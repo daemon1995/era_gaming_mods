@@ -1,0 +1,2482 @@
+ZVSE
+
+** Enhanced War Machines III by Bonizag
+** Wogify Name: script73.erm
+** Updated: Febrary 20, 2012 by rennyo
+
+** variables used:        v847, v850-v859, v862-v880, v883 for long term
+**                        v1-v3,v7800-v7956 temporarily
+
+** string variables used: z1-z4, z78-z90 temporarily
+
+** flags used:            781, 783-790 for long term
+**                        2,3,4 temporarily
+
+** timer used:            41
+
+** functions used:        7795-7820
+
+** hero variables used:   w81-w83
+
+** object variables used: H (at towns and war machine factories), O for owner at war machine factory, T at towns
+
+!#UN:P73/?v847;                            //v847=1;                                                                  check if option is enabled
+** //init
+
+!#VRv863&v847=1:S0;                       //    if v847=1 then { v863=0;                                set v863 to 0 so on the first day will also execute refresh
+!#TM41&v847=1:S1/999/1/255;               //   SET TIMER41 from 1 to 999 step 1 ALL PLAYERS;            init timer 41
+!#IF&v847=1:V781/0;                       //   F781,784,785,786,787=0;                                  init flag 781
+!#IF&v847=1:V784/0;                       //   V876,877=-1;                                             784 set false for the first battle
+!#IF&v847=1:V785/0;                       //   V858=0;                                                  hero doesn't fights for war machine artifact by default
+!#IF&v847=1:V786/0;                       //   V859=0;                                                  786 set false for the first battle
+!#IF&v847=1:V787/0;                       //                                                            787 set false for the fist battle
+!#VRv876&v847=1:S-1;                      //                                                            init vars for detecting meeting heroes
+!#VRv877&v847=1:S-1;                      //                                                            init vars for detecting meeting heroes
+!#VRv858&v847=1:S-2;                      //                                                            init vars for preserving previous player and intelligence
+!#VRv859&v847=1:S0;
+
+!#MA&v847=1:C147/6/750;                   //   SET WAR MACHINE COST 750;                                 all war machines cost 750 gold
+!#MA&v847=1:C146/6/2500;                  //   set ballista cost 2500[upd rennyo 02.2012]
+!#MA&v847=1:C148/6/750;
+
+!?TM41&v847=1;                            //   if v847=1 then ****TIMER41-> {                                                    timer trigger
+!!VRv862:Sc0;                             //                        Current day ?v862;                                            get  current day
+!!VRf:Sv862 %7;                           //                        f=v862 mod 7;
+!!IF:V2/0;                                //                        F2=0;
+!!IF&f=1:V2/1;                            //                        if f=1 then F2=1;
+**                                                                  };
+!?TM41&v863<v862/2/v847=1;                //   if (v863<v862)&(F2=1) then                                                        continue trigger only if it is an other days and the beginning of a new week
+!!DO7807/0/155/1&v862=1:P;                //        ****TIMER41->{                                                               iterate through all heroes and set correct w vars
+!!VRv863:Sc0;                             //                     if v862=1 then {                                                update v863 compare-variable
+!!UN:U98/-1/?f;                           //                                    FU7807(from 0 to 155 step 1);                    get the number of towns
+!!DO7806/1/f/1:Pf/98;                     //                                    };                                               iterate through towns and fill them up
+!!UN:U106/-1/?f;                          //                     Current day ?v863;                                              get the number of war machines
+!!DO7806/1/f/1:Pf/106;                    //                     Number of towns ?f;                                             iterate through war machine factories and fill them up
+**                                        //                     FU7806(x1=f,x2=98,from 1 to f step 1);
+**                                        //                     Number of warmacines factory ?f;
+***                                       //                     FU7806(x1=f,x2=106,from 1 to f step 1);
+****                                      //                     };
+**                                        //
+
+
+
+!?TM41&v847=1;                            //    ****TIMER41->{
+!!VRi:Sv862 %4;                           //                 i=v862 mod 4;                                                                    only for 1/4 of players will execute
+!!VRj&v858>=0:Sv858 %4;                   //                 if v858>=0 then {
+!!OW&v858>=0/v859=1/i=j:Hv858/7800/0;     // [upd rennyo 02.2012]            j=v858 mod 4;                                                    get heroes of previous player
+!!DO7795/1/v7800/1&i=j:P;                 //                                 if (v859=1)&(i=j) then ?v7800 PLAYER v858 GET # of HEROES;       buy machines for heroes of previous player if heroes stand in a town
+!!OW:C?f If/?g;                           //                                 if (i=j) then FU7795(from 1 to v7800 step 1);                    get current player
+!!VRv858:Sf;                              //                                 ?f GET #CURRENT PLAYER,?g GET #f PLAYER CONTROLLER(II or HUMAN); preserve previous player and its intelligence
+!!VRv859:Sg;                              //                                 v858=f,v859=g;                                                   v859-human or AI
+
+!?OB5/6&v847=1; //hero finds first aid tent on adventure map
+!!HE-1:N?v857; //store hero number in v857
+!!FU7799:Pv857; //dismiss original war machines
+!!FU7800:Pv857; //to show correct w vars
+!!FU7804:Pv857; //remove equipment so later we can detect the picked up artifact
+!!IF:V785/1; //we fight for a war machine artifact
+
+!$OB5/6&v847=1;
+!!HEv857:A2/6/?f/?g; // vg nr of equipped first aid tents
+!!HEv857:A2/4/?f/?h; // vh nr of equipped ballistas
+!!HEv857:A2/5/?f/?i; // vi nr of equipped ammo carts
+!!IF:Wv857;
+!!VRw81:+g;
+!!VRw82:+h;
+!!VRw83:+i;
+!!FU7801:Pv857; //correct equipment
+!!IF:V785/0;
+
+!?OB5/4&v847=1; //hero finds ballista on adventure map
+!!HE-1:N?v857; //store hero number in v857
+!!FU7799:Pv857; //dismiss original war machines
+!!FU7800:Pv857; //to show correct w vars
+!!FU7804:Pv857; //remove equipment so later we can detect the picked up artifact
+!!IF:V785/1; //we fight for a war machine artifact
+
+!$OB5/4&v847=1;
+!!HEv857:A2/6/?f/?g; // vg nr of equipped first aid tents
+!!HEv857:A2/4/?f/?h; // vh nr of equipped ballistas
+!!HEv857:A2/5/?f/?i; // vi nr of equipped ammo carts
+!!IF:Wv857;
+!!VRw81:+g;
+!!VRw82:+h;
+!!VRw83:+i;
+!!FU7801:Pv857; //correct equipment
+!!IF:V785/0;
+
+!?OB5/5&v847=1; //hero finds ammo cart on adventure map
+!!HE-1:N?v857; //store hero number in v857
+!!FU7799:Pv857; //dismiss original war machines
+!!FU7800:Pv857; //to show correct w vars
+!!FU7804:Pv857; //remove equipment so later we can detect the picked up artifact
+!!IF:V785/1; //we fight for a war machine artifact
+
+!$OB5/5&v847=1;
+!!HEv857:A2/6/?f/?g; // vg nr of equipped first aid tents
+!!HEv857:A2/4/?f/?h; // vh nr of equipped ballistas
+!!HEv857:A2/5/?f/?i; // vi nr of equipped ammo carts
+!!IF:Wv857;
+!!VRw81:+g;
+!!VRw82:+h;
+!!VRw83:+i;
+!!FU7801:Pv857; //correct equipment
+!!IF:V785/0;
+
+!?CM0&v847=1; //see number of war machines owned by selected hero
+!!OW:C?p; //get current player
+!!OW:Gp/?t; //muliplayer check
+
+!?CM0&t=1/v847=1; //continue trigger only for the right player
+!!OW:A-1/?g; //selected hero in vg
+!!CM:I?f; //vf: where we clicked
+!!HEg&g>=0:B0/?z4; //get hero name
+!!FU7799&g>=0:Pg; //dismiss original war machines
+!!FU7800&g>=0:Pg; //to show correct w vars
+!!IF&g>=0:Wg; //use hero's w# variables
+!!CM&f=5/g>=0:R0; //don't show quest log standard info when right clicked on it
+!!VRz1&f=5/g>=0:S^%W81^; //get machine numbers
+!!VRz2&f=5/g>=0:S^%W82^;
+!!VRz3&f=5/g>=0:S^%W83^;
+!!UN&f=5/g>=0:A6/9/1; //the name is changed to numbers
+!!UN&f=5/g>=0:A4/9/2;
+!!UN&f=5/g>=0:A5/9/3;
+!!IF&f=5/g>=0:Q1/8/6/8/4/8/5/4/z173000; //show number
+!!UN&f=5/g>=0:A6/9/0; //restore original names
+!!UN&f=5/g>=0:A4/9/0;
+!!UN&f=5/g>=0:A5/9/0;
+
+!?CM0&v847=1; //when we right-click on war machine factory
+!!CM:I?f;
+!!CM&f=37:P?g/?h/?i;
+!!OW:C?p; //get current player
+!!OW:Gp/?t; //muliplayer check
+!!OBg/h/i&f=37/t=1:T?j; //get type of clicked object
+!!POg/h/i&f=37/j=106/t=1:H?k O?o; //get H value of war machine factory and owner
+!!IF&f=37/j=106/t=1:V2/1; //assume the war machine factory is owned by current or an allied player
+!!IF&f=37/j=106/o<0/t=1:V2/0; //owned by no color
+!!OW&f=37/j=106/2/t=1:To/?q Tp/?r; //get teams
+!!IF&f=37/j=106/2/q<>r/t=1:V2/0; //owner is not allied
+!!CM&f=37/j=106/2/t=1:R0;
+!!VRl&f=37/j=106/2/t=1:Sk;
+!!VRl&f=37/j=106/2/t=1::16; //vl number of ammo carts
+!!VRm&f=37/j=106/2/t=1:Sl;
+!!VRm&f=37/j=106/2/t=1:*16;
+!!VRk&f=37/j=106/2/t=1:-m;
+!!VRm&f=37/j=106/2/t=1:Sk;
+!!VRm&f=37/j=106/2/t=1::4; //vm number of ballistas
+!!VRn&f=37/j=106/2/t=1:Sm;
+!!VRn&f=37/j=106/2/t=1:*4;
+!!VRk&f=37/j=106/2/t=1:-n;
+!!VRn&f=37/j=106/2/t=1:Sk; //n number of first aid tents
+
+!!VRz1&f=37/j=106/2/t=1:S^%Vn^; //get machine numbers
+!!VRz2&f=37/j=106/2/t=1:S^%Vm^;
+!!VRz3&f=37/j=106/2/t=1:S^%Vl^;
+!!UN&f=37/j=106/2/t=1:A6/9/1; //the name is changed to numbers
+!!UN&f=37/j=106/2/t=1:A4/9/2;
+!!UN&f=37/j=106/2/t=1:A5/9/3;
+!!IF&f=37/j=106/2/t=1:Q1/8/6/8/4/8/5/4/z173001; //show number
+!!UN&f=37/j=106/2/t=1:A6/9/0; //restore original names
+!!UN&f=37/j=106/2/t=1:A4/9/0;
+!!UN&f=37/j=106/2/t=1:A5/9/0;
+
+!?CM2&v847=1; //see number of hero's war machines - hero screen
+!!CM:I?f; //vf: where we clicked
+!!CM:S?s; //get click subtype
+!!CM:H?g/?h; //selected hero in vg
+!!IF:V2/0;
+!!CM&f=15/s=14:R0; //right click on ballista slot
+!!IF&f=15/s=14:V2/1;
+!!CM&f=16/s=14:R0; //right click on ammo cart slot
+!!IF&f=16/s=14:V2/1;
+!!CM&f=17/s=14:R0; //right click on first aid tent slot
+!!IF&f=17/s=14:V2/1;
+
+!?CM2&2/v847=1; //right click on war machine slot
+!!HEg:B0/?z1; //get hero name
+!!IF:Wg; //use hero's w# variables
+!!VRz2&f=15:S^%W82^;
+!!VRz3&f=15/w82<=1:Sz173002;
+!!VRz3&f=15/w82>1:Sz173003;
+!!VRz2&f=16:S^%W83^;
+!!VRz3&f=16/w83<=1:Sz173004;
+!!VRz3&f=16/w83>1:Sz173005;
+!!VRz2&f=17:S^%W81^;
+!!VRz3&f=17/w81<=1:Sz173006;
+!!VRz3&f=17/w81>1:Sz173007;
+
+!!IF:Q1/-1/-1/-1/-1/-1/-1/4/z173008;
+
+!?OB106&v847=1; //hero is at war machine factory
+
+!!HE-1:P?f/?g/?h N?i O?o; //hero number in vi
+!!OW:Go/?t; //multiplayer check
+!!OBf/g/h&t=1:S; //disable standard reaction
+!!POf/g/h&t=1:Oo; //update owner
+!!VRf&t=1:+1;
+!!POf/g/h&t=1:Oo;
+!!VRf&t=1:-1; //restore vf
+!!FU7799&t=1:Pi; //dismiss original war machines
+!!FU7800&t=1:Pi; //correct w vars if needed
+!!FU7813&t=1:Pf/g/h/0/0/0/i; //get available machines
+!!IF&1000/t=1:Q2/z173009;
+!!FU7814&1000/2/t=1:Pf/g/h/i; //we buy machines
+!!FU7815&-1000:Pf/g/h/i; //AI buys machines
+!!OBf/g/h&-1000:R; //AI gets an enabled factory (player might have disabled it)
+
+!$OB106&-1000/v847=1;
+!!HE-1:N?i; //hero number in vi
+!!FU7799&t=1:Pi; //dismiss original war machines
+
+!$OB98&-1000/v847=1; //AI buys war machine at town
+
+!!HE-1:P?f/?g/?h N?i; //hero number in vi
+
+!!IF:V789/0; //assume the hero stands before the town (AI attacks a town)
+!!UN:U98/-1/?k; //get the number of towns
+!!DO7796/1/k/1:Pk/f/g/h; //iterate through towns and check if hero stands in it
+
+!!FU7799&789:Pi; //dismiss original war machines
+!!CAf/g/h&789:B3/22 T?j O?p; //look if ballista yard is built, get subtype and owner
+!!HE-1&1/789:O?o; //get the owner of hero
+!!FU7800&1/o=p/789:Pi; //correct w vars if needed
+!!FU7816&1/o=p/j=6/789:Pi/f/g/h/1; //AI buys ballista if ballista yard is built
+!!CAf/g/h&789:B3/16 T?j O?p; //look if blacksmith is built, get subtype and owner
+!!HE-1&1/789:O?o; //get the owner of hero
+!!FU7800&1/o=p/789:Pi; //correct w vars if needed
+!!FU7816&1/o=p/789:Pi/f/g/h/0; //AI buys machine if blacksmith is built
+
+!?CM1&v847=1; //trigger for click inside town
+!!IF:V783/0; //init flag 783
+!!CA-1:B3/10; //check if village hall is built
+!!IF&1:V783/1; //save flag 1
+!!CA-1:B3/11; //check if town hall is built
+!!IF&1:V783/1; //save flag 1
+!!CA-1:B3/12; //check if city hall is built
+!!IF&1:V783/1; //save flag 1
+!!CA-1:B3/13; //check if capitol is built
+!!IF&1:V783/1; //save flag 1
+
+!?CM1&783/v847=1; //continue if the town is not destroyed
+!!CM:S?f; //get click subtype
+!!CM:I?g A?m/?n; //get building type and click position
+!!OW:C?i; //get current player
+!!OW:Gi/?q; //muliplayer check
+!!CA-1&q=1:H1/?h; //vh visiting hero
+!!CA-1&q=1:H0/?r; //vr garrison hero
+!!CA-1&q=1:T?t; //get town subtype
+!!FU7799&h>=0/q=1:Ph; //dismiss original war machines
+!!FU7799&r>=0/q=1:Pr; //dismiss original war machines
+!!HEh&h<>-1/q=1:P?i/?j/?k; //store hero position
+!!HEh&h<>-1/q=1:O?o; //get owner of hero
+!!CAi/j/k&h<>-1/q=1:O?p B3/16; //get owner of town and see if blacksmith is built
+!!FU7800&h<>-1/o=p/q=1:Ph; //correct w vars if needed at visiting hero
+!!CM&f=12/g=16/h<>-1/q=1:R0; //disable standard reacton
+!!CM&f=12/g=23/h<>-1/m>404/m<471/n>251/n<296/t=4/q=1:R0; //if town is necropolis and building 23 then x: 405-470 y:252-295
+!!CM&f=12/g>=10/g<=15/h<>-1/m>360/m<454/n>159/n<239/t=7/1/q=1:R0; //if town is fortress and building 10-15 then x: 361-453 y:160-238
+!!CM&f=12/g=22/h<>-1/t=6/q=1:R0; //disable for ballista yard in stronghold town
+!!CM&f=12/g=14/h<>-1/m>464/m<536/n>204/n<256/t=8/q=1:R0; //if town is conflux and building 14 then x: 465-535 y: 205-255
+!!CM&f=12/g=14/h<>-1/m>496/m<613/n>216/n<353/t=2/q=1:R0; //if town is tower and building 14 then x: 497-612 y: 217-352
+
+**[start updated by rennyo 26.05.2020 for balista cost]
+!!FU7803&f=12/g=16/h<>-1/o=p/q=1/t=0:Ph/i/j/k/0/1; //call buying function for visiting hero (ballista)
+!!FU7803&f=12/g=16/h<>-1/o=p/q=1/t=5:Ph/i/j/k/0/1; //call buying function for visiting hero (ballista)
+!!FU7803&f=12/g=16/h<>-1/o=p/q=1/t=8:Ph/i/j/k/0/1; //call buying function for visiting hero (ballista)
+!!FU7803&f=12/g=16/h<>-1/o=p/q=1/t<>5/t<>0/t<>8:Ph/i/j/k/0/0; //call buying function for visiting hero  (NOT ballista)
+!!FU7803&f=12/g=23/h<>-1/m>404/m<471/n>251/n<296/t=4/o=p/q=1:Ph/i/j/k/0/0;                      [updated by rennyo 26.05.2020]
+!!FU7803&f=12/g>=10/g<=15/h<>-1/m>360/m<454/n>159/n<239/t=7/o=p/1/q=1:Ph/i/j/k/0/1;             [updated by rennyo 26.05.2020]
+!!FU7803&f=12/g=22/h<>-1/t=6/o=p/q=1:Ph/i/j/k/1/0; //we buy ballistas at the ballista yard in stronghold town  [updated by rennyo 26.05.2020]
+!!FU7803&f=12/g=14/h<>-1/m>464/m<536/n>204/n<256/t=8/o=p/q=1:Ph/i/j/k/0/1;                  [updated by rennyo 26.05.2020]
+!!FU7803&f=12/g=14/h<>-1/m>496/m<613/n>216/n<353/t=2/o=p/q=1:Ph/i/j/k/0/0;                  [updated by rennyo 26.05.2020]
+**[end updated by rennyo 26.05.2020 for balista cost]
+
+!?CM4&v847=1; //trigger for click on first aid tent, player can heal the tent this way
+!!CM:D?o; //get positon of right click during battle
+!!BG:N?v867; //get stack number and pos
+!!BMv867:T?v872 P?s; //get type of monster
+!!BMv867&v872=147:N?v850 I?v851; //vq number of first aid tents vr side index
+!!BHv851&v872=147:N?f; //get hero number
+!!HEf&f>=0/v872=147:S27/?v874; //store first aid skill in v874 of hero
+
+!!VRp&v872=147/v874>0/o=s:S0; //p = 0
+!!BMv867&v872=147/v874>0/o=s:L?f B?g N?h; //y1 hp y2 lost y3 original number y4 actual number y5 monster side
+!!VRp&v872=147/v874>0/o=s/f>0/g=h/h>0:S1; //p 1
+!!VRp&v872=147/v874>0/o=s/h<g/h>0:S1; //p 1
+
+!!BG&v872=147/v874>0/p=1/o=s:A11 Do; //perform healing on the tent itself
+
+--------------------------- B E F O R E     B A T T L E ---------------------
+!?FU(OnBattleReplay)&v847=1;
+!!BA:H0/?y-1 H1/?y-2; //attacker in vf
+!!IF:V789/0; //we set number of war machines
+
+!!IF:Wy-1;
+!!SN:W^attacker_tent^/?w81;
+!!SN:W^attacker_bal^/?w82;
+!!SN:W^attacker_ammo^/?w83;
+!!FU&y-2<0:E;
+!!IF:Wy-2;
+!!SN:W^defender_tent^/?w81;
+!!SN:W^defender_bal^/?w82;
+!!SN:W^defender_ammo^/?w83;
+
+!?BA0&v847=1; //before battle begins
+** variables used:        v847, v850-v859, v862-v880, v883 for long term
+** flags used:            781, 783-790 for long term
+** hero variables used:   w81-w83
+!!BA:H0/?y-1 H1/?y-2; //attacker in vf
+!!IP:V847/883 F781/790 Wy-1/81/83 Wy-2/81/83;
+!!IF:Wy-1;
+!!SN:W^attacker_tent^/w81;
+!!SN:W^attacker_bal^/w82;
+!!SN:W^attacker_ammo^/w83;
+!!FU&y-2<0:E;
+!!IF:Wy-2;
+!!SN:W^defender_tent^/w81;
+!!SN:W^defender_bal^/w82;
+!!SN:W^defender_ammo^/w83;
+
+!?BA52&v847=1; //before battle begins
+
+!!IF:V784/0; //assume battle takes place not in town
+
+
+**[function  without bugs]
+!!VRf:Sv998;   [updated by rennyo 26..02.2012]
+!!VRg:Sv999;   [updated by rennyo 26..02.2012]
+!!VRh:Sv1000;  [updated by rennyo 26..02.2012]
+
+
+
+!!IF:V789/0; //assume the hero stands before the town (AI attacks a town)
+!!IF:V789/0; //assume the battle is not on a place of a castle
+!!UN:U98/-1/?k; //get the number of towns
+!!DO7796/1/k/1:Pk/f/g/h; //iterate through towns and check if there is a garrison hero in it
+
+!!BA:H0/?f; //attacker in vf
+!!BA:H1/?g; //defender in vg
+!!FU7799&-785:Pf; //dismiss original war machines if hero doesn't fight for a war machine artifact
+!!FU7799&g>=0:Pg;
+!!FU7800&-785:Pf; //correct w vars if hero doesn't fight for a war machine artifact
+!!FU7800&g>=0:Pg;
+!!FU7801&785:Pf; //correct equipment for attacker - we got away that at war machine's object trigger
+!!IF:V790/1; //assume hero uses war machines on normal battlefield (i.e. cyclop stockpile, grotto etc. excluded) or on not normal but the hero doesn't have any equipped war machine
+!!IF&g=v856/789:V784/1; //battle in town - ballista cannot be used
+!!IF&v856<0/789:V784/1;
+
+!?BA52&786/v847=1; //army camp fight
+
+!!FU7825&v855>=0:Pv855; //dismiss original war machines
+!!FU7826&v855>=0:Pv855; //correct w vars
+!!HEv855&v855>=0:A1/6/15 A1/4/13 A1/5/14; //equip war machines
+
+!?BA52&v847=1; //continue trigger unconditioned
+
+!!HEf:I?v866/1; //get spell points of attacker hero
+!!HEg&g>=0:I?v880/1; //get spell points of defender hero (if exists)
+
+!!IF:V789/0; //assume we didn't set number of war machines on the battlefield
+
+-------------------------- B A T T L E      R O U N D   ---------------------
+
+!?BF&-789/v847=1; //battle round trigger for placing war machines when battle begins
+
+!!BA:H0/?f; //attacker in vf
+!!BA:H1/?g; //defender in vg
+
+!!VRv852:S0; //init v852
+!!VRv853:S0; //init v853
+!!VRv854:S0; //init v854
+!!VRv855:S0; //init v855
+
+!!IF:Wf; //use attacker hero's w# variable
+*!IF:Wy-1;
+!!VRs:S0; //init vs
+!!COf:E?n; //look if commander is enabled
+!!COf&n=1:D?m; //if enabled look if alive
+!!COf&n=1/m=0:X2/?s T?t; //if enabled and alive get commander's level and its type
+
+!!VRv852&n=1/m=0/t=1:Ss; //v852 number of added war machines (hierophant)
+!!VRv853&n=1/m=0/t=6:Ss; //v853 number of added war machines (ogre leader)
+
+!!HEf:A2/6/?o/?p A2/4/?o/?q A2/5/?o/?r ; //vp vq vr mchines in hero's equipment slot (0 or 1)
+
+!!VRp:+v852;
+
+
+!!VRv852&n=1/m=0/t=1::4 +1; //v852 number of added war machines (hierophant - reduced)
+
+
+!!VRv853&n=1/m=0/t=6::4 +1; //v853 number of added war machines (ogre leader - reduced)
+!!VRq:+v853;
+
+!!VRn:S0; //init vn
+!!BU:E153/?k; //get stack num in vk
+!!BMk&k<>-1:N?n; //get number of monsters in stack
+!!IF&k<>-1/p<>n:V790/0; //not a normal battlefield and hero has equipped war machines
+!!VRn&790:Sv852 +w81; //add hero's machines to commander's machines
+!!BMk&k<>-1/790:Bn Nn;
+!!BMk&k<>-1/-790:Bv852 Nv852; //number of hierophant's first aid tents on not normal battlefields
+
+!!VRn:S0; //init vn
+!!BU:E51/?k; //get stack num in vk
+!!BMk&k<>-1:N?n; //get number of monsters in stack
+!!IF&k<>-1/q<>n:V790/0; //not a normal battlefield and hero has equipped war machines
+!!VRn&790:Sv853 +w82; //add hero's machines to commander's machines
+!!BMk&k<>-1/790:Bn Nn;
+!!BMk&k<>-1/-790:Bv853 Nv853; //number of ogre leader's ballistas on not normal battlefields
+
+!!VRn:S0; //init vn
+!!BU:E18/?k; //get stack num in vk
+!!BMk&k<>-1:N?n; //get number of monsters in stack
+!!IF&k<>-1/r<>n:V790/0; //not a normal battlefield and hero has equipped war machines
+!!VRn&k<>-1/790:Sw83; //number of ammo carts is w83
+!!BMk&k<>-1/790:Bn Nn;
+
+!!IF&g>=0:Wg; //to use defender hero's w# variable, if there is a hero
+
+!!VRs:S0; //init vs
+!!COg&g>=0:E?n; //look if commander is enabled
+!!COg&g>=0/n=1:D?m; //if enabled look if alive
+!!COg&g>=0/n=1/m=0:X2/?s T?t; //if enabled and alive get commander's level and its type
+
+!!VRv854&g>=0/n=1/m=0/t=1:Ss; //v854 number of added war machines (hierophant)
+!!VRv855&g>=0/n=1/m=0/t=6:Ss; //v855 number of added war machines (ogre leader)
+
+!!HEg&g>=0:A2/6/?o/?p A2/4/?o/?q A2/5/?o/?r ; //vp vq vr mchines in hero's equipment slot (0 or 1)
+!!VRp:+v854;
+
+
+!!VRv854&g>=0/n=1/m=0/t=1::4 +1; //v854 number of added war machines (hierophant - reduced)
+!!VRv855&g>=0/n=1/m=0/t=6::4 +1; //v855 number of added war machines (ogre leader - reduced)
+!!VRq:+v855;
+
+!!VRn&g>=0/-786:S0; //init vn
+!!BU&g>=0/-786:E169/?k; //get stack num in vk
+!!BMk&g>=0/-786/k<>-1:N?n; //get number of monsters in stack
+!!VRn&g>=0/-786/k<>-1:Sv854 +w81; //add hero's machines to commander's machines
+!!BMk&g>=0/k<>-1/-786:Bn Nn;
+
+!!VRn&g>=0/-786:S0; //init vn
+!!BU&g>=0/-786:E67/?k; //get stack num in vk
+!!BMk&g>=0/-786/k<>-1:N?n; //get number of monsters in stack
+!!VRn&g>=0/-786/-784/k<>-1:Sv855 +w82; //add hero's machines to commander's machines
+!!BMk&g>=0/k<>-1/-786:Bn Nn;
+
+!!VRn&g>=0/-786:S0; //init vn
+!!BU&g>=0/-786:E32/?k; //get stack num in vk
+!!BMk&g>=0/-786/k<>-1:N?n; //get number of monsters in stack
+!!VRn&g>=0/-786/k<>-1:Sw83; //number of ammo carts is w83
+!!BMk&g>=0/k<>-1/-786:Bn Nn;
+
+//give monsters machines: won't work without a hero because machines need a hero to check his/her secondary skills
+!!VRv879&g>=0/786:S0;
+!!DO7820/0/41/1&g>=0/786:P;
+!!VRf&g>=0/786:Sv879; //v879 sum of monsters' hp
+!!VRf&g>=0/786::10 :25;
+
+!!VRi&g>=0/786:S0 R0/f Rf;
+!!VRh&g>=0/786:Sf;
+!!VRh&g>=0/786:+v854 +i; //add commander's machines to vh
+!!VRh&g>=0/786/h=0:S1;
+!!BU&g>=0/h>0/786:E169/?k; //get stack num in vk
+!!BMk&g>=0/h>0/786:Bh Nh;
+
+!!VRi&g>=0/786:S0 Rf;
+!!VRh&g>=0/786:Sf;
+!!VRh&g>=0/786:+v855 +i; //add commander's machines to vh
+!!VRh&g>=0/786/h=0:S1;
+!!BU&g>=0/h>0/786:E67/?k; //get stack num in vk
+!!BMk&g>=0/h>0/786:Bh Nh;
+
+!!VRi&g>=0/786:S0 Rf;
+!!VRh&g>=0/786:Sf;
+!!VRh&g>=0/786:+i;
+!!VRh&g>=0/786/h=0:S1;
+!!BU&g>=0/h>0/786:E32/?k; //get stack num in vh
+!!BMk&g>=0/h>0/786:Bh Nh;
+
+!!IF:V789/1; //we set number of war machines
+
+!?BR&v847=1; //continue trigger unconditioned
+
+//add spell points to hero, spell points equals number of ammo carts currently owned
+//spell points cannot be greater than the hero's maximum spell points (intelligence and artifacts are taken into count)
+//perhaps this part could be moved to a function
+!!BA&v997>=1:H0/?f;
+!!IF&v997>=1:Wf;
+
+!!HEf&v997>=1:I?n/1; //get current spell points
+!!VRn&v997>=1:+w83; //add number of ammo carts to spell points
+!!VRn&v997>=1/n>v866:Sv866; //if increased spell points would be greater than the maximum then set spell points to maximum
+!!HEf&v997>=1/w83>0:In/1; //give hero spell points
+
+!!BA&v997>=1:H1/?g;
+!!IF&v997>=1/g>=0:Wg;
+
+!!HEg&v997>=1/g>=0:I?n/1; //get current spell points
+!!VRn&v997>=1/g>=0:+w83; //add number of ammo carts to spell points
+!!VRn&v997>=1/n>v880/g>=0:Sv880; //if increased spell points would be greater than the maximum than set spell points to maximum
+!!HEg&v997>=1/g>=0/w83>0:In/1; //give hero spell points
+
+-------------------------- B E F O R E      A C T I O N ---------------------
+
+!?BG0&v847=1;
+!!BG:N?v867 A?v868 D?p; //get stack number attack type and destination
+
+**RNG init.Now it depends not only from stack but x,y,z of battle[upd rennyo 26.05.2020]
+!!BA:P?y2/?y3/?y4;//get battle coordinates for RNG
+!!VRy4:+v867 *256 *256 *256;//(y4 + current stack number[max 41 <= 2^31]) << 24
+!!VRy1:Sv997 *256 *256;//y1 = v997(current turn) << 16
+!!VRy3:*256;//y3 << 8
+!!VRy1:+y2 +y3 +y4;//y1 = y1 + y2 + y3 + y4
+!!UN:V?y5/?y5/?y5/?y6/?y5;
+!!VRy1&y6=0:R0/y1; reset RNG to random number (modified but identical at both side)
+!!BMv867:T?v872 I?v851; //get type of monster and side index
+!!BMv867&v872=147:N?v850; //v850 number of first aid tents
+!!BHv851&v872=147:N?f; //get hero number
+!!HEf&f>=0/v872=147:O?l; //get hero color
+!!OW&f>=0/v872=147:Il/?v873; //decide AI or human
+!!VRv873&f=-1/v872=147:S1; //if there is no hero on this side it is AI
+!!HEf&f>=0/v872=147:S27/?v874; //store hero's first aid skill in v874
+
+!?BG0&v873=0/v847=1; //continue if player
+
+**//section: player has first aid skill
+!!BHv851&v872=147/v874>0/788:M0; //enable spellcasting
+!!BU&v872=147/v874>0/788:Ep/?v875; //v875 is the stack that is healed
+!!VRv869&v872=147/v874>0/788:S0; //initialize v869
+!!DO7810/1/v850/1&v872=147/v874>0/788/v868=11:Pv874/v851/y1; //make a random cure value, vl contains the sum  [upd rennyo 26.05.2020]
+!!VRl&v872=147/v874>0/788/v868=11:Sv869 +1; //vl set to v869, +1 is needed because we won't give the removed 1 hp to this stack
+!!BMv875&v872=147/v874>0/788/v868=11:H?f L?g B?h N?i; //store parameters of the stack to heal
+
+!!VRt&v872=147/v874>0/788/v868=11:Sf; //
+!!VRt&v872=147/v874>0/788/v868=11:-g; //vt the left hp before healing
+!!VRl&v872=147/v874>0/788/v868=11:+t; //add left hp to vl
+!!VRm&v872=147/v874>0/788/v868=11:Sl :f; //vm number of creatures to resurrect
+!!VRi&v872=147/v874>0/788/v868=11:-1; //we used original left hp for resurrect
+!!VRn&v872=147/v874>0/788/v868=11:Sl %f; //vn is the additional hp from heal
+!!VRm&v872=147/v874>0/788/n>0/v868=11:+1; //add +1 creature if it has at least 1 HP
+!!VRi&v872=147/v874>0/788/v868=11:+m; //calculate new creature number
+!!VRg&v872=147/v874>0/788/n>0/v868=11:Sf; //
+!!VRg&v872=147/v874>0/788/n>0/v868=11:-n; //calculate new lost HP
+!!VRg&v872=147/v874>0/788/n=0/v868=11:S0; //lost hp is 0 if no hp for a new creature
+!!VRg&v872=147/v874>0/788/i>h/v868=11:S0; //if we would resurrect more creature there is no lost hp
+!!VRi&v872=147/v874>0/788/i>h/v868=11:Sh; //after healing if number of creatures is greater than originally set it to original
+!!VRv870&v872=147/v874>0/788/v868=11:Sg; //v870: new lost hp
+!!VRv871&v872=147/v874>0/788/v868=11:Si; //v871: new number
+!!BMv875&v872=147/v874>0/788/v868=11:L0 Nv871; //set stack to new - before anim, lost hp is 0, action will be: 0 hp removed
+!!IF&v872=147/v874>0/788/v868=11:V787/1; //we have to set monster to the healed state properly, i. e. ignore first aid tent heal during anim
+
+!!DO7808/0/41/1&v872=147/v874>0/v873=0/788:P2/v851; //iterate through stacks and add one HP, only to the actual side, excluding currently healed stack
+!!DO7802/0/41/1&v872=147/v874>0/v873=0/788:P1/v851; //restore tents' machine attribute, it is needed or the machines may try to counterattack and the game will crash
+
+//end section
+
+------------------------- A F T E R         A C T I O N ---------------------
+
+!?BG1&787/v847=1;
+!!BMv875:Lv870 Nv871; //set stack after tents' healing anim, lost hp is set properly
+!!IF:V787/0; //we have ended the healing
+
+!?BG1&v847=1;
+
+!!BH1:N?f; //get defender hero
+
+!!BG:N?v867; //get stack number attack type and destination
+
+**RNG init.Now it depends not only from stack but x,y,z of battle[upd rennyo 26.05.2020]
+!!BA:P?y2/?y3/?y4;//get battle coordinates for RNG
+!!VRy4:+v867 *256 *256 *256;//(y4 + current stack number[max 41 <= 2^31]) << 24
+!!VRy1:Sv997 *256 *256;//y1 = v997(current turn) << 16
+!!VRy3:*256;//y3 << 8
+!!VRy1:+y2 +y3 +y4;//y1 = y1 + y2 + y3 + y4
+!!VRy1:R0/y1; reset RNG to random number (modified but identical at both side)
+
+!!BMv867:T?v872 I?v851; //get type of monster and side index
+!!BMv867&v872=147:N?v850; //v850 number of tents
+!!BHv851&v872=147:N?f; //get hero number
+!!HEf&f>=0/v872=147:O?l; //get hero color
+!!OW&f>=0/v872=147:Il/?v873; //decide ai or human
+!!VRv873&f=-1/v872=147:S1; //if there is no hero on this side it is AI
+!!HEf&f>=0/v872=147:S27/?v874; //store first aid skill in v874 of hero
+!!VRv874&f=-1/v872=147/v873=1:S0; //monsters have no skill
+
+//sectionA: no first aid skill
+!!VRv856&v872=147/v874=0:S0; //assume we have nothing to heal
+!!DO7808/0/41/1&v872=147/v874=0:P0/v851; //iterate thorugh stacks and see if there is a stack that can be healed
+!!IF&v872=147/v874=0:V788/0;
+!!IF&v872=147/v874=0/v856>0:V788/1;
+!!VRv856&v872=147/v874=0/788:-1;
+!!VRf&v872=147/v874=0/788:S0 Rv856 +1; //choose randomly stack to be healed
+!!VRv856&v872=147/v874=0/788:S0; //init v856 for getting stack number
+!!DO7809/0/41/1&v872=147/v874=0/788:Pf/v851; //get the stack number, returned in v875
+
+!!VRv869&v872=147/v874=0/788:S0; //initialize v869
+!!DO7810/1/v850/1&v872=147/v874=0/788:Pv874/v851/y1; //make a random cure value for tents, v869 contains the sum [upd rennyo 26.05.2020]
+
+!!BMv875&v872=147/v874=0/788:H?f L?g B?h N?i; //store parameters of the stack
+!!VRl&v872=147/v874=0/788:Sv869; //vl set to v869
+!!VRt&v872=147/v874=0/788:Sf; //
+!!VRt&v872=147/v874=0/788:-g; //vt the left hp before healing
+!!VRl&v872=147/v874=0/788:+t; //add left hp to vl
+!!VRm&v872=147/v874=0/788:Sl :f; //vm number of creatures to resurrect
+!!VRi&v872=147/v874=0/788:-1; //we used original left hp for resurrect
+!!VRn&v872=147/v874=0/788:Sl %f; //vn is the additional hp from heal
+!!VRm&v872=147/v874=0/788/n>0:+1; //add +1 creature if it has at least 1 HP
+!!VRi&v872=147/v874=0/788:+m; //calculate new creature number
+!!VRg&v872=147/v874=0/788/n>0:Sf; //
+!!VRg&v872=147/v874=0/788/n>0:-n; //calculate new lost HP
+!!VRg&v872=147/v874=0/788/n=0:S0; //lost hp is 0 if no hp for a new creature
+!!VRg&v872=147/v874=0/788/i>h:S0; //if we would resurrect more creature there is no lost hp
+!!VRi&v872=147/v874=0/788/i>h:Sh; //after healing if number of creatures is greater than originally set it to original
+!!VRv870&v872=147/v874=0/788:Sg; //v870: new lost hp
+!!VRv871&v872=147/v874=0/788:Si; //v871: new number of creatures
+!!BMv875&v872=147/v874=0/788:L0 Nv871; //set stack to new - before anim, lost hp is 0, action will be: 0 hp removed
+!!BMv875&v872=147/v874=0/788:P?p; //get position of stack
+!!BG&v872=147/v874=0/788:A11 Dp; //perform healing action for nice anim
+!!IF&v872=147/v874=0/788:V787/1; //we have to set monster to the healed state properly, i. e. ignore tents' anim heal
+!!BG&v872=147/v874=0/-788:A3; //make defense with tents if there is nothing to heal
+
+//end sectionA
+
+//sectionB: player has first aid skill
+!!BHv851&v872=147/v874>0/v873=0:M1; //disable spellcasting
+!!VRv856&v872=147/v874>0/v873=0:S0; //assume we have nothing to heal
+!!DO7808/0/41/1&v872=147/v874>0/v873=0:P0/v851; //iterate through stacks and see if there is a stack that can be healed
+!!IF&v872=147/v874>0/v873=0:V788/0;
+!!IF&v872=147/v874>0/v873=0/v856>0:V788/1;
+
+!!DO7802/0/41/1&v872=147/v874>0/v873=0/788:P0/v851; //dismiss machine attribute, machines can be healed too
+!!DO7808/0/41/1&v872=147/v874>0/v873=0/788:P1/v851; //iterate through stacks and remove one HP, only from the actual side
+//end sectionB
+
+!!BH0:N?f; //attacker in vf
+!!BH1:N?g; //defender in vg
+
+!!DO7805/0/41/1:Pf/g; //get the actual number of machines for both side, updates w vars
+
+------------------------ A F T E R           B A T T L E --------------------
+
+!?BA53&v847=1;
+
+!!BA:H0/?f; //attacker in vf
+!!BA:H1/?g; //defender in vg
+
+//the hero who lost the battle loses all war machines too, but does not in case surrender
+
+!!HEf&f>=0:O?o;
+!!IF&f>=0:Wf;
+!!VRw81&f>=0/o=-1/v868<>5:S0;
+!!VRw82&f>=0/o=-1/v868<>5:S0;
+!!VRw83&f>=0/o=-1/v868<>5:S0;
+
+!!HEg&g>=0:O?o;
+!!IF&g>=0:Wg;
+!!VRw81&g>=0/o=-1/v868<>5:S0;
+!!VRw81&g>=0/781:S0;
+!!VRw82&g>=0/o=-1/v868<>5:S0;
+!!VRw82&g>=0/781:S0;
+!!VRw83&g>=0/o=-1/v868<>5:S0;
+!!VRw83&g>=0/781:S0;
+
+!!FU7801&f>=0:Pf; //correct eqipment
+!!FU7801&g>=0:Pg;
+!!FU7804&f>=0/785:Pf; //remove equipment because war machine's object trigger will detect the equipment
+
+!!IF:V787/0; //set flag 787 false for the next battle
+
+------------------------         F U N C T I O N S       --------------------
+
+!?FU7795;
+//calls buying funtion for AI at every town if the town is owned by previous player and has a hero at the town (garrison or visitor)
+//x1: greatest object number
+//x16: object number (from back)
+
+!!VRy1:S7800 +x16;
+!!HEvy1:P?y2/?y3/?y4; //get heroes coordinates
+!!OBy2/y3/y4:T?y5; //get object type at hero's position
+!!CAy2/y3/y4&y5=98:O?y6 H0/?y7; //get town owner and garrison hero
+!!VRy8:Svy1; //store hero number
+!!VRy8&y5=98/y7>=0:Sy7;
+
+!!IF:V2/0;
+!!IF&y5=98/y6=v858:V2/1;
+
+!?FU7795&2; //continue function if town owned by previous player, there is a garrison hero and previous player is AI
+!!FU7799:Py8; //dismiss original war machines
+!!CAy2/y3/y4:B3/22 T?y5; //look if ballista yard is built, get subtype
+!!FU7800&y5=6/1:Py8; //correct w vars if needed
+!!FU7816&y5=6/1:Py8/y2/y3/y4/1; //AI buys ballista if ballista yard is built
+!!CAy2/y3/y4:B3/16; //look if blacksmith is built
+!!FU7800&1:Py8; //correct w vars if needed
+!!FU7816&1:Py8/y2/y3/y4/0; //AI buys machine if blacksmith is built
+
+!?FU7796;
+//checks if hero stands in town or battle is on a place of a castle and gets garrison hero number there
+//x1: greatest object number
+//x16: object number (from back)
+//x2 x3 x4 hero or battlefield coordinates
+
+!!VRy1:Sx1 +1 -x16; //run backward
+!!UN:U98/-1/y1/1; //v1 v2 v3 coordinates of town
+!!IF&x2=v1/x3=v2/x4=v3:V789/1; //hero is in this town
+!!CAv1/v2/v3&x2=v1/x3=v2/x4=v3:H0/?v856; //get garrison hero in v856
+
+!?FU7799;
+//dismisses war machines that could be bought originally in heroes3 and gives back gold spent on them
+//x1 hero number
+
+!!HEx1:A2/6/?y1/?y2 A2/4/?y1/?y3 A2/5/?y1/?y4 ; //y2 y3 y4 number of equipped machines
+!!IF:Wx1; //use hero's w vars
+!!HEx1:O?y1; //y1 hero owner
+!!HEx1&w81=0/y2=1:A3/6/1/1; //remove first aid tent that was bought right now
+!!OW&w81=0/y2=1:Ry1/6/d750; //give back gold spent on first aid tent
+!!HEx1&w82=0/y3=1:A3/4/1/1; //remove ballista that was bought right now
+!!OW&w82=0/y3=1:Ry1/6/d2500; //give back gold spent on ballista    [upd rennyo 26.05.20 balista cost]
+!!HEx1&w83=0/y4=1:A3/5/1/1; //remove ammo cart that was bought right now
+!!OW&w83=0/y4=1:Ry1/6/d750; //give back gold spent on ammo cart
+
+!?FU7800;
+//corrects hero's w vars according to war machine equipment
+//x1: hero number
+
+!!IF:Wx1; // use hero's w variables
+!!HEx1:A2/6/?y1/?y2; //y2: nr of equipped first aid tents
+!!VRw81&y2=0/w81<>0:S0;
+!!VRw81&y2=1/w81=0:S1;
+
+!!HEx1:A2/4/?y1/?y2; //y2: nr of equipped ballistas
+!!VRw82&y2=0/w82<>0:S0;
+!!VRw82&y2=1/w82=0:S1;
+
+!!HEx1:A2/5/?y1/?y2; //y2: nr of equipped ammo carts
+!!VRw83&y2=0/w83<>0:S0;
+!!VRw83&y2=1/w83=0:S1;
+
+!?FU7801;
+//corrects hero's war machine eqipment according to hero's w vars
+//x1: hero number
+
+!!IF:Wx1; //use hero w variables
+!!HEx1:A2/6/?y1/?y2; //y2: nr of equipped ballistas
+!!HEx1&w81>=1/y2=0:A1/6/15; //equip first aid tent if necessary
+!!HEx1&w81=0/y2=1:A3/6/1/1; //remove first aid tent if necessary
+
+!!HEx1:A2/4/?y1/?y2; //y2: nr of equipped ballistas
+!!HEx1&w82>=1/y2=0:A1/4/13; //equip ballista if necessary
+!!HEx1&w82=0/y2=1:A3/4/1/1; //remove ballista if necessary
+
+!!HEx1:A2/5/?y1/?y2; //y2: nr of equipped ammo carts
+!!HEx1&w83>=1/y2=0:A1/5/14; //equip ammo cart if necessary
+!!HEx1&w83=0/y2=1:A3/5/1/1; //remove ammo cart if necessary
+
+!?FU7802;
+//deletes monsters' machine attribute
+//x1 = 0 delete monsters' machine flag
+//x1 = 1 restore monsters' machine flag
+//x2 side index
+//x16: stack number
+
+!!BMx16:I?y5 T?y6;
+!!BMx16&y6>=145/y6<=148/y5=x2:F?q F?r;
+!!VRq&y6>=145/y6<=148/y5=x2:&64;
+!!VRr&x1=0/y6>=145/y6<=148/q>0/y5=x2:-q;
+!!VRr&x1=1/y6>=145/y6<=148/q=0/y5=x2:+64;
+!!BMx16&y6>=145/y6<=148/y5=x2:Fr;
+
+!?FU7803;
+//asks for buying until player cancels
+//uses flag 2 for question
+//x1 hero number x2 x3 x4 position of object that stores number of available machines
+//x5:0 hero buys machine at blacksimth x5:1 hero buys ballista at ballista yard
+//x6:1 town sells balistas [x5 is doing something other. do not want to know what it does]  [upd rennyo 26.05.20 balista cost]
+
+!!POx2/x3/x4:H?y5 T?y6; //get number of H attribute in y5 and T in y6
+
+!!VRy1&x5=0:Sy5;
+!!VRy1&x5=1:Sy6;
+
+!!OBx2/x3/x4:U?y2; //get town subtype
+!!IF&y1>0:Wx1; //use hero's w variables
+!!VRz-1|y2=1/y2=4/y2=7:Sz173010;
+!!VRz-1|y2=0/y2=5/y2=8:Sz173011;
+!!VRz-1|y2=2/y2=3/y2=6:Sz173012;
+
+!!VRz-1&x5=1:Sz173013;
+
+!!VRz1&x6=0:Sz173014;  //  [upd rennyo 26.05.20 balista cost]
+!!VRz1&x6=1:Sz173136;  //  [upd rennyo 26.05.20 balista cost]
+!!UN:A6/9/1; //the name is changed to numbers
+!!UN:A4/9/1;
+!!UN:A5/9/1;
+
+!!IF&y1=0:M1/z173015;
+!!IF&y1=0:V2/0; //won't ask longer
+
+!!IF&y1>0/y2=1:Q2/8/6/2/z173016;
+!!IF&y1>0/y2=4:Q2/8/6/2/z173017;
+!!IF&y1>0/y2=7:Q2/8/6/2/z173018;
+
+!!IF&y1>0/y2=0:Q2/8/4/2/z173019;
+!!IF&y1>0/y2=5:Q2/8/4/2/z173020;
+!!IF&y1>0/y2=8:Q2/8/4/2/z173021;
+
+!!IF&y1>0/y2=2:Q2/8/5/2/z173022;
+!!IF&y1>0/y2=3:Q2/8/5/2/z173023;
+!!IF&y1>0/y2=6/x5=0:Q2/8/5/2/z173024;
+
+!!IF&y1>0/x5=1:Q2/8/4/2/z173025;
+
+!!UN:A6/9/0; //restore original names
+!!UN:A4/9/0;
+!!UN:A5/9/0;
+
+!!HEx1&2:O?y3;
+!!OW&2:Ry3/6/?y4; //get gold in y4
+
+**[start upd rennyo 26.05.20 balista cost]
+!!IF&2/y4<750/x6=0:M1/z173026;
+!!IF&2/y4<750/x6=0:V2/0; //set 2 to false if not enough gold
+!!OW&2/x6=0:Ry3/6/d-750; //remove 750 from gold pool
+
+
+!!IF&2/y4<2500/x6=1:M1/z173026;
+!!IF&2/y4<2500/x6=1:V2/0; //set 2 to false if not enough gold
+!!OW&2/x6=1:Ry3/6/d-2500; //remove 750 from gold pool
+**[end upd rennyo 26.05.20 balista cost]
+
+!!VRw81&2/y2=1:+1; //increment w vars if clicked yes according to town subtype
+!!VRw81&2/y2=4:+1;
+!!VRw81&2/y2=7:+1;
+!!VRw82&2/y2=0:+1;
+!!VRw82&2/y2=5:+1;
+!!VRw82&2/y2=8:+1;
+!!VRw83&2/y2=2:+1;
+!!VRw83&2/y2=3:+1;
+!!VRw83&2/y2=6/x5=0:+1;
+!!VRw82&2/y2=6/x5=1:+1;
+!!FU7801&2:Px1; //correct equipment
+!!VRy5&2/x5=0:-1; //decrement available machines
+!!VRy6&2/x5=1:-1; //we bought ballistas at the ballista yard
+
+!!VRy1&2:-1;
+!!IF&2/y1=0:M1/z173027;
+!!IF&2/y1=0:V2/0; //we bought the last machine
+
+!!POx2/x3/x4:Hy5 Ty6; //set object H and T attribute to store updated value
+!!FU7803&2:Px1/x2/x3/x4/x5/x6; //[upd rennyo 26.05.2020]ask longer if clicked yes, had enough gold and there is something to buy
+
+!?FU7804;
+//removes equipped war machines
+//x1: hero number
+!!HEx1:A2/6/?y1/?y2; //y2: nr of equipped first aid tents
+!!HEx1&y2=1:A3/6/1/1; //remove tent if present
+
+!!HEx1:A2/4/?y1/?y2; //y2: nr of equipped ballistas
+!!HEx1&y2=1:A3/4/1/1; //remove ballista if present
+
+!!HEx1:A2/5/?y1/?y2; //y2: nr of equipped ammo carts
+!!HEx1&y2=1:A3/5/1/1; //remove ammo cart if present
+
+!?FU7805;
+//updates the number of war machines for both side
+//x1: attacker hero
+//x2: defender hero
+//x16: stack number
+
+!!BMx16:N?y1 P?y2 T?y3 B?y10;  //get y1 current and y10 initial number in the y3 type stack at position y2
+!!VRy10&y2=153/y3=147:-v852;
+!!VRy10&y2=169/y3=147:-v854;
+
+!!VRy10&y2=51/y3=146:-v853;
+!!VRy10&y2=67/y3=146:-v855;
+
+!!IF:Wx1; //use attacker hero's w# variables if battle takes place on normal battlefield
+!!VRw81&790/y10<y1/y2=153/y3=147:Sy10;
+!!VRw81&790/y10>=y1/y2=153/y3=147:Sy1;
+!!VRw82&790/y10<y1/y2=51/y3=146:Sy10;
+!!VRw82&790/y10>=y1/y2=51/y3=146:Sy1;
+!!VRw83&790/y2=18/y3=148:Sy1;
+
+!!IF&x2>=0:Wx2; //use defender hero's w# variables
+!!VRw81&x2>=0/y10<y1/y2=169/y3=147:Sy10;
+!!VRw81&x2>=0/y10>=y1/y2=169/y3=147:Sy1;
+!!VRw82&x2>=0/-784/y10<y1/y2=67/y3=146:Sy10;
+!!VRw82&x2>=0/-784/y10>=y1/y2=67/y3=146:Sy1;
+!!VRw83&x2>=0/y2=32/y3=148:Sy1;
+
+!?FU7806;
+**                                                                   //sets the available number of machines at towns and war machine factory every week
+**                                                                   //x1: greatest object number
+**                                                                   //x16: object number (from back)
+**                                                                   //x2: object type
+**                                                                   //x1=f,x2=98,from 1 to f step 1
+!!VRy1:Sx1 +1 -x16;                                                  //y1=x1+1-x16;                                       run backward
+!!UN:Ux2/-1/y1/1;                                                    //v1 v2 v3 coordinates
+!!OBv1/v2/v3&x2=98:U?y2;                                             //get town subtype
+
+!!POv1/v2/v3&x2=98/v862=1:H0 T0;                                     //init H and T attributes on first day
+!!POv1/v2/v3&x2=98:H?y3 T?y4;                                        //get H and T values in towns
+
+!!IF&x2=98:V783/0;                                                   //init flag 783
+!!CAv1/v2/v3&x2=98:B3/10;                                            //check if village hall is built
+!!IF&1/x2=98:V783/1;                                                 //save flag 1
+!!CAv1/v2/v3&x2=98:B3/11;                                            //check if town hall is built
+!!IF&1/x2=98:V783/1;                                                 //save flag 1
+!!CAv1/v2/v3&x2=98:B3/12;                                            //check if city hall is built
+!!IF&1/x2=98:V783/1;                                                 //save flag 1
+!!CAv1/v2/v3&x2=98:B3/13;                                            //check if capitol is built
+!!IF&1/x2=98:V783/1;                                                 //save flag 1
+
+!!CAv1/v2/v3&x2=98:B3/16;                                            //check if blacksmith is built
+
+//towns selling first aid tents
+!!POv1/v2/v3&x2=98/y2=1/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=1/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=1/1/y3<=148/783:Hd2; //add 2 war machines/week
+!!POv1/v2/v3&x2=98/y2=4/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=4/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=4/1/y3<=148/783:Hd2; //add 2 war machines/week
+!!POv1/v2/v3&x2=98/y2=7/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=7/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=7/1/y3<=148/783:Hd2; //add 2 war machines/week
+
+//town selling ballistas
+!!POv1/v2/v3&x2=98/y2=0/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=0/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=0/1/y3<=148/783:Hd1; //add 1 war machines/week[upd rennyo 26.05.20]
+!!POv1/v2/v3&x2=98/y2=5/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=5/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=5/1/y3<=148/783:Hd1; //add 1 war machines/week[upd rennyo 26.05.20]
+!!POv1/v2/v3&x2=98/y2=8/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=8/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=8/1/y3<=148/783:Hd1; //add 1 war machines/week[upd rennyo 26.05.20]
+
+//town selling ammo carts
+!!POv1/v2/v3&x2=98/y2=2/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=2/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=2/1/y3<=148/783:Hd2; //add 2 war machines/week
+!!POv1/v2/v3&x2=98/y2=3/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=3/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=3/1/y3<=148/783:Hd2; //add 2 war machines/week
+!!POv1/v2/v3&x2=98/y2=6/-1:H1; //refresh H variable if blacksmith is not built
+!!POv1/v2/v3&x2=98/y2=6/-783:H1; //refresh H variable if town is burned down
+!!POv1/v2/v3&x2=98/y2=6/1/y3<=148/783:Hd2; //add 2 war machines/week
+
+!!CAv1/v2/v3&x2=98/y2=6:B3/22; //check if blallista yard is built
+!!POv1/v2/v3&x2=98/y2=6/-1:T1; //refresh T variable if ballista yard is not built
+!!POv1/v2/v3&x2=98/y2=6/-783:T1; //refresh T variable if town is burnt down
+!!POv1/v2/v3&x2=98/y2=6/1/y4<=148/783:Td2; //add 2 war machines/week
+
+//war machine factory
+!!POv1/v2/v3&x2=106:H42; //refresh H variable to 42 if war machine factory
+!!POv1/v2/v3&x2=106/v862=1:O-1; //no owner
+!!VRv1&x2=106:+1;
+!!POv1/v2/v3&x2=106:H42; //for right-click on adventure screen we need set PO value of the right part of the war machine factory
+!!POv1/v2/v3&x2=106/v862=1:O-1; //no owner
+
+!?FU7807;
+//set correct w vars for heroes at the beginning of the game
+//x16: hero number
+
+!!IF:Wx16;                                         //from 0 to 155 step 1                                       use hero's w# variable
+!!HEx16:A2/6/?y1/?y2;                              //SET HERO=x16;                                                   y2: nr of equipped first aid tents
+!!VRw81&y2=0:S0;                                   //y1,y2=eqiped first aid tents;
+!!VRw81&y2=1:S1;                                   //if y2=0 then w81=0;
+                                                   //if y2=1 then w81=1;
+!!HEx16:A2/4/?y1/?y2;                              //SET HERO=x16;                                                                y2: nr of equipped ballistas
+!!VRw82&y2=0:S0;                                   //y1,y2=equipped ballistas;
+!!VRw82&y2=1:S1;                                   //if y2=0 then w82=0;
+                                                   //if y2=1 then w82=1;
+!!HEx16:A2/5/?y1/?y2;                              //SET HERO=x16;                                                                y2: nr of equipped ammo carts
+!!VRw83&y2=0:S0;                                   //y1,y2=equipped ammo carts
+!!VRw83&y2=1:S1;                                   //if y2=0 then w83=0;
+                                                   //if y2=1 then w83=1;
+
+
+!?FU7808;
+//adds or removes one hit point if possible from all stacks belonging to the left or the right side
+//sum of creatures in stack is unchanged and if no hit points lost before then no hp will be removed
+//x1 = 0 don't remove one hp
+//x1 = 1 remove one hp
+//x2 = 2 add one hp
+//x2 side index
+//x16 stack number
+
+!!BMx16:H?y1 L?y2 B?y3 N?y4 I?y5; //y1 hp y2 lost y3 original number y4 actual number y5 monster side
+!!VRv856&x1=0/y2>0/y3=y4/y4>0/y5=x2:+1; //count creatures that can be healed
+!!VRy2&x1=1/y2>0/y3=y4/y4>0/y5=x2:+1; //increment lost hp
+!!VRy2&x1=2/y2>0/y3=y4/y4>0/y5=x2:-1; //decrement lost hp
+!!VRy2&x1=2/y2>0/y3=y4/y4>0/y5=x2/v868=11/x16=v875:+1; //don't decrement lost hp for the currently healed stack
+!!BMx16&x1>0/y2>0/y3=y4/y4>0/y5=x2:Ly2; //update lost hp
+!!VRv856&x1=0/y4<y3/y4>0/y5=x2:+1; //count creatures that can be healed
+!!VRy2&x1=1/y4<y3/y4>0/y5=x2:+1; //increment lost hp
+!!VRy2&x1=2/y4<y3/y4>0/y5=x2:-1; //decrement lost hp
+!!VRy2&x1=2/y4<y3/y4>0/y5=x2/v868=11/x16=v875:+1; //don't decrement lost hp for the currently healed stack
+!!BMx16&x1>0/y4<y3/y4>0/y5=x2:Ly2; //update lost hp
+
+!?FU7809;
+//gets the stack number of the randomly chosen stack
+//x1: random order number
+//x2: side index
+//x16: stack number
+//v875 will contain the exact stack number
+
+!!BMx16:H?y1 L?y2 B?y3 N?y4 I?y5; //y1 hp y2 lost y3 original number y4 actual number y5 monster side
+!!VRv856&y2>0/y3=y4/y4>0/y5=x2:+1; //count creatures that can be healed
+!!VRv856&y4<y3/y4>0/y5=x2:+1; //count creatures that can be healed
+!!VRv875&x1=v856:Sx16; //we found the stack
+!!VRx16&x1=v856:S41; //avoid calling fu7809 longer
+
+**fixed bugs, balanced specialization[upd rennyo 26.05.2020]
+!?FU7810;
+//calculates random heal value (first aid skill and specialists are taken into count)
+//x1: first skill level
+//x2: side index
+//x3: random init number
+!!VRy1:S25 *x1 +25; //y1+1 max limit for random heal
+!!VRy2:S1 Ry1; //y2 1-25/1-50/1-75/1-100 random
+!!BHx2:N?y5; //get hero number in y5
+!!HEy5|y5=8/y5=27/y5=123:E?y3/?y4; //get hero level if he/she is specialist of first aid skill
+!!VRy4|y5=8/y5=27/y5=123:*2;
+!!VRy2|y5=8/y5=27/y5=123:+y4; //calculate increased heal value
+!!VRv869:+y2; //add to 469
+
+!?FU7811;
+//called when two hero of the same color meets - only for player
+//x1 hero transfer from
+//x2 hero transfer to
+//x3 number of choice (1,2,4)
+
+!!IF:V2/1; //flag for handling "don't transfer" case
+//set label
+!!VRz1&x3=1:Sz173028;
+!!VRz1&x3=2:Sz173029;
+!!VRz1&x3=4:Sz173030;
+//set machine name
+!!VRz90&x3=1:Sz173031;
+!!VRz90&x3=2:Sz173032;
+!!VRz90&x3=4:Sz173033;
+
+!!VRz-1&x3=1:Sz173034;
+!!VRz-1&x3=2:Sz173035;
+!!VRz-1&x3=4:Sz173036;
+
+//get hero's w var
+!!IF:Wx1;
+!!VRy1&x3=1:Sw81;
+!!VRy1&x3=2:Sw82;
+!!VRy1&x3=4:Sw83;
+//init dialog box items
+!!VRz78:S^^;
+!!VRz79:S^^;
+!!VRz80:S^^;
+!!VRz81:S^^;
+!!VRz82:S^^;
+!!VRz83:S^^;
+!!VRz84:S^^;
+!!VRz85:S^^;
+!!VRz86:S^^;
+!!VRz87:S^^;
+!!VRz88:S^^;
+!!VRz89:S^^;
+//init local vars
+!!VRy2:S1;
+!!VRy3:S0;
+!!VRy7:S1;
+//get correct dialog box items
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173037;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173038;
+!!VRzy3&y2=10/y1>10:Sz173039;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173040;
+!!VRzy3&y2=10/y1>10:Sz173041;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173042;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173043;
+!!VRzy3&y2=10/y1>10:Sz173044;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173045;
+!!VRzy3&y2=10/y1>10:Sz173046;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173047;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173048;
+!!VRzy3&y2=10/y1>10:Sz173049;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173050;
+!!VRzy3&y2=10/y1>10:Sz173051;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173052;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173053;
+!!VRzy3&y2=10/y1>10:Sz173054;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173055;
+!!VRzy3&y2=10/y1>10:Sz173056;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173057;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173058;
+!!VRzy3&y2=10/y1>10:Sz173059;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173060;
+!!VRzy3&y2=10/y1>10:Sz173061;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173062;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173063;
+!!VRzy3&y2=10/y1>10:Sz173064;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173065;
+!!VRzy3&y2=10/y1>10:Sz173066;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173067;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173068;
+!!VRzy3&y2=10/y1>10:Sz173069;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173070;
+!!VRzy3&y2=10/y1>10:Sz173071;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173072;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173073;
+!!VRzy3&y2=10/y1>10:Sz173074;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173075;
+!!VRzy3&y2=10/y1>10:Sz173076;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173077;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173078;
+!!VRzy3&y2=10/y1>10:Sz173079;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173080;
+!!VRzy3&y2=10/y1>10:Sz173081;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173082;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173083;
+!!VRzy3&y2=10/y1>10:Sz173084;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173085;
+!!VRzy3&y2=10/y1>10:Sz173086;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173087;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173088;
+!!VRzy3&y2=10/y1>10:Sz173089;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173090;
+!!VRzy3&y2=10/y1>10:Sz173091;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+!!VRy7:*2;
+
+!!VRy3:+78;
+!!VRzy3&y1>=y2/y2<=10:Sz173092;
+!!VRy2:-1;
+!!VRzy3&y1=y2:Sz173093;
+!!VRzy3&y2=10/y1>10:Sz173094;
+!!VRy2:-1;
+!!VRzy3&y1=y2|y1>10:Sz173095;
+!!VRzy3&y2=10/y1>10:Sz173096;
+!!VRy8&y1=y2:Sy7;
+!!VRy8&y2=10/y1>10:Sy7;
+!!VRy2:+3;
+!!VRy3:-77;
+//show dialog box
+!!IF:G1/1/y8/1/78/79/80/81/82/83/84/85/86/87/88/89;
+//get number of row we choosed in y4
+!!VRy5:Sv1;
+!!VRv1:&1;
+!!VRy4&v1>0:S1;
+!!VRv1:Sy5;
+!!VRv1:&2;
+!!VRy4&v1>0:S2;
+!!VRv1:Sy5;
+!!VRv1:&4;
+!!VRy4&v1>0:S3;
+!!VRv1:Sy5;
+!!VRv1:&8;
+!!VRy4&v1>0:S4;
+!!VRv1:Sy5;
+!!VRv1:&16;
+!!VRy4&v1>0:S5;
+!!VRv1:Sy5;
+!!VRv1:&32;
+!!VRy4&v1>0:S6;
+!!VRv1:Sy5;
+!!VRv1:&64;
+!!VRy4&v1>0:S7;
+!!VRv1:Sy5;
+!!VRv1:&128;
+!!VRy4&v1>0:S8;
+!!VRv1:Sy5;
+!!VRv1:&256;
+!!VRy4&v1>0:S9;
+!!VRv1:Sy5;
+!!VRv1:&512;
+!!VRy4&v1>0:S10;
+!!VRv1:Sy5;
+!!VRv1:&1024;
+!!VRy4&v1>0:S11;
+!!VRv1:Sy5;
+!!VRv1:&2048;
+!!VRy4&v1>0:S12;
+!!VRv1:Sy5;
+
+//transfer y4 amount
+!!IF:Wx1;
+!!VRw81&x3=1/y1>=y4/y4<=10:-y4;
+!!VRw82&x3=2/y1>=y4/y4<=10:-y4;
+!!VRw83&x3=4/y1>=y4/y4<=10:-y4;
+!!IF:Wx2;
+!!VRw81&x3=1/y1>=y4/y4<=10:+y4;
+!!VRw82&x3=2/y1>=y4/y4<=10:+y4;
+!!VRw83&x3=4/y1>=y4/y4<=10:+y4;
+!!VRy4:-1;
+//transfer all
+!!IF:Wx1;
+!!VRy6&x3=1/y1=y4:Sw81;
+!!VRy6&x3=1/y4=10/y1>10:Sw81;
+!!VRw81&x3=1/y1=y4:S0;
+!!VRw81&x3=1/y4=10/y1>10:S0;
+!!VRy6&x3=2/y1=y4:Sw82;
+!!VRy6&x3=2/y4=10/y1>10:Sw82;
+!!VRw82&x3=2/y1=y4:S0;
+!!VRw82&x3=2/y4=10/y1>10:S0;
+!!VRy6&x3=4/y1=y4:Sw83;
+!!VRy6&x3=4/y4=10/y1>10:Sw83;
+!!VRw83&x3=4/y1=y4:S0;
+!!VRw83&x3=4/y4=10/y1>10:S0;
+!!IF:Wx2;
+!!VRw81&x3=1/y1=y4:+y6;
+!!VRw81&x3=1/y4=10/y1>10:+y6;
+!!VRw82&x3=2/y1=y4:+y6;
+!!VRw82&x3=2/y4=10/y1>10:+y6;
+!!VRw83&x3=4/y1=y4:+y6;
+!!VRw83&x3=4/y4=10/y1>10:+y6;
+
+!!FU7801:Px1; //correct eqippment
+!!FU7801:Px2; //correct eqippment
+
+!!VRy4:-1;
+//don't transfer this machine
+!!IF&y1=y4:V2/0;
+!!IF&y4=10/y1>10:V2/0;
+
+!?FU7812;
+//called when two hero of the same color meets - only for player
+//x1 transfer machine from
+//x2 transfer machine to
+
+!!VRz1:Sz173097;
+!!VRz78:Sz173098;
+!!VRz79:Sz173099;
+!!VRz80:Sz173100;
+!!VRz81:Sz173101;
+!!IF:G1/1/16/1/78/79/80/81/0/0/0/0/0/0/0/0;
+!!VRy1:Sv1; //save v1 var fu7811 may change it
+!!FU7811&y1<>8:Px1/x2/v1;
+!!FU7812&y1<>8:Px1/x2;
+
+!?FU7813;
+//called when buying machines at war machine factory
+//x1 x2 x3 pos of war machine factory
+//x4 x5 x6 amount of machines to buy
+//x7 hero number
+
+//v852 v853 v854 stores number of available tents, ballistas, ammo carts
+!!IF:V790/1; //init 790
+
+!!POx1/x2/x3:H?y1; //y1 is the machine number available
+!!VRy2:Sy1;
+!!VRy2::16; //y2 number of ammo carts
+!!VRy3:Sy2;
+!!VRy3:*16;
+!!VRy1:-y3;
+!!VRy3:Sy1;
+!!VRy3::4; //y3 number of ballistas
+!!VRy4:Sy3;
+!!VRy4:*4;
+!!VRy1:-y4;
+!!VRy4:Sy1; //y4 number of tents
+
+!!VRy2:-x6;
+!!VRy3:-x5;
+!!VRy4:-x4;
+
+!!HEx7:O?y5;
+!!VRy6:S0 +x5 *2500; //[upd rennyo 26.05.20 ballista cost 2500]
+!!VRy7:S0 +x4 +x6 *750; //[upd rennyo 26.05.20 ballista cost 2500]
+!!VRy6:+y7;             //y6: money to spend
+!!OW:Ry5/6/?y7;
+!!VRy7:-y6;
+
+!!IF&y7<0:V790/0; //not enough gold
+
+!?FU7813&790; //continue if gold resource enables
+!!VRv852:Sy4;
+!!VRv853:Sy3;
+!!VRv854:Sy2;
+!!OW:Ry5/6/y7;
+!!VRy2:*16;
+!!VRy3:*4;
+!!VRy2:+y3 +y4;
+!!POx1/x2/x3:Hy2; //refresh objects H counter
+!!VRx1:+1;
+!!POx1/x2/x3:Hy2; //refresh objects H counter, for right-click on adventure screen we need set PO value of the right part of the war machine factory
+!!IF:Wx7;
+!!VRw81:+x4; //modify hero's w vars
+!!VRw82:+x5;
+!!VRw83:+x6;
+!!FU7801:Px7; //correct equipment
+
+!?FU7814;
+//called when player is at war machine factory
+//x1 x2 x3 pos of war machine factory
+//x4 hero number
+
+!!VRz1:Sz173102;
+!!VRz78:Sz173103;
+!!VRz79:Sz173104;
+!!VRz80:Sz173105;
+!!VRz81:Sz173106;
+!!VRy1:Sv852 *750;
+!!VRy3:Sv854 *750;
+!!VRy2:Sv853 *2500;
+
+!!VRy4:Sy1 +y2 +y3;
+!!VRy5:Sv852 +v853 +v854;
+
+
+!!if&y5>0;
+  !!VRz82:Sz173137;
+  !!IF:G1/1/8/1/78/79/80/82/81/0/0/0/0/0/0/0;
+!!el;
+  !!VRz82:S^^;
+  !!IF:G1/1/16/1/78/79/80/82/81/0/0/0/0/0/0/0;
+
+!!en;
+
+!?FU7814&v1=1; //we choosed first aid tent to buy
+!!VRz1:Sz173107;
+!!VRz78:Sz173108;
+!!VRz79:Sz173109;
+!!VRz80:Sz173110;
+!!VRz78&v852<1:S^^;
+!!VRz79&v852<2:S^^;
+!!IF:G1/2/4/1/78/79/80/0/0/0/0/0/0/0/0/0;
+!!FU7813&v2=1:Px1/x2/x3/1/0/0/x4; //we will buy 1 tent
+!!FU7813&v2=2:Px1/x2/x3/2/0/0/x4; //we will buy 2 tents
+
+!?FU7814&v1=2; //we choosed ballista to buy
+!!VRz1:Sz173111;
+!!VRz78:Sz173112;
+!!VRz79:Sz173113;
+!!VRz80:Sz173114;
+!!VRz78&v853<1:S^^;
+!!VRz79&v853<2:S^^;
+!!IF:G1/2/4/1/78/79/80/0/0/0/0/0/0/0/0/0;
+!!FU7813&v2=1:Px1/x2/x3/0/1/0/x4; //we will buy 1 ballista
+!!FU7813&v2=2:Px1/x2/x3/0/2/0/x4; //we will buy 2 ballistas
+
+!?FU7814&v1=4; //we choosed ammo cart to buy
+!!VRz1:Sz173115;
+!!VRz78:Sz173116;
+!!VRz79:Sz173117;
+!!VRz80:Sz173118;
+!!VRz78&v854<1:S^^;
+!!VRz79&v854<2:S^^;
+!!IF:G1/2/4/1/78/79/80/0/0/0/0/0/0/0/0/0;
+!!FU7813&v2=1:Px1/x2/x3/0/0/1/x4; //we will buy 1 ammo carts
+!!FU7813&v2=2:Px1/x2/x3/0/0/2/x4; //we will buy 2 ammo carts
+
+!?FU7814&v1=8; //we choosed all the war machines to buy
+
+!!FU7813:Px1/x2/x3/v852/v853/v854/x4; //we will buy 2 ammo carts
+
+!?FU7814; //continue function
+!!IF&-790:M1/z173119;
+!!if&790/v1=8;
+  !!FU:E;
+  !!IF:V790/1; //restore flag 790
+!!en;
+!!IF:V790/1; //restore flag 790
+!!FU7814&v1<>8/v1<>16:Px1/x2/x3/x4; //call buy again if we don't choose leaving
+
+!?FU7815;
+//called when AI is at war machine factory
+//x1 x2 x3 war machine pos
+//x4 hero number
+
+!!FU7813&v852>0:Px1/x2/x3/1/0/0/x4;
+!!FU7815&v852>0/790:Px1/x2/x3/x4; call again so ai can go on buying tents if there is enough gold
+!!FU7813&v853>0:Px1/x2/x3/0/1/0/x4;
+!!FU7815&v853>0/790:Px1/x2/x3/x4; call again so ai can go on buying ballistas if there is enough gold
+!!FU7813&v854>0:Px1/x2/x3/0/0/1/x4;
+!!FU7815&v854>0/790:Px1/x2/x3/x4; call again so ai can go on buying ammo carts if there is enough gold
+
+!?FU7816;
+//called when AI buys machines in town
+//x1 hero number
+//x2 x3 x4 town position
+//x5: 0 blacksmith x5: 1 ballista yard
+
+!!IF:V2/1; //init flag 2
+!!POx2/x3/x4:H?y5 T?y6; //get available machine
+
+!!VRy1&x5=0:Sy5;
+!!VRy1&x5=1:Sy6;
+
+!!IF&y1=0:V2/0; //there is no machine available
+!!OBx2/x3/x4:U?y2; //get town subtype
+!!HEx1:O?y3; //get hero owner
+!!OW:Ry3/6/?y4; //get owner's gold
+!!IF&y4<750:V2/0; //AI has got not enough money
+!!IF:Wx1; //use hero's w vars
+
+!!VRw81&2/y2=1:+1;
+!!VRw81&2/y2=4:+1;
+!!VRw81&2/y2=7:+1;
+
+!!VRw82&2/y2=0:+1;
+!!VRw82&2/y2=5:+1;
+!!VRw82&2/y2=8:+1;
+
+!!VRw83&2/y2=2:+1;
+!!VRw83&2/y2=3:+1;
+!!VRw83&2/y2=6/x5=0:+1;
+!!VRw82&2/y2=6/x5=1:+1;
+
+!!OW&2:Ry3/6/d-750; //decrease AI's gold
+!!VRy5&2/x5=0:-1; //decrement number of available machine
+!!VRy6&2/x5=1:-1;
+!!POx2/x3/x4:Hy5 Ty6; //refresh H and T value of town
+!!FU7801&2:Px1; //correct equipment
+!!FU7816&2:Px1/x2/x3/x4/x5; //continue buying if AI could buy this machine
+
+!?FU7817;
+//called when two hero of the same color meet - only for AI
+//x1 hero transfer machine from
+//x2 hero transfer machine from
+
+!!VRh:S0;
+!!VRi:S0;
+!!HEx1:C0/0/?f/?g; //vg number of monsters
+!!VRh:+g;
+!!HEx1:C0/1/?f/?g; //vg number of monsters
+!!VRh:+g;
+!!HEx1:C0/2/?f/?g; //vg number of monsters
+!!VRh:+g;
+!!HEx1:C0/3/?f/?g; //vg number of monsters
+!!VRh:+g;
+!!HEx1:C0/4/?f/?g; //vg number of monsters
+!!VRh:+g;
+!!HEx1:C0/5/?f/?g; //vg number of monsters
+!!VRh:+g;
+!!HEx1:C0/6/?f/?g; //vg number of monsters
+!!VRh:+g;
+
+!!HEx2:C0/0/?f/?g; //vg number of monsters
+!!VRi:+g;
+!!HEx2:C0/1/?f/?g; //vg number of monsters
+!!VRi:+g;
+!!HEx2:C0/2/?f/?g; //vg number of monsters
+!!VRi:+g;
+!!HEx2:C0/3/?f/?g; //vg number of monsters
+!!VRi:+g;
+!!HEx2:C0/4/?f/?g; //vg number of monsters
+!!VRi:+g;
+!!HEx2:C0/5/?f/?g; //vg number of monsters
+!!VRi:+g;
+!!HEx2:C0/6/?f/?g; //vg number of monsters
+!!VRi:+g;
+
+!!IF:Wx1;
+!!VRj:Sw81;
+!!VRk:Sw82;
+!!VRl:Sw83;
+!!IF:Wx2;
+!!VRm:Sw81;
+!!VRn:Sw82;
+!!VRo:Sw83;
+
+!!VRj&h>i:+m;
+!!VRk&h>i:+n;
+!!VRl&h>i:+o;
+!!VRm&h>i:S0;
+!!VRn&h>i:S0;
+!!VRo&h>i:S0;
+!!VRm&i>h:+j;
+!!VRn&i>h:+k;
+!!VRo&i>h:+l;
+!!VRj&i>h:S0;
+!!VRk&i>h:S0;
+!!VRl&i>h:S0;
+
+!!IF:Wx1;
+!!VRw81:Sj;
+!!VRw82:Sk;
+!!VRw83:Sl;
+
+!!IF:Wx2;
+!!VRw81:Sm;
+!!VRw82:Sn;
+!!VRw83:So;
+
+!!FU7801:Px1; //correct equipment
+!!FU7801:Px2; //correct equipment
+
+!?FU7818;
+//called when two hero of the same color meets - only for player
+//x1 hero that triggered meeting
+//x2 other hero
+
+!!HEx1:B0/?z-1;
+!!HEx2:B0/?z-2;
+!!VRz-3:Sz173120;
+!!VRz-4:Sz173121;
+!!VRz-5:Sz173122;
+!!VRz-6:Sz173123;
+
+!!IF:G1/1/4/-3/-4/-5/-6/0/0/0/0/0/0/0/0/0; //show dialog box
+!!VRy1:Sv1; //safe v1 because fu7812 may change it
+!!FU7812&y1=1:Px1/x2;
+!!FU7812&y1=2:Px2/x1;
+
+!!FU7818&y1<>4:Px1/x2; //call again if we don't change cancel
+
+!?FU7819;
+//called when two hero meets
+//x1 hero that triggered meeting
+//x2 other hero
+!!FU7799:Px1; //dismiss original war machines
+!!FU7799:Px2; //dismiss original war machines
+!!HEx1:O?y1; //get the owner
+!!OW:Gy1/?y3; //multiplayer check
+!!HEx2:O?y2; //get the owner
+!!VRv878|x1<>v876/x2<>v877:S1; //another hero pair
+!!VRv878&x1=v876/x2=v877:+1; //count encounter in v878 if they have met already
+!!VRv878:%2;
+!!FU7801:Px1; //correct equipment, needed if we transferred machines by hand on meeting screen, added machine to allied hero or AI transfered it to an allied hero
+!!FU7801:Px2; //correct equipment, needed if we transferred machines by hand on meeting screen, added machine to allied hero or AI transfered it to an allied hero
+!!FU7817&-1000/y1=y2/v878=0:Px1/x2; //transfer AI
+
+!!VRv876:Sx1; //refresh v876
+!!VRv877:Sx2; //refresh v877
+
+!?FU7820;
+//calculates sum of hp of monsters on the battlefield - only for monsters without a hero
+//x16 stack num
+
+!!BMx16:I?y3; //get side index
+!!BMx16&y3=1:H?y1 N?y2 T?y4; //get ceature number, hp and type
+!!VRy2&y3=1:*y1; //calculate hp of stack
+!!VRv879&y3=1/y4<>146/y4<>147/y4<>148:+y2; //add hp to v879 if it is not a war machine
+
+--------------- T R I G G E R S  F O R  H E R O  M E E T I N G --------------
+
+!?CM3&v847=1; //transfer window
+!!CM:S?s; //get click subtype
+!!CM:H?f/?g; //get the left and right hero
+!!CM:I?v883; //get the slot number
+!!IF:V2/0;
+!!CM|v883=40/v883=41/v883=42/v883=59/v883=60/v883=61:R0; //dismiss mouse action
+!!HEf:O?h; //get the owner
+!!OW:Gh/?i; //multiplayer check
+!!HEg:O?j; //get the owner
+!!FU7811&v883=42/h=j/i=1/s=12:Pf/g/1; //war machine transfer between heroes
+!!FU7811&v883=61/h=j/i=1/s=12:Pg/f/1;
+!!FU7811&v883=40/h=j/i=1/s=12:Pf/g/2;
+!!FU7811&v883=59/h=j/i=1/s=12:Pg/f/2;
+!!FU7811&v883=41/h=j/i=1/s=12:Pf/g/4;
+!!FU7811&v883=60/h=j/i=1/s=12:Pg/f/4;
+
+!!FU7800&f>=0:Pf; //to show correct w vars
+!!FU7800&g>=0:Pg; //to show correct w vars
+!!IF:V3/0;
+!!IF&s=14:V3/1; //right click
+!!IF|v883=40/v883=41/v883=42:V2/0; //left hero chosen - stored in flag 2
+!!IF|v883=59/v883=60/v883=61:V2/1; //right hero chosen
+!!IF:V4/0;
+!!IF|v883=40/v883=41/v883=42/v883=59/v883=60/v883=61:V4/1;
+
+!?CM3&-2/3/4/v847=1; //left hero
+!!IF:Wf; //use hero's w# variables
+!!HEf:B0/?z1; //get hero name
+!!VRz2&v883=40:S^%W82^;
+!!VRz3&v883=40/w82<=1:Sz173124;
+!!VRz3&v883=40/w82>1:Sz173125;
+!!VRz2&v883=41:S^%W83^;
+!!VRz3&v883=41/w83<=1:Sz173126;
+!!VRz3&v883=41/w83>1:Sz173127;
+!!VRz2&v883=42:S^%W81^;
+!!VRz3&v883=42/w81<=1:Sz173128;
+!!VRz3&v883=42/w81>1:Sz173129;
+
+!!IF:Q1/-1/-1/-1/-1/-1/-1/4/z173130;
+
+!?CM3&2/3/4/v847=1; //right hero
+!!IF:Wg; //use hero's w# variables
+!!HEg:B0/?z1; //get hero name
+!!VRz2&v883=59:S^%W82^;
+!!VRz3&v883=59/w82<=1:Sz173131;
+!!VRz3&v883=59/w82>1:Sz173132;
+!!VRz2&v883=60:S^%W83^;
+!!VRz3&v883=60/w83<=1:Sz173133;
+!!VRz3&v883=60/w83>1:Sz173134;
+!!VRz2&v883=61:S^%W81^;
+!!VRz3&v883=61/w81<=1:Sz173135;
+!!VRz3&v883=61/w81>1:Sz173136;
+
+!!IF:Q1/-1/-1/-1/-1/-1/-1/4/z173130;
+
+!?HE0&v847=1;
+!!VRf:S0;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE1&v847=1;
+!!VRf:S1;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE2&v847=1;
+!!VRf:S2;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE3&v847=1;
+!!VRf:S3;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE4&v847=1;
+!!VRf:S4;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE5&v847=1;
+!!VRf:S5;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE6&v847=1;
+!!VRf:S6;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE7&v847=1;
+!!VRf:S7;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE8&v847=1;
+!!VRf:S8;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE9&v847=1;
+!!VRf:S9;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE10&v847=1;
+!!VRf:S10;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE11&v847=1;
+!!VRf:S11;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE12&v847=1;
+!!VRf:S12;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE13&v847=1;
+!!VRf:S13;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE14&v847=1;
+!!VRf:S14;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE15&v847=1;
+!!VRf:S15;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE16&v847=1;
+!!VRf:S16;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE17&v847=1;
+!!VRf:S17;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE18&v847=1;
+!!VRf:S18;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE19&v847=1;
+!!VRf:S19;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE20&v847=1;
+!!VRf:S20;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE21&v847=1;
+!!VRf:S21;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE22&v847=1;
+!!VRf:S22;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE23&v847=1;
+!!VRf:S23;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE24&v847=1;
+!!VRf:S24;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE25&v847=1;
+!!VRf:S25;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE26&v847=1;
+!!VRf:S26;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE27&v847=1;
+!!VRf:S27;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE28&v847=1;
+!!VRf:S28;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE29&v847=1;
+!!VRf:S29;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE30&v847=1;
+!!VRf:S30;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE31&v847=1;
+!!VRf:S31;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE32&v847=1;
+!!VRf:S32;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE33&v847=1;
+!!VRf:S33;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE34&v847=1;
+!!VRf:S34;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE35&v847=1;
+!!VRf:S35;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE36&v847=1;
+!!VRf:S36;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE37&v847=1;
+!!VRf:S37;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE38&v847=1;
+!!VRf:S38;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE39&v847=1;
+!!VRf:S39;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE40&v847=1;
+!!VRf:S40;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE41&v847=1;
+!!VRf:S41;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE42&v847=1;
+!!VRf:S42;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE43&v847=1;
+!!VRf:S43;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE44&v847=1;
+!!VRf:S44;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE45&v847=1;
+!!VRf:S45;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE46&v847=1;
+!!VRf:S46;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE47&v847=1;
+!!VRf:S47;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE48&v847=1;
+!!VRf:S48;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE49&v847=1;
+!!VRf:S49;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE50&v847=1;
+!!VRf:S50;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE51&v847=1;
+!!VRf:S51;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE52&v847=1;
+!!VRf:S52;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE53&v847=1;
+!!VRf:S53;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE54&v847=1;
+!!VRf:S54;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE55&v847=1;
+!!VRf:S55;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE56&v847=1;
+!!VRf:S56;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE57&v847=1;
+!!VRf:S57;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE58&v847=1;
+!!VRf:S58;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE59&v847=1;
+!!VRf:S59;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE60&v847=1;
+!!VRf:S60;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE61&v847=1;
+!!VRf:S61;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE62&v847=1;
+!!VRf:S62;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE63&v847=1;
+!!VRf:S63;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE64&v847=1;
+!!VRf:S64;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE65&v847=1;
+!!VRf:S65;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE66&v847=1;
+!!VRf:S66;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE67&v847=1;
+!!VRf:S67;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE68&v847=1;
+!!VRf:S68;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE69&v847=1;
+!!VRf:S69;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE70&v847=1;
+!!VRf:S70;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE71&v847=1;
+!!VRf:S71;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE72&v847=1;
+!!VRf:S72;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE73&v847=1;
+!!VRf:S73;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE74&v847=1;
+!!VRf:S74;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE75&v847=1;
+!!VRf:S75;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE76&v847=1;
+!!VRf:S76;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE77&v847=1;
+!!VRf:S77;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE78&v847=1;
+!!VRf:S78;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE79&v847=1;
+!!VRf:S79;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE80&v847=1;
+!!VRf:S80;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE81&v847=1;
+!!VRf:S81;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE82&v847=1;
+!!VRf:S82;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE83&v847=1;
+!!VRf:S83;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE84&v847=1;
+!!VRf:S84;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE85&v847=1;
+!!VRf:S85;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE86&v847=1;
+!!VRf:S86;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE87&v847=1;
+!!VRf:S87;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE88&v847=1;
+!!VRf:S88;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE89&v847=1;
+!!VRf:S89;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE90&v847=1;
+!!VRf:S90;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE91&v847=1;
+!!VRf:S91;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE92&v847=1;
+!!VRf:S92;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE93&v847=1;
+!!VRf:S93;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE94&v847=1;
+!!VRf:S94;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE95&v847=1;
+!!VRf:S95;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE96&v847=1;
+!!VRf:S96;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE97&v847=1;
+!!VRf:S97;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE98&v847=1;
+!!VRf:S98;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE99&v847=1;
+!!VRf:S99;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE100&v847=1;
+!!VRf:S100;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE101&v847=1;
+!!VRf:S101;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE102&v847=1;
+!!VRf:S102;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE103&v847=1;
+!!VRf:S103;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE104&v847=1;
+!!VRf:S104;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE105&v847=1;
+!!VRf:S105;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE106&v847=1;
+!!VRf:S106;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE107&v847=1;
+!!VRf:S107;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE108&v847=1;
+!!VRf:S108;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE109&v847=1;
+!!VRf:S109;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE110&v847=1;
+!!VRf:S110;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE111&v847=1;
+!!VRf:S111;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE112&v847=1;
+!!VRf:S112;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE113&v847=1;
+!!VRf:S113;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE114&v847=1;
+!!VRf:S114;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE115&v847=1;
+!!VRf:S115;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE116&v847=1;
+!!VRf:S116;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE117&v847=1;
+!!VRf:S117;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE118&v847=1;
+!!VRf:S118;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE119&v847=1;
+!!VRf:S119;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE120&v847=1;
+!!VRf:S120;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE121&v847=1;
+!!VRf:S121;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE122&v847=1;
+!!VRf:S122;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE123&v847=1;
+!!VRf:S123;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE124&v847=1;
+!!VRf:S124;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE125&v847=1;
+!!VRf:S125;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE126&v847=1;
+!!VRf:S126;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE127&v847=1;
+!!VRf:S127;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE128&v847=1;
+!!VRf:S128;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE129&v847=1;
+!!VRf:S129;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE130&v847=1;
+!!VRf:S130;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE131&v847=1;
+!!VRf:S131;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE132&v847=1;
+!!VRf:S132;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE133&v847=1;
+!!VRf:S133;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE134&v847=1;
+!!VRf:S134;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE135&v847=1;
+!!VRf:S135;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE136&v847=1;
+!!VRf:S136;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE137&v847=1;
+!!VRf:S137;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE138&v847=1;
+!!VRf:S138;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE139&v847=1;
+!!VRf:S139;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE140&v847=1;
+!!VRf:S140;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE141&v847=1;
+!!VRf:S141;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE142&v847=1;
+!!VRf:S142;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE143&v847=1;
+!!VRf:S143;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE144&v847=1;
+!!VRf:S144;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE145&v847=1;
+!!VRf:S145;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE146&v847=1;
+!!VRf:S146;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE147&v847=1;
+!!VRf:S147;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE148&v847=1;
+!!VRf:S148;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE149&v847=1;
+!!VRf:S149;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE150&v847=1;
+!!VRf:S150;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE151&v847=1;
+!!VRf:S151;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE152&v847=1;
+!!VRf:S152;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE153&v847=1;
+!!VRf:S153;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE154&v847=1;
+!!VRf:S154;
+!!HE-1:N?g;
+!!FU7819:Pg/f;
+
+!?HE155&v847=1;
+!!VRf:S155;
+!!HE-1:N?g;
+!!FU7819:Pg/f;

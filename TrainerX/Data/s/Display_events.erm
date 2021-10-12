@@ -1,0 +1,137 @@
+ZVSE2
+; Author:   Valery & gamecreator, edited by Archer30
+; Engine:   ERM 2.0+
+; Requires: ERA 3.3+, Era Erm Framework
+
+; Toggle event displaying.
+
+
+!?FU78006990;
+!!UN:Ux1/-1/-1/1; event in v1/v2/v3
+!!UN:Iv1/v2/v3/63/64;
+
+!?FU(OnGameEnter);
+;display events @gamecreator
+!!SN:L^EraPlugins\erm_hooker.era^/?y1 Ay1/^SetHook^/?y2;
+
+!!if&y2<>0;
+  !!SN:Ey2/1/7658344/1073848320; enable OB26 trigger
+  !!SN:Ey2/1/7658538/1208066048; enable OB26 post-trigger
+!!en;
+
+!?FU(trainer_SetUpDisplayEvents);
+!!if&i^trainer_events_on^=(FALSE);
+  !!UN:U26/-1/?y10; [Number of events on the map: y10]
+  !!VRv1:S-1; [Initialize v1 to -1 to work with new faster UN:U syntax]
+  !!DO78006990/1/y10/1&y10>0:P26; [Cycle through all events]
+  !!VRi^trainer_events_on^:S(TRUE);
+  !!SN:T^trainer.addEventsOn^/?z2;
+  !!IF:L^%z2^;
+  !!VRz1:S^Military.wav^;
+  !!SN:Pz1;
+!!el;
+  !!UN:U26/-1/?y10; [Number of events on the map: y10]
+  !!VRv6:S-1; [Initialize v1 to -1 to work with new faster UN:U syntax]
+  !!UN:U26/-1/?y10; [Number of events on the map: y10]
+  !!FU78007010:P63/64/?v5; get object id of 63/64
+  !!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
+  !!DO78007000/1/y10/1&y10>0:Pv5/26; [Cycle through all events]
+  !!VRi^trainer_events_on^:S(FALSE);
+  !!SN:T^trainer.addEventsOff^/?z2;
+  !!IF:L^%z2^;
+!!en;
+
+!?FU78007010;
+; x1 = type
+; x2 = subtype
+; returns x3 = id
+!!UN:C6919480/4/?y1; 0x699538
+!!VRy1:+129908; 0x1FB74
+!!UN:Cy1/4/?y2; y2 = type table
+!!VRy1:+4;
+!!UN:Cy1/4/?y3; y3 = type table end
+!!VRy4:Sy2 +56; y4 = y2 + 0x38 offset type
+!!VRy5:Sy2 +60; y5 = y2 + 0x3C offset subtype
+; loop start
+!!VRx3&y4>y3:S-1; not found, return -1
+!!FU&y4>y3:E; not found, exit
+
+!!UN:Cy4/4/?y6 Cy5/4/?y7; y6 = type, y7 = subtype
+!!VRx3&y6=x1/y7=x2:Sy4 -56 -y2 :68; found, calculate index
+!!FU&y6=x1/y7=x2:E; found, exit
+
+!!VRy4:+68; next type
+!!VRy5:+68; next subtype
+!!SN:G7; loop end
+
+!?FU78007000;
+; x1 = object id
+; x2 = target tile type
+!!UN:C6919480/4/?y1; 0x699538
+!!VRy20:Sy1 +129924; 0x1FB84
+!!UN:Cy20/4/?y20; y20 = graphic table
+!!VRy1:+130112; 0x1FC40
+!!UN:Cy1/4/?y2; y2 = map tiles
+!!VRy1:+4;
+!!UN:Cy1/4/?y3; y3 = map size
+!!UN:Ux2/-1/-1/2; get next tile coords to v2/v3/v4
+!!VRy5:Sv4 *y3 +v3 *y3 +v2 *38 +y2 +18; y5 = tile + 0x12 offset render, 0x26 is tile size
+!!UN:Cy5/4/?y6; y6 = render
+!!VRy5:+4; y5 = tile + 0x16 offset render end
+!!UN:Cy5/4/?y7; y7 = render end
+!!VRy8:Sy6; y8 = render shifted
+; loop start
+!!FU&y8>=y7:E; end render, exit
+
+!!UN&y6<>y8:Cy6/4/?y9 Cy8/4/y9; shift render
+!!UN:Cy8/2/?y9; get graphic id
+!!VRy9:*12 +y20 +8; y9 = graphic + 0x8 offset object id, 0xC is graphic size
+!!UN:Cy9/2/?y10; y10 = object id
+*!IF:M^(%Y9) %Y10 = %X1^;
+
+!!if&y10=x1; found
+  !!VRy7:-4; reduce table
+  !!UN:Cy5/4/y7; save
+!!el; not found
+  !!VRy8:+4; next render
+!!en;
+
+!!VRy6:+4; next render unprocessed
+!!SN:G13; loop end
+
+!?FU78007020;
+; x1 = object id
+; x2/x3/x4 = x/y/l
+!!UN:C6919480/4/?y1; 0x699538
+!!VRy20:Sy1 +129924; 0x1FB84
+!!UN:Cy20/4/?y20; y20 = graphic table
+!!VRy1:+130112; 0x1FC40
+!!UN:Cy1/4/?y2; y2 = map tiles
+!!VRy1:+4;
+!!UN:Cy1/4/?y3; y3 = map size
+!!VRy5:Sx4 *y3 +x3 *y3 +x2 *38 +y2 +18; y5 = tile + 0x12 offset render, 0x26 is tile size
+!!UN:Cy5/4/?y6; y6 = render
+!!VRy5:+4; y5 = tile + 0x16 offset render end
+!!UN:Cy5/4/?y7; y7 = render end
+!!VRy8:Sy6; y8 = render shifted
+; loop start
+!!FU&y8>=y7:E; end render, exit
+
+!!UN&y6<>y8:Cy6/4/?y9 Cy8/4/y9; shift render
+!!UN:Cy8/2/?y9; get graphic id
+!!VRy9:*12 +y20 +8; y9 = graphic + 0x8 offset object id, 0xC is graphic size
+!!UN:Cy9/2/?y10; y10 = object id
+
+!!if&y10=x1; found
+  !!VRy7:-4; reduce table
+  !!UN:Cy5/4/y7; save
+!!el; not found
+  !!VRy8:+4; next render
+!!en;
+
+!!VRy6:+4; next render unprocessed
+!!SN:G12; loop end
+
+!$OB26&1000;
+!!FU78007010:P63/64/?v5;
+!!FU78007020:Pv5/v998/v999/v1000;

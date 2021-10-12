@@ -1,0 +1,579 @@
+ZVSE2
+; gem_functions.erm
+; version 1.00
+; author: daemon_n.
+
+********************************Add Own Button In Town Menu Dialog**********************************
+Allows to add own inTown interaction via Custom Dialog i ve made
+You need set .def of the button -- recomend size is 66x32 px
+buttons are added one by one, depend on the called "gem_AddTownButton" function amount
+
+
+!?FU(gem_OnOpenButtonDlg); 
+Triggers when buttons been added. Occurs when Dialog being called;
+Use this for adding your button;
+You can only set!
+
+;*!FU(gem_AddTownButton):P(z1)/(z2)/(z3)/(y1)/(y2)/(y3)/(y4); function of the btn adding
+;(z1) = ^myOwnDef.def^ - Name of The .def file for the button;
+;(z2) = ^textHintWhenMouseOver^ - contents Hint for the button in bottom part
+;(z3) = ^RightCLickingText^ - PopUp message on the Right-CLicking on the your button
+;(y1) = (FunctionNameToLaunch) - name of the function, use without symbols like (!FU) and (;)
+;(y2) = optional integer 1st value for the your function launch, leave it empty, if not needed
+;(y3) = optional integer 2nd value for the your function launch, leave it empty, if not needed
+;(y4) = optional integer 3rd value for the your function launch, leave it empty, if not needed
+
+!?FU(gem_OnOpenButtonDlg); 
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/0/0;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me1^/^text for me^/(gem_some_rand_fu)/0/0/1;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me3^/^text for me^/(gem_some_rand_fu)/0/0/2;
+  *!FU(gem_AddTownButton):P^resource.def^/^hint for me2^/^text for me^/(gem_some_rand_fu)/0/1/0;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/1/2;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/2/0;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/2/1;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/2/2;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/1/0/0;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/^gem_some_rand_fu^/4/5/6;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me1^/^text for me^/(gem_some_rand_fu)/4/5/6;
+  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me3^/^text for me^/(gem_some_rand_fu)/4/5/6;
+!?FU(gem_some_rand_fu);
+  *!IF:M^%x1 %x2 %x3^;
+
+!?FU(gem_CheckModFolderNameExists);         [that function get mod list in array from !FU(gem_GetModList) and compare each folder with]
+!#VA(modNameForCheck:x) (isExist:x);
+  !!VR(emptyStr:z):S^%z(modNameForCheck)^ H1;
+  !!if|1/(emptyStr)=^^;        [show error if mod name is not string or empty]
+    !!IF:M^{The mod name you are trying to check is incorrect!}^;
+    !!FU:E;
+  !!en;
+
+  !!VR(textModNameForCheck:z):S^%z(modNameForCheck)^;
+  !!FU(gem_GetModList):P?(modListArrayID:y)/?(modsAmount:y);
+
+  !!FU(StrToLower):P(textModNameForCheck)/?(textModNameForCheck);
+
+  !!re i/0/(modsAmount)/1/-1;
+    !!SN:M(modListArrayID)/i/?(modName:z);
+    !!FU(StrToLower):P(modName)/?(modName);
+
+    !!if&(textModNameForCheck)=(modName);
+      !!VR(isExist):S(TRUE);
+      !!FU:E;    
+    !!en;
+  !!en;
+
+  !!VR(isExist):S(FALSE);
+
+
+!?FU(gem_GetModList);
+!#VA(modListArrayID:x) (modsAmount:x) (modListGlobalVar:x); 
+  !!FU:A?(numArgs:y);
+
+  *!if&(numArgs)<2;
+    *!SN:F^ShowErmError^/^Substr: invalid arguments number. Expected at least {2} arguments^;
+    *!FU:E;
+  *!en;
+
+
+  !!SN:L^vfs.dll^/?(dll:y) A(dll)/^GetMappingsReportA^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL);
+  !!SN:Bv1/v1/?s^gem_modList^;
+  !!VR(savedV1:y):Sv1;
+  !!SN:A(dll)/^MemFree^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL)/(savedV1);
+  !!SN:Ks^gem_modList^/?(textLength:y);
+
+  !!VR(garbageLength:y):S(NULL);
+  !!VR(endOfGarbage:y):S(NULL);
+  !!VR(skipNextText:y):S(FALSE);
+  !!FU(NewIntArray):P?(modNamesEndings:y);
+  !!VRs^gem_modListCut^:S^^;
+
+  !!re i/0/(textLength)/1/-1;
+
+    !!SN:Ks^gem_modList^/i/?(textSymbol:z);
+
+    !!if&(textSymbol)=^$^;
+      !!VRi:+10;
+      !!VRk:Si+1;
+      !!VR(modStart:y):Sk;
+      !!co;
+    !!en;
+
+    !!if&(textSymbol)=^[^;
+      !!if&(garbageLength);
+        !!VRi:+(garbageLength);
+        !!co;
+      !!el;
+        !!VR(startOfTextGarbage:y):Si;
+        !!VR(skipNextText):S(TRUE);
+      !!en;
+    !!en;
+
+    !!if&(textSymbol)=^]^;
+        !!VR(garbageLength):Si -(startOfTextGarbage);
+        !!VR(skipNextText):S(FALSE);
+        !!co;
+    !!en;
+
+    !!VRs^gem_modListCut^&(skipNextText)=(FALSE):+^%(textSymbol)^;
+  !!en;
+
+  !!SN:Ks^gem_modListCut^/?(textLength:y);
+
+  !!FU(NewStrArray):P?(modListArrayID);
+
+  !!re i/0/(textLength)/1/-1;
+    !!SN:Ks^gem_modListCut^/i/?(textSymbol);
+
+    !!if&(textSymbol)=^\^;
+      !!VR(modsAmount):+1;
+      !!co;
+    !!en;
+
+    !!VRs^gem_mod_no_%(modsAmount)^:+(textSymbol);
+  !!en;
+
+  !!VRs^gem_modList^:S^^;
+  !!VRs^gem_modListCut^:S^^;
+
+  !!re i/1/(modsAmount);
+    !!VRs^gem_mod_no_%i^:M6/?(latSymbol:y);
+    !!VR(latSymbol):+1;
+    !!VRs^gem_mod_no_%i^:M1/s^gem_mod_no_%i^/0/(latSymbol);
+    !!FU(Array_Push):P(modListArrayID)/s^gem_mod_no_%i^;
+
+    !!if&(numArgs)>2;                                   [if user asked mod list]
+      !!VRs^gem_modListCut^:+^%s(gem_mod_no_%i)
+^;                                             [add mod to the list on the next line]
+    !!en;
+
+    !!VRs^gem_mod_no_%i^:S^^;                           [remove global var]
+  !!en;
+
+  !!SN:F^ExtendArrayLifetime^/(modListArrayID);         [return id of array with mod list]
+
+  !!if&(numArgs)>2;                                     [if user asked mod list]
+
+    !!VRs^gem_modListCut^:M6/?(latSymbol);
+
+    !!VR(latSymbol):+1;
+    !!VRs^gem_modListCut^:M1/s^gem_modListCut^/0/(latSymbol);
+    !!VR(modListGlobalVar):Z^{~text align=left}%s(gem_modListCut)}^;
+  !!en;
+
+!?FU(gem_ExtractIntsFromText);                        [returns only integer numbers as int array elements from string]
+  !#VA(strPtr:x);                       [Original string.]
+  !#VA(numbersArrayID:x);               [returns local array id via ?(intVar:y)]
+  !#VA(amountOfNumbers:x);              [returns local array size ]
+
+  !!VRs^gem_originalString^:S^%z(strPtr)^;
+  !!SN:Ks^gem_originalString^/?(strLength:y);
+
+  !!VR(amountOfNumberArrays:y):S1;
+  !!FU(NewIntArray):P?i^current_%(amountOfNumberArrays)_array_ID^;
+  !!VR(breakPoint:y):S(NULL);
+  !!VR(isNeedBreakPoint:y):S(FALSE);
+  !!re i/0/(strLength)/1/-1;
+    !!SN:Ks^gem_originalString^/i/?(checkSymbol:z);
+
+    !!VR(isNeedBreakPoint):S(TRUE);
+
+    !!re (commonInt:y)/0/9;
+      !!if&(checkSymbol)=^%(commonInt)^;
+        !!FU(Array_Push):Pi^current_%(amountOfNumberArrays)_array_ID^/(commonInt);
+        !!VR(isNeedBreakPoint):S(FALSE);
+        !!br;
+      !!en;
+    !!en;
+
+    !!if&(isNeedBreakPoint);
+      !!SN:Mi^current_%(amountOfNumberArrays)_array_ID^/?(arrayLength:y);
+      !!co&(arrayLength)=(NULL);
+      !!VR(amountOfNumberArrays):+1;
+      !!FU(NewIntArray):P?i^current_%(amountOfNumberArrays)_array_ID^;
+    !!en;
+
+  !!en;
+
+
+  !!VRs^gem_originalString^:S^^;
+  !!SN:Mi^current_%(amountOfNumberArrays)_array_ID^/?(arrayLength:y);
+  !!VR(amountOfNumberArrays)&(arrayLength)=(NULL):-1;
+
+  !!if&(amountOfNumberArrays);  
+    !!FU(NewIntArray):P?(numbersArrayID:x);
+
+    !!re i/1/(amountOfNumberArrays);
+
+      !!VR(elemSumm:y):S(NULL);
+      !!SN:Mi^current_%i_array_ID^/?(arrayLength:y);
+
+      !!re j/0/(arrayLength)/1/-1;
+
+        !!SN:Mi^current_%i_array_ID^/j/?(elemValue:y);
+        !!VR(multipler:y):S(arrayLength) -j -1;
+
+        !!if&(multipler);
+          !!re k/1/(multipler);
+            !!VR(elemValue):*10;
+          !!en;
+        !!en;
+
+        !!VR(elemSumm):+(elemValue);
+      !!en;
+
+      !!FU(Array_Push)&(arrayLength):P(numbersArrayID)/(elemSumm);
+      !!VRi^current_%i_array_ID^:S(NULL);
+    !!en;
+
+    !!FU:A?(numArgs:y);
+
+    !!if&(numArgs)>3;
+      !!VR(totalInt:x):S(NULL);
+      !!VR(fullText:z):S^^;
+      !!SN:M(numbersArrayID)/?(arrayLength);
+
+      !!re j/0/(arrayLength)/1/-1;
+
+        !!SN:M(numbersArrayID)/j/?(elemValue:y);
+        !!SN:K^%(elemValue)^/?(intLength:y);
+
+        !!re l/0/(intLength)/1/-1;
+          !!SN:K^%(elemValue)^/l/?(textSymbol:z);
+          !!VR(fullText):+(textSymbol);
+        !!en;
+
+      !!en;
+
+*!IF:L^%(fullText)^;
+
+    !!en;
+
+    !!VR(amountOfNumbers):S(amountOfNumberArrays);
+    !!SN:F^ExtendArrayLifetime^/(numbersArrayID);
+  !!el;
+    !!IF:M^There are no numbers in the text you entered^;
+  !!en;
+
+
+!?FU(gem_OnRightAfterOpenTownScreen);&i^gem_town_once^;
+!!FU:E;
+  !!SN:W^gem_town_once^;                [remove variable;]
+    *!IF:M^%(gem_town_GetButton_array_counter)^;
+
+  !!re i/1/i^gem_town_GetButton_array_counter^&i^gem_town_GetButton_array_counter^;
+    !!SN:Mi^gem_town_GetButton_array_%i^/?(arrayLength:y);
+
+    !#VA(array[3]:y);
+    !!re j/0/(arrayLength)/1/-1&(arrayLength);
+      !!SN:Mi^gem_town_GetButton_array_%i^/j/?(arrayValue:y);
+      !!VR(array):S(arrayValue);
+    !!en;
+    !!SN:Mi^gem_town_GetButton_array_%i^;
+    *!IF:M^%(arrayLength)^;
+
+    !!co&(arrayLength)=0;
+    *!VR(counter:y):S(arrayLength) +1;
+    !!if&(arrayLength)>2;
+      !!FU(gem_DlgButtonGetSetup):P(array[0])/(array[1])/?(array[2]);
+      !!SN:F^ExtendArrayLifetime^/(array[2]);
+    !!el&(arrayLength)=2;
+      !!FU(gem_DlgButtonGetSetup):P(array[0])/(array[1]);/(array[2]);
+    !!el&(arrayLength)=1/(arrayLength);
+      !!FU(gem_DlgButtonGetSetup):P(array[0]);/(array[1]);/(array[2]);
+    !!en;
+  !!en;
+  !!SN:W^gem_town_GetButton_array_counter^;
+    *!IF:M^%(gem_town_GetButton_array_counter)^;
+  *!FU(gem_DlgButtonGetSetup):Pi^gem_town_menu_Button_ID^/x1/x2/x3;140/x1;;
+*?FU(OnKeyPressed)&i^key_down^/x1=(KEY_C);
+
+
+
+
+
+
++22 | state;
++24 | xPos;
++26 | yPos;
++28 | width;
++30 | height;
++32 | text ptr in status_bar;
++36 | text ptr on text by RMB;
++48 | def structure ptr;
++52 | def frame number;
++56 | def frame number when pressed (if button);
++60 | mirror: 0-no, 1-yes;
++68 | Does the dialog close: 0-no, 1-yes; - only set
+^;
+*!en;
+
+!?FU(gem_DlgDefProc);
+!#VA(itemId:x) (currentFrame:x) (whenPressedFrame:x) (whenDisabledFrame:x) (closeDlg:x) (customDlgStruct:x);
+  !!if&(itemId)<0;
+    !!IF:M^itemId is incorrect!
+    should be 0 and higher^;
+    !!FU:E;
+  !!en;
+
+  !!VR(savedV1:y):Sv1;
+
+  !!if&(customDlgStruct);
+    !!VR(currentDlgStruct:y):S(customDlgStruct);
+  !!el;
+    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!en;
+
+  !!SN:E6288816/2/(currentDlgStruct)/(itemId);
+  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+  !!FU:S(@currentFrame)/?(cFSyntax:y) S(@whenPressedFrame)/?(wPFSyntax:y) S(@whenDisabledFrame)/?(wDFSyntax:y) S(@closeDlg)/?(closeDlgSyntax:y);
+
+  !!VR(itemAction:y):S(itemStructure) +52;
+    !!UN&(cFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(currentFrame);
+    !!UN&(cFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(currentFrame);
+
+  !!VR(itemAction:y):S(itemStructure) +56;
+    !!UN&(wPFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(whenPressedFrame);
+    !!UN&(wPFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(whenPressedFrame);
+
+  !!VR(itemAction:y):S(itemStructure) +60;
+    !!UN&(wDFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(whenDisabledFrame);
+    !!UN&(wDFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(whenDisabledFrame);
+
+  !!VR(itemAction:y):S(itemStructure) +68;
+    !!UN&(closeDlgSyntax)=(ARG_SYNTAX_GET):C(itemAction)/2/?(closeDlg);
+    !!UN&(closeDlgSyntax)=(ARG_SYNTAX_SET):C(itemAction)/2/(closeDlg);  
+
+  !!VRv1:S(savedV1);
+
+!?FU(gem_DlgDisableBtn);
+!#VA(itemId:x) (enable:x) (whenDisabledFrame:x) (redraw:x) (customDlgStruct:x);
+  !!if&(itemId)<0;
+    !!IF:M^itemId is incorrect!
+    should be 0 and higher^;
+    !!FU:E;
+  !!en;
+
+  !!VR(savedV1:y):Sv1;
+
+  !!if&(customDlgStruct);
+    !!VR(currentDlgStruct:y):S(customDlgStruct);
+  !!el;
+    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!en;
+
+   !!SN:E6288816/2/(currentDlgStruct)/(itemId);
+  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+  !!FU:A?(numArgs:y);
+  !!if&(numArgs)>2;
+    !!VR(itemAction:y):S(itemStructure) +60;
+    !!UN:C(itemAction)/4/(whenDisabledFrame);
+  !!en;
+
+  !!SN:E6287104/2/(itemStructure)/(enable); 0-§à§ä§Ü§Ý, 1-§Ó§Ü§Ý
+  !!SN&(redraw):E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
+
+  !!VRv1:S(savedV1);
+
+!?FU(gem_DlgShowItem);
+!#VA(itemId:x) (showItem:x) (clickableItem:x) (redraw:x) (customDlgStruct:x);
+  !!if&(itemId)<0;
+    !!IF:M^itemId is incorrect!
+    should be 0 and higher^;
+    !!FU:E;
+  !!en;
+
+
+  !!VR(savedV1:y):Sv1;
+
+  !!if&(customDlgStruct);
+    !!VR(currentDlgStruct:y):S(customDlgStruct);
+  !!el;
+    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!en;
+
+  !!SN:E6288816/2/(currentDlgStruct)/(itemId);
+  !!VR(itemStructure:y):Sv1; 
+
+  !!if&(showItem);
+
+    !!SN:E6286720/2/(itemStructure)/5/6;
+  !!el;
+
+    !!if&(clickableItem);
+      !!SN:E6286720/2/(itemStructure)/6/4;
+    !!el;
+      !!SN:E6286720/2/(itemStructure)/6/6;
+    !!en;
+
+  !!en;
+
+  !!SN&(redraw):E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
+
+  !!VRv1:S(savedV1);
+
+!?FU(gem_DlgItemSize);
+!#VA(itemId:x) (width:x) (height:x) (redraw:x) (customDlgStruct:x);
+  !!if&(itemId)<0;
+    !!IF:M^itemId is incorrect!
+    should be 0 and higher^;
+    !!FU:E;
+  !!en;
+
+  !!VR(savedV1:y):Sv1;
+
+  !!if&(customDlgStruct);
+    !!VR(currentDlgStruct:y):S(customDlgStruct);
+  !!el;
+    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!en;
+  !!SN:E6288816/2/(currentDlgStruct)/(itemId);
+  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+  !!FU:S(@width)/?(widthSyntax:y) S(@height)/?(heightSyntax:y);
+
+  !!VR(itemAction:y):S(itemStructure) +28;
+
+    !!UN&(widthSyntax)=(ARG_SYNTAX_GET):C(itemAction)/2/?(width);
+    !!UN&(widthSyntax)=(ARG_SYNTAX_SET):C(itemAction)/2/(width);
+
+
+
+    !!if&(widthSyntax)=(ARG_SYNTAX_GET);
+      !!UN:C(itemAction)/2/?(width);
+    !!el&(widthSyntax)=(ARG_SYNTAX_SET);
+      !!UN:C(itemAction)/2/(width);
+    !!el;
+      !!UN:C(itemAction)/2/?(currWidth:y);
+      !!VR(width):+(currWidth);
+
+      !!if&(width)>0;
+        !!UN:C(itemAction)/2/(width);
+      !!el;
+        !!UN:C(itemAction)/2/0;
+      !!en;
+
+    !!en;
+
+
+  !!VR(itemAction:y):S(itemStructure) +30;
+    
+
+    !!if&(heightSyntax)=(ARG_SYNTAX_GET);
+      !!UN:C(itemAction)/2/?(height);
+    !!el&(heightSyntax)=(ARG_SYNTAX_SET);
+      !!UN:C(itemAction)/2/(height);
+    !!el;
+      !!UN:C(itemAction)/2/?(currHeight:y);
+      !!VR(height):+(currHeight);
+      !!UN:C(itemAction)/2/(height);
+
+      !!if&(height)>0;
+        !!UN:C(itemAction)/2/(height);
+      !!el;
+        !!UN:C(itemAction)/2/0;
+      !!en;
+
+    !!en;
+
+
+  !!SN&(redraw):E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
+
+  !!VRv1:S(savedV1);
+
+
+!?FU(gem_DlgItemPosition);
+!#VA(itemId:x) (x:x) (y:x) (redraw:x) (customDlgStruct:x);
+  !!if&(itemId)<0;
+    !!IF:M^itemId is incorrect!
+    should be 0 and higher^;
+    !!FU:E;
+  !!en;
+
+  ; parameters of any dialog element
+  ; text, pictures, buttons, etc.
+  !!VR(savedV1:y):Sv1;
+
+  !!if&(customDlgStruct);
+    !!VR(dlgStruct:y):S(customDlgStruct);
+  !!el;
+    !!FU(H3Dlg_GetCurrentDlg):P?(dlgStruct:y);
+  !!en;
+  !!SN:E6288816/2/(dlgStruct)/(itemId);
+  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+  !!FU:S(@x)/?(xSyntax:y) S(@y)/?(ySyntax:y);
+
+  !!VR(itemAction:y):S(itemStructure) +24;
+    !!if&(xSyntax)=(ARG_SYNTAX_GET);
+      !!UN:C(itemAction)/2/?(x);
+    !!el&(xSyntax)=(ARG_SYNTAX_SET);
+      !!UN:C(itemAction)/2/(x);
+    !!el;
+      !!UN:C(itemAction)/2/?(currX:y);
+      !!VR(x):+(currX);
+      !!UN:C(itemAction)/2/(x);
+    !!en;
+
+  !!VR(itemAction:y):S(itemStructure) +26;
+    !!if&(ySyntax)=(ARG_SYNTAX_GET);
+      !!UN:C(itemAction)/2/?(y);
+    !!el&(ySyntax)=(ARG_SYNTAX_SET);
+      !!UN:C(itemAction)/2/(y);
+      *!IF:L^%(y)^;
+    !!el;
+      !!UN:C(itemAction)/2/?(currY:y);
+      !!VR(y):+(currY);
+      !!UN:C(itemAction)/2/(y);    
+    !!en;
+
+  !!SN&(redraw):E6288864/2/(dlgStruct)/1/-65535/65535; [update currentDlg;]
+
+  !!VRv1:S(savedV1);
+
+!?FU(gem_GetBttnStructure);
+!#VA(itemId:x) (btnStructure:x);
+  !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!SN:E6288816/2/(currentDlgStruct)/(itemId);
+  !!VR(btnStructure):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+!?FU(gem_GetAdvDwellingName);
+!#VA(objType:x) (objSubtype:x) (objName:x);
+  !!FU:A?(numArgs:y) S(@objName)/(nameSyntax:y);
+
+  !!if|(numArgs)<(@objName)/(nameSyntax)<>(ARG_SYNTAX_GET);
+    !!IF:M^incorrect Arguments number or type!
+    use only {GET} Syntax for getting dwelling name^;
+    !!FU:E;
+  !!en;
+
+  !!if&(objType)<>(OBJ_CREATURE_GENERATOR_1)/(objType)<>(OBJ_CREATURE_GENERATOR_4);
+    !!IF:M^incorrect object Type number!
+    use only Types %(OBJ_CREATURE_GENERATOR_1) or %(OBJ_CREATURE_GENERATOR_4) object Types^;
+    !!FU:E;
+  !!en;
+
+  !!UN&(objType)=(OBJ_CREATURE_GENERATOR_1):C6886304/4/?y1;            [crGen1.txt adress]
+  !!UN&(objType)=(OBJ_CREATURE_GENERATOR_4):C6887052/4/?y1;            [crGen4.txt adress]
+
+; @Master Of Puppets
+
+  !!VRy1:+32;
+  !!UN:Cy1/4/?y2;
+  !!VR(objSubtype):*4+y2;
+  !!UN:C(objSubtype)/4/?y1;
+  !!SN:X?y4 Xy1 X?z1 Xy4;
+  !!VR(objName):Z^%z1^;
+
+!?FU(OnGameEnter);
+
+1405CE18
+
+!?FU(gem_DlgSetColor);
+  !#VA(dlgStruct:x) (setColor:x);
+  !!SN:E7510739/1/(dlgStruct);
+  !!UN:Cv1/4/?y1;
+  !!VRy2:Sy1 +76;
+  !!UN:Cy2/4/?y3;
+  !!SN:E6288384/2/y1/512/13/y3/(setColor);

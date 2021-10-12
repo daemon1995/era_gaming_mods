@@ -1,0 +1,187 @@
+ZVSE2
+
+;Author: Valery
+;material: Algor
+
+;Display spells, retals, casts left and action
+;edit: daemon_n; added translations and correct "wait" phases support;
+
+
+; ========= GAME RESOLUTION ==========
+!#DC(HD_X) = 4199496;
+!#DC(HD_Y) = 4199503;
+!#DC(NULL) = 0;
+; ======= END GAME RESOLUTION ========
+
+!?CM4;
+!!CM:F?y1;
+!!FU&y1<>512:E;  Ctrl + [right-click]
+
+
+!!FU(GetKeyModsState):P;
+
+!!if&i^key_leftAlt^=1;/i^key_down^=(TRUE):;
+  !!FU(gem_advanced_battle_hints_dlg_call):P;
+!!en;
+!!SN:L^user32.dll^/?y1 Ay1/^GetKeyState^/?y2 Ey2/1/4;
+!!VRy1:Sv1&65535;
+!!FU&y1<32768:E; exit if not Ctrl hold
+!!FU(gem_advanced_battle_hints_dlg_call):P;
+
+
+*?FU(OnBattleMouseHint);
+*!FU(gem_advanced_battle_hints_dlg_call):P;
+*!VRi^gem_dl_was_opened^:S(TRUE);
+*?FU(gem_DlgMouseMove)&i^gem_dl_was_opened^=(TRUE);
+*!CM:I2000;
+*!UN:C6918864/4/?y1;  *!VRy1:+84;  *!UN:Cy1/4/?y2;
+*!SN:E6287904/2/y2/1/1/1;
+*!SN:E6288864/2/y2/1/-65535/65535;
+
+*!VRi^gem_dl_was_opened^:S(FALSE);
+!?FU(gem_advanced_battle_hints_dlg_call);
+
+ !!CM:D?y1;
+!!FU|y1<1/y1>186:E;  exit if outside BF
+!!BU:Ey1/?y2; check if stack alive at position
+!!UN:J8/1/^gem_interface.pac^;
+!!FU|-1/y2<0:E;
+!!UN:C6919200/4/?y10;
+!!VRy11:Sy10 +81380;
+!!UN:Cy11/1/?y8; роверка на фазу ожидани
+!!FU(gem_CheckGameLang):P;
+
+!!if&y8<>1:;
+  !!BMy2:F?i;
+  !!SN:T^%s(gem_b).active^/?(actionC:z);
+  !!VRi:&33554432;
+  !!SN&i>0:T^%s(gem_b).wait^/?(actionC:z);
+  !!BMy2:F?i;
+  !!VRi:&67108864;
+  !!SN&i>0:T^%s(gem_b).done^/?(actionC:z);
+  !!BMy2:F?i;
+  !!VRi:&134217728; [just look at waiting bit]
+  !!SN&i>0:T^%s(gem_b).def^/?(actionC:z);
+!!el:;
+  !!SN:T^%s(gem_b).wait^/?(actionC:z);
+  !!BMy2:F?i;
+  !!VRi:&67108864;
+  !!SN&i>0:T^%s(gem_b).done^/?(actionC:z);
+  !!BMy2:F?i;
+  !!VRi:&134217728; [just look at waiting bit]
+  !!SN&i>0:T^%s(gem_b).def^/?(actionC:z);
+!!en;
+
+!!BMy2:R?y4; [check retaliations left]
+!!SN&y4<1:T^%s(gem_b).no^/?(retailC:z);
+!!SN&y4>0/y4<101:T^%s(gem_b).some^/?(retailC:z)/^quantity^/y4;
+!!SN&y4>100:T^%s(gem_b).endl^/?(retailC:z);
+
+!!BMy2:E?y5; [check spells number remaining]
+!!SN&y5<1:T^%s(gem_b).no^/?(spellQ:z);
+!!SN&y5>0:T^%s(gem_b).some^/?(spellQ:z)/^quantity^/y5;;
+!!SN:T^%s(gem_b).1^/?(line1:z);
+!!SN:T^%s(gem_b).2^/?(line2:z);
+!!SN:T^%s(gem_b).3^/?(line3:z);
+!!DL27:N^gem_abh.txt^;
+!!DL27:A32/3/(line1)/0 A33/3/(line2)/0 A34/3/(line3)/0;
+!!DL27:A35/3/(retailC)/0;
+!!DL27:A36/3/(spellQ)/0;
+!!DL27:A37/3/(actionC)/0;
+!!DO321456986/1/10/1:P; reset spells frames
+!!re i/1/10:;
+  !!DL27:Ai/4/76/0;
+!!en:;
+!!DO321456987/0/75/1:Py2/1;
+!!CM:A?y15/?y16;                        [y15, y16, записываем координаты клика мышкой]
+!!FU(gem_DL_ChangeCoords):P27/y15/y16;    [функция изменения координат диалога и его отрисовка по ПКМ]
+
+*!DL27:S1;
+*!DL:C1;
+!!FU(DL_ShowPopup):P27;
+
+!!CM:R0;
+
+!?FU321456987;
+!!BMx1:Gx16/?y1/?y2; spell/duration/power
+!!FU&y1<1:E; exit if not applied
+!!DL27:Ax2/4/x16/0;
+!!VRy3:Sx2+10; get the ID of hint area
+!!VRzx2:S^x%Y1^;
+!!DL27:Ay3/3/zx2/0;
+!!VRx2:+1;
+*?FU(OnKeyPressed_Battle)&x1=(KEY_G);
+*!re i/0/20:;
+  *!IF:L^%^;
+*!en:;
+
+
+!?FU(gem_DL_ChangeCoords);
+!#VA(dlgId:x) (x:x) (y:x);
+; x1 - WoG dialog id
+; x2 - coord X (-1 center)
+; x3 - coord Y (-1 center)
+*!IF:L^%(xBefore) %(yBefore)^;
+
+
+!!SN:E7510739/(CALLCONV_CDECL)/(dlgId);
+!!VR(ptrDlg:y):Sv1;
+!!if&(ptrDlg)<>(NULL):;
+  !!UN:C(ptrDlg)/(UNC_UINT32)/?(strDlg:y);
+  !!UN:C(strDlg)/32/(UNC_UINT32)/?(dlgWidth:y);
+  !!VR(centerX:y):S(dlgWidth) :2;
+  !!UN:C(strDlg)/36/(UNC_UINT32)/?(dlgHight:y);
+  !!VR(centerY:y):S(dlgHight) :2;
+  
+  !!VR(clickCoordX:y):S(x);+(centerX) -40;
+  !!VR(clickCoordY:y):S(y); -40;+(centerY) -40;
+  !!VR(rightBorderDistance:y):S800 -(dlgWidth); -(dlgWidth);
+  !!VR(botBorderDistance:y):S600 -(dlgHight);
+
+
+
+  !!if&i^gem_IsHdModLoaded^<>(FALSE);
+    !!UN:C(HD_X)/(UNC_INT16)/?(gameResolutionX:y);
+    !!UN:C(HD_Y)/(UNC_INT16)/?(gameResolutionY:y);
+
+    !!if&(gameResolutionY)>=664/(gameResolutionX)>=1180;
+      !!VR(clickCoordX)&(x)>(dlgWidth):-(centerX); -40;
+      !!VR(clickCoordX)&(x)<(rightBorderDistance):+(centerX) -40; -40;
+      !!VR(clickCoordY)&(y)>(botBorderDistance):-(dlgHight); +(dlgHight);
+    *!en;
+
+    !!el;
+    *!IF:L^234^;
+        !!VR(clickCoordX)&(x)>(dlgWidth):-(dlgWidth); -40;
+        !!VR(clickCoordX)&(x)>(rightBorderDistance)/(x)<=(dlgWidth):-(centerX); -40;
+        !!VR(clickCoordY)&(y)>=(botBorderDistance):-(dlgHight); 
+    !!en;
+  !!el;
+        !!VR(clickCoordX)&(x)>(dlgWidth):-(dlgWidth); -40;
+        !!VR(clickCoordX)&(x)>(rightBorderDistance)/(x)<=(dlgWidth):-(centerX); -40;
+        !!VR(clickCoordY)&(y)>=(botBorderDistance):-(dlgHight); 
+  !!en;
+    *!FU(gem_BattleScreenClickHDShift):P(clickCoordX)/(clickCoordY)/(FALSE)/?(hdX:x)/?(hdY:y);
+    !!UN:C(strDlg)/24/(UNC_UINT32)/(clickCoordX);
+    !!UN:C(strDlg)/28/(UNC_UINT32)/(clickCoordY); 
+    *!IF:L^%(x) %(y) //// %(clickCoordX) %(clickCoordY)^;
+!!en;
+
+*?FU(gem_BattleScreenClickHDShift);
+*#VA(x:x) (y:x) (isFirstPacking:x);
+*!UN:C(HD_X)/(UNC_INT16)/?(gameResolutionX:y);
+*!UN:C(HD_Y)/(UNC_INT16)/?(gameResolutionY:y);
+*!VR(xCoordinateShift:y):S(gameResolutionX) -800 :2;
+*!VR(yCoordinateShift:y):S(gameResolutionY) -600 :2;
+
+*!if&(isFirstPacking)=(TRUE);
+  *!VR(yCoordinateShift)&(gameResolutionY)>=664:-10;
+  *!VR(xRealCoordinate:x):S(x) +(xCoordinateShift);
+  *!VR(yRealCoordinate:x):S(y) +(yCoordinateShift);
+*!el;
+  *!VR(yCoordinateShift):+20;
+  *!VR(yCoordinateShift)&(gameResolutionY)>=664:+20;
+  *!VR(xRealCoordinate:x):S(xCoordinateShift) +(x) -200; +400; -(x);
+  *!VR(yRealCoordinate:x):S(yCoordinateShift) +(y) -150;
+*!en;
+*!IF:L^x = %(x), y = %(y) /%(isFirstPacking)/ X = %(xRealCoordinate), Y = %(yRealCoordinate);^;
