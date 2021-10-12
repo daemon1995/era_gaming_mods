@@ -1,0 +1,506 @@
+ZVSE2
+;gem_scripts.erm
+!#DC(GEM_BATTLE_TYPE_NO_AUTO) = 1;
+!#DC(GEM_BATTLE_TYPE_AUTO_MANA) = 2;
+!#DC(GEM_BATTLE_TYPE_AUTO_MANA_FREE) = 4;
+!#DC(GEM_BATTLE_TYPE_ASK_BEFORE_START) = 8;
+
+Global Fixes by Archer30.
+Created to fix details of some mods. 
+
+
+
+*********************************
+**** Difficulty Mod Part 1/2 ****
+*********************************
+
+
+IMPORTANT!!!
+This part of code needs to be executed SOONER than diff mod. Please don't change the filename of the script without testing
+
+**** fix Mixed Neutral Config not disabled when Mixed Neutral is disab1e in mod manager Part 1/2
+**** forced Mixed Neutral config off when Mixed Neutral mod is not loaded
+**** discard any change to mixed neutral config option when mixed neutral mod is not loaded
+
+!?FU(Neutrals_checkboxes);              [when opening neutral settings dialogue]
+  !!UN:J8/1/^mixed neutrals.pac^;         [check if Mixed Neutral Mod enabled in mod manager]
+  !!VRi^mix_missing^&-1/i^mix_enabled^=(TRUE):S1; [mark mix_missing as 1 if mix is not loaded]
+  !!SN&-1:W^mix_enabled^/(FALSE);         [disable mixed neutral config if Mixed Neutral is missing]
+
+!?FU(OnCustomDialogEvent)&v998=13/v999=30722/v1000=13; [when finish diff options configuration]
+  !!UN:J8/1/^mixed neutrals.pac^;         [check if Mixed Neutral Mod enabled in mod manager]
+  !!VRi^mix_missing^&-1/i^mix_enabled^=(TRUE):S1; [mark mix_missing as 1 if mix is not loaded]
+  !!SN&-1:W^mix_enabled^/(FALSE);         [disable mixed neutral config if Mixed Neutral is missing]
+
+
+**** End Difficulty Mod Part 1/2
+
+
+***************************************
+**** Game Enhancement Mod Part 1/2 ****
+***************************************
+
+
+IMPORTANT!!!
+This part of code needs to be executed SOONER than GEM. Please don't change the filename of the script without testing
+
+**** Load from ini, default GEM Battle Mode depending on whether Quick Combat/Qucik Combat Battle Option is enabled
+
+*?FU(OnEveryDay)&i^timerday^=1/i^timerIsAi^=(FALSE); [moved to gem options]
+*!FU(gem_LoadBattleOptionsFromIni):Pi;
+*!FU(gem_LoadGemSettingsFromIni):Pi;
+
+!?FU(gem_LoadBattleOptionsFromIni);
+!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+!!UN:C6916044/4/?(quickCombat:y);
+!!FU(ReadIniInts):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/1;[read from ini, default 1]
+!!FU(ReadIniInts)&i^gem_Quick_Combat_Check^=(TRUE):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/8;[if quick combat battle option is on]
+!!FU(ReadIniInts)&i^gem_Quick_Combat_Check^=(FALSE)/(quickCombat)=(TRUE):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/2;[if quick combat battle option is off and quick combat system option is on]
+*!VRi^Current_Battle_Type%i(gem_CurPlay)^:Si^gem_battleMode^;
+
+
+**** Load GEM settings from ini
+
+!?FU(gem_LoadGemSettingsFromIni);
+!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+!!FU(ReadIniInts):P(filePath)/^main^/^gem_control_units^/?i^gem_option_1_ini^/1; [read from ini, default 1]
+!!FU(ReadIniInts):P(filePath)/^main^/^gem_newButtons^/?i^gem_option_2_ini^/1; [read from ini, default 1]
+!!FU(ReadIniInts):P(filePath)/^main^/^gem_allyHeroScreen^/?i^gem_option_3_ini^/1; [read from ini, default 1]
+!!FU(ReadIniInts):P(filePath)/^main^/^gem_enemyHeroScreen^/?i^gem_option_4_ini^/1; [read from ini, default 1]
+
+
+**** Fix Quick Combat Syetem Option reverting changes at turn end
+
+!?FU(OnEveryDay)&i^timerDay^>1/i^timerIsAi^=(FALSE);
+!!UN:C6916044/4/?(quickCombat:y);
+!!VR(battleType:y):Si^Current_Battle_Type%i(gem_CurPlay)^;
+!!if&(battleType)=1/(quickCombat)=(TRUE);[change battle type if system option mismatches]
+  !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S2;
+!!el&(battleType)=2/(quickCombat)=(FALSE);
+  !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S1;
+!!el&(battleType)=4/(quickCombat)=(FALSE);
+  !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S1;
+!!en;
+
+
+**** End Game Enhancement Mod Part 1/2
+
+
+____________________________________________________________________________________________________
+
+
+
+!?FU(OnGameEnter);
+!!TL:E1;
+
+!?FU(OnGameLeave);
+!!TL:E0;
+
+; --------------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------------
+*                       [Скрипты для битвы - scripts for the battles]
+; --------------------------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------------------------
+!?FU(OnKeyPressed_AdvMap)&x1=(KEY_W)/999;     [нажатие клавиши на КП (HK_W) и только на свой ход]
+  !!OW:C?y4;                              [узнать цвет игрока]
+  !!SN:W^Current_Battle_Type%Y4^/?y1;     [для его кнопки-переменной, которую тоже узнать]
+    !!VRy2&y1<>8:Sy1*2;
+    !!VRy2&y1=8:S1;
+    !!SN:W^Current_Battle_Type%Y4^/y2; [узнать, что данный игрок выбрал до этого]
+    !!FU(gem_Button_Switch):P;                  [переключить на обычный] 
+  !!FU(gem_Autobattle_Check_And_Sound):P1;    [сообщить]
+
+!?FU(gem_Autobattle_Check_And_Sound);
+  !!OW:C?y4;                              [узнать цвет игрока]
+  !!SN:W^Current_Battle_Type%Y4^/?y2;     [узнать, что данный игрок выбрал до этого]
+  !!SN:W^gem_CheckGameLang^/?y5;
+  !!if|y2<2:;                        [если 1]
+    !!UN:C6916044/4/0;                    [отключить авто]
+    !!SN&y2=1/x1=1:T^%Y5_gem_map.battle1^/?z-1; [показать описание ОТКЛ]
+  !!el:;
+    !!UN:C6916044/4/1;                    [установить параметр быстрой битвы 0x6987CC]
+    !!SN&y2=2/x1=1:T^%Y5_gem_map.battle2^/?z-1;[показать описание ВКЛ с магией]
+    !!SN&y2=4/x1=1:T^%Y5_gem_map.battle3^/?z-1;[показать описание ВКЛ без магии]
+    !!SN&y2=8/x1=1:T^%Y5_gem_map.battle4^/?z-1; [показать описание ПЕРЕД БОЕМ]  
+  !!en;
+  !!IF&x1=1:L^%Z-1^;
+*!FU(gem_SaveBattleOptionsToIni)&x1=1:P;     [save options]
+
+
+** отключение битвы человека против человека / Disable autobattle vs human players (by daemon_n)
+** удаление очков заклинаний на время автобоя, поддерживает переигровку (by daemon_n)
+** Spell Points Delete in the autobattle, supports battle replay
+!?BA52&1000;                                [before Human battle]
+  !!if&i^battle_human_0^/i^battle_human_1^;                          [if not neutrals]
+    !!BA:Q0;                            [both hum = disable auto]
+    !!FU:E;                             [and exit]
+  !!en;
+
+  !!OW:C?(currPlayer:y) I(currPlayer)/?(isAi:y);                          [check current player color]
+  !!if&(isAi)=(TRUE):;                                 [if ai attacks]
+    !!BA:Od/?(currPlayer);                              [set choice of human from right side]
+  !!en;
+  !!SN:W^Current_Battle_Type%(currPlayer)^/?y3;         [to know his choice]
+
+  !!UN:C6916044/4/?(isAutoBattleState:y);                        [узнать авто]
+  !!if&(isAutoBattleState)=(FALSE)/i^Current_Battle_Type%(currPlayer)^>(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^<(GEM_BATTLE_TYPE_ASK_BEFORE_START):;
+    !!VRi^Current_Battle_Type%(currPlayer)^:S/(GEM_BATTLE_TYPE_NO_AUTO);         [to know his choice]
+    !!BA:Q0;
+    !!FU:E;                                   [and exit func]
+  !!en;
+
+  !!SN&(isAutoBattleState)=(TRUE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):W^Current_Battle_Type%(currPlayer)^/(GEM_BATTLE_TYPE_AUTO_MANA);         [to know his choice]
+  *!SN:W^Current_Battle_Type%(currPlayer)^/?(currentBattleTypeChoie:y);         [to know his choice]
+  !!VRi^gem_Was_Mana_Removed^:S(FALSE);                 [was not remove the SP]
+
+
+  !!if&i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START):;                                 [if choising]
+     !!VRi^Current_Battle_Type_Choice%(currPlayer)^&i^Current_Battle_Type_Choice%(currPlayer)^=(NULL):S(GEM_BATTLE_TYPE_NO_AUTO);
+     !!SN:W^gem_CheckGameLang^/?y2;
+     !!SN:T^%Y2_gem_map.battlelist1^/?z-1;
+     !!SN:T^%Y2_gem_map.battlelist2^/?z-2;
+     !!SN:T^%Y2_gem_map.battlelist3^/?z-3;
+     !!SN:T^%Y2_gem_map.battlelist4^/?z-4;
+     !!IF:G1/1/i^Current_Battle_Type_Choice%(currPlayer)^/-1/-2/-3/-4;                  [show message]
+     !!SN:W^Current_Battle_Type_Choice%(currPlayer)^/v1;  [store choice]
+  !!en;
+
+  !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):;                   [if choisen]
+    !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S1;
+    !!BA:Q0;                              [set no auto]
+    !!FU:E;                               [and exit func]
+  !!en;
+
+  !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA):;                   [if choisen]
+    !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
+
+    !!BA:Q1;                              [set auto]
+    !!FU:E;                               [end]
+  !!en;
+
+  !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE):;
+    !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
+
+    !!FU(gem_Spellpoints_Removing):P;     [start remove mana func]
+    !!VRi^gem_Was_Mana_Removed^:S(TRUE); [store it]
+    !!BA:Q1;                              [set auto]
+    !!FU:E;                               [end]
+  !!en;                                   [final] 
+
+
+
+!?FU(Dlg_BattleResults_Proc)&i^gem_BeforeBattleResultClose^=(FALSE)/i^gem_OnlyOneBattleReplayIsAllowed^/i^gem_replay_counter^/i^battle_humanOnly^=(FALSE)/1000;
+    !!VRi^gem_BeforeBattleResultClose^:S(TRUE);
+
+  !!FU(gem_DlgShowItem):P0/0/0/0;/1;
+
+  !!FU(gem_DlgShowItem):P30723/0/0/1;/1;
+
+  *!FU:E;
+
+
+*?FU(OnBeforeBattleReplay)&i^gem_several_PC^=(TRUE);&i^gem_replay_counter^>1;
+  *!VRi^gem_replay_counter^:+1;
+
+  *!if&i^gem_replay_counter^>1;
+
+    *!VRs^gem_MP_abuse^:S^^;
+    *!re i/1/i^gem_replay_counter^;
+      *!VRs^gem_MP_abuse^:+^:( ^;
+      *!IF:M^%s(gem_MP_abuse)^;
+    *!en;
+  *!en;
+
+!?FU(OnBattleReplay);
+
+  !!if&i^gem_Was_Mana_Removed^;
+    !!FU(gem_Spellpoints_Giving):P;             [give mana]
+    !!VRi^gem_Was_Mana_Removed^:S2;
+  !!en;
+
+
+  !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):+1;
+  *!IF:M^%i(gem_OnlyOneBattleReplayIsAllowed)^;
+  *!if&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE)/i^gem_replay_counter^>1;
+    *!FU(gem_Spellpoints_Removing):P;     [start remove mana func]
+    *!SN:W^gem_Was_Mana_Removed^/1;
+    *!BA:Q1;
+  *!en;
+
+
+!?FU(OnAfterBattleUniversal)&1000;
+  !!if&i^gem_OnlyOneBattleReplayIsAllowed^;
+    !!VRi^gem_replay_counter^:S0;
+  !!en;
+
+  !!FU(gem_Button_Switch):P;
+
+  !!if&i^Autobattle_Was_Disabled^;
+    !!UN:C6916044/4/1;
+    !!VRi^Autobattle_Was_Disabled^:S(FALSE);      [запоминаем]
+  !!en;
+
+  !!UN:P900/?y1;
+  !!UN&y1=0:J11/1;
+  *!BA:Q?y1 E?y2;                         [Quick? MP?]
+  *!FU|y1<>1/y2=1/:E;                [quit if or no quick or PvP or was replay - no? then exit]
+
+  !!if&i^gem_Was_Mana_Removed^=1;
+    !!FU(gem_Spellpoints_Giving):P;
+    !!VRi^gem_Was_Mana_Removed^:S(FALSE);
+  !!en;
+
+  !!VRi^gem_BeforeBattleResultClose^:S(FALSE);
+
+
+!?FU(gem_Spellpoints_Removing);             [taking SP func]
+  !!OW:C?y1 Iy1/?y1;                    [Get current player color and control]
+    !!if&y1=0:;                         [if human hero is attacker]
+      !!FU&904:E;                       [exit if human uses berserker's potion (61wog)]
+      !!HE-10:I?y2 I0/1;                [store SP Availabilityin y1 / take off SP]
+      !!SN:W^gem_Auto_Spellpoints^/y2;      [store SP Availabilityin in global]
+    !!en;                               [human hero is defender]
+    !!if&y1<>0:;
+      !!BA:H1/?y2;
+      !!FU|905/y2=-2:E;                 [exit if human has no hero or uses berserker's potion (61wog)]
+      !!HE-20:I?y2 I0/1;     
+      !!SN:W^gem_Auto_Spellpoints^/y2;  
+    !!en;
+
+!?FU(gem_Spellpoints_Giving);               [restore SP func]
+  !!OW:C?y1 Iy1/?y1;                    [Get current player color and control]
+    !!if&y1=0:;                         [if human hero is attacker]
+      !!FU&904:E;
+      !!SN:W^gem_Auto_Spellpoints^/?y2 ;    [check SP before battle]
+      !!HE-10:Iy2;                      [restore SP]
+    !!en;
+    !!if&y1<>0:;                        [if human defending]
+      !!BA:H1/?y2;
+      !!FU|905/y2=-2:E;                 [exit if human has no hero or uses berserker's potion (61wog)]
+      !!SN:W^gem_Auto_Spellpoints^/?y2;     
+      !!HE-20:Iy2;                
+    !!en;
+    ** отключение замораживания окна вражеских существ без опыта существ (by daemon_n)
+** enable sod style of creatures window in battle without troop experience script
+!?BA52&1000;                            [before Human battle]
+  !!UN:P900/?y1;                          [check troop experience script]
+  !!if&y1=0:;                             [if disabled]
+    !!UN:J11/1;                           [enable sod style of window]
+  !!el:;                                  [else]
+    !!UN:J11/0;                           [enable wog style of window]
+  !!en;
+
+!?FU(gem_StartGame);
+  !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
+    !!SN:W^Current_Battle_Type%i^/?y1;
+    !!SN&y1=0:W^Current_Battle_Type%i^/1;
+  !!en:;
+
+  !!FU(gem_Autobattle_Check_And_Sound):P0;
+
+!?FU(OnAfterErmInstructions);           [once set "ask -before battle" - if option is enabled]
+!!UN:P233/?(isEnabled:y) P233/(FALSE);  [отключаем выбор режима типа битвы]
+!!SN:W^gem_Quick_Combat_Check^/(isEnabled);
+
+!?FU(OnGameEnter)&999;
+!!if&i^gem_Quick_Combat_Check^=(TRUE);
+  !!re i/0/(PLAYER_LAST);
+  !!OW:Ii/?(isAi:y)/?(isDead:y);
+
+    !!if&(isAi)=(FALSE)/(isDead)=(FALSE);
+    !!SN:W^Current_Battle_Type%i^/8;    [ set "ask -before battle"]
+    !!en;
+  !!en;
+  !!SN:W^gem_Quick_Combat_Check^/(FALSE);
+!!en;
+!!FU(gem_Button_Switch):P;
+
+!?FU(OnEveryDay)&1000;
+
+!!FU(gem_Button_Switch):P;&i^timerDay^>0
+!!FU(gem_Autobattle_Check_And_Sound):P0;
+
+!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_RELEASED);
+
+    !!if&i^manualf_Button_ID^=i^mouse_item^:;
+      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_NO_AUTO);
+      !!FU(gem_Button_Switch):P;
+      !!FU(gem_Autobattle_Check_And_Sound):P1; !!FU:E;
+    !!en;
+
+    !!if&i^automf_Button_ID^=i^mouse_item^:;
+      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_AUTO_MANA);
+      !!FU(gem_Button_Switch):P;
+      !!FU(gem_Autobattle_Check_And_Sound):P1;!!FU:E;
+    !!en;
+
+    !!if&i^autowm_Button_ID^=i^mouse_item^:;
+      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
+      !!FU(gem_Button_Switch):P;
+      !!FU(gem_Autobattle_Check_And_Sound):P1;!!FU:E;
+    !!en;
+
+    !!if&i^choiceB_Button_ID^=i^mouse_item^:;
+      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_ASK_BEFORE_START);
+      !!FU(gem_Button_Switch):P;
+      !!FU(gem_Autobattle_Check_And_Sound):P1;!!FU:E;
+   !!en:;
+!?FU(gem_Button_Switch)&999;
+  !!UN:J8/1/^gem_interface.pac^; !!FU&-1:E;
+  !!SN:F^GetButtonID^/^indicator^; !!FU&v1<1:E;
+
+  !!VR(setFrame:y):Si^Current_Battle_Type%i(gem_CurPlay)^;
+  !!VR(setFrame)&(setFrame)=(GEM_BATTLE_TYPE_ASK_BEFORE_START):-1;
+  !!FU(gem_DlgDefProc):Pv1/(setFrame);
+  !!SN:D;
+
+
+!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^;        [описание кнопок- выбор режима битвы - battle type choice]
+
+    !!if&i^manualf_Button_ID^=i^mouse_item^:;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button1hint^/?z-1;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+    !!en;
+
+    !!if&i^automf_Button_ID^=i^mouse_item^:;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button2hint^/?z-1;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+    !!en;
+
+    !!if&i^autowm_Button_ID^=i^mouse_item^:;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button3hint^/?z-1;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+    !!en;
+
+    !!if&i^choiceB_Button_ID^=i^mouse_item^:;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button4hint^/?z-1;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+   !!en:;
+
+**** right-click msg of Lord buttons
+
+    !!if&i^mouse_item^=i^optionB_Button_ID^;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button5hint^/?z-1 T^%Y5_gem_map.buttondelete^/?z-2;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+    !!en;
+    
+    !!if&i^mouse_item^=i^mithrilB_Button_ID^;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button6hint^/?z-1 T^%Y5_gem_map.buttondelete^/?z-2;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+    !!en;
+
+    !!if&i^indicator_Button_ID^=i^mouse_item^:;
+      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button7hint^/?z-1;
+      !!CM:R0;
+      !!IF:M0/4/^%Z-1^;
+   !!en:;
+
+____________________________________________________________________________________________________
+
+
+
+Global Fixes by Archer30. 
+Created to fix details of some mods. 
+!?FU(OnGameEnter);
+  !!UN:C(GAME_MANAGER)/4/?(gmAdd:y);
+  !!VR(mapTypeAdd:y):S(gmAdd)+128664;
+  !!UN:C(mapTypeAdd)/4/?(thisMapType:y);
+  !!UN&(thisMapType)<2:C(mapTypeAdd)/4/2;
+
+
+*********************************
+**** Difficulty Mod Part 2/2 ****
+*********************************
+
+
+IMPORTANT!!!
+This part of code needs to be executed LATER than diff mod. Please don't change the filename of the script without testing
+
+
+**** fix Mixed Neutral Config not disabled when Mixed Neutral is disab1ed in mod manager Part 2/2
+
+!?FU(difm_SaveOptionsToIni);
+!!VR(filePath:z):S^Runtime/difficulty mod.ini^;
+!!FU(WriteIniInts)&i^mix_missing^>0:P(filePath)/^main^/
+  ^mix_enabled^/?i^mix_missing^;[restore mix_enabled value to the value before launching without mix neutrals]
+!!FU(SaveIni):P(filePath);
+
+
+**** disable unecessary right-click msg on system option if diff mod is enabled
+
+!?FU(OnAdventureMapRightMouseClick);
+!!CM:I?(location:y);                    [clicked location]
+!!UN:J8/1/^Difficulty Mod.pac^;         [check if diff mod is enabled]
+!!CM&(location)=10/1:R0;                [disable right-click standard action on system option if true]
+
+
+**** disable Mixed Neutrals config option from diff mod by default (not all enjoy it)
+**** enable Preview mixed stack by default (awesome feature, why not?)
+**** disable View exact quantity by default (to leave some mysteries)
+
+!?FU(difm_LoadOptionsFromIni);
+!!VR(filePath:z):S^Runtime/difficulty mod.ini^;
+
+!!FU(ReadIniInts):P(filePath)/^main^/
+  ^mix_enabled^/?i^mix_enabled^/(FALSE)/
+  ^mixconf_displayExactStackQuantities^/?i^mixconf_displayExactStackQuantities^/(FALSE)/
+  ^mixconf_showRegularViewDialog^/?i^mixconf_showRegularViewDialog^/(FALSE);
+
+
+**** Fix Neutral Experience still activated with none in settings
+
+!?FU(OnCustomDialogEvent)&v998=13/v999=30722/v1000=13;
+!!UN&i^Stack_Exp_Rate^=0:P231/0;
+!!UN&i^Stack_Exp_Rate^>0:P231/1;
+
+
+**** End Difficulty Mod Part 2/2
+
+
+
+***************************************
+**** Game Enhancement Mod Part 2/2 ****
+***************************************
+
+
+IMPORTANT!!!
+This part of code needs to be executed LATER than GEM. Please don't change the filename of the script without testing
+
+
+**** Save GEM Battle Mode selection to ini
+
+!?FU(gem_Autobattle_Check_And_Sound);
+!!FU(gem_SaveBattleOptionsToIni)&x1=1:P;[inherit x1 from GEM]
+
+!?FU(gem_SaveBattleOptionsToIni);
+!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+!!FU(WriteIniInts):P(filePath)/^main^/^gem_battleMode^/?i^Current_Battle_Type%i(gem_CurPlay)^;
+!!FU(SaveIni):P(filePath);
+
+
+**** Save GEM Settings to ini
+
+!?FU(OnCustomDialogEvent)&v998=505/v999>=30721/v999<=30722/v1000=13;
+!!FU(gem_SaveGEMSettingsToIni):P;
+
+!?FU(gem_SaveGEMSettingsToIni);
+!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+*!SN:L^BattleSave.dll^/?(battleSavePlugin:y);
+!!FU(WriteIniInts):P(filePath)/^main^/^gem_control_units^/?i^gem_option_1_%i(gem_CurPlay)^; [save battle save option only when plugin is disabled]
+!!FU(WriteIniInts):P(filePath)/^main^/^gem_newButtons^/?i^gem_option_2_%i(gem_CurPlay)^;
+!!FU(WriteIniInts):P(filePath)/^main^/^gem_allyHeroScreen^/?i^gem_option_3_%i(gem_CurPlay)^;
+*!FU(WriteIniInts):P(filePath)/^main^/^gem_rpgMode^/?i^gem_option_4_%i(gem_CurPlay)^;
+*!FU(WriteIniInts):P(filePath)/^main^/^gem_disableFreeJoin^/?i^gem_option_5_%i(gem_CurPlay)^;
+!!FU(WriteIniInts):P(filePath)/^main^/^gem_enemyHeroScreen^/?i^gem_option_4_%i(gem_CurPlay)^;
+!!FU(SaveIni):P(filePath);
+
+
+**** End Game Enhancement Mod Part 2/2
+
+
