@@ -1,6 +1,6 @@
 
 # Change Log
-All notable changes to Era Gaming Mods
+All notable changes to Era Assembly, including [Archer's mods for launcher](https://github.com/Archer30/Era-Launcher-Mods)
 
 ## [Unreleased] - yyyy-mm-dd
 
