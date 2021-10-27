@@ -15,4 +15,5 @@ Docent Picolan
 Totkotoriy
 Astaroth
 FCst1
+Raistlin
 GrayFace
