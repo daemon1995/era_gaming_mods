@@ -16,4 +16,4 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 - Fixed some details of TrainerX. [Details of changes](https://github.com/Archer30/Era-Launcher-Mods/blob/main/CHANGELOG.md)
 
 ## [2.33] - 2021-10-12
-[Change log of Assenmbly 2.33](https://discord.com/channels/665742159307341827/667300419302719489/897220495454380052)
+[Change log of Assenmbly 2.33](http://wforum.heroes35.net/showthread.php?tid=5235&pid=129486#pid129486)
