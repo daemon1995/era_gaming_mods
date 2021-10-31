@@ -7,7 +7,7 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 ### Added
 
 ### Changed
-- Neutral Stack Size will no longer set the aggression level of neutrals (WoG Scripts). (Comment: With Diff Mod loaded, the same restriction is still valid)
+- Neutral Stack Size will no longer set the aggression level of neutrals (WoG Scripts). (Note: With Diff Mod loaded, the same restriction is still valid)
 ### Fixed
 - Adapted the Sorcery Enhancement script. Now it won't produce error with map objects with custom sizes.
 - Fixed the behaviour of checking monoliths with Mithril.
