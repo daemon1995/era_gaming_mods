@@ -18,4 +18,4 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 - Fixed possible crashes when checking hero's primary skils with spell scroll equipped. 
 
 ## [2.33] - 2021-10-12
-[Change log of Assenmbly 2.33](http://wforum.heroes35.net/showthread.php?tid=5235&pid=129486#pid129486)
+[Changelog of Era Launcher Edition 2.33](http://wforum.heroes35.net/showthread.php?tid=5235&pid=129486#pid129486)
