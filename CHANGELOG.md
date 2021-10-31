@@ -13,7 +13,7 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 - Fixed the behaviour of checking monoliths with Mithril.
 - Fixed the English localization of Cutthroat.
 - Fixed possible crashes when checking hero's primary skils with spell scroll equipped. 
-- Fixed some details of TrainerX. (Comment: Now typhon users are possible to use cheat for getting additional creatures - last creature ID must be set with FU(GetMaxMonsterId) before use)
+- Fixed some details of TrainerX. [Details of changes](https://github.com/Archer30/Era-Launcher-Mods/blob/main/CHANGELOG.md)
 
 ## [2.33] - 2021-10-12
 [Change log of Assenmbly 2.33](https://discord.com/channels/665742159307341827/667300419302719489/897220495454380052)
