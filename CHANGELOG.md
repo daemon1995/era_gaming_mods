@@ -5,6 +5,7 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 ## [Unreleased] - yyyy-mm-dd
 
 ### Added
+- Updated WoG Fix Lite 2.7.0. [Details of changes](http://wforum.heroes35.net/showthread.php?tid=5352&pid=129726#pid129726)
 - Updated TrainerX. [Details of changes](https://github.com/Archer30/Era-Launcher-Mods/blob/main/CHANGELOG.md)
 
 ### Changed
