@@ -1,4 +1,4 @@
-ZVSE
+ZVSE2
 
 ** All My Scripts (2004 September 19)                         (for WoG v3.58)
 ** by Tobyn
@@ -201,101 +201,129 @@ ZVSE
 
   CLICK DETECTED
 
-!?CM&v2362>0;              right-click trigger if script active
-!!CM:I?y-1;                  check click location
+!?CM&v2362>0/999;              right-click trigger if script active
 !!UN:P36/?v2369;             =1 if Mithril active
 
-  test if chat-line was clicked
-!!IF&237/-238/y-1=38:V237/0 V238/1 Q1/-1/-1/4/z164006; [10 to 01] if chat bar clicked
-!!IF&-237/-238/y-1=38:V237/1 Q1/-1/-1/4/z164007; [00 to 10] a set flag 237 means transfer mode active
+!!if&i^mouse_item^=38;   test if chat-line was clicked
+  !!IF&237/-238:V237/0 V238/1 Q1/-1/-1/4/z164006; [10 to 01] if chat bar clicked
+  !!IF&-237/-238:V237/1 Q1/-1/-1/4/z164007; [00 to 10] a set flag 237 means transfer mode active
+!!en;
+
 !!IF&-237/238:V237/0 V238/0; [01 to 00] reset if any transfer condition not met
-!!CM&237/y-1=37:R0;          disable standard reaction for right-click adv map if enough resources
-!!FU2336&237/y-1=37:P;       call Fct 2336 if transfer mode and adv map right-clicked and enough resources
+
+!!if&237/i^mouse_item^=37;
+  !!CM:R0;          disable standard reaction for right-click adv map if enough resources
+  !!FU2336:Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^;       call Fct 2336 if transfer mode and adv map right-clicked and enough resources
+!!en;
 
 
   GET BASIC INFO and START
 
 !?FU2336;
-
-!!CM:P?y1/?y2/?y3;           get clicked coordinates - store in y1,y2,y3
-!!OBy1/y2/y3:T?y4 U?y5 C?y6; get type (y4), subtype (y5), ctrl number (y6)
-!!OW:C?p;                    get current player, store in quick var (p)
+!#VA(x:x) (y:x) (z:x);
+*!CM:P?y1/?y2/?y3;           get clicked coordinates - store in y1,y2,y3
+!!OB(x)/(y)/(z):T?(obj:y); U?y5 C?y6; get type (y4), subtype (y5), ctrl number (y6)
+!!OW:C?(currentPlayer:y);                    get current player, store in quick var (p)
 
   now get object type, store in quick var (t)
-!!VRt:S0;                    0 for none of the 7 flaggable objects
-!!VRt&y4=34:S1;              1 for hero
-!!VRt&y4=98:S2;              2 for town
-!!VRt|y4=53/y4=220:S3;       3 for mine
-!!VRt|y4=17/y4=20:S4;        4 for dwelling
-!!VRt&y4=42:S5;              5 for lighthouse
-!!VRt&y4=87:S6;              6 for shipyard
-!!VRt|y4=33/y4=219:S7;       7 for garrison
-
   use type (t) to get owner (o) and compare with current player (p)
-!!VRo:S10;    init owner variable with impossible color, because elsewise
+*!VRo:S10;    init owner variable with impossible color, because elsewise
 ;             FU2337 could be called even if obj has no owner (only case if
 ;             player red (0) active, but not owner (0). Would still pass o=p)
-!!HEy1/y2/y3&t=1:O?o;        get owner - hero
-!!CAy1/y2/y3&t=2:O?o;        get owner - town
-!!MNy1/y2/y3&t=3:O?o;        get owner - mine
-!!DWy1/y2/y3&t=4:O?o;        get owner - dwelling
-!!MNy1/y2/y3&t=5:O?o;        get owner - lighthouse
-!!SYy1/y2/y3&t=6:O?o;        get owner - shipyard
-!!GRy1/y2/y3&t=7:O?o;        get owner - garrison
-!!FU2337&o=p:Py1/y2/y3;      call transfer screen (only if current player owns that flaggable obj, else give following msg)
-!!IF&o<>p:Q1/-1/-1/4/z164008; msgbox if no own flag at click location
+!!VR(owner:y):S-1;
+!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):O?(owner);        get owner - hero
+!!FU(GetRealObjectOnMap):P(x)/(y)/(z)/?(realObj:y);
+!!HE(x)/(y)/(z)&(realObj)=(OBJ_HERO):O?(owner);        get owner - hero
 
+!!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):O?(owner);        get owner - town
+
+!!MN(x)/(y)/(z)|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):O?(owner)/1; [check for owner but don't redraw]
+!!DW(x)/(y)/(z)|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4):O?(owner);
+*!MNy1/y2/y3&t=5:O?o;        get owner - lighthouse
+!!SY(x)/(y)/(z)&(obj)=(OBJ_SHIPYARD):O?(owner);
+!!GR(x)/(y)/(z)&(obj)=(OBJ_GARRISON):O?(owner);
+!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):O?(owner);        get owner - hero
+
+!!FU2337&(owner)=(currentPlayer):P(x)/(y)/(z)/(obj)/(owner)/(currentPlayer);      call transfer screen (only if current player owns that flaggable obj, else give following msg)
+!!IF&(owner)<>(currentPlayer):Q1/-1/-1/4/z164008; msgbox if no own flag at click location
 
   TRANSFER SCREEN and RESOURCE CHECK
 
 !?FU2337;
+!#VA(x:x) (y:x) (z:x) (obj:x) (owner:x) (currentPlayer:x);
+
 !!IF:V239/0;                 init transfer flag to "not set"
-!!IF&t>1:Q239/10/p/2/z164009; displays own flag (hero won't display this msgbox, use standard dismiss)
-!!VRn&239:S-1;               set new owner to none (grey) if selected
-!!VRq:S0;                    init loop variable q (range 0..7) to test all 8 possible colors
-!!DO2338/0/7/1&-239/t<>2:Px1/x2/x3; check with 8-time loop, ask only for active colors
-!!FU2339&239/n<>o:Px1/x2/x3; call actual transfer function
+!!IF&(obj)<>(OBJ_HERO):Q239/10/(currentPlayer)/2/z164009; displays own flag (hero won't display this msgbox, use standard dismiss)
+!!VR(owner)&239:S-1;               set new owner to none (grey) if selected
+*!DO2338/(PLAYER_FIRST)/(PLAYER_LAST)/1&-239/(obj)<>(OBJ_TOWN):Px1/x2/x3; check with 8-time loop, ask only for active colors
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
 
-  LOOP FUNCTION (determine active colors)
+  !!br|239/(obj)=(OBJ_TOWN);
+  !!co&i=(currentPlayer);
+  !!OW:Ii/d/?(isKilled:y);                test if color q inactive/killed (1) or alive (0)
 
-!?FU2338;                  prevent own and non-playing colors from being displayed
-!!OW:Iq/d/?r;                test if color q inactive/killed (1) or alive (0)
-!!VRr&q=p:S1;                ignore color if alive but current player
-!!OW&r=0:Tp/?s;              get team (quick var s) of current player
-!!OW&r=0:Tq/?m;              get team (m) of tested color, compare with team of current player
-!!MNx1/x2/x3&t=3:R?y1/1;     check mine's resource type
-!!OW&t=3:R-1/y1/?y2;         check that resource on owner
-!!VRy3&y1<>6/y2>0:S1;        set mine indicator for resources
-!!VRy3&y1=6/y2>999:S1000;    set mine indicator for gold
-!!OW&t=3/v2369=1/y3=0:R-1/7/?y4; check owner's Mithril if enabled and not enough other resources
-!!IF&-239/r=0/t=3/y3=0/y4=0:Q239/y1/0/7/0/1/z164010; call mine transfer notification
-!!VRy1&y4>0:S7;              set Mithril type if enough
-!!VRy3&y4>0:S1;              set Mithril amount =1 if enough
-!!VRz-1:S^^;                 init z-1
-!!VRz-1&m=s:Sz164011;        set z-1 to ally if detected
-!!IF&-239/r=0/y3>0:Q239/y1/y3/10/q/2/z164012; call mine transfer dialogue box
-!!IF&-239/r=0/t<>3:Q239/10/q/2/z164013;       call transfer dialogue box
-!!VRn&239:Sq;                store selected color in n
-!!OW&t=3/239/y1<>6:R-1/y1/d-1; remove 1 mine resource if mine transfer initiated
-!!OW&t=3/239/y1=6:R-1/y1/d-1000; remove 1000 gold if gold mine transfer initiated
-!!VRx16&239:S7;              end loop if selected
-!!VRq&-239:+1;               next if not selected
+  !!if&(isKilled)=(FALSE);
+
+    !!OW:T(currentPlayer)/?(currPlayerTeam:y);              get team (quick var s) of current player
+    !!OW:Ti/?(testPlayerTeam:y);              get team (m) of tested color, compare with team of current player
+    
+
+    !!if|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2);
+
+      !!MNx1/x2/x3:R?(resource:y)/1;     check mine's resource type
+
+      !!OW:R-1/(resource)/?(resourceNum:y);         check that resource on owner
+      !!VR(mineIndicator:y)&(resource)<>(RES_GOLD)/(resourceNum):S1;
+      !!VR(mineIndicator:y)&(resource)=(RES_GOLD)/(resourceNum)>999:S1000;
+      !!OW&v2369=1/(mineIndicator)=0:R-1/7/?(mithtrilNum:y); check owner's Mithril if enabled and not enough other resources
+      !!IF&-239/(mineIndicator)=0/(mithtrilNum)=0:Q239/(resource)/0/7/0/1/z164010; call mine transfer notification
+    
+      !!if&(mithtrilNum);
+        !!VR(mineIndicator):S1;
+        !!VR(resourceNum):S7;
+      !!en;
+    !!en;
+
+    !!VRz-1:S^^;                 init z-1
+    !!VRz-1&(testPlayerTeam)=(currPlayerTeam):Sz164011;        set z-1 to ally if detected
+    !!IF&-239/(resourceNum):Q239/(resource)/(mineIndicator)/10/i/2/z164012; call mine transfer dialogue box
+    !!IF&-239/(obj)<>(OBJ_MINE)/(obj)<>(OBJ_MINE_2):Q239/10/i/2/z164013;       call transfer dialogue box
+
+
+    !!if&239;
+      !!VR(owner):Si;
+      !!if|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2);
+        !!OW&(mineIndicator)<>(RES_GOLD):R-1/(resource)/d-1; remove 1 mine resource if mine transfer initiated
+        !!OW&(mineIndicator)=(RES_GOLD):R-1/(resource)/d-1000; remove 1000 gold if gold mine transfer initiated
+      !!en;
+
+      !!br;
+    !!en;
+  !!en;
+  
+!!en;
+
+!!FU2339&(owner)<>(currentPlayer):Px1/x2/x3/(owner)/(obj); call actual transfer function
+
 
 
   TRANSFER FUNCTION
 
 !?FU2339;                  apply respective "set owner" commands according to n,t vars
+!#VA(x:x) (y:x) (z:x) (chosen:x) (obj:x); (currentPlayer:x);
+
 *!HEx1/x2/x3&t=1/n=-1:K;     set owner - hero eliminated (if ownership was renounced)
-!!HEx1/x2/x3&t=1:On G?y1 W?y2/1;  set owner - hero (if transfered to an existing color) and get movement [TESTING]
-!!VRy1&t=1:-y2;              hero - calculate difference between initial and current movement
-!!HEx1/x2/x3&t=1:Y10/?y3/?y4/d; check hero - don't penalize hero transfer if speed curse present
-!!HEx1/x2/x3&t=1/y1>0/y4=0:Y10/y1/0/1; hero - set that difference as movement curse for current day only
-!!CAx1/x2/x3&t=2:On;         set owner - town
-!!MNx1/x2/x3&t=3:On;         set owner - mine
-!!DWx1/x2/x3&t=4:On/1;       set owner - dwelling (new syntax)
-!!MNx1/x2/x3&t=5:On;         set owner - lighthouse
-!!SYx1/x2/x3&t=6:On;         set owner - shipyard
-!!GRx1/x2/x3&t=7:On;         set owner - garrison
+!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):O(chosen) G?y1 W?y2/1;  set owner - hero (if transfered to an existing color) and get movement [TESTING]
+!!VRy1&(obj)=(OBJ_HERO):-y2;              hero - calculate difference between initial and current movement
+!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):Y10/?y3/?y4/d; check hero - don't penalize hero transfer if speed curse present
+!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO)/y1>0/y4=0:Y10/y1/0/1; hero - set that difference as movement curse for current day only
+!!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):O(chosen);         set owner - town
+!!MN(x)/(y)/(z)|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):O(chosen);         set owner - mine
+!!UN|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):R2;
+!!DW(x)/(y)/(z)|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4):O(chosen)/1;       set owner - dwelling (new syntax)
+*!MN(x)/(y)/(z)&:O(chosen);         set owner - lighthouse
+!!SY(x)/(y)/(z)&(obj)=(OBJ_SHIPYARD):O(chosen);         set owner - shipyard
+!!GR(x)/(y)/(z)&(obj)=(OBJ_GARRISON):O(chosen);         set owner - garrison
 
 !?OB98&v2362=1/1000;      to counter clearing of "build-here-this-day" flag for human players
 !!CA998:R?y-1;               check that flag's condition when entering (or conquering) a town

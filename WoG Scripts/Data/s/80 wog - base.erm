@@ -15,11 +15,16 @@ ZVSE2
 !!FU(WOG_CreateERMHook):Py2;
 
 !?FU(WOG_CreateERMHook);
-!!SN:Ex1/1/5013149/(WOG_OnNewDay);         [trigger on start every day]
-!!SN:Ex1/1/5014608/(WOG_OnNewWeek);        [trigger on start every week]
-!!SN:Ex1/1/5016587/(WOG_OnNewMonth);       [trigger on start every month]
-!!SN:Ex1/1/7710213/(WOG_PreBeforeBattle);  [use only in exceptional cases]
-!!SN:Ex1/1/5008601/(WOG_EndOfTurn);        [trigger on every player end of turn]
+!#VA(hookingFuncAddress:x);
+!!SN:E(hookingFuncAddress)/1/5013149/(WOG_OnNewDay);                      [trigger on start every day]
+!!SN:E(hookingFuncAddress)/1/5014608/(WOG_OnNewWeek);                     [trigger on start every week]
+!!SN:E(hookingFuncAddress)/1/5016587/(WOG_OnNewMonth);                    [trigger on start every month]
+!!SN:E(hookingFuncAddress)/1/7710213/(WOG_PreBeforeBattle);               [use only in exceptional cases]
+!!SN:E(hookingFuncAddress)/1/5008601/(WOG_EndOfTurn);                     [trigger on every player end of turn]
+
+!!SN:E(hookingFuncAddress)/1/5968384/(WOG_OnUpdateHeroInteractionScreen); [trigger WHILE hero meeting screen]
+!!SN:E(hookingFuncAddress)/1/5942672/(WOG_OnBeforeHeroSwap);              [trigger AFTER OnBeforeHeroInteraction but BEFORE Dlg show (works in town screen)]
+!!SN:E(hookingFuncAddress)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 
 ; ******************************************************************************
 
@@ -35,3 +40,54 @@ ZVSE2
 !!VR(result)&(value2)=114:S(TRUE);
 
 ; ******************************************************************************
+
+************************* HD_MOD_WAR_MACHINES_SWAP_FIX *************************
+
+!?FU(WOG_OnBeforeHeroSwap)&999;
+  !!FU&v591<1/v847<1:E;                            [v591 is WM 1, v847 is WM 3]
+  !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
+
+  !!FU&v1<1:E;
+
+  !!UN:C6962576/(UNC_INT32)/?(heroSwapStructure:y);
+
+  !!UN:C(heroSwapStructure)/64/(UNC_INT32)/?(leftHeroStructure:y);
+  !!UN:C(heroSwapStructure)/68/(UNC_INT32)/?(rightHeroStructure:y);
+
+  !!UN:C(leftHeroStructure)/26/(UNC_INT32)/?i^swap_hero_0^;
+  !!UN:C(rightHeroStructure)/26/(UNC_INT32)/?i^swap_hero_1^;
+
+  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+    !!HEi^swap_hero_0^:A2/i/d/?i^WM_Machine_%i_Hero_0^;
+    !!HEi^swap_hero_1^:A2/i/d/?i^WM_Machine_%i_Hero_1^;
+  !!en;
+  !!VRi^WM_Machine_Before_Art_Swap^:S(TRUE);
+
+!?FU(OnUnequipArt)|i^swap_hero_0^/i^swap_hero_1^;
+  !!if&v998>=(ART_BALLISTA)/v998<=(ART_FIRST_AID_TENT)/i^WM_Machine_Before_Art_Swap^;
+    !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
+  !!en;
+
+!?FU(WOG_OnUpdateHeroInteractionScreen)&i^WM_Machine_Before_Art_Swap^=(FALSE);
+  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+    !!VR(artUnequip:y):Si *-1;
+    !!if&i^WM_Machine_%i_Hero_0^>i^WM_Machine_%i_Hero_1^;
+      !!HEi^swap_hero_0^:A4/i;
+      !!HEi^swap_hero_1^:A(artUnequip);
+    !!el&i^WM_Machine_%i_Hero_1^>i^WM_Machine_%i_Hero_0^;
+      !!HEi^swap_hero_0^:A(artUnequip);
+      !!HEi^swap_hero_1^:A4/i;
+    !!en;
+    !!VRi^WM_Machine_Before_Art_Swap^:S(TRUE);
+
+  !!en;
+
+!?FU(WOG_OnAfterHeroSwap)&999;
+  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+    !!VRi^WM_Machine_%i_Hero_0^:S(FALSE);
+    !!VRi^WM_Machine_%i_Hero_1^:S(FALSE);
+  !!en;
+
+  !!VRi^swap_hero_0^:S(FALSE);
+  !!VRi^swap_hero_1^:S(FALSE);
+  !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
