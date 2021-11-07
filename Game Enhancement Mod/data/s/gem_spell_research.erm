@@ -4,17 +4,26 @@ ZVSE2
 !#DC(SRM_DLG_SPELL_CHOICE) = 508;
 
 ;spellResearch mod is rewritten in ERM 2.0
-;current version is 1.04
+;current version is 1.05
 ;author - daemon_n
 ;original idea - HotA Crew (Horn of the Abyss game)
-;requires ERA 3.8.4 +, ERA ERM Framework mod;
+;requires ERA 3.9.0 +, ERA ERM Framework mod;
 ;used dialogs ID - 506, 507, 508
 ;used z-vars - 1-15, 20-23, 30-32, 40, 41, 50;
 !?FU(OnGameEnter);
-!!re i/0/(RES_GOLD);
-  !!OW:R-1/i/d100;
+*!re i/0/(RES_GOLD);
+  *!OW:R-1/i/d100;
+*!en;
+*!SN:D;
+!?FU(OnAfterBuildTownBuilding);    [trigger after Bulding - ERA 3.9.1+]
+!?FU(OnBuildTownBuilding);
+!?FU(OnAfterBuildTownBuilding)&i^srm_mod_is_enabled^;    [trigger after Bulding - ERA 3.9.1+]
+!#VA(townId:x) (buildingId:x);
+!!CA0/(townId):T?(townType:y);
+
+!!if&(townType)=(TOWN_TOWER)/(buildingId)=22;                               [when building the library in Tower]
+  !!FU(srm_remove_library_spells_from_arrays_when_built):P(townId);   [start remove library_spells from_arrays_when_built FU]
 !!en;
-!!SN:D;
 
 !?FU(OnTownMouseClick)&i^srm_mod_is_enabled^;
   !!CM:S?(clickSub:y) I?(clickedPlace:y);
@@ -26,7 +35,7 @@ ZVSE2
 
     !!CA-1:U?(townId:y) T?(townType:y) B3/26;    
 
-    !!FU&1/(townType)=(TOWN_CONFLUX)|(townId)>=i^srm_townsAmount^:E;                       [if this is not town from the start or flux with graal]
+    !!FU&1/(townType)=(TOWN_CONFLUX)|(townId)>=i^srm_townsAmount^:E;        [if this is not town from the start or flux with graal]
 
     
     !!CA-1:B3/22;
@@ -34,8 +43,8 @@ ZVSE2
       !!VR(hasLibrary:y):S(TRUE);
 
       !!if&i^srm_town%(townId)_has_no_library_from_start^;
-        !!FU(srm_remove_library_spells_from_arrays_when_built):P(townId); [start srm_remove_library_spells_from_arrays_when_built FU]
-        !!VRi^srm_town%(townId)_has_no_library_from_start^:S(FALSE); [and it should be once]
+        *!FU(srm_remove_library_spells_from_arrays_when_built):P(townId);   [start remove library_spells from_arrays_when_built FU]
+        !!VRi^srm_town%(townId)_has_no_library_from_start^:S(FALSE);        [and it should be once]
       !!en;
 
     !!en;
@@ -53,7 +62,10 @@ ZVSE2
     !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
     !!FU(srm_gm_rebuild_visual_set):P(townId)/(guildLevel)/(townType)/(hasLibrary);
     !!FU(srm_new_MG_DL_text_creating):P(townId)/(currPlayer)/(clickedPlayer);
-      !!VRi^srm_check_spellbook1^:S(TRUE);
+    !!VRi^srm_check_spellbook1^:S(TRUE);
+    !!if&i^srm_greetings_message^;
+      !!VRi^srm_greetings_message^:S2;
+    !!en;
     !!DL(SRM_DLG_MAGE_GUILD):S1;
 
     [AFTER DLG WAS CLOSED]
@@ -281,12 +293,13 @@ i^current_researchable_spell_in_town%(townId)^
     !!VR(spellGlobalPlace:y):Si^srm_spell_place_in_mg^;
     !!VR(guildLevel:y):S(spellGlobalPlace) :10;
 
-    !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/0/?i^firstSpellFromStore^;
+    !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(availableSpellsToResearch:y);
 
+    !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/0/?i^firstSpellFromStore^;
 
     !!DL(SRM_DLG_SPELL_CHOICE):A5/(DLG_CMD_SET_DEF_FRAME)/i^firstSpellFromStore^/0;             [set correct pictures in offer dialog]
 
-    !!if&(guildLevel)=4;                                                                        [if 5th gm Lvl]
+    !!if|(guildLevel)=4/(availableSpellsToResearch)<2;                                          [if 5th gm Lvl or array has only 1 spell]
       !!VRi^secondSpellFromStore^:S-1;
       !!VRi^current_researchable_spell_in_town%(townId)^:Si^firstSpellFromStore^;
     !!el;
@@ -521,6 +534,7 @@ i^current_researchable_spell_in_town%(townId)^
     !!re i/0/(arraySize)/1/-1;
       !!SN:Mi^srm_town%(townId)_researched_slots^/i/?(blockedScroll:y); [setting description for the blocked scrolls (learned spells)]
       !!VR(spellId:y):Si^srm_spell_%(blockedScroll)^ -100;
+      !!co&(spellId)<0;
       !!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
       !!VR(realElementID:y):S200 +(blockedScroll);
 
@@ -679,37 +693,135 @@ i^current_researchable_spell_in_town%(townId)^
 
   !!if&(boxSize)<30;
     !!FU(gem_DlgItemSize):P12/d/d20;/(SRM_DLG_SPELL_CHOICE);
-    !!FU(gem_DlgItemSize):P13/d/d20;/(SRM_DLG_SPELL_CHOICE);
+    !!FU(gem_DlgItemSize):P13/d/d20/1;/(SRM_DLG_SPELL_CHOICE);
     !!VRi^srm_increase_dlg_height^:S(FALSE);
   !!en;
 
-!?FU(gem_OnDlgProcessAction)&i^srm_check_spellbook1^=(TRUE);
-  !!FU(srm_check_spellbook)&999:P;
-  !!VRi^srm_check_spellbook1^:S(FALSE);
+!?FU(OnAfterErmInstructions);
+
+!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+!!FU(ReadIniInts):P(filePath)/^main^/^srm_greetings^/?i^srm_greetings_message^/1;
+!!if&i^srm_greetings_message^;
+  !!FU(WriteIniInts):P(filePath)/^main^/^srm_greetings^/0; [save battle save option only when plugin is disabled]
+  !!FU(SaveIni):P(filePath);
+!!en;
 
 
 
+!?FU(gem_OnDlgProcessAction)|i^srm_check_spellbook1^=(TRUE)/i^srm_greetings_message^=2;
+  !!if&i^srm_greetings_message^;
+    !!VRi^srm_greetings_message^:S0;
+    !!SN:T^%s(srm_lang)_spell_research_help.head^/?(head:z);
+    !!SN:T^%s(srm_lang)_spell_research_help.body^/?s^srm_availableSpellsToResearchList^;
+    !!SN:T^%s(srm_lang)_spell_research_help.info^/?(info:z);
+    !!IF:M^%(head)%s(srm_availableSpellsToResearchList)%(info)^;
+    !!SN:W^srm_availableSpellsToResearchList^;
+  !!en;
+
+  !!if&i^srm_check_spellbook1^;
+    !!VRi^srm_check_spellbook1^:S(FALSE);
+    !!FU(srm_check_spellbook)&999:P;
+  !!en;
+
+
+
+
+!?FU(OnCustomDialogEvent)&x1=(SRM_DLG_MAGE_GUILD)/v999=43;
+  !!CA-1:U?(townId:y) G?(guildLevel:y);
+  *!IF:M^%(guildLevel)^;
+  *!FU:E;
+  !!VR(guildLevel):-1;
+
+  !!if&v1000=(MOUSE_LMB_RELEASED);
+    !!SN:T^%s(srm_lang)_spell_research_help.head^/?(head:z);
+    !!SN:T^%s(srm_lang)_spell_research_help.body^/?s^srm_availableSpellsToResearchList^;
+    !!SN:T^%s(srm_lang)_spell_research_help.ask^/?(ask:z);
+
+    !!IF:Q1^%(head)%s(srm_availableSpellsToResearchList)%(ask)^;
+
+    !!FU(srm_show_spells_to_research_list)&1:P(townId)/(guildLevel);
+    !!IF&1:M^%s(srm_availableSpellsToResearchList)^;
+    !!SN:W^srm_availableSpellsToResearchList^;
+  !!en;
+
+  !!if&v1000=(MOUSE_RMB_PRESSED);
+    !!FU(srm_show_spells_to_research_list):P(townId)/(guildLevel);
+
+    !!IF:M0/4/^%s(srm_availableSpellsToResearchList)^;
+    !!SN:W^srm_availableSpellsToResearchList^;
+  !!en;
+
+
+!?FU(srm_show_spells_to_research_list);
+!#VA(townId:x) (guildLevel:x);
+  !!SN:T^%s(srm_lang)_spell_research_help.levelSpellsHead^/?(head:z);
+  !!SN:T^%s(srm_lang)_spell_research_help.endl^/?(endl:z);
+
+  !!VRs^srm_availableSpellsToResearchList^:S^{~text valign=top}%(head)}%(endl)^;
+  !!re i/0/(guildLevel);
+    !!SN:Mi^srm_town%(townId)_gm%i_store^/?(arraySize:y);
+    !!if&(arraySize);
+      !!VR(realGm:y):Si +1;
+      !!SN:T^%s(srm_lang)_spell_research_help.levelSpells^/?(lineStart:z)/^guild^/(realGm);
+      !!VRs^srm_availableSpellsToResearchList^:+^{~text align=left}%(lineStart)}^ +(endl);
+      !!FU(NewIntArray):P?(tempSpellListarray:y);
+      !!FU(Array_Copy):Pi^srm_town%(townId)_gm%i_store^/(tempSpellListarray);
+      !!FU(Array_Sort):P(tempSpellListarray);
+      !!re (itemId:y)/0/(arraySize)/1/-1;
+        !!SN:M(tempSpellListarray)/(itemId)/?(spellId:y);
+        *!VR(spellId):+1;
+        !!VRs^srm_availableSpellsToResearchList^:+^{~text align=right}{~>spells.def:%(spellId) valign=center}}^;
+        !!VR(difCheck:y):S(arraySize) -(itemId) -1;
+        !!VRs^srm_availableSpellsToResearchList^&(itemId)=8/(difCheck):+(endl) +(endl) +(endl);
+      !!en;
+      !!VRs^srm_availableSpellsToResearchList^&i<(guildLevel):+(endl) +(endl);
+    !!en;
+  !!en;
 !?FU(srm_remove_library_spells_from_arrays_when_built);
   !#VA(townId:x) (guildLevel:y);
-
+  !!VR(hasLibrary:y):S(TRUE);                                            [of course it is :demonr:]
   !!re (guildLevel)/0/4;
 
     !!VR(scrollPosition:y):S5 -(guildLevel);
     !!CA0/(townId):G(guildLevel)/(scrollPosition)/?(extraLibrarySpell:y);
     !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(arraySize:y);
+
+
+    !!co&(arraySize)<1;
     !!VR(localArrayCount:y):S0;
 
     !!re i/0/(arraySize)/1/-1;
       !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/i/?(spellForCheck:y);
 
-      !!if&(spellForCheck)<>(extraLibrarySpell);
+      !!if&(spellForCheck)<>(extraLibrarySpell)/(extraLibrarySpell)>=(SPELL_FIRST);
         !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/(localArrayCount)/(spellForCheck);
         !!VR(localArrayCount):+1;
       !!en;
 
     !!en;
+*!IF:M^%^;
 
     !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/d-1; [resize array when library is build and spell is removed from its]
+    !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(availableSpellsToResearch:y);
+
+    !!if&(availableSpellsToResearch)=0;
+      *!VR(maxScrollsOnLevel:y):S5 -(guildLevel) +(hasLibrary);
+      !!CA0/(townId):G(guildLevel)/?(maxScrollsOnLevel:y);
+      !!re i/0/(maxScrollsOnLevel)/1/-1;
+        !!VR(itemId:y):S(guildLevel) *10 + i;
+        !!FU(Array_Push):Pi^srm_town%(townId)_researched_slots^/(itemId);
+        !!if&(itemId)=i^current_researchable_spell_in_town%(townId)_place^;
+          !!IF:M^%^;
+
+          !!CA0/(townId):G(guildLevel)/i/i^current_researchable_spell_in_town%(townId)^;  [accept researhable spell in town]
+          !!VRi^current_researchable_spell_in_town%(townId)^:S-1;
+          !!VRi^current_researchable_spell_in_town%(townId)_place^:S-1;
+i^current_researchable_spell_in_town%(townId)_place^
+        !!en;
+      !!en;
+
+    !!en;
+
 
   !!en;
 
@@ -741,6 +853,7 @@ i^current_researchable_spell_in_town%(townId)^
       !!re (guildLevel:y)/0/(maxGm);
         !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_gm%(guildLevel)_store^;;
       !!en;
+      !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_researched_slots^; [create empty arrays for in the future spells research]
 
       !!VR(hasLibrary:y):S(FALSE);
 
@@ -766,7 +879,9 @@ i^current_researchable_spell_in_town%(townId)^
 
       !!en;
 
-      !!re (guildLevel:y)/0/4;                                                                             [after all the spells loops -]
+************  AFTER ADDING ALL SPELLS TO RESEARH IN THE ARRAYS DO THIS:  ************************* 
+
+      !!re (guildLevel:y)/0/4;                                                                             [after all the spells loops - loop all mg lvls]
         !!br&(guildLevel)=3/(townType)=(TOWN_STRONGHOLD);  
         !!br&(guildLevel)=3/(townType)=(TOWN_FORTRESS);
         !!br&(guildLevel)=4/(townType)=(TOWN_CASTLE); 
@@ -776,33 +891,58 @@ i^current_researchable_spell_in_town%(townId)^
           !!VR(scrollPosition:y):S5 -(guildLevel);
           !!CA0/(townId):G(guildLevel)/(scrollPosition)/?(extraLibrarySpell:y);                            [check each latest scroll in each gm lvl]
 
-          !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(arraySize:y);                                 [get research array size]
+          !!if&(extraLibrarySpell)>=(SPELL_FIRST);                                                           [only if extra slot has spell]
+            !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(arraySize:y);                                 [get research array size]
 
-          !!FU(NewIntArray):P?(mainArrayLocalCopy:y);
-          !!FU(Array_Copy):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(mainArrayLocalCopy);               [copy to local array]
-          !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/1;                                              [set array size = to  1]
-          !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/0/(extraLibrarySpell);                          [set extraLibrarySpell to the 0th array elem]
+            !!FU(NewIntArray):P?(mainArrayLocalCopy:y);
+            !!FU(Array_Copy):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(mainArrayLocalCopy);               [copy to local array]
+            !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/1;                                              [set array size = to  1]
+            !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/0/(extraLibrarySpell);                          [set extraLibrarySpell to the 0th array elem]
 
-          !!re i/0/(arraySize)/1/-1;
-            !!SN:M(mainArrayLocalCopy)/i/?(spellFromArray:y);                                           [check each its spell]
+            !!re i/0/(arraySize)/1/-1;
+              !!SN:M(mainArrayLocalCopy)/i/?(spellFromArray:y);                                           [check each its spell]
 
-            !!if&(extraLibrarySpell)<>(spellFromArray);                                                 [except extraLibrarySpell ID]
-              !!FU(Array_Push):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellFromArray);                 [filling the main array with itself and only from 1st (not 0th) element]
+              !!if&(extraLibrarySpell)<>(spellFromArray);                                                 [except extraLibrarySpell ID]
+                !!FU(Array_Push):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellFromArray);                 [filling the main array with itself and only from 1st (not 0th) element]
+              !!en;
             !!en;
+
+          !!en;
+
+        !!en;
+
+        !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(availableSpellsToResearch:y);
+
+
+        !!if&(availableSpellsToResearch)<1;
+          *!VR(maxScrollsOnLevel:y):S5 -(guildLevel) +(hasLibrary);
+          !!CA0/(townId):G(guildLevel)/?(maxScrollsOnLevel:y);
+
+          !!re i/0/(maxScrollsOnLevel)/1/-1;
+            !!VR(itemId:y):S(guildLevel) *10 + i;
+            !!FU(Array_Push):Pi^srm_town%(townId)_researched_slots^/(itemId);
           !!en;
 
         !!en;
 
       !!en;
 
-      !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_researched_slots^; [create empty arrays for in the future spells research]
 
     !!en;
+
+
 
 !?FU(srm_CheckSpellInTown);
   !#VA(townId:x) (spellForCheck:x) (guildLevel:x) (hasLibrary:x) (isSpellFree:x);
   !!VR(maxScrollsOnLevel:y):S5 -(guildLevel) +(hasLibrary);
   !!VR(isSpellFree):S(TRUE);
+
+  !!FU(Town_IsSpellBanned):P(townId)/(spellForCheck)/?(isBanned:y);
+  !!if&(isBanned);
+      *!IF:M^%(spellForCheck) isBanned: %(isBanned) in Town %(townId)^;
+      !!VR(isSpellFree):S(FALSE);
+      !!FU:E;
+  !!en;
 
   !!re (scrollPosition:y)/0/(maxScrollsOnLevel)/1/-1;
     !!CA0/(townId):G(guildLevel)/(scrollPosition)/?(spellOnPosition:y);
@@ -812,6 +952,12 @@ i^current_researchable_spell_in_town%(townId)^
       !!br;
     !!en;
   !!en;
+
+
+
+
+
+
 
 !?FU(OnKeyPressed_Town)&x1=(KEY_F3);
 !!CA-1:U/?(townId:y);
@@ -893,40 +1039,40 @@ i^current_researchable_spell_in_town%(townId)^
   !#VA(townId:x) (arraySize:x) (coverId:y) (x:y) (y:y);
 
   !!re i/0/(arraySize)/1/-1;                                            [such times how array is size]
-    !!SN:Mi^srm_town%(townId)_researched_slots^/i/?(ptr:y);             [read exh element]
-    !!VR(coverId):S200 +(ptr);
+    !!SN:Mi^srm_town%(townId)_researched_slots^/i/?(itemId:y);             [read exh element]
+    !!VR(coverId):S200 +(itemId);
 
-    !!if&(ptr)>=0/(ptr)<=5;                                             [1st MG level]
-      !!VR(x)&(ptr)<3:S90*(ptr) +220;
-      !!VR(x)&(ptr)>2:S90*(ptr) +248;
+    !!if&(itemId)>=0/(itemId)<=5;                                             [1st MG level]
+      !!VR(x)&(itemId)<3:S90*(itemId) +220;
+      !!VR(x)&(itemId)>2:S90*(itemId) +248;
       !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/(x)/0 A(coverId)/53/436/0;
       !!co;
     !!en;
 
-    !!if&(ptr)>=10/(ptr)<=14;                                           [2nd MG Level]
-      !!VR(y):S(ptr) %10 *94  +44;
+    !!if&(itemId)>=10/(itemId)<=14;                                           [2nd MG Level]
+      !!VR(y):S(itemId) %10 *94  +44;
       !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/46/0 A(coverId)/53/(y)/0;
       !!co;
     !!en;
     
-    !!if&(ptr)>=20/(ptr)<=23;                                           [3rd MG Level]
-      !!VR(x):S(ptr) %2 *102 +568;
-      !!VR(y)&(ptr)<22:S73;
-      !!VR(y)&(ptr)>21:S148;
+    !!if&(itemId)>=20/(itemId)<=23;                                           [3rd MG Level]
+      !!VR(x):S(itemId) %2 *102 +568;
+      !!VR(y)&(itemId)<22:S73;
+      !!VR(y)&(itemId)>21:S148;
       !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/(x)/0 A(coverId)/53/(y)/0;
       !!co;
     !!en;
 
-    !!if&(ptr)>=30/(ptr)<=32;                                           [4th MG Level]
-      !!VR(y)&(ptr)=30:S33;
-      !!VR(y)&(ptr)=31:S141;
-      !!VR(y)&(ptr)=32:S246;
+    !!if&(itemId)>=30/(itemId)<=32;                                           [4th MG Level]
+      !!VR(y)&(itemId)=30:S33;
+      !!VR(y)&(itemId)=31:S141;
+      !!VR(y)&(itemId)=32:S246;
       !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/181/0 A(coverId)/53/(y)/0;
       !!co;
     !!en;
 
-    !!if&(ptr)>=40/(ptr)<=41;                                           [5th MG Level]
-      !!VR(x):S(ptr) %2 *100 +489;
+    !!if&(itemId)>=40/(itemId)<=41;                                           [5th MG Level]
+      !!VR(x):S(itemId) %2 *100 +489;
       !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/(x)/0 A(coverId)/53/318/0;
     !!en;
 
@@ -984,3 +1130,55 @@ i^current_researchable_spell_in_town%(townId)^
     !!SN:T^%s(srm_lang)_spell_research_main.cant_buy^/?(msgSpellBook:z)/^cost^/(spellBookCost);
     !!IF:Q1/8/0/1^%(msgSpellBook)^;
   !!en;
+
+!?FU(OnKeyPressed_Town)&x1=(KEY_F3);
+*!IF:L^%^;
+!!CA-1:U?(townId:y);
+*!FU(Town_IsSpellBanned):P(townId)/(SPELL_ARMAGEDDON)/?(isBanned:y);
+*!IF:L^isBanned: %(isBanned)^;
+
+!?FU(WOG_Town_GetStruct);
+; x1 - town number on map (0...47)
+;?x2 - return: itemId structure town
+!#VA(townId:x) (buildId:x); 
+!!IF&(townId)<(MAP_TOWN_FIRST)|(townId)>(MAP_TOWN_LAST):M^{FU(Town_GetStruct)}: Wrong town id.^;
+!!UN:C(GAME_MANAGER)/(UNC_UINT32)/?(game:y); 
+!!UN:C(game)/136724/(UNC_UINT32)/?(itemId:y); 
+!!VR(buildId):S(townId) *360 +(itemId);
+!!IF&(buildId)<43200000:M^{FU(Town_GetStruct): Attention!}
+Error in getting town structure address. 
+The game may fall at any time.^; 
+
+!?FU(Town_IsSpellBanned);
+!#VA(townId:x) (spellID:x) (result:x);
+!!VR(result):S(FALSE);
+
+; получаем структуру города
+!!FU(WOG_Town_GetStruct):P(townId)/?(town:y);
+
+; работаем с битами запрета заклинаний в городе
+; bit = (1 << (id & 31) & *(spellsBits + (id >> 5)) )
+!!VR(bitsOffset:y):S(spellID) :32 *4 +212;  212=смещение до забаненых спеллов (town->0xD4: int[4])
+!!UN:C(town)/(bitsOffset)/4/?(spellsBits:y);
+!!VR(leftPart:y):S(spellID) &31;
+
+!!VR(isSpellBannedInTown:y):S1 Sd<<(leftPart) &(spellsBits);
+*!IF&(SPELL_PROTECTION_FROM_FIRE)=(spellID):M^%(leftPart)  %(spellsBits)^;
+
+; проверяем на запрет искомое заклинание в городе
+!!if&(isSpellBannedInTown)<>0:;
+  !!VR(result):S(TRUE);
+  !!FU:E;
+!!en;
+
+; работаем с битами запрета заклинаний в игре
+!!UN:C6919480/4/?(gameMgr:y); 
+!!VR(spellBannedOfsset:y):S74 +(spellID);
+!!UN:C(gameMgr)/(spellBannedOfsset)/1/?(isSpellBannedInGame:y);
+
+; проверяем на запрет искомое заклинание в игре
+!!if&(isSpellBannedInGame)>0:;
+  !!VR(result):S(TRUE);
+  !!FU:E;
+!!en;
+
