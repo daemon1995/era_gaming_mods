@@ -2308,14 +2308,14 @@ ZVSE2
 !#VA(knowledge:x); Out. Knowledge value.
 
 !#VA(equippedArts[19]:y);
+!#VA(equippedArtMods[19]:y);
 
 !!re (slot:y)/0/(equippedArts[SIZE])/1/-1;
+  !!FU(GetArtAtSlot):P(hero)/(slot)/?(art:y)/?(artMod:y);
   !!VR(equippedArts[slot]):S(NO_ART);
-  !!co&(slot)>=(ART_SLOT_BALLISTA)/(slot)<=(ART_SLOT_SPELL_BOOK);
+  !!VR(equippedArtMods[slot]):S(artMod);
 
-  !!HE(hero):A1/?(art:y)/(slot);  
-
-  !!if&(art)<>(ART_HIGHLIGHTED_SLOT)/(art)<>(ART_ARTIFACT_LOCK)/(art)>=(ART_CENTAUR_AXE)/(art)<1000;
+  !!if&(art)<>(ART_HIGHLIGHTED_SLOT)/(art)<>(ART_ARTIFACT_LOCK);
     !!VR(equippedArts[slot]):S(art);
     !!FU(UnequipArtFromSlot):P(hero)/(slot);
   !!en;
@@ -2324,16 +2324,75 @@ ZVSE2
 !!HE(hero):F?(attack)/?(defense)/?(power)/?(knowledge);
 
 !!re (slot:y)/0/(equippedArts[SIZE])/1/-1;
-  !!co&(slot)>=(ART_SLOT_BALLISTA)/(slot)<=(ART_SLOT_SPELL_BOOK);
-
   !!VR(art):S(equippedArts[slot]);
-  !!FU(EquipArtToSlot)&(art)<>(NO_ART):P(hero)/(art)/(slot);
+  !!FU(EquipArtToSlot)&(art)<>(NO_ART):P(hero)/(art)/(equippedArtMods[slot])/(slot);
 !!en;
+
+!?FU(GetArtAtSlot);
+; Returns hero artifact and artifact modifier at given slot.
+!#VA(hero:x);   Hero ID or (CURRENT_HERO)
+!#VA(slot:x);   Slot ID (backpack is supported).
+!#VA(artId:x);  OUT. Artifact ID.
+!#VA(artMod:x); OUT. Artifact modifier.
+
+!!HE(hero):Z?(heroStruct:y);
+
+!!if|(slot)<(ART_SLOT_FIRST)/(slot)>(ART_SLOT_LAST);
+  !!SN:F^ShowErmError^/^GetArtAtSlot: invalid artifact slot ID: %(slot)^;
+  !!FU:E;
+!!en;
+
+!!if&(slot)>=(ART_SLOT_EQUIPPED_FIRST)/(slot)<=(ART_SLOT_EQUIPPED_LAST);
+  !!VR(artHandlePtr:y):+S(slot) *8 +301 +(heroStruct);
+!!el;
+  !!VR(artHandlePtr:y):+S(slot) -(ART_SLOT_EQUIPPED_LAST) -1 *8 +468 +(heroStruct);
+!!en;
+
+!!UN:C(artHandlePtr)/0/(UNC_INT)/?(artId);
+!!UN:C(artHandlePtr)/4/(UNC_INT)/?(artMod);
+
+!?FU(ChangeArtModAtSlot);
+; Changes artifact modifier in specified hero slot. Usually modifier is spell ID for spell scrolls or (NO_ART_MOD).
+!#VA(hero:x);   Hero ID or (CURRENT_HERO)
+!#VA(slot:x);   Slot ID (backpack is supported).
+!#VA(artMod:x); Artifact modifier.
+
+!!HE(hero):Z?(heroStruct:y);
+
+!!if|(slot)<(ART_SLOT_FIRST)/(slot)>(ART_SLOT_LAST);
+  !!SN:F^ShowErmError^/^GetArtAtSlot: invalid artifact slot ID: %(slot)^;
+  !!FU:E;
+!!en;
+
+!!if&(slot)>=(ART_SLOT_EQUIPPED_FIRST)/(slot)<=(ART_SLOT_EQUIPPED_LAST);
+  !!VR(artHandlePtr:y):+S(slot) *8 +301 +(heroStruct);
+!!el;
+  !!VR(artHandlePtr:y):+S(slot) -(ART_SLOT_EQUIPPED_LAST) -1 *8 +468 +(heroStruct);
+!!en;
+
+!!UN:C(artHandlePtr)/4/(UNC_INT)/(artMod);
+
+!?FU(AddArtToHero);
+; Adds artifact to hero, trying to equip it first and fallbacking to putting in backpack. Returns success flag.
+; Automatically builds combo arts and checks scenario win conditions.
+!#VA(hero:x);   ID of hero to equip artifact to.
+!#VA(art:x);    ID of artifact to equip.
+!#VA(artMod:x); Artifact modifier or (NO_ART_MOD). For spell scrolls its spell ID. For other artifacts the value is usually ignored.
+              ; Custom artifact modifiers may be implemented. Artifact modifier is always carried with artifact by game functions.
+!#VA(result:x); Boolean. Success flag.
+
+!!HE(hero):Z?(heroStruct:y);
+!!VR(savedV1:y):Sv1;
+!!SN:E7431164/(CALLCONV_CDECL)/(heroStruct)/(art)/(artMod);
+!!VR(result):Sv1 &1;
+!!VRv1:S(savedV1);
 
 !?FU(EquipArtToSlot);
 ; Tries to put artifact to specified hero doll slot, triggering OnEquipArt event. Returns success flag.
 !#VA(hero:x);   ID of hero to equip artifact to.
-!#VA(art:x);    ID of artifact to equipt.
+!#VA(art:x);    ID of artifact to equip.
+!#VA(artMod:x); Artifact modifier or (NO_ART_MOD). For spell scrolls its spell ID. For other artifacts the value is usually ignored.
+              ; Custom artifact modifiers may be implemented. Artifact modifier is always carried with artifact by game functions.
 !#VA(slot:x);   ID of hero doll slot to put artifact in or (NO_ART_SLOT) for autodetection.
 !#VA(result:x); Boolean. Success flag.
 
