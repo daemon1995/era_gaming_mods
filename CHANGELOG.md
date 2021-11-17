@@ -8,8 +8,8 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 
 
 ### Changed
-Disable Neutral Town option when TUM is enabled
-Improve the details of some scripts
+- Disable Neutral Town option when TUM is enabled
+- Improve the details of some scripts
 
 ### Fixed
 
