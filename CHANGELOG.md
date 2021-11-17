@@ -9,9 +9,10 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 
 ### Changed
 - Disable Neutral Town option when TUM is enabled
-- Improve the details of some scripts
 
 ### Fixed
+- Improve the details of some scripts
+- Fix the behaviour of building all buildings in TrainerX
 
 ## [2.34] - 2021-11-4
 [Changlog of 2.34](http://wforum.heroes35.net/showthread.php?tid=5235&pid=129903#pid129903)
