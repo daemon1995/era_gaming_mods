@@ -8,7 +8,8 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 
 
 ### Changed
-Re-enable Hota heroe sprites in PVP battles
+Disable Neutral Town option when TUM is enabled
+Improve the details of some scripts
 
 ### Fixed
 
