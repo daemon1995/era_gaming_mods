@@ -49,88 +49,54 @@ Functions used: FU10800-FU10815  (FU10799, FU10807 and FU10808 no longer used an
 Dialogue Box numbers used: 17
 
 ********************************************************************************
-   Disable Forts and Remove Cartographers
-********************************************************************************
-
- [Check various map options and perform appropriate actions if they're enabled]
-!?FU(OnEveryDay)&i^timerOnce^/i^timerDay^=1;
-
- [Check if forts are disabled in WoGify options]
-!!UN:P131/?y1;
-
- [Count all towns and store number in y4]
-!!UN&y1=1:U98/-1/?y4;
-
- [Check if only human forts are disabled in WoGify script]
-!!UN:P144/?y2;
-
- [Cycle through all towns to remove forts]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO10800/1/y4/1&y4>0/y1=1:Py2;
-
- [Check if cartographers are to be removed]
-!!UN:P145/?y3;
-
- [Count all cartographers]
-!!UN&y3=1:U13/-1/?y5;
-
- [Check map size and subtract one]
-!!UN:X?y6/?y7;
-!!VRy6:-1;
-
- [Cycle through all cartographers and remove them]
-!!DO10801/1/y5/1&y5>0/y3=1:Py5/y6;
-
-
-********************************************************************************
    Cycle through all Towns and Remove Forts, Citadels and Castles
 ********************************************************************************
 
-!?FU10800;
+!?FU(WOG_OnIterateAllTowns);
+!#VA(townId:x);
 
- [x1=1 if only human/neutral towns start without forts]
+; check option is enabled
+!!UN:P131/?(noFortsOn:y); 
+!!FU&(noFortsOn)<>(TRUE):E;
+; Check owner of current castle to see if it's an AI or human
+!!UN:P144/?(exceptAiOn:y);
+!!CA0/(townId):O?(owner:y);
+!!OW:I(owner)/?(isAi:y);
+!!FU&(isAi)/(exceptAiOn):E;
+; Remove fort, citadels and castles in town at loop
+; unless "Only human forts removed" option is set and town is owned by an AI
+!!CA0/(townId):B2/9;
+!!CA0/(townId):B2/8;
+!!CA0/(townId):B2/7;
+!!CA0/(townId):B2/13;
+; Update Town Look on Adventure Map to match internal buildings
+!!CA0/(townId):I0;
 
- [Store location of next castle in v1/v2/v3]
-!!UN:U98/-1/-1/2;
-
- [Check owner of current castle to see if it's an AI or human: y2=1 if AI]
-!!CA2&x1=1:O?y1;
-!!OW&x1=1:Iy1/?y2;
-
- [Remove fort, citadels and castles in town at loop]
- [unless "Only human forts removed" option is set and town is owned by an AI]
-!!CA2|x1=0/y2=0:B2/9;
-!!CA2|x1=0/y2=0:B2/8;
-!!CA2|x1=0/y2=0:B2/7;
-
- [Update Town Look on Adventure Map to match internal buildings]
-!!CA2|x1=0/y2=0:I0;
 
 ********************************************************************************
    Cycle through all cartographers and remove them
 ********************************************************************************
 
-!?FU10801;
-
- [x1=number of cartographers, x2=map size]
-
- [Remove cartographers backwards so as not to mess up numbering]
-!!VRy1:Sx1 -x16 +1;
-
- [Store location of current cartographer in v1/v2/v3]
-!!UN:U13/-1/y1/1;
-
- [Store subtype of cartographer in y2: 0=water, 1=surface, 2=underground]
-!!OB1:U?y2;
-
- [Adjust x value by +1 to get lower-right position of object rectangle]
-!!VRv1&v1<x2:+1;
-
- [Remove current cartographer]
-!!UN:Ov1/v2/v3/1;
-
- [Replace with Cover of Darkness unless it's a water cartographer]
-!!UN&y2<>0:Iv1/v2/v3/15/0;
+!?FU(WOG_OnIterateAllMapObjects);
+!#VA(x:x) (y:x) (z:x);
+!#VA(objType:x);
+!#VA(objSubtype:x);
+!#VA(isYellowSquare:x); boolean.
+!#VA(isPassable:x);     boolean.
+; check: is entry to the object
+!!FU&(isYellowSquare)<>(TRUE):E;
+; check option is enabled
+!!UN:P145/?(noCartographerOn:y); 
+!!FU&(noCartographerOn)<>(TRUE):E;
+; exit if not searchable types
+!!FU&(objType)<>(OBJ_CARTOGRAPHER):E;
+; set a new object type
+!!VR(objType):S(OBJ_COVER_OF_DARKNESS);
+!!VR(objSubtype):S0;
+; delete current and create a new object
+!!UN:O(x)/(y)/(z)/1/(TRUE);
+!!VR(x):+1;                             [1 - offset of the entrance and bottom right of the object]
+!!UN:I(x)/(y)/(z)/(objType)/(objSubtype)/(TRUE);
 
 
 ********************************************************************************
