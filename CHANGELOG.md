@@ -9,6 +9,10 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 
 ### Changed
 - Disable Neutral Town option when TUM is enabled
+- Updated Henchmen and Enhanced Henchmen:
+1) Now Random Heroes will also get a henchman if both Henchmen and Random Heroes are enabled
+2) Fix synchronization issue in PVP battles
+3) Fix wrong position for placing double wide henchmen in siege battles
 
 ### Fixed
 - Improve the details of some scripts
