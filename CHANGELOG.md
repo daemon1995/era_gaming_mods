@@ -15,3 +15,4 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 - Fixed retreating from a battle with a neutral stack would make the stack x2 in the next battle
 
 ## [2.40] - 2021-11-22
+[Changelog](https://discord.com/channels/665742159307341827/667300419302719489/912053258359566366)
