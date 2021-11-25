@@ -1,18 +1,17 @@
-ZVSE
+ZVSE2
 
 ** Enhanced War Machines III by Bonizag
 ** Wogify Name: script73.erm
 ** Updated: Febrary 20, 2012 by rennyo
+** Updated: Nov 2021 by Archer30
 
-** variables used:        v847, v850-v859, v862-v880, v883 for long term
+** variables used:        v847, v850-v859, v864-v880, v883 for long term
 **                        v1-v3,v7800-v7956 temporarily
 
 ** string variables used: z1-z4, z78-z90 temporarily
 
-** flags used:            781, 783-790 for long term
+** flags used:            782-785, 787-790 for long term
 **                        2,3,4 temporarily
-
-** timer used:            41
 
 ** functions used:        7795-7820
 
@@ -20,54 +19,36 @@ ZVSE
 
 ** object variables used: H (at towns and war machine factories), O for owner at war machine factory, T at towns
 
-!#UN:P73/?v847;                            //v847=1;                                                                  check if option is enabled
-** //init
+!#UN:P73/?v847;                       [check if option is enabled]
 
-!#VRv863&v847=1:S0;                       //    if v847=1 then { v863=0;                                set v863 to 0 so on the first day will also execute refresh
-!#TM41&v847=1:S1/999/1/255;               //   SET TIMER41 from 1 to 999 step 1 ALL PLAYERS;            init timer 41
-!#IF&v847=1:V781/0;                       //   F781,784,785,786,787=0;                                  init flag 781
-!#IF&v847=1:V784/0;                       //   V876,877=-1;                                             784 set false for the first battle
-!#IF&v847=1:V785/0;                       //   V858=0;                                                  hero doesn't fights for war machine artifact by default
-!#IF&v847=1:V786/0;                       //   V859=0;                                                  786 set false for the first battle
-!#IF&v847=1:V787/0;                       //                                                            787 set false for the fist battle
-!#VRv876&v847=1:S-1;                      //                                                            init vars for detecting meeting heroes
-!#VRv877&v847=1:S-1;                      //                                                            init vars for detecting meeting heroes
-!#VRv858&v847=1:S-2;                      //                                                            init vars for preserving previous player and intelligence
-!#VRv859&v847=1:S0;
+!?FU(wm3_Initialization);
+!!IF:V784/0;                            [flg#784, 784 set false for the first battle]
+!!IF:V785/0;                            [flg#785, hero doesn't fights for war machine artifact by default]
+!!IF:V787/0;                            [flg#787, 787 set false for the fist battle]
+!!VRv876:S-1;                           [v876, init vars for detecting meeting heroes]
+!!VRv877:S-1;                           [v877, init vars for detecting meeting heroes]
+!!VRv858:S-2;                           [v858, init vars for preserving previous player and intelligence]
+!!VRv859:S0;
 
-!#MA&v847=1:C147/6/750;                   //   SET WAR MACHINE COST 750;                                 all war machines cost 750 gold
-!#MA&v847=1:C146/6/2500;                  //   set ballista cost 2500[upd rennyo 02.2012]
-!#MA&v847=1:C148/6/750;
+!!MA:C147/6/750;                        [War machines cost 750 gold except for Ballista]
+!!MA:C146/6/2500;
+!!MA:C148/6/750;
 
-!?TM41&v847=1;                            //   if v847=1 then ****TIMER41-> {                                                    timer trigger
-!!VRv862:Sc0;                             //                        Current day ?v862;                                            get  current day
-!!VRf:Sv862 %7;                           //                        f=v862 mod 7;
-!!IF:V2/0;                                //                        F2=0;
-!!IF&f=1:V2/1;                            //                        if f=1 then F2=1;
-**                                                                  };
-!?TM41&v863<v862/2/v847=1;                //   if (v863<v862)&(F2=1) then                                                        continue trigger only if it is an other days and the beginning of a new week
-!!DO7807/0/155/1&v862=1:P;                //        ****TIMER41->{                                                               iterate through all heroes and set correct w vars
-!!VRv863:Sc0;                             //                     if v862=1 then {                                                update v863 compare-variable
-!!UN:U98/-1/?f;                           //                                    FU7807(from 0 to 155 step 1);                    get the number of towns
-!!DO7806/1/f/1:Pf/98;                     //                                    };                                               iterate through towns and fill them up
-!!UN:U106/-1/?f;                          //                     Current day ?v863;                                              get the number of war machines
-!!DO7806/1/f/1:Pf/106;                    //                     Number of towns ?f;                                             iterate through war machine factories and fill them up
-**                                        //                     FU7806(x1=f,x2=98,from 1 to f step 1);
-**                                        //                     Number of warmacines factory ?f;
-***                                       //                     FU7806(x1=f,x2=106,from 1 to f step 1);
-****                                      //                     };
-**                                        //
+!#FU(wm3_Initialization)&v847:P;
 
+!?FU(OnEveryDay)&i^timerOnce^/i^timerWeekday^=1/v847; [continue trigger only if it is an other days and the beginning of a new week]
+!!DO7807/(HERO_FIRST)/(HERO_LAST_WOG)/1&i^timerDay^=1:P; [iterate through all heroes and set correct w vars]
+!!UN:U98/-1/?f;                         [get the number of towns]
+!!DO7806/1/f/1:Pf/98;                   [iterate through towns and fill them up]
+!!UN:U106/-1/?f;                        [get the number of war machines]
+!!DO7806/1/f/1:Pf/106;                  [iterate through war machine factories and fill them up]
 
+!?FU(OnEveryDay)&i^timerOnce^/v847;     [Purchase Warmachines for AI every 3 days]
+!!VRi^randHero_AiTimer^:+1;
+!!FU&i^randHero_AiTimer^<>3:E;
 
-!?TM41&v847=1;                            //    ****TIMER41->{
-!!VRi:Sv862 %4;                           //                 i=v862 mod 4;                                                                    only for 1/4 of players will execute
-!!VRj&v858>=0:Sv858 %4;                   //                 if v858>=0 then {
-!!OW&v858>=0/v859=1/i=j:Hv858/7800/0;     // [upd rennyo 02.2012]            j=v858 mod 4;                                                    get heroes of previous player
-!!DO7795/1/v7800/1&i=j:P;                 //                                 if (v859=1)&(i=j) then ?v7800 PLAYER v858 GET # of HEROES;       buy machines for heroes of previous player if heroes stand in a town
-!!OW:C?f If/?g;                           //                                 if (i=j) then FU7795(from 1 to v7800 step 1);                    get current player
-!!VRv858:Sf;                              //                                 ?f GET #CURRENT PLAYER,?g GET #f PLAYER CONTROLLER(II or HUMAN); preserve previous player and its intelligence
-!!VRv859:Sg;                              //                                 v858=f,v859=g;                                                   v859-human or AI
+!!VRi^randHero_AiTimer^:S0;
+!!FU(wm3_LoopThroughAiTowns):P;
 
 !?OB5/6&v847=1; //hero finds first aid tent on adventure map
 !!HE-1:N?v857; //store hero number in v857
@@ -322,8 +303,8 @@ ZVSE
 !!SN:W^defender_ammo^/?w83;
 
 !?BA0&v847=1; //before battle begins
-** variables used:        v847, v850-v859, v862-v880, v883 for long term
-** flags used:            781, 783-790 for long term
+** variables used:        v847, v850-v859, v864-v880, v883 for long term
+** flags used:            784-785, 787-790 for long term
 ** hero variables used:   w81-w83
 !!BA:H0/?y-1 H1/?y-2; //attacker in vf
 !!IP:V847/883 F781/790 Wy-1/81/83 Wy-2/81/83;
@@ -365,11 +346,14 @@ ZVSE
 !!IF&g=v856/789:V784/1; //battle in town - ballista cannot be used
 !!IF&v856<0/789:V784/1;
 
-!?BA52&786/v847=1; //army camp fight
+!?BA52&i^Random_Hero_Active^/v847=1; //army camp fight
+!!VR(randomHero:y):i^battle_hero_1^;
 
-!!FU7825&v855>=0:Pv855; //dismiss original war machines
-!!FU7826&v855>=0:Pv855; //correct w vars
-!!HEv855&v855>=0:A1/6/15 A1/4/13 A1/5/14; //equip war machines
+!!if&(randomHero)>=0;
+  !!FU7825:P(randomHero); //dismiss original war machines
+  !!FU7826:P(randomHero); //correct w vars
+  !!HE(randomHero):A1/6/15 A1/4/13 A1/5/14; //equip war machines
+!!en;
 
 !?BA52&v847=1; //continue trigger unconditioned
 
@@ -452,50 +436,75 @@ ZVSE
 !!VRv855&g>=0/n=1/m=0/t=6::4 +1; //v855 number of added war machines (ogre leader - reduced)
 !!VRq:+v855;
 
-!!VRn&g>=0/-786:S0; //init vn
-!!BU&g>=0/-786:E169/?k; //get stack num in vk
-!!BMk&g>=0/-786/k<>-1:N?n; //get number of monsters in stack
-!!VRn&g>=0/-786/k<>-1:Sv854 +w81; //add hero's machines to commander's machines
-!!BMk&g>=0/k<>-1/-786:Bn Nn;
+!!if&g>=0/i^Random_Hero_Active^<>(TRUE);
+  !!VRn:S0; //init vn
+  !!BU:E169/?k; //get stack num in vk
 
-!!VRn&g>=0/-786:S0; //init vn
-!!BU&g>=0/-786:E67/?k; //get stack num in vk
-!!BMk&g>=0/-786/k<>-1:N?n; //get number of monsters in stack
-!!VRn&g>=0/-786/-784/k<>-1:Sv855 +w82; //add hero's machines to commander's machines
-!!BMk&g>=0/k<>-1/-786:Bn Nn;
+  !!if&k<>-1;
+    !!BMk:N?n; //get number of monsters in stack
+    !!VRn:Sv854 +w81; //add hero's machines to commander's machines
+    !!BMk:Bn Nn;
+  !!en;
 
-!!VRn&g>=0/-786:S0; //init vn
-!!BU&g>=0/-786:E32/?k; //get stack num in vk
-!!BMk&g>=0/-786/k<>-1:N?n; //get number of monsters in stack
-!!VRn&g>=0/-786/k<>-1:Sw83; //number of ammo carts is w83
-!!BMk&g>=0/k<>-1/-786:Bn Nn;
+  !!VRn:S0; //init vn
+  !!BU:E67/?k; //get stack num in vk
+
+  !!if&k<>-1;
+    !!BMk:N?n; //get number of monsters in stack
+    !!VRn&-784:Sv855 +w82; //add hero's machines to commander's machines
+    !!BMk:Bn Nn;
+  !!en;
+
+  !!VRn:S0; //init vn
+  !!BU:E32/?k; //get stack num in vk
+
+  !!if&k<>-1;
+    !!BMk:N?n; //get number of monsters in stack
+    !!VRn:Sw83; //number of ammo carts is w83
+    !!BMk:Bn Nn;
+  !!en;
+!!en;
 
 //give monsters machines: won't work without a hero because machines need a hero to check his/her secondary skills
-!!VRv879&g>=0/786:S0;
-!!DO7820/0/41/1&g>=0/786:P;
-!!VRf&g>=0/786:Sv879; //v879 sum of monsters' hp
-!!VRf&g>=0/786::10 :25;
+!!if&g>=0/i^Random_Hero_Active^;
+  !!VRv879:S0;
+  !!DO7820/0/41/1:P;
+  !!VRf:Sv879; //v879 sum of monsters' hp
+  !!VRf::10 :25;
 
-!!VRi&g>=0/786:S0 R0/f Rf;
-!!VRh&g>=0/786:Sf;
-!!VRh&g>=0/786:+v854 +i; //add commander's machines to vh
-!!VRh&g>=0/786/h=0:S1;
-!!BU&g>=0/h>0/786:E169/?k; //get stack num in vk
-!!BMk&g>=0/h>0/786:Bh Nh;
+  !!VRi:S0 R0/f Rf;
+  !!VRh:Sf;
+  !!VRh:+v854 +i; //add commander's machines to vh
 
-!!VRi&g>=0/786:S0 Rf;
-!!VRh&g>=0/786:Sf;
-!!VRh&g>=0/786:+v855 +i; //add commander's machines to vh
-!!VRh&g>=0/786/h=0:S1;
-!!BU&g>=0/h>0/786:E67/?k; //get stack num in vk
-!!BMk&g>=0/h>0/786:Bh Nh;
+  !!if&h=0;
+    !!VRh:S1;
+  !!elh>0;
+    !!BU:E169/?k; //get stack num in vk
+    !!BMk:Bh Nh;
+  !!en;
 
-!!VRi&g>=0/786:S0 Rf;
-!!VRh&g>=0/786:Sf;
-!!VRh&g>=0/786:+i;
-!!VRh&g>=0/786/h=0:S1;
-!!BU&g>=0/h>0/786:E32/?k; //get stack num in vh
-!!BMk&g>=0/h>0/786:Bh Nh;
+  !!VRi:S0 Rf;
+  !!VRh:Sf;
+  !!VRh:+v855 +i; //add commander's machines to vh
+
+  !!if&h=0;
+    !!VRh:S1;
+  !!el&h>0;
+    !!BU:E67/?k; //get stack num in vk
+    !!BMk:Bh Nh;
+  !!en;
+
+  !!VRi:S0 Rf;
+  !!VRh:Sf;
+  !!VRh:+i;
+
+  !!if&h=0;
+    !!VRh:S1;
+  !!el&h>0;
+    !!BU:E32/?k; //get stack num in vh
+    !!BMk:Bh Nh;
+  !!en;
+!!en;
 
 !!IF:V789/1; //we set number of war machines
 
@@ -668,18 +677,23 @@ ZVSE
 
 !!HEf&f>=0:O?o;
 !!IF&f>=0:Wf;
-!!VRw81&f>=0/o=-1/v868<>5:S0;
-!!VRw82&f>=0/o=-1/v868<>5:S0;
-!!VRw83&f>=0/o=-1/v868<>5:S0;
 
-!!HEg&g>=0:O?o;
-!!IF&g>=0:Wg;
-!!VRw81&g>=0/o=-1/v868<>5:S0;
-!!VRw81&g>=0/781:S0;
-!!VRw82&g>=0/o=-1/v868<>5:S0;
-!!VRw82&g>=0/781:S0;
-!!VRw83&g>=0/o=-1/v868<>5:S0;
-!!VRw83&g>=0/781:S0;
+!!if&f>=0/o=-1/v868<>5;
+  !!VRw81:S0;
+  !!VRw82:S0;
+  !!VRw83:S0;
+!!en;
+
+!!if&g>=0;
+  !!HEg:O?o;
+  !!IF:Wg;
+  !!VRw81&o=-1/v868<>5:S0;
+  !!VRw81&i^Random_Hero_Active^:S0;
+  !!VRw82&o=-1/v868<>5:S0;
+  !!VRw82&i^Random_Hero_Active^:S0;
+  !!VRw83&o=-1/v868<>5:S0;
+  !!VRw83&i^Random_Hero_Active^:S0;
+!!en;
 
 !!FU7801&f>=0:Pf; //correct eqipment
 !!FU7801&g>=0:Pg;
@@ -689,29 +703,42 @@ ZVSE
 
 ------------------------         F U N C T I O N S       --------------------
 
-!?FU7795;
-//calls buying funtion for AI at every town if the town is owned by previous player and has a hero at the town (garrison or visitor)
-//x1: greatest object number
-//x16: object number (from back)
+; Calls buying funtion for AI at every town if the town has a hero at the town (garrison or visitor)
+!?FU(wm3_LoopThroughAiTowns);
+!!VR(x:y):S-1;
 
-!!VRy1:S7800 +x16;
-!!HEvy1:P?y2/?y3/?y4; //get heroes coordinates
-!!OBy2/y3/y4:T?y5; //get object type at hero's position
-!!CAy2/y3/y4&y5=98:O?y6 H0/?y7; //get town owner and garrison hero
-!!VRy8:Svy1; //store hero number
-!!VRy8&y5=98/y7>=0:Sy7;
+; loop through all towns
+!!re i;
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
 
-!!IF:V2/0;
-!!IF&y5=98/y6=v858:V2/1;
+  ; next town if not belongs to AI/no hero in town
+  !!CA(x)/(y)/(z):O?(player:y);
+  !!OW:I(player)/?(isAi:y);
+  !!co&(isAi)<>(TRUE);
 
-!?FU7795&2; //continue function if town owned by previous player, there is a garrison hero and previous player is AI
-!!FU7799:Py8; //dismiss original war machines
-!!CAy2/y3/y4:B3/22 T?y5; //look if ballista yard is built, get subtype
-!!FU7800&y5=6/1:Py8; //correct w vars if needed
-!!FU7816&y5=6/1:Py8/y2/y3/y4/1; //AI buys ballista if ballista yard is built
-!!CAy2/y3/y4:B3/16; //look if blacksmith is built
-!!FU7800&1:Py8; //correct w vars if needed
-!!FU7816&1:Py8/y2/y3/y4/0; //AI buys machine if blacksmith is built
+  !!CA(x)/(y)/(z):H0/?(garrisonHero:y) H1/?(visitingHero:y);
+  !!FU(wm3_GetAiHeroWarmachines)&(garrisonHero)>(NO_HERO):P(x)/(y)/(z)/(garrisonHero);
+  !!FU(wm3_GetAiHeroWarmachines)&(visitingHero)>(NO_HERO):P(x)/(y)/(z)/(visitingHero);
+!!en;
+
+!?FU(wm3_GetAiHeroWarmachines);
+!#VA(x:x) (y:x) (z:x) (hero:x);
+
+!!FU7799:P(hero); //dismiss original war machines
+!!CA(x)/(y)/(z):B3/22 T?(townType:y); //look if ballista yard is built, get subtype
+
+!!if&(townType)=(TOWN_STRONGHOLD)/1;
+  !!FU7800:P(hero); //correct w vars if needed
+  !!FU7816:P(hero)/(x)/(y)/(z)/1; //AI buys ballista if ballista yard is built
+!!en;
+
+!!CA(x)/(y)/(z):B3/16; //look if blacksmith is built
+
+!!if&1;
+  !!FU7800:P(hero); //correct w vars if needed
+  !!FU7816:P(hero)/(x)/(y)/(z)/0; //AI buys machine if blacksmith is built
+!!en;
 
 !?FU7796;
 //checks if hero stands in town or battle is on a place of a castle and gets garrison hero number there
@@ -908,16 +935,16 @@ ZVSE
 !!VRw83&x2>=0/y2=32/y3=148:Sy1;
 
 !?FU7806;
-**                                                                   //sets the available number of machines at towns and war machine factory every week
-**                                                                   //x1: greatest object number
-**                                                                   //x16: object number (from back)
-**                                                                   //x2: object type
-**                                                                   //x1=f,x2=98,from 1 to f step 1
+;                                                                    //sets the available number of machines at towns and war machine factory every week
+;                                                                    //x1: greatest object number
+;                                                                    //x16: object number (from back)
+;                                                                    //x2: object type
+;                                                                    //x1=f,x2=98,from 1 to f step 1
 !!VRy1:Sx1 +1 -x16;                                                  //y1=x1+1-x16;                                       run backward
 !!UN:Ux2/-1/y1/1;                                                    //v1 v2 v3 coordinates
 !!OBv1/v2/v3&x2=98:U?y2;                                             //get town subtype
 
-!!POv1/v2/v3&x2=98/v862=1:H0 T0;                                     //init H and T attributes on first day
+!!POv1/v2/v3&x2=98/i^timerDay^=1:H0 T0;                                     //init H and T attributes on first day
 !!POv1/v2/v3&x2=98:H?y3 T?y4;                                        //get H and T values in towns
 
 !!IF&x2=98:V783/0;                                                   //init flag 783
@@ -972,10 +999,10 @@ ZVSE
 
 //war machine factory
 !!POv1/v2/v3&x2=106:H42; //refresh H variable to 42 if war machine factory
-!!POv1/v2/v3&x2=106/v862=1:O-1; //no owner
+!!POv1/v2/v3&x2=106/i^timerDay^=1:O-1; //no owner
 !!VRv1&x2=106:+1;
 !!POv1/v2/v3&x2=106:H42; //for right-click on adventure screen we need set PO value of the right part of the war machine factory
-!!POv1/v2/v3&x2=106/v862=1:O-1; //no owner
+!!POv1/v2/v3&x2=106/i^timerDay^=1:O-1; //no owner
 
 !?FU7807;
 //set correct w vars for heroes at the beginning of the game
@@ -985,15 +1012,15 @@ ZVSE
 !!HEx16:A2/6/?y1/?y2;                              //SET HERO=x16;                                                   y2: nr of equipped first aid tents
 !!VRw81&y2=0:S0;                                   //y1,y2=eqiped first aid tents;
 !!VRw81&y2=1:S1;                                   //if y2=0 then w81=0;
-                                                   //if y2=1 then w81=1;
+;                                                  //if y2=1 then w81=1;
 !!HEx16:A2/4/?y1/?y2;                              //SET HERO=x16;                                                                y2: nr of equipped ballistas
 !!VRw82&y2=0:S0;                                   //y1,y2=equipped ballistas;
 !!VRw82&y2=1:S1;                                   //if y2=0 then w82=0;
-                                                   //if y2=1 then w82=1;
+;                                                  //if y2=1 then w82=1;
 !!HEx16:A2/5/?y1/?y2;                              //SET HERO=x16;                                                                y2: nr of equipped ammo carts
 !!VRw83&y2=0:S0;                                   //y1,y2=equipped ammo carts
 !!VRw83&y2=1:S1;                                   //if y2=0 then w83=0;
-                                                   //if y2=1 then w83=1;
+;                                                  //if y2=1 then w83=1;
 
 
 !?FU7808;
@@ -1495,35 +1522,49 @@ ZVSE
 !!IF:V2/1; //init flag 2
 !!POx2/x3/x4:H?y5 T?y6; //get available machine
 
-!!VRy1&x5=0:Sy5;
-!!VRy1&x5=1:Sy6;
+!!if&x5=0;
+  !!VRy1:Sy5;
+!!el;
+  !!VRy1:Sy6;
+!!en;
 
 !!IF&y1=0:V2/0; //there is no machine available
 !!OBx2/x3/x4:U?y2; //get town subtype
 !!HEx1:O?y3; //get hero owner
 !!OW:Ry3/6/?y4; //get owner's gold
 !!IF&y4<750:V2/0; //AI has got not enough money
-!!IF:Wx1; //use hero's w vars
 
-!!VRw81&2/y2=1:+1;
-!!VRw81&2/y2=4:+1;
-!!VRw81&2/y2=7:+1;
+!!if&2;
+  !!IF:Wx1; //use hero's w vars
 
-!!VRw82&2/y2=0:+1;
-!!VRw82&2/y2=5:+1;
-!!VRw82&2/y2=8:+1;
+  !!VRw81&y2=(TOWN_RAMPART):+1;
+  !!VRw81&y2=(TOWN_NECROPOLIS):+1;
+  !!VRw81&y2=(TOWN_FORTRESS):+1;
 
-!!VRw83&2/y2=2:+1;
-!!VRw83&2/y2=3:+1;
-!!VRw83&2/y2=6/x5=0:+1;
-!!VRw82&2/y2=6/x5=1:+1;
+  !!VRw82&y2=(TOWN_CASTLE):+1;
+  !!VRw82&y2=(TOWN_DUNGEON):+1;
+  !!VRw82&y2=(TOWN_CONFLUX):+1;
 
-!!OW&2:Ry3/6/d-750; //decrease AI's gold
-!!VRy5&2/x5=0:-1; //decrement number of available machine
-!!VRy6&2/x5=1:-1;
+  !!VRw83&y2=(TOWN_TOWER):+1;
+  !!VRw83&y2=(TOWN_INFERNO):+1;
+
+  !!if&y2=(TOWN_STRONGHOLD);
+    !!VRw83&x5=0:+1;
+  !!el;
+    !!VRw82&x5=1:+1;
+  !!en;
+
+  !!OW:Ry3/6/d-750; //decrease AI's gold
+  !!VRy5&x5=0:-1; //decrement number of available machine
+  !!VRy6&x5=1:-1;
+!!en;
+
 !!POx2/x3/x4:Hy5 Ty6; //refresh H and T value of town
-!!FU7801&2:Px1; //correct equipment
-!!FU7816&2:Px1/x2/x3/x4/x5; //continue buying if AI could buy this machine
+
+!!if&2;
+  !!FU7801:Px1; //correct equipment
+  !!FU7816:Px1/x2/x3/x4/x5; //continue buying if AI could buy this machine
+!!en;
 
 !?FU7817;
 //called when two hero of the same color meet - only for AI
@@ -1643,6 +1684,43 @@ ZVSE
 !!BMx16&y3=1:H?y1 N?y2 T?y4; //get ceature number, hp and type
 !!VRy2&y3=1:*y1; //calculate hp of stack
 !!VRv879&y3=1/y4<>146/y4<>147/y4<>148:+y2; //add hp to v879 if it is not a war machine
+
+; For Random Hero
+!?FU7825;
+//dismisses war machines that could be bought originally in heroes3 and gives back gold spent on them
+//x1 hero number
+
+!!HEx1:A2/6/?y1/?y2 A2/4/?y1/?y3 A2/5/?y1/?y4 ; //y2 y3 y4 number of equipped machines
+!!IF:Wx1; //use hero's w vars
+
+!!if&w81=0/y2=1;
+  !!HEx1:A3/6/1/1; //remove first aid tent that was bought right now
+!!en;
+
+!!if&w82=0/y3=1;
+  !!HEx1:A3/4/1/1; //remove ballista that was bought right now
+!!en;
+
+!!if&w83=0/y4=1;
+  !!HEx1:A3/5/1/1; //remove ammo cart that was bought right now
+!!en;
+
+!?FU7826;
+//corrects hero's w vars according to war machine equipment
+//x1: hero number
+
+!!IF:Wx1; // use hero's w variables
+!!HEx1:A2/6/?y1/?y2; //y2: nr of equipped first aid tents
+!!VRw81&y2=0/w81<>0:S0;
+!!VRw81&y2=1/w81=0:S1;
+
+!!HEx1:A2/4/?y1/?y2; //y2: nr of equipped ballistas
+!!VRw82&y2=0/w82<>0:S0;
+!!VRw82&y2=1/w82=0:S1;
+
+!!HEx1:A2/5/?y1/?y2; //y2: nr of equipped ammo carts
+!!VRw83&y2=0/w83<>0:S0;
+!!VRw83&y2=1/w83=0:S1;
 
 --------------- T R I G G E R S  F O R  H E R O  M E E T I N G --------------
 
