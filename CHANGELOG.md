@@ -5,21 +5,13 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 ## [Unreleased] - yyyy-mm-dd
 
 ### Added
-
+- Completely rewrite Random Hero in ERM 2. Now random hero will be generated even if there are 8 players on the map.
 
 ### Changed
-- Disable Neutral Town option when TUM is enabled
-- Updated Henchmen and Enhanced Henchmen:
-1) Now Random Heroes will also get a henchman if both Henchmen and Random Heroes are enabled
-2) Fix synchronization issue in PVP battles
-3) Fix wrong position for placing double wide henchmen in siege battles
+
 
 ### Fixed
-- Improve the details of some scripts
-- Fix the behaviour of building all buildings in TrainerX
+- Fixed henchmen got killed after battle if the enemy's henchman is dead.
+- Fixed retreating from a battle with a neutral stack would make the stack x2 in the next battle
 
-## [2.34] - 2021-11-4
-[Changlog of 2.34](http://wforum.heroes35.net/showthread.php?tid=5235&pid=129903#pid129903)
-
-## [2.33] - 2021-10-12
-[Changelog of 2.33](http://wforum.heroes35.net/showthread.php?tid=5235&pid=129486#pid129486)
+## [2.40] - 2021-11-22
