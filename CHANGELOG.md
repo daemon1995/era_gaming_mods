@@ -5,7 +5,7 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 ## [Unreleased] - yyyy-mm-dd
 
 ### Added
-- Completely rewrite Random Hero in ERM 2. Now random hero will be generated even if there are 8 players on the map.
+- Completely rewrote Random Hero in ERM 2. Now random hero will be generated even if there are 8 players on the map.
 
 ### Changed
 
