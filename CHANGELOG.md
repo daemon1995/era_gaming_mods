@@ -6,6 +6,7 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 
 ### Added
 - Completely rewrote Random Hero in ERM 2. Now random hero will be still generated even if there are 8 players on the map.
+- Added Ctrl/Shihft/Alt Click for most features in Trainer main interface.
 
 ### Changed
 
