@@ -10,7 +10,7 @@ ZVSE
 ** Modified by Thomas Franz (samot)
 ** - no monster growth if the No-Growth-Option in the map editor is set (FU5402)
 **- no monster growth if the creatures are friendly (always join) - (FU5402)- this option is disabled
-** - abandonded mines are guarded by ghosts (as HoMM 1), at least 7 stacks á 50 ghosts
+** - abandonded mines are guarded by ghosts (as HoMM 1), at least 7 stacks Ð± 50 ghosts
 **   their number increase daily by 101-103% + 1-3 ghosts (if there are 100 ghosts in
 **   a stack it will growth by 2 (101% of 100 are 1 + 1 random ghost) until 6 ghosts
 **   (103% of 100 = 3 + 3 random ghosts)
@@ -318,17 +318,35 @@ Recommendations for Neutral Units Bonuses:
 !!en;
 
 ********************************************************************************
-
-** Monster Growth **
-[Post-Instruction trigger]
+** Monsters Aggression **
 !?FU(OnEveryDay)&i^timerOnce^=1/i^timerDay^=1; [On First Day of the Map]
 
-!!UN:P232/?y-1;                         [Check if script is enabled: y-1]
+!!SN:W^Aggression_Neutrals^/?y1; !!FU&y1=0:E; [Option from Dif Mod to enable/disable changed aggression value]
+!!UN:U54/-1/?y1;                        [Number of monsters on the map: y1]
+!!VRv2:S-1;                             [Initialize v2 to -2 to work with new faster UN:U syntax]
+!!re i/1/y1;
+  !!UN:U54/-1/-1/2;                     [Store coordinates for next monster in v2/v3/v4]
+  !!MOv2/v3/v4:R?y4/1;                  [check if monsters is forbidden to grow (if #=1 then the amount of monsters won't grow) get agression level]
+  !!if&y4>0;                            [exit if they mustn't grow (option in map editor) or are friendly (always join)]
+    !!VRy5:S0T2;                        [Generate coinflip for chance to increase agression by 1, 2 o 3]
+    !!VRy4&y5=0:+1;                     [Add +1 to agression level so the chance to join is less]
+    !!VRy4&y5=1:+2;                     [Add +2 to agression level so the chance to join is less]
+    !!VRy4&y5=2:+3;                     [Add +3 to agression level so the chance to join is less]
+    !!VRy4&y4>=10:S10;                  [Value cannot be more than 10]
+    !!MOv2/v3/v4:Ry4/1;                 [Set all monster stacks to new agression level]
+  !!en;
+!!en;
+
+
+** Monster Growth **
+!?FU(OnEveryDay)&i^timerOnce^=1/i^timerDay^=1; [On First Day of the Map]
+
+!!UN:P232/?y1;                          [Check if script is enabled: y-1]
 !!SN:W^Stack_Size_Enable^/?y55;         [Stack_Exp_Rate No Modification]
 !!FU&y55=0:E;
-!!UN&y-1=1:U54/-1/?y2;                  [Number of monsters on the map: y2]
+!!UN&y1=1:U54/-1/?y2;                   [Number of monsters on the map: y2]
 !!VRv1:S-1;                             [Initialize v1 to -1 to work with new faster UN:U syntax]
-!!DO5402/1/y2/1&y-1=1/y2>0:P;           [Cycle through all monsters]
+!!DO5402/1/y2/1&y1=1/y2>0:P;            [Cycle through all monsters]
 
 
 !?FU5402;
@@ -339,15 +357,8 @@ Recommendations for Neutral Units Bonuses:
 !!MOv1/v2/v3:O?y3 R?y4/1;               [check if monsters is forbidden to grow (if #=1 then the amount of monsters won't grow) get agression level]
 !!FU|y3=1/y4=0:E;                       [exit if they mustn't grow (option in map editor) or are friendly (always join)]
 
-!!VRy5:S0T1;                            [Generate coinflip for chance to increase agression by 2 o 3]
-!!VRy4&y5=0:+2;                         [Add +2 to agression level so the chance to join is less]
-!!VRy4&y5=1:+3;                         [Add +3 to agression level so the chance to join is less]
-!!VRy4&y4>=10:S10;                      [Value cannot be more than 10]
-** All Monsters are Savage,only monsters left by hero on the map will join **
-!!MOv1/v2/v3&y1>=0:Ry4/1;               [Set all monster stacks to new agression level]
-
 !!MOv1/v2/v3:G?y2;                      [Number in stack: y2]
-!!FU&y2>=3850:E;                        [Exit if Stack is already at 4000 Units]
+!!FU&y2>=3800:E;                        [Exit if Stack is already at 4000 Units]
 !!MA:Ly1/?y10;                          [Get Monster Level]
 
 !!SN:W^Stack_Size_Mod_L1^/?y61; Lvl 1

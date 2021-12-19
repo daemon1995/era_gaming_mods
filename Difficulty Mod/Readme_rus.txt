@@ -65,6 +65,14 @@
 Посетить домашнюю страницу мода: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
 
+1.033
+- New Option: Stack Experience Rebalance: Removes most OP or unnecessary stack abilities from all new TUM monsters and WoG units, leaving them only with 1 important skill at ACE level. Reduces all other stack exp values aswell
+- New option to increase monsters aggression by +1 or +2 or +3 (with 33% chance each) (now as separate option)
+- Updated Mixed Neutrals configuration with monsters IDs from TUM 2.16
+- Battle Commander gains +20% health when playing with TUM 
+- The commander in creature banks has slightly less health and damage on all levels
+- added option to configure Enhanced Henchman mod from Archer (work in progress)
+
 
 Список изменений:
 

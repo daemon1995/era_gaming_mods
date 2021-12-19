@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.032 ******************
+                 ************** version: 1.033 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -26,6 +26,8 @@ The mod has to offer (all optional):
 -AI starting boost
 -AI no Dimension Door spell
 -Option interface for Mixed Neutrals Mod by Berserker
+-Option interface for Enhanced Henchman Mod by Archer
+-Option interface for Stack-Experience Rebalance Mod by Perry
 
 
 
@@ -66,6 +68,16 @@ Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Upd
 
 
 Changelog:
+
+1.033
+- New Option: Stack Experience Rebalance: Removes most OP or unnecessary stack abilities from all new TUM monsters and WoG units, leaving them only with 1 important skill at ACE level. Reduces all other stack exp values aswell
+- New option to increase monsters aggression by +1 or +2 or +3 (with 33% chance each) (now as separate option)
+- Updated Mixed Neutrals configuration with monsters IDs from TUM 2.16
+- Battle Commander gains +20% health when playing with TUM 
+- The commander in creature banks has slightly less health and damage on all levels
+- added option to configure Enhanced Henchman mod from Archer (work in progress)
+
+
 
 1.032
 - enabled the Dif option to add extra abilities to enemies stacks (experimental)
