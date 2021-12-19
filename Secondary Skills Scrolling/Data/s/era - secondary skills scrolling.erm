@@ -1,0 +1,120 @@
+ZVSE2
+
+** secondary skills Scrolling 
+** Idea and original script - Berserker
+** Reworked to support the mod "10 Secondary Skills" от igrik'а - Algor
+** Rewritten in ERM 2 to support "Warfare" WoG-option - daemon_n
+
+!#UN:P182/0;                            // отключение WoG-опции 182 "Показ скрытых навыков" за ненадобностью
+
+!?FU(OnStartOrLoad);                  // после загрузки игры 
+!!UN:P182/0;                            // отключение WoG-опции 182 "Показ скрытых навыков" за ненадобностью
+
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_flags^=(NO_MOUSE_FLAGS);           // при клике в окне героя
+  !!SN:F^GetButtonID^/^sss_next^;
+
+  !!if&v1/i^mouse_item^=v1;
+    !!VRi^sss_CurrentPage^:+1;
+    !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+    !!FU(sss_DoNotRefreshHeroScreenTwice):P;
+  !!en;
+
+  !!SN:F^GetButtonID^/^sss_pre^;
+
+  !!if&v1/i^mouse_item^=v1;
+    !!VRi^sss_CurrentPage^:-1;
+    !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+    !!FU(sss_DoNotRefreshHeroScreenTwice):P;
+  !!en;
+
+
+!?FU(OnOpenHeroScreen);
+  !!VRi^sss_CurrentPage^:S1;
+  !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+
+!?FU(OnCloseHeroScreen);
+!!VRi^sss_CurrentPage^:S0;
+
+!?FU(OnPreHeroScreen)&i^sss_do_not_update_screen^=(FALSE);   
+!!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+
+!?FU(OnPostHeroScreen)&i^sss_do_not_update_screen^=(FALSE);   
+!!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+
+!?FU(OnKeyPressed_HeroScreen)&i^key^=(KEY_PRIOR)|i^key^=(KEY_NEXT);
+  !!VRi^sss_CurrentPage^&i^key^=(KEY_PRIOR):-1;
+  !!VRi^sss_CurrentPage^&i^key^=(KEY_NEXT):+1;
+  !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+
+  !!FU(sss_DoNotRefreshHeroScreenTwice):P;
+
+!?FU(sss_SwithPage);                // отображение x1 страницы втор.навыков в экране героя
+!#VA(page:x) (skills:y);
+  !!FU(NewIntArray):P?(skillsList:y);
+  !!UN:P193/?(warfare:y);
+
+  !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST):;
+    !!HE-1:Si/?(learned:y);
+
+    !!if&(learned);
+
+      !!if&(warfare);
+        !!if|i=(SKILL_BALLISTICS)/i=(SKILL_ARTILLERY)/i=(SKILL_FIRST_AID);
+          !!IF:W-1;
+          !!if&w48;
+            !!co&i<>w48;                                                    [user choice from WarFare skill]
+          !!el;
+            !!HE-1:X?(skillSpec:y)/?(skill:y);
+
+            !!if&(skillSpec);
+              !!if|(skill)=(SKILL_BALLISTICS)/(skill)=(SKILL_ARTILLERY)/(skill)=(SKILL_FIRST_AID);
+                !!co&i<>(skill);                                                    [user choice from WarFare skill]
+              !!el;
+                !!co&i<>(SKILL_FIRST_AID);                                                    [user choice from WarFare skill]
+              !!en;
+            !!el;
+                !!co&i<>(SKILL_FIRST_AID);                                                    [user choice from WarFare skill]
+            !!en;
+          !!en;
+        !!en;      
+      !!en;
+
+      !!FU(Array_Push):P(skillsList)/i;
+      !!VR(skills):+1;
+    !!en;
+  !!en;
+
+  !!FU&(skills)=0:E;
+
+  !!UN:C7620583/1/?(maxToShow:y);                    // y6 - максимальное количество втор.навыков отображаемых в окне героя
+
+  !!if&(maxToShow)=(skills);
+    !!VR(totalPages:y):S1;
+  !!el;
+    !!VR(totalPages:y):S(skills) :(maxToShow) +1;
+  !!en;
+
+
+  !!if&(page)>(totalPages);
+    !!VRi^sss_CurrentPage^:S1;
+  !!el&(page)<1;
+    !!VRi^sss_CurrentPage^:S(totalPages);
+  !!en;
+
+  !!VR(startSkill:y):Si^sss_CurrentPage^ -1 *(maxToShow);
+  !!VR(lastSkill:y):Si^sss_CurrentPage^ *(maxToShow); -(tail); +(startSkill); %(maxToShow); +(page);
+
+  !!VR(lastSkill)&(lastSkill)>(skills):S(skills) %(maxToShow) +(startSkill);
+  !!VR(skillsToShow:y):S(lastSkill) -(startSkill);
+  !!HE-1:S(skillsToShow);
+
+  !!re i/(startSkill)/(lastSkill)/1/-1;
+    !!SN:M(skillsList)/i/?(skill:y);
+    !!VR(slot:y):Si -(startSkill) +1;
+    !!HE-1:S(slot)/(skill)/1;
+  !!en;
+
+!?FU(sss_DoNotRefreshHeroScreenTwice);
+!!VRi^sss_do_not_update_screen^:S(TRUE);
+!!UN:R3/-1;                             // обновление окна текущего героя
+!!VRi^sss_do_not_update_screen^:S(FALSE);
