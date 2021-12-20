@@ -1,0 +1,66 @@
+ZVSE
+This script limits the number of skeletons you can gain from a single fight to 10% of your total skellies
+It starts as soon as you hit 500 skellies
+
+!?FU(OnCombatRound)&v997=0;             [On first combat round]
+!!SN:W^ACM_Skellies_battle_start^/0;    [Reset Skeleton count]
+!!SN:W^ACM_Skellies_battle_end^/0;      [Reset Skeleton count]
+
+!!BA:H0/?y1;                            [Attacker]
+!!HEy1:O?y2;                            [Check hero owner]
+!!OW:C?y3;                              [Check current player]
+!!FU&y2<>y3:E;                          [Abort if not the same]
+!!HEy1:S12/?y4;                         [Check for Necromancy]
+!!DO(ACM_Count_Skeletons)/0/6/1&y4>0:Py1/1; [loop hero slots and count skeletons]
+
+
+!?FU(ACM_Count_Skeletons);
+x1=Hero, x2=battle indicator start/end
+56  Skeleton, 57  Skeleton Warrior, 220 Skeleton Knight  
+
+!!HEx1:C0/x16/?y10/?y11;                [Check Heros army slot 1]
+!!if|y10=56/y10=57/y10=220:;
+  !!SN&x2=1:W^ACM_Skellies_battle_start^/dy11;
+  !!SN&x2=2:W^ACM_Skellies_battle_end^/dy11;
+!!en:;
+
+!!if&x2=3:;
+  !!HEx1&y10=220/x3<y11:C0/x16/?y5/dx4;
+  !!FU&y10=220/x3<y11:E;                [Reduce first skeleton knight slot found and end loop]
+  !!HEx1&y10=57/x3<y11:C0/x16/?y5/dx4;
+  !!FU&y10=57/x3<y11:E;                 [Reduce first skeleton warrior slot found and end loop]
+  !!HEx1&y10=56/x3<y11:C0/x16/?y5/dx4;
+  !!FU&y10=56/x3<y11:E;                 [Reduce first skeleton slot found and end loop]
+!!en:;
+
+
+!?FU(OnAfterBattleUniversal);           [After every battle]
+!!BA:H0/?y1;                            [Attacker]
+!!HEy1:O?y2;                            [Check hero owner]
+!!OW:C?y3;                              [Check current player]
+!!FU&y2<>y3:E;                          [Abort if not the same]
+!!HEy1:S12/?y4;                         [Check for Necromancy]
+!!FU&y4=0:E;
+!!DO(ACM_Count_Skeletons)/0/6/1:Py1/2;
+
+!!SN:W^ACM_Skellies_battle_start^/?y20;
+!!FU&y20<800:E;                         [If below 800 skeletons exit function]
+!!SN:W^ACM_Skellies_battle_end^/?y21;
+!!VRy22:Sy21-y20;
+!!FU&y22<=0:E;                          [Exit if no skeletons gained]
+
+!!if&y20<15000; less than 15k it is max 10% per battle
+!!VRy23:Sy20:10;                        [y23 is max allowed gain per combat]
+!!FU&y22<y23:E;                         [Exit if gain was less than 10 percent]
+!!VRy24:Sy22-y23;                       [The amount substracted is the difference minus the allowed gain]
+!!VRy25:Sy24*-1;                        [Get negative value for substraction]
+!!DO(ACM_Count_Skeletons)/0/6/1:Py1/3/y24/y25; [loop hero slots and count skeletons]
+!!en;
+
+!!if&y20>15000; less than 15k it is max 5% per battle
+!!VRy23:Sy20:20;                        [y23 is max allowed gain per combat]
+!!FU&y22<y23:E;                         [Exit if gain was less than 10 percent]
+!!VRy24:Sy22-y23;                       [The amount substracted is the difference minus the allowed gain]
+!!VRy25:Sy24*-1;                        [Get negative value for substraction]
+!!DO(ACM_Count_Skeletons)/0/6/1:Py1/3/y24/y25; [loop hero slots and count skeletons]
+!!en;
