@@ -1,0 +1,120 @@
+{
+  "mix": {
+    "global": {
+      "enabled":                    "TRUE", // Automatical conversion of regular neutrals to mixed neutrals is enabled or not.
+      "minNumNeutralStacks":        "2",    // Minimum number of mixed neutral stacks in battle.
+      "maxNumNeutralStacks":        "4",    // Maximum Number of mixed neutral stacks in battle.
+      "neutralStackSpread":         "MIX_SPREAD_SPACE_BETWEEN", // Default spread strategy for neutral stacks.
+                                            // Possible values: "MIX_NO_SPREAD", "MIX_SPREAD_TOP_DOWN", "MIX_SPREAD_NEAR_CENTER", "MIX_SPREAD_AWAY_FROM_CENTER",
+                                            // "MIX_SPREAD_SPACE_BETWEEN" and "MIX_SPREAD_RANDOM".
+      "neutralStackScale":          "100",  // Multiplier for original neutrals quantity on adventure map in percents.
+      "neutralStackScaleForHuman":  "100",  // Additional multiplier of neutrals power only for humans in percents.
+      "neutralsAggressionModifier": "0",    // Value to add to neutrals aggression level. May be negative.
+                                            // Normal values range: 0 - compliant, 1..9 - gradation of aggression, 10 - savage
+      "neutralsNeverEscape":        "0",    // If 1, neutrals will never try to escape
+      "generateMonstersByFactions": "1",    // If 1, additional generated monsters will belong to the same faction.
+      "allowAlliedFactions":        "1",    // If 1, allied faction monsters will also be generated.
+      "moveNeutralsToFactions":     "1",    // If 1, all WoG neutral monsters will be assigned a faction / town.
+      "registerRegularMonsters":    "1",    // If 1, all regular WoG creatures are registered and will become accessible for generation.
+      "registerFactionAllies":      "1",    // If 1, configurates each faction allies and their association level.
+      "minRelativeMonLevel":        "-1",   // Minimum relative level for generated monsters, as compared to base monster level. -6..+6.
+      "maxRelativeMonLevel":        "1",    // Maximum relative level for generated monsters, as compared to base monster level. -6..+6.
+    },
+
+    // Documentation for mixed neutrals config for particular monster type on the map.
+    // Specifying all fields and sections at once is useless, it's documentation only.
+    // See examples json for details. All fields are optional, except "custom".
+    // Many fields support global constants.
+    // See mix - consts.erm, sections "STACK SPREAD STRATEGIES" and "JSON CONFIG MONSTER TYPE".
+    //
+    // Replace XXX with monster ID or "ANY" for universal fallback template
+    "monXXX": {
+      "custom": "1", // If present and is non-zero number, means, that custom config will be used for particular monster type
+
+      "probability": "40", // Each configuration for particular monster type may have unlimited number of alternatives.
+                           // Each alternative has its own probability, that is tested one by one before something matches
+                           // or all alternatives are processed.
+                           //
+                           // Total probability cannot exceed 100%, thus specifying 40 for the first alternative configuration
+                           // we leave up to 60% for the rest alternatives.
+                           //
+                           // Default: 100
+
+      // Slots have 0..6 indexes. Configs for each slot is placed in "slot0".."slot6" sections.
+      // During generation slots are processed from 0 to 6 one by one.
+      // By default each slot is initialized with 100 power and (NO_MON) type. It means, that slots are empty.
+      // In battle empty slots will be removed (packing/zipping) if there is no stack with spreading strategy,
+      // so empty slots are not an issue.
+      // If all slots are empty, regular (non-mixed) neutrals will be used in game.
+      "slot3": { // Lets configure slot 3
+        "type": "MIX_MON_TYPE_BASE", // Slot monsters type. Supports constants. (NO_MON) for empty slot, ID or constant for particular monster,
+                                     // See MIX_MON_XXX constants. Base means type of monster on adventure map.
+                                     // Here we leave base monster type as is, so that central stack is the same as monster on adventure map.
+                                     // Default: current type for specified slot.
+
+        "probability": "50",         // Probability in percents to apply config to this slot.
+                                     // There maybe numerous alternative slot configurations, each
+                                     // one with its own probability. Just remember, that total probability
+                                     // is 100, thus specifying 70% pikemen, 50% marksmen, 10% angels will
+                                     // lead to that real markmen probability will be 30% and angels will
+                                     // never be generated at all.
+                                     //
+                                     // Default: 100. It means, that no specifying probability will make the engine
+                                     // to use this configuration and stop processing any alternatives for this slot
+
+        "power": "200",              // Power is relative value, used to calculate each slot/stack relative power.
+                                     // Total mixed neutrals power (Fight Value) depends on adventure map stack size
+                                     // and global settings. All stacks/slot share part of total power (Fight Value).
+                                     // If you set one slot/stack to 100 and the other one to 200, it will means,
+                                     // that the latter will have 2X Fight Value, as compared to the former.
+                                     //
+                                     // By default all slots start with 100 power, which means equally.
+
+        "spread": "MIX_NO_SPREAD",   // Spreading strategy. MIX_SPREAD_XXX constants.
+                                     // Spreading is dividing stacks among free/empty slots.
+                                     // For instance, you may want to set slot 0, slot 6 and spread
+                                     // monsters from slot 0 and slot 6 to other slots by some algorithm.
+                                     //
+                                     // Default: MIX_NO_SPREAD
+
+        "min_level": "-3",           // Minimum relative level of faction/ally/random creature to generate.
+                                     // The value is increased by base monster level. So 0 means the same as base monster level.
+                                     // To specify absolute minimum level use constants MIX_MON_ABS_LEVEL_1..MIX_MON_ABS_LEVEL_7
+
+        "max_level": "-3",           // Maximum relative level of faction/ally/random creature to generate.
+                                     // The value is increased by base monster level. So 0 means the same as base monster level.
+                                     // To specify absolute maximum level use constants MIX_MON_ABS_LEVEL_1..MIX_MON_ABS_LEVEL_7
+
+        "copy_to": "0 6",            // Possibility to copy/clone current slot, including type and power
+                                     // to other slots, which are separated by spaces in value.
+                                     // Examples: "3", "0 4 6", "".
+                                     // Use this setting to produce duplicate slots, which still
+                                     // may be changed if appropriate "slotN" section will be found.
+                                     // Note, that copying is performed after slot probability was hit
+                                     // and all parameters are determined.
+                                     //
+                                     // Default: "" (no copying)
+      }, // slot3
+
+      // It's possible to provide numerous alternative configurations for each slot.
+      // Each alternative has its own probability. Alternatives are tested until any of them hits.
+      // If no alternatives hit the probability, the slot remains unchanged.
+      // To specify alternative, add "_alt1", "_alt2", "_altN" increasing suffix to sections.
+      "slot3_alt": {
+        // Here all already described fields may be used
+      },
+    }, // monXXX
+
+    // Alternative configuration for monXXX.
+    // To specify alternative, add "_alt1", "_alt2", "_altN" increasing suffix to sections.
+    // All already described sections, including alternatives for each slot may be specified inside
+    "monXXX_alt1": {
+      "custom":      "1",  // obligatory
+      "probability": "60",
+
+      "slot1": {
+        // ...
+      },
+    }
+  },
+}

@@ -1,0 +1,49 @@
+; ---------- Detecting mixed neutrals mod ---------
+Check i^mix_on^ variable for (TRUE) to detect if mod is enabled.
+
+; ---------- Changing global settings programmatically ----------
+Use (OnAfterErmInstructions) event to overwrite global settings.
+See mix - main.erm PUBLIC section for global variables list.
+All json config settings are loaded before (OnAfterErmInstructions) event.
+
+; ---------- New events ----------
+"mix_OnRegisterRegularMonsters"
+  This event is specially designed for registering new monster ranges like 197..250 (if you use TyphonZ/Amethyst like library).
+  If you don't register particular monsters as regular (non-towers/commanders/blank) monsters, then these monsters will not be
+  used by mod at all. All functions will ignore them.
+
+  To register monsters range use function "mix_RegisterRegularMonsterRange"
+  See mix - main.erm for this function and other function description and arguments.
+
+  You can also setup fraction relationships between other fractions using "mix_SetFactionAllies" function.
+  Usually we specify weights, which are used to determine probability to generate monster of base fraction or some allied fraction.
+
+"mix_OnViewNeutrals":P?(showFuzzyNumbers)/?(disablePopup)/(neutrals)/(x)/(y)/(z);
+  The event allows to customize view neutrals dialog.
+
+  showFuzzyNumbers: boolean = (TRUE). If true, quantities are displayed inaccurately like 50-99, accurately otherwise.
+  disablePopup:     boolean = (FALSE). Set to true to suppress mod dialog. Show your custom dialog instead.
+  neutrals:         dynamical array ID. Array is 7 pairs of (monType, monNum) for each neutral slot.
+                    Use it to display your own dialog.
+  x, y, z:          Monster coordinates on adventure map.
+
+"mix_OnAnalyseBattleResults"
+  Event occurs in "OnAfterBattleUniversal" when it's not mixed neutrals battle or it's mixed neutrals battle and the mod is ready to change
+  fianl stacks using BA:M. You may log battle casualities and implement, for instance, custom necromancy here.
+
+"mix_OnApplyNeutralsCasualities":P?(newMonNum)/(origMonNum)/i^mix_battleX^/i^mix_battleY^/i^mix_battleZ^;
+  This event allows to change final neutral stack size on adventure map.
+  Here custom rules may be implemented, for instance, restoring neutrals if attacker escaped or died.
+
+  Example:
+  Check if hero retreated and then
+  VR(newMonNum):S(origMonNum) to remove neutrals casualities
+
+; ---------- Generating monsters in your mods ----------
+Use the following functions to generate monsters, if your mods depend on Mixed Neutrals mod:
+  "mix_GenerateRandomMonster"
+  "mix_GenerateFactionMonster"
+  "mix_GetRandomBaseOrAlliedFaction"
+
+; ---------- Handling mixed neutrals battle specially ----------
+Check i^mix_isMixedNeutralsBattle^ boolean variable in OnAfterBattleSetup or any other events, occuring after OnBeforeBattleUniversal.
