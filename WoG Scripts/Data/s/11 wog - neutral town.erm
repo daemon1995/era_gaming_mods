@@ -1,9 +1,10 @@
-ZVSE
+ZVSE2
 
 ** TownC ERM script v1.2 - Donald X. Vaccarino, Jonas Gustafsson and Timothy Pulver,
 ** with some balancing suggestions from Kerill Kennedy.
 ** Requires WOG version 3.58 or later
 ** Updated  July 26, 2004
+** Updated Dec 2021 by Archer30
 
 ** Turns Conflux into a town of neutral creatures
 ** Fire/Air Messengers changed into new level 3 monsters
@@ -27,13 +28,13 @@ ZVSE
 ** Variables Used: v900-914 (not exclusive)
 ** Flags Used: none
 ** Functions Used: 6100-6106
-** Timers Used: TM2 (script00)
 
 ** Timer routine
 
-!?TM2&$day$=1/$once$=1; // only once at day 1
-!!UN:P67/?y-1; [check if script is enabled: y-1]
-!!FU6104&y-1=1:P; // do conversion if script is enabled
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^; // only once at day 1
+!!UN:P67/?(neutralTownOn:y); [check if script is enabled: y-1]
+!!FU6104&(neutralTownOn):P; // do conversion if script is enabled
+!!FU(neutTown_SetMonTowns):P;
 
 ** end of timer routine
 
@@ -333,21 +334,6 @@ ZVSE
 !!MA:U195/172; [upg hellsteed to nightmare]
 !!MA:U168/135; [upg gorynych to rust dragon]
 
-!!MA:O138/8; [these creatures all count as being conflux troops]
-!!MA:O143/8;
-!!MA:O140/8;
-!!MA:O142/8;
-!!MA:O144/8;
-!!MA:O164/8;
-!!MA:O166/8;
-!!MA:O193/8;
-!!MA:O136/8;
-!!MA:O172/8;
-!!MA:O168/8;
-!!MA:O135/8;
-!!MA:O195/8;
-!!MA:O194/8;
-
  [change messengers]
 
 !!MA:L164/2; [level 2 (3)]
@@ -408,26 +394,33 @@ ZVSE
 !!MA:L144/3; //set Monster Level to L4
 !!MA:L194/3; //set Werewolf Monster Level to L4
 
-
  [adjust Sorceresses and Enchanters]
 !!MA:G193/3; [Increase Sorceress Growth to 3]
 !!MA:G136/3; [Increase Enchanter Growth to 3]
 !!MA:L136/4; // set Monster Level to L5
 !!MA:L193/4; // set Monster Level to L5
 
-[adjust Gorynyches]
-!!MA:C168/6/3200; [Decrease Gorynych cost to 3200 Gold]
-!!MA:C168/1/1; [Increase Gorynych resource cost to 1 Mercury]
+ [adjust Gorynyches]
+!!MA:C168/(RES_GOLD)/3200; [Decrease Gorynych cost to 3200 Gold]
+!!MA:C168/(RES_MERCURY)/1; [Increase Gorynych resource cost to 1 Mercury]
 !!MA:L168/6; // set Monster Level to L7
 
  [adjust Rust Dragons]
 !!MA:P135/300; Change Rust dragons, 300 HP
-!!MA:C135/6/5000; Change Rust dragons, cost 5000
-!!MA:C135/1/5 C135/3/0; Change Rust dragons, cost 5 Mercury and 0 Sulfur
+!!MA:C135/(RES_GOLD)/5000; Change Rust dragons, cost 5000
+!!MA:C135/(RES_MERCURY)/5 C135/(RES_SULFUR)/0; Change Rust dragons, cost 5 Mercury and 0 Sulfur
 !!MA:M135/30; Change Rust dragons, [min dmg 30 (50 ori)]
 !!MA:S135/15; Change Rust dragons, [speed 15 (17 ori)]
 !!MA:L135/6; // set Monster Level to L7
 
+; Adjust fight values and AI values (1.2 times values of Black Dragon)
+!!MA:F(MON_BLACK_DRAGON)/?(fvBlackDragon:y);
+!!VR(fvRustDragon:y):S(fvBlackDragon) *6 :5;
+!!MA:F(MON_RUST_DRAGON)/(fvRustDragon);
+
+!!MA:I(MON_BLACK_DRAGON)/?(avBlackDragon:y);
+!!VR(avRustDragon:y):S(avBlackDragon) *6 :5;
+!!MA:I(MON_RUST_DRAGON)/(avRustDragon);
 
  [adjust conflux might hero specialties]
 !!HE128:X4/194/2/1/2; [Pasis - Werewolf/Troll specialist: +2 att, +1 def, +2 dmg]
@@ -460,5 +453,20 @@ ZVSE
 !!DO6105/128/143/1:P; [set future starting troops for conflux heroes]
 
 !#UN:P67/?v1;                       [Algor]
-!#FU(NeutralTown1)&v1>0:P;          [Algor]
-
+!#FU(NeutralTown1)&v1>0:P;
+
+!?FU(neutTown_SetMonTowns);
+!!MA:O138/8; [these creatures all count as being conflux troops]
+!!MA:O143/8;
+!!MA:O140/8;
+!!MA:O142/8;
+!!MA:O144/8;
+!!MA:O164/8;
+!!MA:O166/8;
+!!MA:O193/8;
+!!MA:O136/8;
+!!MA:O172/8;
+!!MA:O168/8;
+!!MA:O135/8;
+!!MA:O195/8;
+!!MA:O194/8;
