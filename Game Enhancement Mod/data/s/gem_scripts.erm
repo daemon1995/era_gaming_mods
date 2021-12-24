@@ -132,18 +132,16 @@ ________________________________________________________________________________
 ** удаление очков заклинаний на время автобоя, поддерживает переигровку (by daemon_n)
 ** Spell Points Delete in the autobattle, supports battle replay
 
-!?IP0;
-!!BA:Q0;                            [both hum = disable auto]
+!?FU(OnBeforeBattleForThisPcDefender);
+  !!BA:Q0;                            [both hum = disable auto]
+  !!UN:C6916044/4/?i^Autobattle_Was_Disabled^;
 
-!?IP1;
-!!BA:Q0;                            [both hum = disable auto]
-
-!?FU(OnBeforeBattle)&1000;     [before Human battle]
+!?FU(OnBeforeBattle)&(ERM_FLAG_IS_HUMAN);     [before Human battle]
 
   !!if&i^battle_humanOnly^;             [if not neutrals]
     !!BA:Q0;                            [both hum = disable auto]
+    !!UN:C6916044/4/?i^Autobattle_Was_Disabled^;
     !!FU:E;                             [and exit]
-
   !!en;
 
   !!OW:C?(currPlayer:y) I(currPlayer)/?(isAi:y); [check current player color]
@@ -173,6 +171,7 @@ ________________________________________________________________________________
      !!IF:G1/1/i^Current_Battle_Type_Choice%(currPlayer)^/-1/-2/-3/-4;                  [show message]
      !!SN:W^Current_Battle_Type_Choice%(currPlayer)^/v1;  [store choice]
   !!en;
+
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):;                   [if choisen]
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S1;
     !!BA:Q0;                              [set no auto]
@@ -235,17 +234,23 @@ ________________________________________________________________________________
   *!en;
 
 
+
+
+!?FU(OnAfterBattleUniversal)&1000;
+  !!if&i^Autobattle_Was_Disabled^;
+    !!UN:C6916044/4/1;
+    !!VRi^Autobattle_Was_Disabled^:S(FALSE);      [запоминаем]
+  !!en;
+
 !?FU(OnAfterBattleUniversal)&1000/i^battle_humanOnly^=(FALSE);
+
   !!if&i^gem_OnlyOneBattleReplayIsAllowed^;
     !!VRi^gem_replay_counter^:S0;
   !!en;
 
   !!FU(gem_Button_Switch):P;
 
-  !!if&i^Autobattle_Was_Disabled^;
-    !!UN:C6916044/4/1;
-    !!VRi^Autobattle_Was_Disabled^:S(FALSE);      [запоминаем]
-  !!en;
+
 
   !!UN:P900/?y1;
   !!UN&y1=0:J11/1;

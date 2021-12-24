@@ -61,7 +61,7 @@ ZVSE2
     !!DL(SRM_DLG_MAGE_GUILD):Nz1;
     !!FU(srm_ManageMageGuildDLGItems):P(SRM_DLG_MAGE_GUILD)/(townId); [Customise the dialogue]
 
-    !!FU(srm_set_text_lang):P;                                                  [set text based on the mod list]
+    !!FU(srm_set_text_lang):P;          [set text based on the mod list]
     *!FU(srm_check_spellbook)&999:P;                                               [now it's checked when the DLG opened;]
 
     !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
@@ -74,10 +74,11 @@ ZVSE2
     !!DL(SRM_DLG_MAGE_GUILD):S1;
 
     [AFTER DLG WAS CLOSED]
-    !!if&i^srm_rebuild_guild^;
+    !!if&i^srm_rebuild_guild^|i^srm_spell_bought^;
       !!VR(realGuildLevel:y):S(guildLevel) -1;             
       !!CA-1:B6/(realGuildLevel);         [rebuild magic guild for learn new spells - evading from learn bug, idk]
       !!VRi^srm_rebuild_guild^:S(FALSE);
+      !!VRi^srm_spell_bought^:S(FALSE);
     !!en;
     !!CM:R0;
     !!SN:D;
@@ -101,36 +102,8 @@ ZVSE2
     !!if&v999<=41;
       !!VRi^srm_spell_place_in_mg^:Sv999;
     !!el;
-      *!re i/0/41;
-i^current_researchable_spell_in_town%(townId)^
-        *!if&i^srm_spell_%i^=i^srm_spell_42^;
       !!VRi^srm_spell_place_in_mg^:Si^current_researchable_spell_in_town%(townId)_place^; [allocate of the central shard ID is equal scroll]
-          *!br;
-        *!en;
-
-        *!if&i=5;
-          *!VRi:S9;
-          *!co;
-        *!en;
-
-        *!if&i=14;
-          *!VRi:S19;
-          *!co;
-        *!en;
-
-        *!if&i=23;
-          *!VRi:S29;
-          *!co;
-        *!en;
-
-        *!if&i=32;
-          *!VRi:S39;
-          *!co;
-        *!en;
-      *!en;
     !!en;
-
-    *!IF:M^%i(srm_spell_place_in_mg)^;
 
     !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
     !!VRi^srm_ask_research_leave_dl^:S(FALSE);
@@ -706,13 +679,80 @@ i^current_researchable_spell_in_town%(townId)^
   !!en;
 
 !?FU(OnAfterErmInstructions);
+  !!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+  !!FU(ReadIniInts):P(filePath)/^main^/^srm_greetings^/?i^srm_greetings_message^/1;
+  !!if&i^srm_greetings_message^;
+    !!FU(WriteIniInts):P(filePath)/^main^/^srm_greetings^/0; [save battle save option only when plugin is disabled]
+    !!FU(SaveIni):P(filePath);
+  !!en;
 
-!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
-!!FU(ReadIniInts):P(filePath)/^main^/^srm_greetings^/?i^srm_greetings_message^/1;
-!!if&i^srm_greetings_message^;
-  !!FU(WriteIniInts):P(filePath)/^main^/^srm_greetings^/0; [save battle save option only when plugin is disabled]
-  !!FU(SaveIni):P(filePath);
-!!en;
+
+
+
+*?FU(gem_OnDlgProcessAction)&i^srm_enableAnimation^;
+*!IF:L^%^;
+  *!VRi^counter^:+2 %8;
+*!IF:L^%i(counter)^;
+  *!if&i^counter^<>0;
+
+
+  *!VRi^counter^:+3;
+  *!CA-1:U?(townId:y);
+  *!FU&i^current_researchable_spell_in_town%(townId)^<0:E;
+  *!en;c
+  *!FU(FunctionName):P;
+  *!FU(gem_DlgDefProc):P6/?(currentFrame:y);
+
+  *!if&i^curren_select^<>i^current_researchable_spell_in_town%(townId)_place^/i^current_researchable_spell_in_town%(townId)_place^>-1;
+
+    *!DL(SRM_DLG_MAGE_GUILD):Ai^current_researchable_spell_in_town%(townId)_place^/(DLG_CMD_SET_DEF_FRAME)/0/0;
+  *!en;
+
+  *!if&(currentFrame)=10;
+  *!FU(gem_DlgDefProc):P6/0;
+*!IF:L^%^;*!FU(gem_DlgShowItem):P6/0;
+*!IF:L^%^;*!FU(gem_DlgDisableBtn):P6/0;
+*!IF:L^%^;
+  *!DL(SRM_DLG_MAGE_GUILD):Ai^current_researchable_spell_in_town%(townId)_place^/(DLG_CMD_SET_DEF)/^TPMAGES.def^/0;
+  *!DL(SRM_DLG_MAGE_GUILD):E6/0;
+  *!en;
+
+  *!if&i^checkk^;
+    
+  *!en;
+*!if&;
+  
+*!en;
+!?FU(DlgItem_ShowHint);
+   *!IF:L^%^;
+
+и повторяем действие, но уже с имеющимися координатами
+  *!FU(H3Dlg_GetCurrentDlg):P?(currentDlg:y);
+  *!SN:E6289824/2/(currentDlg)/i^Dlg_mouseX^/i^Dlg_mouseY^; Получаем структуру элемента в v1 [005FF9A0 6289824 Dlg_ItemAtPos __this]
+  *!if&v1;
+    *!UN&v1:Cv1/16/2/?i^curren_select^; Используя мои хаки со смещением, получаем Id элемента)) Аналог
+  *!IF:L^%^;
+  *!if&i^curren_select^<6;
+  *!FU(gem_DlgItemPosition):Pi^curren_select^/?y1/?y2;
+  *!FU(gem_DlgItemPosition):P6/y1/y2;
+  *!en;
+  *!IF:L^%v1^;
+  *!SN:E4482656/2/i^curren_select^/0/-1/0;
+  *!VRi^curren_select^:S(itemId);
+  *!FU&(itemId)>5:E;
+    *!re i/0/25;
+    *!FU(gem_DlgDefProc):P(itemId)/?(wha:y);
+    *!if&(wha)=(SPELL_LAST_WOG);
+    *!FU(gem_DlgDefProc):P(itemId)/0;
+      *!br;
+    *!en;
+
+    *!FU(gem_DlgDefProc):P(itemId)/d1;
+    *!en;
+  *!SN:D;
+  *!en;
+
+
 
 
 
@@ -807,7 +847,7 @@ i^current_researchable_spell_in_town%(townId)^
       !!en;
 
     !!en;
-*!IF:M^%^;
+
 
     !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/d-1; [resize array when library is build and spell is removed from its]
     !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(availableSpellsToResearch:y);
@@ -824,7 +864,6 @@ i^current_researchable_spell_in_town%(townId)^
           !!CA0/(townId):G(guildLevel)/i/i^current_researchable_spell_in_town%(townId)^;  [accept researhable spell in town]
           !!VRi^current_researchable_spell_in_town%(townId)^:S-1;
           !!VRi^current_researchable_spell_in_town%(townId)_place^:S-1;
-i^current_researchable_spell_in_town%(townId)_place^
         !!en;
       !!en;
 
@@ -960,16 +999,6 @@ i^current_researchable_spell_in_town%(townId)_place^
       !!br;
     !!en;
   !!en;
-
-
-
-
-
-
-
-!?FU(OnKeyPressed_Town)&x1=(KEY_F3);
-!!CA-1:U/?(townId:y);
-!!VRi^current_researchable_spell_in_town%(townId)_place^:S-1;
 
 !?FU(srm_gm_rebuild_visual_set);
   !#VA(townId:x) (guildLevel:x) (townType:x) (hasLibrary:x);
@@ -1132,6 +1161,7 @@ i^current_researchable_spell_in_town%(townId)_place^
     !!if&1;
       !!OW:R(heroOwner)/(RES_GOLD)/d-(spellBookCost);
       !!HE(heroId):A4/(ART_SPELL_BOOK);
+      !!VRi^srm_spell_bought^:S(TRUE);
     !!en;
 
   !!el;

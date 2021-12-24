@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.032 ******************
+                 ************** version: 1.033 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -66,14 +66,11 @@
 
 
 1.033
-- New Option: Stack Experience Rebalance: Removes most OP or unnecessary stack abilities from all new TUM monsters and WoG units, leaving them only with 1 important skill at ACE level. Reduces all other stack exp values aswell
-- New option to increase monsters aggression by +1 or +2 or +3 (with 33% chance each) (now as separate option)
-- Updated Mixed Neutrals configuration with monsters IDs from TUM 2.16
-- Battle Commander gains +20% health when playing with TUM 
-- The commander in creature banks has slightly less health and damage on all levels
-- added option to configure Enhanced Henchman mod from Archer (work in progress)
-
-
+- Новая опция увеличения агрессии монстров на +1, +2 или +3 (с вероятностью 33% каждый) (теперь как отдельная опция)
+- Новая опция: ребалансировка опыта существ: удаляет большинство слишком сильных или ненужных способностей отряда у всех новых монстров TUM и юнитов WoG, оставляя им только 1 важный навык на уровне ACE (10). Уменьшает все остальные значения опыта отряда.
+- Обновлена ??конфигурация смешанных нейтралов с идентификаторами монстров из TUM 2.16.
+- Боевой командир получает + 20% здоровья при игре с ТУМ
+- добавлена возможность настройки мода Enhanced Henchman by Archer (в стадии разработки)
 Список изменений:
 
 1.032:

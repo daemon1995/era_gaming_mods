@@ -31,7 +31,7 @@ ZVSE2
 ** TOBYN LIBRARY FUNCTIONS (2004 September 19)                (for WoG v3.58)
 ** by Tobyn
 **
-** As with the Universal Timer TM1/2 above, this script64.erm uses
+**
 ** some common functions (may also be used from outside with a fct call)
 **
 ** USES FU2333,2345
@@ -333,7 +333,8 @@ ZVSE2
 !!CA-1:R1;                   set flag back to "already-built-here-this-day" if it was before
 !!VRv2362:S1;                reset indicator
 
-!?TM2&v2362=2;            every player each day
+           
+!?FU(OnEveryDay)&v2362=2;every player each day
 !!VRv2362:S1;                reset the indicator for "built-here-this-day" flag
 
 ******************************************************************************************
@@ -368,7 +369,7 @@ ZVSE2
 ** - or once the "choose from many pictures" dialogue is available, use it to
 **   replace the successive msgboxes for resource selection
 **
-** USES Universal Timer TM1/2, hero var w47 (resource choice), var v2369 (Mithril)
+** USES hero var w47 (resource choice), var v2369 (Mithril)
 **      FU2342-FU2344
 ** calls library fcts FU2333 (luck), FU2345 (skill click)
 ** uses flag 236, uses v2333 (modifier for ExpEst gold/day), v2334 (lvl 10 msg status)
@@ -402,7 +403,7 @@ ZVSE2
 ;   check w47 for resources/day irrespective of Estates,
 ;   only take Estates into account when *changing* w47
 
-!?TM2&v2363=1;                       daily timer for every color (if script active)
+!?FU(OnEveryDay)&v2363=1;                       daily timer for every color (if script active)
 !!VRv2334&$day$=1/$once$=1:S0;         init lvl 10 msg status at first day
 !!UN:B0/?v2369;                        check Mithril status (1=active)
 !!OW:H-1/2331/0;                       store current color's number of heroes in v2331
@@ -626,7 +627,7 @@ ZVSE2
 **   hero had one before battle began, even if it was destroyed in battle.
 **
 ** uses vars v2301..23
-** uses vars v2398..99 (99/98 attacking/defending hero)
+** uses vars i^battle_hero_1^..99 (99/98 attacking/defending hero)
 ** ONLY ACTIVE if v2364=1 (wogify option 190)
 
 
@@ -642,57 +643,74 @@ ZVSE2
 
   BEFORE BATTLE
 
-!?BA52&v2364=1;                    start combat trigger for both sides (if script active)
-!!BA:H0/?v2399 H1/?v2398;            store attacking/defending hero numbers
-!!VRv2301:C0/0/0/0/0/0/0/0/0/0/0;    init v2301..11
-!!VRv2312:C0/0/0/0/0/0/0/0/0/0/0/0;  init v2312..23
-!!HEv2399:         Ed/?v2301 Fd/d/?v2302/d S27/?v2304 A2/6/?v2305/d M37/?v2307 M38/?v2308 M39/?v2309;
-!!HEv2398&v2398>-1:Ed/?v2311 Fd/d/?v2312/d S27/?v2314 A2/6/?v2315/d M37/?v2317 M38/?v2318 M39/?v2319;
+!?BA52&v2364=1;                         [start combat trigger for both sides (if script active)]
+*!BA:H0/?i^battle_hero_0^ H1/?i^battle_hero_1^;            store attacking/defending hero numbers
+!!VRv2301:C0/0/0/0/0/0/0/0/0/0/0;       [init v2301..11]
+!!VRv2312:C0/0/0/0/0/0/0/0/0/0/0/0;     [init v2312..23]
+!!HEi^battle_hero_0^:         Ed/?v2301/1 S(SKILL_FIRST_AID)/?v2304 A2/6/?v2305/d M37/?v2307 M38/?v2308 M39/?v2309;
+!!HEi^battle_hero_1^&i^battle_hero_1^>-1:Ed/?v2311 Fd/d/?v2312/d S(SKILL_FIRST_AID)/?v2314 A2/6/?v2315/d M37/?v2317 M38/?v2318 M39/?v2319;
 
   First Aid Specialty
-!!HEv2399:X?y-1/?y-2/d/d/d/d/d;    get Attacker skill specialty
-!!VRv2303&y-1=0/y-2=27:S1;           set indicator if First Aid spec
-!!HEv2399&v2303=1:M37/1;             hero temp gets Cure spell during battle if specialist (even w/o First Aid skill)
-!!HEv2399&v2303=1/v2304>1:M38/1;     hero temp gets Animate Dead if Advanced or Expert specialist
-!!HEv2399&v2303=1/v2304>2:M39/1;     hero temp gets Resurrection if Expert specialist
-!!VRv2301&v2303=1:*2;                specialty gives 2 Tents per hero level
-!!HEv2398&v2398>-1:X?y-3/?y-4/d/d/d/d/d; get Defender skill specialty
-!!VRv2313&v2398>-1/y-3=0/y-4=27:S1;  set indicator if First Aid spec
-!!HEv2398&v2313=1:M37/1;             temp Cure spell during battle
-!!HEv2398&v2313=1/v2314>1:M38/1;     temp Animate Dead if Advanced or Expert
-!!HEv2398&v2313=1/v2314>2:M39/1;     temp Resurrection if Expert
-!!VRv2311&v2313=1:*2;                specialty gives 2 Tents per hero level
+!!HEi^battle_hero_0^:X?y-1/?y-2/d/d/d/d/d; [get Attacker skill specialty]
+!!VRv2303&y-1=0/y-2=27:S1;              [set indicator if First Aid spec]
+!!HEi^battle_hero_0^&v2303=1:M37/1;     [hero temp gets Cure spell during battle if specialist (even w/o First Aid skill)]
+!!HEi^battle_hero_0^&v2303=1/v2304>1:M38/1; [hero temp gets Animate Dead if Advanced or Expert specialist]
+!!HEi^battle_hero_0^&v2303=1/v2304>2:M39/1; [hero temp gets Resurrection if Expert specialist]
+!!VRv2301&v2303=1:*2;                   [specialty gives 2 Tents per hero level]
+!!HEi^battle_hero_1^&i^battle_hero_1^>-1:X?y-3/?y-4/d/d/d/d/d; [get Defender skill specialty]
+!!VRv2313&i^battle_hero_1^>-1/y-3=0/y-4=27:S1; [set indicator if First Aid spec]
+!!HEi^battle_hero_1^&v2313=1:M37/1;     [temp Cure spell during battle]
+!!HEi^battle_hero_1^&v2313=1/v2314>1:M38/1; [temp Animate Dead if Advanced or Expert]
+!!HEi^battle_hero_1^&v2313=1/v2314>2:M39/1; [temp Resurrection if Expert]
+!!VRv2311&v2313=1:*2;                   [specialty gives 2 Tents per hero level]
 
 
   IN BATTLE (summon Tents and apply Cure spell)
 
-!?FU(OnBattlefieldVisible)&v2364=1;                      start battlefield trigger (if script active)
-!!BU&v2304>0:E153/?v2306;            check if attacker already has tents
-!!BU&v2314>0:E168/?v2316;            check if defender already has tents
-!!BMv2306&v2304>0/v2306>0:Ndv2301;   add Tents for attacker
-!!BMv2316&v2314>0/v2316>0:Ndv2311;   add Tents for defender
-!!BU&v2304>0/v2306=-1:S147/v2301/153/0/-1/0; summons Tents for attacker
-!!BU&v2314>0/v2316=-1:S147/v2311/168/1/-1/0; summons Tents for defender
+!?FU(OnSetupBattlefield)&v2364=1;                                     [start battlefield trigger (if script active)]
+!!BU&v2304>0:E153/?v2306;                                               [check if attacker already has tents]
+!!BU&v2314>0:E168/?v2316;                                               [check if defender already has tents]
+!!BMv2306&v2304>0/v2306>0:Ndv2301;                                      [add Tents for attacker]
+!!BMv2316&v2314>0/v2316>0:Ndv2311;                                      [add Tents for defender]
+!!BU&v2304>0/v2306=-1:S(MON_FIRST_AID_TENT)/v2301/153/0/-1/0;                            [summons Tents for attacker]
+!!BU&v2314>0/v2316=-1:S(MON_FIRST_AID_TENT)/v2311/168/1/-1/0;                            [summons Tents for defender]
 
-!?BG&v2364=1;                      battleground action (useable by both sides) (if script active)
-!!BG:A?v2320;                          get current action (wait for Tent Healing)
-!!BG&v2320=11:N?v2321 D?v2322 Q?v2310; get Tent number, destination position, owner
-!!BMv2321&v2320=11:N?v2323;            get current amount of Tents
-!!BMv2321&v2320=11/v2310=0/v2304>0:C37/v2322/v2323/v2304/1; cast Cure on destination (left side)
-!!BMv2321&v2320=11/v2310=1/v2314>0:C37/v2322/v2323/v2314/1; cast Cure on destination (right side)
+!?BG&v2364=1;                                                           [battleground action (useable by both sides) (if script active)]
+
+!!BG:A?(action:y);                                                           [get current action (wait for Tent Healing)]
+!!if&(action)=(BATTLE_ACTION_TENT_HEAL);
+  !!BG:N?(tentStack:y) D?(healPos:y) Q?(side:y);                                  [get Tent number, destination position, owner]
+
+  !!BU:E(healPos)/?(stack:y);
+  !!BM(stack):P?(stackPos:y);
+
+  !!BM(tentStack):N?(tents:y);                                             [get current amount of Tents]
+  !!BM(tentStack)&(side)=0/v2304>0:C(SPELL_CURE)/(stackPos)/v2304/(tents)/1;             [cast Cure on destination (left side)]
+  !!BM(tentStack)&(side)=1/v2314>0:C(SPELL_CURE)/(stackPos)/v2314/(tents)/1;             [cast Cure on destination (right side)]
+
+!!en;
+
 
 
   AFTER BATTLE (restore values given by First Aid Specialty)
+!?FU(OnAfterBattleUniversal);
+*!FU(WOG_UpdateWarMachinesBattleVars):P;
 
-!?BG1&v2364=1;                     post-action trigger, if script active
-!!BU:C?y-1;                          check if combat has ended this turn
-!!FU&y-1=0:E;                        exit if it hasn't
+!?BG1&v2364=1;                                                          [post-action trigger, if script active]
+!!BU:C?y-1;                                                             [check if combat has ended this turn]
+!!FU&y-1=0:E;                                                           [exit if it hasn't]
   attacker
-!!HEv2399&v2303=1/v2305>0:A1/6/15;   restore Tent if given and hero specialty
-!!HEv2399:M37/v2307 M38/v2308 M39/v2309; remove Cure, Res, AnDead spells if only given by Specialty
+!!HEi^battle_hero_0^&v2303=1/v2305>0:A1/(ART_FIRST_AID_TENT)/15;        [restore Tent if given and hero specialty]
+!!HEi^battle_hero_0^:M37/v2307 M38/v2308 M39/v2309;                     [remove Cure, Res, AnDead spells if only given by Specialty]
   defender
-!!HEv2398&v2313=1/v2315>0:A1/6/15;   restore Tent if given and hero specialty
-!!HEv2398&v2398>-1:M37/v2317 M38/v2318 M39/v2319; remove Cure, Res, AnDead spells if only given by Specialty
+!!HEi^battle_hero_1^&v2313=1/v2315>0:A1/(ART_FIRST_AID_TENT)/15;        [restore Tent if given and hero specialty]
+!!HEi^battle_hero_1^&i^battle_hero_1^>-1:M37/v2317 M38/v2318 M39/v2319; [remove Cure, Res, AnDead spells if only given by Specialty]
+*!VRy1:S56 :55 *34 -33 +33 %4;
+*!FU(WOG_UpdateWarMachinesBattleVars):P;
+
+*!IF:L^2^;
+
+*!DO7805/0/41/1:Pi^battle_hero_0^/i^battle_hero_1^; //get the actual number of machines for both side, updates w vars
 
 ******************************************************************************************
 
@@ -727,34 +745,44 @@ ZVSE2
 **   And you can always give it to another hero or to a commander afterwards...
 **
 ** uses vars (v248)
-** uses vars v2398..99 (Tobyn universal vars, v2399/v2398 attacking/defending hero)
+** uses vars i^battle_hero_1^..99 (Tobyn universal vars, i^battle_hero_0^/i^battle_hero_1^ attacking/defending hero)
 ** uses fcts FU2340,2341
 ** uses strings z237..239 for skill names
-** uses Universal Timer TM1/2 (day1)
 ** ONLY ACTIVE if v2365=1 (wogify option 193)
 
 
   INIT SKILL NAMES (leaves descriptions unchanged)
 
-!?TM2&$day$=1/$once$=1/v2365=1;      triggers for first active color on day 1 only (if script active)
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^=1/v2365=1;      triggers for first active color on day 1 only (if script active)
 ;                                      (will trigger after script03.erm skill enhancement)
-!!UN:P54/?y-1;                         check if War Machines I is active (Overlord, script54, war machine levels)
-!!UN:P55/?y-2;                         check if War Machines II is active (Arstahd, script55, Tent mid-battle Resurrection)
-!!UN:P204/?y-3;                        check if First Aid I is active (Arstahd, script48, Tent post-battle Resurrection)
-!!UN:P190/?y-4;                        check if First Aid II is active (Tobyn, script64 see above, Tent Cure spell)
-!!UN:P201/?y-5;                        check if Artillery I is active (Arstahd, script48, pre-battle damage)
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?y-1;                         check if War Machines I is active (Overlord, script54, war machine levels)
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_II)/?y-2;                         check if War Machines II is active (Arstahd, script55, Tent mid-battle Resurrection)
+!!UN:P(WOG_OPT_FIRST_AID_I)/?y-3;                        check if First Aid I is active (Arstahd, script48, Tent post-battle Resurrection)
+!!UN:P(WOG_OPT_FIRST_AID_II)/?y-4;                        check if First Aid II is active (Tobyn, script64 see above, Tent Cure spell)
+!!UN:P(WOG_OPT_ARTILLERY)/?y-5;                        check if Artillery I is active (Arstahd, script48, pre-battle damage)
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_III)/?y-6;
 
-!!MA&y-1=0/y-2=0/y-3=0/y-4=0:P147/750; all First Aid Tents will have 750 HPs (if neither First Aid skill nor the Tent war machine itself are enhanced)
+*!MA&y-1=0/y-2=0/y-3=0/y-4=0/y-6=0:P147/750; removed by angry @daemon_n all First Aid Tents will have 750 HPs (if neither First Aid skill nor the Tent war machine itself are enhanced)
+!!VR(balName:z):Sz164039;
+!!VR(balName)|y-1=1/y-2=1:S^{%(balName)}^;
+!!VR(artName:z):Sz164040;
+!!VR(artName)&y-5=1:S^{%(artName)}^;
+!!VR(faName:z):Sz164041;
+!!VR(faName)|y-1/y-3=1/y-4=1:S^{%(faName)}^;
 
 !!VRz237:Sz164039;                     if no warfare relevant skills were enhanced
 !!VRz238:Sz164040;                      .
-!!VRz239:Sz164041;                      .
+!!VRz239:Sz164041; 
+
+
+                     .
 !!VRz237|y-1=1/y-2=1:Sz164042;         if Ballistics enhanced by script 54 or 55
 !!VRz238|y-5=1:Sz164043;               if Artillery enhanced by script 48
 !!VRz239|y-3=1/y-4=1:Sz164044;         if First Aid enhanced by script 48 or 64
 
-!!UN:G0/10/0/237 G0/20/0/238 G0/27/0/239;  set skill names to Warfare
-
+!!SN:H^secskill^/(SKILL_BALLISTICS)/0/(balName) H^secskill^/(SKILL_ARTILLERY)/0/(artName) H^secskill^/(SKILL_FIRST_AID)/0/(faName);
+*!UN:G0/10/0/237 G0/20/0/238 G0/27/0/239;  set skill names to Warfare
+*!IF:M^%(balName)^;
 
   MANUALLY SET WARFARE MAIN SKILL
 
@@ -870,11 +898,11 @@ ZVSE2
 !!FU2341:P-1/w48;            update Warfare skill levels and displayed skill
 
 !?BA52&v2365=1;            battle has started (trigger for both sides)
-!!BA:H0/?v2399 H1/?v2398;    store attacking/defending hero numbers
-!!IF:Wv2399;                 set w var reference to attacking hero
-!!FU2341:Pv2399/w48;         check attacking hero
-!!IF&v2398>-1:Wv2398;          set w var reference to defending hero (if any)
-!!FU2341&v2398>-1:Pv2398/w48;  check defending hero (if any)
+*!BA:H0/?i^battle_hero_0^ H1/?i^battle_hero_1^;    store attacking/defending hero numbers
+!!IF:Wi^battle_hero_0^;                 set w var reference to attacking hero
+!!FU2341:Pi^battle_hero_0^/w48;         check attacking hero
+!!IF&i^battle_hero_1^>-1:Wi^battle_hero_1^;          set w var reference to defending hero (if any)
+!!FU2341&i^battle_hero_1^>-1:Pi^battle_hero_1^/w48;  check defending hero (if any)
 
 ******************************************************************************************
 
@@ -890,14 +918,14 @@ ZVSE2
 **
 ** BTW: how to change building cost without using \data\building.txt file?
 **
-** USES universal timer TM1/2, functions FU2334, var (v2324..2327), (flag 1)
+** USES functions FU2334, var (v2324..2327), (flag 1)
 ** ONLY ACTIVE if v2366=1 or v2367=1 (wogify options 188 and 189)
 
 !#UN&v2366=1:T1/6/0/134 T1/6/1/151;  replace Green->FaerieDrag, Gold->DiaDrag
 !#MA&v2366=1:C151/6/12000 O134/1;    DiaDrag 8000->12000 Gold, FaerieDrag neutral->Rampart
 !#MA&v2366=1:U26/27;                 GreenDrag still upgrades to GoldDrag at Hill Fort
 
-!?TM2&$weekday$=1/$once$=1;          get town coords and change every Rampart/Conflux ONCE every monday
+!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^=1;          get town coords and change every Rampart/Conflux ONCE every monday
 !!UN&v2367=1:P67/?y-1;                 check if Neutral Town script67 is active
 !!VRv2367&y-1=1:S0;                    if so, disable reduction in Neutral "Conflux" Town
 !!UN|v2366=1/v2367=1:U98/-1/?v2324;    store how many towns there are

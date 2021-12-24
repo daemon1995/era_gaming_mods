@@ -18,6 +18,30 @@ SN:W ?? ?????, ????????????? ????????? key functions
 *?FU(OnHeroesMeetScreenMouseClick);
 *!IF&i^mouse_action^=(MOUSE_LMB_PRESSED):M^%i(mouse_item)^;
 
+
+*?FU(OnKeyPressed)&x1=(KEY_Q);
+
+  *!SN:L^EraPlugins\erm_hooker.era^/?y1;
+
+  *!if&y1<>0;
+    *!SN:Ay1/^SetHook^/?y2;
+    *!SN:Ey2/1/5893984/(gem_OnCast);                            [нажатие клавиши на  ѕ]
+    *!SN:Ey2/1/4679396/(gem_OnGetResist);                            [нажатие клавиши на  ѕ]
+4679396
+  *!en;
+!?FU(gem_OnGetResist);
+*!IF:L^%^;
+!?FU(gem_OnCast);
+*!IF:L^%x1^;
+*!re i/0/40/2;
+  !!UN:Cx1/28/4/?y1;
+*!IF:L^%y1 %i^;
+
+*!en;
+
+
+
+
 !?FU(OnAfterErmInstructions);
   *!FU(gem_GetModList):P?(modListArrayID:y)/?(modsAmount:y)/?(modList:z);
   *!OW:Cd/?(clickedPlayer:y);
@@ -133,18 +157,26 @@ SN:W ?? ?????, ????????????? ????????? key functions
 !?BG0; !!BG:A?y1; !!BA:H1/?y2;          [??? ????????]
 !!UN&y1=4/y2=-2:C4689325/1/2;           [????? ?????]
 !?BA52;  !!UN:C4689325/1/125;           [???? ?????]
-*?FU(OnBattleStackObtainsTurn);
-*!VRy1:S0 R14;
-*!IF:L^%y1^;
+
 ** War Machines Cost 1 gold when surrend
 !?BA52;
-!!re i/(MON_CATAPULT)/(MON_FIRST_AID_TENT);
-  !!MA:Ci/6/?i^gem_%i_machine_cost^ Ci/6/1;
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_III)/?(isEnabled:y);                       [check if option is enabled]
+
+!!if&(isEnabled)=(FALSE);
+  !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
+    !!MA:Ci/(RES_GOLD)/?i^gem_%i_machine_cost^ Ci/(RES_GOLD)/1;
+  !!en;
 !!en;
+
+
 !?BA53;
-!!re i/(MON_CATAPULT)/(MON_FIRST_AID_TENT);
-  !!MA:Ci/6/i^gem_%i_machine_cost^;
-  !!VRi^gem_%i_machine_cost^:S(NULL);
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_III)/?(isEnabled:y);                       [check if option is enabled]
+!!if&(isEnabled)=(FALSE);
+
+  !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
+    !!MA:Ci/(RES_GOLD)/i^gem_%i_machine_cost^;
+    !!VRi^gem_%i_machine_cost^:S(NULL);
+  !!en;
 !!en;
 ; --------------------------------------------------------------------------------------------------
 ** ** ????? ?????? ??????/ Fast tactic troop replacement (by igrik)
@@ -154,7 +186,7 @@ SN:W ?? ?????, ????????????? ????????? key functions
   *!IF:L^%y1 %y2 %y3^;
 
   *!SN:L/?y1 L^HD_MCR.dll^/?y2;
-!!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
+  !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
   !!BU:T?y3;
   !!FU|v1<>0/y3<>1:E; 
   !!BU:Ey4/?y5;
@@ -170,33 +202,20 @@ SN:W ?? ?????, ????????????? ????????? key functions
 
 ** open heroscreens in the battle by right click
 
-!?CM4&1000;
-!!BA:E?y2;
-!!FU|y2=1:E;
-!!CM:F?y1 D?y2 S?y3;
-!!FU|y1<>512/y3<>14:E;
-!!FU&y2<252|y2>253:E;
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_battleHex^>=252/i^mouse_battleHex^<=253;
 
-!!FU&i^battle_hero_0^<0/y2=252:E;
-  
-!!FU&i^battle_hero_1^<0/y2=253:E;
-
-!!if&i^battle_human_0^=1/i^battle_ai_1^=1;
-
-  !!FU(gem_hero_battle_info):Py2/i^battle_hero_0^/i^battle_hero_1^/i^gem_window_option_%i(battle_owner_0)^/i^gem_enemy_window_option_%i(battle_owner_0)^;
-  *!IF:L^1^;
+!!if&i^battle_hero_0^>(NO_HERO)/i^battle_ai_1^=1;
+  !!FU(gem_hero_battle_info):Pi^mouse_battleHex^/i^battle_hero_0^/i^battle_hero_1^/i^gem_window_option_%i(battle_owner_0)^/i^gem_enemy_window_option_%i(battle_owner_0)^;
 !!en;
 
-!!if&i^battle_human_1^=1/i^battle_ai_0^=1;
-*!IF:L^i(battle_owner_1) = %i(battle_owner_1)
-i(battle_owner_0) = %i(battle_owner_0)
-^;
-  !!FU(gem_hero_battle_info):Py2/i^battle_hero_0^/i^battle_hero_1^/i^gem_window_option_%i(battle_owner_1)^/i^gem_enemy_window_option_%i(battle_owner_1)^;
 
+
+!!if&i^battle_human_1^=1/i^battle_ai_0^=1;
+  !!FU(gem_hero_battle_info):Pi^mouse_battleHex^/i^battle_hero_0^/i^battle_hero_1^/i^gem_window_option_%i(battle_owner_1)^/i^gem_enemy_window_option_%i(battle_owner_1)^;
 !!en;
 
 !?FU(gem_hero_battle_info);
-  !#VA(clickPlace:x) (leftHeroNumber:x) (rightHeroNumber:x) (ownHeroWindow:x) (enemyHeroWindow:x);
+  !#VA(clickPlace:x) (leftHero:x) (rightHero:x) (ownHeroWindow:x) (enemyHeroWindow:x);
   !!if&v7195=1;                                         [Archer - fix display of resistance II]
     !!FU7026&v7054>-1:Pv7054/1;                         [reset skill levels - attacker]
     !!FU7026&v7055>-1:Pv7055/1;                         [reset skill levels - defender]
@@ -205,11 +224,11 @@ i(battle_owner_0) = %i(battle_owner_0)
     !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
 
     !!if&(clickedPlayer)=(currPlayer);
-      !!SN&(ownHeroWindow)=1/(clickPlace)=252:E5118576/3/(leftHeroNumber)/1/1/1;
-      !!SN&(enemyHeroWindow)=1/(clickPlace)=253:E5118576/3/(rightHeroNumber)/1/1/1;
+      !!SN&(ownHeroWindow)=1/(clickPlace)=252:E5118576/3/(leftHero)/1/1/1;
+      !!SN&(enemyHeroWindow)=1/(clickPlace)=253:E5118576/3/(rightHero)/1/1/1;
     !!el;
-      !!SN&(enemyHeroWindow)=1/(clickPlace)=252/(leftHeroNumber)>-1:E5118576/3/(leftHeroNumber)/1/1/1;
-      !!SN&(ownHeroWindow)=1/(clickPlace)=253/(rightHeroNumber)>-1:E5118576/3/(rightHeroNumber)/1/1/1;
+      !!SN&(enemyHeroWindow)=1/(clickPlace)=252/(leftHero)>-1:E5118576/3/(leftHero)/1/1/1;
+      !!SN&(ownHeroWindow)=1/(clickPlace)=253/(rightHero)>-1:E5118576/3/(rightHero)/1/1/1;
     !!en;
 
   !!if&v7195=1;
@@ -295,23 +314,23 @@ i(battle_owner_0) = %i(battle_owner_0)
 ; --------------------------------------------------------------------------------------------------
 Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
-!?FU(OnSetupBattlefield)&1000; 
-  !!BA:Q?f; !!FU&f=1:E;
-  !!BA:H0/?y1;                            [Attacking Hero]
-  !!BA:H1/?y2;                            [Defending Hero]
-  *!FU(Set_Morale_and_Luck):Py1/y2/0;
+!?FU(OnSetupBattlefield)&1000/i^battle_isQuick^=(FALSE); 
+  *!BA:Q?f; *!FU&f=1:E;
+  *!BA:H0/?y1;                            [Attacking Hero]
+  *!BA:H1/?y2;                            [Defending Hero]
+  !!FU(Set_Morale_and_Luck):Pi^battle_hero_0^/i^battle_hero_1^/0;
 
-  !?FU(OnCombatRound)&1000;                                                       
-  !!BA:Q?f; !!FU&f=1:E;
-  !!BA:H0/?y1;                            [Attacking Hero]
-  !!BA:H1/?y2;                            [Defending Hero]
-  *!FU(Set_Morale_and_Luck):Py1/y2/1;
+  !?FU(OnCombatRound)&1000/i^battle_isQuick^=(FALSE);                                                       
+  *!BA:Q?f; *!FU&f=1:E;
+  *!BA:H0/?y1;                            [Attacking Hero]
+  *!BA:H1/?y2;                            [Defending Hero]
+  !!FU(Set_Morale_and_Luck):Pi^battle_hero_0^/i^battle_hero_1^/1;
 
-  !?FU(OnAfterBattleAction)&1000;
-  !!BA:Q?f; !!FU&f=1:E;
-  !!BA:H0/?y1;                            [Attacking Hero]
-  !!BA:H1/?y2;                            [Defending Hero]
-  *!FU(Set_Morale_and_Luck):Py1/y2/1;
+  !?FU(OnAfterBattleAction)&1000/i^battle_isQuick^=(FALSE);
+  *!BA:Q?f; *!FU&f=1:E;
+  *!BA:H0/?y1;                            [Attacking Hero]
+  *!BA:H1/?y2;                            [Defending Hero]
+  !!FU(Set_Morale_and_Luck):Pi^battle_hero_0^/i^battle_hero_1^/1;
 
   !?FU(Set_Morale_and_Luck); 
     x1=Attacker Hero, x2=Defender Hero, x3=battle state 0=BF and 1=BG and BR
@@ -320,7 +339,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/0/10/1;                                                                                                       
       !!BMi:T?y3;                           [Get Creature Type]
-      !!if&y3=150;                         [if 150  SupremeArchangel  found]
+      !!if&y3=(MON_SUPREME_ARCHANGEL);                         [if 150  SupremeArchangel  found]
         *!HEx1&x3=0:R0/d1; add 1 temporary morale
         !!br;
        !!en;                              
@@ -328,7 +347,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/0/10/1;
       !!BMi:T?y3;                                  [Get Creature Type]
-      !!if&y3=153;                                [if 153  Antichrist  found]
+      !!if&y3=(MON_HELL_BARON);                                [if 153  Antichrist  found]
         !!HEx2&x3=0/x2>=0/x2<=155:R1/d-1;          [add -1 temporary Luck]
         !!DO(Reduce_Luck_Fix)/21/31/1&x2=-2/x3=1:P; 
         !!br;
@@ -337,7 +356,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/0/10/1;
       !!BMi:T?y3; Get Creature Type 
-      !!if&y3=154;                                   [if 154  Blood Dragon  found]
+      !!if&y3=(MON_BLOOD_DRAGON);                                   [if 154  Blood Dragon  found]
         *!HEx2&x3=0/x2>=0/x2<=155:R0/d-1; add -2 temporary morale
         !!DO(Reduce_Morale_Fix)/21/31/1&x3=1/x2=-2:P; [Reduce Morale only if no enemy hero]
         !!br;
@@ -346,7 +365,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/0/10/1;
       !!BMi:T?y3; Get Creature Type 
-      !!if&y3=156; if 156  GheroOwnerst Behemoth found
+      !!if&y3=(MON_GHOST_BEHEMOTH); if 156  GheroOwnerst Behemoth found
         *!HEx1&x3=0/x2>=0/x2<=155:R1/d1; add 1 temporary Luck
         !!br;
       !!en;
@@ -357,7 +376,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/21/31/1;
       !!BMi:T?y3;                                      [Get Creature Type]
-      !!if&y3=150;                                    [if 150  SupremeArchangel  found]
+      !!if&y3=(MON_SUPREME_ARCHANGEL);                                    [if 150  SupremeArchangel  found]
         *!HEx2&x3=0/x2>=0/x2<=155:R0/d1; add 1 temporary morale
         *!HEx2&x3=0/x2=-2:R0/d1; add 1 temporary morale for neutrals witheroOwnerut Hero at Defending side
         !!DO(Increase_Morale_Fix)/21/31/1&x2=-2/x3=1:P; 
@@ -367,7 +386,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/21/31/1;
     !!BMi:T?y3;                                        [Get Creature Type]
-      !!if&y3=153;                                    [if 153  Antichrist  found]
+      !!if&y3=(MON_HELL_BARON);                                    [if 153  Antichrist  found]
         !!HEx1&x3=0/x2>=0/x2<=155:R1/d-1;              [add -1 temporary Luck]
         !!br;
       !!en;
@@ -375,14 +394,14 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
     !!re i/21/31/1;
       !!BMi:T?y3; Get Creature Type 
-      !!if&y3=154; if 154  Blood Dragon  found
+      !!if&y3=(MON_BLOOD_DRAGON); if 154  Blood Dragon  found
         *!HEx1&x3=0/x2>=0/x2<=155:R0/d-2; add -2 temporary morale
         !!br;
         !!en;
       !!en;
     !!re i/21/31/1;
       !!BMi:T?y3;                                    [Get Creature Type]
-        !!if&y3=156;                                [if 156  GheroOwnerst Behemoth found]
+        !!if&y3=(MON_GHOST_BEHEMOTH);                                [if 156  GheroOwnerst Behemoth found]
         !!HEx2&x3=0/x2>=0/x2<=155:R1/d2;             [add 2 temporary Luck]
         !!DO(Increase_Luck_Fix)/21/31/1&x2=-2/x3=1:P; 
         !!br;
@@ -484,70 +503,56 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 *?FU(OnKeyPressed_AdvMap)&i^key^=(KEY_ALT)/i^key_down^=(TRUE); [We don't need no hint :)]   
 *!FU(AdvMap_SetHint):P^Move your mouse^;
 
-!?FU(OnAdvMapTileHint)&1000;
+!?FU(OnAdvMapTileHint)&999;
   !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
   !#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
   !#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
-  *!IF:L^%i(timerDay)^;
+  *!IF:L^%x1 %x2 %x3 %x4 %x5 %x6 %x7 %x8^;
   !!FU(GetKeyModsState):P;
   !!if&i^key_leftAlt^=0;
-
+*!IF:L^%(objType)^;
     !!if|(objType)=(OBJ_HERO)/(objType)=(OBJ_FIRST);
-      !!MM:M?(currHint:z);
-      !!OW:C?(currPlayer:y)/?(clickedPlayer:y) A(clickedPlayer)/?(actHero:y);
-      
-      !!if&(objType)=(OBJ_FIRST);
 
-       !!if&i^gem_several_PC^=(TRUE)/i^timerDay^<2/(currPlayer)<>(clickedPlayer);
-          !!FU:E;
-        !!en;
-        !!FU&(actHero)<0:E;
-        !!HE(actHero):P?(xActHeroPos:y)/?(yActHeroPos:y)/?(zActHeroPos:y);
-        
-        *!UN:V//?y1/?y1/?y1;
+      !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
 
+        !!re i/0/7;
+          !!OW:O(clickedPlayer)/i/?(heroInTable:y);
+          !!co&(heroInTable)<(HERO_FIRST);
 
-        !!if&(x)=(xActHeroPos)/(y)=(yActHeroPos)/(z)=(zActHeroPos);
-          !!HE(actHero):G?(heroMovePoints:y) W?(heroMovePointsLesft:y)/1 O?(heroOwner:y);
-        !!el;
-          !!FU:E;
-        !!en;
-      !!el;
+          !!HE(heroInTable):P?(x)/?(y)/?(z);
 
-        !!if&(x)=(tileX)/(y)=(tileY)/(z)=(tileZ);
-
-          !!if&(objSubtype)>(NO_HERO);
+          !!if&(x)=(tileX)/(y)=(tileY)/(z)=(tileZ);
             !!HE(x)/(y)/(z):G?(heroMovePoints:y) W?(heroMovePointsLesft:y)/1 O?(heroOwner:y);
-          !!el;
-            !!FU:E;
+            !!br;
           !!en;
-        !!el;
-          !!FU:E;
         !!en;
-      !!en;
 
-      !!if&(heroOwner)=(clickedPlayer);/(actHero)=(hInPos);
-        !!FU(gem_CheckGameLang):P;
-        !!SN:T^%s(gem_m).mp_left^/?(newHint:z);
-        !!MM:M^%(currHint)  {%(newHint)} %(heroMovePointsLesft) / %(heroMovePoints){)}^;
-      !!en;
+          !!FU&i>7:E;
+          !!MM:M?(currHint:z);
+
+          !!FU(gem_CheckGameLang):P;
+          !!SN:T^%s(gem_m).mp_left^/?(newHint:z);
+          !!MM:M^%(currHint)  {%(newHint)} %(heroMovePointsLesft) / %(heroMovePoints){)}^;
+
     !!FU:E;
     !!en;
   !!el;
 
     !!if&(objType)<=(OBJ_WITCH_HUT)|(objType)=(OBJ_FREELANCERS_GUILD)/(objType)=(OBJ_QUEST_GUARD)/(objType)=(OBJ_TRADING_POST_2);
       !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
-      !!OW:A(clickedPlayer)/?y1;
-      !!VRy5:S0;
-      !!VRy5&y1>=0/y1<=155:S1;/y2=37/y3=512/y4=14:S1;
-      !!FU&y5<>1:E;
-      !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/y1/?(pathLenght:y)/?(heroMp:y)/?(isMemoryIssue:y);
-      !!FU&(isMemoryIssue)=1:E;
-      !!FU(gem_CheckGameLang):P;
-      !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
-      !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
-      !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  ;
-      !!MM:M^%z-6^;
+      !!OW:A(clickedPlayer)/?(activeHero:y);
+
+      !!if&(activeHero)>(NO_HERO)/(activeHero)<=(HERO_LAST_WOG);
+        *!HE(x)/(y)/(z):N?(isActive:y);
+        *!FU&(isActive)=(activeHero):E;
+        !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(activeHero)/?(pathLenght:y)/?(heroMp:y)/?(isMemoryIssue:y);
+        !!FU&(isMemoryIssue)=1:E;
+        !!FU(gem_CheckGameLang):P;
+        !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
+        !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
+        !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  ;
+        !!MM:M^%z-6^;
+      !!en;
     !!en;
   !!en;
 
@@ -607,45 +612,37 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 ** by Shift+Alt+Leftclick delete at the one moment (by daemon_n)
 
 !?CM5;
-  !!CM:F?y6 S?y2;
-  !!FU&y6<>1/y6<>33/y2<>14:E;
-  !!CM:P?y1/?y2/?y3;                      [Get courser position]
-  !!OBy1/y2/y3:T?y4; !!FU&y4<>34:E;       [Get Type of Object]
-  !!HEy1/y2/y3:N?y5 O?y4;                 [If Hero type get Hero Number]
-  !!OW:C?y1 A-1/?y2 Gy1/?y3;
-  !!if&y3=0;
-    !!SN:W^gem_CheckGameLang^/?y7;
-    !!SN:T^%Y7_gem_map.herotake^/?z-1;
-    !!IF:M1/^%Z-1^;z187014;
-    !!FU:E;
-  !!en;
-  !4!IF:L^%Y1/%Y2/%Y3/%Y4/%Y5^;
-  !!FU|y2=y5/y1<>y4/y5<0/y5>155:E;        [If Hero and valid Hero Number]
+!?FU(OnAdventureMapLeftMouseClick)&i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^mouse_action^=(MOUSE_LMB_PRESSED)/999;
+  !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?(objectType:y) U?(objSubtype:y);                                                      [get type of clicked object]
+  
 
-  !!if&y6=1;
-    !!re i/0/7;
-    !!OW:O-1/i/?y4;
-    !!if&y4=y5;
-      !!VRy1:Si+39;
-      !!CM:Iy1;
-      !!br;
-    !!en;
-    !!en;
-  !!en;
+  !!if&(objectType)=(OBJ_HERO);
 
-  !!if&y6=33;
-    !!re i/0/7;
-    !!OW:O-1/i/?y4;
-    !!if&y4=y5;
-      !!HEy5:B0/?z1;
-      !!CM:R0;
-      !!SN:W^gem_CheckGameLang^/?y7;
-      !!SN:T^%Y7_gem_map.herokill^/?z-1/^hero_name^/z1;
-      !!IF:Q1/^%Z-1^;
-      !!HEy5&1:K;
-      !!br;
-    !!en;
-    !!en;
+
+    !!if&i^mouse_flags^=(MOUSE_FLAG_SHIFT)|i^mouse_flags^=33;
+      !!OW:Cd/?(clickOwner:y) A(clickOwner)/?(activeHero:y);
+      !!HEi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:O?(heroOwner:y) N?(objSubtype:y);
+
+      !!if&(heroOwner)=(clickOwner)/(activeHero)<>(objSubtype)/(objSubtype)>-1;
+          !!HE(activeHero):Z?(struct:y);
+          !!re i/0/7;
+            !!OW:O(clickOwner)/i/?(heroInTable:y);
+            !!if&(heroInTable)=(objSubtype);
+              !!if&i^mouse_flags^=(MOUSE_FLAG_SHIFT);
+                !!VRy1:Si+39;
+                !!CM:Iy1;                
+              !!el;
+                !!HE(objSubtype):B0/?z1;
+                !!CM:R0;
+                !!SN:T^%s(gem_m).herokill^/?z-1/^hero_name^/z1;
+                !!IF:Q1/^%Z-1^;
+                !!HE(objSubtype)&1:K;
+              !!en;
+              !!br;
+            !!en;
+          !!en;
+      !!en;
+    !!en;  
   !!en;
 ; --------------------------------------------------------------------------------------------------
 
@@ -699,41 +696,39 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 * --------------------------------------  [Hero Screen scripts] ----------------------------------------
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
-; ???? ??? ?? ??? ??????? ???????? ???? ? CTRL+???(by igrik)
 
-!?FU208001;  ???? ? ?? "me"
-!!IF:V115/0;
-!!OW:C?y1;
-!!OW:Gy1/?y2;
-!!IF&y2=1:V115/1;
-
-!?CM2;
-!!FU208001:P0;                          // ???? ? ?? ??????!!FU&-115:E;                            // ???
-!!CM:A?y1/?y2;                          // ????? ???!!CM:H?y3/?y4;                          // ??????!!CM:I?y5;                              // ??????!!CM:F?y6 I?y7;                         // ?????? ???!!VRy9:Sy5-68;                          // ???? ????
-!!FU208003&y5=141/y6=4/y3>-1:Py3;       // ?????????!!FU|y5<68/y5>74:E;                     // ???
-!!FU208002&y6=512:Py3/y9;               // ??? ???? ????
-
-!?FU208002;                             // ?????? ??? (???? ???????)
-  !!SN:L^user32.dll^/?y1 Ay1/^GetKeyState^/?y2 Ey2/1/17;
-  !!VRy1:Sv1&65535;                       // ????? ? CTRL+???  !!FU&y1<32768:E;
-  !!HEx1:C0/x2/?y2/?y3;
-  !!FU&y2=-1:E;
-  !!EXx1/x2:R?y4/156/?y5/?y6;
-  !!if&y4=1;
-    !!CM:R0;
-    !!EXx1/x2&y6=0:R0/156/y5/0;
-    !!EXx1/x2&y6<>0:R1/156/y5/d-1;
-    !!HEx1:A156;
-    !!UN:R3/-1;
-    !!VRz1:S^Button.wav^;
-    !!SN:Pz1;
-  !!en;
 
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
 ; ??????? ??? ??? ???? (by igrik)
+
+!?FU(OnHeroesMeetScreenMouseClick);                   [disable clicks on chat and outside hero swap screen @daemon_n]
+  *!if|i^mouse_item^=37/i^mouse_x^>800/i^mouse_y^>622;
+    *!CM:R0;
+    *!IF:L^%^;
+  *!en;
+; give Banners to Hero from stacks by CTRL + RMB on stack in hero screen (by igrik)
+!?FU(OnHeroScreenMouseClick)&999/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^key_leftCtrl^/i^mouse_item^>=68/i^mouse_item^<=74;
+
+  !!VR(slot:y):Si^mouse_item^ -68;
+    !!HE-1:C0/(slot)/?(num:y)/d;
+    !!if&(num)<>(NO_MON);
+      !!EX-1/(slot):R?(isArt:y)/(ART_WARLORDS_BANNER)/?(artSub:y)/?(arts:y);
+
+      !!if&(isArt);
+        !!CM:R(FALSE);
+        !!if&(isArt)>1;
+          !!EX-1/(slot):R1/(ART_WARLORDS_BANNER)/(artSub)/d-1;
+        !!el;
+          !!EX-1/(slot):R0/(ART_WARLORDS_BANNER)/(artSub)/0;
+        !!en;
+        !!SN:P^Button.wav^;
+        !!HE-1:A(ART_WARLORDS_BANNER);
+        !!UN:R3/-1;      
+      !!en;
+    !!en;
+
 !?FU(OnHeroScreenMouseClick);
-  *!IF:M^%i(mouse_action)^;
   !!if&i^mouse_flags^=512/i^mouse_item^=8000/i^Typhon_Third_Upgrade_Mod_Active^=(FALSE);
     !!SN:W^gem_CheckGameLang^/?y5;
     !!SN:T^%Y5_gem_hero.backpack^/?z-1;
@@ -749,7 +744,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
   !!en;
 
 ;-------------------------------------------------------------------------------
-witch huts - seet all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
+witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !?FU(OnAfterErmInstructions);
   !!UN:C6919480/4/?(value:y);
   !!VR(address:y):S(value) +128980;
@@ -863,78 +858,7 @@ witch huts - seet all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY
   !!VRz1:S^%z1 %z2^;
   !!MM:Mz1;
 
-*?FU(OnHeroScreenMouseClick);
-  *!SN:L^HD_WOG.dll^/?(isHdMod:y);
-  *!FU&(isHdMod)=(FALSE):E;
-  *!CM:F?(clickFlag:y) I?(clickPlace:y) S?(clickSubtype:y);
 
-
-  *!if|(clickFlag)=(MOUSE_FLAG_CTRL)/(clickFlag)=5;
-
-    *!if&(clickSubtype)=(MOUSE_LMB_RELEASED)/(clickPlace)>=68/(clickPlace)<=74;
-      *!HE-1:N?(heroNumber:y);
-      *!VR(clickSlot:y):S(clickPlace)-68;
-      *!FU(gem_SwapTroopExpFix):P(clickFlag)/(clickSlot)/(heroNumber);
-    *!en;
-  *!en;
-*!if&(clickFlag)=(MOUSE_FLAG_CTRL)/(clickSubtype)=(MOUSE_LMB_RELEASED)/(clickPlace)>=68/(clickPlace)<=74;
-
-  *!VR(clickSlot:y):S(clickPlace)-68;
-  *!HE-1:C0/(clickSlot)/?(creatureType:y)/?(creatureCount:y)/?(creatureExp:y)/d;
-  *!IF:L^%(clickSlot) %(creatureType) %(creatureCount) %(creatureExp)^;
-
-  *!re i/0/6;
-      *!HE-1:C0/i/?(newCreatureType:y)/?(newCreatureCount:y)/?(newCreatureExp:y)/d;
-      *!if&(creatureType)=(newCreatureType)/(newCreatureCount)=1/(newCreatureExp)=0/i<>(clickSlot);
-        *!IF:L^%i %(newCreatureType) %(newCreatureCount) %(newCreatureExp)^;
-        *!HE-1:C0/i/d/d/(creatureExp)/2;
-        *!SN:D;
-        *!br;
-      *!en;
-  *!en;
-*!en;
-*?FU(OnKeyPressed_HeroScreen)&i^key^=(KEY_CONTROL)/i^key_down^=(TRUE);
-*!IF:L^%^;
-*!re i/0/6;
-  *!HE(CURRENT_HERO):C0/i/?i^gem_ty_%i^/?i^gem_qua_%i^/?i^gem_exp_%i^/d;
-  *!IF:L^%i(gem_ty_%i) %i(gem_qua_%i)  %i(gem_exp_%i)^;
-  *!if&i^gem_qau_%i^=1;
-      *!re j/0/6;
-        *!HE(CURRENT_HERO)&j<>i:C0/j/?i^gem_ty_%j^/?i^gem_qua_%j^/?i^gem_exp_%j^/d;
-        *!HE(CURRENT_HERO)&i^gem_ty_%i^=i^gem_ty_%j^:C0/i/d/d1/j^gem_exp_%i^/0;
-      *!en;
-*!en;
-
-
-*?FU(OnTownMouseClick);
-  *!SN:L^HD_WOG.dll^/?(isHdMod:y);
-  *!FU&(isHdMod)=(FALSE):E;
-  *!CM:F?(clickFlag:y) I?(clickPlace:y) S?(clickSubtype:y);
-
-  *!if|(clickFlag)=(MOUSE_FLAG_CTRL)/(clickFlag)=5;
-
-    *!if&(clickSubtype)=(MOUSE_LMB_RELEASED)/(clickPlace)>=140/(clickPlace)<=146;
-      *!CA-1:H1/?(heroVisitor:y);
-      *!VR(clickSlot:y):S(clickPlace)-140;
-      *!FU(gem_SwapTroopExpFix):P(clickFlag)/(clickSlot)/(heroVisitor);
-    *!en;
-  *!en;
-
-*?FU(gem_SwapTroopExpFix);
-  *#VA(clickFlag:x) (clickSlot:x) (heroNumber:x);
-
-  *!HE(heroNumber):C0/(clickSlot)/?(creatureType:y)/?(creatureCount:y)/?(creatureExp:y)/d;
-    *!IF:L^%(clickSlot) %(creatureType) %(creatureCount) %(creatureExp)^;
-
-  *!re i/0/6;
-    *!HE(heroNumber):C0/i/?(newCreatureType:y)/?(newCreatureCount:y)/?(newCreatureExp:y)/d;
-    *!if&(creatureType)=(newCreatureType)/(newCreatureCount)=1/(newCreatureExp)=0/i<>(clickSlot);
-      *!IF:L^%i %(newCreatureType) %(newCreatureCount) %(newCreatureExp)^;
-      *!HE(heroNumber):C0/i/d/d/(creatureExp)/2;
-      *!br&(clickFlag)=(MOUSE_FLAG_CTRL);
-    *!en;
-  *!en;
-  *!SN:D;
 
 !?FU(OnBattleScreenMouseClick);|(BATTLE_TYPE_FLAG_RIGHT_HAS_HERO);
   !!CM:I?(clickPosition:y) S?(clickType:y);
@@ -1092,7 +1016,7 @@ witch huts - seet all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY
         !!VR(diffCost:y)&(upgMonCost)>(monCost):S(upgMonCost) -(monCost) *(monAmount);
 
         !!if&(resAmount)>=(diffCost)/(upgMonCost)>(monCost);
-          !!VR(monDifCost:z):+^%(diffCost) {~>smalres.def:%i} ^;
+          !!VR(monDifCost:z):+^{%(diffCost)} {~>smalres.def:%i} ^;
         !!el&(upgMonCost)>(monCost);
           !!VR(monDifCost:z):+^{~red} %(diffCost) {~>smalres.def:%i}} ^;
           !!VR(notEnoughRes:y):S(diffCost) -(resAmount);

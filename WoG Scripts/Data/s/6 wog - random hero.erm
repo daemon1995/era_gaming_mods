@@ -21,7 +21,7 @@ ZVSE2
 !!VRi^Random_Hero_Active^:S(FALSE);
 !!VR(random:y):T0/0/3;                  [25% chance]
 !!VR(random)&i^Random_Neutral_Hero^:S0; [Compatible with Always Random Hero]
-!!FU&(random)<>0:E;                     [Exit if no luck]
+!!FU&(random)<>0:E;
 
 ; Get an available random hero and generate on the battlefield
 !!VRi^Random_Hero_Active^:S(TRUE);
@@ -31,53 +31,43 @@ ZVSE2
 
 !?FU(randHero_GetHeroesInTaverns);
 !#VA(heroesInTaverns:x);
-
 !!FU(NewIntArray):P?(heroesInTaverns);
-
 ; Loop through all tavern and store hero numbers in the array
 !!re i/(PLAYER_FIRST)/(PLAYER_LAST);
   !!OW:Vi/?(leftHero:y)/?(rightHero:y);
   !!FU(Array_Push)&(leftHero)>(NO_HERO):P(heroesInTaverns)/(leftHero);
   !!FU(Array_Push)&(rightHero)>(NO_HERO):P(heroesInTaverns)/(rightHero);
 !!en;
-
 !!SN:F^ExtendArrayLifetime^/(heroesInTaverns);
 
 !?FU(randHero_GetRandomHero);
 !#VA(heroesInTaverns:x) (hero:x);
 
 !!VR(heroAvailable:y):S(TRUE);
-; Check if Hourglass of Asmodeus is enabled to decide whether to include Xeron to the list
+; Check is Hourglass of Asmodeus is enabled to dicide whether include Xeron to the list
 !!UN:P106/?(asmodeusOn:y);
 
 !!if&(asmodeusOn);
   !!VR(lastHero:y):S(HERO_BORAGUS);
 !!el;
-  !!VR(lastHero):S(HERO_LAST_WOG);
+  !!VR(lastHero:y):S(HERO_LAST_WOG);
 !!en;
-
-; Loop through all heroes
+; Check if the hero belongs to no player
 !!re i;
-  ; Check if the hero has an owner
-  !!VR(hero):R0/(HERO_FIRST)/(lastHero);
+  !!VR(hero):S(HERO_FIRST) R(lastHero);
   !!HE(hero):O?(owner:y);
+  !!co&(owner)<>(NO_OWNER);
+  !!SN:M(heroesInTaverns)/?(size:y);
 
-  ; Check if the hero is in tavern if with no owner
-  !!if&(owner)=(NO_PLAYER);
-    !!SN:M(heroesInTaverns)/?(size:y);
-
-    !!re (index:y)/0/(size)/1/-1;
-      !!SN:M(heroesInTaverns)/(index)/?(tavernHero:y);
-      !!br&(hero)=(tavernHero);
-    !!en;
-
-    ; Check if the hero is on the map if not in the tavern
-    !!if&(index)=(size);                [index = size if the loop of tavern hero array didn't break]
-      !!HE(hero):P?(x:y)/?(y:y)/?(z:y);
-      ; End the loop if the hero is not in the tavern, otherwise, look for the next random hero
-      !!br&(z)<0;
-    !!en;
+  !!re (index:y)/0/(size)/1/-1;
+    !!SN:M(heroesInTaverns)/(index)/?(tavernHero:y);
+    !!co2&(hero)=(tavernHero);
   !!en;
+
+  !!HE(hero):P?(x:y)/?(y:y)/?(z:y);
+  
+  !!co|(x)>=0/(y)>=0/(z)>=0;
+  !!br;
 !!en;
 
 ; Store neutral stacks in global vars (in order to return them on battle replay)
@@ -102,5 +92,13 @@ ZVSE2
   !!VRi^Replay_Battle_Monster_%i^:S(NO_MON);
   !!VRi^Replay_Slot_Number_%i^:S0;
 !!en;
-
 !!VRi^Random_Hero_Active^:S(FALSE);
+
+
+; Cancel Surrender
+!?FU(OnBeforeBattleAction)&i^Random_Hero_Active^/(ERM_FLAG_IS_HUMAN);
+!!BG:A?(actionType:y);
+
+!!if&(actionType)=(BATTLE_ACTION_SURRENDER);
+  !!BG:A(BATTLE_ACTION_CANCEL);
+!!en;
