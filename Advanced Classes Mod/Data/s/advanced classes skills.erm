@@ -9569,7 +9569,7 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 15 times
   !!VRy1&y4=y1/y50>=0/y50<=41:Sy50;     [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
   !!SN:W^FireMage_Attacking_Stack^/y4;
 !!en;
-!!SN:W^Fire_Mage_Damage_Flag^/0;
+
 
 !?FU(Event_AfterMeeleDamage_Fire_Mage);
 
@@ -9600,7 +9600,6 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 15 times
         !!SSy21:E3/y57;                 [Revert damage to value from before]
         !!VRy85:S0T1;                   [Generate Random Number]
         !!SN&y85=0:W^Commander_Kill_Counter_%Y50^/d1; [Increase counter by one with each attack and 50% chance]
-        !!SN:W^Fire_Mage_Damage_Flag^/1; 
     !!en;
   !!en;
 !!en;
@@ -9616,21 +9615,38 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 15 times
 !!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Fire_Mage);
 
 
-!?MR1;
+!?MF1;
 *When attacking with Fire Mage make own units immune vs damage*
-!!SN:W^Fire_Mage_Damage_Flag^/?y1; !!FU&y1=0:E;
-!!BG:A?y1 N?y5;                         [Aktion in y1]
-!!if&y1=6;                             [If Hero cast]
-  !!MR:N?y4 F?y3 S?y6;                  [damage receiving stack and get damage]
-  !!FU&y3=0:E;
-  !!if&y4>=0/y4<=41;
-    !!BMy4:I?y13;                       [Get Monster Side]
-    !!BHy13:N?y11;                      [Get Hero]
-    !!BG:H?y10;                         [Get Hero Number]
-    !!if|y6=21/y6=22;
-      !!MR&y10=y11:F0;                  [zero damage if same hero]
-    !!en;
-   !!en;
+!!SN:W^Magog_Fireball_Enable^/?y1;
+!!FU&y1=0:E;
+!!BG:N?y1;                              [Get attacking stack number]
+!!MF:N?y4;                              [Get defending stack number]
+!!BMy1:I?y5;                            [Get attacking stack side]
+!!BMy4:I?y6;                            [Get defending stack side]
+!!UN:C42149568/4/?y10;                  [Judgement basis (028326c0)]
+!!MF&y10=4454752/y5=y6:E0;              [Disable taking damage if Magog Fireball and own team]
+
+!?MR2;                                  [Magogs Fireball-Cast that comes with Stack Expierence doesnt damage own troops]
+*When attacking with Fire Mage make own units immune vs damage*
+!!SN:W^Magog_Fireball_Enable^/?y1;
+!!FU&y1=0:E;
+!!BG:A?y1;                              [Aktion in y1]
+!!BG:Q?y55;
+
+!!if|y1=7/y1=6:;                        [if ranged or melee attack]
+  !!MR:S?y2 F?y3;
+
+  !!if&y2=21:;                          [if Fireball]
+    !!MR:N?y10;
+    !!BMy10:I?y11;
+    !!MR&y11=y55:F100;                  [Disable Magic damage for attacker side from Fireball]
+  !!en:;
+
+  !!if&y2=22:;                          [if Inferno]
+    !!MR:N?y10;
+    !!BMy10:I?y11;
+    !!MR&y11=y55:F100;                  [Disable Magic damage for attacker side from Fireball]
+  !!en;
 !!en;
 
 
@@ -10431,8 +10447,15 @@ At each level up AI will choose com class if none has been selected. Each level 
   !!SN&y3=6:W^Commander_Vampire_%Y1^/1; 
   !!SN&y3=7:W^Commander_FireMage_%Y1^/1; 
 !!en;
-!!VRy4:S1T4;                            [Generate Random number from 1-7]
+!!VRy4:S1T4;                            [Generate Random number from 1-5]
 !!SN:W^Commander_Kill_Counter_%Y1^/dy4; [at each level up add random amount to kill count]
+
+!?HL-1&1000;
+*starting from level 5 and if you have already selected a commander class you will get bonus kill count based on your current com class
+!!HE-1:N?y1 E?y4/?y3/1;                 [Get hero number and level]
+!!FU&y3<6:E;                            [Exit below level 5]
+!!FU(Check_Com_Masteries):Py1/0/0/0/?y2;[Pass Hero Number and return current com class]
+!!SN&y2>0:W^Commander_Kill_Counter_%Y1^/d1;  [at each level up add random amount to kill count]
 
 
 ***************************************
@@ -11213,7 +11236,6 @@ Here all variables should be reset before a repeated fight
 !!SN:W^Hardened_Shield_Block_1^/1;
 
 !!SN:W^Prevent_Com_Cast_Flag^/0;
-!!SN:W^Fire_Mage_Damage_Flag^/0;
 
 
 !?FU(OnBeforeBattleUniversal);
@@ -11225,7 +11247,6 @@ Here all variables should be reset before a repeated fight
 !!SN:W^Hardened_Shield_Block_0^/1;
 !!SN:W^Hardened_Shield_Block_1^/1;
 !!SN:W^Prevent_Com_Cast_Flag^/0;
-!!SN:W^Fire_Mage_Damage_Flag^/0;
 
 
 ********************************************************************************
@@ -30668,4 +30689,3 @@ Hint: If you remove UN44.def and UN32.def from ACM pack file the crash can be av
 
 
 ********************************************************************************
-
