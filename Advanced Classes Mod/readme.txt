@@ -1,5 +1,5 @@
 
-Advanced Classes Mod 1.073
+Advanced Classes Mod 1.074
 
 A Mod by Perry R, for Heroes 3 ERA 3.9 
 with the help of AlfWithCake, anti-victor, Daemon_n, Sandris and Berserker
