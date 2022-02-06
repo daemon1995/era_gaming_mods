@@ -34,7 +34,7 @@ SN:W ?? ?????, ????????????? ????????? key functions
 !?FU(gem_OnCast);
 *!IF:L^%x1^;
 *!re i/0/40/2;
-  !!UN:Cx1/28/4/?y1;
+  *!UN:Cx1/28/4/?y1;
 *!IF:L^%y1 %i^;
 
 *!en;
@@ -430,28 +430,28 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 ; --------------------------------------------------------------------------------------------------
 ** script that displays the distance to the end of the route is triggered by Alt/Alt + RMB on the map:
 !?CM0&1000;
-!!UN:C(WND_MANAGER)/(UNC_INT)/?(advManager:y);
-!!SN:E5039840/(CALLCONV_THISCALL)/(advManager);
-!!VR(clickedPlayer:y):Sv1;
-!!OW:A(clickedPlayer)/?(hero:y);
-!!CM:I?(location:y) F?(flag:y) S?(subtype:y);
+  !!UN:C(WND_MANAGER)/(UNC_INT)/?(advManager:y);
+  !!SN:E5039840/(CALLCONV_THISCALL)/(advManager);
+  !!VR(clickedPlayer:y):Sv1;
+  !!OW:A(clickedPlayer)/?(hero:y);
+  !!CM:I?(location:y) F?(flag:y) S?(subtype:y);
 
-!!FU(GetKeyModsState):P;
-!!FU&i^key_leftAlt^=(FALSE):E;
+  !!FU(GetKeyModsState):P;
+  !!FU&i^key_leftAlt^=(FALSE):E;
 
-!!VR(conditions:y):S(FALSE);
-!!VR(conditions)&(hero)>=0/(hero)<=155/(location)=37/(flag)=512/(subtype)=14:S(TRUE);
-!!FU&(conditions)<>(TRUE):E;
+  !!VR(conditions:y):S(FALSE);
+  !!VR(conditions)&(hero)>=0/(hero)<=155/(location)=37/(flag)=512/(subtype)=14:S(TRUE);
+  !!FU&(conditions)<>(TRUE):E;
 
-!!CM:R0;
+  !!CM:R0;
 
-!!CM:P?(x:y)/?(y:y)/?(z:y);
+  !!CM:P?(x:y)/?(y:y)/?(z:y);
 
-!!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(hero)/?(pathLenght:y)/?(heroMp:y);;
-    !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-1/^hero_name^/z3;/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
-    !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
-    !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  
-!!IF:M0/4/^%z-1^;
+  !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(hero)/?(pathLenght:y)/?(heroMp:y);;
+      !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-1/^hero_name^/z3;/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
+      !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
+      !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  
+  !!IF:M0/4/^%z-1^;
 
 !?FU(GetRealObjectOnMap);
 ; x1/x2/x3 - ????? ???? ? ???; ?x4/?x5 - ????????: ????? ????
@@ -462,6 +462,49 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
   !!SN:E4228816/2/y2/x1/x2/x3;
   !!VRy1:Sv1 +30;  !!UN:Cy1/2/?x4;
   !!VRy1:+4;       !!UN:Cy1/2/?x5;
+
+fill refugees by mons
+!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
+
+    !!FU(GetMaxMonsterId):P?(lastMon:y);
+    !!UN:P200/?(isRefugeeSync:y);
+    !!if&(lastMon)=(MON_DRACOLICH)/(isRefugeeSync)<>(TRUE);
+
+      !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(campsAmount:y);
+      !!if&(campsAmount);
+        !!re i/1/(campsAmount);
+          !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/i/2;
+          !!FU(gem_GetRandomMon):P?(mon:y)/5/(MON_AZURE_DRAGON)/(MON_RUST_DRAGON)/(MON_FAERIE_DRAGON)/(MON_CRYSTAL_DRAGON)/(MON_DRACOLICH);
+          !!MA:G(mon)/?(growth:y);
+          !!OB2:U(mon) C(growth);
+          !!SN:H^monname^/(mon)/0/?z-1;
+        !!en;
+      !!en;
+    !!en;
+
+!?FU(gem_GetRandomMon);
+  !#VA(mon:x) (monsToExcl:x) (mons[10]:x);
+
+  !!FU(GetMaxMonsterId):P?(result:y);
+  !!VR(mon):R0/0/(result);
+
+  !!VR(flag:y):S(TRUE);
+  !!VR(flag)|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):S(FALSE); [not used]
+  !!VR(flag)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE); [Emissaries]
+  !!VR(flag)&(mon)>=(MON_PALADIN_A)/(mon)<=(MON_ASTRAL_SPIRIT_D):S(FALSE); [Commanders]
+  !!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE); [war_machines]
+  
+  !!if&(monsToExcl);
+    !!re i/0/(monsToExcl)/1/-1;
+      !!VR(flag)&(mon)=(mons[i]):S(FALSE); [ultra dragons]
+    !!en;
+  !!en;
+
+  !!FU(arena_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
+  *!if;
+
+  *!en;
+
 
 *?FU(OnAdvMapTileHint)&1000;
   *#VA(x:x) (y:x) (z:x);             Object entrance coordinates
@@ -611,14 +654,9 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 ** Script to select (make active) Hero on Adventure Map by Shift+Leftclick on Hero* (by PerryR)
 ** by Shift+Alt+Leftclick delete at the one moment (by daemon_n)
 
-!?CM5;
 !?FU(OnAdventureMapLeftMouseClick)&i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^mouse_action^=(MOUSE_LMB_PRESSED)/999;
   !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?(objectType:y) U?(objSubtype:y);                                                      [get type of clicked object]
-  
-
   !!if&(objectType)=(OBJ_HERO);
-
-
     !!if&i^mouse_flags^=(MOUSE_FLAG_SHIFT)|i^mouse_flags^=33;
       !!OW:Cd/?(clickOwner:y) A(clickOwner)/?(activeHero:y);
       !!HEi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:O?(heroOwner:y) N?(objSubtype:y);
@@ -627,10 +665,13 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
           !!HE(activeHero):Z?(struct:y);
           !!re i/0/7;
             !!OW:O(clickOwner)/i/?(heroInTable:y);
+
             !!if&(heroInTable)=(objSubtype);
               !!if&i^mouse_flags^=(MOUSE_FLAG_SHIFT);
-                !!VRy1:Si+39;
-                !!CM:Iy1;                
+                *!VRy1:Si+39;
+                !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+                !!SN:E4291200/(CALLCONV_THISCALL)/(advMgr)/(objSubtype)/0/0/1;
+                !!CM:R0;                
               !!el;
                 !!HE(objSubtype):B0/?z1;
                 !!CM:R0;
@@ -645,51 +686,93 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
     !!en;  
   !!en;
 ; --------------------------------------------------------------------------------------------------
+* Show current mithril message;
+!?CM5&i^mouse_item^=1008/i^mouse_flags^=(NO_MOUSE_FLAGS)/i^mouse_action^=(MOUSE_LMB_PRESSED);
+    !!FU(gem_DlgItemSize):P3235/?(width:y)/?(height:y);
+    !!FU(gem_DlgItemPosition):P3235/?(x:y)/?(y:y);
 
+    !!VR(xDif:y):Si^mouse_x^ -(x);
+    !!VR(yDif:y):Si^mouse_y^ -(y);
+    !!if|(xDif)<(width)/(yDif)>(height);
+      !!FU(gem_DisplayMithrilMessage):P;
+    !!en;
+!?CM0&i^mouse_item^=1008/i^mouse_flags^=(MOUSE_FLAG_RMB);
+
+    !!FU(gem_DlgItemSize):P3235/?(width:y)/?(height:y);
+    !!FU(gem_DlgItemPosition):P3235/?(x:y)/?(y:y);
+
+    !!VR(xDif:y):Si^mouse_x^ -(x);
+    !!VR(yDif:y):Si^mouse_y^ -(y);
+    !!if|(xDif)<(width)/(yDif)>(height);
+      !!OW:Cd/?(clickedPlayer:y);
+      !!OW:R(clickedPlayer)/(RES_MITHRIL)/?(resNumber:y);
+
+      !!if&(resNumber)>0;
+          !!SN:T^%s(gem_s).line7+^/?z1/^mithril^/(resNumber);
+      !!el;
+          !!SN:T^%s(gem_s).line7^/?z1/^mithril^/(resNumber);
+      !!en;
+
+      !!CM:R0;
+      !!IF:M0/4/^%z1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
+    !!en;
 
 
 ; --------------------------------------------------------------------------------------------------
 
 ; --------------------------------------------------------------------------------------------------
-* SheroOwnerw current time and laptop battery charge level by rightclick on game date * (by feanor)
-!?CM0;
-  !!CM:I?y1 F?y2;
-  !!if&y1=1008/y2=512;
-  !!CM:R0;
-  !!VRz1:S^kernel32.dll^;
-  !!SN:Lz1/?y2;
-  !!VRz1:S^GetSystemPowerStatus^;
-  !!SN:Ay2/z1/?y3;
-  !!SN:Ey3/1/?y4;
-  !!VRy10:Sy4;
-  !!VRy10::65536;
-  !!VRz1:S^GetLocalTime^;
-  !!SN:Ay2/z1/?y3;
-  !!SN:Ey3/1/?y4;
-  !!VRy8:Sy6;
-  !!VRy9:Sy6;
-  !!VRy8::65536;
-  !!VRy9:%65536;
-  !!SN:W^gem_CheckGameLang^/?y5;
-  !!SN:T^%Y5_gem_map.time1^/?z-1;/^heroOwnerur^/y9/^minute^/y8;
-  !!SN:T^%Y5_gem_map.time2^/?z-2;/^effect^/y10;
-  !!IF&y10<>255/y9>9/y8>9:M0/4/^%Z-1 %Y9:%Y8
+* Show current time and laptop battery charge level by rightclick on game date * (by feanor)
+!?CM0&i^mouse_item^=1008/i^mouse_flags^=(MOUSE_FLAG_RMB);
+!#VA(usedY[10]:y);
+  *!CM:I?y1 F?y2;
+  *!IF:L^%i(mouse_y)^;
+  *!if&y1=1008/y2=512;
+    !!FU(gem_DlgItemSize):P3235/?(width:y)/?(height:y);
+    !!FU(gem_DlgItemPosition):P3235/?(x:y)/?(y:y);
 
-  %Z-2 %Y10%%^;
-  !!IF&y10=255/y9>9/y8>9:M0/4/^%Z-1 %Y9:%Y8^;
-  !!IF&y10<>255/y9<10/y8>9:M0/4/^%Z-1 0%Y9:%Y8
+    !!VR(xDif:y):Si^mouse_x^ -(x);
+    !!VR(yDif:y):Si^mouse_y^ -(y);
+    !!if|(xDif)<(width)/(yDif)>(height);
+      *!IF:L^%(width) %(xDif) %i(mouse_y) %(yDif) %(height) ^;
+    !!en;
 
-  %Z-2 %Y10%%^;
-  !!IF&y10=255/y9<10/y8>9:M0/4/^%Z-1  0%Y9:%Y8^;;
-  !!IF&y10<>255/y9<10/y8<10:M0/4/^%Z-1 0%Y9:0%Y8
+    !!if&(xDif)>(width)/(yDif)<(height);
+      !!CM:R0;
+      !!VRz1:S^kernel32.dll^;
+      !!SN:Lz1/?y2;
+      !!VRz1:S^GetSystemPowerStatus^;
+      !!SN:Ay2/z1/?y3;
+      !!SN:Ey3/1/?y4;
+      !!VRy10:Sy4;
+      !!VRy10::65536;
+      !!VRz1:S^GetLocalTime^;
+      !!SN:Ay2/z1/?y3;
+      !!SN:Ey3/1/?y4;
+      !!VRy8:Sy6;
+      !!VRy9:Sy6;
+      !!VRy8::65536;
+      !!VRy9:%65536;
+      !!SN:W^gem_CheckGameLang^/?y5;
+      !!SN:T^%Y5_gem_map.time1^/?z-1;/^heroOwnerur^/y9/^minute^/y8;
+      !!SN:T^%Y5_gem_map.time2^/?z-2;/^effect^/y10;
+      !!IF&y10<>255/y9>9/y8>9:M0/4/^%Z-1 %Y9:%Y8
 
-  %Z-2 %Y10%%^;
-  !!IF&y10=255/y9<10/y8<10:M0/4/^%Z-1 0%Y9:0%Y8^;
-  !!IF&y10<>255/y9>9/y8<10:M0/4/^%Z-1 %Y9:0%Y8
+      %Z-2 %Y10%%^;
+      !!IF&y10=255/y9>9/y8>9:M0/4/^%Z-1 %Y9:%Y8^;
+      !!IF&y10<>255/y9<10/y8>9:M0/4/^%Z-1 0%Y9:%Y8
 
-  %Z-2 %Y10%%^; 
-  !!IF&y10=255/y9>9/y8<10:M0/4/^%Z-1 %Y9:0%Y8^;
-  !!en;
+      %Z-2 %Y10%%^;
+      !!IF&y10=255/y9<10/y8>9:M0/4/^%Z-1  0%Y9:%Y8^;;
+      !!IF&y10<>255/y9<10/y8<10:M0/4/^%Z-1 0%Y9:0%Y8
+
+      %Z-2 %Y10%%^;
+      !!IF&y10=255/y9<10/y8<10:M0/4/^%Z-1 0%Y9:0%Y8^;
+      !!IF&y10<>255/y9>9/y8<10:M0/4/^%Z-1 %Y9:0%Y8
+
+      %Z-2 %Y10%%^; 
+      !!IF&y10=255/y9>9/y8<10:M0/4/^%Z-1 %Y9:0%Y8^;
+    !!en;
+  *!en;
   
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
@@ -742,7 +825,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
     !!CM:R0;
     !!IF:M0/4/^%Z-1^;
   !!en;
-
+!!FU(EquipArtToSlot):P(HERO_VALESKA)/(ART_SPYGLASS)/(NO_ART_MOD)/(ART_SLOT_MISC_1)/?(result:y);
 ;-------------------------------------------------------------------------------
 witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !?FU(OnAfterErmInstructions);
@@ -751,21 +834,23 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
   !!UN:C(address)/1/?(mapType:y); [y11=114 ?? ???????? (????[r]andom_maps)] 
   !!if&(mapType)=114;
 
-    !#VA(x:y) (y:y) (z:y) (skillWh:y) (randValue:y); [define variables to store object coordinates]
-    !!VR(x):S-1;                            [setting x-coordinate to -1 will force to start search from scratch]
-    !!re i;                                 [endless loop]
-      !!UN:U(OBJ_WITCH_HUT)/(ANY_OBJ)/-1/(x)/(y)/(z); [find next monster, (x) = -1 on failure]
-      !!br&(x)<0;                          [exit loop if nothing found]
-      !!WH(x)/(y)/(z):S?(skillWh);
-      !!if&(skillWh)<(SKILL_WATER_MAGIC);
-        !!re f;
-          !!VR(randValue):S(SEC_SKILL_FIRST) R(SEC_SKILL_LAST);
-          !!br&(randValue)<>(SKILL_NAVIGATION)/(randValue)<>(SKILL_NECROMANCY);
-        !!en;
-        !!WH(x)/(y)/(z):S(randValue);
-        !!WH(x)/(y)/(z):S?(skillWh);
-      !!en;
-    !!en;
+    *#VA(x:y) (y:y) (z:y) (skillWh:y) (randValue:y); [define variables to store object coordinates]
+    *!VR(x):S-1;                            [setting x-coordinate to -1 will force to start search from scratch]
+    *!re i;                                 [endless loop]
+      *!UN:U(OBJ_WITCH_HUT)/(ANY_OBJ)/-1/(x)/(y)/(z); [find next monster, (x) = -1 on failure]
+      *!br&(x)<0;                          [exit loop if nothing found]
+      *!WH(x)/(y)/(z):S?(skillWh);
+      *!SN:H^secskill^/(skillWh)/0/?z-1;
+      *!IF:L^%(skillWh) %z-1^;
+      *!if&(skillWh)<(SKILL_WATER_MAGIC);
+        *!re f;
+          *!VR(randValue):S(SEC_SKILL_FIRST) R(SEC_SKILL_LAST);
+          *!br&(randValue)<>(SKILL_NAVIGATION)/(randValue)<>(SKILL_NECROMANCY);
+        *!en;
+        *!WH(x)/(y)/(z):S(randValue);
+        *!WH(x)/(y)/(z):S?(skillWh);
+      *!en;
+    *!en;
 
     !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsAmount:y);
     !!UN:U(OBJ_RANDOM_TOWN)/(ANY_OBJ)/?(randomTownsAmount:y);
