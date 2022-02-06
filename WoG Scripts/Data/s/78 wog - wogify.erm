@@ -201,6 +201,8 @@ ZVSE2
 ********************************************************************************
 
 *** Generate Random Spell Number by Fnord ***
+!#MCv3341:S@ban@;
+!#VRv3341:S10932;
 
 !#MCv3500:S@spell@;
 !#VR$spell$:S7777;
@@ -234,82 +236,101 @@ Returned Values:
  y-98 : Element (1=air, 2=fire, 4=water, 8=earth, 15=all elements)
 
 --------------------------------------------------------------------------------
+*?FU(OnKeyPressed)&x1=(KEY_1);
+
+  *!FU$spell$:P5/5/0/0/0/5/69/68/66/1/2; (Get a fifth level spell)
 
 !?FU7777;
 ; x1=min. level, x2=max. level, x3=type, x4=element, x5=banning
 ; x6=number of exclusions, x7..x15=specific exclusions
-
+!#VA(minLvl:x) (maxLvl:x) (spType:x) (schoolBit:x) (restrictBanned:x);
+!#VA(numExclSpells:x) (spell[9]:x);
 !!VRy-99:S-1; [Initialize y-99 to -1]
+*!IF:M^%v1^;
 
-; Set y-99 to 99 for an invalid parameter: mast skip loop
-!!VRy-99|x1<0/x1>5/x2<0/x2>5/x3<0/x3>2/x4<0/x4>15/x5<0/x5>3/x6<0/x6>9:S99;
-!!IF&y-99=99:M^{ERM Error:} FU$spell$ function was called with invalid arguments^;
+!!if|(minLvl)<0/(minLvl)>5/(maxLvl)<0/(maxLvl)>5/(spType)<0/(spType)>2/(schoolBit)<0/(schoolBit)>15/x5<0/x5>3/(numExclSpells)<0/(numExclSpells)>9;
+  ; Set y-99 to 99 for an invalid parameter: mast skip loop
+  !!VRy-99:S99;
+  !!IF:M^{ERM Error:} FU$spell$ function was called with invalid arguments^;
+!!en;
 
-; Do up to 500 loops to find a valid spell number: return in y-99
-!!DO7778/1/500/1&y-99=-1:Px1/x2/x3/x4/x5/x6/x7/x8/x9/x10/x11/x12/x13/x14/x15;
+; Do up to 500 loops to find a valid spell number: return in y-99 @daemon_n, what? 500 loops? Hold my beer; 
+!!FU(NewIntArray):P70/?(allSpells:y);
+!!FU(Array_Fill):P(allSpells)/(SPELL_FIRST)/1;
+!!FU(Array_Shuffle):P(allSpells);
 
-; generate ERA debug information in folder Debag/Era if y-99 no valid spell id
-!!SN&y-99<0|y-99>69:F^GenerateDebugInfo^;
-; Attention: y-99 mast be 0...69
+!!re (randSpellLoop:y)/0/69;
+  !!if&y-99=-1;                                                          [if no chosen spell]
+    !!SN:M(allSpells)/(randSpellLoop)/?i^WOG_main_rand_spell^;           [get rnd spell]
 
-; igrik (fix - always return valid id spell)
-!!VRy-99&y-99<0|y-99>69:S99;[check to invalid spell id]
-!!VRy-99&y-99=99/x3<>1:S15; [x3=0: to any spells: return 15 Magic Arrow]
-!!VRy-99&y-99=99/x3=1:S2;   [x3=1: if adventure spells return 2 Visions]
+    !!if&i^WOG_main_rand_spell^<>(SPELL_TITANS_LIGHTNING_BOLT);          [skip titan]
+      !!if&(numExclSpells);
+
+        !!re j/0/(numExclSpells)/1/-1;                                   [if avoid repeat]
+          !!if&i^WOG_main_rand_spell^=(spell[j]);                        [check with args]
+            !!co 2;                                                      [dont' call function if already exists]
+          !!en;
+        !!en;
+      !!en;
+
+      *!IF&(minLvl)=1:L^%(randSpellLoop) %i(WOG_main_rand_spell)^;
+      !!FU7778:P(minLvl)/(maxLvl)/(spType)/(schoolBit)/(restrictBanned); [call fuction without extra args]
+      !!VRi^WOG_main_rand_spell^:S0;                                     [clear variable]
+    !!en; 
+
+  !!el;
+
+    !!FU:E;                                                            [exit FU, if was found the spell]
+    *!br;
+  !!en;
+
+!!en;
+
+!!FU:E;
+
+!!if&y-99=-1;
+  !!FU:E;
+!!en;
+
+!!if&y-99<0|y-99>69;
+  ; generate ERA debug information in folder Debag/Era if y-99 no valid spell id
+  *!SN:F^GenerateDebugInfo^;
+  ; Attention: y-99 mast be 0...69
+  ; igrik (fix - always return valid id spell)
+  !!VRy-99:S99;[check to invalid spell id]
+  !!VRy-99&x3<>1:S(SPELL_MAGIC_ARROW); [x3=0: to any spells: return 15 Magic Arrow]
+  !!VRy-99&x3=1:S(SPELL_VISIONS);   [x3=1: if adventure spells return 2 Visions]
+!!en;
 
 --------------------------------------------------------------------------------
-
  [Generate Valid Random Spell Number: y-99]
 !?FU7778;
  [x1=min. level, x2=max. level, x3=type, x4=element, x5=banning]
- [x6=number of exclusions, x7..x15=specific exclusions]
+!#VA(minLvl:x) (maxLvl:x) (spType:x) (schoolBit:x) (restrictBanned:x);                     // 
 
-!!VRy1:S0 R69; [Random spell number (0..69): y1]
-!!FU7779:Py1; [Determine Spell Level (y-96), Type (y-97), Element (y-98)]
+!!FU7779:Pi^WOG_main_rand_spell^; [Determine Spell Level (y-96), Type (y-97), Element (y-98)]
 
-!!VRy2:S0; [Initialize y2 to 0]
-!!VRy2&x1<>0/y-96<x1:S1; [If level too low, set y2 to 1]
-!!VRy2&x2<>0/y-96>x2:S1; [If level too high, set y2 to 1]
-!!VRy2&x3<>0/x3<>y-97:S1; [If invalid type, set y2 to 1]
-!!VRy3:Sx4; [Copy x4 (elements) to y3]
-!!VRy3:&1;  [Check for Air Element]
-!!VRy2&x4<>0/x4<>15/y-98<>15/y-98=1/y3<>1:S1; [If Air Spell and invalid, set y2 to 1]
-!!VRy3:Sx4; [Copy x4 (elements) to y3]
-!!VRy3:&2;  [Check for Fire Element]
-!!VRy2&x4<>0/x4<>15/y-98<>15/y-98=2/y3<>2:S1; [If Fire Spell and invalid, set y2 to 1]
-!!VRy3:Sx4; [Copy x4 (elements) to y3]
-!!VRy3:&4;  [Check for Water Element]
-!!VRy2&x4<>0/x4<>15/y-98<>15/y-98=4/y3<>4:S1; [If Water Spell and invalid, set y2 to 1]
-!!VRy3:Sx4; [Copy x4 (elements) to y3]
-!!VRy3:&8;  [Check for Earth Element]
-!!VRy2&x4<>0/x4<>15/y-98<>15/y-98=8/y3<>8:S1; [If Earth Spell and invalid, set y2 to 1]
-!!UN:J0/y1/?y4; [Check if spell is enabled (0) or disabled (1): y4]
-!!VRy2&y4=1/x5=1:S1; [If spell is disabled and banning is selected, set y2 to 1]
-!!VRy5:S0; [Initialize y5 to 0]
-!!UN&y1=0:P152/?y5;  [Check for banned Summon Boat    - y5=1 if banned]
-!!UN&y1=7:P153/?y5;  [Check for banned Water Walk     - y5=1 if banned]
-!!UN&y1=9:P154/?y5;  [Check for banned Town Portal    - y5=1 if banned]
-!!UN&y1=8:P155/?y5;  [Check for banned Dimension Door - y5=1 if banned]
-!!UN&y1=6:P156/?y5;  [Check for banned Fly            - y5=1 if banned]
-!!UN&y1=1:P221/?y5;  [Check for banned Scuttle Boat   - y5=1 if banned]
-!!UN&y1=2:P222/?y5;  [Check for banned Visions        - y5=1 if banned]
-!!UN&y1=26:P223/?y5; [Check for banned Armageddon    - y5=1 if banned]
-!!UN&y1=5:P246/?y5;  [Check for banned View Air       - y5=1 if banned]
-!!UN&y1=3:P247/?y5;  [Check for banned View Earth     - y5=1 if banned]
-!!VRy2&y5=1/x5=1:S1; [If spell is banned and banning is selected, set y2 to 1]
-!!VRy2&y1=57:S1; [If spell is Titan's Lightning Bolt is selected, set y2 to 1]
-!!VRy2&x6>=1/x7=y1:S1;  [If spell is 1st excluded spell, set y1 to 1]
-!!VRy2&x6>=2/x8=y1:S1;  [If spell is 2nd excluded spell, set y1 to 1]
-!!VRy2&x6>=3/x9=y1:S1;  [If spell is 3rd excluded spell, set y1 to 1]
-!!VRy2&x6>=4/x10=y1:S1; [If spell is 4th excluded spell, set y1 to 1]
-!!VRy2&x6>=5/x11=y1:S1; [If spell is 5th excluded spell, set y1 to 1]
-!!VRy2&x6>=6/x12=y1:S1; [If spell is 6th excluded spell, set y1 to 1]
-!!VRy2&x6>=7/x13=y1:S1; [If spell is 7th excluded spell, set y1 to 1]
-!!VRy2&x6>=8/x14=y1:S1; [If spell is 8th excluded spell, set y1 to 1]
-!!VRy2&x6>=9/x15=y1:S1; [If spell is 9th excluded spell, set y1 to 1]
+!!if&(schoolBit)<>15/(schoolBit)<>0/y-98<>15;
+  !!VR(bitCheck:y):S(schoolBit) Sd&y-98; [Copy x4 (elements) to y3]
+  !!FU&(bitCheck)<>y-98:E;
+!!en;
 
-!!VRy-99&y2=0:Sy1;  [If spell is valid, set y-99 to spell number: y-99]
-!!VRx16&y2=0:S999;  [If spell is valid, set x16 to 999 to exit loop: x16]
+!!if|(minLvl)/(maxLvl);
+  !!FU|y-96<(minLvl)/y-96>(maxLvl):E;[If level too low or too high, set y2 to 1]
+!!en;
+
+!!if&(spType);
+  !!FU&y-97<>(spType):E;[If invalid type, set y2 to 1]
+!!en;
+
+!!FU$ban$:Pi^WOG_main_rand_spell^; * y-94=0 if not banned/disabled/* y-94=1 if banned * y-94=2 if disabled* y-94=3 if banned and disabled
+!!if&y-94/(restrictBanned);
+
+  !!FU:E;
+!!en;
+!!VRy-99:Si^WOG_main_rand_spell^;  [If spell is valid, set y-99 to spell number: y-99]
+
+
 
 --------------------------------------------------------------------------------
 
@@ -540,7 +561,7 @@ Returned Values:
 !!UN:R7/0/1; [Show cursor and disable changing]
 !!VRv3340:S0; [Initialize v3340 to 0]
 !!VRv3340&v1<0:S99; [Set v3340 to 99 if WoGification cancelled]
-
+*!IF:L^%v3340^;
 !!if&v3340=99;
   !!IF:M1/z100038;
   !!UN:R7/0/0; [Show mouse cursor and enable changing if WoGification cancelled]
@@ -1208,7 +1229,7 @@ Returned Values:
 !!DO8179/y1/v1/1&870:P; (Cycle through all resource piles, replace one in what value v70 holds)
 !d!IF:M^Total number of resource piles: %V1.
 Number replaced with Mithril: %V6^;
-
+*!IF&870:M^%F870^;
 *** Campfires ***
 !!IF:V9/1;
 !!UN&870:U12/-1/?v1;   (Get number of campfires on map(for replacing with Mithril))
@@ -1217,6 +1238,7 @@ Number replaced with Mithril: %V6^;
 !!VRy1&870:S1 Ry3;     (Draw random number to see what pile to start with)
 !!VRv5:Sv70 +v70 -1;    (Get replacing frequency)
 !!DO8179/y1/v1/1&870:P;(Cycle through all Campfires, replace one in what value v70 holds)
+*!IF&870:M^%F870^;
 
 !!IF:V870/0;    (set Flag to indicate that Mithril has been added)
 ** End of Mithril section.

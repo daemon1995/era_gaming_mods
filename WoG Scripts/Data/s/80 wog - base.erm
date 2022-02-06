@@ -2,6 +2,8 @@ ZVSE2
 
 ; UNIVERSAL START TRIGGER
 
+
+!#VRi^WOG_RandomSeedValue^:R0/11/99;
 !?FU(OnStartOrLoad);
 !!FU(WOG_StartGame):P;
 
@@ -10,6 +12,14 @@ ZVSE2
 ; CREATE WOG HOOKS (need plugin: erm_hooker.era)
 
 !?FU(WOG_StartGame);
+
+!!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
+!!if&v1<>(FALSE);
+  !!VRi^WOG_IsHdMod^:S(TRUE);
+!!el;
+  !!VRi^WOG_IsHdMod^:S(FALSE);
+!!en;
+
 !!SN:L^erm_hooker.era^/?(hooker:y);
 !!FU&(hooker)=0:E;
 
@@ -28,6 +38,9 @@ ZVSE2
 !!SN:E(address)/1/5968384/(WOG_OnUpdateHeroInteractionScreen); [trigger WHILE hero meeting screen]
 !!SN:E(address)/1/5942672/(WOG_OnBeforeHeroSwap);              [trigger AFTER OnBeforeHeroInteraction but BEFORE Dlg show (works in town screen)]
 !!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+!!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+!!SN:E(address)/1/4526215/(WOG_OnChangeWindowByResources);     [trigger WHEN counts what pic to display in status window for pickuped resource]
+
 
 ; ******************************************************************************
 !?FU(WOG_MapItem_GetRealTypeAndSubtype); 
@@ -55,6 +68,16 @@ ZVSE2
 !!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
 !!VR(result)&(value2)=114:S(TRUE);
 
+
+
+!?FU(WOG_GetRandomSeedByCoord);
+!#VA(x:x) (y:x) (z:x) (seed:x);
+
+!!VR(x)|(x)<1/(x)>255:S255;
+!!VR(y)|(y)<1/(y)>255:S255;
+!!VR(z)&(z)<1:Si^WOG_RandomSeedValue^;
+
+!!VR(seed):Si^WOG_RandomSeedValue^ *255 *(x) *255 *(y) +(z); +v99
 ; ******************************************************************************
 
 ; HD MOD WAR MACHINES SWAP FIX
@@ -121,3 +144,29 @@ ZVSE2
 !!UN&1:P67/(FALSE);                     [Neutral Town]
 
 !#FU(tum_DisableWoGOptions):P;
+
+!?FU(WOG_GetColorOwnerString);
+!#VA(owner:x) (string:x); 
+!!VR(line:y):S(owner) +23;
+
+!!FU(WOG_ReadTxtString):P6971564/(line);/?(string);
+!!VR(string):Z^%z1^;
+
+!?FU(WOG_GetResourceName);
+!#VA(resType:x) (string:x); 
+!!FU(WOG_ReadTxtString):P6968208/(resType);/?(string);
+!!VR(string):Z^%z1^;
+
+!?FU(WOG_GetMineName);
+!#VA(mineType:x) (string:x); 
+!!FU(WOG_ReadTxtString):P6968376/(mineType);/?(string);
+!!VR(string):Z^%z1^;
+
+!?FU(WOG_ReadTxtString);; @Master Of Puppets
+!#VA(txtLoadAddres:x) (stringNum:x); (string:x); 
+  !!UN:C(txtLoadAddres)/4/?y1;            
+  !!VRy1:+32;
+  !!UN:Cy1/4/?y2;
+  !!VR(stringNum):*4+y2;
+  !!UN:C(stringNum)/4/?y1;
+  !!SN:X?y4 Xy1 X?z1 Xy4;

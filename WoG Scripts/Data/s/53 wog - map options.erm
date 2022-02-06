@@ -257,6 +257,7 @@ Dialogue Box numbers used: 17
 !!UN&x1=3:P247/?y2; [Check for banned View Earth     - y2=1 if banned]
 !!UN&x1=4:P249/?y2; [Check for banned Disguise       - y2=1 if banned]
 
+!!VRy-94:S0; [Set y-94 to 1 if spell is banned: y-94]
 !!VRy-94&y2=1:S1; [Set y-94 to 1 if spell is banned: y-94]
 !!VRy-94&y1=1:S2; [Set y-94 to 2 if spell is disabled: y-94]
 !!VRy-94&y1=1/y2=1:S3; [Set y-94 to 3 if spell is banned and disabled: y-94]
@@ -285,8 +286,15 @@ Dialogue Box numbers used: 17
 !!SRv2/v3/v4:S?y1; [Read spell at shrine: y1]
 !!FU|y1<0/y1>69:E; [Exit if invalid spell]
 !!FU$ban$:Py1; [Check if spell is banned or disabled: y-94>0 if yes]
-!!FU$spell$&y-94>0:Px2/x2/0/0/1/0; [Random non-banned level x2 spell: y-99]
-!!SRv2/v3/v4&y-94>0:Sy-99; [Set a random spell (y-99) that isn't banned or disabled]
+!!if&y-94>0;
+  !!FU$spell$:Px2/x2/0/0/1/0; [Random non-banned level x2 spell: y-99]
+  !!if&y-99<>(NO_SPELL);
+    !!SRv2/v3/v4:Sy-99; [Set a random spell (y-99) that isn't banned or disabled]
+  !!el;
+    !!SRv2/v3/v4:S(SPELL_MAGIC_ARROW); [Set a random spell (y-99) that isn't banned or disabled]
+  !!en;
+!!en;
+
 
 -------------------------------------------------------------------------------
 
@@ -308,26 +316,24 @@ Dialogue Box numbers used: 17
 !!VRy2:-1024; [Subtract 1024 to get spell number]
 !!VRy3:S0;    [Clear y3]
 
-!!UN&y1=2/y2=0:P152/?y3; [Check for banned Summon Boat    - y3=1 if banned]
-!!UN&y1=2/y2=7:P153/?y3; [Check for banned Water Walk     - y3=1 if banned]
-!!UN&y1=2/y2=9:P154/?y3; [Check for banned Town Portal    - y3=1 if banned]
-!!UN&y1=2/y2=8:P155/?y3; [Check for banned Dimension Door - y3=1 if banned]
-!!UN&y1=2/y2=6:P156/?y3; [Check for banned Fly            - y3=1 if banned]
-!!UN&y1=2/y2=1:P221/?y3; [Check for banned Scuttle Boat   - y3=1 if banned]
-!!UN&y1=2/y2=2:P222/?y3; [Check for banned Visions        - y3=1 if banned]
-!!UN&y1=2/y2=26:P223/?y3; [Check for banned Armageddon    - y3=1 if banned]
-!!UN&y1=2/y2=5:P246/?y3; [Check for banned View Air       - y3=1 if banned]
-!!UN&y1=2/y2=3:P247/?y3; [Check for banned View Earth     - y3=1 if banned]
-!!UN&y1=2/y2=4:P249/?y3; [Check for banned Disguise       - y3=1 if banned]
+!!if&y1=2;
+   !!FU$ban$:Py2;
+   !!if&y-94>0;
+      !!FU7779:Py2; [Check level of banned spell: y-96]
+      !!FU$spell$:Py-96/y-96/0/0/1/1/y2; [Generate new non-banned spell of same level: y-99]
 
-!!FU7779&y3=1:Py2; [Check level of banned spell: y-96]
-!!FU$spell$&y3=1:Py-96/y-96/0/0/1/0; [Generate new non-banned spell of same level: y-99]
-!!VRy5:Sy-99 |1024;                  [Add new non-banned spell of same level: y5]
-!!SCv2/v3/v4&y3=1/y-99>=0:T2 Ly5;    [Give Scholar new Spell unless all are banned (y5)]
+      !!if&y-99<>(NO_SPELL);
+        !!VRy5:Sy-99 |1024;                  [Add new non-banned spell of same level: y5]
+        !!SCv2/v3/v4&y3=1/y-99>=0:T2 Ly5;    [Give Scholar new Spell unless all are banned (y5)]
+      !!el;
+          [If all spells of same level banned (y-99=-1), give a skill instead]
+         !!VRy4:S0 R27; [Random # from 1 to 27 for Secondary Skill replacement (y4)]
+         !!SCv2/v3/v4:T1 Sy4; [Give Scholar Secondary Skill (y4)]
+      !!en;
+   !!en;
 
- [If all spells of same level banned (y-99=-1), give a skill instead]
-!!VRy4&y3=1/y-99<0:S0 R27; [Random # from 1 to 27 for Secondary Skill replacement (y4)]
-!!SCv2/v3/v4&y3=1/y-99<0:T1 Sy4; [Give Scholar Secondary Skill (y4)]
+!!en;
+
 
 -------------------------------------------------------------------------------
 
@@ -342,20 +348,26 @@ Dialogue Box numbers used: 17
 
  [Loop through Spell Scrolls and substitute a new non-banned spell]
 !?FU10810;
-
 !!UN:U93/-1/-1/2; [Store coordinates of next Spell Scroll in v2/v3/v4]
 !!ARv2/v3/v4:V?y1; [Store spell number in y1]
 !!FU|y1<0/y1>69:E; [Exit if invalid spell]
 !!FU$ban$:Py1; [Check if spell is banned: y-94>0 if yes]
-!!FU7779&y-94>0:Py1; [Check level of spell on spell scroll: y-96]
-!!FU$spell$&y-94>0:Py-96/y-96/0/0/1/0; [Generate new non-banned spell of same level: y-99]
-!!OBv2/v3/v4&y-94>0:Cy-99; [Give Spell Scroll new spell (y3)]
+
+!!if&y-94>0;
+  !!FU7779:Py1; [Check level of spell on spell scroll: y-96]
+  !!FU$spell$:Py-96/y-96/0/0/1/1/y1; [Generate new non-banned spell of same level: y-99]
+  !!if&y-99<>(NO_SPELL);
+    !!OBv2/v3/v4:Cy-99; [Give Spell Scroll new spell (y3)]
+  !!el;
+    !!OBv2/v3/v4:C(SPELL_MAGIC_ARROW); [Give Spell Scroll new spell (y3)]
+  !!en;
+!!en;
 
 -------------------------------------------------------------------------------
 
  [Ban spells from Heroes' starting spells]
 !?FU10811;
-
+!#VA(usedY[12]:y);
 !!UN:P37/?y1; [Check if Rebalanced Factions script is active: y1=1 if active]
 !!UN:P152/?y2; [Check if Summon Boat is banned: y2=1 if banned]
 !!UN:P153/?y3; [Check if Water Walk is banned: y3=1 if banned]
@@ -368,39 +380,79 @@ Dialogue Box numbers used: 17
 !!UN:P246/?y10; [Check if View Air is banned: y10=1 if banned]
 !!UN:P247/?y11; [Check if View Earth is banned: y11=1 if banned]
 !!UN:P249/?y12; [Check if Disguise is banned: y11=1 if banned]
+!!VR(exit:y):S(TRUE);
 
-!!DO10812/0/155/1|y2=1/y3=1/y4=1/y5=1/y6=1/y7=1/y8=1/y9=1/y10=1/y11=1/y12=1:Py1/y2/y3/y4/y5/y6/y7/y8/y9/y10/y11/y12; [Loop through all Heroes if anything banned]
+!!re i/2/12;
+  !!if&yi<>(FALSE);
+    !!VR(exit):S(FALSE);
+  !!en;
+!!en;
+
+!!if&(exit)=(FALSE);
+  !!FU(NewIntArray):P?(bannedSpells:y);
+  !!FU(Array_Push):P(bannedSpells)/(SPELL_SUMMON_BOAT)/(SPELL_WATER_WALK)/(SPELL_TOWN_PORTAL)/(SPELL_DIMENSION_DOOR)/(SPELL_FLY)/(SPELL_SCUTTLE_BOAT);
+  !!FU(Array_Push):P(bannedSpells)/(SPELL_VISIONS)/(SPELL_ARMAGEDDON)/(SPELL_VIEW_AIR)/(SPELL_VIEW_EARTH)/(SPELL_DISGUISE);
+
+  !!FU(NewIntArray):P?(replacingSpells:y);
+  !!FU(Array_Push):P(replacingSpells)/(SPELL_CURE)/(SPELL_WATER_ELEMENTAL)/(SPELL_RESURRECTION)/(SPELL_AIR_ELEMENTAL)/(SPELL_AIR_ELEMENTAL)/(SPELL_WEAKNESS);
+  !!FU(Array_Push):P(replacingSpells)/(SPELL_BLIND)/(SPELL_INFERNO)/(SPELL_HASTE)/(SPELL_VIEW_EARTH)/(SPELL_DISRUPTING_RAY);
+
+  !!re (hero:y)/0/(HERO_LAST_WOG);
+
+      !!re j/0/10;
+        !!SN:M(bannedSpells)/j/?(bSpell:y);
+        !!VR(optId:y):Sj +2;
+        !!HE(hero):M(bSpell)/?(learned:y);
+
+        !!if&(learned)/y(optId);
+          !!SN:M(replacingSpells)/j/?(rSpell:y);
+
+          !!HE(hero):M(bSpell)/(FALSE) M(rSpell)/(TRUE);
+        !!en;
+      !!en;
+  !!en;
+!!en;
+
+!!if&y1=(TRUE);
+  !!HE(HERO_GEM):M(SPELL_CURE)/(FALSE);
+!!en;
+
+*!re i/0/(end_value);
+  
+*!en;
+!!FU:E;
+*!DO10812/0/155/1|y2=1/y3=1/y4=1/y5=1/y6=1/y7=1/y8=1/y9=1/y10=1/y11=1/y12=1:Py1/y2/y3/y4/y5/y6/y7/y8/y9/y10/y11/y12; [Loop through all Heroes if anything banned]
 
 -------------------------------------------------------------------------------
 
  [Loops through Heroes and replaces banned spells]
-!?FU10812;
+*?FU10812;
 
-!!HEx16:M0/?y1; [y1=1 if Hero has Summon Boat]
-!!HEx16&y1=1/x2=1:M0/0 M37/1; [Give Hero Cure instead if banned]
-!!HEx16:M7/?y2; [y2=1 if Hero has Water Walk]
-!!HEx16&y2=1/x3=1:M7/0 M68/1; [Give Hero Summon Water Elemental instead if banned]
-!!HEx16:M9/?y3; [y3=1 if Hero has Town Portal]
-!!HEx16&y3=1/x4=1:M9/0 M38/1; [Give Hero Resurrection instead if banned]
-!!HEx16:M8/?y4; [y4=1 if Hero has Dimension Door]
-!!HEx16&y4=1/x5=1:M8/0 M69/1; [Give Hero Summon Air Elemental instead if banned]
-!!HEx16:M6/?y5; [y5=1 if Hero has Fly]
-!!HEx16&y5=1/x6=1:M6/0 M69/1; [Give Hero Summon Air Elemental instead if banned]
-!!HEx16:M1/?y6; [y6=1 if Hero has Scuttle Boat]
-!!HEx16&y6=1/x7=1:M1/0 M45/1; [Give Hero Weakness instead if banned]
-!!HEx16:M2/?y7; [y7=1 if Hero has Visions]
-!!HEx16&y7=1/x8=1:M2/0 M62/1; [Give Hero Blind instead if banned]
-!!HEx16:M26/?y8; [y8=1 if Hero has Armageddon]
-!!HEx16&y8=1/x9=1:M26/0 M22/1; [Give Hero Inferno instead if banned]
-!!HEx16:M5/?y9; [y9=1 if Hero has View Air]
-!!HEx16&y9=1/x10=1:M5/0 M53/1; [Give Hero Haste instead if banned]
-!!HEx16:M3/?y10; [y10=1 if Hero has View Earth]
-!!HEx16&y10=1/x11=1:M3/0 M42/1; [Give Hero Curse instead if banned]
-!!HEx16:M4/?y11; [y11=1 if Hero has Disguise]
-!!HEx16&y11=1/x12=1:M4/0 M47/1; [Give Hero Disrupting Ray instead if banned]
+*!HEx16:M0/?y1; [y1=1 if Hero has Summon Boat]
+*!HEx16&y1=1/x2=1:M0/0 M37/1; [Give Hero Cure instead if banned]
+*!HEx16:M7/?y2; [y2=1 if Hero has Water Walk]
+*!HEx16&y2=1/x3=1:M7/0 M68/1; [Give Hero Summon Water Elemental instead if banned]
+*!HEx16:M9/?y3; [y3=1 if Hero has Town Portal]
+*!HEx16&y3=1/x4=1:M9/0 M38/1; [Give Hero Resurrection instead if banned]
+*!HEx16:M8/?y4; [y4=1 if Hero has Dimension Door]
+*!HEx16&y4=1/x5=1:M8/0 M69/1; [Give Hero Summon Air Elemental instead if banned]
+*!HEx16:M6/?y5; [y5=1 if Hero has Fly]
+*!HEx16&y5=1/x6=1:M6/0 M69/1; [Give Hero Summon Air Elemental instead if banned]
+*!HEx16:M1/?y6; [y6=1 if Hero has Scuttle Boat]
+*!HEx16&y6=1/x7=1:M1/0 M45/1; [Give Hero Weakness instead if banned]
+*!HEx16:M2/?y7; [y7=1 if Hero has Visions]
+*!HEx16&y7=1/x8=1:M2/0 M62/1; [Give Hero Blind instead if banned]
+*!HEx16:M26/?y8; [y8=1 if Hero has Armageddon]
+*!HEx16&y8=1/x9=1:M26/0 M22/1; [Give Hero Inferno instead if banned]
+*!HEx16:M5/?y9; [y9=1 if Hero has View Air]
+*!HEx16&y9=1/x10=1:M5/0 M53/1; [Give Hero Haste instead if banned]
+*!HEx16:M3/?y10; [y10=1 if Hero has View Earth]
+*!HEx16&y10=1/x11=1:M3/0 M42/1; [Give Hero Curse instead if banned]
+*!HEx16:M4/?y11; [y11=1 if Hero has Disguise]
+*!HEx16&y11=1/x12=1:M4/0 M47/1; [Give Hero Disrupting Ray instead if banned]
 
  [If Rebalanced Factions is active and Hero is Gem, take Cure away again]
-!!HEx16&y1=1/x1=1/x16=27:M37/0;
+*!HEx16&y1=1/x1=1/x16=27:M37/0;
 
 -------------------------------------------------------------------------------
 
@@ -431,21 +483,27 @@ Dialogue Box numbers used: 17
  [Check if spell banning for Pandora's Box is enabled]
 !!UN:P150/?y-1;
 
+!!if&y-1<>0;
+
+   !!LE998:S?(spells:y); [Number of spells in Pandora's Box: y-2]
+
+   !!if&(spells)>0;
+     !!re i/0/(spells)/1/-1;
+       !!LE998:Si/?(spell:y);                [Check each spell given by Pandora's Box: y1]
+
+       !!FU$ban$:P(spell);                [Check if spell is banned: y-94=1 or 3 if banned]
+
+       !!if|y-94=1/y-94=3;
+         !!LE998:Si/-1;            [If banned, remove spell from box]
+       !!en;
+     !!en;
+   !!en;
+!!en;
  [Call Function 10814 if banning is enabled]
-!!LE998&y-1=1:S?y-2; [Number of spells in Pandora's Box: y-2]
-!!VRy-3:Sy-2 -1;
-!!DO10814/0/y-3/1&y-1=1/y-2>0:P; [Remove all banned spells]
 
+*?HL(ANY_HERO);
+*!HL:Sd/(SKILL_NECROMANCY)/(SKILL_DIPLOMACY);
 -------------------------------------------------------------------------------
-
- [Spell banning function for Pandora's Box - from object trigger]
-
-!?FU10814;
-
-!!LE998:Sx16/?y1;               [Check each spell given by Pandora's Box: y1]
-!!FU&y1<0:E;                    [Skip this spell if no spell at that position]
-!!FU$ban$:Py1;                  [Check if spell is banned: y-94=1 or 3 if banned]
-!!LE998|y-94=1/y-94=3:Sx16/-1;  [If banned, remove spell from box]
 
 -------------------------------------------------------------------------------
 
@@ -1539,6 +1597,13 @@ Dialogues used: DG25
 
 Variables: v3320-v3325 (v3326-v3330 reserved)
 Functions: FU10938
+!?PI;
+!!UN:P185/?y-1; [Check if script is enabled: y-1]
+!!if&y-1;
+   !!VRz1:S^Message Disabling^; [Section name: z1]
+   !!DO10938/3320/3325/1&y-1:P0; [Load the saved disabling states from disk file]
+!!en;
+*!IF:L^%v3320^;
 
  [Right-click on System Options is trigger]
 !?CM0;
