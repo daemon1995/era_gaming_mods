@@ -46,14 +46,24 @@ ZVSE2
 
 ; Resurrect the henchamn when visting a town
 !?OB(OBJ_TOWN)&i^hench_enabled^;
-!!OW:I(CURRENT_PLAYER)/?(isAi:y);
-!!FU&(isAi):E;                          [exit if the visitng player is AI]
-
+!!CA998:O?(ownerTown:y);
 !!HE(CURRENT_HERO):N?(hero:y);
-!!IF:W(hero);
-!!FU(hench_ResurrectHench)&w118>(NO_MON)/w119<>(TRUE):P(hero); [Offer to resurrect the henchman if henchman is avaliable and dead]
+!!HE(hero):O?(ownerHero:y);
+!!FU&(ownerHero)<>(ownerTown):E;
 
-; Ask to get a henchman for human player or give one for AI player
+!!OW:I(CURRENT_PLAYER)/?(isAi:y);
+!!IF:W(hero);
+
+; Offer to resurrect the henchman if henchman is avaliable and dead
+!!if&w118>(NO_MON)/w119<>(TRUE);
+  !!if&(isAi);
+    !!VRw119:S(TRUE);
+  !!el;
+    !!FU(hench_ResurrectHench):P(hero);
+  !!en;
+!!en;
+
+; Ask to get a henchman for human player or give one to the hero
 !?FU(OnBeforeBattleUniversal)&i^hench_enabled^;
 !!FU(hench_GetHenchBeforeBattle):P(BATTLE_LEFT);
 !!FU(hench_GetHenchBeforeBattle):P(BATTLE_RIGHT);
@@ -133,10 +143,8 @@ ZVSE2
   !!if&(qty)<=0;
     !!BM(stack):K100000000;    [prevent resurrecting henchman in battle]
     !!FU(hench_ManageHenchLiving):P(side)/(FALSE);
-  !!el&(qty)>1/(mon)<>(MON_GHOST);
-    !!BM(stack):N1 L0;
+  !!el&(qty)>1;
     !!FU(hench_ManageHenchLiving):P(side)/(TRUE);
-    !!SN:D;
   !!en;
 !!en;
 
@@ -298,7 +306,7 @@ ZVSE2
 
 !!VRz2:Sz149006;
 
-!!if&(canInteract)>0;                              [Allow selection only when hero is with an owner/on interacting player's turn]
+!!if&(canInteract);                     [Allow selection only when hero is with an owner/on interacting player's turn]
   !!VRz2:+^
 ^ +^{%z149002}^;
   !!IF:Q2/(PIC_TYPE_MONSTER)/w118/(MSG_TYPE_QUESTION)/z2;
