@@ -1,7 +1,8 @@
-ZVSE
+ZVSE2
 
 ** Artifact Boost ERM script v1.4 - Donald X. Vaccarino
 ** Updated Jul. 18. 2004 by Hermann the Weird
+** Updated Feb 2022 by Archer30
 ** Requires WOG version 3.58 or later
 ** Make formerly weak artifacts do something special, usually once/week
 ** WoGify Name: script02.erm
@@ -34,7 +35,7 @@ ZVSE
 
 ** To use this code, put it into a Global Event, set to never happen.
 
-** Variables Used: v600-v628, v630-v631, v640-v648, z326-z331, i-l
+** Variables Used: v600-v628, v631, v640-v648, z326-z331, i-l
 ** Flags Used: 1, 2, 5, 710-714
 
 ** w33 must not be modified by other programs, used for enabling/disabling weekly creatures!
@@ -42,27 +43,16 @@ ZVSE
 ** The other variables may be used elsewhere but will be trashed by this code.
 
 ** Functions Used: 599-609, 612, 613
-** Timers Used: 85 (was 76)
-
-
-** Initialization Code
-
-!#UN:P102/?v1; [Check if Artifact Boost is enabled in WoGify Options]
-
-!#TM85&v1=1:S1/999/7/255; [timer once/week for all players]
-
-** end of Initialization Code
 
 
 ** Timer routine
 
-!?TM85;
+!?FU(OnEveryDay)&i^timerOnce^/i^timerWeekday^=1;
 
 !!UN:P102/?y-1; [Check if Artifact Boost Script is enabled in WoGify Options]
 !!FU&y-1<>1:E;     [Exit if it isn't]
 
-!!OW:C?v630; [get current player]
-!!VRv600:S0; [start with hero #0]
+!!VRv600:S(HERO_FIRST); [start with hero #0]
 !!DO600/0/155/1:P; [iterate through all heroes]
 
 ** end of timer routine
@@ -151,7 +141,7 @@ ZVSE
 !?FU600;
 
 !!HEv600:O?v602; [get owner of iterated hero]
-!!FU602&v602>=0/v630=v602:P; [if hero in use and it's that hero's owner's turn, continue in function 602]
+!!FU602&v602>(NO_PLAYER):P; [if hero in use, continue in function 602]
 !!VRv600:+1; [inc hero #]
 
 ** end of function
@@ -338,28 +328,42 @@ ZVSE
 !!HEv600&5/v624>0/v24>0/2:A3/67/1/1; [remove a Diplomat's Ring]
 !!UN&v624>0/2:R1; [redraw screen]
 
-!!VRv24:S0 R6; [random slot # to start from]
-!!DO599/0/6/1:P; [find a slot with a creature - we always will]
-!!HEv600:C0/v25/?v27/?v26; [get j type i qty of our random slot creature]
-!!UN&v27>=0/v26>0:N3/330/v27/1; [get plural name of creature into z330]
-!!VRy1:S0 R1; [pick no-retaliation or attack-twice to offer]
-!!VRz331&y1=0:Sz102052;
-!!VRz331&y1=1:Sz102053;
-!!IF&5/v628>0/v27>=0/v26>0:Q2/z102054;
-!!IF|v27<0/v26=0:V2/0; [If no creatures, don't do anything]
-!!IF&-5:V2/0; [AI doesn't do it]
-!!IF&5/v628>0/2:M1/z102055;
-!!IF&5/v628>0/-2/v27>=0/v26>0:M1/z102056;
-!!HEv600&v628>0/2:A3/126/1/1; [remove an Orb Of Inhibition]
-!!MA&v628>0/2:Xv27/?y2; [read current creature flags]
-!!VRy2&v628>0/2/y1=0:|32768; [attack twice bit]
-!!VRy2&v628>0/2/y1=1:|65536; [no retaliation bit]
-!!MA&v628>0/2:Xv27/y2; [set creature flags!]
+; Orb Of Inhibition (works only for human players)
+!!if&v628>0/5;
+  !!FU599:P?y30;                      [find a creature from the army - the hero could have no creature!]
 
-!!IF&5/v613>0:M1/z102057;
-!!VRy1:S30;
-!!VRy1:*v631; [Surcoat factor]
-!!HEv600&v613>0:Tv604/v605/v606/90/y1; [ogre fight]
+  !!if&y30>(NO_MON);                  [if the hero does have a creature]
+    !!UN:N3/330/y30/1;                [get plural name of creature into z330]
+    !!VRy1:R0/0/1;                    [pick no-retaliation or attack-twice to offer]
+
+    !!if&y1=0;
+      !!VRz331:Sz102052;
+    !!el;
+      !!VRz331:Sz102053;
+    !!en;
+
+    !!IF:Q2/z102054;
+
+    !!if&2;
+      !!IF:M1/z102055;
+      !!HEv600:A3/126/1/1;          [remove an Orb Of Inhibition]
+      !!MA:Xv27/?y2;                [read current creature flags]
+      !!VRy2&y1=0:|32768;           [attack twice bit]
+      !!VRy2&y1=1:|65536;           [no retaliation bit]
+      !!MA:Xv27/y2;                 [set creature flags!]
+    !!el;
+      !!IF:M1/z102056;
+    !!en;
+  !!en;
+!!en;
+
+; Targ Of The Rampaging Ogre
+!!if&v613>0;
+  !!IF&5:M1/z102057;
+  !!VRy1:S30;
+  !!VRy1:*v631; [Surcoat factor]
+  !!HEv600:Tv604/v605/v606/90/y1; [ogre fight]
+!!en;
 
 ** end of function
 
@@ -452,15 +456,27 @@ ZVSE
 
 
 ** function to check a slot for creatures
-** k = random slot to check, l = slot found
 
 !?FU599;
+!#VA(randMon:x);
 
-!!VRy1:Sv24;
-!!VRy1:%7; [now we have a usable slot number]
-!!HEv600:C0/y1/?v26/?v27; [get i type j qty]
-!!VRv25&v26<>-1/v27>0:Sy1; [it's got something!]
-!!VRv24:+1; [next slot]
+!!VR(randMon):S(NO_MON);
+!!FU(NewIntArray):P?(armyMons:y);
+
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HEv600:C0/i/?(mon:y)/?(qty:y);
+
+  !!FU(Array_Push)&(mon)>(NO_MON)/(qty)>0:P(armyMons)/(mon);
+!!en;
+
+!!SN:M(armyMons)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(maxIndex:y):S(size) -1;
+  !!VR(random:y):R0/0/(maxIndex);
+
+  !!SN:M(armyMons)/(random)/?(randMon);
+!!en;
 
 ** end of function
 
@@ -476,10 +492,14 @@ ZVSE
 !!HE-1:O?y3;   [Check hero player id]
 !!FU&y2<>y3:E; [Exit if different]
 
-!!HE-1:A2/66/0/?v628; [check for Statesman's Medal]
+!!HE-1:A2/(ART_STATESMANS_MEDAL)/0/?v628; [check for Statesman's Medal]
 !!IF:V2/0; [AI won't give medal]
-!!IF&1000/v628>0:Q2/8/66/2/z102058;
-!!IF&1000/v628>0/-2:M1/z102059;
+
+!!if&1000/v628>0;
+  !!IF:Q2/8/66/2/z102058;
+  !!IF&-2:M1/z102059;
+!!en;
+
 !!FU605&2:Pv998/v999/v1000; [handle giving the medal]
 
 ** end of trigger
@@ -552,8 +572,11 @@ ZVSE
 !?FU612;     [Function for Pendant of Holiness]
 
 !!HEv600:A2/0/?v24/?v25; [check for spell book]
-!!IF&5/v25=0:Q1/8/102/1/z102038;     [Message if no spell book]
-!!FU&v25=0:E;     [Exit if no spell book]
+
+!!if&v25=0;
+  !!IF&5:Q1/8/102/1/z102038;     [Message if no spell book]
+  !!FU:E;     [Exit if no spell book]
+!!en;
 
 !!IF:V1/0;     [Init flag for counting spells]
 !!VRv1:S0;     [Init v var that carries spell number]
