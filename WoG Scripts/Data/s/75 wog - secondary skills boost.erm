@@ -1,4 +1,4 @@
-ZVSE
+ZVSE2
 
 ** Secondary Skills Boost ERM script v1.6 - Donald X. Vaccarino. Right-click hint text added by Timothy Pulver for v1.6.
 ** Requires WOG version 3.58
@@ -41,15 +41,15 @@ ZVSE
 !?FU8166;     [Initialization function]
 
 ** Hint text for spyglass/speculum
-!!UN:P215/?v1;     [Check if Scouting is enabled in WoGify Options]
-!!VRz430&v1=1:Sz103024;
-!!UN&v1=1:A52/10/430;
-!!VRz431&v1=1:Sz103025;
-!!UN&v1=1:A53/10/431;
+*!UN:P215/?v1;     [Check if Scouting is enabled in WoGify Options]
+!!VRz430:Sz103024;
+!!UN:A52/10/430;
+!!VRz431:Sz103025;
+!!UN:A53/10/431;
 
 !#UN:P215/?v1;     [Check if Scouting is enabled in WoGify Options]
-!#TM74&v1=1:S1/999/1/255; [once/day for all players]
-!#FU8166:P;     [Set strings for spyglass/speculum if active]
+*#TM74&v1=1:S1/999/1/255; [once/day for all players]
+!#FU8166&v1:P;     [Set strings for spyglass/speculum if active]
 
 ** End of Initialization Code
 -------------------------------------------------------------------------
@@ -59,86 +59,73 @@ ZVSE
      Scouting
 *************************************************************************
 
-!?TM74;     [Timer routine for scouting]
+*?TM74;     [Timer routine for scouting]
+!?FU(OnEveryDay);
 
-!!UN:P215/?y-1;     [Check if Scouting is enabled in WoGify Options]
+!!UN:P215/?(isEnabled:y);     [Check if Scouting is enabled in WoGify Options]
 !!FU&y-1<>1:E;     [Exit if it isn't]
+!!if&(isEnabled);
+  !!OW:Hi^timerOwner^/1;                  [get current heroes to v-array]
 
-!!OW:C?v907;     [get current player]
-!!DO650/0/155/1:P;     [iterate through all heroes]
+  !!re i/2/v1/1/1;
+    !!HEvi:S(SKILL_SCOUTING)/?(scoutingLvl:y);
 
-** End of timer routine
+    !!if&(scoutingLvl);
+      !!HEvi:A2/(ART_SPECULUM)/0/?(isSpec:y); [check for Speculums]
+      !!HEvi:A2/(ART_SPYGLASS)/0/?(isSpy:y); [check for Spyglasses]
+      !!VR(roguesAmount:y):S(scoutingLvl) *2 -1 +(isSpy) +(isSpec);
+
+      !!if&i^timerIsAi^;
+        !!HEvi:C2/(MON_ROGUE)/(roguesAmount)/0; [Same for AI]
+      !!el;
+        !!IF:Wvi;
+        !!HEvi&w43=0:C2/(MON_ROGUE)/(roguesAmount)/1; [Give rogues to a free or rogue slot, else ask player]
+      !!en;
+    !!en;
+
+  !!en;
+!!en;
+
+!?FU(OnHeroScreenMouseClick)&999/i^mouse_action^=(MOUSE_RMB_PRESSED);
+
+!!UN:P215/?(isEnabled:y);     [Check if Scouting is enabled in WoGify Options]
+
+!!if&(isEnabled);
+  !!FU(WOG_GetSkillInfoByClick):Pi^mouse_item^/(CURRENT_HERO)/?(skill:y)/?(skillArea:y);
+
+  !!if&(skill)=(SKILL_SCOUTING)/(skillArea)>1;
+    !!CM:R0;     [Disable standard r-click info]
+    !!HE(CURRENT_HERO):S(SKILL_SCOUTING)/?(scoutingLvl:y);     [Check for scouting level]
+    !!IF:W(CURRENT_HERO);     [w vars refer to current hero]
+
+    !!VRz-1:Sz103035+^.^;     [Set strings]
+    !!VRz-1&w43=1:Sz103036+^.^;
+    !!VRz-2:Sz103036;
+    !!VRz-2&w43=1:Sz103035;
+
+    ** Ask for enabling/disabling rogues
+
+    ** Basic scouting
+    !!IF&(scoutingLvl)=1:Q2/20/12/2/z103037;
+
+    ** Advanced scouting
+    !!IF&(scoutingLvl)=2:Q2/20/13/2/z103038;
+
+    ** Expert scouting
+    !!IF&(scoutingLvl)=3:Q2/20/14/2/z103039;
+
+    !!FU&-2:E;     [Exit if "no" answered]
+
+    !!VRy-4:Sw43;
+    !!VRw43&y-4=1:S0;     [set w var for enabling/disabling daily rogues, 0=enabled (default)]
+    !!VRw43&y-4=0:S1;
+
+    ** End of right click trigger for rogue enabling/disabling
+
+  !!en;
+!!en;
 
 
-!?FU650;     [Function to handle scouting for hero #x16]
-
-!!HEx16:O?v900;     [get hero's owner]
-
-!!VRv901:S0;     [assume no Rogues]
-!!HEx16&v900=v907:S3/?v901;     [get scouting level if hero owned by current player]
-!!VRv901&v901=3:S5;     [5 Rogues at expert]
-!!VRv901&v901=2:S3;     [3 Rogues at advanced (and 1 at basic)]
-!!HEx16:A2/52/0/?y1;     [check for Speculums]
-!!HEx16:A2/53/0/?y2;     [check for Spyglasses]
-!!VRv901&v901>0:+y1;     [plus a Rogue per Speculum, if hero has Scouting]
-!!VRv901&v901>0:+y2;     [plus a Rogue per Spyglass, if hero has Scouting]
-!!IF:Wx16;     [w vars refer to hero x16]
-!!OW:Iv900/?y-1;     [check for AI]
-!!HEx16&y-1=0/v901>0/w43=0:C2/143/v901/1;     [Give rogues to a free or rogue slot, else ask player]
-!!HEx16&y-1=1/v901>0:C2/143/v901/0;     [Same for AI]
-
-** End of function to handle scouting for hero #x16
-
-
-!?CM2;     [Right click trigger for rogue enabling/disabling]
-
-!!UN:P215/?y-1;     [Check if scouting enabled]
-!!FU&y-1<>1:E;     [Exit if it isn't]
-
-!!IF:W-1;     [w vars refer to current hero]
-
-!!CM:I?y-1 S?y-5;     [Get click location and type]
-
-!!FU&y-5<>14:E;     [Exit if no r-click]
-!!FU|y-1<87/y-1>102:E;     [Exit if not on skill Names or skill Levels]
-
-!!VRy-1|y-1=87/y-1=95:S1;     [Translate r-click location to skill number]
-!!VRy-1|y-1=88/y-1=96:S2;
-!!VRy-1|y-1=89/y-1=97:S3;
-!!VRy-1|y-1=90/y-1=98:S4;
-!!VRy-1|y-1=91/y-1=99:S5;
-!!VRy-1|y-1=92/y-1=100:S6;
-!!VRy-1|y-1=93/y-1=101:S7;
-!!VRy-1|y-1=94/y-1=102:S8;
-
-!!HE-1:Sy-1/?y-2/1;     [Ask what skill occupies this slot]
-!!FU&y-2<>3:E;     [Exit if it isn't scouting]
-!!CM:R0;     [Disable standard r-click info]
-!!HE-1:S3/?y-3;     [Check for scouting level]
-
-!!VRz-1:Sz103035+^.^;     [Set strings]
-!!VRz-1&w43=1:Sz103036+^.^;
-!!VRz-2:Sz103036;
-!!VRz-2&w43=1:Sz103035;
-
-** Ask for enabling/disabling rogues
-
-** Basic scouting
-!!IF&y-3=1:Q2/20/12/2/z103037;
-
-** Advanced scouting
-!!IF&y-3=2:Q2/20/13/2/z103038;
-
-** Expert scouting
-!!IF&y-3=3:Q2/20/14/2/z103039;
-
-!!FU&-2:E;     [Exit if "no" answered]
-
-!!VRy-4:Sw43;
-!!VRw43&y-4=1:S0;     [set w var for enabling/disabling daily rogues, 0=enabled (default)]
-!!VRw43&y-4=0:S1;
-
-** End of right click trigger for rogue enabling/disabling
 -------------------------------------------------------------------------
 
 
@@ -148,106 +135,91 @@ ZVSE
 
 !?HL-1;     [Level up trigger for eagle eye]
 
-!!UN:P103/?y-1;     [Check if Eagle Eye I is enabled in WoGify Options]
-!!UN:P202/?y-3;     [Check if Eagle Eye II is enabled in WoGify Options]
-!!FU&y-1<>1:E;     [Exit if it isn't]
+  !!UN:P103/?y-1;     [Check if Eagle Eye I is enabled in WoGify Options]
+  !!FU&y-1<>1:E;     [Exit if it isn't]
 
-!!HE-1:S11/?v901;     [get eagle eye level]
-!!FU&v901=0:E;     [Exit if no eagle eye]
+  !!HE-1:S11/?(eeLvl:y);     [get eagle eye level]
+  !!FU&(eeLvl)=0:E;     [Exit if no eagle eye]
 
-** get hero name and sex, prepare strings
-!!HE-1:B0/?z70;
-!!HE-1:R2/?y-1;
-!!VRz71&y-1=0:Sz103040;
-!!VRz72&y-1=0:Sz103041;
-!!VRz71&y-1=1:Sz103042;
-!!VRz72&y-1=1:Sz103043;
-!!VRz73&y-1=0:Sz103044;
-!!VRz73&y-1=1:Sz103045;
+  ** get hero name and sex, prepare strings
+  !!HE-1:B0/?z70;
+  !!HE-1:R2/?y-1;
+  !!VRz71&y-1=0:Sz103040;
+  !!VRz72&y-1=0:Sz103041;
+  !!VRz71&y-1=1:Sz103042;
+  !!VRz72&y-1=1:Sz103043;
+  !!VRz73&y-1=0:Sz103044;
+  !!VRz73&y-1=1:Sz103045;
 
-; [igrik: isGameNotYetStarted]
-!!UN:C6915152/4/?y7;
-!!VRv910&y7=1:S0;
+  ; [igrik: isGameNotYetStarted]
 
-!!HE-1:O?v908;     [get owner of this hero]
-!!OW&v908<>-1:Iv908/?v909;     [get AI (1) or human (0)]
-!!VRv910:S0;     [assume AI]
-!!VRv910&v908<>-1/v909=0:S1;     [human if has owner and that owner is human]
 
-!!HE-1:A2/0/?v911/?v906;     [see if hero has a spell book]
-!!IF&v910=1/v901>0/v906=0:M1/z103026;     [Message if no spell book]
+  !!HE-1:O?v908;     [get owner of this hero]
+  !!OW&v908<>-1:Iv908/?v909;     [get AI (1) or human (0)]
+  !!VR(showMsg:y):S0;     [assume AI]
+  !!VR(showMsg)&v908<>-1/v909=0:S1;     [human if has owner and that owner is human]
+  !!UN:C6915152/4/?y7;
+  !!VR(showMsg)&y7=1:S0;
+  !!HE-1:A2/0/?v911/?v906;                          [see if hero has a spell book]
+  !!IF&(showMsg)=1/v906=0:M1/z103026;             [Message if no spell book]
 
-** Algor: begin
-!!FU&v906=0:E;               [exit, if no spellbook]
-!!VRv1:S-1;
-!!DO653/0/69/1:P-1/4/-1/0;     [count number of avaliable spells (1-4 lvl) in v1]
-!!if&v1=-1/y-3=0:;           [if all spells known & Eagle Eye II is disabled]
-  !!VRy-2:S0 +v901 +35;      [Get pic for message]
-  !!IF&v910=1:Q2/20/y-2/1/z103046;
-  !!HE-1:S11/0;              [Remove eagle eye]
-  !!FU:E;                    [Exit if all spells known]
-!!en:;
+  ** Algor: begin
+  !!FU&v906=0:E;                                    [exit, if no spellbook]
+  **daemon_n: begin
+  !!VR(maxSpellLvl:y):S2;                 [y2 - wisdom req. for e.eye]
+  !!HE-1:S(SKILL_WISDOM)/?(wisLvl:y);     [y1/y2 - wisdom/e.eye skill level]
 
-!!if&v901>0/v906<>0:;        [learn spell]
-  !!HE-1:S7/?y1 S11/?y2;     [y1/y2 - wisdom/e.eye skill level]
-  !!VRy2:+1;                 [y2 - wisdom req. for e.eye]
-  !!VRy2&y1=0/y2>2:S2;       [y2 max avail. spell level]
-  !!VRy2&y1=1/y2>3:S3;       [...]
-  !!VRv1:S-1;
-      *!IF:M^%y2^;
+  !!if&(wisLvl);
+    !!VR(maxSpellLvl):S1 +(eeLvl) F0/(wisLvl) Sd2 F1/4;                 [y2 - wisdom req. for e.eye]
+  !!en;
 
-  !!DO653/0/69/1:P-1/y2/-1/0/11;  [count number of avaliable spells in v1]
-    *!IF:M^%y2^;
+  !!FU(NewIntArray):P?(avSpells:y);                 [create spells arr;]
 
-  !!if&v1>=0:;
-    !!VRv1:-1;
+  !!re (spell:y)/0/(SPELL_LAST_WOG);                        [go through all]
+    !!HE(CURRENT_HERO):M(spell)/?(isLearned:y);           [y1=1 for known spell]
+    !!SS(spell):L?(spellLvl:y);                           [y3 - spell level]
 
-    !!if&v1>0;
-      !!VRy11:S0 Rv1;          [y11 - random avaliable spell #2]
-      !!VRy10:S0 Rv1;          [y10 - random avaliable spell #1]
-      !!VRv1:S-1;
-      !!DO653/0/69/1:P-1/y2/y10/0; [v1 - spell #1]
-      !!VRv2:Sv1;
-      !!VRv1:S-1;
-      !!DO653/0/69/1:P-1/y2/y11/1/v2; [v1 - spell #1, v2 exlude spell]
-      !!IF&v910<>1:V2/0;
-      !!IF&v910=1:Q2/9/v1/9/v2/7/z103027;
-      !!HE-1&2:Mv1/1;          [learn left spell]
-      !!HE-1&-2:Mv2/1;         [learn right spell]
-    !!el;
-      !!VRy10:S0 Rv1;          [y10 - random avaliable spell #1]
-      !!VRv1:S-1;
-      !!DO653/0/69/1:P-1/y2/y10/0; [v1 - spell #1]
-      !!VRv2:Sv1;
-      !!VRv1:S-1;
-      !!IF&v910<>1:V2/0;
-      !!IF&v910=1:Q2/9/v1/1/z103027;
-      !!HE-1:Mv1/1;          [learn left spell]
+    !!if&(isLearned)=(FALSE)/(spellLvl)<=(maxSpellLvl);
+      !!FU$ban$:P(spell);
+
+      !!if&y-94=0/(spell)<>(SPELL_TITANS_LIGHTNING_BOLT); [y-94 =0 - is not banned and not disabled]
+        !!FU(Array_Push):P(avSpells)/(spell);
+      !!en;
+    !!en;
+  !!en;
+
+  !!SN:M(avSpells)/?(size:y);           [check spell amount]
+
+  !!if&(size);                          [if there is any spell]
+    !!VR(leftSpell:y):S(NO_SPELL);
+    !!VR(rightSpell:y):S(NO_SPELL);
+
+    !!if&(size)>1;                      [if we have several spells]
+      !!if&(size)>2;                    [if we have more 2 spells, shuffle them]
+        !!FU(Array_Shuffle):P(avSpells);
+      !!en;
+
+      !!SN:M(avSpells)/0/?(leftSpell) M(avSpells)/1/?(rightSpell);
+
+    !!el;                               [if we have only 1 spell]
+      !!SN:M(avSpells)/0/?(leftSpell) M(avSpells)/0/?(rightSpell);
     !!en;
 
+    !!IF:V2/0;
+    !!IF&(showMsg)=1:Q2/(PIC_TYPE_SPELL)/(leftSpell)/(PIC_TYPE_SPELL)/(rightSpell)/(MSG_TYPE_CHOOSE_PIC)/z103027;
 
-  !!en:;
-!!en:;
+    !!HE(CURRENT_HERO)&2:M(leftSpell)/1;[learn left spell]
+    !!HE(CURRENT_HERO)&-2:M(rightSpell)/1; [learn right spell - is default;]
+  !!el;                                 [if all spells known & Eagle Eye II is disabled];]
+    !!UN:P202/?y-3;                     [Check if Eagle Eye II is enabled in WoGify Options]
+    !!if&y-3=(FALSE);
+      !!VRy-2:S0 +(eeLvl) +35;          [Get pic for message]
+      !!IF&(showMsg)=1:Q2/20/y-2/1/z103046;
+      !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/0; [Remove eagle eye]
+    !!en;
+  !!en;
+**daemon_n: end
 
-!?FU653;                                      [x1 - hero, x2 - max. spell lvl, x3 - return spell(>=0)/count spells(=-1)]
-  *!IF&x5=11:L^%x2^;
-
-!!HEx1:Mx16/?y1;                              [y1=1 for known spell]
-*!UN:J0/x16/?y2;                              [y2=1 for banned spell]
-!!VRy5:Sx16;
-!!FU$ban$:Py5;
-
-!!SSx16:L?y3;                                 [y3 - spell level]
-  *!IF:M^%x2^;
-
-*!IF:M^%y3 <= %x2^;
-!!if&y1=0/y-94=0/y3<=x2:;
-  !!VRv1:+1;                                  [v1 - spell count]
-  !!if&v1=x3/x4=1/x16<>x5:;
-    !!VRv1:Sx16;
-    !!VRx16:S100;                             [exit cycle]
-  !!en:;
-!!en:;
 ** Algor: end
 
 
