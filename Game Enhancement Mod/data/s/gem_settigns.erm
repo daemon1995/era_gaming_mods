@@ -283,65 +283,58 @@ ________________________________________________________________________________
 !!UN&i^gem_buttons_option_%i(gem_CurPlay)^=(TRUE):P185/(FALSE);
 !!UN&i^gem_buttons_option_%i(gem_CurPlay)^=(FALSE):P185/i^scriptMsgDisabling_on^;
 
-
-**** disable right-click on Kingdom View for mithril details Part 2/2
-
-!?FU(OnAdventureMapRightMouseClick)&i^gem_buttons_option_%i(gem_CurPlay)^=(TRUE);
-!!CM:I?(location:y);                    [Store right-click location]
-!!UN&(location)=3:P149/i^mithrilDisplay_on^; [revert mithril display option]
-
-
-**** Mithril Display button
-
+; Display Mithril by pressing the 5th GEM button
 !?FU(OnAdventureMapLeftMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_flags^=(NO_MOUSE_FLAGS);
+  !!if&i^mouse_item^=i^mithrilB_Button_ID^;
+    !!FU(WogScriptsModCheck):P;
 
-  *!UN:P36/?y1; [Check if Mithril script is enabled: y1]
-*!CM:S=13; *!FU&-1:E; *!CM:F=0; *!FU&-1:E;
-!!if&i^mouse_item^=i^mithrilB_Button_ID^;
+    !!if&1;
+      !!UN:P149/?(mithrilDispOn:y); [Check if Mithril Display is enabled: y2]
 
-  !!FU(WogScriptsModCheck):P;
-  !!if&-1;
-    !!SN:W^gem_CheckGameLang^/?y7 T^%y7_gem_map.button5click^/?z1;
-    !!IF:M^%z1^; 
-    !!FU:E;
+      !!if&(mithrilDispOn);
+        !!FU(gem_DisplayMithril)&999:P;
+      !!el;
+        !!SN:T^%i(gem_CheckGameLang)_gem_map.button6click^/?(noMithrilDisp:z);
+        !!IF:M^%(noMithrilDisp)^; 
+      !!en;
+    !!el;
+      !!SN:T^%i(gem_CheckGameLang)_gem_map.button5click^/?(noWogSctipts:z);
+      !!IF:M^%(noWogSctipts)^; 
+    !!en;
   !!en;
-  !!UN:P149/?y2; [Check if Mithril Display is enabled: y2]
 
-  !!if&y2<>1;
-    !!SN:W^gem_CheckGameLang^/?y8 T^%y8_gem_map.button6click^/?z2;
-    !!IF:M^%z2^; 
-    !!FU:E;
-  !!en;
-  !!FU(gem_DisplayMithrilMessage):P;
-
-!!en;
-
-!?FU(gem_DisplayMithrilMessage);
+!?FU(gem_DisplayMithril);
   !!UN:P36/?y1; [Check if Mithril script is enabled: y1]
-  *!UN:P149/?y2; [Check if Mithril Display is enabled: y2]
-  !!OW:C?y4; [Store number of current player in y-4]
-  !!OW:Ry4/7/?y-5; [Store current player's Mithril in y-5]
+  !!OW:C?y4; [Store number of current player in y4]
+  !!OW:Ry4/(RES_MITHRIL)/?y-5; [Store current player's Mithril in y-5]
 
-  !!VRz-1&y-5<>1:Sz136004; [Set "bars" unless Mithril total is 1: z-1]
-  !!VRz-1&y-5=1:Sz136005; [Set "bar" if Mithril total is 1: z-1]
-
-  !!OW:Gy4/?y6; [Check if current player is the one who's turn it is: y-6]
-  !!FU&y6=0:E; [Exit if it's not this player's turn]
+  !!if&y-5=1;
+    !!VRz-1:Sz136005; [Set "bar" if Mithril total is 1: z-1]
+  !!el;
+    !!VRz-1:Sz136004; [Set "bars" unless Mithril total is 1: z-1]
+  !!en;
 
   [Display current player's Mithril amount in a text box]
-  !!IF&y1<>1:Q1/7/y-5/1/z136059; [Just display total Mithril if Mithril script is disabled]
-  !!IF&y1=1:Q2/7/y-5/2/z136006; [Display Mithril and offer to display price list: Flag 2]
+  !!if&y1;
+    !!IF:Q(MSG_TYPE_QUESTION)/(PIC_TYPE_RES_MITHRIL)/y-5/2/z136006; [Display Mithril and offer to display price list: Flag 2]
+  !!el;
+    !!IF:Q(MSG_TYPE_MES)/(PIC_TYPE_RES_MITHRIL)/y-5/1/z136059; [Just display total Mithril if Mithril script is disabled]
+  !!en;
 
   !!VRz-2:S^mithril_price_list.bmp^; [Store name of price list file in z-2]
   !!VRz-3:S^..\data\s\pic\%Z-2^;  [File and path name for Mithril Price List gif: z-3]
   !!UN:J8/2/-3; [Check if Mithril Price List image is there: Flag 1=True if yes]
-  !!if&y1=1;
-    !!IF&2/1:B1/-3/0; [Set up dialogue box for displaying Mithril price list]
-    !!IF&2/1:P1; [Display Mithril price list]
-    !!VRz-4&2/-1:Sz136087; [Set alternate dialogue text for standard dialogue if image file missing]
-    !!VRz-5&2/-1:Sz136088; [Set 2nd part of alternate dialogue text: z-5]
-    !!VRz-6&2/-1:Sz136089; [Set 3rd part of alternate dialogue text: z-5]
-    !!IF&2/-1:Q1/7/0/1^%Z-4%Z-5%Z-6^; [Display standard dialogue price list if image file missing]
+
+  !!if&y1/2;
+    !!if&1;
+      !!IF:B1/-3/0; [Set up dialogue box for displaying Mithril price list]
+      !!IF:P1; [Display Mithril price list]
+    !!el;
+      !!VRz-4:Sz136087; [Set alternate dialogue text for standard dialogue if image file missing]
+      !!VRz-5:Sz136088; [Set 2nd part of alternate dialogue text: z-5]
+      !!VRz-6:Sz136089; [Set 3rd part of alternate dialogue text: z-5]
+      !!IF:Q(MSG_TYPE_MES)/(PIC_TYPE_RES_MITHRIL)/0/1^%Z-4%Z-5%Z-6^; [Display standard dialogue price list if image file missing]
+    !!en;
   !!en;
 
 **** Message Disabling button
