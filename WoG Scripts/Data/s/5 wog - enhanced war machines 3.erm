@@ -7,7 +7,7 @@ ZVSE2
 ** Updated: Nov 2021 by Archer30
 ** Updated: Dec 2021 by daemon_n
 
-!BY daemon_n:
+!BY @daemon_n:
 *Since 05.12.2021 ballista is w81, ammo_cart is w82, first aid tent is w83!
 
 
@@ -135,22 +135,23 @@ ZVSE2
     //restore original Names for The Artifacts
     !!SN:H^-art^/(ART_BALLISTA)/0/^^ H^-art^/(ART_AMMO_CART)/0/^^ H^-art^/(ART_FIRST_AID_TENT)/0/^^;
 
-  !!en;
 
-!?FU(OnAdventureMapRightMouseClick)&v847=1/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/999;                 [when we right-click on war machine factory]
-  !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?j;                                                      [get type of clicked object]
+!?FU(OnAdventureMapRightMouseClick)&v847=1/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/999;           [when we right-click on war machine factory]
+  !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?j;                                                [get type of clicked object]
   !!FU&j<>(OBJ_WAR_MACHINE_FACTORY):E;
+  !!VRv2:Ci^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^;                                                [save coords to v2/v3/v4]
 
-  !!POi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:H?k O?o;                                                  [get H value of war machine factory and owner]
-  !!IF:V2/1;                                                                                              [assume the war machine factory is owned by current or an allied player]
+  !!SN:O?v2/?v3/?v4;
+  !!POv2/v3/v4:H?k O?o;                                                                             [get H value of war machine factory and owner]
+  !!IF:V2/1;                                                                                        [assume the war machine factory is owned by current or an allied player]
 
-  !!IF&o<0:V2/0;                                                                                          [owned by no color]
-  !!OW:To/?q Tp/?r;                                                                                       [get teams]
-  !!IF&q<>r:V2/0;                                                                                         [owner is not allied]
+  !!IF&o<0:V2/0;                                                                                    [owned by no color]
+  !!OW:To/?q Tp/?r;                                                                                 [get teams]
+  !!IF&q<>r:V2/0;                                                                                   [owner is not allied]
 
   !!if&2;
     !!CM:R0;
-    !!FU(WOG_73_Func_GetMachinesAmountInFactory):Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/?(ballistas:y)/?(ammos:y)/?(tents:y);
+    !!FU(WOG_73_Func_GetMachinesAmountInFactory):Pv2/v3/v4/?(ballistas:y)/?(ammos:y)/?(tents:y);
 
     //set New  Names for The Artifacts
     !!SN:H^art^/(ART_BALLISTA)/0/^%(ballistas)^ H^art^/(ART_AMMO_CART)/0/^%(ammos)^ H^art^/(ART_FIRST_AID_TENT)/0/^%(tents)^;
@@ -193,15 +194,10 @@ ZVSE2
   !!HE-1:P?(x:y)/?(y:y)/?(z:y) N?(heroId:y) O?(owner:y);           [hero number in vi]
 
   !!if&999;                                                        [only for Human and His turn]
-    !!OB(x)/(y)/(z):S;                                             [disable standard reaction]
-    !!PO(x)/(y)/(z):O(owner);                                            [update owner]
-    !!VR(x):+1;
-    !!PO(x)/(y)/(z):O(owner);
-
-    !!VR(x):-1;                                                    [restore vf]
+    !!OB(CURRENT_OBJ):S;                                    [disable standard reaction]
+    !!PO(CURRENT_OBJ):O(owner);                                            [update owner]
     *!FU(WOG_73_Func_DismissOriginalBoughtMachines):P(heroId);     [dismiss original war machines]
     !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);             [correct w vars if needed]
-    !!PO(x)/(y)/(z):H?(wmAmount:y);
     !!FU(WOG_73_Msg_BuyMachinesInFactory):P(x)/(y)/(z)/(heroId); [call buy machines DLG]
 
   !!en;
@@ -238,10 +234,8 @@ ZVSE2
   !!en;
 
 !$OB(OBJ_WAR_MACHINE_FACTORY)&-(ERM_FLAG_IS_HUMAN)/v847=1;         [For AI only]
-  !!HE-1:P?(x:y)/?(y:y)/?(z:y) N?(heroId:y) O?(owner:y);           [hero number in vi]
-  !!PO(x)/(y)/(z):O(owner);                                            [update owner]
-  !!VR(x):+1;
-  !!PO(x)/(y)/(z):O(owner);
+  !!HE-1:N?(heroId:y) O?(owner:y);           [hero number in vi]
+  !!PO(CURRENT_OBJ):O(owner);                                            [update owner]
   !!FU(WOG_73_Func_DismissOriginalBoughtMachines):P(heroId);       [dismiss original war machines]
 
 
@@ -646,10 +640,9 @@ ZVSE2
 
   !!el;
     //war machine factory
-    !!re i/0/1;
-      !!VRv2:+i;
-      !!POv2/v3/v4:H42 O(NO_OWNER);                            [refresh H variable to 42 if war machine factory and set no owner]
-    !!en;
+
+    !!POv2/v3/v4:H42 O(NO_OWNER);                            [refresh H variable to 42 if war machine factory and set no owner]
+
   !!en;
 
 
@@ -1116,6 +1109,8 @@ F784 = battle is in town//
         !!en;
       !!UN|i^mouse_battleHex^=(stackPos)/i^mouse_battleHex^=(offset):R5/2/17;    [change cursor]
     !!en;
+  !!el;
+    !!UN:R5/2/0;
   !!en;
 
 !?FU(OnBattleScreenMouseClick)&v847=1/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);       [trigger for click on first aid tent, player can heal theFunc tent this way]
