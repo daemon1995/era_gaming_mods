@@ -2,7 +2,7 @@
 # Change Log
 All notable changes to Era Assembly, including [Archer's mods for launcher](https://github.com/Archer30/Era-Launcher-Mods)
 
-## [Unreleased] - yyyy-mm-dd
+## [Unreleased]
 
 ### Added
 - Rewrite Summon Elementals with full ReMagic/ACM support. Now you can summon elementals by left-clicking on spell book from adv map. 
