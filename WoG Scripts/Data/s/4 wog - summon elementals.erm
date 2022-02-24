@@ -6,7 +6,6 @@ ZVSE2
 
 ; Summon elementals with 10 times the usual spell cost on adventure map, once every turn for every hero
 ; AI will summon with the same costs if they learned an expert summon spell
-; The terrain overlay bonus (or penalty from cursed land) is not coded yet for AI
 
 
 // Initialization. Now all the summoning spells are also considered as adv spells
@@ -74,28 +73,7 @@ ZVSE2
 
 ; Get the creature type/quantity of summoning
 !!VR(mon:y):Si^wog_74_mon_%(spell)^;
-
-!!if&(spell)=(SPELL_FIRE_ELEMENTAL);
-  !!VR(ss:y):S(SKILL_FIRE_MAGIC);
-  !!VR(favourTerrain:y):S226;           [Fiery Fields]
-!!el&(spell)=(SPELL_AIR_ELEMENTAL);
-  !!VR(ss):S(SKILL_AIR_MAGIC);
-  !!VR(favourTerrain):S229;             [Magic Clouds]
-!!el&(spell)=(SPELL_WATER_ELEMENTAL);
-  !!VR(ss):S(SKILL_WATER_MAGIC);
-  !!VR(favourTerrain):S228;             [Lucid Pools]
-!!el&(spell)=(SPELL_EARTH_ELEMENTAL);
-  !!VR(ss):S(SKILL_EARTH_MAGIC);
-  !!VR(favourTerrain):S231;             [Rockland]
-!!en;
-
-; Set the level of magic ss depending on the terrain overlay the hero is standing on
-!!if|(terrain)=(favourTerrain)/(terrain)=229; [Magic Plains]
-  !!VR(level:y):S(SKILL_EXPERT);
-!!el;
-  !!HE(hero):S(ss)/?(level);
-!!en;
-
+!!FU(WOG_74_GetRealSpellLevel):P(hero)/(spell)/(terrain)/?(level:y);
 !!FU(WOG_74_GetSummonQty):P(hero)/(spell)/(level)/?(qty:y);
 
 ; Add creature to the army
@@ -113,6 +91,30 @@ ZVSE2
 ; Mark the summoning spell as cast
 !!VRi^wog_74_%(hero)_cast^:S(TRUE);
 
+!?FU(WOG_74_GetRealSpellLevel);
+!#VA(hero:x) (spell:x) (terrain:x) (level:x);
+
+!!if&(spell)=(SPELL_FIRE_ELEMENTAL);
+  !!VR(ss:y):S(SKILL_FIRE_MAGIC);
+  !!VR(favourTerrain:y):S226;           [Fiery Fields]
+!!el&(spell)=(SPELL_AIR_ELEMENTAL);
+  !!VR(ss):S(SKILL_AIR_MAGIC);
+  !!VR(favourTerrain):S229;             [Magic Clouds]
+!!el&(spell)=(SPELL_WATER_ELEMENTAL);
+  !!VR(ss):S(SKILL_WATER_MAGIC);
+  !!VR(favourTerrain):S228;             [Lucid Pools]
+!!el&(spell)=(SPELL_EARTH_ELEMENTAL);
+  !!VR(ss):S(SKILL_EARTH_MAGIC);
+  !!VR(favourTerrain):S231;             [Rockland]
+!!en;
+
+; Set the level of magic ss depending on the terrain overlay the hero is standing on
+!!if|(terrain)=(favourTerrain)/(terrain)=229; [Magic Plains]
+  !!VR(level):S(SKILL_EXPERT);
+!!el;
+  !!HE(hero):S(ss)/?(level);
+!!en;
+
 // Function for getting the quantity of creature summon from a summon spell
 // Customise here if you wish
 !?FU(WOG_74_GetSummonQty);
@@ -127,6 +129,10 @@ ZVSE2
 // Summon elementals for AI heroes
 !?FU(OnEveryDay)&i^timerDay^>1/i^timerOnce^/i^wog_74_enabled^;
 !!re (hero:y)/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HE(hero):P?(x:y)/?(y:y)/?(z:y);
+  !!TR(x)/(y)/(z):G?(terrain:y);
+  !!co&(terrain)=21;                    [Cursed Ground]
+
   !!HE(hero):O?(owner:y);
   !!OW:I(owner)/?(isAi:y);
 
@@ -140,7 +146,7 @@ ZVSE2
     !!HE(hero):I?(mana:y);
 
     !!re (spell:y)/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL);
-      !!FU(WOG_74_CheckIfAbleToSummon):P(hero)/(mana)/(spell)/?(canCast:y);
+      !!FU(WOG_74_CheckIfAbleToSummon):P(hero)/(terrain)/(mana)/(spell)/?(canCast:y);
 
       !!if&(canCast);
         !!VR(castFire)&(spell)=(SPELL_FIRE_ELEMENTAL):S(TRUE);
@@ -180,23 +186,19 @@ ZVSE2
       !!VR(random:y):R0/0/(maxIndex);
       !!SN:M(availSpells)/(random)/?(spell);
 
-      !!FU(WOG_74_SummonElementals):P(hero)/(spell)/(TRUE);
+      !!FU(WOG_74_SummonElementals):P(hero)/(spell)/(terrain)/(TRUE);
     !!en;
   !!en;
 !!en;
 
 !?FU(WOG_74_CheckIfAbleToSummon);
-!#VA(hero:x) (mana:x) (spell:x) (result:x);
+!#VA(hero:x) (terrain:x) (mana:x) (spell:x) (result:x);
 
 !!VR(result):S(FALSE);
 !!HE(hero):M(spell)/?(spellLearned:y);
 
 !!if&(spellLearned);
-  !!VR(ss:y)&(spell)=(SPELL_FIRE_ELEMENTAL):S(SKILL_FIRE_MAGIC);
-  !!VR(ss)&(spell)=(SPELL_AIR_ELEMENTAL):S(SKILL_AIR_MAGIC);
-  !!VR(ss)&(spell)=(SPELL_WATER_ELEMENTAL):S(SKILL_WATER_MAGIC);
-  !!VR(ss)&(spell)=(SPELL_EARTH_ELEMENTAL):S(SKILL_EARTH_MAGIC);
-  !!HE(hero):S(ss)/?(level:y);
+  !!FU(WOG_74_GetRealSpellLevel):P(hero)/(spell)/(terrain)/?(level:y);
 
   ; Summon elementals only with expert magic for AI
   !!if&(level)>=(SKILL_EXPERT);
