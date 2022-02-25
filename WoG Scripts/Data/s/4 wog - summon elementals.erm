@@ -6,6 +6,7 @@ ZVSE2
 
 ; Summon elementals with 10 times the usual spell cost on adventure map, once every turn for every hero
 ; AI will summon with the same costs if they learned an expert summon spell
+; w94 - cast Summon Elementals this turn
 
 
 // Initialization. Now all the summoning spells are also considered as adv spells
@@ -26,7 +27,8 @@ ZVSE2
 // Reset all the cast flag for all heroes
 !?FU(OnEveryDay)&i^timerDay^>1/i^timerOnce^/i^wog_74_enabled^;
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!VRi^wog_74_%i_cast^:S(FALSE);
+  !!IF:Wi;
+  !!VRw84:S(FALSE);
 !!en;
 
 // Multiple spell points costs for summoning spells
@@ -57,12 +59,14 @@ ZVSE2
 !!VR(spell:y):Sv997;
 
 !!if&(spell)>=(SPELL_FIRE_ELEMENTAL)/(spell)<=(SPELL_AIR_ELEMENTAL);
-  !!if&i^wog_74_%(hero)_cast^;
+  !!IF:W(hero);
+  ; Pop up msg if the hero has cast Summon Elementals this turn
+  !!if&w84;
     !!FU(WOG_GetGeneralText):P126/?(string:z);
     !!IF:M^%(string)^;
+  ; Summon Elementals for the hero if hasn't cast
   !!el;
     !!FU(WOG_74_SummonElementals):P(hero)/(spell)/(terrain)/(FALSE);
-    ; Play sound and refresh
     !!SN:P^SUMNELM^;
     !!SN:D;
   !!en;
@@ -89,7 +93,8 @@ ZVSE2
 !!VR(cost)&(isAi):*10;                  [10 times the cost for AI as the cost for them hasn't been changed upon opening spell book]
 !!HE(hero):Id-(cost);
 ; Mark the summoning spell as cast
-!!VRi^wog_74_%(hero)_cast^:S(TRUE);
+!!IF:W(hero);
+!!VRw84:S(TRUE);
 
 !?FU(WOG_74_GetRealSpellLevel);
 !#VA(hero:x) (spell:x) (terrain:x) (level:x);
