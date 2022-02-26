@@ -2,7 +2,7 @@ ZVSE2
 
 Mithril Enhancements Script v1.4 by Anders Jonsson
 Updated September 14, 2004
-Updated Oct 2021 by Archer30
+Updated Feb 2022 by Archer30 and daemon_n
 
 Minor updates by Timothy Pulver and QQD
 Mithril Display Scripts by Timothy Pulver
@@ -211,7 +211,7 @@ entrance squares. Do not use this with another script that might do the same
   !!en;
 
 *** Adventure map Objects ***
-!?CM&999;
+!?FU(OnAdventureMapRightMouseClick)&999;
     !!UN:P36/?v1;              (Check if Mithril Enhancements script is enabled: v1)
     *!VRv1&-999:S0;            (check if the current player is in front of the PC that clicked)
     !!FU&v1=0:E;               (If script is disabled or not player's turn, exit trigger)
@@ -280,62 +280,57 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Upgrade Dwelling ***
 !?FU8170;
-!!VRy1:S-1;
 !!DWv4/v5/v6:O?y1;       (check who owns dwelling)
-!!FU&y1=-1:E; (abort if unowned)
+!!FU&y1=(NO_OWNER):E; (abort if unowned)
+
 !!OW:Ty1/?y21;       (Check team)
 !!OW:C?y2;           (check current player)
 !!OW:Ty2/?y22;       (Check team)
 !!FU&y21<>y22:E; (abort if not same)
-!!DWv4/v5/v6:M0/?y2/?y3;
-!!VRy4&y2<111:Sy2;
-!!VRy4&y2<111:%2;
-!!FU&y4=1/y2<111:E; (Divide Monster Number by 2 to see if it's already upgraded, and if so, abort)
-!!VRy6&y2<111:Sy2;
-!!VRy6&y2<111::2;
-!!VRy6&y2<111:+1;
-!!VRy6&y2<111:%7;    (y6 is now monster level)
-!!VRy6&y2<111/y6<4/y6>0:S1;
-!!VRy6&y2<111/y6>3:S2;
-!!VRy6&y2<111/y6=0:S3;  (y6 is now cost)
 
-!!VRy6&y2=118:S1;
-!!VRy6&y2=112:S1;
-!!VRy6&y2=113:S2;
-!!VRy6&y2=114:S2;
-!!VRy6&y2=115:S1;
-!!VRy6&y2=120:S2;
-!!VRy6&y2=130:S3;
-!!VRy8:S-1;
-!!VRy8&y2=118:S119;
-!!VRy8&y2=112:S127;
-!!VRy8&y2=113:S125;
-!!VRy8&y2=114:S129;
-!!VRy8&y2=115:S123;
-!!VRy8&y2=120:S121;
-!!VRy8&y2=130:S131;          (Special table for Conflux)
+; Check for upgrade of the creature. Don't allow to upgrade if no upgrade or upgrading to Level 8 (as L8 have their own dwellings)
+!!DWv4/v5/v6:M0/?y2/d;
+!!FU(GetUpgradedMonster):Py2/?y8;
+!!FU&y8=(NO_MON):E;
+!!FU&y8>=(MON_SUPREME_ARCHANGEL)/y8<=(MON_SACRED_PHOENIX):E;
 
-!!FU|y2=116/y2=117/y2>130:E; (abort if non-upgradeable creature)
-!!OW:R-1/7/?y7;              (get amount of mithril)
-!!FU&y7<y6:E;                (check if has enough mithril)
-!!VRy8&y2<111:Sy2;
-!!VRy8&y2<111:+1;
-!!FU&y8=-1:E;                (abort if no creature selected)
-!!UN:N3/z1/y8/1;             (Get new creature name- plural)
-!!UN:N3/z2/y2/1;             (Get old creature name- plural)
-!!UN:N3/z3/y2/0;             (Get old creature name- singular)
-!!CM:R0;                     (disable standard popup)
+; Check if the dwelling has been upgraded at least once
+!!VRy31:S(FALSE);
+!!FU(GetDegradedMonCandidates):Py2/?y32;
+!!SN:My32/?y33;
+!!VRy31&y33>0:S(TRUE);
 
-!!IF:V1/0;                       (To be sure)
-!!IF&y6>1:Q1/7/y6/2/z136009;
+!!MA:Ly8/?y30;
 
-!!IF&y6=1:Q1/7/y6/2/z136010;
+!!if&y30<=3;
+  !!VRy6:S1;                            [y6 - cost of mithril]
+!!el&y30>3/y30<=5;
+  !!VRy6:S2;
+!!el;
+  !!VRy6:S3;
+!!en;
+
+; Double the price if the dwelling has been upgraded
+!!VRy6&y31:*2;
+
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y7;[get amount of mithril]
+!!FU&y7<y6:E;                           [check if has enough mithril]
+
+!!SN:H^monname^/y8/1/?z1;               [Get new creature name- plural]
+!!SN:H^monname^/y2/1/?z2;               [Get old creature name- plural]
+!!SN:H^monname^/y2/0/?z3;               [Get old creature name- singular]
+!!CM:R0;                                [disable standard popup]
+
+!!if&y6>1;
+  !!IF:Q1/7/y6/2/z136009;               [plural]
+!!el;
+  !!IF&y6=1:Q1/7/y6/2/z136010;          [singular]
+!!en;
 
 !!FU&-1:E;
-!!VRy6:*-1;
-!!OW:R-1/7/dy6;               (take Mithril)
-!!DWv4/v5/v6&y2<111:M0/d1/y3; (Upgrade dwelling if non-conflux)
-!!DWv4/v5/v6&y2>110:M0/y8/y3; (Upgrade dwelling if conflux)
+
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-y6;               (take Mithril)
+!!DWv4/v5/v6:M0/y8/d; (Upgrade dwelling if conflux)
 
 !?FU8171;
 !!VRy1:S-1;
