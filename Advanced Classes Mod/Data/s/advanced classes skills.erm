@@ -1890,10 +1890,12 @@ x1 - hero id, x2 - master rank, x3 - GM rank, x4 - skill id
 !?FU(OnHeroGainLevel);
 !!HE(CURRENT_HERO):N?(hero:y);
 !!FU(acm_AdjustLevelUpPrimarySkills):P(hero); [Adjust Primary Skills for different classes]
-!!FU(Set_SS_Skill_Name_and_Text)&(ERM_FLAG_IS_HUMAN):P;                                    [Reset Skill Descriptions to show correct name in level up Screen]
+!!FU(Set_SS_Skill_Name_and_Text)&(ERM_FLAG_IS_HUMAN):P; [Reset Skill Descriptions to show correct name in level up Screen]
 
 ; Set new skill descriptions to display in level-up dialog
 !!re i/0/(SEC_SKILL_LAST);
+  !!HE(hero):Si/?y50;                   [get hero skill level]
+  !!SN:W^ACM_SSkill_%Vi^/y50;           [Save skill level in variable]
   !!FU(H3_Mod_Skill_Loop10):P(hero)/i;
 !!en;
 
@@ -2049,11 +2051,11 @@ Fixes the Primary skill level up for Mage Class after level 10. Now they keep hi
 !!VRy3:Sy2 %2;
 !!if&y3=1;                             [If Mage class]
   !!HL:S?y1/?y50/?y50;                  [Get Primary Skill in y1 and dont change the Secondary Skills]
-  !!VRy5:S0T2;                          [Coin Flip 33% to change]
-  !!VRy6:S2T1;                          [Flip for Spell Power or Knowledge]
+  !!VRy5:S0R2;                          [Coin Flip 33% to change]
+  !!VRy6:S2R1;                          [Flip for Spell Power or Knowledge]
   !!VRy1&y1=0/y5=1:Sy6;                 [If Attack change with 50% chance to Spell Power or Knowledge]
   !!VRy1&y1=1/y5=1:Sy6;                 [If Defense change with 50% chance to Spell Power or Knowledge]
-  !!VRy10:S0T3;
+  !!VRy10:S0R3;
   !!VRy1&y6=3/y10=3:S2;                 [If Knowledge was rolled there is a 25% chance that Knowledge gets converted to Spell Power]
   !!HL:Sy1/?y50/?y50;                   [Get Primary Skill in y1 and dont change the Secondary Skills]
 !!en;
@@ -2386,9 +2388,11 @@ Close Dialouge
 
 --------------------------------------------------------------------------------
 ************************* HERO SCREEN CLICK DIALOGUE ***************
-!?CM2;                                  [hero screen click]
-!!CM:F?y1 I?y2 S?y3;
-!!if&y1=512/y2=45/y3=14;               [When clicked on Hero Portrait]
+!?FU(OnKeyPressed_HeroScreen);
+!!FU(gem_DlgReload):P^Her_Scre.txt^;
+
+!?FU(OnHeroScreenMouseClick)&i^mouse_flags^=(MOUSE_FLAG_RMB)/i^mouse_item^=45/i^mouse_action^=(MOUSE_RMB_PRESSED);
+
 
 !!HE-1:N?y1;
 !!FU(acm_RecalcClassPoints):Py1/?y10/?y20/?y30; [Return value for class points from current hero]
@@ -2405,6 +2409,8 @@ Close Dialouge
 !!CM:R0;
 
 * PREPARE ADVANCED LEVELS DIALOGUE
+!!UN:C7505216/1/2;                    [before DLG ini - remove shadow]
+
 !!DL667:N^Her_Scre.txt^;
 !!HEy1:B0/?z-1;                         [name of hero]
 !!HEy1:Ed/?y5;                          [level of hero]
@@ -2435,38 +2441,8 @@ Close Dialouge
 
 !!SN:T^AC_Misc.HS_Level^/?z-2 Iz-2/?z-2;
 
-!!DO(Set_pcx_small)/1/1/1:P1/y3;        [loop through all heroes and set the pcx portrait text [LARGE portrait]
-!!DO(Set_pcx_small)/1/8/1:P2/-1;        [loop through all heroes and set the pcx portrait text [SMALL portrait]
 
-!!HEy1:F?y9/?y11/?y12/?y13;             [hero primary skills?]
-!!VRz6:S^%Y9^;                          [PS text string]
-!!VRz7:S^%Y11^;                         [PS text string]
-!!VRz8:S^%Y12^;                         [PS text string]
-!!VRz9:S^%Y13^;                         [PS text string]
 
-* set units defs & textfields for creature numbers
-!!DO(Set_defs1)/0/6/1:P;
-
-*set textboxes in dialogue
-!!DL667:A1/3/z-1/1;                     [set hero name text box]
-!!DL667:A2/3/z-2/1;                     [set level text box]
-
-!!DL667:A54/3/z6/1;                     [set attack primary skills text box]
-!!DL667:A4/3/z7/1;                      [set defense primary skills text box]
-!!DL667:A55/3/z8/1;                     [set spell power primary skills text box]
-!!DL667:A57/3/z9/1;                     [set knowledge primary skills text box]
-
-!!SN:T^AC_Misc.Attack1^/?z2;
-!!SN:T^AC_Misc.Defense^/?z3;
-!!SN:T^AC_Misc.Power^/?z4;
-!!SN:T^AC_Misc.Knowledge^/?z5;
-
-!!DL667:A88/3/z2/1;                     [set attack primary skills text box]
-!!DL667:A43/3/z3/1;                     [set defense primary skills text box]
-!!DL667:A44/3/z4/1;                     [set spell power primary skills text box]
-!!DL667:A49/3/z5/1;                     [set knowledge primary skills text box]
-
-!!DL667:A24/4/y14/1;                    [set flag def cadre according to player color]
 
 !!VRy70:S0;
 *Decide which Class has highest points*
@@ -2517,243 +2493,243 @@ Close Dialouge
 !!SN:W^Classic_Skin_Mod^/?y50;          [Check if Skin Option activated]
 
 !!if&y70=1/y10>=y92/y10<y93;           [For Master Warrior]
-!!VRy95:S1;                             [Set to Master Training I 1]
-!!VRy96:S36;                            [Set to Critical Hit I 36]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!DL667:A50/11/z-7/1;                   [Show picture number 50]
-!!DL667:A51/11/z-8/1;                   [Show picture number 51]
-!!SN:W^Master_Picture^/?y25;
-!!VRz-3:S^MWarrior%Y25%Z-4.pcx^;        [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189586;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.M_Warrior_Skill_1^/?z20;
-  !!SN:T^AC_Misc.M_Warrior_Skill_2^/?z21;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-!!en;
+  !!VRy95:S1;                             [Set to Master Training I 1]
+  !!VRy96:S36;                            [Set to Critical Hit I 36]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!DL667:A50/11/z-7/1;                   [Show picture number 50]
+  !!DL667:A51/11/z-8/1;                   [Show picture number 51]
+  !!SN:W^Master_Picture^/?y25;
+  !!VRz-3:S^MWarrior%Y25%Z-4.pcx^;        [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189586;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.M_Warrior_Skill_1^/?z20;
+    !!SN:T^AC_Misc.M_Warrior_Skill_2^/?z21;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+  !!en;
 !!en;
 
 !!if&y70=1/y10>=y93;                   [For Grandmaster Warrior]
-!!VRy95:S5;                             [Set to Master Training II 1 (Elite Soldier)]
-!!VRy96:S80;                            [Set to Critical Hit II 80]
-!!VRy97:S44;                            [Set to Endure Pain 44]
-!!VRy98:S52;                            [Set to Commanders 52]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
-!!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!DL667:A52/11/z-9/1;
-!!DL667:A53/11/z-10/1;
-!!SN:W^Grandmaster_Picture^/?y25;
-!!VRz-3:S^GMWarrior%Y25%Z-4.pcx^;       [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189587;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.GM_Warrior_Skill_1^/?z20;
-  !!SN:T^AC_Misc.GM_Warrior_Skill_2^/?z21;
-  !!SN:T^AC_Misc.GM_Warrior_Skill_3^/?z22;
-  !!SN:T^AC_Misc.GM_Warrior_Skill_4^/?z23;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-  !!DL667:A62/3/z22/1;
-  !!DL667:A63/3/z23/1;
-!!en;
+  !!VRy95:S5;                             [Set to Master Training II 1 (Elite Soldier)]
+  !!VRy96:S80;                            [Set to Critical Hit II 80]
+  !!VRy97:S44;                            [Set to Endure Pain 44]
+  !!VRy98:S52;                            [Set to Commanders 52]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
+  !!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!DL667:A52/11/z-9/1;
+  !!DL667:A53/11/z-10/1;
+  !!SN:W^Grandmaster_Picture^/?y25;
+  !!VRz-3:S^GMWarrior%Y25%Z-4.pcx^;       [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189587;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.GM_Warrior_Skill_1^/?z20;
+    !!SN:T^AC_Misc.GM_Warrior_Skill_2^/?z21;
+    !!SN:T^AC_Misc.GM_Warrior_Skill_3^/?z22;
+    !!SN:T^AC_Misc.GM_Warrior_Skill_4^/?z23;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+    !!DL667:A62/3/z22/1;
+    !!DL667:A63/3/z23/1;
+  !!en;
 !!en;
 
 !!if&y70=2/y20>=y92/y20<y93;           [For Master Mage]
-!!VRy95:S53;                            [Set to Master Power 53 (Extra Cast I)]
-!!VRy96:S70;                            [Set to Elemental Resistance 70]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!SN:W^Master_Picture^/?y25;
-!!VRz-3:S^MMage%Y25%Z-4.pcx^;           [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189589;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.M_Mage_Skill_1^/?z20;
-  !!SN:T^AC_Misc.M_Mage_Skill_2^/?z21;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-!!en;
+  !!VRy95:S53;                            [Set to Master Power 53 (Extra Cast I)]
+  !!VRy96:S70;                            [Set to Elemental Resistance 70]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!SN:W^Master_Picture^/?y25;
+  !!VRz-3:S^MMage%Y25%Z-4.pcx^;           [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189589;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.M_Mage_Skill_1^/?z20;
+    !!SN:T^AC_Misc.M_Mage_Skill_2^/?z21;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+  !!en;
 !!en;
 
 !!if&y70=2/y20>=y93;                   [For GrandMaster Mage]
-!!VRy95:S56;                            [Set to Spell Braiding 53 (Extra Cast II)]
-!!VRy96:S70;                            [Set to Elemental Resistance 70]
-!!VRy97:S47;                            [Set to Arkane Prophet 47]
-!!VRy98:S55;                            [Set to Channeling 24]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
-!!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!DL667:A52/11/z-9/1;
-!!DL667:A53/11/z-10/1;
-!!SN:W^Grandmaster_Picture^/?y25;
-!!VRz-3:S^GMMage%Y25%Z-4.pcx^;          [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189590;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.GM_Mage_Skill_1^/?z20;
-  !!SN:T^AC_Misc.GM_Mage_Skill_2^/?z21;
-  !!SN:T^AC_Misc.GM_Mage_Skill_3^/?z22;
-  !!SN:T^AC_Misc.GM_Mage_Skill_4^/?z23;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-  !!DL667:A62/3/z22/1;
-  !!DL667:A63/3/z23/1;
-!!en;
+  !!VRy95:S56;                            [Set to Spell Braiding 53 (Extra Cast II)]
+  !!VRy96:S70;                            [Set to Elemental Resistance 70]
+  !!VRy97:S47;                            [Set to Arkane Prophet 47]
+  !!VRy98:S55;                            [Set to Channeling 24]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
+  !!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!DL667:A52/11/z-9/1;
+  !!DL667:A53/11/z-10/1;
+  !!SN:W^Grandmaster_Picture^/?y25;
+  !!VRz-3:S^GMMage%Y25%Z-4.pcx^;          [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189590;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.GM_Mage_Skill_1^/?z20;
+    !!SN:T^AC_Misc.GM_Mage_Skill_2^/?z21;
+    !!SN:T^AC_Misc.GM_Mage_Skill_3^/?z22;
+    !!SN:T^AC_Misc.GM_Mage_Skill_4^/?z23;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+    !!DL667:A62/3/z22/1;
+    !!DL667:A63/3/z23/1;
+  !!en;
 !!en;
 
 !!if&y70=3/y30>=y92/y30<y93;           [For Master Adventurer]
-!!VRy95:S50;                            [Set to War Path I 50]
-!!VRy96:S58;                            [Set to Horsemaster 58 (Lord)]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!SN:W^Master_Picture^/?y25;
-!!VRz-3:S^MAdv%Y25%Z-4.pcx^;            [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189592;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.M_Adv_Skill_1^/?z20;
-  !!SN:T^AC_Misc.M_Adv_Skill_2^/?z21;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-!!en;
+  !!VRy95:S50;                            [Set to War Path I 50]
+  !!VRy96:S58;                            [Set to Horsemaster 58 (Lord)]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!SN:W^Master_Picture^/?y25;
+  !!VRz-3:S^MAdv%Y25%Z-4.pcx^;            [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189592;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.M_Adv_Skill_1^/?z20;
+    !!SN:T^AC_Misc.M_Adv_Skill_2^/?z21;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+  !!en;
 !!en;
 
 !!if&y70=3/y30>=y93;                   [For GrandMaster Adventurer]
-!!VRy95:S81;                            [Set to War Path II 50]
-!!VRy96:S11;                            [Set to Benediction 2 (Landlord)]
-!!VRy97:S49;                            [Set to Strength in Numbers 49]
-!!VRy98:S43;                            [Set to Coordinated Attack 43]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
-!!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!DL667:A52/11/z-9/1;
-!!DL667:A53/11/z-10/1;
-!!SN:W^Grandmaster_Picture^/?y25;
-!!VRz-3:S^GMAdv%Y25%Z-4.pcx^;           [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189593;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.GM_Adv_Skill_1^/?z20;
-  !!SN:T^AC_Misc.GM_Adv_Skill_2^/?z21;
-  !!SN:T^AC_Misc.GM_Adv_Skill_3^/?z22;
-  !!SN:T^AC_Misc.GM_Adv_Skill_4^/?z23;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-  !!DL667:A62/3/z22/1;
-  !!DL667:A63/3/z23/1;
-!!en;
+  !!VRy95:S81;                            [Set to War Path II 50]
+  !!VRy96:S11;                            [Set to Benediction 2 (Landlord)]
+  !!VRy97:S49;                            [Set to Strength in Numbers 49]
+  !!VRy98:S43;                            [Set to Coordinated Attack 43]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
+  !!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!DL667:A52/11/z-9/1;
+  !!DL667:A53/11/z-10/1;
+  !!SN:W^Grandmaster_Picture^/?y25;
+  !!VRz-3:S^GMAdv%Y25%Z-4.pcx^;           [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189593;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.GM_Adv_Skill_1^/?z20;
+    !!SN:T^AC_Misc.GM_Adv_Skill_2^/?z21;
+    !!SN:T^AC_Misc.GM_Adv_Skill_3^/?z22;
+    !!SN:T^AC_Misc.GM_Adv_Skill_4^/?z23;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+    !!DL667:A62/3/z22/1;
+    !!DL667:A63/3/z23/1;
+  !!en;
 !!en;
 
 !!if&y70=4;                            [For Hunter]
-!!VRy95:S1;                             [Set to Master Training I 1]
-!!VRy96:S50;                            [Set to War Path 50]
-!!VRy97:S100;                           [Set to Rapid Shot 100]
-!!VRy98:S21;                            [Set to Irresistable Magic 21 (Magic Block)]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
-!!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!DL667:A52/11/z-9/1;
-!!DL667:A53/11/z-10/1;
-!!SN:W^Grandmaster_Picture^/?y25;
-!!VRz-3:S^Hunter%Y25%Z-4.pcx^;          [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189596;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.Hunter_Skill_1^/?z20;
-  !!SN:T^AC_Misc.Hunter_Skill_2^/?z21;
-  !!SN:T^AC_Misc.Hunter_Skill_3^/?z22;
-  !!SN:T^AC_Misc.Hunter_Skill_4^/?z23;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-  !!DL667:A62/3/z22/1;
-  !!DL667:A63/3/z23/1;
-!!en;
+  !!VRy95:S1;                             [Set to Master Training I 1]
+  !!VRy96:S50;                            [Set to War Path 50]
+  !!VRy97:S100;                           [Set to Rapid Shot 100]
+  !!VRy98:S21;                            [Set to Irresistable Magic 21 (Magic Block)]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
+  !!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!DL667:A52/11/z-9/1;
+  !!DL667:A53/11/z-10/1;
+  !!SN:W^Grandmaster_Picture^/?y25;
+  !!VRz-3:S^Hunter%Y25%Z-4.pcx^;          [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189596;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.Hunter_Skill_1^/?z20;
+    !!SN:T^AC_Misc.Hunter_Skill_2^/?z21;
+    !!SN:T^AC_Misc.Hunter_Skill_3^/?z22;
+    !!SN:T^AC_Misc.Hunter_Skill_4^/?z23;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+    !!DL667:A62/3/z22/1;
+    !!DL667:A63/3/z23/1;
+  !!en;
 !!en;
 
 !!if&y70=5;                            [For Battlemage]
-!!VRy95:S53;                            [Set to Master Power 53]
-!!VRy96:S1;                             [Set to Master Training 1]
-!!VRy97:S75;                            [Set to Precast 75]
-!!VRy98:S37;                            [Set to Intimidation (Warcry)]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
-!!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]^;
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!DL667:A52/11/z-9/1;
-!!DL667:A53/11/z-10/1;
-!!SN:W^Grandmaster_Picture^/?y25;
-!!VRz-3:S^BM%Y25%Z-4.pcx^;              [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189595;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.Battlemage_Skill_1^/?z20;
-  !!SN:T^AC_Misc.Battlemage_Skill_2^/?z21;
-  !!SN:T^AC_Misc.Battlemage_Skill_3^/?z22;
-  !!SN:T^AC_Misc.Battlemage_Skill_4^/?z23;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-  !!DL667:A62/3/z22/1;
-  !!DL667:A63/3/z23/1;
-!!en;
+  !!VRy95:S53;                            [Set to Master Power 53]
+  !!VRy96:S1;                             [Set to Master Training 1]
+  !!VRy97:S75;                            [Set to Precast 75]
+  !!VRy98:S37;                            [Set to Intimidation (Warcry)]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
+  !!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]^;
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!DL667:A52/11/z-9/1;
+  !!DL667:A53/11/z-10/1;
+  !!SN:W^Grandmaster_Picture^/?y25;
+  !!VRz-3:S^BM%Y25%Z-4.pcx^;              [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189595;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.Battlemage_Skill_1^/?z20;
+    !!SN:T^AC_Misc.Battlemage_Skill_2^/?z21;
+    !!SN:T^AC_Misc.Battlemage_Skill_3^/?z22;
+    !!SN:T^AC_Misc.Battlemage_Skill_4^/?z23;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+    !!DL667:A62/3/z22/1;
+    !!DL667:A63/3/z23/1;
+  !!en;
 !!en;
 
 !!if&y70=6;                            [For Druid]
-!!VRy95:S53;                            [Set to Master Power 53]
-!!VRy96:S63;                            [Set to Herbalism 63 (Natrual Healer)]
-!!VRy97:S68;                            [Set to Ethereal 68 (Stone/Hard Skin)]
-!!VRy98:S61;                            [Set to Concentration 61 (replaces War Path)]
-!!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
-!!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
-!!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
-!!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
-!!DL667:A50/11/z-7/1;
-!!DL667:A51/11/z-8/1;
-!!DL667:A52/11/z-9/1;
-!!DL667:A53/11/z-10/1;
-!!SN:W^Grandmaster_Picture^/?y25;
-!!VRz-3:S^Druid%Y25%Z-4.pcx^;           [level pcx name]
-!!DL667:A19/11/z-3/1;                   [show big picture]
-!!VRz-5:Sz189597;
-!!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
-!!if&y50=0;
-  !!SN:T^AC_Misc.Druid_Skill_1^/?z20;
-  !!SN:T^AC_Misc.Druid_Skill_2^/?z21;
-  !!SN:T^AC_Misc.Druid_Skill_3^/?z22;
-  !!SN:T^AC_Misc.Druid_Skill_4^/?z23;
-  !!DL667:A60/3/z20/1;
-  !!DL667:A61/3/z21/1;
-  !!DL667:A62/3/z22/1;
-  !!DL667:A63/3/z23/1;
-!!en;
+  !!VRy95:S53;                            [Set to Master Power 53]
+  !!VRy96:S63;                            [Set to Herbalism 63 (Natrual Healer)]
+  !!VRy97:S68;                            [Set to Ethereal 68 (Stone/Hard Skin)]
+  !!VRy98:S61;                            [Set to Concentration 61 (replaces War Path)]
+  !!VRz-7:S^skill%Y95.pcx^; !!VRz-7&y50=1:S^skill%Y95C.pcx^; [Set z-7 to correct name]
+  !!VRz-8:S^skill%Y96.pcx^; !!VRz-8&y50=1:S^skill%Y96C.pcx^; [Set z-8 to correct name]
+  !!VRz-9:S^skill%Y97.pcx^; !!VRz-9&y50=1:S^skill%Y97C.pcx^; [Set z-9 to correct name]
+  !!VRz-10:S^skill%Y98.pcx^; !!VRz-10&y50=1:S^skill%Y98C.pcx^; [Set z-10 to correct name]
+  !!DL667:A50/11/z-7/1;
+  !!DL667:A51/11/z-8/1;
+  !!DL667:A52/11/z-9/1;
+  !!DL667:A53/11/z-10/1;
+  !!SN:W^Grandmaster_Picture^/?y25;
+  !!VRz-3:S^Druid%Y25%Z-4.pcx^;           [level pcx name]
+  !!DL667:A19/11/z-3/1;                   [show big picture]
+  !!VRz-5:Sz189597;
+  !!DL667:A3/3/z-5/1;                     [show correct skill text what can be leveled]
+  !!if&y50=0;
+    !!SN:T^AC_Misc.Druid_Skill_1^/?z20;
+    !!SN:T^AC_Misc.Druid_Skill_2^/?z21;
+    !!SN:T^AC_Misc.Druid_Skill_3^/?z22;
+    !!SN:T^AC_Misc.Druid_Skill_4^/?z23;
+    !!DL667:A60/3/z20/1;
+    !!DL667:A61/3/z21/1;
+    !!DL667:A62/3/z22/1;
+    !!DL667:A63/3/z23/1;
+  !!en;
 !!en;
 
 !!VRz-3&y1=152:S^Roland.pcx^;           [Special Heroes get Special Pictures]
@@ -2763,11 +2739,13 @@ Close Dialouge
 
 !!UN:R3/-1;                             [redraw hero screen]
 !!DL667:S;                              [show dialogue]
+!!UN:C7505216/1/18;                 [after dlgClose - restore shadow]
+
 !!UN:R3/-1;                             [redraw hero screen]
-!!en;
+
 
 **** CLICK ON CANCEL BUTTON [FLAG], DO NOTHING
-!?DL&v998=667/v999=32/v1000=13;
+!?DL&v998=667/v999=30722/v1000=13;
 !!DL:C1;                                [end dialogue immedietly]
 
 
@@ -2776,156 +2754,140 @@ Close Dialouge
 ********  SHOW RIGHT CLICK INFORMATION WHEN CLICKED ON SKILL AND CLASS PICTURE *********
 !?DL&v1000=14;
 !!if|v998=667/v998=266;
-!!if|v999=50/v999=51/v999=52/v999=53/v999=19;
-!!VRz-6:S^^;                            [clear]
-* set-up skill text description
-*
-!!HE-1:N?y1;
-!!FU(acm_RecalcClassPoints):Py1/?y10/?y20/?y30; [Return value for class points from current hero]
+  !!if|v999=50/v999=51/v999=52/v999=53/v999=19;
+    !!VRz-6:S^^;                            [clear]
+    * set-up skill text description
+    *
+    !!HE-1:N?y1;
+    !!FU(acm_RecalcClassPoints):Py1/?y10/?y20/?y30; [Return value for class points from current hero]
 
-!!SN:W^Adept_Level_Global_Value^/?y90;
-!!SN:W^Expert_Level_Global_Value^/?y91;
-!!SN:W^Master_Level_Global_Value^/?y92; [Read out global values for Master rank]
-!!SN:W^Grandmaster_Level_Global_Value^/?y93; [Read out global values for GM rank]
+    !!SN:W^Adept_Level_Global_Value^/?y90;
+    !!SN:W^Expert_Level_Global_Value^/?y91;
+    !!SN:W^Master_Level_Global_Value^/?y92; [Read out global values for Master rank]
+    !!SN:W^Grandmaster_Level_Global_Value^/?y93; [Read out global values for GM rank]
 
-!!FU&y10<y92/y20<y92/y30<y92:E;         [If no requirements met Exit Fkt]
+    !!FU&y10<y92/y20<y92/y30<y92:E;         [If no requirements met Exit Fkt]
 
-!!VRy70:S0;
-*Decide which Class has highest points*
-!!VRy70&y10>y20/y10>y30:S1;             [Warrior]
-!!VRy70&y20>y10/y20>y30:S2;             [Mage]
-!!VRy70&y30>y20/y30>y10:S3;             [Adventurer]
-!!VRy70&y20>=y92/y30>=y92:S6;           [Druid]
-!!VRy70&y10>=y92/y20>=y92:S5;           [Battlemage]
-!!VRy70&y10>=y92/y30>=y92:S4;           [Hunter]
+    !!VRy70:S0;
+    *Decide which Class has highest points*
+    !!VRy70&y10>y20/y10>y30:S1;             [Warrior]
+    !!VRy70&y20>y10/y20>y30:S2;             [Mage]
+    !!VRy70&y30>y20/y30>y10:S3;             [Adventurer]
+    !!VRy70&y20>=y92/y30>=y92:S6;           [Druid]
+    !!VRy70&y10>=y92/y20>=y92:S5;           [Battlemage]
+    !!VRy70&y10>=y92/y30>=y92:S4;           [Hunter]
 
-* set advanced level skills and pictures
+  * set advanced level skills and pictures
 
-!!if&y70=1/y10>=y92/y10<y93;           [For Master Warrior]
-!!SN&v999=50:T^AC_Misc.Master_Training^/?z-6; [Get Description of first Bonus]
-!!IF&v999=50:M1/4/^%Z-6^;               [Show Description of first Bonus when RClick]
-!!SN&v999=51:T^AC_Misc.Critical_Hit_1^/?z-6; [Get Description of second Bonus]
-!!IF&v999=51:M1/4/^%Z-6^;               [Show Description of second Bonus when RClick]
-!!SN&v999=19:T^AC_Misc.Warrior_Description^/?z-6; [Get Description of Class]
-!!IF&v999=19:M1/4/^%Z-6^;               [Show Description of Class when RClick]
-!!en;
+    !!if&y70=1/y10>=y92/y10<y93;           [For Master Warrior]
+      !!SN&v999=50:T^AC_Misc.Master_Training^/?z-6; [Get Description of first Bonus]
+      !!IF&v999=50:M1/4/^%Z-6^;               [Show Description of first Bonus when RClick]
+      !!SN&v999=51:T^AC_Misc.Critical_Hit_1^/?z-6; [Get Description of second Bonus]
+      !!IF&v999=51:M1/4/^%Z-6^;               [Show Description of second Bonus when RClick]
+      !!SN&v999=19:T^AC_Misc.Warrior_Description^/?z-6; [Get Description of Class]
+      !!IF&v999=19:M1/4/^%Z-6^;               [Show Description of Class when RClick]
+    !!en;
 
-!!if&y70=1/y10>=y93;                   [For Grandmaster Warrior]
-!!SN&v999=50:T^AC_Misc.Elite_Soldier^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Critical_Hit_2^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=52:T^AC_Misc.Endure_Retaliation^/?z-6;
-!!IF&v999=52:M1/4/^%Z-6^;
-!!SN&v999=53:T^AC_Misc.Commander_1^/?z-6;
-!!IF&v999=53:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Warrior_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=1/y10>=y93;                   [For Grandmaster Warrior]
+      !!SN&v999=50:T^AC_Misc.Elite_Soldier^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Critical_Hit_2^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=52:T^AC_Misc.Endure_Retaliation^/?z-6;
+      !!IF&v999=52:M1/4/^%Z-6^;
+      !!SN&v999=53:T^AC_Misc.Commander_1^/?z-6;
+      !!IF&v999=53:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Warrior_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=2/y20>=y92/y20<y93;           [For Master Mage]
-!!SN&v999=50:T^AC_Misc.Extra_Cast_1^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Elemental_Resistance_1^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Mage_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=2/y20>=y92/y20<y93;           [For Master Mage]
+      !!SN&v999=50:T^AC_Misc.Extra_Cast_1^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Elemental_Resistance_1^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Mage_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=2/y20>=y93;                   [For GrandMaster Mage]
-!!SN&v999=50:T^AC_Misc.Extra_Cast_2^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Elemental_Resistance_1^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=52:T^AC_Misc.Arkane_Prophet^/?z-6;
-!!IF&v999=52:M1/4/^%Z-6^;
-!!SN&v999=53:T^AC_Misc.Channeling^/?z-6;
-!!IF&v999=53:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Mage_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=2/y20>=y93;                   [For GrandMaster Mage]
+      !!SN&v999=50:T^AC_Misc.Extra_Cast_2^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Elemental_Resistance_1^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=52:T^AC_Misc.Arkane_Prophet^/?z-6;
+      !!IF&v999=52:M1/4/^%Z-6^;
+      !!SN&v999=53:T^AC_Misc.Channeling^/?z-6;
+      !!IF&v999=53:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Mage_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=3/y30>=y92/y30<y93;           [For Master Adventurer]
-!!SN&v999=50:T^AC_Misc.Plunder_1^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Horsemaster^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Adventurer_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=3/y30>=y92/y30<y93;           [For Master Adventurer]
+      !!SN&v999=50:T^AC_Misc.Plunder_1^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Horsemaster^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Adventurer_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=3/y30>=y93;                   [For GrandMaster Adventurer]
-!!SN&v999=50:T^AC_Misc.Plunder_2^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Landlord_1^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=52:T^AC_Misc.Strength_Numbers^/?z-6;
-!!IF&v999=52:M1/4/^%Z-6^;
-!!SN&v999=53:T^AC_Misc.Coordinated_Attack^/?z-6;
-!!IF&v999=53:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Adventurer_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=3/y30>=y93;                   [For GrandMaster Adventurer]
+      !!SN&v999=50:T^AC_Misc.Plunder_2^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Landlord_1^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=52:T^AC_Misc.Strength_Numbers^/?z-6;
+      !!IF&v999=52:M1/4/^%Z-6^;
+      !!SN&v999=53:T^AC_Misc.Coordinated_Attack^/?z-6;
+      !!IF&v999=53:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Adventurer_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=4;                            [For Hunter]
-!!SN&v999=50:T^AC_Misc.Master_Training^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Plunder_1^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=52:T^AC_Misc.First_Shot^/?z-6;
-!!IF&v999=52:M1/4/^%Z-6^;
-!!SN&v999=53:T^AC_Misc.Magic_Block^/?z-6;
-!!IF&v999=53:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Hunter_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=4;                            [For Hunter]
+      !!SN&v999=50:T^AC_Misc.Master_Training^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Plunder_1^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=52:T^AC_Misc.First_Shot^/?z-6;
+      !!IF&v999=52:M1/4/^%Z-6^;
+      !!SN&v999=53:T^AC_Misc.Magic_Block^/?z-6;
+      !!IF&v999=53:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Hunter_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=5;                            [For Battlemage]
-!!SN&v999=50:T^AC_Misc.Extra_Cast_1^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Master_Training^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=52:T^AC_Misc.Precast^/?z-6;
-!!IF&v999=52:M1/4/^%Z-6^;
-!!SN&v999=53:T^AC_Misc.Intimidation^/?z-6;
-!!IF&v999=53:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Battlemage_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=5;                            [For Battlemage]
+      !!SN&v999=50:T^AC_Misc.Extra_Cast_1^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Master_Training^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=52:T^AC_Misc.Precast^/?z-6;
+      !!IF&v999=52:M1/4/^%Z-6^;
+      !!SN&v999=53:T^AC_Misc.Intimidation^/?z-6;
+      !!IF&v999=53:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Battlemage_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!if&y70=6;                            [For Druid]
-!!SN&v999=50:T^AC_Misc.Extra_Cast_1^/?z-6;
-!!IF&v999=50:M1/4/^%Z-6^;
-!!SN&v999=51:T^AC_Misc.Natural_Healer^/?z-6;
-!!IF&v999=51:M1/4/^%Z-6^;
-!!SN&v999=52:T^AC_Misc.Natural_Resistance^/?z-6;
-!!IF&v999=52:M1/4/^%Z-6^;
-!!SN&v999=53:T^AC_Misc.Concentration^/?z-6;
-!!IF&v999=53:M1/4/^%Z-6^;
-!!SN&v999=19:T^AC_Misc.Druid_Description^/?z-6;
-!!IF&v999=19:M1/4/^%Z-6^;
-!!en;
+    !!if&y70=6;                            [For Druid]
+      !!SN&v999=50:T^AC_Misc.Extra_Cast_1^/?z-6;
+      !!IF&v999=50:M1/4/^%Z-6^;
+      !!SN&v999=51:T^AC_Misc.Natural_Healer^/?z-6;
+      !!IF&v999=51:M1/4/^%Z-6^;
+      !!SN&v999=52:T^AC_Misc.Natural_Resistance^/?z-6;
+      !!IF&v999=52:M1/4/^%Z-6^;
+      !!SN&v999=53:T^AC_Misc.Concentration^/?z-6;
+      !!IF&v999=53:M1/4/^%Z-6^;
+      !!SN&v999=19:T^AC_Misc.Druid_Description^/?z-6;
+      !!IF&v999=19:M1/4/^%Z-6^;
+    !!en;
 
-!!en;
+  !!en;
 !!en;
 
 --------------------------------------------------------------------------------
-* STACK PICTURES & TEXT STRINGS SET-UP FOR DIALOGUE
-
-!?FU(Set_defs1);
-!!VRy-21:S0;
-!!VRy-20:S0;
-!!VRy-22:S0;
-!!VRv1:S0;
-!!HE-1:C0/x16/?y-20/?y-21;              [slot 1]
-!!VRv1:Sy-21;
-!!VRz-9:S^^;
-!!VRz-9&v1>0:S^%Y-21^;
-!!VRy-22:S2 +y-20;
-!!VRy-22&v1=0:S1;
-!!VRy-23:S34 +x16; !!VRy-24:S12 +x16;
-!!DL667:Ay-23/3/z-9/1;                  [set def and textbox for slot 1-7]
-!!DL667:Ay-24/4/y-22/1;
 
 * for summoning dialogue
 *!VRy-23&x1=1:S10 +x16; *!VRy-24&x1=1:S2 +x16;
@@ -2937,107 +2899,9 @@ Close Dialouge
 *!DL540&x1=2:Ay-23/3/z-9/1;             [set def and textbox for slot 1-7]
 *!DL540&x1=2:Ay-24/4/y-22/1;
 
-!!FU&x1<>1:E;
 
 --------------------------------------------------------------------------------
-* SMALL/LARGE HERO PICTURE TEXT STRINGS SET-UP FOR DIALOGUE
-!?FU(Set_pcx_small);
-!!VRy-4:S0; !!VRz-3:S^^;  !!VRz-4:S^^;  !!VRz-5:S^^; !!VRz-6:S^^;
-* set small hero portraits on the left
-!!OW&x16=1:O-1/d/?y-21/d/d/d/d/d/d/d/d; [1st hero number]
-!!OW&x16=2:O-1/d/d/?y-21/d/d/d/d/d/d/d; [2nd hero number]
-!!OW&x16=3:O-1/d/d/d/?y-21/d/d/d/d/d/d; [3rd hero number]
-!!OW&x16=4:O-1/d/d/d/d/?y-21/d/d/d/d/d; [4th hero number]
-!!OW&x16=5:O-1/d/d/d/d/d/?y-21/d/d/d/d; [5th hero number]
-!!OW&x16=6:O-1/d/d/d/d/d/d/?y-21/d/d/d; [6th hero number]
-!!OW&x16=7:O-1/d/d/d/d/d/d/d/?y-21/d/d; [7th hero number]
-!!OW&x16=8:O-1/d/d/d/d/d/d/d/d/?y-21/d; [8th hero number]
 
-!!HEx2&x2<>-1:B2/?y-2;
-!!HEy-21&x2=-1:B2/?y-2;                 [class of hero]
-
-!!VRy-4&x2=-1:Sy-21 :10;                [see how many 0 must be in text string]
-!!VRy-4&x2<>-1:Sx2 :10;                 [see how many 0 must be in text string]
-
-*say hero class and fill variable for picture display
-!!VRz-3&y-2=0:S^KN^;                    [knight]
-!!VRz-3&y-2=1:S^CL^;                    [cleric]
-!!VRz-3&y-2=2:S^RN^;                    [ranger]
-!!VRz-3&y-2=3:S^DR^;                    [druid]
-!!VRz-3&y-2=4:S^AL^;                    [alchemist]
-!!VRz-3&y-2=5:S^WZ^;                    [alchemist]
-!!VRz-3&y-2=6:S^HR^;                    [demoniac]
-!!VRz-3&y-2=7:S^DM^;                    [heretic]
-!!VRz-3&y-2=8:S^DK^;                    [death knight]
-!!VRz-3&y-2=9:S^NC^;                    [necromancer]
-!!VRz-3&y-2=10:S^OV^;                   [overlord]
-!!VRz-3&y-2=11:S^WL^;                   [warlock]
-!!VRz-3&y-2=12:S^BR^;                   [barbarian]
-!!VRz-3&y-2=13:S^BM^;                   [battlemage]
-!!VRz-3&y-2=14:S^BS^;                   [beastmaster]
-!!VRz-3&y-2=15:S^WH^;                   [witch]
-!!VRz-3&y-2=16:S^PL^;                   [planeswalker]
-!!VRz-3&y-2=17:S^EL^;                   [elementalist]
-
-!!VRz-10&x1=1:S^L^;  !!VRz-10&x1=2:S^S^;[distinguish between small and large hero .pcx picture]
-
-!!VRz-4&y-4=0:S^HP^+^%Z-10^+^00^;       [set text string according to hero numbering]
-!!VRz-4&y-4>=1/y-4<=9:S^HP^+^%Z-10^+^0^;
-!!VRz-4&y-4>=10:S^HP%Z-10^;
-!!VRz-5:S^.pcx^;
-
-!!VRz-6&x2=-1:S^%Z-4%Y-21%Z-3%Z-5^;     [complete hero picture text string [small]
-!!VRz-6&x2<>-1:S^%Z-4%X2%Z-3%Z-5^;      [large]
-
-* setup text for extraordinary heroes - planeswalker/elementalist/special heroes like sir mullich, which all have strabge texts
-!!VRz-6&x2=128:S^HPL000PL.pcx^;   !!VRz-6&x2=135:S^HPL007PL.pcx^;   !!VRz-6&x2=149:S^HPL005SH.pcx^;   !!VRz-6&x2=143:S^HPL007EL.pcx^;
-!!VRz-6&x2=129:S^HPL001PL.pcx^;   !!VRz-6&x2=136:S^HPL000EL.pcx^;   !!VRz-6&x2=150:S^HPL006SH.pcx^;   !!VRz-6&x2=152:S^HPL009SH.pcx^; [Roland]
-!!VRz-6&x2=130:S^HPL002PL.pcx^;   !!VRz-6&x2=137:S^HPL001EL.pcx^;   !!VRz-6&x2=144:S^HPL130KN.pcx^;   !!VRz-6&x2=146:S^HPL128QC.pcx^; [146 Catherine]
-!!VRz-6&x2=131:S^HPL003PL.pcx^;   !!VRz-6&x2=138:S^HPL002EL.pcx^;   !!VRz-6&x2=153:S^HPL008SH.pcx^;   !!VRz-6&x2=155:S^HPL131Dm.pcx^; [155 Xeron]
-!!VRz-6&x2=132:S^HPL004PL.pcx^;   !!VRz-6&x2=139:S^HPL003EL.pcx^;   !!VRz-6&x2=142:S^HPL006EL.pcx^;   !!VRz-6&x2=154:S^HPL001SH.pcx^; [154 Boragus]
-!!VRz-6&x2=133:S^HPL005PL.pcx^;   !!VRz-6&x2=140:S^HPL004EL.pcx^;   !!VRz-6&x2=147:S^HPL003SH.pcx^;   !!VRz-6&x2=145:S^HPL000SH.pcx^; [145 Adrienne]
-!!VRz-6&x2=134:S^HPL006PL.pcx^;   !!VRz-6&x2=141:S^HPL005EL.pcx^;   !!VRz-6&x2=148:S^HPL004SH.pcx^;   !!VRz-6&x2=151:S^HPL007SH.pcx^; [151 Mutare]
-
-!!VRz-6&y-21=128/x2=-1:S^HPS000PL.pcx^;   !!VRz-6&y-21=135/x2=-1:S^HPS007PL.pcx^;   !!VRz-6&y-21=149/x2=-1:S^HPS005SH.pcx^;   !!VRz-6&y-21=143/x2=-1:S^HPS007EL.pcx^;
-!!VRz-6&y-21=129/x2=-1:S^HPS001PL.pcx^;   !!VRz-6&y-21=136/x2=-1:S^HPS000EL.pcx^;   !!VRz-6&y-21=150/x2=-1:S^HPS006SH.pcx^;   !!VRz-6&y-21=152/x2=-1:S^HPS009SH.pcx^; [Roland]
-!!VRz-6&y-21=130/x2=-1:S^HPS002PL.pcx^;   !!VRz-6&y-21=137/x2=-1:S^HPS001EL.pcx^;   !!VRz-6&y-21=144/x2=-1:S^HPS130KN.pcx^;   !!VRz-6&y-21=146/x2=-1:S^HPS128QC.pcx^; [146 Catherine]
-!!VRz-6&y-21=131/x2=-1:S^HPS003PL.pcx^;   !!VRz-6&y-21=138/x2=-1:S^HPS002EL.pcx^;   !!VRz-6&y-21=153/x2=-1:S^HPS008SH.pcx^;   !!VRz-6&y-21=155/x2=-1:S^HPS131Dm.pcx^; [155 Xeron]
-!!VRz-6&y-21=132/x2=-1:S^HPS004PL.pcx^;   !!VRz-6&y-21=139/x2=-1:S^HPS003EL.pcx^;   !!VRz-6&y-21=142/x2=-1:S^HPS006EL.pcx^;   !!VRz-6&y-21=154/x2=-1:S^HPS001SH.pcx^; [154 Boragus]
-!!VRz-6&y-21=133/x2=-1:S^HPS005PL.pcx^;   !!VRz-6&y-21=140/x2=-1:S^HPS004EL.pcx^;   !!VRz-6&y-21=147/x2=-1:S^HPS003SH.pcx^;   !!VRz-6&y-21=145/x2=-1:S^HPS000SH.pcx^; [145 Adrienne]
-!!VRz-6&y-21=134/x2=-1:S^HPS006PL.pcx^;   !!VRz-6&y-21=141/x2=-1:S^HPS005EL.pcx^;   !!VRz-6&y-21=148/x2=-1:S^HPS004SH.pcx^;   !!VRz-6&y-21=151/x2=-1:S^HPS007SH.pcx^; [151 Mutare]
-
-*!IF:M^Hero is %X2 and %Z-6^;
-*!IF:M^%Z-6^;
-*!FU(ACM.GetHeroPortrait)&x1=1/x2>=0/x2<156:Py-21/1/z3; Test
-*!IF:M^%Z3^;
-*!VRz-6&x1=1/x2>=0/x2<156:Sz3;
-
-!!DL667&x1=1/x2<>-1:A0/11/z-6/1;        [set LARGE hero picture .pcx]
-
-!!DL358&x1=1/x2<>-1/x3=5:A1/11/z-6/1;   [set large portrait for vectoring dialogue]
-!!DL359&x1=1/x2<>-1/x3=6:A1/11/z-6/1;   [set large portrait for vectoring dialogue]
-
-!!DL416&x1=1/x2<>-1/x3=7:A0/11/z-6/1;   [set hero portraits for SQUIRE dialogue]
-
-!!DL416&x1=1/x2<>-1/x3=8:A1/11/z-6/1;   [hero portraits for squire dialogue]
-!!DL416&x1=1/x2<>-1/x3=9:A2/11/z-6/1;
-!!DL416&x1=1/x2<>-1/x3=10:A3/11/z-6/1;
-!!DL416&x1=1/x2<>-1/x3=11:A4/11/z-6/1;
-!!DL416&x1=1/x2<>-1/x3=12:A5/11/z-6/1;
-!!DL416&x1=1/x2<>-1/x3=13:A6/11/z-6/1;
-!!DL416&x1=1/x2<>-1/x3=14:A7/11/z-6/1;
-!!DL417&x1=1/x2<>-1/x3=15:A1/11/z-6/1;
-!!DL418&x1=1/x2<>-1/x3=16:A1/11/z-6/1;
-!!DL418&x1=1/x2<>-1/x3=17:A4/11/z-6/1;
-
-!!DL667&x1=2/x16=1:A23/11/z-6/1;         [set SMALL hero picture (1st hero)]
-!!DL667&x1=2/x16=2/y-21<>-1:A25/11/z-6/1;[set SMALL hero picture (2nd hero)]
-!!DL667&x1=2/x16=3/y-21<>-1:A26/11/z-6/1;[set SMALL hero picture (3rd hero)]
-!!DL667&x1=2/x16=4/y-21<>-1:A27/11/z-6/1;[set SMALL hero picture (4th hero)]
-!!DL667&x1=2/x16=5/y-21<>-1:A28/11/z-6/1;[set SMALL hero picture (5th hero)]
-!!DL667&x1=2/x16=6/y-21<>-1:A29/11/z-6/1;[set SMALL hero picture (6th hero)]
-!!DL667&x1=2/x16=7/y-21<>-1:A30/11/z-6/1;[set SMALL hero picture (7th hero)]
-!!DL667&x1=2/x16=8/y-21<>-1:A31/11/z-6/1;[set SMALL hero picture (8th hero)]
 ******************END ADVANCED LEVELS MASTER DIALOGUE *****************************
 
 
@@ -3116,6 +2980,7 @@ Close Dialouge
 !!SN:W^Damage_Counter_Attacking_Stack^/-1;
 !!SN:W^Vampire_Class_Attacking_Stack^/-1;
 !!SN:W^FireMage_Attacking_Stack^/-1;
+!!SN:W^Vampire_Cowl_Attacking_Stack^/-1;
 
 
 !?BF;
@@ -3268,29 +3133,29 @@ Creature speed   Base movement
 10                1960
 11 or more        2000
 
-!?FU(OnEveryDay)&i^timerIsAi^=0/i^timerOnce^=1;
-!!DO(AC_Function_135)/0/155/1:P;
+!?FU(OnEveryDay)&i^timerIsAi^=0/i^timerOnce^=1; [Trigger on every day once]
+!!DO(AC_Function_135)/0/155/1:P;        [loop all heroes]
 
 !?FU(AC_Function_135);
 !!HEx16:O?y1;                           [Checke Hero Owner]
 !!FU&y1=-1:E;                           [Exit if none]
-!!HEx16:S0/?y10;                        [Checke ob der Held Pathfinding hat und Speichere in y10]
+!!HEx16:S0/?y10;                        [Check if hero has Pathfinding and save result in y10]
 !!SN:W^H3_Pathfinding_0_Hero%X16^/?y11; [Checke ob der Held Grandmaster Pathfinding hat und Speichere in y11]
 !!SN:W^H3_Pathfinding_1_Hero%X16^/?y12; [Checke ob der Held Grandmaster Pathfinding hat und Speichere in y11]
 !!FU|y10=0/y11=0:E;                     [Exit if not at least Master Pathfinding]
 
-!!HEx16:C0/0/?y2/?y32; !!MA&y32<>0:Sy2/?y22; [Check Creatures in Hero Army]
-!!HEx16:C0/1/?y3/?y33; !!MA&y33<>0:Sy3/?y23; [Get Speed of First Creature]
-!!HEx16:C0/2/?y4/?y34; !!MA&y34<>0:Sy4/?y24;
-!!HEx16:C0/3/?y5/?y35; !!MA&y35<>0:Sy5/?y25;
-!!HEx16:C0/4/?y6/?y36; !!MA&y36<>0:Sy6/?y26;
-!!HEx16:C0/5/?y7/?y37; !!MA&y37<>0:Sy7/?y27;
-!!HEx16:C0/6/?y8/?y38; !!MA&y38<>0:Sy8/?y28;
+!!HEx16:C0/0/?y2/?y32; !!MA&y32<>0:Sy2/?y22; [Check Creatures in Hero Army and Get Speed of First Creature]
+!!HEx16:C0/1/?y3/?y33; !!MA&y33<>0:Sy3/?y23; [second slot]
+!!HEx16:C0/2/?y4/?y34; !!MA&y34<>0:Sy4/?y24; [...]
+!!HEx16:C0/3/?y5/?y35; !!MA&y35<>0:Sy5/?y25; [...]
+!!HEx16:C0/4/?y6/?y36; !!MA&y36<>0:Sy6/?y26; [...]
+!!HEx16:C0/5/?y7/?y37; !!MA&y37<>0:Sy7/?y27; [...]
+!!HEx16:C0/6/?y8/?y38; !!MA&y38<>0:Sy8/?y28; [...]
 
 !!VRy21:S0;
-!!if&y11=1/y12=0;
-!!VRy21|y28=8/y27=8/y26=8/y25=8/y24=8/y23=8/y22=8:S30;  [+30 Movement Penalty if lowest speed is 8]
-!!VRy21|y28=7/y27=7/y26=7/y25=7/y24=7/y23=7/y22=7:S75;  [+75 Movement Penalty if lowest speed is 7]
+!!if&y11=1/y12=0;                       [if Master Pathfinding]
+!!VRy21|y28=8/y27=8/y26=8/y25=8/y24=8/y23=8/y22=8:S30; [+30 Movement Penalty if lowest speed is 8]
+!!VRy21|y28=7/y27=7/y26=7/y25=7/y24=7/y23=7/y22=7:S75; [+75 Movement Penalty if lowest speed is 7]
 !!VRy21|y28=6/y27=6/y26=6/y25=6/y24=6/y23=6/y22=6:S100; [+100 Movement Penalty if lowest speed is 6]
 !!VRy21|y28=5/y27=5/y26=5/y25=5/y24=5/y23=5/y22=5:S130; [+130 Movement Penalty if lowest speed is 5]
 !!VRy21|y28=4/y27=4/y26=4/y25=4/y24=4/y23=4/y22=4:S165; [+165 Movement Penalty if lowest speed is 4]
@@ -3306,7 +3171,7 @@ Creature speed   Base movement
 !!VRy21|y28=3/y27=3/y26=3/y25=3/y24=3/y23=3/y22=3:S200; [-500 Movement Penalty if lowest speed is 3]
 !!VRy21:*2;                             [Eliminates Penalty completly]
 !!en;
-!!HEx16:Wdy21/1; Add Bonus Movement
+!!HEx16:Wdy21/1;                        [Add Bonus Movement to hero]
 
 
 !?CM5;                                  [Left Click on Adventure Screen to change pathfinding value]
@@ -3484,6 +3349,9 @@ Creature speed   Base movement
 !?HM-1&1000;                            [continue if scouting is enabled]
 
 !!HE-1:N?y1 O?y2 S3/?y3;                [get #, owner of  and scouting skill]
+!!OW:C?y30 Iy30/?y40 Gy30/?y50;         [get current player and if human player is sitting in front of the screen]
+!!FU&y2<>y30:E;                         [exit if not current player's hero]
+!!FU&y40=0/y50=0:E;                     [Exit if not correct human player]
 !!SN:W^Scouting_Event_Chance_%Y1^/0;    [reset scouting chance]
 !!FU(Count_Set_Pieces_2)&y1>=0/y1<=155/y2>=0:Py1/0/0/0/0/?y90; [Count class Set Pieces function X6]
 !!HEy1&y1>=0:A2/101/0/?y91;             [101 Pendant of Second Sight]
@@ -3532,11 +3400,11 @@ Creature speed   Base movement
 !!VRy5&y3=3:Ty30;                       [set random roll to 3.5% (14/400)]
 !!SN:W^Scouting_Event_Chance_%Y1^/y30;  [save scouting chance]
 
-!!VRy60:S0T1;                           [Random Coinflip Generator]
+!!VRy60:S0R1;                           [Random Coinflip Generator]
 !!VRy5&y5=15/y60=0:S5;                  [Only 50% chance to get an artifact]
 !!VRy5&y5=16/y60=0:S5;                  [Only 50% chance to get an spell]
 
-*!VRy5:S5; ** TEST**
+*!VRy5:S11; ** TEST**
 
 !!FU(Improved_Scouting_Bonus)&y1>=0/y1<=155/y3>=0/y5<=17:Py1/y3/y2/y5/y50; [do scouting function - and pass Hero Number/Scouting SkillLevel/Owner/RandomRoll/Specialist status y50]
 ** end of movement trigger
@@ -3692,8 +3560,8 @@ Creature speed   Base movement
 !!IF:Q2/20/y3/21/y4/2/z199147;
 !!SN&2:W^Scouting_Fight_Trigger^/1;
 !!SN&-2:W^Scouting_Fight_Trigger^/0;
-!!HEx1&2:Ty80/y81/y82/y4/y5;            [fight monsters]
-!!UN:R1;
+!!HEx1&2/999:Ty80/y81/y82/y4/y5;        [fight monsters]
+!!UN&2/999:R1;
 !!en;
 
 !!if&x4=14;                             [14=  Give Mithril]
@@ -4297,8 +4165,8 @@ Taken from Algor Era Scripts
 !!BMy72:G213/0/?t;
 !!BMy82:G213/0/?t;
 
-!!VRy12:S0T999;
-!!VRy13:S0T999;
+!!VRy12:S0R999;
+!!VRy13:S0R999;
 
 !!SN:W^ATT_LUCK_BONUS_FACTOR^/150;
 !!SN:W^RET_LUCK_BONUS_FACTOR^/150;
@@ -4656,19 +4524,19 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!HEy99:A2/63/?y29/?y30; !!VRy40&y30=1:+15; [Bird of Perception]
 !!HEy99:A2/64/?y29/?y30; !!VRy40&y30=1:+20; [Stoic Watchman]
 !!HEy99:A2/65/?y29/?y30; !!VRy40&y30=1:+25; [Emblem of Cognizance]
-!!VRy50:S0T100;                         [Create random number]
+!!VRy50:S0R100;                         [Create random number]
 
 !!FU&y50>y40:E;                         [Exit if roll fails]
 !!HEy99:S7/?y14;                        [7 Wisdom]
 !!BG:S?y4;                              [Spell Number]
-!!if&y4>=10/y4<=69;                    [Valid Spell]
+!!if&y4>=10/y4<=69;                     [Valid Spell]
   !!SSy4:L?y5;                          [Spell Level]
   !!FU&y5=5/y14<3:E;                    [Exit if Wisdom level not high enough]
   !!FU&y5=4/y14<2:E;
   !!FU&y5=3/y14<1:E;
   !!HEy99:My4/?y7;                      [Check if Hero already knows the spell]
   !!SN:W^Hero%Y99_Spell%Y4_Specialists^/?y8; [Check saved spells before battle]
-  !!if&y7=0/y8=0;                      [If Hero doesnt know the spell and also not currently just unlearned]
+  !!if&y7=0/y8=0;                       [If Hero doesnt know the spell and also not currently just unlearned]
     !!HEy99:My4/1;                      [Give Hero the new spell]
     !!SN:W^Hero%Y99_Spell%Y4_Specialists^/1; [Fix for Sorcery or Elemental Specialists]
     !!SN:W^Eagle_Eye_Spell_0^/y4;
@@ -4745,7 +4613,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!VRy5&y1>0:+y1;                        [Eagle eye skill lvl bonus]
 
 !!VRy11:*4;                             [Spell Power times four]
-!!VRy3:S1T49 +y11 *y5;                  [Magic_Artillery damage: (1-50 + spell power*4) x bonus multiplier]
+!!VRy3:S1R49 +y11 *y5;                  [Magic_Artillery damage: (1-50 + spell power*4) x bonus multiplier]
 
 !!VRy30:S1 +y11 *y5;                    [Min Damage]
 !!VRy31:S50  +y11 *y5;                  [Max Damage]
@@ -4753,7 +4621,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!SN:W^EagleEye_High_Damage_Hero%V7020^/y31; [Save High Damage to display it in Bonus List]
 !!FU&x3=1:E;                            [Exit here to not run the actual shooting fkt]
 
-!!VRy2:S0T6;                            [random slot # to start search from]
+!!VRy2:S0R6;                            [random slot # to start search from]
 !!SN:W^First_Aid_Heal_Slot^/7;          [7 = slot not found]
 !!DO(AC_Function_11)/0/6/1:Px1/y2/y3/x2;[shoot next slot with >= 2 monsters]
 ** end of function
@@ -4803,7 +4671,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!CM:F?v3 I?v4 S?v5 T?v6;               [where we click and click subtype]
 !!FU|v6<>512/v5<>14:E;                  [If not Necromancy Icon Clicked Exit]
 
-!!if|v3=512/v3=0;                      [if right or left click]
+!!if|v3=512/v3=0;                       [if right or left click]
   !!if|v4=79/v4=80/v4=81/v4=82/v4=83/v4=84/v4=85/v4=86/v4=501/v4=504;
     !!VRv4:-78;                         [To hit correct Secondary Skill ID]
     !!FU|v4<0/v4>8:E;
@@ -4954,7 +4822,7 @@ Till here Normal Necromancy
 !!en;
 
 !!FU:E;
-!!VRy20:S0T100;
+!!VRy20:S0R100;
 !!UN&y1=68/y20<5:C5127994/4/67;         [For Tamika change to Dread Knights with 10% chance]
 !!UN&y1=67/y20<5:C5127994/4/61;         [For Charna change to Wraith with 10% chance]
 !!UN&y1=66/y20<5:C5127994/4/65;         [For Moandor change to Power Liches with 10% chance]
@@ -5280,7 +5148,7 @@ Till here Normal Necromancy
 !!VRy4:*2;                              [Hero Level times 2]
 !!VRy5|v7020=6/v7020=97/v7020=54/v7020=81/v7020=36:+1; [if Artillery Specialist Hero]
 
-!!VRy3:S1T49 +y4 +y9 *y5;               [Artillery damage: (1-50 + hero level*2+ hero attack*3) x bonus multiplier]
+!!VRy3:S1R49 +y4 +y9 *y5;               [Artillery damage: (1-50 + hero level*2+ hero attack*3) x bonus multiplier]
 
 !!VRy30:S1 +y4 +y9 *y5;                 [Min Damage]
 !!VRy31:S50 +y4 +y9 *y5;                [Max Damage]
@@ -5288,7 +5156,7 @@ Till here Normal Necromancy
 !!SN:W^Artillery_High_Damage_Hero%V7020^/y31; [Save High Damage to display it in Bonus List]
 !!FU&x2=1:E;                            [Exit here to not run the actual shooting fkt]
 
-!!VRy2:S0T6;                            [random slot # to start search from]
+!!VRy2:S0R6;                            [random slot # to start search from]
 !!SN:W^First_Aid_Heal_Slot^/7;          [7 = slot not found]
 !!DO(AC_Function_14)/0/6/1:Px1/y2/y3;   [shoot next slot with >= 2 monsters]
 ** end of function
@@ -5405,7 +5273,7 @@ gives +50/100/150/250/500 HP to Ballista WM
 
     !!if&y79=0;
       !!if|y6=36/y6=105/y6=128;         [Pasis, Vey, Torosar]
-      !!VRy50:S0T2;
+      !!VRy50:S0R2;
       !!SN&y50=2/y1=6:W^007.AttackA.Times^/d1; [add one strike if success]
       !!SN&y50=2/y1=7:W^007.ShootA.Times^/d1; [add one strike if success]
       !!en;
@@ -5413,14 +5281,14 @@ gives +50/100/150/250/500 HP to Ballista WM
 
     !!if&y79=1;
       !!if|y6=36/y6=105;                [Pasis, Vey, Torosar]
-      !!VRy50:S0T2;
+      !!VRy50:S0R2;
       !!SN&y50=2/y1=6:W^007.AttackA.Times^/d1; [add one strike if success]
       !!SN&y50=2/y1=7:W^007.ShootA.Times^/d1; [add one strike if success]
       !!en;
     !!en;
 
     !!FU(Check_Com_Masteries):Py6/?y40; [Pass Hero Number and return if Commander Mastery is enabled]
-    !!VRy50:S0T1;                       [Coin Flip]
+    !!VRy50:S0R1;                       [Coin Flip]
     !!SN:W^Commander_Fighter_%Y6^/?y41; [Check Commander Class]
     !!SN:W^Commander_Ranger_%Y6^/?y42;  [Check Commander Class]
     !!SN:W^Commander_Scout_%Y6^/?y43; 
@@ -5441,7 +5309,7 @@ gives +50/100/150/250/500 HP to Ballista WM
   !!FU|y6<0/y4=147/y4=148/y4=149/y4=145:E;[Exit if no Hero or Warmachine]
   !!FU(Count_Set_Pieces):Py6/0/0/0/0/0/0/0/0/0/0/0/?y94; [Count Set Pieces Archdevil Set Suite]
   !!if&y94=5;
-    !!VRy50:S0T3;                           [25% chance for extra Strike]
+    !!VRy50:S0R3;                           [25% chance for extra Strike]
     !!SN&y50=3/y1=6:W^007.AttackA.Times^/d1;[add one strike if success]
     !!SN&y50=3/y1=7:W^007.ShootA.Times^/d1; [add one strike if success]
   !!en;
@@ -5543,11 +5411,11 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!VRy2&y3=3/y11=1/y12=0:S40;
 !!VRy2&y3=3/y11=1/y12=1:S50;
 
-!!VRy3:S0T100;                          [roll percentile dice...]
+!!VRy3:S0R100;                          [roll percentile dice...]
 !!FU(AC_Function_24)&y1>=0/y1<=155/y3<y2:Py1/0; [handle learning bonus]
 
 **Second Chance for Learning Specialists
-!!VRy3:S0T250;                          [roll percentile dice...]
+!!VRy3:S0R250;                          [roll percentile dice...]
 !!HEy1:X?y23/?y24/?y25/?y26/?y27/?y28/?y29; [Check Hero Speciality]
 !!FU(AC_Function_24)&y1>=0/y1<=155/y3<y2/y23=0/y24=21:Py1/1; [handle learning bonus for Learning Specialists]
 ** End of level up trigger for learning
@@ -5737,7 +5605,7 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!SN:W^Heal_After_Fight_High_Hero%V7020^/y31; [Save High Damage to display it in Bonus List]
 !!FU&x3=1:E;                            [Exit here to not run the actual fkt]
 
-!!VRy2:S0T6;                            [random slot # to start search from]
+!!VRy2:S0R6;                            [random slot # to start search from]
 !!SN:W^First_Aid_Heal_Slot^/7;          [7 = slot not found]
 !!DO(AC_Function_15)/0/6/1:Px1/y1/y2/x2;[heal next slot with >= 1 monster killed, x2 holds if Druid Heal 1-Yes 0-No]
 ** end of function
@@ -5974,8 +5842,9 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!CO-1:D?y40;                           [Check if Commander of Hero is still alive]
 !!CO-1:T?y41;                           [Check if Commander Type]
 !!if&y40=0/y41=1;                       [If Commander alive and is a Hierophant]
+  !!FU(Check_Com_Masteries):Py61/0/0/0/0/0/0/0/0/0/0/?y65; [Pass Hero Number and return Passive Modifier]
   !!CO-1:X2/?y42;                       [Get Commander Level]
-  !!VRy43:Sy42*5;                       [Multiply level of Commander with 5]
+  !!VRy43:Sy42*5*y65:100;               [Multiply level of Commander with 5 and then with passive modifier]
   !!VRy10:+y43;                         [Add level*5 HP to heal for the First Aid Tent]
 !!en;
 
@@ -6032,7 +5901,7 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!if|y50<174/y50>191;
   !!MA:Ly50/?y11;                       [Get Monster Level]
   !!VRy13:S0; !!VRy13&y11=0:S6; !!VRy13&y11=1:S5; !!VRy13&y11=2:S4; !!VRy13&y11=3:S3; !!VRy13&y11=4:S2; !!VRy13&y11=5:S1; !!VRy13&y11=6:S1; [Number of possible revices based on creature level]
-  !!VRy15:S0T99;
+  !!VRy15:S0R99;
   !!VRy16&y11=0:S80; !!VRy16&y11=1:S75; !!VRy16&y11=2:S70; !!VRy16&y11=3:S65; !!VRy16&y11=4:S63; !!VRy16&y11=5:S58; !!VRy16&y11=6:S35; [Chance for Overheal to work in percent]
 
   !!SN&y60=0:W^Tent_Capacity_Att^/?y21; [Get current Heal capacity]
@@ -6125,8 +5994,9 @@ gives +50/100/150/250/500 HP to Ballista WM
   !!COy1:T?y51;                         [Get Commander Type]
   !!VRy53:S0;
   !!if&y50=0/y51=1;                     [If Alive and Hierophant]
+    !!FU(Check_Com_Masteries):Py1/0/0/0/0/0/0/0/0/0/0/?y65; [Pass Hero Number and return Passive Modifier]
     !!COy1:X2/?y52;                     [Get Commander Level]
-    !!VRy53:Sy52*20;                    [20*Commander Level to Capacity]
+    !!VRy53:Sy52*30*y65:100;            [30*Commander Level to Capacity multiply with passive modifier]
   !!en;
   !!VRy10:+y53;                         [Add Bonus Capacity from Commander]
   !!SN:W^Tent_Capacity_Att^/y10;        [Set Heal Capacity]
@@ -6152,8 +6022,9 @@ gives +50/100/150/250/500 HP to Ballista WM
     !!COy1:T?y51;                       [Get Commander Type]
     !!VRy53:S0;
     !!if&y50=0/y51=1;                   [If Alive and Hierophant]
+      !!FU(Check_Com_Masteries):Py1/0/0/0/0/0/0/0/0/0/0/?y65; [Pass Hero Number and return Passive Modifier]
       !!COy1:X2/?y52;                   [Get Commander Level]
-      !!VRy53:Sy52*20;                  [20*Commander Level to Capacity]
+      !!VRy53:Sy52*30*y65:100;          [30*Commander Level to Capacity multiply with passive modifier]
     !!en;
     !!VRy10:+y53;                       [Add Bonus Capacity from Commander]
     !!SN:W^Tent_Capacity_Def^/y10;      [Set Heal Capacity]
@@ -6773,7 +6644,7 @@ Druid                  : Heals two squads after combat, Flat Damage Block, 1 ext
 !!SN:W^Master_Mage_Hero%Y99^/?y41;
 !!SN:W^Master_Adventurer_Hero%Y99^/?y42;
 
-!!VRy20:S0T100;                         [Generate Random value]
+!!VRy20:S0R100;                         [Generate Random value]
 !!VRy20&y3=1:+10;                       [+10% Crit chance with Master Warrior]
 !!VRy20&y2=1:+10;                       [+20% Crit chance with Grandmaster Warrior]
 !!VRy20&y41=1/y3=1:-10;                 [No additional crit chance for Hybrid classes]
@@ -6964,7 +6835,7 @@ Druid                  : Heals two squads after combat, Flat Damage Block, 1 ext
 !!VRy8&y5=1:+2;                         [Talisman of Mana Bonus  20% Bonus]
 !!VRy8&y31=1:+3;                        [Wizards Well Bonus  +30% Chance]
 
-!!VRy10:S0T10;                          [do coin flip for stronger spell in combat]
+!!VRy10:S0R10;                          [do coin flip for stronger spell in combat]
 
 !!FU&y10>y8:E;                          [exit the function  if random value is bigger than 3]
 
@@ -7662,10 +7533,10 @@ Druid can transfer spells (buffs) on his troops to the next combat
 ********************************************************************************
 !?FU(Remember_Spells_Fkt_1);
 
-!!VRx16&x2=1:S0T7;                      [Chose Random Stack Attacker]
+!!VRx16&x2=1:S0R7;                      [Chose Random Stack Attacker]
 !!VRx16&x2=2:S21R7;                     [Chose Random Stack Defender]
 !!SN:W^Creature_Numerator1^/?y20;
-!!VRx16&x2=1/y20=x16:S0T7;              [Reroll if same number Attacker]
+!!VRx16&x2=1/y20=x16:S0R7;              [Reroll if same number Attacker]
 !!VRx16&x2=2/y20=x16:S21R7;             [Reroll if same number Defender]
 !!SN:W^Creature_Numerator1^/x16;
 !!SN:W^Remember_Spells_Counter0^/?y5;
@@ -8810,7 +8681,7 @@ Caitlin, Aine, Grindan, Jenova, Octavia, (Damacon removed), Sephinroth
 !!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y99; [Check for Third Upgrade Mod]
 !!if&y99=1;                             [If Third Upgrade Mod is enabled also check for Skeleton Knights]
   [:loop2];
-  !!VRy10:S0T7;                         [Generate Random Stack number]
+  !!VRy10:S0R7;                         [Generate Random Stack number]
   !!BMy10:T?y11 N?y12 G4/?y13/?y14;     [Get Monster type, number and spell]
   !!VRy90:+1;                           [increase loop counter]
   !!VRy11&y90=40:S220;                  [Terminate Loop if no Skeleton Warrior 57 found]
@@ -8821,7 +8692,7 @@ Caitlin, Aine, Grindan, Jenova, Octavia, (Damacon removed), Sephinroth
   !!if&y90=40/y11=220;                  [If no Skeleton Knight found look for Skeletons 57]
   !!VRy90:S0;
     [:loop];
-    !!VRy10:S0T7;
+    !!VRy10:S0R7;
     !!BMy10:T?y11 N?y12 G4/?y13/?y14;
     !!VRy90:+1;
     !!VRy11&y90=40:S57;                 [Terminate Loop if no Skeleton Warrior 57 found]
@@ -8833,7 +8704,7 @@ Caitlin, Aine, Grindan, Jenova, Octavia, (Damacon removed), Sephinroth
   !!if&y90=40/y11=57;                   [If no Skeleton Warrior found look for Skeletons 56]
     !!VRy91:S0;
     [:loop1];
-    !!VRy10:S0T7;
+    !!VRy10:S0R7;
     !!BMy10:T?y11 N?y12 G4/?y13/?y14;
     !!VRy91:+1;
     !!FU&y91=40:E;                      [Exit complete Function if no Valid Creature can be found]
@@ -8850,7 +8721,7 @@ Caitlin, Aine, Grindan, Jenova, Octavia, (Damacon removed), Sephinroth
 !!en;
 
 [:loop];
-!!VRy10:S0T7;
+!!VRy10:S0R7;
 !!BMy10:T?y11 N?y12 G4/?y13/?y14;
 !!VRy90:+1;
 !!VRy11&y90=40:S57;                     [Terminate Loop if no Skeleton Warrior 57 found]
@@ -8861,7 +8732,7 @@ Caitlin, Aine, Grindan, Jenova, Octavia, (Damacon removed), Sephinroth
 !!if&y90=40/y11=57;                     [If no Skeleton Warrior found look for Skeletons 56]
   !!VRy91:S0;
   [:loop1];
-  !!VRy10:S0T7;
+  !!VRy10:S0R7;
   !!BMy10:T?y11 N?y12 G4/?y13/?y14;
   !!VRy91:+1;
   !!FU&y91=40:E;                        [Exit complete Function if no Valid Creature can be found]
@@ -8965,7 +8836,7 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !!if&y10=0;                             [If Alive]
   !!FU(Check_Com_Masteries):Py1/0/0/0/0/0/0/0/0/0/0/?y21; [Pass Hero Number and return Passive Modifier]
   !!COy1:X2/?y12;                       [Get Commander Level]
-  !!VRy13:Sy12*10*y21:100;              [10*Commander Level to HP]
+  !!VRy13:Sy12*15*y21:100;              [15*Commander Level to HP]
   !!VRy14:Sy12:6*y21:100;               [Commander Level/6 to Min+Max Damage]
   !!DO(AC_Function_39)/0/10/1&y11=1:P147/y13; [Hierophant pass 147 for First Aid Tent and Commander Level]
   !!DO(AC_Function_39)/0/10/1&y11=6:P146/y13/y14; [Ogre Leader pass 146 for Ballista and Commander Level]
@@ -8978,7 +8849,7 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!if&y10=0;                           [If Alive ]
   !!FU(Check_Com_Masteries):Py1/0/0/0/0/0/0/0/0/0/0/?y21; [Pass Hero Number and return Passive Modifier]
   !!COy1:X2/?y12;                       [Get Commander Level]
-  !!VRy13:Sy12*10*y21:100;              [10*Commander Level to HP]
+  !!VRy13:Sy12*15*y21:100;              [15*Commander Level to HP]
   !!VRy14:Sy12:6*y21:100;               [Commander Level/6 to Min+Max Damage]
   !!DO(AC_Function_39)/21/31/1&y11=1:P147/y13; [Hierophant pass 147 for First Aid Tent and Commander Level]
   !!DO(AC_Function_39)/21/31/1&y11=6:P146/y13/y14; [Ogre Leader pass 146 for Ballista and Commander Level]
@@ -9336,7 +9207,7 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!BMy4:T?y10;
   !!MA:Ly10/?y11;                       [Get Monster Level]
   !!VRy13:S0; !!VRy13&y11=0:S7; !!VRy13&y11=1:S6; !!VRy13&y11=2:S5; !!VRy13&y11=3:S4; !!VRy13&y11=4:S3; !!VRy13&y11=5:S2; !!VRy13&y11=6:S1; [Number of possible revives based on creature level]
-  !!VRy15:S0T99;
+  !!VRy15:S0R99;
   !!VRy16&y11=0:S85; !!VRy16&y11=1:S82; !!VRy16&y11=2:S80; !!VRy16&y11=3:S78; !!VRy16&y11=4:S75; !!VRy16&y11=5:S65; !!VRy16&y11=6:S45; [Chance possible revives based on creature level]
   !!VRy51:Sy50-100:4;                   [Convert Spell Modifier to 25% effectiveness, so a +140% would mean +10% increased chance for the heal spell to work]
   !!VRy16:+y51;                         [Add percentage to initial chance]
@@ -9441,11 +9312,11 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!FU&y3=-1:E;                         [Exit if no Monster there]
 
   !!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y45; [Pass Hero Number and return Passive Modifier]
-  !!VRy10:S0T99;
+  !!VRy10:S0R99;
   !!VRy11:Sy32+40*y45:100;              [Chance for Crushing Blow is Com_level/2 +40% * passive modifier]
   !!if&y10<y11;
     !!BMy4&1000/f=0:V14;                [Show crusing animation]
-    !!VRy30:S0T6;
+    !!VRy30:S0R6;
     !!VRy40:S2; !!VRy40&y31>=30:S3;  !!VRy40&y31>=45:S4; !!VRy40&y31>=55:S5; !!VRy40:*-1; [+1 increased reduction per 10 level]
     !!VRy41:S1; !!VRy41&y31>=25:S2;  !!VRy41:*-1;
     !!BMy4|y30=0/y30=3/y30=4/y30=6:Ady40;[Attack -x]
@@ -9790,7 +9661,7 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 15 times
   !!if&y13<>y12;
     !!if&y5>=0/y5<=41;                  [If valid creature number]
       !!FU(H3_Calc_Crit_Chance_and_Damage):Py4/?y16/?y99/1/y31/y2/y5; [Pass Hero Number/Returns Crit chance/Crit damage/Battle State /Enemy Hero(y31) /Spell/Target]
-      !!VRy9:S0T99;                     [y9 chance to crit (0..99)]
+      !!VRy9:S0R99;                     [y9 chance to crit (0..99)]
       !!FU(Check_Com_Masteries):Py4/?y70/0/0/?y71; [Get commander class modifier from function]
       !!VRy16&y70=1/y71=4:+15;          [+15% crit chance if Mastery enabled for Caster Commander +15% from the hero makes +30% in total]
       !!if&y9<y16;                      [if crit]
@@ -9842,7 +9713,7 @@ Astral Spirit new Pacifist ability. Instead of reducing the number of enemy unit
 !!VRy45::15-6;                          [+1% reduce per 15% passive modifier]
 !!VRy5::4;                              [1% per 4 level]
 !!VRy10:S5+y5+y45;                      [Set Amount by which to reduce enemy damage and HP and multiply by passive modifier]
-!!VRy10:*-1+100;                        [Substrac from 100]
+!!VRy10:*-1+100;                        [Substract from 100]
 !!if&y2=8/y3=0/y4=1;
   !!DO(AC_Function_134)/21/41/1:Py10;   [Run if Astral Spirit is alive]
   !!SN:T^AC_Misc.Pacifist_Ability^/?z1/^damage^/y10;
@@ -10347,8 +10218,8 @@ Close Dialouge
 
 !!BMv7080&v7080>-1:T?y3 I?y4;           [get acting monster type and side]
 !!BMv7082&v7082>-1:F?y7 P?y8;           [get target's flags, position]
-!!VRy10&y3>=174/y3<=191/v7081>=6/v7081<=7/v7084=4096/y4=0:S0T99; [random roll - attacker]
-!!VRy11&y3>=174/y3<=191/v7081>=6/v7081<=7/v7086=4096/y4=1:S0T99; [random roll - defender]
+!!VRy10&y3>=174/y3<=191/v7081>=6/v7081<=7/v7084=4096/y4=0:S0R99; [random roll - attacker]
+!!VRy11&y3>=174/y3<=191/v7081>=6/v7081<=7/v7086=4096/y4=1:S0R99; [random roll - defender]
 !!FU7073&y3>=174/y3<=191/v7081>=6/v7081<=7/v7084=4096/y4=0/y10<50:Py7/y8; [50% cast poison if commander with death stare attacked or shot - attacker]
 !!FU7073&y3>=174/y3<=191/v7081>=6/v7081<=7/v7086=4096/y4=1/y11<50:Py7/y8; [50% cast poison if commander with death stare attacked or shot - defender]
 
@@ -10360,8 +10231,8 @@ Close Dialouge
 !!VRy9&v7080>-1:&65536;                 [check for no retaliation]
 
 !!BMv7080&v7080>-1:F?y7 P?y8;           [get acting creature's flags, position]
-!!VRy10&y3>=174/y3<=191/v7081=6/v7084=4096/v7087>0/y4=0/y6>-1/y9=0:S0T99; [random roll - attacker]
-!!VRy11&y3>=174/y3<=191/v7081=6/v7086=4096/v7087>0/y4=1/y6>-1/y9=0:S0T99; [random roll - defender]
+!!VRy10&y3>=174/y3<=191/v7081=6/v7084=4096/v7087>0/y4=0/y6>-1/y9=0:S0R99; [random roll - attacker]
+!!VRy11&y3>=174/y3<=191/v7081=6/v7086=4096/v7087>0/y4=1/y6>-1/y9=0:S0R99; [random roll - defender]
 !!FU7073&y3>=174/y3<=191/v7081=6/v7084=4096/v7087>0/y4=0/y10<50/y6>-1/y9=0:Py7/y8; [50% cast poison if commander with death stare retaliates - attacker]
 !!FU7073&y3>=174/y3<=191/v7081=6/v7086=4096/v7087>0/y4=1/y11<50/y6>-1/y9=0:Py7/y8; [50% cast poison if commander with death stare retaliates - defender]
 
@@ -11294,7 +11165,7 @@ Here all variables should be reset before a repeated fight
 
   !!FU(H3_Calc_Crit_Chance_and_Damage):Py4/?y16/?y99/1/y31/y2/y5; [(Pass Hero Number/Returns Crit chance/Crit damage/Battle State/Enemy Hero/Spell/Target)]
 
-  !!VRy9:S0T99;                           [y9 chance to crit (0..99)]
+  !!VRy9:S0R99;                           [y9 chance to crit (0..99)]
 
   !!if&y9<y16;
     !!if|y2=24/y2=25/y2=26;                [Death Ripple, Destroy Undead and Armageddon get -25% crit damage]
@@ -12012,8 +11883,8 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 !!if&y3>=0;
 
 !!if&y2=38;
-!!FU(Count_Set_Pieces):P-1/0/0/0/0/0/?y95;   [Count Set Pieces function]
-!!if&y95>=5;                           [If hero wears 5 Priest of the Light Set pieces + 50% Bonus to Resurrection]
+!!FU(Count_Set_Pieces):P-1/0/0/0/0/0/?y95; [Count Set Pieces function]
+!!if&y95>=5;                            [If hero wears 5 Priest of the Light Set pieces + 50% Bonus to Resurrection]
 !!SN:W^Spell_Change_Flag^/1;
 !!SSy2:P?y5;
 !!SN:W^Priest_Set_Bonus_Res^/y5;
@@ -12023,8 +11894,8 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 !!en;
 
 !!if&y2=39;
-!!FU(Count_Set_Pieces):P-1/0/0/0/0/0/0/?y96;  [Count Set Pieces function]
-!!if&y96>=5;                           [If hero wears 5 Priest of the Dark Set pieces + 50% Bonus to Raise Dead]
+!!FU(Count_Set_Pieces):P-1/0/0/0/0/0/0/?y96; [Count Set Pieces function]
+!!if&y96>=5;                            [If hero wears 5 Priest of the Dark Set pieces + 50% Bonus to Raise Dead]
 !!SN:W^Spell_Change_Flag^/1;
 !!SSy2:P?y5;
 !!SN:W^Dark_Priest_Set_Bonus_Res^/y5;
@@ -12034,8 +11905,8 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 !!en;
 
 !!if&y2=36;
-!!FU(Count_Set_Pieces):P-1/0/0/0/0/0/0/0/0/?y97;[Count Set Pieces function]
-!!if&y97=3;                            [If hero wears 3 Resistance Set pieces Set Mass Magic Mirror]
+!!FU(Count_Set_Pieces):P-1/0/0/0/0/0/0/0/0/?y97; [Count Set Pieces function]
+!!if&y97=3;                             [If hero wears 3 Resistance Set pieces Set Mass Magic Mirror]
 !!SN:W^Spell_Change_Flag^/1;
 !!SSy2:F?i;
 !!VRi:&-17;                             [remove single target flag]
@@ -12046,7 +11917,7 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 
 !!if&y2=48;
 !!FU(Count_Set_Pieces):P-1/0/0/0/0/0/0/0/0/0/0/0/0/?y97; [Count Set Pieces function]
-!!if&y97>=5;                           [If hero wears 5 Angelic Allinace Set pieces + 50% Bonus to Prayer]
+!!if&y97>=5;                            [If hero wears 5 Angelic Allinace Set pieces + 50% Bonus to Prayer]
 !!SN:W^Spell_Change_Flag^/1;
 !!HEy3:S16/?y50;                        [Check Water Magic Level]
 !!SSy2:Ey50/?y5;
@@ -12058,7 +11929,7 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 
 !!if&y2=43;
 !!FU(Count_Set_Pieces_2):P-1/?y47;      [Count Set Pieces function]
-!!if&y47>=4;                           [If hero wears 4 Battle Mage War Dress Set pieces + 50% Bonus to Bloodlust]
+!!if&y47>=4;                            [If hero wears 4 Battle Mage War Dress Set pieces + 50% Bonus to Bloodlust]
 !!SN:W^Spell_Change_Flag^/1;
 !!HEy3:S14/?y50;                        [Check Fire Magic Level]
 !!SSy2:Ey50/?y5;
@@ -12076,6 +11947,30 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
     !!SSy2:Ey50/?y5;
     !!SN:W^Boots_of_Haste_Bonus^/y5;
     !!VRy5:+2;                          [+2 Bonus to Haste]
+    !!SSy2:Ey50/y5;
+  !!en;
+!!en;
+
+!!if&y2=27;                             [27  Shield]
+  !!HEy3:A2/41/?y18/?y19;               [Check for 41 Dragonbone Greaves]
+  !!if&y19=1;
+    !!SN:W^Spell_Change_Flag^/1;
+    !!HEy3:S17/?y50;                    [Check Earth Magic Level]
+    !!SSy2:Ey50/?y5;
+    !!SN:W^Dragonbone_Greaves_Bonus^/y5;
+    !!VRy5:-5;                          [+5% Bonus to Shield]
+    !!SSy2:Ey50/y5;
+  !!en;
+!!en;
+
+!!if&y2=54;                             [54  Slow]
+  !!HEy3:A2/56/?y18/?y19;               [Check for 56 Dead Man's Boots]
+  !!if&y19=1;
+    !!SN:W^Spell_Change_Flag^/1;
+    !!HEy3:S17/?y50;                    [Check Earth Magic Level]
+    !!SSy2:Ey50/?y5;
+    !!SN:W^Dead_Man_Boots_Bonus^/y5;
+    !!VRy5:-5;                          [+5% Bonus to Slow]
     !!SSy2:Ey50/y5;
   !!en;
 !!en;
@@ -12138,12 +12033,30 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 !!SSy2:Ey50/y5;                         [Restore old Value]
 !!en;
 
-!!if&y2=53;                            [*Haste]
+!!if&y2=53;                             [*Haste]
 !!SN:W^Spell_Change_Flag^/0;
 !!SN:W^Boots_of_Haste_Bonus^/?y5;
 !!HEy3:S15/?y50;                        [Check Fire Magic Level]
 !!SSy2:Ey50/?y5;                        [Restore old Value]
 !!VRy5:-2;                              [-2 to Haste]
+!!SSy2:Ey50/y5;                         [Restore old Value]
+!!en;
+
+!!if&y2=27;                             [*Shield]
+!!SN:W^Spell_Change_Flag^/0;
+!!SN:W^Dragonbone_Greaves_Bonus^/?y5;
+!!HEy3:S17/?y50;                        [Check Earth Magic Level]
+!!SSy2:Ey50/?y5;
+!!VRy5:+5;                              [+5% Bonus to Shield]
+!!SSy2:Ey50/y5;                         [Restore old Value]
+!!en;
+
+!!if&y2=54;                             [*Slow]
+!!SN:W^Spell_Change_Flag^/0;
+!!SN:W^Dead_Man_Boots_Bonus^/?y5;
+!!HEy3:S17/?y50;                        [Check Earth Magic Level]
+!!SSy2:Ey50/?y5;
+!!VRy5:+5;                              [+5% Bonus to Slow]
 !!SSy2:Ey50/y5;                         [Restore old Value]
 !!en;
 
@@ -12517,9 +12430,9 @@ x14= Fix Speed modifier
 
 !!if&y50=1;                             [If Hierophant]
   !!SN:T^AC_Misc.Bonus_Table_Hierophant^/?z4;
-  !!VRy52:Sy44*10*y22:100;              [Tent Health Bonus]
+  !!VRy52:Sy44*15*y22:100;              [Tent Health Bonus]
   !!VRy53:Sy44*5*y22:100;               [Bonus heal from commander]
-  !!VRy54:Sy44*20*y22:100;              [Bonus heal capacity from commander]
+  !!VRy54:Sy44*30*y22:100;              [Bonus heal capacity from commander]
   !!VRy55:Sy44*y43*2+50*y21:100;        [Shield Power + Spell Modifier]
 !!en;
 
@@ -12561,7 +12474,9 @@ x14= Fix Speed modifier
 
 !!if&y50=8;                             [If AstralSpirit]
   !!SN:T^AC_Misc.Bonus_Table_AstralSpirit^/?z4;
-  !!VRy52:Sy44:5+5*y22:100;             [Pacifist Ability]
+  !!VRy83:Sy22:15-6;                    [+1% reduce per 15% passive modifier]
+  !!VRy82:Sy44:4;                       [1% per 4 level]
+  !!VRy52:S5+y83+y82;                   [Set Amount by which to reduce enemy damage and HP and multiply by passive modifier]
   !!FU(Astral_Spirit_Calc_Air_Element):Py44/y43/y21/?y54/0/0/y4; [Pass values and return Health and Damage of Element]
 !!en;
 
@@ -12766,7 +12681,6 @@ x14= Fix Speed modifier
 !!HE-1&y96=5:Fd1/d1/d1/d1;              [With 5 Set pieces Increase primary +1]
 !!HE-1&y96=6:Fd4/d4/d4/d4;              [With 6 Set pieces Increase all +4]
 
-
 !?AE0|v998=104/v998=14/v998=20/v998=26/v998=8/v998=56; Unequip Artifact   !!FU&761:E;
 !!FU(Count_Set_Pieces):P-1/?y90/?y91/?y92/?y93/?y94/?y95/?y96; [Count Set Pieces function]
 
@@ -12775,6 +12689,7 @@ x14= Fix Speed modifier
 !!HE-1&y96=3:Fd-2/d0/d0/d0;             [With 4 Set pieces Increase attack -2]
 !!HE-1&y96=4:Fd-1/d-1/d-1/d-1;          [With 5 Set pieces Increase primary -1]
 !!HE-1&y96=5:Fd-4/d-4/d-4/d-4;          [With 6 Set pieces decrease all -4]
+
 
 *---------------------------------
 *Books*
@@ -13585,6 +13500,20 @@ Artifacts show description when right clicked
 
 !?DL&v998=570/v999=30722/v1000=13;
 !!DL:C1;                                [Close Art Table DL]                     
+
+
+*Issue warning when clicking on Backpack to not assemble/disassemble artifacts with HD Mod functionality
+!?FU(OnHeroScreenMouseClick);
+
+!!SN:W^Backpack_Warning_Flag^/?y1; !!FU&y1=0:E; Exit if it has already been shown
+!!CM:F?y1 I?y2 S?y3;
+!!if&y1=0/y2=8000;
+  !!SN:T^AC_Misc.Backpack_Warning^/?s^Text^; !!IF:M0/4/^%S(Text)^;
+  !!SN:W^Backpack_Warning_Flag^/0; 
+!!en;
+
+!?FU(OnAfterErmInstructions);
+!!SN:W^Backpack_Warning_Flag^/1;
 
 
 ********************************************************************************
@@ -14688,6 +14617,73 @@ That breakes immunities and allows to apply spells to creatures that are usually
 !!en;
 
 
+!?MF1; 
+*Vampire Coate gives 1% life leech to all creatures
+!!UN:C42149568/4/?y10;                  [Physical Damage]
+!!if|y10=4462398/y10=4456676;           [Only run when melee or Strikes all round]
+  !!BG:A?y1; !!FU&y1<>6:E;              [Exit if not melee]
+  !!BG:N?y1;                            [Attacking Stack]
+  !!MF:N?y4;                            [damage receiving stack]
+  !!SN:W^Vampire_Cowl_Attacking_Stack^/?y50;
+  !!VRy1&y4=y1/y50>=0/y50<=41:Sy50;     [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
+  !!SN:W^Vampire_Cowl_Attacking_Stack^/y4;
+  !!BMy4:F?y36;                         [Get Flag of damage receiving stack]
+  !!VRy36:&16;                          [Check Alive bit of creature]
+  !!FU&y36=0:E;                         [Exit if no alive stack]
+  !!BMy1:T?y2 H?y6 L?y7 B?y8 N?y9;      [Creature Type]
+  !!FU&y8=0:E;
+  !!FU&y6=0:E;
+  !!FU&y6=y9/y7=0:E;                    [Exit if monster was not damaged]
+  !!if&y2>=0/y2<=191;                   [if any commander]
+
+    !!BG:H?y5;                          [Get Hero]
+    !!FU&y5<0:E;                        [Exit if no Hero]
+    !!HEy5:A2/55/?y40/?y41; !!FU&y41=0:E;[Check for 55 Vampire's Cowl]
+    !!MF:F?y3;                          [Get damage]
+    !!FU&y3<=0:E;
+
+    !!BMy1:N?y71 H?y2 L?y3 B?y4;          [Get Battle Monsters parameters]
+
+    !!FU&y4=0:E;
+    !!FU&y2=0:E;
+    !!FU&y71=y4/y3=0:E;                   [Exit if monster was not damaged]
+
+    *!VRy10:S10000; Test set heal to 1000
+    !!VRy10:Sy3; Test set heal to 1000
+    !!VRy10:*1:100;
+    !!FU&y10<=0:E;
+
+    !!VRy12:Sy10 %y2;                       [Divide Amount of Heal durch HP]
+    !!VRy15:Sy3;                            [Set to lost life]
+    !!VRy15:Sy15-y12;                       [Lost life - difference from Heal]
+    !!VRy16:Sy15;
+    !!VRy11:Sy10:y2;                        [Number of possible Revives]
+
+    !!if&y12>=y3;                           [Calc correct rest life]
+    !!VRy16:*-1;
+    !!VRy17:Sy2;
+    !!VRy17:-y16;
+    !!VRy16:Sy17;
+    !!VRy11:+1;                             [Add 1 creature for correct rest life]
+    !!en;
+
+    !!VRy70:Sy71+y11;                       [Total Number after attack]
+    !!VRy16&y70>y4:S0;                      [Fix for Commander, Set lost life to zero if could heal more than 1 stack above maximum]
+    !!VRy70&y70>=y4:Sy4;                    [Set Number Cannot be more than before fight]
+
+
+    *!BMy1:N?y8 B?y9 T?y50 H?y17 G4/?y18/?y19; [Check Monster Parameters and for Disguise]
+    !!BMy1:Ny70 Ly16;                       [Heal happens Set Number and apply rest life]
+
+
+    !!BMy1&1000/f=0:V74;                [Show leech animation on stack]
+    !!VRz1&1000:S^DRAINLIF^;
+    !!SN&1000/f=0:Pz1;                  [Play leech sound]
+  !!en;
+!!en;
+
+
+
 
 !?AE1&v998=146; Equip Artifact  !!FU&761:E;
 !!HE-1:Fd2/d/d/d;                      [axe of smashing +2]
@@ -14986,6 +14982,11 @@ All changes to these parameters should be done here. Values can be called anytim
   !!en;
 
   !!HEx1:A2/166/?y80/?y81;              [66 Blank Neck Broach +10% to all attributes]
+  !!if&y81=1;
+    !!VRy50:+10; !!VRy51:+10; !!VRy52:+10; !!VRy53:+10; !!VRy54:+10; !!VRy55:+10; !!VRy56:+10; !!VRy57:+10;
+  !!en;
+
+  !!HEx1:A2/54/?y80/?y81;               [54 Amulet of the Undertaker +10% to all attributes]
   !!if&y81=1;
     !!VRy50:+10; !!VRy51:+10; !!VRy52:+10; !!VRy53:+10; !!VRy54:+10; !!VRy55:+10; !!VRy56:+10; !!VRy57:+10;
   !!en;
@@ -15552,12 +15553,12 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
 !!SN:H^art^/29/1/z188172;                [Breastplate of Brimstone]
 !!SN:H^art^/101/1/z188173;               [Pendant of Second Sight]
 *-------Angelic Alliance------*
-!!SN:H^art^/31/1/z188131; !!UN:A31/5/-1; [Armor of Wonder]
-!!SN:H^art^/32/1/z188133; !!UN:A32/5/-1; [Sandals of the Saint]
-!!SN:H^art^/33/1/z188177; !!UN:A33/5/-1; [Celestial Necklace of Bliss]
-!!SN:H^art^/34/1/z188178; !!UN:A34/5/-1; [Lion's Shield of Courage]
-!!SN:H^art^/35/1/z188179; !!UN:A35/5/-1; [Sword of Judgement]
-!!SN:H^art^/36/1/z188180; !!UN:A36/5/-1; [Helm of Heavenly Enlightenment]
+!!SN:H^art^/31/1/z188131; *!UN:A31/5/-1; [Armor of Wonder]
+!!SN:H^art^/32/1/z188133; *!UN:A32/5/-1; [Sandals of the Saint]
+!!SN:H^art^/33/1/z188177; *!UN:A33/5/-1; [Celestial Necklace of Bliss]
+!!SN:H^art^/34/1/z188178; *!UN:A34/5/-1; [Lion's Shield of Courage]
+!!SN:H^art^/35/1/z188179; *!UN:A35/5/-1; [Sword of Judgement]
+!!SN:H^art^/36/1/z188180; *!UN:A36/5/-1; [Helm of Heavenly Enlightenment]
 *-------Pegasus Harness-------*
 !!SN:H^art^/60/1/z188181;                [Bow of Elven Cherrywood]
 !!SN:H^art^/61/1/z188182;                [Bowstring of the Unicorn's Mane]
@@ -21859,7 +21860,9 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 
 !!VRy71:Sx2 *10 +100;
 !!VRy71&x3>0:Sx2 *15 +150;              [with GM Earth]
-!!SN&x9=1:W^Hero%X1_Shield_Upgrade^/?y80; !!VRy27&x9=1:+y80; Add Spell Trainer Effect
+!!SN&x9=1:W^Hero%X1_Shield_Upgrade^/?y80; !!VRy27&x9=1:+y80; [Add Spell Trainer Effect]
+!!HEx1:A2/41/?y18/?y19;                 [Check for 41 Dragonbone Greaves]
+!!VRy27&y19=1:+5;                       [Add Artifact Effect]
 !!SN&x6=3/x4=1:T^AC_Spells.Shield_0^/?z137;
 !!SN&x6=3/x4=0:T^AC_Spells.Shield_1^/?z137;
 !!SN&x6<3/x4=0:T^AC_Spells.Shield_2^/?z137;
@@ -21934,7 +21937,9 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !!VRz784&x9=1:+z1; !!SN:Iz784/?z784; !!VRm:Sx6 +(SPELL_TEXT_DESCR); !!SN:H^spell^/50/m/z784;
 
 
-!!SN&x9=1:W^Hero%X1_Slow_Upgrade^/?y90; !!VRy54&x9=1:+y90; Add Spell Trainer Effect
+!!SN&x9=1:W^Hero%X1_Slow_Upgrade^/?y90; !!VRy54&x9=1:+y90; [Add Spell Trainer Effect]
+!!HEx1:A2/56/?y18/?y19;                 [Check for 56 Dead Man's Boots]
+!!VRy54&y19=1:+5;                       [Add Artifact Effect]
 !!SN&x6>0/x4=1:T^AC_Spells.Slow_0^/?z785;
 !!SN&x6=3/x4=0:T^AC_Spells.Slow_1^/?z785;
 !!SN&x6<3/x4=0:T^AC_Spells.Slow_2^/?z785;
@@ -22961,6 +22966,20 @@ TUM Creatures
 !!en;
 
 
+Adapt the Summon Elementals Option by Archer30
+The following lines must be executed later than the functions with the same name in 4 wog - summon elementals.erm
+
+!?FU(WOG_74_GetSummonQty);
+!#VA(hero:x) (spell:x) (level:x) (qty:x);
+
+!!FU(Calc_Summoning_Power):P(hero)/(spell)/?(totalHp:y); [Pass Hero Number, Spell Number, Returns total Summoned HP]
+
+!!MA:Pi^wog_74_mon_%(spell)^/?(hp:y);
+!!VR(qty):S(totalHp) :(hp) +1;
+
+; Fix quantity in particular cases
+!!VR(lostHp:y):S(totalHp) %(hp) -(hp) *-1;
+!!VR(qty)|(hp)=(lostHp)/(lostHp)=0:-1;
 ********************************************************************************
 
 
@@ -23076,35 +23095,35 @@ ERMS_ScriptAuthor=PerryR
 !!BA:H0/?y2;                            [For Attacker]
 !!SN:W^Magic_Specialists_Att_Spells_Saved^/?y1;
 !!if&y2>=0/y1=1;
-!!DO(AC_Function_75)/10/69/1:Py2/1;     [Give Back Hero Spells Function]
-!!DO(AC_Function_76)/86/89/1:Py2/2;     [Give Back Hero Spells Function Books]
-!!DO(AC_Function_76)/1011/1070/1:Py2/2; [Give Back Hero Spells Function Scrolls]
-!!DO(AC_Function_77)/10/69/1:Py2;       [Reset Book Spells Vars]
-*!FU(Restore_Special_Spell_Mana_Cost):Py2;                                      [Reset Special Spell Mana Cost Attacker]
-!!HEy2:A2/128/?y10/?y11;
-!!HEy2&y11=1:A3/128/1/1;
-!!HEy2&y11=1:A4/128;                    [Reequip Armageddon Blade after fight]
-!!HEy2&y11=1:Fd-3/d-3/d-3/d-6;          [Reduce Stats to compensate for AM stats]
-*!HEy2:A2/124/?y10/?y11;
-*!HEy2&y11=1:A3/124/1/1;
-*!HEy2&y11=1:A4/124;                                                            [Reequip 124 Spellbinder's Hat  after fight]
+  !!DO(AC_Function_75)/10/69/1:Py2/1;   [Give Back Hero Spells Function]
+  !!DO(AC_Function_76)/86/89/1:Py2/2;   [Give Back Hero Spells Function Books]
+  !!DO(AC_Function_76)/1011/1070/1:Py2/2;[Give Back Hero Spells Function Scrolls]
+  !!DO(AC_Function_77)/10/69/1:Py2;     [Reset Book Spells Vars]
+  *!FU(Restore_Special_Spell_Mana_Cost):Py2;                                      [Reset Special Spell Mana Cost Attacker]
+  !!HEy2:A2/128/?y10/?y11;
+  !!HEy2&y11=1:A3/128/1/1;
+  !!HEy2&y11=1:A4/128;                  [Reequip Armageddon Blade after fight]
+  !!HEy2&y11=1:Fd-3/d-3/d-3/d-6;        [Reduce Stats to compensate for AM stats]
+  !!HEy2:A2/124/?y10/?y11;
+  !!HEy2&y11=1:A3/124/1/1;
+  !!HEy2&y11=1:A4/124;                  [Reequip 124 Spellbinder's Hat  after fight]
 !!en;
 
 !!BA:H1/?y3;                            [For Defender]
 !!SN:W^Magic_Specialists_Def_Spells_Saved^/?y1;
 !!if&y3>=0/y1=1;
-!!DO(AC_Function_75)/10/69/1:Py3/1;     [Give Back Hero Spells Function]
-!!DO(AC_Function_76)/86/89/1:Py3/2;     [Give Back Hero Spells Function Books]
-!!DO(AC_Function_76)/1011/1070/1:Py3/2; [Give Back Hero Spells Function Scrolls]
-!!DO(AC_Function_77)/10/69/1:Py3;       [Reset Book Spells Vars]
-*!FU(Restore_Special_Spell_Mana_Cost):Py3;                                      [Reset Special Spell Mana Cost]
-!!HEy3:A2/128/?y10/?y11;
-!!HEy3&y11=1:A3/128/1/1;
-!!HEy3&y11=1:A4/128;                    [Reequip Armageddon Blade after fight]
-!!HEy3&y11=1:Fd-3/d-3/d-3/d-6;          [Reduce Stats to compensate for AM stats]
-*!HEy3:A2/124/?y10/?y11;
-*!HEy3&y11=1:A3/124/1/1;
-*!HEy3&y11=1:A4/124;                                                            [Reequip 124 Spellbinder's Hat  after fight]
+  !!DO(AC_Function_75)/10/69/1:Py3/1;   [Give Back Hero Spells Function]
+  !!DO(AC_Function_76)/86/89/1:Py3/2;   [Give Back Hero Spells Function Books]
+  !!DO(AC_Function_76)/1011/1070/1:Py3/2;[Give Back Hero Spells Function Scrolls]
+  !!DO(AC_Function_77)/10/69/1:Py3;     [Reset Book Spells Vars]
+  *!FU(Restore_Special_Spell_Mana_Cost):Py3;                                      [Reset Special Spell Mana Cost]
+  !!HEy3:A2/128/?y10/?y11;
+  !!HEy3&y11=1:A3/128/1/1;
+  !!HEy3&y11=1:A4/128;                  [Reequip Armageddon Blade after fight]
+  !!HEy3&y11=1:Fd-3/d-3/d-3/d-6;        [Reduce Stats to compensate for AM stats]
+  !!HEy3:A2/124/?y10/?y11;
+  !!HEy3&y11=1:A3/124/1/1;
+  !!HEy3&y11=1:A4/124;                  [Reequip 124 Spellbinder's Hat  after fight]
 !!en;
 
 !!SN:W^Magic_Specialists_Att^/0;        [Reset extra Cast at Battle End]
@@ -25633,7 +25652,6 @@ By clicking on the Blacksmith or Mage Guild you can buyupgrades or enchantment f
 ****************************************************************************************************
 Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith or Mage Guild
 !?CM1;                                  [Town Screen Trigger]
-
 !!CM:T?y1 F?y2 I?y3 S?y4;               [where we click and click subtype]
 !!FU&y4<>14:E; !!FU&y2<>512:E;
 !!if&y1=512/y2=512/y4=14;               [if left click]
@@ -25644,6 +25662,19 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
   !!SN:W^WM_Upgrade_Hero^/y5;
   !!SN:W^WM_Visit_Purchased^/0;
 !!en;
+
+
+!?FU(gem_OnOpenButtonDlg);              [Function from GEM Mod that is called when clicking the new buttons]
+  !!CA-1:H1/?y5;                        [town Visitor]
+  !!FU|y5<0/y5>155:E;                   [Exit if no hero]
+  !!SN:T^AC_Warmachine.GEM_Button_Smith^/?z20;
+  !!SN:T^AC_Warmachine.GEM_Button_Smith_Hint^/?z21;
+  !!SN:T^AC_Warmachine.GEM_Button_Ench^/?z22;
+  !!SN:T^AC_Warmachine.GEM_Button_Ench_Hint^/?z23;
+  !!FU(gem_AddTownButton):P^upgrsmth.def^/^%Z20^/^%Z21^/(Warmachine_Upgrade_Town)/y5/1/0; [Blacksmith button]
+  !!FU(gem_AddTownButton):P^MageGld.def^/^%Z22^/^%Z23^/(Warmachine_Upgrade_Town)/y5/2/0; [Enchanter button]
+  !!SN:W^WM_Upgrade_Hero^/y5;
+  !!SN:W^WM_Visit_Purchased^/0;
 
 
 ****************************************************************************************************
@@ -27653,7 +27684,7 @@ Grandmaster Mage:+1
 !!HEx1:S18/?y4;                         [Checke current hero Scholar]
 !!VRy5&y4>0:+25;                        [+Scholar Bonus]
 !!VRy6&y4>0:+1;                         [+Spell Upgrade for Basic Scholar]
-!!VRy6&y4=3/y14=0/y15=0:+1;             [+Spell Upgrade for Expert Scholar]
+!!VRy6&y4=3:+1;                         [+Spell Upgrade for Expert Scholar]
 !!VRy6&y4=3/y14=1/y15=1:+1;             [+Spell Upgrade for Grandmaster Scholar]
 
 !!HEx1:A2/76/d/?y20 A2/77/d/?y21 A2/78/d/?y22 A2/139/d/?y23; [Check for Artifacts Collar,Ring,Cape,Ring of the Magi]
@@ -27699,7 +27730,7 @@ Grandmaster Mage:+1
 
 !!BA:Q?y1;                              [Check for Quick Combat]
 !!if&y1=1;
-  !!VRy99:S0T99;
+  !!VRy99:S0R99;
   !!FU&y99>50:E;                        [In Quick Combat the chance to level up a spell is only 50% to encourage the player to use his spells and not get the level ups for free]
 !!en;
 
@@ -30621,22 +30652,6 @@ Hint: If you remove UN44.def and UN32.def from ACM pack file the crash can be av
 !!en;
 
 ********************************************************************************
-Adapt the Summon Elementals Option by Archer30
-The following lines must be executed later than the functions with the same name in 4 wog - summon elementals.erm
-
-!?FU(WOG_74_GetSummonQty);
-!#VA(hero:x) (spell:x) (level:x) (qty:x);
-
-!!FU(Calc_Summoning_Power):P(hero)/(spell)/?(totalHp:y); [Pass Hero Number, Spell Number, Returns total Summoned HP]
-
-!!MA:Pi^wog_74_mon_%(spell)^/?(hp:y);
-!!VR(qty):S(totalHp) :(hp) +1;
-
-; Fix quantity in particular cases
-!!VR(lostHp:y):S(totalHp) %(hp) -(hp) *-1;
-!!VR(qty)|(hp)=(lostHp)/(lostHp)=0:-1;
-
-********************************************************************************
 
 
 
@@ -30646,3 +30661,523 @@ The following lines must be executed later than the functions with the same name
 
 
 ********************************************************************************
+*Mobile Market of Time*
+Allows a hero to forget a secondary skill. Can be used once or twice for each hero.
+This should help to better roll your desired class.
+The Market can be accessed by right cklicking the market in the citiy or the GEM town buttons.
+
+!?FU(OnTownMouseClick);                 [Town Screen Trigger]
+
+!!CM:T?y1 F?y2 I?y3 S?y4;               [y1, y2, y3, y4, where we click and click subtype]
+!!FU&y4<>14:E; !!FU&y2<>512:E;          []
+!!if&y1=512/y2=512/y4=14/y3=14;               [if right click on marketplace]
+  !!CA-1:H1/?y5;                        [y5, town Visitor]
+  !!FU|y5<0/y5>155:E;                   []
+  !!VRz1:S^Warlock Bank 01.wav^;
+  !!SN:Pz1;  
+  !!FU(Mobile_Time_Market)&y1=512/y2=512/y3=14/y4=14:Py5;
+  !!SN:W^ACM_Skill_Match_Found^/-1;
+  !!SN:W^WM_Upgrade_Hero^/y5;
+  !!SN:W^ACM_MobileMarket_Finished^/0; 
+!!en;                                   []
+
+
+*?FU(gem_OnOpenButtonDlg);              [Function from GEM Mod that is called when clicking the new buttons]
+  *!CA-1:H1/?y5;                        [y5, town Visitor]
+  *!FU|y5<0/y5>155:E;                   [Exit if no hero]
+  *!SN:T^AC_Warmachine.GEM_Button_Smith^/?z20; [z20, ]
+  *!SN:T^AC_Warmachine.GEM_Button_Smith_Hint^/?z21; [z21, ]
+  *!SN:T^AC_Warmachine.GEM_Button_Ench^/?z22; [z22, ]
+  *!SN:T^AC_Warmachine.GEM_Button_Ench_Hint^/?z23; [z23, ]
+  *!FU(gem_AddTownButton):P^upgrsmth.def^/^%Z20^/^%Z21^/(Warmachine_Upgrade_Town)/y5/1/0; [Blacksmith button]
+  *!FU(gem_AddTownButton):P^MageGld.def^/^%Z22^/^%Z23^/(Warmachine_Upgrade_Town)/y5/2/0; [Enchanter button]
+  *!SN:W^WM_Upgrade_Hero^/y5;           []
+  *!SN:W^WM_Visit_Purchased^/0;         []
+
+
+!?FU(Mobile_Time_Market);
+
+  !!DL233:N^ss_popup.txt^;               [Name of Dialogue text file]
+  !!SN:T^AC_Misc.Time_Market_Welcome^/?z20;
+  !!DL233:A2/3/z20/1; [Name of Class]
+  !!DL233:S; 
+
+
+!?DL&v998=233/v999=30722/v1000=13;       [Save Confirm]
+  !!SN:W^ACM_Hit_Counter^/?y99;
+  !!SN:W^WM_Upgrade_Hero^/?y5;
+  
+  !!FU(ACM_Time_Market_Input)&y99=0:Py5;
+
+  !!SN:W^ACM_Skill_Match_Found^/?y10; 
+  !!FU(ACM_Time_Market_Forget_Skill)&y99>0/y10>=0:Py5/y99;
+
+
+!?FU(ACM_Time_Market_Input);
+
+  !!VRz1:S^WoodDRClose.wav^;
+  !!SN:Pz1;  
+
+  !!SN:T^AC_Misc.Time_Market_Input1^/?z7;
+  !!SN:T^AC_Misc.Time_Market_Input2^/?z8;
+
+  !!SN:W^WM_Upgrade_Hero^/?y1;
+
+  !!VRz1:S^^;                         [Initialize z1 to null: z1]
+  !!IF:D15/7/8/1/1/1/1/1/1/1/1/1/1/1/1/1; [Create input dialouge]
+  !!IF:E1/15;                         [Display Input Box]
+  !!VRz1:H1;                          [Flag 1 is set to False if no text and True if text]
+
+  !!re i/0/27;                          [loop all skills and see if the input matches one of the hereos skills]
+    !!HEx1:Si/?y6;                     [check skill level from hero]
+    !!UN:G0/i/0/0;                      [reset skill names to match input]
+    !!SN:H^secskill^/i/0/?z10;          [Get name of Sec Skill]
+    !!if&y6>0/z1=z10;                  [if match found end loop]
+
+      !!FU(H3_Mod_Check_Skill_Level):Px1/?y2/?y3/i; [get M/GM level of secondary skill]
+      !!VRz15:S^^;                        [Set z-var blank]
+      !!SN&y6=1:T^AC_Misc.Basic^/?z15;    [set skill level name acordingly]
+      !!SN&y6=2:T^AC_Misc.Advanced^/?z15; [...]
+      !!SN&y6=3:T^AC_Misc.Expert^/?z15;   [...]
+      !!SN&y6=3/y2=1/y3=0:T^AC_Misc.Master^/?z15; [...]
+      !!SN&y6=3/y2=1/y3=1:T^AC_Misc.Grandmaster^/?z15; [...]
+      !!SN:T^AC_Misc.Time_Market_Main1^/?z20/^skill^/z10/^level^/z15;
+      !!SN:T^AC_Misc.Time_Market_Button1^/?z21;
+      !!SN:T^AC_Misc.Time_Market_Button2^/?z22;
+
+      !!DL233:A2/3/z20/1; Main Text
+      !!DL233:A3/3/z21/1; Accept button
+      !!DL233:A4/3/z22/1; Cancel button 
+      !!SN:W^ACM_Skill_Match_Found^/i;
+      !!SN:W^ACM_Hit_Counter^/1;
+      *!VRx3:Si;                        [Set i to found skill and return with function]
+      !!br;                             [Exit loop]
+    !!en;
+  !!en;
+
+
+
+!?FU(ACM_Time_Market_Forget_Skill);
+  
+  !!SN:W^ACM_Skill_Match_Found^/?y10;
+  !!SN:W^ACM_Hit_Counter^/?y40;
+  !!HEx1:Sy10/?y6;                      [Get level of that skill]
+  !!if&y6>0;
+    !!FU(H3_Mod_Check_Skill_Level):Px1/?y2/?y3/y10; [get M/GM level of secondary skill]
+    !!VRz15:S^^;                        [Set z-var blank]
+    !!SN&y6=1:T^AC_Misc.Basic^/?z15;    [set skill level name acordingly]
+    !!SN&y6=2:T^AC_Misc.Advanced^/?z15; [...]
+    !!SN&y6=3:T^AC_Misc.Expert^/?z15;   [...]
+    !!SN&y6=3/y2=1/y3=0:T^AC_Misc.Master^/?z15; [...]
+    !!SN&y6=3/y2=1/y3=1:T^AC_Misc.Grandmaster^/?z15; [...]
+
+    !!OW:R-1/6/?y60;                  [give the resources]
+    !!if&y40>1;
+      !!OW&y60>=1000:R-1/6/d-1000;      [give the resources]
+      !!UN&y60>=1000:R2;                [Redraw resource bar]
+    !!en;
+
+    !!SN:W^ACM_Hit_Counter^/?y30;
+    !!VRy30:-1;
+    !!VRy30&y60<1000:-1; 
+    !!VRy31:Sy30*1000;
+    !!VRy30&y30<0:S0;
+    !!VRy31&y31<0:S0;
+
+    !!SN&y60>=1000:T^AC_Misc.Time_Market_Main2^/?z20/^skill^/z10/^level^/z15/^hits^/y30/^amount^/y31;
+    !!SN&y60<1000:T^AC_Misc.Time_Market_No_Gold^/?z20/^skill^/z10/^level^/z15/^hits^/y30/^amount^/y31;
+    !!SN:T^AC_Misc.Time_Market_Button3^/?z21;
+    !!SN:T^AC_Misc.Time_Market_Button4^/?z22;
+
+    !!DL233:A2/3/z20/1;                 [Main Text]
+    !!DL233:A3/3/z21/1;                 [Accept button]
+    !!DL233:A4/3/z22/1;                 [Cancel button]
+
+    !!FU&y60<1000:E;
+ 
+    !!if&y40>1;
+      !!VRy2:S0R2;
+      !!VRz2&y2=0:S^wood weapon vs leather01l.wav^;
+      !!VRz2&y2=1:S^wood weapon vs leather02m.wav^;
+      !!VRz2&y2=2:S^wood weapon vs leather03h.wav^;
+      !!SN:Pz2;
+      !!VRz2:S^LM115e.wav^;
+      !!SN:Pz2;
+
+      !!if&y2=2;                          [33% chance for hit to succeed]
+        !!VRy6&y6>0:Sy6-1;
+        !!HEx1:Sy10/y6;                   [reduce skill level]
+        !!SN&y6=0:W^ACM_MobileMarket_Finished^/1;      
+      !!en;
+    !!en;
+    !!SN:W^ACM_Hit_Counter^/d1;
+  !!el;
+
+  !!SN:W^ACM_MobileMarket_Finished^/?y1;
+  !!if&y1=1; 
+    !!SN:T^AC_Misc.Time_Market_Main3^/?z20/^skill^/z10;
+    !!SN:T^AC_Misc.Time_Market_Button5^/?z21;
+    !!SN:T^AC_Misc.Time_Market_Button6^/?z22;
+
+    !!DL233:A2/3/z20/1;                 [Main Text]
+    !!DL233:A3/3/z21/1;                 [Accept button]
+    !!DL233:A4/3/z22/1;                 [Cancel button]
+    !!VRz2:S^Quest.wav^;
+    !!SN:Pz2;
+    !!SN:W^ACM_MobileMarket_Finished^/2;
+  !!en;
+
+!?DL&v998=233/v999=30721/v1000=13;       [Save Confirm]
+  !!SN:W^ACM_Hit_Counter^/0;
+  !!VRz1:S^Wizard weapon Shop 04.wav^;
+  !!SN:Pz1;  
+  !!VRz1:S^WoodDRClose.wav^;
+  !!SN:Pz1;
+  !!DL:C1;
+
+
+****************************************************************************************************
+*Code to set Master and Grandmaster icons in Hero screen*
+
+Set hooks at Map Start/Load
+!?FU(OnStartOrLoad);
+  !!SN:L^EraPlugins\erm_hooker.era^/?y1;
+  !!if&y1<>0;
+    !!SN:Ay1/^SetHook^/?y2 Ey2/1/5120844/(acm_OnUpdateHeroBackPackScreen); [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5213968/(acm_BeforeOnHeroLvlUp);                            [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5217657/(acm_OnHeroLvlUp);                                  [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5968384/(acm_OnSwapHeroDlgUpdate);                          [Set Hook provided by Daemon :*]
+
+  **KingdomOverview update dlg - first hook get hero, skill and fram, 2nd hook - set frame
+    !!SN:Ey2/1/5365875/(acm_OnKingdomOverViewGetHeroSkill);                [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5365884/(acm_OnKingdomOverView_SetSkillDEfFrame);           [Set Hook provided by Daemon :*]
+
+  **Mouse Over hooks - sets text for skill name and prepare sec skill def frame id;
+    !!SN:Ey2/1/5095015/(acm_OnHeroScreen_SecSkill_MouseOver);              [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5379483/(acm_OnKingdomOverView_SecSkill_MouseOver);         [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5967453/(acm_OnLeftHeroMeetingScreen_SecSkill_MouseOver);   [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5967500/(acm_OnRightHeroMeetingScreen_SecSkill_MouseOver);  [Set Hook provided by Daemon :*]
+
+  **When MsgBox prepared we set own def frame
+    !!SN:Ey2/1/5201399/(acm_OnMsgBox_SetSecSkillPicture);                  [Set Hook provided by Daemon :*]
+
+  !!en;
+
+!?FU(acm_OnLeftHeroMeetingScreen_SecSkill_MouseOver);
+!!FU(acm_SwapHeroDlg_SetSkillHint):Px1/0;
+
+!?FU(acm_OnRightHeroMeetingScreen_SecSkill_MouseOver);
+!!FU(acm_SwapHeroDlg_SetSkillHint):Px1/1;
+
+!?FU(acm_SwapHeroDlg_SetSkillHint);
+!#VA(this:x) (side:x);
+  !!UN:C(this)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+  !!UN:C(ebp)/8/4/?(itemId:y);
+  !!VR(slotIndex:y):S(itemId)-200 %8 +1;
+  !!HEi^swap_hero_%(side)^:S(slotIndex)/?(skill:y)/1;
+  !!if&(skill)<>(NO_SKILL);
+    !!FU(acm_UNC_SetSecSkillLevel_Text):Pi^swap_hero_%(side)^/(skill);
+    !!DO(AC_Set_SS_Description)/(skill)/(skill)/1:Pi^swap_hero_%(side)^; [Set new Skill description]
+    !!DO(AC_Set_SS_Names)/(skill)/(skill)/1:Pi^swap_hero_%(side)^;       [Set new Skill name]
+  !!el;
+    !!SN:W^acm_text_currentSkillLevel^;
+  !!en;
+
+!?FU(acm_OnKingdomOverView_SecSkill_MouseOver);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(clickSlot:y);
+  !!VR(skillSlot:y):S(clickSlot) -158 +1;
+
+  !!UN:C(esi)/26/4/?(heroId:y);
+  !!HE(heroId):S(skillSlot)/?(skill:y)/1;
+  !!if&(skill)<>(NO_SKILL);
+    !!FU(acm_UNC_SetSecSkillLevel_Text):P(heroId)/(skill);
+    !!DO(AC_Set_SS_Description)/(skill)/(skill)/1:P(heroId); [Set new Skill description]
+    !!DO(AC_Set_SS_Names)/(skill)/(skill)/1:P(heroId);       [Set new Skill name]
+  !!el;
+    !!SN:W^acm_text_currentSkillLevel^;
+  !!en;
+
+!?FU(acm_OnHeroScreen_SecSkill_MouseOver);
+  !!UN:C6916976/4/?(hero:y);
+  !!UN:C(hero)/26/4/?(heroId:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(ecx:y);
+  !!VR(skillSlot:y):S(ecx);
+  !!HE(heroId):S(skillSlot)/?(skill:y)/1;
+
+  !!if&(skill)<>(NO_SKILL);
+    !!FU(acm_UNC_SetSecSkillLevel_Text):P(heroId)/(skill);
+  !!el;
+    !!SN:W^acm_text_currentSkillLevel^;
+  !!en;
+
+!?FU(acm_OnMsgBox_SetSecSkillPicture)&i^acm_text_currentSkillLevel^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y);                    [edx = [ebx +0x4] or v7 = vDlg8ItemPo->PicSubType;]
+  !!VR(ebx):+4;
+  !!UN:C(ebx)/4/?(picNum:y);                                        [picNum is PicSubType]
+
+  !!VR(skillId:y):S(picNum) -3 :3;                                  [get skill id by pic id 0 IF:Q - case 20]
+  !!VR(picNum:y):S(skillId)*2 +i^acm_text_currentSkillLevel^ +86;   [set new pic id by offset]
+  !!UN:C(ebx)/4/(picNum);                                           [replace current pic id by own]
+
+!?FU(acm_OnKingdomOverViewGetHeroSkill);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y);                    [esi here is skill id]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(ecx:y);                    [ecx here is heroStructure]
+  !!if&(ecx)/(esi);
+    !!UN:C(ecx)/26/4/?(heroId:y);
+    !!FU(H3_Mod_Check_Skill_Level):P(heroId)/?(masterLvl:y)/?(gmLvl:y)/(esi);
+    !!HE(heroId):S(esi)/?(skillLvl:y);
+    !!FU(ACM_Calc_Correct_Def_Cadre):P(esi)/(skillLvl)/(masterLvl)/(gmLvl)/?i^acm_KingdomOverview_SecSkill_DefFrame^/1;
+  !!el;
+    !!VRi^acm_KingdomOverview_SecSkill_DefFrame^:S(FALSE);
+  !!en;
+
+!?FU(acm_OnKingdomOverView_SetSkillDEfFrame)&i^acm_KingdomOverview_SecSkill_DefFrame^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/i^acm_KingdomOverview_SecSkill_DefFrame^;        [edx here is frame id]
+
+!?FU(acm_BeforeOnHeroLvlUp);
+  !!UN:Cx1/4/4/?(left:y);
+  !!UN:Cx1/4/?(right:y);
+
+  !!if&(left)>=0/(left)<=(SEC_SKILL_LAST);
+    !!SN:W^ACM_Left_Skill_ID^/(left);
+  !!en;  
+  !!if&(right)>=0/(left)<=(SEC_SKILL_LAST);
+    !!SN:W^ACM_Right_Skill_ID^/(right); 
+  !!en;
+
+!?FU(ACM_Calc_Correct_Def_Cadre); 
+  x1=Skill ID, x2=Skill Level, x3=Master, x4=Grandmaster, x5=returns cadre, x6=Level_Up(0) or HeroScreen(1)
+  !!if&x6=0;
+    !!VRx5:Sx1*3+3+x2-1;                [Handle normal Basic until Expert skills. To get correct cadre from Def. Basic Pathfinding starts at 3. The first 3 cadres are empty.]
+    !!VRx5&x3=1:Sx1*2+x2+85;            [Handle correct Master and GM cadres. Y4=1 means at least Master skill]
+  !!en;
+
+  !!if&x6=1;
+    !!VRx5:Sx1*3+3+x2-1;             [Handle normal Basic until Expert skills. To get correct cadre from Def. Basic Pathfinding starts at 3. The first 3 cadres are empty.]
+    !!VRx5&x3=1:Sx1*2+x4+87;         [Handle correct Master and GM cadres. Y4=1 means at least Master skill]
+  !!en;
+
+*Level up dialogue whenever hero gains a level. Set correct text and def cadre.
+!?FU(acm_OnHeroLvlUp);
+
+  !!UN:Cx1/4/?y1;                         [Get dialouge ID]
+
+  !!SN:W^ACM_Left_Skill_ID^/?y10;         [Left skill ID]
+  !!if&y10>=0/y10<=27;                    [If valid secondary skill found]
+  !!SN:H^secskill^/y10/0/?z10;            [Get name of Sec Skill]
+    !!HE-1:N?y99; !!FU&y99<0/y99>=155:E;  [Exit if no valid hero number]
+    !!HEy99:Sy10/?y6;                     [Get level of that skill]
+    !!HEy99:Sy10/?y8;                     [Get level of that skill]
+    !!VRy6&y6<3:+1;                       [Increase skill level to show potential next level]
+    !!SN:W^ACM_SSkill_%Y10^/?y7;          [get skill level before it was decreased]
+    !!FU(H3_Mod_Check_Skill_Level):Py99/?y2/?y3/y10; [get M/GM level of secondary skill]
+    !!VRz15:S^^;                          [Set z-var blank]
+    !!SN&y6=1:T^AC_Misc.Basic^/?z15;      [set skill level name acordingly]
+    !!SN&y6=2:T^AC_Misc.Advanced^/?z15;   [...]
+    !!SN&y6=3/y7=2:T^AC_Misc.Expert^/?z15;[...]
+    !!SN&y6=3/y7=3/y8=2:T^AC_Misc.Master^/?z15; [...]
+    !!SN&y6=3/y7=3/y8=2/y2=1:T^AC_Misc.Grandmaster^/?z15; [...]
+    !!FU(ACM_Calc_Correct_Def_Cadre):Py10/y6/y2/0/?y20/0;
+  !!en;
+
+  !!SN:W^ACM_Right_Skill_ID^/?y11;        [Right Skill ID]
+  !!if&y11>=0/y11<=27;                    [If valid secondary skill found]
+  !!SN:H^secskill^/y11/0/?z11;            [Get name of Sec Skill]
+    !!HE-1:N?y99; !!FU&y99<0/y99>=155:E;
+    !!HEy99:Sy11/?y6;                     [Get level of that skill]
+    !!HEy99:Sy11/?y8;                     [Get level of that skill]
+    !!VRy6&y6<3:+1;                       [Increase skill level to show potential next level]
+    !!SN:W^ACM_SSkill_%Y11^/?y7;          [get skill level before it was decreased]
+    !!FU(H3_Mod_Check_Skill_Level):Py99/?y2/?y3/y11; [get M/GM level of secondary skill]
+    !!VRz16:S^^;
+    !!SN&y6=1:T^AC_Misc.Basic^/?z16;      [set skill level name acordingly]
+    !!SN&y6=2:T^AC_Misc.Advanced^/?z16;   [...]
+    !!SN&y6=3/y7=2:T^AC_Misc.Expert^/?z16;[...]
+    !!SN&y6=3/y7=3/y8=2:T^AC_Misc.Master^/?z16; [...]
+    !!SN&y6=3/y7=3/y8=2/y2=1:T^AC_Misc.Grandmaster^/?z16; [...]
+    !!FU(ACM_Calc_Correct_Def_Cadre):Py11/y6/y2/0/?y21/0;
+  !!en;
+
+  !!SN:T^AC_Misc.LvLUp_Text_Double^/?z20/^skill^/z11/^level^/z16/^skill2^/z10/^level2^/z15; [load text for left and right skill]
+  !!SN&y10<0:T^AC_Misc.LvLUp_Text_Single^/?z20/^skill^/z11/^level^/z16; [load text for only one skill displayed]
+
+  !!VRz10:S^%Z15
+  %Z10^; Set text below left skill icon
+  !!VRz11:S^%Z16
+  %Z11^; Set text below right skill icon
+
+  !!FU(H3Dlg_SendCmdToItem):Py1/2005/(DLG_CMD_SET_TEXT)/z20/(DLG_CMD_TYPE_DEFAULT); [Long skill text what hero can learn]
+  !!FU(H3Dlg_SendCmdToItem)&y10>=0:Py1/2007/(DLG_CMD_SET_TEXT)/z10/(DLG_CMD_TYPE_DEFAULT); [Left side]
+  !!FU(H3Dlg_SendCmdToItem):Py1/2008/(DLG_CMD_SET_TEXT)/z11/(DLG_CMD_TYPE_DEFAULT); [Right side]
+  !!FU(H3Dlg_SendCmdToItem)&y10<0/y11>=0:Py1/2007/(DLG_CMD_SET_TEXT)/z11/(DLG_CMD_TYPE_DEFAULT); [Right side]
+  !!FU(H3Dlg_SendCmdToItem)&y10>=0:Py1/2010/(DLG_CMD_SET_DEF_FRAME)/y20/(DLG_CMD_TYPE_DEFAULT); [Send cmd to set def cadre]
+  !!FU(H3Dlg_SendCmdToItem):Py1/2011/(DLG_CMD_SET_DEF_FRAME)/y21/(DLG_CMD_TYPE_DEFAULT); [Send cmd to set def cadre]
+  !!FU(H3Dlg_SendCmdToItem)&y10<0/y11>=0:Py1/2010/(DLG_CMD_SET_DEF_FRAME)/y21/(DLG_CMD_TYPE_DEFAULT); [Send cmd to set def cadre]
+
+  !!SN:W^ACM_Left_Skill_ID^/-1;           [Reset variables]
+  !!SN:W^ACM_Right_Skill_ID^/-1;
+
+****************************************************************************************************
+On open hero screen set correct def cadres and skill tags
+
+!?FU(acm_OnUpdateHeroBackPackScreen);   [When opening hero screen]
+  !!FU(SetCorrectText):P;
+
+!?FU(SetCorrectText);
+  !!UN:C6916808/4/?(heroDlgStructure:y);[hero dlg structure]
+  
+  !!HE-1:N?y7; !!FU|y7<0/y7>155:E;      [Exit if no valid Hero number]
+
+  !!SN:F^PluginExists^/^10sskills^;     [Check for 10 SSkill Plugin]
+  !!VRy99&v1=0:S8; !!VRy99&v1=1:S10;
+ *Set correct skill level tag
+  !!re i/1/y99;                         [cycle secondary skill slots 1-8]
+    !!VRy11:S49+i;                      [iteration of z variable that holds name of skill level text]
+    !!VRy10:S94+i;                      [iteration of y10 that holds name of skill level text]
+    !!VRy10&i=9:S503;                   [Correct field ID for 9th Slot]
+    !!VRy10&i=10:S506;                  [Correct field ID for 10th Slot]
+    !!HEy7:Si/?y5/1;                    [Get what skill is displayed in slot 1 to 8]
+    !!if&y5>=0/y5<=27;                  [If valid secondary skill found]
+    !!HEy7:Sy5/?y6;                     [Get level of that skill]
+    !!FU(H3_Mod_Check_Skill_Level):Py7/?y2/?y3/y5; [get M/GM level of secondary skill]
+    !!SN&y6=1:T^AC_Misc.Basic^/?zy11;   [set skill level name acordingly]
+    !!SN&y6=2:T^AC_Misc.Advanced^/?zy11;[...]
+    !!SN&y6=3:T^AC_Misc.Expert^/?zy11;  [...]
+    !!SN&y6=3/y2=1/y3=0:T^AC_Misc.Master^/?zy11; [...]
+    !!SN&y6=3/y2=1/y3=1:T^AC_Misc.Grandmaster^/?zy11; [...]
+    !!FU(H3Dlg_SendCmdToItem):P(heroDlgStructure)/y10/(DLG_CMD_SET_TEXT)/^%Zy11^/(DLG_CMD_TYPE_DEFAULT); [Send text to command ID]
+    !!en;
+  !!en;
+
+ *Set correct skill cadre 
+  !!re i/1/y99;                         [cycle secondary skill slots 1-8]
+    !!VRy10:Si+78;                      [iteration of skill slot ID from 79-86]
+    !!VRy10&i=9:S501;                   [Correct field ID for 9th Slot]
+    !!VRy10&i=10:S504;                  [Correct field ID for 10th Slot]
+    !!HEy7:Si/?y2/1;                    [get what skill is in first slot and get Hero name]   
+    !!if&y2>=0/y2<=27;                  [if valid hero number and valid secondary skill is in the slot]
+      !!HEy7:Sy2/?y3;                   [get level of secondary skill and exit if it is not at least Expert Level]
+      !!FU(H3_Mod_Check_Skill_Level):Py7/?y4/?y5/y2; [get M/GM level of secondary skill]
+      !!FU(ACM_Calc_Correct_Def_Cadre):Py2/y3/y4/y5/?y11/1;
+      !!FU(H3Dlg_SendCmdToItem):P(heroDlgStructure)/y10/(DLG_CMD_SET_DEF_FRAME)/y11/(DLG_CMD_TYPE_DEFAULT); [Send cmd to set def cadre]
+    !!en;
+  !!en;
+
+
+
+****************************************************************************************************
+When right and left click on secondary skills show correct def
+Disabled standard reaction and shows own custom DL with specific def cadre
+
+
+!?FU(acm_UNC_SetSecSkillLevel_Text);
+!#VA(heroId:x) (skill:x);
+  !!FU(H3_Mod_Check_Skill_Level):P(heroId)/?(masterLvl:y)/?(gmLvl:y)/(skill); [get M/GM level of secondary skill]
+  !!VR(zVar:y):S9597416 +1024;
+
+  !!if&(gmLvl);
+    !!VRz2:S^%T(AC_Misc.Grandmaster)^;
+    !!SN:W^acm_text_currentSkillLevel^/^%T(AC_Misc.Grandmaster)^ W^acm_text_currentSkillLevel^/2;
+    !!UN:C6976992/4/(zVar);
+
+    !!FU:E;
+  !!en;
+
+  !!if&(masterLvl);
+    !!VRz2:S^%T(AC_Misc.Master)^;
+
+    !!SN:W^acm_text_currentSkillLevel^/^%T(AC_Misc.Master)^ W^acm_text_currentSkillLevel^/1;
+    !!UN:C6976992/4/(zVar);
+
+    !!FU:E;
+  !!en;
+  !!VRz2:S^%T(AC_Misc.Expert)^;
+  !!UN:C6976992/4/(zVar);
+
+  !!SN:W^acm_text_currentSkillLevel^;
+
+
+!?FU(WOG_OnBeforeHeroSwap)&1000;
+  !!UN:C6962576/(UNC_INT32)/?(heroSwapStructure:y);
+
+  !!UN:C(heroSwapStructure)/64/(UNC_INT32)/?(leftHeroStructure:y);
+  !!UN:C(heroSwapStructure)/68/(UNC_INT32)/?(rightHeroStructure:y);
+
+  !!UN:C(leftHeroStructure)/26/(UNC_INT32)/?i^swap_hero_0^;
+  !!UN:C(rightHeroStructure)/26/(UNC_INT32)/?i^swap_hero_1^;
+  !!VRi^acm_SwapActionOnce^:S(FALSE);
+
+
+!?FU(OnHeroesMeetScreenMouseClick)&i^mouse_item^<>301/i^mouse_item^;
+!!VRi^acm_SwapActionOnce^:S(FALSE);
+
+
+!?FU(acm_OnSwapHeroDlgUpdate)&i^acm_SwapActionOnce^=(FALSE);
+!!re i/0/1;
+  !!FU(ACM_HeroMeetingScreen_SetCorrectDescription):Pi/i^swap_hero_%i^;
+!!en;
+!!VRi^acm_SwapActionOnce^:S(TRUE);
+
+
+!?FU(OnAfterHeroInteraction);
+!!VRi^acm_SwapActionOnce^:S(FALSE);
+
+
+!?FU(ACM_HeroMeetingScreen_SetCorrectDescription);
+
+!#VA(side:x) (heroId:x);
+!#VA(usedY[5]:y);
+  !!if&(side)=0;
+    !!VR(startItemSkillId:y):S199;
+  !!el;
+    !!VR(startItemSkillId:y):S207;
+  !!en;
+
+    !!re i/1/8;                         [cycle secondary skill slots 1-8]
+      !!VR(itemId:y):Si+(startItemSkillId); [iteration of skill slot ID from 200-207]
+      !!HE(heroId):Si/?(skill:y)/1;     [get what skill is in first slot and get Hero name]
+      !!if&(skill)>=0/(skill)<=27;      [if valid hero number and valid secondary skill is in the slot]
+        !!HE(heroId):S(skill)/?(skillLvl:y); [get level of secondary skill and exit if it is not at least Expert Level]
+        !!FU(H3_Mod_Check_Skill_Level):P(heroId)/?y4/?y5/(skill); [get M/GM level of secondary skill]
+        !!FU(ACM_Calc_Correct_Def_Cadre):P(skill)/(skillLvl)/y4/y5/?(defId:y)/1;
+        !!UN:C6962576/(UNC_INT32)/?(heroSwapStructure:y);
+        !!UN:C(heroSwapStructure)/56/(UNC_INT32)/?(currentDlg:y);
+        !!FU(H3Dlg_SendCmdToItem):P(currentDlg)/(itemId)/(DLG_CMD_SET_DEF_FRAME)/(defId)/(DLG_CMD_TYPE_DEFAULT); [Send cmd to set def cadre]
+      !!en;
+    !!en;
+
+
+!?FU(OnHeroScreenMouseClick)&i^mouse_item^>=501/i^mouse_item^<=506;
+
+  !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
+    !!VR(msgType:y):S(MSG_TYPE_MES);
+  !!el&i^mouse_action^=(MOUSE_RMB_PRESSED);
+    !!VR(msgType:y):S(MSG_TYPE_POPUP);
+  !!el;
+    !!FU:E;
+  !!en;
+
+  !!if&i^mouse_item^<504;
+    !!VR(skillSlot:y):S9;
+  !!el;
+    !!VR(skillSlot:y):S10;
+  !!en;
+
+  !!HE(CURRENT_HERO):S(skillSlot)/?(skill:y)/1 N?(heroId:y);
+  
+  !!if&(skill)<>(NO_SKILL);
+    !!HE(heroId):S(skill)/?(skillLvl:y);
+
+    !!if&(skillLvl)>2;
+      !!CM:R0;
+      !!FU(acm_UNC_SetSecSkillLevel_Text):P(heroId)/(skill);
+      !!VR(picNum:y):S(skill) *3 +5;
+
+      !!SN:H^secskill^/(skill)/3/?(skillExpDescr:z);
+      !!IF:Q1/20/(picNum)/(msgType)^%(skillExpDescr)^;
+    !!en;
+
+  !!el;
+    !!SN:W^acm_text_currentSkillLevel^;
+  !!en;
