@@ -129,58 +129,66 @@ ZVSE2
   !!en;
 !!en;
 
-!!FU(hench_IfPosIsValid):P(proposedPos)/(isDoubleWide)/(side)/?(isValid:y);
+!!FU(hench_GetValidPositionForSummon):P(proposedPos)/(mon)/(side)/?(position);
 
-!!if&(isValid);
-  !!VR(position):S(proposedPos);
-!!el;
-  !!FU(hench_GetNearestRandomPosition):P(proposedPos)/(isDoubleWide)/(side)/?(position);
-!!en;
-
-!?FU(hench_GetNearestRandomPosition);
-!#VA(pos:x) (isDoubleWide:x) (side:x) (result:x);
-!#VA(maxDistance:x); optional parameter
+!?FU(hench_GetValidPositionForSummon);
+!#VA(pos:x);                            [proposed position]
+!#VA(mon:x);                            [monster for summoning]
+!#VA(side:x);                           [side of summoning]
+!#VA(result:x);                         [nearest valid position for summoning. -1 for no position found]
+!#VA(maxDistance:x);                    [optional parameter, max distance between the proposed position and the nearest valid position]
 
 !!FU:A?(params:y);
 !!VR(maxDistance)&(params)<5:S19; by default
+
+!!MA:X(mon)/?(flags:y);
+!!VR(isDoubleWide:y):S(flags) &(MON_FLAG_WIDE);
+
 !!VR(result):S-1;
-!!VR(posX:y):S(pos)%17;
-!!VR(posY:y):S(pos):17;
 
-!!re (distance:y)/1/(maxDistance);
-  !!FU(NewIntArray):P?(validPosArray:y);
-  !!VR(steps:y):S(distance)*6-1;
+!!FU(hench_IfPosIsValid):P(pos)/(isDoubleWide)/(side)/?(isAvailPos:y);
 
-  !!re i/0/(steps);
-    !!if&i=0;
-      !!VR(direction:y):S(hench_DIRECTION_UP_LEFT);
-    !!el;
-      !!VR(direction):Si :(distance);
+!!if&(isAvailPos);
+  !!VR(result):S(pos);
+!!el;
+  !!VR(posX:y):S(pos) %17;
+  !!VR(posY:y):S(pos) :17;
+
+  !!re (distance:y)/1/(maxDistance);
+    !!FU(NewIntArray):P?(validPosArray:y);
+    !!VR(steps:y):S(distance) *6 -1;
+
+    !!re i/0/(steps);
+      !!if&i=0;
+        !!VR(direction:y):S3;             [Upper Left]
+      !!el;
+        !!VR(direction):Si :(distance);
+      !!en;
+
+      !!FU(hench_NextHex):P(direction)/?(pos)/?(posX)/?(posY);(posX) and (posY) are needed for next position calculation, if the current one is out of battlefield
+      !!FU(hench_IfPosIsValid):P(pos)/(isDoubleWide)/(side)/?(isAvailPos:y);
+
+      !!if&(isAvailPos);
+        !!FU(Array_Push):P(validPosArray)/(pos);
+      !!en;
     !!en;
 
-    !!FU(hench_NextHex):P(direction)/?(pos)/?(posX)/?(posY);(posX) and (posY) are needed for next position calculation, if the current one is out of battlefield
-    !!FU(hench_IfPosIsValid):P(pos)/(isDoubleWide)/(side)/?(isAvailPos:y);
+    !!SN:M(validPosArray)/?(arraySize:y);
 
-    !!if&(isAvailPos);
-      !!FU(Array_Push):P(validPosArray)/(pos);
+    !!if&(arraySize)>0;
+      !!VR(lastPos:y):S(arraySize)-1;
+      !!VR(resultPtr:y):R0/0/(lastPos);
+      !!SN:M(validPosArray)/(resultPtr)/?(result);
+
+      !!br;
     !!en;
-  !!en;
-
-  !!SN:M(validPosArray)/?(arraySize:y);
-
-  !!if&(arraySize)>0;
-    !!VR(lastPos:y):S(arraySize)-1;
-    !!VR(resultPtr:y):R0/0/(lastPos);
-    !!SN:M(validPosArray)/(resultPtr)/?(result);
-
-    !!br;
   !!en;
 !!en;
 
 !?FU(hench_NextHex);
 !#VA(direction:x) (hex:x) (x:x) (y:x);
 
-!!VR(rowParity:y):S(y)&1;
+!!VR(rowParity:y):S(y) &1;
 
 !!if&(direction)=0;                     [Upper Right]
   !!VR(x):+1-(rowParity);
@@ -242,7 +250,7 @@ ZVSE2
   !!VR(isFree)&v1=1:S(FALSE);
 !!en;
 
-; Fix exessive henchman quantity/Manage Dead or Alive
+// Fix exessive henchman quantity/Manage Dead or Alive
 !?FU(OnAfterBattleAction)&i^hench_enabled^;
 !!FU(hench_ManageDeadOrAlive):Pi^hench_stack_0^/(BATTLE_LEFT);
 !!FU(hench_ManageDeadOrAlive):Pi^hench_stack_1^/(BATTLE_RIGHT);
