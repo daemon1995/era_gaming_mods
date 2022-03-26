@@ -66,9 +66,9 @@ ZVSE2
 !!en;
 
 // Manage henchmen variables before the battle
-!?FU(OnBeforeBattleUniversal)&i^hench_enabled^;
-; Ask to get a henchman for human player or give one to the hero
-!!FU(hench_AskToChooseAHench):P(BATTLE_LEFT);
+!?FU(OnBeforeBattle)&i^hench_enabled^;
+; Ask to get a henchman for attacking human player or give one to the hero
+!!FU(hench_AskToChooseAHench)&i^battle_hero_0^>(NO_HERO)/i^battle_ai_0^<>(TRUE):Pi^battle_hero_0^;
 
 !?FU(OnBeforeBattleBeforeDataSend)&i^hench_enabled^;
 ; Pass through henchman variables in PVP battles
@@ -129,126 +129,7 @@ ZVSE2
   !!en;
 !!en;
 
-!!FU(hench_GetValidPositionForSummon):P(proposedPos)/(mon)/(side)/?(position);
-
-!?FU(hench_GetValidPositionForSummon);
-!#VA(pos:x);                            [proposed position]
-!#VA(mon:x);                            [monster for summoning]
-!#VA(side:x);                           [side of summoning]
-!#VA(result:x);                         [nearest valid position for summoning. -1 for no position found]
-!#VA(maxDistance:x);                    [optional parameter, max distance between the proposed position and the nearest valid position]
-
-!!FU:A?(params:y);
-!!VR(maxDistance)&(params)<5:S19; by default
-
-!!MA:X(mon)/?(flags:y);
-!!VR(isDoubleWide:y):S(flags) &(MON_FLAG_WIDE);
-
-!!VR(result):S-1;
-
-!!FU(hench_IfPosIsValid):P(pos)/(isDoubleWide)/(side)/?(isAvailPos:y);
-
-!!if&(isAvailPos);
-  !!VR(result):S(pos);
-!!el;
-  !!VR(posX:y):S(pos) %17;
-  !!VR(posY:y):S(pos) :17;
-
-  !!re (distance:y)/1/(maxDistance);
-    !!FU(NewIntArray):P?(validPosArray:y);
-    !!VR(steps:y):S(distance) *6 -1;
-
-    !!re i/0/(steps);
-      !!if&i=0;
-        !!VR(direction:y):S3;             [Upper Left]
-      !!el;
-        !!VR(direction):Si :(distance);
-      !!en;
-
-      !!FU(hench_NextHex):P(direction)/?(pos)/?(posX)/?(posY);(posX) and (posY) are needed for next position calculation, if the current one is out of battlefield
-      !!FU(hench_IfPosIsValid):P(pos)/(isDoubleWide)/(side)/?(isAvailPos:y);
-
-      !!if&(isAvailPos);
-        !!FU(Array_Push):P(validPosArray)/(pos);
-      !!en;
-    !!en;
-
-    !!SN:M(validPosArray)/?(arraySize:y);
-
-    !!if&(arraySize)>0;
-      !!VR(lastPos:y):S(arraySize)-1;
-      !!VR(resultPtr:y):R0/0/(lastPos);
-      !!SN:M(validPosArray)/(resultPtr)/?(result);
-
-      !!br;
-    !!en;
-  !!en;
-!!en;
-
-!?FU(hench_NextHex);
-!#VA(direction:x) (hex:x) (x:x) (y:x);
-
-!!VR(rowParity:y):S(y) &1;
-
-!!if&(direction)=0;                     [Upper Right]
-  !!VR(x):+1-(rowParity);
-  !!VR(y):-1;
-!!el&(direction)=1;                     [Right]
-  !!VR(x):+1;
-!!el&(direction)=2;                     [Lower Right]
-  !!VR(x):+1-(rowParity);
-  !!VR(y):+1;
-!!el&(direction)=3;                     [Upper Left]
-  !!VR(x):-(rowParity);
-  !!VR(y):+1;
-!!el&(direction)=4;                     [Left]
-  !!VR(x):-1;
-!!el&(direction)=5;                     [Lower Left]
-  !!VR(x):-(rowParity);
-  !!VR(y):-1;
-!!en;
-
-!!if&(x)>-1/(x)<17/(y)>-1/(y)<11;
-  !!VR(hex):S(y) *17 +(x);
-!!el;
-  !!VR(hex):S-1;
-!!en;
-
-!?FU(hench_IfPosIsValid);
-!#VA(pos:x) (isDoubleWide:x) (side:x) (isAvailPos:x);
-
-!!VR(isAvailPos):S(TRUE);
-!!FU(hench_IfHexIsFree):P(pos)/?(isAvailPos);
-
-!!if&(isDoubleWide)/(isAvailPos);
-  !!VR(secPos:y)&(side)=(BATTLE_LEFT):S(pos) +1;
-  !!VR(secPos:y)&(side)=(BATTLE_RIGHT):S(pos) -1;
-  !!FU(hench_IfHexIsFree):P(secPos)/?(isAvailPos);
-!!en;
-
-!?FU(hench_IfHexIsFree);
-!#VA(pos:x) (isFree:x);
-
-!!VR(isFree):S(TRUE);
-!!VR(posX:y):S(pos) %17;
-
-!!if|(pos)<0/(pos)>186/(posX)=0/(posX)=16;
-  !!VR(isFree):S(FALSE);
-!!en;
-
-!!if&(isFree);
-  !!BU:E(pos)/?(stack:y) O(pos)/?(obstacleFlag:y);
-  !!VR(isFree)|(stack)>(NO_STACK)/(obstacleFlag)>0:S(FALSE);
-!!en;
-
-!!if&(isFree);
-  !!UN:C(COMBAT_MANAGER)/4/?(battleMgr:y);
-  !!SN:E4626848/2/(battleMgr)/(pos)/0;  defensive moat
-  !!VR(isFree)&v1=1:S(FALSE);
-  !!SN:E4625904/2/(battleMgr)/(pos);  if position prohibited
-  ; needed for positions 95 and 96 near the town gate
-  !!VR(isFree)&v1=1:S(FALSE);
-!!en;
+!!VR(position):S(proposedPos);
 
 // Fix exessive henchman quantity/Manage Dead or Alive
 !?FU(OnAfterBattleAction)&i^hench_enabled^;
@@ -471,25 +352,22 @@ ZVSE2
 
 ; Ask to get a henchman if the human hero didn't get one
 !?FU(hench_AskToChooseAHench);
-!#VA(side:x);
-
-; Exit the function if no hero/no army
-!!BA:H(side)/?(hero:y);
-!!FU&(hero)<=(NO_HERO):E;
-
-!!FU(hench_CheckIfHenchEligible):P(hero)/?(isEligible:y);
-!!FU&(isEligible)=(FALSE):E;
+!#VA(hero:x);
 
 !!IF:W(hero);
 
-; Show the dialogue for whether choosing a henchman
-!!if&i^battle_ai_%(side)^<>(TRUE)/w118=(NO_MON);
-  !!IF:Q2/10/i^battle_owner_%(side)^/(MSG_TYPE_QUESTION)/z149001;
+!!if&w118=(NO_MON);
+  !!FU(hench_CheckIfHenchEligible):P(hero)/?(isEligible:y);
 
-  !!if&2;
-    !!FU(hench_ChooseHench):P(hero);
-  !!el;
-    !!VRw118:S-2;
+  !!if&(isEligible);
+    !!IF:Q2/10/i^battle_owner_0^/(MSG_TYPE_QUESTION)/z149001;
+
+    !!if&2;
+      !!FU(hench_ChooseHench):P(hero);
+    ; Set w118 to -2 so it won't ask again
+    !!el;
+      !!VRw118:S-2;
+    !!en;
   !!en;
 !!en;
 
