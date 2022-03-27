@@ -11,21 +11,22 @@ ZVSE2
 // This variable will be reset at the end of battle
 !?OB(OBJ_MONSTER)&1000;
 !!UN:P72/?(wogOption:y);
-!!VRi^wog_72_neutralStackBattle^&(wogOption):S(TRUE);
+!!VRi^wog_72_isNeutralBattle^&(wogOption):S(TRUE);
+
 
 // Manage variables before the battle, generates the neutral hero
-!?FU(OnBeforeBattle)&i^wog_72_neutralStackBattle^/i^battle_hero_1^=(NO_HERO);
+!?FU(OnBeforeBattle)&i^wog_72_isNeutralBattle^/i^battle_hero_1^=(NO_HERO);
 ; Check if it is lucky enough to encounter the neutral hero or else
-!!VRi^Random_Hero_Active^:S(FALSE);
+!!VRi^wog_72_randHeroActive^:S(FALSE);
 !!VR(random:y):R0/0/3;                  [25% chance]
-!!VR(random)&i^Random_Neutral_Hero^:S0; [Compatibility with Always Random Hero]
+!!VR(random)&i^Random_Neutral_Hero^:S0; [Always generate a neutral hero if Always Random Hero is enabled]
 
 ; Get an available random hero and generate on the battlefield if lucky enough
 !!if&(random)=0;
-  !!VRi^Random_Hero_Active^:S(TRUE);
+  !!VRi^wog_72_randHeroActive^:S(TRUE);
   !!FU(WOG_72_GetHeroesInTaverns):P?(heroesInTaverns:y);
   !!FU(WOG_72_GetRandomHero):P(heroesInTaverns)/?i^battle_hero_1^;
-  !!FU(WOG_72_SetRandomHeroOwner):Pi^battle_hero_1^;
+  *!FU(WOG_72_SetRandomHeroOwner):Pi^battle_hero_1^; [disable for now as it is no longer required]
   !!BA:H1/i^battle_hero_1^;
 !!en;
 
@@ -56,61 +57,67 @@ ZVSE2
   !!VR(lastHero):S(HERO_LAST_WOG);
 !!en;
 
-; Loop through all heroes
-!!re i;
+!!SN:M(heroesInTaverns)/?(size:y);
+!!FU(NewIntArray):P?(availHeroes:y);
+
+; Loop through all the heroes
+!!re i/(HERO_FIRST)/(lastHero);
   ; Check if the hero has an owner
-  !!VR(hero):R0/(HERO_FIRST)/(lastHero);
-  !!HE(hero):O?(owner:y);
+  !!HEi:O?(owner:y);
 
   ; Check if the hero is in tavern if with no owner
-  !!if&(owner)=(NO_PLAYER);
-    !!SN:M(heroesInTaverns)/?(size:y);
+  !!if&(owner)=(NO_OWNER);
 
     !!re (index:y)/0/(size)/1/-1;
       !!SN:M(heroesInTaverns)/(index)/?(tavernHero:y);
-      !!br&(hero)=(tavernHero);
+
+      !!br&i=(tavernHero);
     !!en;
 
     ; Check if the hero is on the map if not in the tavern
     !!if&(index)=(size);                [index = size if the loop of tavern hero array didn't break]
-      !!HE(hero):P?(x:y)/?(y:y)/?(z:y);
-      ; End the loop if the hero is not in the tavern, otherwise, look for the next random hero
-      !!br&(z)<0;
+      !!HEi:P?(x:y)/?(y:y)/?(z:y);
+
+      ; Push the hero to the available heroes array if all the criteria is matched
+      !!FU(Array_Push)&(z)<0:P(availHeroes)/i;
     !!en;
   !!en;
 !!en;
 
+!!SN:M(availHeroes)/?(size);
+!!VR(lastIndex:y):S(size) -1;
+!!VR(index):R0/0/(lastIndex);
+!!SN:M(availHeroes)/(index)/?(hero);
+
+
 // Store neutral stacks in global vars (in order to return them on battle replay)
 // The timeing is slightly late in order to be compatible with other scripts
 // These variables will be reset at the end of battle or upon loading the game
-!?FU(OnSetupBattlefield)&i^Random_Hero_Active^;
+!?FU(OnSetupBattlefield)&i^wog_72_randHeroActive^;
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-  !!BA:M1/i/?i^Replay_Battle_Monster_%i^/?i^Replay_Slot_Number_%i^;
+  !!BA:M1/i/?i^wog_72_replayType_%i^/?i^wog_72_replayNum_%i^;
 !!en;
+
 
 // Restore neutral stacks on battle replay
-!?FU(OnBattleReplay)&i^Random_Hero_Active^;
+!?FU(OnBattleReplay)&i^wog_72_randHeroActive^;
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-  !!BA:M1/i/i^Replay_Battle_Monster_%i^/i^Replay_Slot_Number_%i^;
+  !!BA:M1/i/i^wog_72_replayType_%i^/i^wog_72_replayNum_%i^;
 !!en;
+
 
 // Reset variables
-!?FU(OnAfterBattleUniversal)&i^Random_Hero_Active^;
-!!VRi^wog_72_neutralStackBattle^:S(FALSE);
-
-!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-  !!VRi^Replay_Battle_Monster_%i^:S(NO_MON);
-  !!VRi^Replay_Slot_Number_%i^:S0;
-!!en;
-
-!!VRi^Random_Hero_Active^:S(FALSE);
+!$OB(OBJ_MONSTER)&i^battle_hasHuman^/i^wog_72_randHeroActive^;
+!!VRi^wog_72_isNeutralBattle^:S(FALSE);
+!!VRi^wog_72_randHeroActive^:S(FALSE);
 
 !?FU(OnAfterLoadGame);
-!!VRi^wog_72_neutralStackBattle^:S(FALSE);
-!!VRi^Random_Hero_Active^:S(FALSE);
+!!VRi^wog_72_isNeutralBattle^:S(FALSE);
+!!VRi^wog_72_randHeroActive^:S(FALSE);
+
 
 // Prevent neutral hero from surrendering
-!?FU(OnBeforeBattleAction)&i^Random_Hero_Active^;
+!?FU(OnBeforeBattleAction)&i^wog_72_randHeroActive^;
 !!BG:A?(actionType:y);
 
 !!if&(actionType)=(BATTLE_ACTION_RETREAT)/i^battle_current_side^=(BATTLE_RIGHT);
@@ -122,6 +129,7 @@ ZVSE2
     !!BG:A(BATTLE_ACTION_DEFEND);
   !!en;
 !!en;
+
 
 // Function for setting an owner for the random hero (for compatibility with HD Mod 5.2 R95)
 // Fighting a hero with no owner will prevent entering quick combat
