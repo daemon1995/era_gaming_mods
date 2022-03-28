@@ -8,7 +8,8 @@ All notable changes to Era Assembly, including [Archer's mods for launcher](http
 - TrainerX: New feature - Place any object - an experimental feature that allows you to place any object on the map. Note that this could result in serious bug. Use at your own risk!
 - Summon Elemental: Completely rewritten with full ReMagic/ACM support. Now you can summon elementals by left-clicking on spell book from adv map. 
 - Mithril Enhancement: Now it is possible to upgrade a creature dwelling a second time with double the price. Also allows dwellings from 3rd party mods to be upgraded
-- Enhanced Henchmen: New config dialog from Diff Mod. Fix MP - Thanks to wessonsm
+- Enhanced Henchmen: New config dialog from Diff Mod. Fix MP
+- The Battle Experience option has got a new sprite when the troops are leveling up. Thanks to Fanofheroes.
 
 ### Changed
 - Now Emerald Tower wont's provide the option "strike all enemies around" for creatures have ability "drain Life" or "attract dead souls"
