@@ -21,8 +21,10 @@ ZVSE2
 !!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
 !!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN); [передача ничейных городов розовому игроку]
 
-!!if&i^es_770_tyrantHero^=(HERO_SIR_MULLICH)/(hasLost);
+!!OW:W(PLAYER_PINK)/?(townsAmount:y);
+!!if&(townsAmount)=0/(hasLost);
   !!OW:I(PLAYER_PINK)/1/1;              [деактивируем розового »»-игрока, если “иран не получил ни одного города и на старте не было розового игрока]
+  !!SN:W^wog_100_enabled^ W^es_770_tyrantHero^;
   !!FU:E;                               [Выход, если “иран не получил ни одного города и на старте не было розового игрока]
 !!en;
 
@@ -42,12 +44,12 @@ ZVSE2
 !!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_CREATURE_GENERATOR_4); [передача ничейных жилищ розовому игроку]
 
 !!UN:J2/?(diff:y);                      [уровень сложности (0..4)]
-!!VR(coef:y):S(diff) +i^es_770_tyrantHero^ -144;          [уровень сложности (0..4) + количество городов “ирана]
+!!VR(coef:y):S(diff) +(townsAmount);          [уровень сложности (0..4) + количество городов “ирана]
 !!VR(normRes:y):S(coef) *5;             [дерево/руда 5 за каждый стартовый город и уровень сложности]
 !!VR(rareRes:y):S(coef) *3;             [минералы 3 за каждый стартовый город и уровень сложности]
 !!VR(gold:y):S(coef) *10000;            [золото 10000 за каждый стартовый город и уровень сложности]
-!!OW:R/(PLAYER_PINK)/(RES_WOOD)/(normRes) R/(PLAYER_PINK)/(RES_ORE)/(normRes) R/(PLAYER_PINK)/(RES_GOLD)/(gold);
-!!OW:R/(PLAYER_PINK)/(RES_MERCURY)/(rareRes) R/(PLAYER_PINK)/(RES_SULFUR)/(rareRes) R/(PLAYER_PINK)/(RES_CRYSTAL)/(rareRes) R/(PLAYER_PINK)/(RES_GEMS)/(rareRes); [даем “ирану ресурсы]
+!!OW:R(PLAYER_PINK)/(RES_WOOD)/(normRes) R(PLAYER_PINK)/(RES_ORE)/(normRes) R(PLAYER_PINK)/(RES_GOLD)/(gold);
+!!OW:R(PLAYER_PINK)/(RES_MERCURY)/(rareRes) R(PLAYER_PINK)/(RES_SULFUR)/(rareRes) R(PLAYER_PINK)/(RES_CRYSTAL)/(rareRes) R(PLAYER_PINK)/(RES_GEMS)/(rareRes); [даем “ирану ресурсы]
 
 ; Manage hero availabilities
 ; Check if extension heroes option was enabled by the player, re-enable the option if it was
@@ -56,16 +58,14 @@ ZVSE2
   !!FU(wog_100_EnableExtentionHeroes):P;[This function is in WoG Scripts - 53 wog - map options]
 ; Check for heroes owned by pink player, make all of them available to be recruited by pink if extension heroes was not enabled
 !!el;
-  !!OW:H(PLAYER_PINK)/2/0;
+  !!OW:H(PLAYER_PINK)/2;
   !!VR(lastHeroPtr:y):Sv2 +2;
-
   !!re i/3/(lastHeroPtr);
-    !!VR(index:y):Si -2;
-    !!OW:H(PLAYER_PINK)/i/(index);
     !!HEvi:R3/(TRUE)/128;               [128 - recruit by Pink only]
   !!en;
 !!en;
 
+!!SN:W^wog_100_enabled^ W^es_770_tyrantHero^;
 !?FU(ES_770_SearchForObjects);          [передача ничейного объекта розовому игроку]
 !#VA(objType:x);
 
@@ -77,24 +77,29 @@ ZVSE2
   !!if&(owner)=(NO_OWNER);
     !!CA2:O(PLAYER_PINK);               [смена хоз€ина ничейного города]
     !!CA2:B1/5;                         [постройка таверны в городе]
-  !!en;
-!!en;
 
-!!if&(objType)=(OBJ_TOWN)/(owner)=(NO_OWNER);
-  ; Check if the hero has an owner or is in the prison
-  !!HEi^es_770_tyrantHero^:O?(heroOwner:y) P?(x:y)/?(y:y)/?(z:y);
-  !!HEi^es_770_tyrantHero^&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1:Pv2/v3/v4 O(PLAYER_PINK); [ѕомещаем геро€ в последний присвоенный город, если он не нан€т или не в тюрьме]
-  !!OW:A(PLAYER_PINK)/i^es_770_tyrantHero^;               [ѕередаем геро€ “ирану]
-  !!VRi^es_770_tyrantHero^&i^es_770_tyrantHero^<(HERO_ROLAND):+1;           [переключение на следующего геро€]
+    ; Check if the hero has an owner or is in the prison
+    !!re i/i^es_770_tyrantHero^/(HERO_BORAGUS);
+
+      !!HEi:O?(heroOwner:y) P?(x:y)/?(y:y)/?(z:y);
+      !!if&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1;
+        !!HEi^es_770_tyrantHero^:Pv2/v3/v4 O(PLAYER_PINK);               [ѕомещаем геро€ в последний присвоенный город, если он не нан€т или не в тюрьме]
+        !!OW:A(PLAYER_PINK)/i^es_770_tyrantHero^;                        [ѕередаем геро€ “ирану]
+        !!VRi^es_770_tyrantHero^&i^es_770_tyrantHero^<(HERO_BORAGUS):Si; [переключение на следующего геро€]
+        !!br;
+      !!en;
+    !!en;
+  !!en;
+  
 !!el&(objType)=(OBJ_MINE);
-  !!MN2:O?(owner)/1;                    [текущий хоз€ин шахты]
+  !!MN2:O?(owner)/1;                         [текущий хоз€ин шахты]
   !!MN2&(owner)=(NO_OWNER):O(PLAYER_PINK)/1; [смена хоз€ина ничейной шахты]
 ; Take dwellings with no guards
 !!el&(objType)=(OBJ_CREATURE_GENERATOR_1);
-  !!DW2:O?(owner)/1 G0/d/?(num:y);      [текущий хоз€ин жилища (тип 17), количество охранников]
+  !!DW2:O?(owner)/1 G0/d/?(num: y);                   [текущий хоз€ин жилища (тип 17), количество охранников]
   !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища  без охраны (1-4 уровни)]
 !!el&(objType)=(OBJ_CREATURE_GENERATOR_4);
-  !!DW2:O?(owner)/1 G0/d/?(num);        [текущий хоз€ин жилища (тип 20), количество охранников]
+  !!DW2:O?(owner)/1 G0/d/?(num);                     [текущий хоз€ин жилища (тип 20), количество охранников]
   !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища без охраны (1-4 уровни)]
 !!en;
 
