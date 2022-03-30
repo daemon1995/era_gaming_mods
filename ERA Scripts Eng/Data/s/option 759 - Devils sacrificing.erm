@@ -4,9 +4,6 @@ ZVSE2
 ** Name          : Devils sacrificing
 ** Name rus.     : Дьявольское пожертвование
 ** Options       : 759
-** Dialogs       : -
-** Variables     : v7928-v7929, z787-z788, z179099-z179100, z179204
-** Tmp variables : v1, v2, z1, z2
 
 *** Архидьяволы и Бароны Ада получают способность 1 раз за бой (Бароны Ада - 2 раза)принести в жертву дружественный отряд
 *** живых непризванных существ восстановив свое здоровье/численность на сумму здоровья принесенного в жертву отряда.
@@ -21,15 +18,16 @@ ZVSE2
 // Initialise variables and set Up monster descriptions
 !?FU(OnAfterErmInstructions);
 ; Initialise variables - This must to be execute regardless the option
-!!VRv7928:C(NO_STACK)/(NO_STACK);
+!!VRi^es_759_devilStack^:S(NO_STACK);
+!!VRi^es_759_victimStack^:S(NO_STACK);
 
 !!UN:P759/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
 !!MA:B(MON_ARCH_DEVIL)/d1 B(MON_HELL_BARON)/d2; 
 !!SN:H^monname^/(MON_ARCH_DEVIL)/2/?(archDev:z) H^monname^/(MON_HELL_BARON)/2/?(hellBar:z);
-!!VR(newArchDev:z):S(archDev) +z179100;
-!!VR(newHellBar:z):S(hellBar) +z179100;
+!!VR(newArchDev:z):S(archDev) +^%T(es.759.desc)^;
+!!VR(newHellBar:z):S(hellBar) +^%T(es.759.desc)^;
 
 !!SN:H^monname^/(MON_ARCH_DEVIL)/2/(newArchDev) H^monname^/(MON_HELL_BARON)/2/(newHellBar);
 
@@ -39,7 +37,7 @@ ZVSE2
 !!if&(upgHellBar)>(NO_MON);
   !!MA:B(upgHellBar)/d3;
   !!SN:H^monname^/(upgHellBar)/2/?(upgHellBarDesc:z);
-  !!VR(newUpgBaronDesc:z):S(upgHellBarDesc) +z179100;
+  !!VR(newUpgBaronDesc:z):S(upgHellBarDesc) +^%T(es.759.desc)^;
   !!SN:H^monname^/(upgHellBar)/2/(newUpgBaronDesc);
 !!en;
 
@@ -51,7 +49,8 @@ ZVSE2
 !!UN:P759/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-!!VRv7928:C(NO_STACK)/(NO_STACK);
+!!VRi^es_759_devilStack^:S(NO_STACK);
+!!VRi^es_759_victimStack^:S(NO_STACK);
 !!VRi^ES_759_isDevilWithSpellsTurn^:S(FALSE);
 
 !!VR(stack:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackOfSide);
@@ -60,7 +59,7 @@ ZVSE2
 !!if&(spell)>0;
   !!if|(type)=(MON_ARCH_DEVIL)/(type)=(MON_HELL_BARON);
     !!VRi^ES_759_isDevilWithSpellsTurn^:S(TRUE);'
-    !!VRv7928&(num)<(startNum):S(stack);
+    !!VRi^es_759_devilStack^&(num)<(startNum):S(stack);
   !!en;
 
   ; Set the stack as the fourth upgraded devil (if applicable)
@@ -68,7 +67,7 @@ ZVSE2
 
   !!if&(type)=(upgHellBar)/(upgHellBar)>(NO_MON);
     !!VRi^ES_759_isDevilWithSpellsTurn^:S(TRUE);'
-    !!VRv7928&(num)<(startNum):S(stack);
+    !!VRi^es_759_devilStack^&(num)<(startNum):S(stack);
   !!en;
 !!en;
 
@@ -79,22 +78,22 @@ ZVSE2
 
 !!if&(action)=(BATTLE_ACTION_HERO_CAST);
   !!BMi^battle_current_stack^:N?(num:y) B?(startNum:y);
-  !!VRv7928&(num)<(startNum)/(num)>0:Si^battle_current_stack^;
+  !!VRi^es_759_devilStack^&(num)<(startNum)/(num)>0:Si^battle_current_stack^;
 !!en;
 
 
 // Change the cursor and show hint when hovering over victims
-!?FU(OnBattleMouseHint)&v7928>(NO_STACK);  [при движении мыши по гексам поля боя, если ходит отряд Архидьяволов, который можно восстановить]
+!?FU(OnBattleMouseHint)&i^es_759_devilStack^>(NO_STACK);  [при движении мыши по гексам поля боя, если ходит отряд Архидьяволов, который можно восстановить]
 ; Exit if not hovering one of the hex
-!!VRv7929:S-1;                             [v7929, сброс номера жертвенного отряда]
+!!VRi^es_759_victimStack^:S(NO_STACK);     [сброс номера жертвенного отряда]
 !!MM:D?(pos:y);                            [позиция курсора]
 !!FU|(pos)<0/(pos)>186:E;                  [выход, если курсор за полем]
 
 ; Exit if not no stack/same stack/not on the same side
 !!BU:E(pos)/?(stack:y);                    [номер живого отряда в позиции]
-!!FU|(stack)=(NO_STACK)/(stack)=v7928:E;   [выход, если живого отряда в позиции нет или курсор наведен на ходящий отряд Архидьяволов]
-!!FU&(stack)<=(BATTLE_ATTACKER_STACK_LAST)/v7928>=(BATTLE_DEFENDER_STACK_FIRST):E; [выход, если курсор наведен на вражеский отряд]
-!!FU&(stack)>=(BATTLE_DEFENDER_STACK_FIRST)/v7928<=(BATTLE_ATTACKER_STACK_LAST):E; [...]
+!!FU|(stack)=(NO_STACK)/(stack)=i^es_759_devilStack^:E;   [выход, если живого отряда в позиции нет или курсор наведен на ходящий отряд Архидьяволов]
+!!FU&(stack)<=(BATTLE_ATTACKER_STACK_LAST)/i^es_759_devilStack^>=(BATTLE_DEFENDER_STACK_FIRST):E; [выход, если курсор наведен на вражеский отряд]
+!!FU&(stack)>=(BATTLE_DEFENDER_STACK_FIRST)/i^es_759_devilStack^<=(BATTLE_ATTACKER_STACK_LAST):E; [...]
 
 ; Exit if the victim is not a living creature/is summoned
 !!BM(stack):F?(monFlags:y) T?(type:y) N?(num:y); [флаги/тип/количество существ отряда под курсором]
@@ -102,22 +101,22 @@ ZVSE2
 !!VR(isSummoned:y):S(monFlags) &(MON_FLAG_SUMMONED); [если существа отряда под курсором призванные]
 !!FU|(isAlive)=(FALSE)/(isSummoned)=(TRUE):E; [выход, если существа отряда под курсором не живые или призванные]
 
-!!VRv7929:S(stack);                        [v7929, установка номера жертвенного отряда]
+!!VRi^es_759_victimStack^:S(stack);        [установка номера жертвенного отряда]
 !!UN:R5/2/18;                              [установка вида курсора "Жертва"]
 
 !!if&(num)=1;
-  !!SN:H^monname^/(type)/0/?z2;
+  !!SN:H^monname^/(type)/0/?(victimName:z);
 !!el;
-  !!SN:H^monname^/(type)/1/?z2;
+  !!SN:H^monname^/(type)/1/?(victimName);
 !!en;
 
-!!VRz1:Sz179099;                           [required to convert %z2 from ert to its real value]
-!!MM:Mz1;                                  [подмена стандартной подсказки]
+!!SN:T^es.759.hint^/?(hint:z)/^victim^/(victimName);
+!!MM:M(hint);                              [подмена стандартной подсказки]
 
 
 // Sacrifce the target when clicking on it
-!?FU(OnBattleScreenMouseClick)&v7928>(NO_STACK)/v7929>(NO_STACK)/i^mouse_action^=(MOUSE_LMB_PRESSED); [при клике на жертвенном отряде, если ходит отряд Архидьяволов, который можно восстановить]
-!!FU(ES_759_ReviveDevils):Pv7928/v7929;    [Восстановление Архидьяволов за счет жертвенного отряда]
+!?FU(OnBattleScreenMouseClick)&i^es_759_devilStack^>(NO_STACK)/i^es_759_victimStack^>(NO_STACK)/i^mouse_action^=(MOUSE_LMB_PRESSED); [при клике на жертвенном отряде, если ходит отряд Архидьяволов, который можно восстановить]
+!!FU(ES_759_ReviveDevils):Pi^es_759_devilStack^/i^es_759_victimStack^;    [Восстановление Архидьяволов за счет жертвенного отряда]
 
 !?FU(ES_759_ReviveDevils);                 [Восстановление Архидьяволов за счет жертвенного отряда: номер отряда Архидьяволов,Баронов/жертвенного отряда]
 !#VA(devilStack:x) (victimStack:x);
@@ -153,21 +152,22 @@ ZVSE2
 
 ; Play the attack animation and msg on the battlefield
 !!UN:C4462626/1/13;                        [анимациия атаки по умолчанию]
-!!SN:H^monname^/(victimType)/1/?z2;
-!!SN:H^monname^/(devilType)/1/?z3;
+!!SN:H^monname^/(victimType)/1/?(victimName:z);
+!!SN:H^monname^/(devilType)/1/?(devilName:z);
 !!VR(restoredNum:y):S(newNum) -(num:y);    [not used for now]
-!!VRz1:Sz179204;
-!!MM:Sz1;                                  [добавление сообщения в лог боя]
+
+!!SN:T^es.759.battleLog^/?(battleLog:z)/^devil^/(devilName)/^victim^/(victimName);
+!!MM:S(battleLog);
 
 ; Skip this turn
 !!BG:A(BATTLE_ACTION_SKIP);                [пропуск хода отрядом]
 
-
 *** AI
 
+
 // Revive devil for AI if the living number is lower than 70%
-!?FU(OnBeforeBattleAction)&v7928>(NO_STACK)/i^battle_isVisible^; [перед действием отряда Архидяволов, который можно восстановить]
-!!BMv7928:I?y1 G59/?y2/d G60/?y3/d N?y4 B?y5; [y1/y2/y3/y4/y5 - принадлежность отряда/продолжительность Берсерка/Гипноза/текущая/макс. численность]
+!?FU(OnBeforeBattleAction)&i^es_759_devilStack^>(NO_STACK)/i^battle_isVisible^; [перед действием отряда Архидяволов, который можно восстановить]
+!!BMi^es_759_devilStack^:I?y1 G59/?y2/d G60/?y3/d N?y4 B?y5; [y1/y2/y3/y4/y5 - принадлежность отряда/продолжительность Берсерка/Гипноза/текущая/макс. численность]
 !!VRy4:*100 :y5;                           [y4 - численность отряда в процентах от начальной]
 !!FU&y4>70:E;                              [выход, если Архидьяволы/Бароны Ада понесли менее 30% потерь]
 
@@ -177,18 +177,18 @@ ZVSE2
 !!OW&y6>=0:Iy6/?y7;                        [y7=1, если отряд под контролем ИИ]
 !!FU&y6>=0/y7=0:E;                         [выход, если отряд под контролем человека]
 
-!!BMv7928:N?y11 B?y12 L?y13 H?y14;         [y11/y12/y13/y14 - текущее количество/начальное количество/потерянное здоровье/макс.здоровье отряда]
+!!BMi^es_759_devilStack^:N?y11 B?y12 L?y13 H?y14;         [y11/y12/y13/y14 - текущее количество/начальное количество/потерянное здоровье/макс.здоровье отряда]
 !!VRy10:Sy12 -y11 *y14 +y13 *11 :10;       [y10 - здоровье отряда, которое можно восстановить "жертвой" (+10% допустимый "перебор")]
 !!VRv1:C-1/-1;                             [инициализация v1,v2]
 !!DO(ES_759_SearchForAIVictim)/0/20/1&y1=0:Py13/y10/y14;         [поиск отряда наиболее подходящего для жертвы в v1]
 !!DO(ES_759_SearchForAIVictim)/21/41/1&y1=1:Py13/y10/y14;        [...]
-!!FU(ES_759_ReviveDevils)&v1>=0:Pv7928/v1; [Восстановление Архидьяволов за счет жертвенного отряда, если подходящая жертва найдена]
+!!FU(ES_759_ReviveDevils)&v1>=0:Pi^es_759_devilStack^/v1; [Восстановление Архидьяволов за счет жертвенного отряда, если подходящая жертва найдена]
 
 !?FU(ES_759_SearchForAIVictim);                                  [поиск наиболее подходящего отряда на роль жертвы]
 ** x16 - проверяемый отряд, x1/x2/x3 - минимальное здоровье жертвы/максимальное здоровье жертвы/здоровье восстанавливаемого существа
 ** v1 - прошлый найденный отряд, v2 - FV/кол-во восстановленных существ для прошлого найденного отряда
 !!BMx16:T?y2 N?y3;                         [y2/y3 - тип/количество существ потенциального жертвенного отряда]
-!!FU|x16=v7928/y2<0/y3<1:E;                [выход, если приверяемый и восстанавливаемый отряды совпадают или проверяемый отряд не существует]
+!!FU|x16=i^es_759_devilStack^/y2<0/y3<1:E;                [выход, если приверяемый и восстанавливаемый отряды совпадают или проверяемый отряд не существует]
 
 !!BMx16:F?y1 H?y4 L?y5;                    [y1/y4/y5 - флаги/макс.здоровье/потерянное здоровье существ потенциального жертвенного отряда]
 !!VRy6:Sy3 &16;                            [y6=0, если существа отряда под курсором не живые]

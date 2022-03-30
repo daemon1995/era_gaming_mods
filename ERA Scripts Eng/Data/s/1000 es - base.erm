@@ -1,13 +1,52 @@
 ZVSE2
-; Author:   Archer30
+; Author:   Archer30 & igrik
 ; Engine:   ERM 2.0+
 ; Requires: ERA 3.3+, Era Erm Framework
 
 
+// Manage options compatibility
 ; Temporally disable Extention Heroes if Tyrant is enabled, would be re-enabled again when Tyrant is set up
 !?FU(ES_770_DisableExtentionHeroes);
-!!UN:P100/?i^wog_100_enabled^;
+!!UN:P100/?i^ES_100_enabled^;
 !!UN:P770/?(wogOption:y);
 !!UN&(wogOption):P100/0;
 
 !#FU(ES_770_DisableExtentionHeroes):P;
+
+
+// Set Up hooks
+!?FU(OnStartOrLoad);
+!!SN:L^erm_hooker.era^/?(ermHooker:y);
+!!FU&(ermHooker)=0:E;
+
+!!SN:A(ermHooker)/^SetHook^/?(hooker:y);
+!!FU(ES_CreateERMHook):P(hooker);
+
+!?FU(ES_CreateERMHook);
+!#VA(hooker:x);
+
+!!SN:E(hooker)/1/4462998/(ES_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
+!!SN:E(hooker)/1/4455129/(ES_HOOK_AfterAttackMainFunc); [Trigger after shooting]
+
+!?FU(ES_HOOK_AfterAttackMainFunc);     [by igrik]
+!!SN:X?(hook:y);
+!!UN:C(hook)/0/4/?(stackStrucktDefender:y);   
+!!UN:C(hook)/4/4/?(stackStrucktAttacker:y);  
+!!BG:A?(typeAttack:y);
+!!VR(stackAttackerID:y):S(NO_MON); 
+!!VR(stackDefenderID:y):S(NO_MON); 
+
+!!if&(stackStrucktAttacker)<>(FALSE); 
+  !!UN:C(stackStrucktAttacker)/244/4/?(attakerSide:y); 
+  !!UN:C(stackStrucktAttacker)/248/4/?(attakerStackIdInSide:y);
+  !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide); 
+!!en;
+
+!!if&(stackStrucktDefender)<>(FALSE);
+  !!UN:C(stackStrucktDefender)/244/4/?(defenderSide:y);
+  !!UN:C(stackStrucktDefender)/248/4/?(defenderStackIdInSide:y);
+  !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
+!!en;
+
+!!FU(ES_OnAfterMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
+!!FU(ES_OnAfterShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
