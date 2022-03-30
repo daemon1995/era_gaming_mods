@@ -5,6 +5,9 @@ ZVSE2
 ** Name rus.     : “иран
 ** Options       : 770
 
+; Note: This script would disable Extension Heroes option (if enabled) on erm instructions to preveny other players having special heroes at the start. 
+; After Tyrant is set up, Extension Heroes would be re-enabled again.
+
 
 !?FU(OnAfterErmInstructions);           [событи€ в начале игры]
 !!UN:P770/?(wogOption:y);               [провер€ем включена ли опци€ 770]
@@ -14,17 +17,41 @@ ZVSE2
 !!OW:I(PLAYER_PINK)/?(isAi:y)/?(hasLost:y);
 !!FU&(isAi)<>(TRUE)/(hasLost)<>(TRUE):E;
 
+; Set Up variables
 !!OW:I(PLAYER_PINK)/1/0 T(PLAYER_PINK)/-1; [активируем розового »»-игрока без союзов]
-!!VRi^es_770_tyrantHero^:S(HERO_SIR_MULLICH);             [номер первого геро€ розового (145..152)]
+
+!!UN:P106/?(hourglassOn:y);
+
+!!if&(hourglassOn);
+  !!VR(lastHero:y):S(HERO_BORAGUS);
+!!el;
+  !!VR(lastHero):S(HERO_LAST_WOG);
+!!en;
+
+; Create the array of all the available extention heroes
+!!FU(NewIntArray):P?i^es_770_availExtentionHeroes^;
+
+!!re i/(HERO_SIR_MULLICH)/(lastHero);
+  !!HEi:O?(heroOwner:y) P?(x:y)/?(y:y)/?(z:y);
+
+  !!FU(Array_Push)&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1:Pi^es_770_availExtentionHeroes^/i;
+!!en;
+
+!!FU(Array_Shuffle):Pi^es_770_availExtentionHeroes^;
+
+; Search for neutral towns to be occupied by pink player
 !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(num:y);    [оличество городов в (num)]
 !!VR(lastId:y):S(num) -1;               [максимальный номер города на карте]
 !!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
 !!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN); [передача ничейных городов розовому игроку]
 
-!!OW:W(PLAYER_PINK)/?(townsAmount:y);
-!!if&(townsAmount)=0/(hasLost);
+; Exit the script if there is no neutral town on the map
+!!OW:W(PLAYER_PINK)/?(townNum:y);
+
+!!if&(townNum)=0/(hasLost);
   !!OW:I(PLAYER_PINK)/1/1;              [деактивируем розового »»-игрока, если “иран не получил ни одного города и на старте не было розового игрока]
-  !!SN:W^wog_100_enabled^ W^es_770_tyrantHero^;
+  !!SN:W^wog_100_enabled^;
+
   !!FU:E;                               [Выход, если “иран не получил ни одного города и на старте не было розового игрока]
 !!en;
 
@@ -44,7 +71,7 @@ ZVSE2
 !!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_CREATURE_GENERATOR_4); [передача ничейных жилищ розовому игроку]
 
 !!UN:J2/?(diff:y);                      [уровень сложности (0..4)]
-!!VR(coef:y):S(diff) +(townsAmount);          [уровень сложности (0..4) + количество городов “ирана]
+!!VR(coef:y):S(diff) +(townNum);        [уровень сложности (0..4) + количество городов “ирана]
 !!VR(normRes:y):S(coef) *5;             [дерево/руда 5 за каждый стартовый город и уровень сложности]
 !!VR(rareRes:y):S(coef) *3;             [минералы 3 за каждый стартовый город и уровень сложности]
 !!VR(gold:y):S(coef) *10000;            [золото 10000 за каждый стартовый город и уровень сложности]
@@ -55,52 +82,88 @@ ZVSE2
 ; Check if extension heroes option was enabled by the player, re-enable the option if it was
 !!if&i^wog_100_enabled^;
   !!UN:P100/(TRUE);                     [re-enable disabled extension heroes option]
-  !!FU(wog_100_EnableExtentionHeroes):P;[This function is in WoG Scripts - 53 wog - map options]
-; Check for heroes owned by pink player, make all of them available to be recruited by pink if extension heroes was not enabled
+  !!FU(WOG_100_EnableExtentionHeroes):P;[This function is in WoG Scripts - 53 wog - map options]
+; Make all of the special heroes that are available to be recruited by pink if extension heroes was not enabled
 !!el;
-  !!OW:H(PLAYER_PINK)/2;
-  !!VR(lastHeroPtr:y):Sv2 +2;
-  !!re i/3/(lastHeroPtr);
-    !!HEvi:R3/(TRUE)/128;               [128 - recruit by Pink only]
+  !!re i/(HERO_SIR_MULLICH)/(lastHero);
+    !!HEi:O?(heroOwner:y);
+
+    !!if&(heroOwner)=(PLAYER_PINK);
+      !!HEi:R3/(TRUE)/128;            [128 - recruit by Pink only]
+    !!el&(heroOwner)=(NO_OWNER);
+      !!HEi:P?(x:y)/?(y:y)/?(z:y);
+      !!HEi&(x)=-1/(y)=-1/(z)=-1:R3/(TRUE)/128;
+    !!en;
   !!en;
 !!en;
 
-!!SN:W^wog_100_enabled^ W^es_770_tyrantHero^;
+!!SN:W^wog_100_enabled^;
+
+
 !?FU(ES_770_SearchForObjects);          [передача ничейного объекта розовому игроку]
 !#VA(objType:x);
 
 !!UN:U(objType)/(ANY_OBJ)/-1/2;         [получаем координаты объекта в v2-v4]
 
 !!if&(objType)=(OBJ_TOWN);
-  !!CA2:O?(owner:y);                    [текущий хоз€ин города]
+  ; Check if the town is neutral, give to Pink is positive
+  !!CA2:O?(owner:y);
 
+  ; Build the tavern if eligible
   !!if&(owner)=(NO_OWNER);
-    !!CA2:O(PLAYER_PINK);               [смена хоз€ина ничейного города]
-    !!CA2:B1/5;                         [постройка таверны в городе]
+    !!CA2:O(PLAYER_PINK) U?(townId:y);
+    !!FU(ES_770_CheckBuildingEligibility):P(townId)/5/?(tavernIsEligible:y);
 
-    ; Check if the hero has an owner or is in the prison
-    !!re i/i^es_770_tyrantHero^/(HERO_BORAGUS);
+    !!if&(tavernIsEligible);
+      !!CA2:B1/5;                       [5 - tavern]
 
-      !!HEi:O?(heroOwner:y) P?(x:y)/?(y:y)/?(z:y);
-      !!if&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1;
-        !!HEi^es_770_tyrantHero^:Pv2/v3/v4 O(PLAYER_PINK);               [ѕомещаем геро€ в последний присвоенный город, если он не нан€т или не в тюрьме]
-        !!OW:A(PLAYER_PINK)/i^es_770_tyrantHero^;                        [ѕередаем геро€ “ирану]
-        !!VRi^es_770_tyrantHero^&i^es_770_tyrantHero^<(HERO_BORAGUS):Si; [переключение на следующего геро€]
-        !!br;
+      ; Check the number of the Tyrant's heroes, give more if fewer than 8 if there are still extention heroes
+      !!OW:H(PLAYER_PINK)/5/0;
+      !!SN:Mi^es_770_availExtentionHeroes^/?(size:y);
+
+      !!if&v5<8/(size)>0;
+        !!FU(Array_Pop):Pi^es_770_availExtentionHeroes^/?(hero:y); [Get the hero of the end of the array and remove from the array]
+        !!HE(hero):Pv2/v3/v4 O(PLAYER_PINK);
       !!en;
     !!en;
   !!en;
-  
 !!el&(objType)=(OBJ_MINE);
-  !!MN2:O?(owner)/1;                         [текущий хоз€ин шахты]
-  !!MN2&(owner)=(NO_OWNER):O(PLAYER_PINK)/1; [смена хоз€ина ничейной шахты]
+  !!MN2:O?(owner)/1;                                 [текущий хоз€ин шахты]
+  !!MN2&(owner)=(NO_OWNER):O(PLAYER_PINK)/1;         [смена хоз€ина ничейной шахты]
 ; Take dwellings with no guards
 !!el&(objType)=(OBJ_CREATURE_GENERATOR_1);
-  !!DW2:O?(owner)/1 G0/d/?(num: y);                   [текущий хоз€ин жилища (тип 17), количество охранников]
+  !!DW2:O?(owner)/1 G0/d/?(num:y);                   [текущий хоз€ин жилища (тип 17), количество охранников]
   !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища  без охраны (1-4 уровни)]
 !!el&(objType)=(OBJ_CREATURE_GENERATOR_4);
   !!DW2:O?(owner)/1 G0/d/?(num);                     [текущий хоз€ин жилища (тип 20), количество охранников]
   !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища без охраны (1-4 уровни)]
 !!en;
+
+; Check if it allowed to build the building in the city            [by igrik]
+!?FU(ES_770_CheckBuildingEligibility);
+!#VA(townId:x);                         [town number on map (0...47)]
+!#VA(building:x);                       [building id]
+!#VA(result:x);                         [return: bool (0-no, 1-yes)]
+
+!!VR(result):S(FALSE);   
+!!FU(ES_770_GetTownStruct):P(townId)/?(ptr:y);
+!!CA0/(townId):R?(isbuilt:y) R(FALSE);
+!!SN:E6033696/2/(ptr)/(building);
+!!VR(result)&v1<>(FALSE):S(TRUE);
+!!CA0/(townId):R(isbuilt);
+
+; Get city structure
+!?FU(ES_770_GetTownStruct);
+!#VA(townId:x);                         [Town number on map (0...47)]
+!#VA(ptr:x);                            [Return: ptr structure town]
+ 
+!!IF&(townId)<=(NO_TOWN)|(townId)>47:M^Wrong town id.^;
+!!UN:C6919480/4/?(value:y); 
+!!VR(value):+136724;
+!!UN:C(value)/4/?(value2:y); 
+!!VR(ptr:x):S(townId) *360 +(value2);
+!!IF&(ptr)<43200000:M^{Attention!}
+Error in getting town structure address. 
+The game may fall at any time.^; 
 
 ** end
