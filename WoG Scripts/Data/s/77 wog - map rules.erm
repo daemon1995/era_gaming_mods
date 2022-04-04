@@ -1,7 +1,8 @@
-ZVSE
+ZVSE2
 
 WoGify Name: script01.erm
 Updated: Sep. 24, 2004 by Hermann the Weird
+Updated: Apr 2022 by Archer30
 
 WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 101 code value:
@@ -570,7 +571,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** hero level-up trigger
 
-!?HL-1;
+!?FU(OnHeroGainLevel);
 
 !!VRv1:S0; [make sure v1 starts as 0]
 !!UN:P101/?v1; [check wogify options number - 5 means no rules]
@@ -683,19 +684,27 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** function to give hero an artifact based on experience
 
 !?FU712;
+!!HE(CURRENT_HERO):O?(owner:y); [get hero owner]
 
-!!HE-1:E?y2; [get experience]
-**Here's new part of code
-!!UN&y2<6200:J6/2/?y3;
-!!UN&y2>=6200/y2<20600:J6/4/?y3;
-!!UN&y2>=20600/y2<57533:J6/8/?y3;
-!!UN&y2>=57533:J6/16/?y3;
+!!if&(owner)<>(NO_OWNER);
+  !!HE(CURRENT_HERO):E?(exp:y)/?(level:y); [get experience]
 
-!!HE-1:A4/y3; [give (equip) artifact]
-!!HE-1:B0/?z2; [get hero name]
-!!HE-1:O?y4; [get hero owner]
-!!OW&y4<>-1:Iy4/?y5; [get AI 1 or human 0]
-!!IF&y4<>-1/y5=0:Q2/8/y3/1/z101048;
+  !!if&(level)<=5;
+    !!UN:J6/(ART_LEVEL_TREASURE)/?(art:y);
+  !!el&(level)>6/(level)<12;
+    !!UN:J6/(ART_LEVEL_MINOR)/?(art);
+  !!el&(level)>=12/(level)<18;
+    !!UN:J6/(ART_LEVEL_MAJOR)/?(art);
+  !!el&(level)>=18;
+    !!UN:J6/(ART_LEVEL_RELIC)/?(art);
+  !!en;
+
+  !!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
+  !!HE(CURRENT_HERO):B0/?z2; [get hero name]
+
+  !!OW:I(owner)/?(isAi:y); [get AI 1 or human 0]
+  !!IF&(isAi)<>(TRUE):Q2/(PIC_TYPE_ART)/(art)/(MSG_TYPE_MES)/z101048;
+!!en;
 
 ** end of function
 
