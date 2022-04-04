@@ -1,30 +1,58 @@
-ZVSE
-_WARNING_#1=IMPORTANT! This file is not in a plain text format. NEVER use any editor except ERM_S for making any kind of changes!
-ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
-
+ZVSE2
 ** Author        : Algor, feanor
+** Update        : Archer30
 ** Name          : Pathfinding
 ** Name rus.     : Поиск Пути
 ** Options       : 739
-** Dialogs       : -
-** Variables     : -
-** Tmp variables : -
-** Timers        : -
-** Functions     : -
-** PO-values     : -
 
 ** Опция изменяет стоимости перемещения по разным почвам/дорогам
 ** для разных уровней навыка Поиск Пути, так чтобы КАЖДЫЙ уровень
 ** навыка хоть и в разной степени, но был полезен на КАЖДОЙ почве.
 
+
 !?FU(OnAfterErmInstructions);           [перед началом новой игры]
-!!UN:P739/?y1;          [проверяем включена ли опция 739 в y1]
-!!FU&y1=0:E;            [выход если опция не включена]
-** Установка описаний навыка Поиск Пути
-!!FU(Fun_SetDescriptionFromERT):P0/0/0/179289;  [Название ПП]
-!!FU(Fun_SetDescriptionFromERT):P0/0/1/179286;  [Базовый ПП]
-!!FU(Fun_SetDescriptionFromERT):P0/0/2/179287;  [Продвинутый ПП]
-!!FU(Fun_SetDescriptionFromERT):P0/0/3/179288;  [Эксперт ПП]
+!!UN:P739/?(esPathfinding:y);           [проверяем включена ли опция 739]
+!!FU&(esPathfinding)<>(TRUE):E;         [выход если опция не включена]
+
+; Set up new name in gold - Disable for now
+*!SN:H^secskill^/(SKILL_PATHFINDING)/0/^^;
+*!SN:H^secskill^/(SKILL_PATHFINDING)/0/?(name:z);
+*!VR(newName:z):S^{%(name)}^;
+*!SN:H^secskill^/(SKILL_PATHFINDING)/0/(newName);
+
+; Set up new skill description
+!!VR(basicDesc:z):S^%T(es.739.basicDesc)^;
+!!VR(advancedDesc:z):S^%T(es.739.advancedDesc)^;
+!!VR(expertDesc:z):S^%T(es.739.expertDesc)^;
+
+; Add in WoG Pathfinding enhancedment if the option is enabled
+!!UN:P209/?(wogPathfinding:y);
+
+!!if&(wogPathfinding);
+  !!VR(newLine:z):S^
+^;
+  !!VR(basicDesc):+(newLine) +z175112;
+  !!VR(advancedDesc):+(newLine) +z175113;
+  !!VR(expertDesc):+(newLine) +z175114;
+!!en;
+
+; Change the descriptions
+!!SN:H^secskill^/(SKILL_PATHFINDING)/(SKILL_BASIC)/(basicDesc);
+!!SN:H^secskill^/(SKILL_PATHFINDING)/(SKILL_ADVANCED)/(advancedDesc);
+!!SN:H^secskill^/(SKILL_PATHFINDING)/(SKILL_EXPERT)/(expertDesc);
+
+!?FU(OnStartOrLoad);
+!!UN:P739/?(esPathfinding:y);           [проверяем включена ли опция 739]
+!!FU&(esPathfinding)<>(TRUE):E;         [выход если опция не включена]
+
+; Store all the original values
+!!FU(NewIntArray):P?i^es_739_patches^/(M_TEMP);
+
+!!re (address:y)/6546704/6546908/4;
+  !!UN:C(address)/(UNC_INT)/?(value:y);
+  !!FU(Array_Push):Pi^es_739_patches^/(value);
+!!en;
+
 ** Грязь
 !!UN:C6546704/4/130;     [Нет ПП]
 !!UN:C6546708/4/120;     [Базовый ПП]
@@ -91,78 +119,18 @@ ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
 !!UN:C6546904/4/50;      [Продвинутый ПП]
 !!UN:C6546908/4/50;      [Эксперт ПП]
 
-!?FU(OnAfterLoadGame);  [после загрузки игры]
-!!UN:P739/?y1;          [проверяем включена ли опция 739 в y1]
-!!FU&y1=0:E;            [выход если опция не включена]
-** Установка описаний навыка Поиск Пути
-!!FU(Fun_SetDescriptionFromERT):P0/0/0/179289;  [Название ПП]
-!!FU(Fun_SetDescriptionFromERT):P0/0/1/179286;  [Базовый ПП]
-!!FU(Fun_SetDescriptionFromERT):P0/0/2/179287;  [Продвинутый ПП]
-!!FU(Fun_SetDescriptionFromERT):P0/0/3/179288;  [Эксперт ПП]
-** Грязь
-!!UN:C6546704/4/130;     [Нет ПП]
-!!UN:C6546708/4/120;     [Базовый ПП]
-!!UN:C6546712/4/110;     [Продвинутый ПП]
-!!UN:C6546716/4/100;     [Эксперт ПП]
-** Песок
-!!UN:C6546720/4/160;     [Нет ПП]
-!!UN:C6546724/4/140;     [Базовый ПП]
-!!UN:C6546728/4/120;     [Продвинутый ПП]
-!!UN:C6546732/4/100;     [Эксперт ПП]
-** Трава
-!!UN:C6546736/4/115;     [Нет ПП]
-!!UN:C6546740/4/110;     [Базовый ПП]
-!!UN:C6546744/4/105;     [Продвинутый ПП]
-!!UN:C6546748/4/100;     [Эксперт ПП]
-** Снег
-!!UN:C6546752/4/160;     [Нет ПП]
-!!UN:C6546756/4/140;     [Базовый ПП]
-!!UN:C6546760/4/120;     [Продвинутый ПП]
-!!UN:C6546764/4/100;     [Эксперт ПП]
-** Болото
-!!UN:C6546768/4/175;     [Нет ПП]
-!!UN:C6546772/4/150;     [Базовый ПП]
-!!UN:C6546776/4/125;     [Продвинутый ПП]
-!!UN:C6546780/4/100;     [Эксперт ПП]
-** Скалы
-!!UN:C6546784/4/145;     [Нет ПП]
-!!UN:C6546788/4/130;     [Базовый ПП]
-!!UN:C6546792/4/115;     [Продвинутый ПП]
-!!UN:C6546796/4/100;     [Эксперт ПП]
-** Подземелье
-!!UN:C6546800/4/115;     [Нет ПП]
-!!UN:C6546804/4/110;     [Базовый ПП]
-!!UN:C6546808/4/105;     [Продвинутый ПП]
-!!UN:C6546812/4/100;     [Эксперт ПП]
-** Лава
-!!UN:C6546816/4/130;     [Нет ПП]
-!!UN:C6546820/4/120;     [Базовый ПП]
-!!UN:C6546824/4/110;     [Продвинутый ПП]
-!!UN:C6546828/4/100;     [Эксперт ПП]
-** Вода
-!!UN:C6546832/4/100;     [Нет ПП]
-!!UN:C6546836/4/100;     [Базовый ПП]
-!!UN:C6546840/4/100;     [Продвинутый ПП]
-!!UN:C6546844/4/100;     [Эксперт ПП]
-** Пропасть
-!!UN:C6546848/4/0;       [Нет ПП]
-!!UN:C6546852/4/0;       [Базовый ПП]
-!!UN:C6546856/4/0;       [Продвинутый ПП]
-!!UN:C6546860/4/0;       [Эксперт ПП]
-** Земляная дорога
-!!UN:C6546864/4/80;      [Нет ПП]
-!!UN:C6546868/4/80;      [Базовый ПП]
-!!UN:C6546872/4/80;      [Продвинутый ПП]
-!!UN:C6546876/4/80;      [Эксперт ПП]
-** Гравийная дорога
-!!UN:C6546880/4/65;      [Нет ПП]
-!!UN:C6546884/4/65;      [Базовый ПП]
-!!UN:C6546888/4/65;      [Продвинутый ПП]
-!!UN:C6546892/4/65;      [Эксперт ПП]
-** Мощеная дорога
-!!UN:C6546896/4/50;      [Нет ПП]
-!!UN:C6546900/4/50;      [Базовый ПП]
-!!UN:C6546904/4/50;      [Продвинутый ПП]
-!!UN:C6546908/4/50;      [Эксперт ПП]
+!?FU(OnGameLeave);
+!!UN:P739/?(esPathfinding:y);           [проверяем включена ли опция 739]
+!!FU&(esPathfinding)<>(TRUE):E;         [выход если опция не включена]
+
+; Restore all the original values
+!!SN:Mi^es_739_patches^/?(size:y);
+!!VR(address:y):S6546704;
+
+!!re i/0/(size)/1/-1;
+  !!SN:Mi^es_739_patches^/i/?(value:y);
+  !!UN:C(address)/(UNC_INT)/(value:y);
+  !!VR(address):+4;
+!!en;
 
 ** end

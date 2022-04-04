@@ -4,8 +4,10 @@ ZVSE2
 ; Requires: ERA 3.3+, Era Erm Framework
 
 
-// Manage options compatibility
-; Temporally disable Extention Heroes if Tyrant is enabled, would be re-enabled again when Tyrant is set up
+**************************************
+**** Manage options compatibility ****
+**************************************
+// Temporally disable Extention Heroes if Tyrant is enabled, would be re-enabled again when Tyrant is set up
 !?FU(ES_770_DisableExtentionHeroes);
 !!UN:P100/?i^ES_100_enabled^;
 !!UN:P770/?(wogOption:y);
@@ -14,7 +16,49 @@ ZVSE2
 !#FU(ES_770_DisableExtentionHeroes):P;
 
 
-// Set Up hooks
+// Determine the mode of Landing Navigation by checking he percentage of water on the surface
+!?FU(ES_770_Intialization);
+; Loop through all the tiles on the surface to get the percentage of water
+!!VR(waterTiles:y):S0;
+!!UN:X?(width:y)/?(level:y);
+
+!!re (x:y)/0/(width)/1/-1;
+  !!re (y:y)/0/(width)/1/-1;
+    !!TR(x)/(y)/0:T?(terrain:y);
+    !!VR(waterTiles)&(terrain)=8:+1;
+  !!en;
+!!en;
+
+!!VR(totalTiles:y):S(width) *(width);
+!!VR(waterPercent:y):S(waterTiles) *100 :(totalTiles);
+
+!!if&(waterPercent)<15;
+  !!VRi^es_770_landMode^:S(TRUE);
+
+  ; Ban water artifacts and spells
+  !!UN:A(ART_NECKLACE_OF_OCEAN_GUIDANCE)/1 A(ART_BOOTS_OF_LEVITATION)/1 A(ART_SEA_CAPTAINS_HAT)/1 A(ART_ADMIRALS_HAT)/1; [запрет водных артефактов]
+  !!UN:P152/1 P153/1 P221/1;            [включение опций Бана водных заклинаний]
+  !!UN:J0/(SPELL_SUMMON_BOAT)/1 J0/(SPELL_SCUTTLE_BOAT)/1 J0/(SPELL_WATER_WALK)/1; [Бан водных заклинаний в Гильдиях Магов и Пирамидах]
+!!en;
+
+!#FU(ES_770_Intialization):P;
+
+
+// Disable Resistance II if Enhanced Resistance is enabled
+!?FU(ES_777_DisableResistanceII);
+!!UN:P777/?(enhRes:y);                [проверяем включена ли опция 777 в y1]
+
+!!if&(enhRes);
+  !!UN:P210/(FALSE);             [если включена, отключаем опцию Сопротивление II]
+  !!VRv7195:S(FALSE);            [...]
+!!en;
+
+!#FU(ES_777_DisableResistanceII):P;
+
+
+**********************
+**** Set Up hooks ****
+**********************
 !?FU(OnStartOrLoad);
 !!SN:L^erm_hooker.era^/?(ermHooker:y);
 !!FU&(ermHooker)=0:E;
@@ -36,13 +80,13 @@ ZVSE2
 !!VR(stackAttackerID:y):S(NO_MON); 
 !!VR(stackDefenderID:y):S(NO_MON); 
 
-!!if&(stackStrucktAttacker)<>(NO_STACK); 
+!!if&(stackStrucktAttacker)<>(FALSE); 
   !!UN:C(stackStrucktAttacker)/244/4/?(attakerSide:y); 
   !!UN:C(stackStrucktAttacker)/248/4/?(attakerStackIdInSide:y);
   !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide); 
 !!en;
 
-!!if&(stackStrucktDefender)<>(NO_STACK);
+!!if&(stackStrucktDefender)<>(FALSE);
   !!UN:C(stackStrucktDefender)/244/4/?(defenderSide:y);
   !!UN:C(stackStrucktDefender)/248/4/?(defenderStackIdInSide:y);
   !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
