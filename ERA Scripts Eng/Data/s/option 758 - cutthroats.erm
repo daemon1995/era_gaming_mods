@@ -4,19 +4,15 @@ ZVSE2
 ** Name          : Cutthroats
 ** Name rus.     : Головорезы
 ** Options       : 758
-** Dialogs       : -
-** Variables     : -
-** Tmp variables : z1-z2
-** Timers        : -
-** Functions     : -
-** PO-values     : -
 
 ** Воры становятся хладнокровными головорезами не зависящими от боевого духа,
 ** но каждый раз после убийства отряда воодушевляются получая возможность совершить еще одно действие.
 
-!?FU(OnAfterErmInstructions);           [перед началом игры]
+
+// Initialization
+!?FU(OnAfterErmInstructions);
 !!UN:P758/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
+!!FU&(wogOption)<>(TRUE):E;
 
 ; Set up new names and description
 !!SN:H^monname^/(MON_ROGUE)/0/^%T(es.758.singName)^;
@@ -25,68 +21,60 @@ ZVSE2
 !!VR(newDesc:z):S(desc) +^%T(es.758.desc)^;
 !!SN:H^monname^/(MON_ROGUE)/2/(newDesc);
 
-!!MA:F(MON_ROGUE)/?(fv:y) X(MON_ROGUE)/?(monFlags:y); [FV/флаги Головорезов]
-!!VR(fv):*105 :100;                     [увеличиваем FV на 5%]
-!!VR(monFlags):|(MON_FLAG_NO_MORALE);   [даем флаг "нет пенальти морали"]
-!!MA:F(MON_ROGUE)/(fv) X(MON_ROGUE)/(monFlags); [обновляем FV/флаги Головорезов]
+; Give No Morale monster flag and increse the fight value
+!!MA:F(MON_ROGUE)/?(fv:y) X(MON_ROGUE)/d|(MON_FLAG_NO_MORALE);
+!!VR(fv):*105 :100;
+!!MA:F(MON_ROGUE)/(fv);
 
-!?FU(OnBeforeBattleUniversal);[перед боем]
-!!UN:P758/?y1;                [проверяем включена ли опция 758 в y1]
-!!SN&y1>0:W^opt758s^/-1 W^opt758d^/-1 W^opt758m^/-1; [сбрасываем номера атакующего отряда и цели]
+!?FU(OnBeforeBattleUniversal);
+; Initialise variable - This must to be execute regardless the option
+!!VRi^es_758_defStack^:S(NO_STACK);
 
-!?FU(OnBeforeBattleAction);   [перед действием]
-!!UN:P758/?y1; !!FU&y1=0:E;   [выход если опция не включена]
+// Store defending stack ID if it is Rogue attacking another monster
+!?FU(OnBeforeBattleAction);
+!!UN:P758/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!BG:A?y1 N?y2 E?y3;          [y1/y2/y3 - тип действия/отряд/цель]
-!!FU|y1<>6/y2<0/y3<0:E;       [выход, если не атака ближнего боя, нет отряда или цели]
+!!BG:A?(action:y) E?(defStack:y);
+!!BMi^battle_acting_stack^:T?(type:y);
 
-!!BMy2:T?y4;                  [y4 - тип атакующего отряда]
-!!SN&y4=(MON_ROGUE):W^opt758s^/y2 W^opt758d^/y3; [если атака Головорезов, сохраняем номера атакующего отряда и цели]
-
-!?FU(OnBattleRegeneratePhase);[фаза регенерации]
-!!UN:P758/?y1; !!FU&y1=0:E;   [выход если опция не включена]
-
-!!SN&y1>0:W^opt758s^/?y1 W^opt758d^/?y2; [y1/y2 - атакующий отряд/цель]
-!!FU&y1<0/y2<0:E;             [выход, если не было атаки Головорезов]
-
-!!BMy1:N?y3;                  [y3/y4 - количество существ в отрядах]
-!!BMy2:N?y4;                  [...]
-
-!!if|y3<1/y4>0;               [если убиты головорезы или не убит целевой отряд]
-  !!SN:W^opt758s^/-1 W^opt758d^/-1; [обнуляем номера]
-  !!FU:E;                     [и выходим]
+!!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK)/(type)=(MON_ROGUE);
+  !!VRi^es_758_defStack^:S(defStack);
 !!en;
 
-!!SN&y1<21:W^opt758m^/0;      [устанавливаем признак стороны Головорезов]
-!!SN&y1>20:W^opt758m^/1;      [...]
-!!SN:X?i/?j/1;                [блокируем фазу регенерации]
+// Check if Rogue is eligible to attack again
+!?FU(OnBattleActionEnd)&i^es_758_defStack^>(NO_STACK);
+; Check if the defending stack is dead
+!!BMi^es_758_defStack^:N?(defNum:y);
 
-!?FU(OnBattleStackObtainsTurn); [при получении хода в бою]
-!!UN:P758/?y1; !!FU&y1=0:E;   [выход если опция не включена]
+!!if&(defNum)<=0;
+  !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ACTED);
 
-!!SN&y1>0:W^opt758s^/?y1 W^opt758d^/?y2 W^opt758m^/?y3; [y1/y2/y3 отряд/цель/сторона]
-!!FU|y1<0/y2<0/y3<0:E;        [выход, если одно из значений не установлено]
 
-!!SN:W^opt758s^/-1 W^opt758d^/-1 W^opt758m^/-1; [обнуляем номера]
-!!BMy1:N?y5;                  [y5 - количество головорезов]
-!!FU&y5<1:E;                  [выход, если головорезов нет]
+  ; Show battle log and play animation/sound
+  !!if&i^battle_isVisible^;
+    !!BMi^battle_acting_stack^:N?(cutthroatNum:y);
 
-; Show battle log and play animation/sound
-!!if&i^battle_isVisible^;     [для не-быстрой битвы]
-  !!if&y5=1;
-    !!SN:H^monname^/(MON_ROGUE)/0/?(cutthroatName:z);
-  !!el;
-    !!SN:H^monname^/(MON_ROGUE)/1/?(cutthroatName);
+    !!if&(cutthroatNum)=1;
+      !!SN:H^monname^/(MON_ROGUE)/0/?(cutthroatName:z);
+    !!el;
+      !!SN:H^monname^/(MON_ROGUE)/1/?(cutthroatName);
+    !!en;
+
+    !!SN:T^es.758.battleLog^?(battleLog:z)/^cutthroat^/(cutthroatName);
+    !!MM:S(battleLog);
+
+    !!SN:P^MIRTH^;                      [вывод звука морали]
+    !!BMi^battle_acting_stack^:V20;     [анимация морали на отряде]
   !!en;
-
-  !!SN:T^es.758.battleLog^?(battleLog:z)/^cutthroat^/(cutthroatName);
-  !!MM:S(battleLog);
-
-  !!SN:P^MIRTH^;              [вывод звука морали]
-  !!BMy1:V20;                 [анимация морали на отряде]
 !!en;
 
-!!VRy1&y1>20/y3=1:-21;        [y1 - номер отряда (0..20)]
-!!SN:Xy3/y1;                  [передаем ход головорезам]
+// Restore the turn to Rogue's turn
+!?FU(OnBattleStackObtainsTurn)&i^es_758_defStack^>(NO_STACK);
+!#VA(stackSide:x) (stackInd:x);
+
+!!VR(stackSide):Si^battle_acting_side^;
+!!VR(stackInd):Si^battle_acting_stack^ &(BATTLE_STACKS_PER_SIDE);
+!!VRi^es_758_defStack^:S(NO_STACK);
 
 ** end
