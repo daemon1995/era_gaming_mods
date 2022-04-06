@@ -37,69 +37,36 @@ ZVSE2
   !!SN:H^monname^/(upgHellBar)/2/(newUpgBaronDesc);
 !!en;
 
-!?FU(OnBeforeBattleUniversal);
+!?FU(OnBeforeBattleUniversal)&i^battle_isVisible^;
 ; Initialise variables - This must to be execute regardless the option
-!!VRi^es_759_devilStack^:S(NO_STACK);
-!!VRi^es_759_defStack^:S(NO_STACK);
+!!VRi^es_759_victimStack^:S(NO_STACK);
 
-// Check if it is any of the devils' turn
-!?FU(OnBattleStackObtainsTurn)&i^battle_isVisible^;
-!#VA(side:x) (stackOfSide:x);
-
+// Change the cursor and show hint when hovering over victims
+!?FU(OnBattleMouseHint)&i^battle_round^>=0;
 !!UN:P759/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-!!VRi^es_759_devilStack^:S(NO_STACK);
-!!VRi^es_759_defStack^:S(NO_STACK);
-!!VRi^ES_759_isDevilWithSpellsTurn^:S(FALSE);
+!!VRi^es_759_victimStack^:S(NO_STACK);
 
-!!VR(stack:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackOfSide);
-!!BM(stack):T?(type:y) E?(spell:y) N?(num:y) B?(startNum:y);
-
-!!if&(spell)>0;
-  !!if|(type)=(MON_ARCH_DEVIL)/(type)=(MON_HELL_BARON);
-    !!VRi^ES_759_isDevilWithSpellsTurn^:S(TRUE);'
-    !!VRi^es_759_devilStack^&(num)<(startNum):S(stack);
-  !!en;
-
-  ; Set the stack as the fourth upgraded devil (if applicable)
-  !!FU(GetUpgradedMonster):P(MON_HELL_BARON)/?(upgHellBar:y);
-
-  !!if&(type)=(upgHellBar)/(upgHellBar)>(NO_MON);
-    !!VRi^ES_759_isDevilWithSpellsTurn^:S(TRUE);'
-    !!VRi^es_759_devilStack^&(num)<(startNum):S(stack);
-  !!en;
-!!en;
-
-// Recheck whether the devil is eligible to cast sacrifice (in case the hero's spell kills it)
-!?FU(OnBattleActionEnd)&i^ES_759_isDevilWithSpellsTurn^;
-!!BG:A?(action:y);
-
-!!if&(action)=(BATTLE_ACTION_HERO_CAST);
-  !!BMi^battle_current_stack^:N?(num:y) B?(startNum:y);
-  !!VRi^es_759_devilStack^&(num)<(startNum)/(num)>0:Si^battle_current_stack^;
-!!en;
-
-// Change the cursor and show hint when hovering over victims
-!?FU(OnBattleMouseHint)&i^es_759_devilStack^>(NO_STACK);  [при движении мыши по гексам поля боя, если ходит отряд Архидьяволов, который можно восстановить]
 ; Exit if not hovering one of the hex
-!!VRi^es_759_defStack^:S(NO_STACK);        [сброс номера жертвенного отряда]
 !!MM:D?(pos:y);                            [позиция курсора]
 !!FU|(pos)<0/(pos)>186:E;                  [выход, если курсор за полем]
 
-; Exit if not no stack/same stack/not on the same side
+; Exit if not a devil with spell (and not being controlled)
+!!FU(ES_759_CheckEligibleToSacrifice):Pi^battle_current_stack^/?(result:y);
+!!FU&(result)<>(TRUE):E;
+
+; Exit if the pointed stack is not from the same side with the devil/is cloned/not living
 !!BU:E(pos)/?(stack:y);                    [номер живого отряда в позиции]
-!!FU|(stack)=(NO_STACK)/(stack)=i^es_759_devilStack^:E;   [выход, если живого отряда в позиции нет или курсор наведен на ходящий отряд Архидьяволов]
-!!FU&(stack)<=(BATTLE_ATTACKER_STACK_LAST)/i^es_759_devilStack^>=(BATTLE_DEFENDER_STACK_FIRST):E; [выход, если курсор наведен на вражеский отряд]
-!!FU&(stack)>=(BATTLE_DEFENDER_STACK_FIRST)/i^es_759_devilStack^<=(BATTLE_ATTACKER_STACK_LAST):E; [...]
+!!FU(ES_759_CheckIfVictimIsValidForHuman):P(stack)/?(result);
+!!FU&(result)<>(TRUE):E;
 
-; Exit if the victim is not a living creature/is summoned
-!!BM(stack):F?(monFlags:y) T?(type:y) N?(num:y); [флаги/тип/количество существ отряда под курсором]
-!!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE); [если существа отряда под курсором не живые]
-!!VR(isSummoned:y):S(monFlags) &(MON_FLAG_SUMMONED); [если существа отряда под курсором призванные]
-!!FU|(isAlive)=(FALSE)/(isSummoned)=(TRUE):E; [выход, если существа отряда под курсором не живые или призванные]
+!!VRi^es_759_victimStack^:S(stack);
 
-!!VRi^es_759_defStack^:S(stack);           [установка номера жертвенного отряда]
+; Show hint of the sacrificing event
+!!BM(stack):T?(type:y) N?(num:y);          [флаги/тип/количество существ отряда под курсором]
+
+!!VRi^es_759_victimStack^:S(stack);        [установка номера жертвенного отряда]
 !!UN:R5/2/18;                              [установка вида курсора "Жертва"]
 
 !!if&(num)=1;
@@ -111,9 +78,41 @@ ZVSE2
 !!SN:T^es.759.hint^/?(hint:z)/^victim^/(victimName);
 !!MM:M(hint);                              [подмена стандартной подсказки]
 
-// Sacrifce the target when clicking on it
-!?FU(OnBattleScreenMouseClick)&i^es_759_devilStack^>(NO_STACK)/i^es_759_defStack^>(NO_STACK)/i^mouse_action^=(MOUSE_LMB_PRESSED); [при клике на жертвенном отряде, если ходит отряд Архидьяволов, который можно восстановить]
-!!FU(ES_759_ReviveDevils):Pi^es_759_devilStack^/i^es_759_defStack^;    [Восстановление Архидьяволов за счет жертвенного отряда]
+!?FU(ES_759_CheckEligibleToSacrifice);
+!#VA(stack:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!BM(stack):E?(spell:y) T?(type:y) N?(num:y) B?(startNum:y) G(SPELL_BERSERK)/?(isBerserked:y)/d G(SPELL_HYPNOTIZE)/?(isHypotized:y)/d;
+
+!!if&(spell)>0/(num)<(startNum)/(isBerserked)<>(TRUE)/(isHypotized)<>(TRUE);
+  !!VR(result)|(type)=(MON_ARCH_DEVIL)/(type)=(MON_HELL_BARON):S(TRUE);
+
+  ; Set the stack as the fourth upgraded devil (if applicable)
+  !!FU(GetUpgradedMonster):P(MON_HELL_BARON)/?(upgHellBar:y);
+  !!VR(result)&(type)=(upgHellBar)/(upgHellBar)>(NO_MON):S(TRUE);
+!!en;
+
+!!FU&(result)<>(TRUE):E;
+
+!?FU(ES_759_CheckIfVictimIsValidForHuman);
+!#VA(stack:x) (result:x);
+
+!!VR(result):S(FALSE);
+
+!!if&(stack)>(NO_STACK)/(stack)<>i^battle_current_stack^;
+  !!FU&(stack)<=(BATTLE_ATTACKER_STACK_LAST)/i^battle_current_stack^>=(BATTLE_DEFENDER_STACK_FIRST):E; [выход, если курсор наведен на вражеский отряд]
+  !!FU&(stack)>=(BATTLE_DEFENDER_STACK_FIRST)/i^battle_current_stack^<=(BATTLE_ATTACKER_STACK_LAST):E; [...]
+
+  ; Exit if the victim is not a living creature/is summoned
+  !!BM(stack):F?(monFlags:y);
+  !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE); [если существа отряда под курсором не живые]
+  !!VR(isSummoned:y):S(monFlags) &(MON_FLAG_SUMMONED); [если существа отряда под курсором призванные]
+  !!VR(result)&(isAlive)/(isSummoned)<>(TRUE):S(TRUE);
+!!en;
+
+// Sacrifce the target and revive the devil when clicking on it
+!?FU(OnBattleScreenMouseClick)&i^es_759_victimStack^>(NO_STACK)/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^battle_round^>=0;
+!!FU(ES_759_ReviveDevils):Pi^battle_current_stack^/i^es_759_victimStack^;
 
 !?FU(ES_759_ReviveDevils);                 [Восстановление Архидьяволов за счет жертвенного отряда: номер отряда Архидьяволов,Баронов/жертвенного отряда]
 !#VA(devilStack:x) (victimStack:x);
@@ -162,46 +161,64 @@ ZVSE2
 *** AI
 
 // Revive devil for AI if the living number is lower than 70%
-!?FU(OnBeforeBattleAction)&i^es_759_devilStack^>(NO_STACK)/i^battle_isVisible^; [перед действием отряда Архидяволов, который можно восстановить]
-!!BMi^es_759_devilStack^:I?y1 G59/?y2/d G60/?y3/d N?y4 B?y5; [y1/y2/y3/y4/y5 - принадлежность отряда/продолжительность Берсерка/Гипноза/текущая/макс. численность]
-!!VRy4:*100 :y5;                           [y4 - численность отряда в процентах от начальной]
-!!FU&y4>70:E;                              [выход, если Архидьяволы/Бароны Ада понесли менее 30% потерь]
+!?FU(OnBeforeBattleAction)&i^battle_isVisible^/i^battle_round^>=0; [перед действием отряда Архидяволов, который можно восстановить]
+!!UN:P759/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!BA:O?y4/?y5;                             [y4/y5 - атакующий/защищающийся игроки]
-!!VRy6&y1=0:Sy4;                           [y6 - номер игрока-владельца отряда]
-!!VRy6&y1=1:Sy5;                           [...]
-!!OW&y6>=0:Iy6/?y7;                        [y7=1, если отряд под контролем ИИ]
-!!FU&y6>=0/y7=0:E;                         [выход, если отряд под контролем человека]
+; Exit if not AI's turn
+!!FU&i^battle_ai_%i(battle_current_side)^<>(TRUE):E;
 
-!!BMi^es_759_devilStack^:N?y11 B?y12 L?y13 H?y14;         [y11/y12/y13/y14 - текущее количество/начальное количество/потерянное здоровье/макс.здоровье отряда]
-!!VRy10:Sy12 -y11 *y14 +y13 *11 :10;       [y10 - здоровье отряда, которое можно восстановить "жертвой" (+10% допустимый "перебор")]
-!!VRv1:C-1/-1;                             [инициализация v1,v2]
-!!DO(ES_759_SearchForAIVictim)/0/20/1&y1=0:Py13/y10/y14;         [поиск отряда наиболее подходящего для жертвы в v1]
-!!DO(ES_759_SearchForAIVictim)/21/41/1&y1=1:Py13/y10/y14;        [...]
-!!FU(ES_759_ReviveDevils)&v1>=0:Pi^es_759_devilStack^/v1; [Восстановление Архидьяволов за счет жертвенного отряда, если подходящая жертва найдена]
+; Exit if not a devil with spell (and not being controlled)
+!!FU(ES_759_CheckEligibleToSacrifice):Pi^battle_acting_stack^/?(result:y);
+!!FU&(result)<>(TRUE):E;
 
-!?FU(ES_759_SearchForAIVictim);                                  [поиск наиболее подходящего отряда на роль жертвы]
-** x16 - проверяемый отряд, x1/x2/x3 - минимальное здоровье жертвы/максимальное здоровье жертвы/здоровье восстанавливаемого существа
-** v1 - прошлый найденный отряд, v2 - FV/кол-во восстановленных существ для прошлого найденного отряда
-!!BMx16:T?y2 N?y3;                         [y2/y3 - тип/количество существ потенциального жертвенного отряда]
-!!FU|x16=i^es_759_devilStack^/y2<0/y3<1:E;                [выход, если приверяемый и восстанавливаемый отряды совпадают или проверяемый отряд не существует]
+; Exit if the devil is more than 70% of the starting number
+!!BMi^battle_acting_stack^:N?(num:y) B?(startNum:y);
+!!VR(percent:y):S(num) *100 :(startNum);
+!!FU&(percent)>70:E; 
 
-!!BMx16:F?y1 H?y4 L?y5;                    [y1/y4/y5 - флаги/макс.здоровье/потерянное здоровье существ потенциального жертвенного отряда]
-!!VRy6:Sy3 &16;                            [y6=0, если существа отряда под курсором не живые]
-!!VRy7:Sy3 &4194304;                       [y7>0, если существа отряда под курсором призванные]
-!!FU|y6=0/y7>0:E;                          [выход, если существа отряда не живые или призванные]
+; Get a valid victim depending on the lost hp of the devil
+!!BMi^battle_acting_stack^:L?(lostHp:y) H?(hp:y); [текущее количество/начальное количество/потерянное здоровье/макс.здоровье отряда]
+!!VR(totalLostHp:y):S(startNum) -(num) *(hp) +(lostHp) *11 :10; [здоровье отряда, которое можно восстановить "жертвой" (+10% допустимый "перебор")]
+!!FU(ES_759_GetAiVictim):Pi^battle_acting_stack^/(totalLostHp)/?(victimStack:y);
 
-!!VRy6:Sy3 *y4 -y5;                        [y6 - общее здоровье жертвы]
-!!FU|y6<x1/y6>x2:E;                        [выход, если здоровья не достаточно для восстановления хотя бы одного существа или более чем на 10% больше, чем необходимое для полного восстановления отряда]
+; Revive the devil if the victim is found
+!!FU(ES_759_ReviveDevils)&(victimStack)>(NO_STACK):Pi^battle_acting_stack^/(victimStack);
 
-!!VRy7:Sy6 -x1 :x3 +1;                     [y7 - количество восстанавливаемых существ]
-!!VRy8:Sy6 -x1 %x3;                        [...]
-!!VRy7&y8>0:+1;                            [...]
-!!MA:Fy2/?y8;                              [y8 - значение "FV/кол-во восстановленных существ" для приносимого в жертву отряда]
-!!VRy8:*y3 :y7;                            [...]
-!!VRv1&y8<v2:Sx16;                         [если проверяемы отряд принести в жертву выгоднее чем предыдущий найденный...]
-!!VRv2&y8<v2:Sy8;                          [...выбираем текущий отряд]
-!!VRv2&v1=-1:Sy8;                          [если более подходящего отряда еще не было...]
-!!VRv1&v1=-1:Sx16;                         [...выбираем текущий отряд]
+!?FU(ES_759_GetAiVictim);
+!#VA(devilStack:x) (totalLostHp:x) (victimStack:x);
+
+!!VR(victimStack):S(NO_STACK);
+!!VR(maxFvHpRatio:y):S(INT_MAX);
+!!BM(devilStack):H?(devilHp:y) I?(side:y);
+
+!!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
+!!VR(lastStack:y):S(firstStack) +20;
+
+!!re i/(firstStack)/(lastStack);
+  ; Next mon if the target is not alive or summoned
+  !!BMi:T?(type:y) N?(num:y);
+  !!co|i=(devilStack)/(type)<=(NO_MON)/(num)<0;
+
+  !!BMi:F?(monFlags:y) H?(hp:y) L?(lostHp:y);
+  !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);
+  !!VR(isSummoned:y):S(monFlags) &(MON_FLAG_SUMMONED);
+  !!co|(isAlive)=(FALSE)/(isSummoned);
+
+  ; Check the totla Hp of the victim and see if it can revive at least one devil but not over heal it
+  !!VR(totalHp:y):S(num) *(hp) -(lostHp);
+
+  !!if&(totalHp)>=(devilHp)/(totalHp)<(totalLostHp);
+    ; Calculate Hp/Fv Ratio and decide how to proceed
+    !!MA:F(type)/?(fv:y) L(type)/?(lv:y);
+    !!VR(fvHpRatio:y):S(fv) :(hp:y);
+
+    ; Set the target if it has lower fv/hp ratip and is weaker than level 7
+    !!if&(fvHpRatio)<(maxFvHpRatio)/(lv)<6;  
+      !!VR(victimStack):Si;
+      !!VR(maxFvHpRatio):S(fvHpRatio);
+    !!en;
+  !!en;
+!!en;
 
 *** end
