@@ -36,6 +36,8 @@ ZVSE2
 !!VR(waterPercent:y):S(waterTiles) *100 :(totalTiles);
 
 !!if&(waterPercent)<15;
+  ; Set the global variable for land mode
+  !!UN:P773/2;
   !!VRi^es_770_landMode^:S(TRUE);
 
   ; Ban water artifacts and spells
@@ -75,6 +77,7 @@ ZVSE2
 **********************
 **** Set Up hooks ****
 **********************
+
 !?FU(OnStartOrLoad);
 !!SN:L^erm_hooker.era^/?(ermHooker:y);
 !!FU&(ermHooker)=0:E;
@@ -110,3 +113,30 @@ ZVSE2
 
 !!FU(ES_OnAfterMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
 !!FU(ES_OnAfterShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+
+************************************
+**** Set up object repalcements ****
+************************************
+
+!?FU(OnAfterErmInstructions);
+; deleting the sound in the delete object function
+; because it causes a crash
+!!UN:C4893167/2/?(patch:y);
+!!UN:C4893167/2/24555;
+; get size of the map
+!!UN:X?(mapSize:y)/?(hasUnderground:y);
+
+; pass once through all cells of the map
+!!re l/0/(hasUnderground);    coord z
+  !!re k/0/(mapSize)/1/-1;    coord y
+    !!re i/0/(mapSize)/1/-1;  coord x
+      !!OBi/k/l:T?(objType:y) U?(objSubtype:y);
+      !!TRi/k/l:E?(isYellowSquare:y) P?(isPassable:y); 
+      !!VR(isYellowSquare):X1;  reverse param isYellowSquare
+      !!FU(ES_OnIterateAllMapObjects):Pi/k/l/(objType)/(objSubtype)/(isYellowSquare)/(isPassable);
+    !!en;
+  !!en;
+!!en;
+; restoring the source code of the sound
+; in the delete objects function
+!!UN:C4893167/2/(patch);
