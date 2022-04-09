@@ -4,9 +4,9 @@ ZVSE2
 ; Requires: ERA 3.3+, Era Erm Framework
 
 
-**************************************
-**** Manage options compatibility ****
-**************************************
+************************
+**** Manage options ****
+************************
 // Temporally disable Extention Heroes if Tyrant is enabled, would be re-enabled again when Tyrant is set up
 !?FU(ES_770_DisableExtentionHeroes);
 !!UN:P100/?i^ES_100_enabled^;
@@ -14,7 +14,6 @@ ZVSE2
 !!UN&(wogOption):P100/0;
 
 !#FU(ES_770_DisableExtentionHeroes):P;
-
 
 // Determine the mode of Landing Navigation by checking the percentage of water on the surface
 !?FU(ES_770_Intialization);
@@ -48,7 +47,6 @@ ZVSE2
 
 !#FU(ES_770_Intialization):P;
 
-
 // The following changes are critical to teh initialization of secondary skill text
 // Disable Resistance II if Enhanced Resistance is enabled
 !?FU(ES_777_DisableResistanceII);
@@ -61,7 +59,6 @@ ZVSE2
 
 !#FU(ES_777_DisableResistanceII):P;
 
-
 // Disable Sorcery II if Critical Sorcery is re-enabled
 !?FU(ES_789_DisableSorceryII);
 !!UN:P789/?(critSorcery:y);                [проверяем включена ли опция 789]
@@ -73,7 +70,6 @@ ZVSE2
 
 !#FU(ES_789_DisableSorceryII):P;
 
-
 **********************
 **** Set Up hooks ****
 **********************
@@ -82,14 +78,14 @@ ZVSE2
 !!SN:L^erm_hooker.era^/?(ermHooker:y);
 !!FU&(ermHooker)=0:E;
 
-!!SN:A(ermHooker)/^SetHook^/?(hooker:y);
-!!FU(ES_CreateERMHook):P(hooker);
+!!SN:A(ermHooker)/^SetHook^/?(address:y);
+!!FU(ES_CreateERMHook):P(address:y);
 
 !?FU(ES_CreateERMHook);
-!#VA(hooker:x);
+!#VA(address:x);
 
-!!SN:E(hooker)/1/4462998/(ES_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
-!!SN:E(hooker)/1/4455129/(ES_HOOK_AfterAttackMainFunc); [Trigger after shooting]
+!!SN:E(address)/1/4462998/(ES_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
+!!SN:E(address)/1/4455129/(ES_HOOK_AfterAttackMainFunc); [Trigger after shooting]
 
 !?FU(ES_HOOK_AfterAttackMainFunc);     [by igrik]
 !!SN:X?(hook:y);
@@ -140,3 +136,80 @@ ZVSE2
 ; restoring the source code of the sound
 ; in the delete objects function
 !!UN:C4893167/2/(patch);
+
+*******************
+**** Functions ****
+*******************
+// Get a random artifact ID
+; Create artifact arrays of all the levels
+!?FU(ES_CreateArtifactArraysOrAllLevels);
+!!FU(GetMaxArtifactId):P?(lastArt:y);
+!!VR(lastArt):F(ART_LAST_WOG)/999;      [compatiblity settings]
+
+!!re (index:y)/1/4;
+  !!VR(artLevel:y):S1 Sd<<(index);
+  !!FU(NewIntArray):P?i^es_artifactArray_%(artLevel)^/(M_TEMP);
+
+  !!re i/(ART_CENTAUR_AXE)/(lastArt);
+    !!if&i<>(ART_HIGHLIGHTED_SLOT)/i<>(ART_ARTIFACT_LOCK);
+      !!UN:Ai/?(isDisabled:y) Ai/3/?(level:y) Ai/4/?(combiId:y);
+
+      !!if&(isDisabled)<>(TRUE)/(combiId)=(NO_ART)/(level)=(artLevel);
+        !!FU(Array_Push):Pi^es_artifactArray_%(artLevel)^/i;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+!#FU(ES_CreateArtifactArraysOrAllLevels):P;
+
+!?FU(OnAfterLoadGame);
+!!FU(ES_CreateArtifactArraysOrAllLevels):P;
+
+; The action function for getting a random artifact ID with artifact level
+!?FU(ES_GetRandomArtifactId);
+!#VA(artLevel:x);                       [level of the artifact]
+!#VA(artifact:x);                       [returned artifact ID]
+
+!!SN:Mi^es_artifactArray_%(artLevel)^/?(size:y);
+!!VR(size):-1;
+!!VR(index:y):R0/0/(size);
+!!SN:Mi^es_artifactArray_%(artLevel)^/(index)/?(artifact);
+
+// Get strings from text resources
+!?FU(ES_GetStringByFilename);
+!#VA(txtFilename:x);                    [filename of the text]
+!#VA(lineIndex:x);                      [number of line of the string, starts from 0]
+!#VA(string:x);                         [returned string]
+
+; Standarize the filename
+!!FU(StrToLower):Pz(txtFilename)/?(text:z);
+; Remove filename extension (if applicable)
+!!SN:K(text)/?(size:y);
+!!VR(index:y):S(size) -4;
+!!SN:K(text)/(index)/?(character:z);
+!!FU(Substr)&(character)=^.^:P(text)/0/-4/?(text);
+
+!!if&(text)=^artevent^;
+  !!VR(address:y):S6909120;             [artifact events]
+!!el&(text)=^minename^;
+  !!VR(address):S6968376;               [mine names]
+!!el&(text)=^plcolors^;
+  !!VR(address):S6976900;               [player colour]
+!!el&(text)=^priskill^;
+  !!VR(address):S6974556;               [primary skills]
+!!el&(text)=^restypes^;
+  !!VR(address):S6968208;               [resources]
+!!el;
+  !!VR(string):Z^Wrong txt filename!^;
+  !!FU:E;
+!!en;
+
+; @Master Of Puppets
+!!UN:C(address)/(UNC_INT)/?(value:y);            
+!!VR(address2:y):S(value) +32;
+!!UN:C(address2)/(UNC_INT)/?(value3:y);
+!!VR(address3:y):S(lineIndex) *4 +(value3);
+!!UN:C(address3)/(UNC_INT)/?(value4:y);
+!!SN:X?(value5:y) X(value4) X?z1 X(value5);
+!!VR(string):Z^%z1^;
