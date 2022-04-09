@@ -144,10 +144,10 @@ ZVSE2
 ; Create artifact arrays of all the levels
 !?FU(ES_CreateArtifactArraysOrAllLevels);
 !!FU(GetMaxArtifactId):P?(lastArt:y);
-!!VR(lastArt):F(ART_LAST_WOG)/999;      [compatiblity settings]
 
 !!re (index:y)/1/4;
   !!VR(artLevel:y):S1 Sd<<(index);
+  ; Create the array
   !!FU(NewIntArray):P?i^es_artifactArray_%(artLevel)^/(M_TEMP);
 
   !!re i/(ART_CENTAUR_AXE)/(lastArt);
@@ -164,7 +164,23 @@ ZVSE2
 !#FU(ES_CreateArtifactArraysOrAllLevels):P;
 
 !?FU(OnAfterLoadGame);
-!!FU(ES_CreateArtifactArraysOrAllLevels):P;
+!!FU(GetMaxArtifactId):P?(lastArt:y);
+
+!!re (index:y)/1/4;
+  !!VR(artLevel:y):S1 Sd<<(index);
+  ; Remove all the elements from the array
+  !!SN:Mi^es_artifactArray_%(artLevel)^/0;
+
+  !!re i/(ART_CENTAUR_AXE)/(lastArt);
+    !!if&i<>(ART_HIGHLIGHTED_SLOT)/i<>(ART_ARTIFACT_LOCK);
+      !!UN:Ai/?(isDisabled:y) Ai/3/?(level:y) Ai/4/?(combiId:y);
+
+      !!if&(isDisabled)<>(TRUE)/(combiId)=(NO_ART)/(level)=(artLevel);
+        !!FU(Array_Push):Pi^es_artifactArray_%(artLevel)^/i;
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
 ; The action function for getting a random artifact ID with artifact level
 !?FU(ES_GetRandomArtifactId);

@@ -2,8 +2,8 @@ ZVSE2
 ** Author orig.  : Fnord
 ** Update        : Archer30
 ** Name          : Monsters drop artefacts
-** Name rus.     : Монстры с артефактами
-** Changes rus.  : [Algor] вынос опции в отдельный файл для мода ERA, построчные комментарии
+** Name rus.     : РњРѕРЅСЃС‚СЂС‹ СЃ Р°СЂС‚РµС„Р°РєС‚Р°РјРё
+** Changes rus.  : [Algor] РІС‹РЅРѕСЃ РѕРїС†РёРё РІ РѕС‚РґРµР»СЊРЅС‹Р№ С„Р°Р№Р» РґР»СЏ РјРѕРґР° ERA, РїРѕСЃС‚СЂРѕС‡РЅС‹Рµ РєРѕРјРјРµРЅС‚Р°СЂРёРё
 ** Options       : 769
 ** PO-values     : V0 (neutral stacks)
 
@@ -38,7 +38,7 @@ ZVSE2
 ; check objects
 !!FU&(objType)<>(OBJ_MONSTER):E;
 
-; Set up Monster artifacts
+; Set up monster artifacts
 !!VR(random:y):R0/1/100;                [Random number: 1-100]
 !!FU&(random)>25:E;                     [Only a 25% chance of monster having an artifact]
 
@@ -54,20 +54,29 @@ ZVSE2
 
 !!MO(x)/(y)/(z):G?(num:y);
 ; Determine Class from 1 to 5 based on stack's gold value
-!!MA:C(objSubtype)/(RES_GOLD)/?(cost:y);  [Gold cost of 1 monster: y9]
-!!VR(totalCost:y):S(cost) *(num); [Gold cost of monster stack: y10]
+!!MA:C(objSubtype)/(RES_GOLD)/?(cost:y);[Gold cost of 1 monster: y9]
+!!VR(totalCost:y):S(cost) *(num);       [Gold cost of monster stack]
 !!VR(class:y)&(totalCost)<=999:S0;              [Stack is Class 0 (No Artifact)]
-!!VR(class)&(totalCost)>=1000/(totalCost)<=2999:S(ART_LEVEL_TREASURE);   [Stack is Class 1 (Treasure)]
+!!VR(class)&(totalCost)>=1000/(totalCost)<=2999:S(ART_LEVEL_TREASURE); [Stack is Class 1 (Treasure)]
 !!VR(class)&(totalCost)>=3000/(totalCost)<=11999:S(ART_LEVEL_MINOR);  [Stack is Class 2 (Minor)]
 !!VR(class)&(totalCost)>=12000/(totalCost)<=39999:S(ART_LEVEL_MAJOR); [Stack is Class 3 (Major)]
-!!VR(class)&(totalCost)>=40000:S(ART_LEVEL_RELIC);            [Stack is Class 4 (Relic)]
-!!FU&(class)=0:E; [Exit if Class 0]
+!!VR(class)&(totalCost)>=40000:S(ART_LEVEL_RELIC); [Stack is Class 4 (Relic)]
+!!FU&(class)=0:E;                       [Exit if Class 0]
 
 ; Get a random artifact
 !!re i/0/99;
   !!FU(ES_GetRandomArtifactId):P(class)/?(art:y);
 
-  !!br&(art)<>(ART_BOOTS_OF_SPEED)/(art)<>(ART_EQUESTRIANS_GLOVES)/(art)<>(ART_BOOTS_OF_LEVITATION)/(art)<>(ART_ANGEL_WINGS);
+  ; Break the loop if the found artifact is not any of the following
+  !!VR(foundArt:y):S(TRUE);
+  !!VR(foundArt)|(art)=(ART_BOOTS_OF_SPEED)/(art)=(ART_EQUESTRIANS_GLOVES)/(art)=(ART_BOOTS_OF_LEVITATION)/(art)=(ART_ANGEL_WINGS):S(FALSE);
+
+  ; Set more art to be invalid if Land Navigation is in land mode
+  !!if&i^es_770_landMode^;
+    !!VR(foundArt)|(art)=(ART_NECKLACE_OF_OCEAN_GUIDANCE)/(art)=(ART_SEA_CAPTAINS_HAT)/(art)=(ART_ADMIRALS_HAT):S(FALSE);
+  !!en;
+
+  !!br&(foundArt)=(TRUE);
 !!en;
 
 ; Set the artifact number as the PO:V0 value
@@ -97,7 +106,7 @@ ZVSE2
 ** [Post-Battle Trigger]
 !$OB(OBJ_MONSTER);
 !!UN:P769/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;  [exit if option isn't enabled]
+!!FU&(wogOption)<>(TRUE):E;             [exit if option isn't enabled]
 
 !!PO998:V0/?(art:y) V0/0;
 
