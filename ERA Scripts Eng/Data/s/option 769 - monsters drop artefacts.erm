@@ -45,18 +45,20 @@ ZVSE2
 !!MO(x)/(y)/(z):R?(aggression:y)/1;     [Check monster's aggression]
 !!FU&(aggression)=0:E;                  [Skip if monster is set to always join]
 
-!!UN:P904/1 P905/0;                     [Disable ERM error messages and clear error flag]
-!!VR(art:y):S(NO_ART);                  [Initialisation, (art) won't be changed if monster has no setup]
-!!MO(x)/(y)/(z):A?(art);                [Check monster's artifact]
-!!UN:P905/?(hasError:y);                [Check ERM error flag: y4=1 if stack has no setup]
-!!UN:P904/0;                            [Re-enable ERM error messages]
-!!FU&(hasError)=0/(art)>(NO_ART):E;     [Skip if monster already has an artifact]
+; Check if the monster has already got an artifact
+!!OB(x)/(y)/(z):C?(controlWords:y);
+!!VR(hasSetup:y):S(controlWords) &(BIT_31); [Bit 31 for checking additional settings]
+
+!!if&(hasSetup);
+  !!MO(x)/(y)/(z):A?(art:y);
+  !!FU&(art)>(NO_ART):E;                [skip if monster already has an artifact]
+!!en;
 
 !!MO(x)/(y)/(z):G?(num:y);
 ; Determine Class from 1 to 5 based on stack's gold value
 !!MA:C(objSubtype)/(RES_GOLD)/?(cost:y);[Gold cost of 1 monster: y9]
 !!VR(totalCost:y):S(cost) *(num);       [Gold cost of monster stack]
-!!VR(class:y)&(totalCost)<=999:S0;              [Stack is Class 0 (No Artifact)]
+!!VR(class:y)&(totalCost)<=999:S0;      [Stack is Class 0 (No Artifact)]
 !!VR(class)&(totalCost)>=1000/(totalCost)<=2999:S(ART_LEVEL_TREASURE); [Stack is Class 1 (Treasure)]
 !!VR(class)&(totalCost)>=3000/(totalCost)<=11999:S(ART_LEVEL_MINOR);  [Stack is Class 2 (Minor)]
 !!VR(class)&(totalCost)>=12000/(totalCost)<=39999:S(ART_LEVEL_MAJOR); [Stack is Class 3 (Major)]
