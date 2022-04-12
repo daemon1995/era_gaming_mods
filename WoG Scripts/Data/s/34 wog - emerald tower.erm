@@ -200,8 +200,11 @@ Dialogues: 3
 !!UN:J8/2/2; [Check if image file exists: Flag 1=True if yes]
 !!IF&1000/1:D3/1/0/0/2/0/0/0/3/0/0/0/0/0/0/0;
 !!IF:F3/0/0/0/0/0; [Remove cancel button]
-!!IF&2/1000/1:E1/3; [Display dialogue box]
-!!IF&2/1000/-1:M^%Z-1^; [Display alternative standard dialogue if image file is missing]
+
+!!if&2/1000;
+  !!IF&1:E1/3; [Display dialogue box]
+  !!IF&-1:M^%Z-1^; [Display alternative standard dialogue if image file is missing]
+!!en;
 
 !!FU(WOG_44_ChooseSpeciesMain)&2:P; [Choose species to improve]
 
@@ -262,22 +265,25 @@ Dialogues: 3
 
 !!VRv2&v1240>=12/v6<0:S-1; [Set v2 to -1 if v1240 = 12 and creature isn't new]
 
-!!FU(WOG_44_ChooseTypeImprovement)&v2>=0:P; [Display improvement options]
+!!FU(WOG_44_ChooseImprovementType)&v2>=0:P; [Display improvement options]
 
-!!FU(WOG_44_ChooseSpeciesMain)&v2=-1/-4/1000:P; [Choose another species to improve]
+!!if&1000;
+  !!FU(WOG_44_ChooseSpeciesMain)&v2=-1/-4:P; [Choose another species to improve]
 
- [If player didn't buy a bonus]
-!!if&4/-5/v1270=0/v1270<>100/1000;
-  !!IF:Q1/5/6/1/z144015;
-  !!OW:R-1/5/d6; [Give back 6 gems if nothing bought]
-  !!IF:V5/1; [Set Flag 5 to True]
-!!en;
+   [If player didn't buy a bonus]
+  !!if&4/-5;
+    !!if&v1270=0;
+      !!IF:Q1/5/6/1/z144015;
+      !!OW:R-1/5/d6; [Give back 6 gems if nothing bought]
+      !!IF:V5/1; [Set Flag 5 to True]
 
- [If player bought "24 shots" and nothing else]
-!!if&4/-5/v1270=100/1000;
-  !!IF:Q1/5/6/1/z144016;
-  !!OW:R-1/5/d6; [Give back 6 gems if only "24 shots" bought]
-  !!IF:V5/1; [Set Flag 5 to True]
+     [If player bought "24 shots" and nothing else]
+    !!el&v1270=100;
+      !!IF:Q1/5/6/1/z144016;
+      !!OW:R-1/5/d6; [Give back 6 gems if only "24 shots" bought]
+      !!IF:V5/1; [Set Flag 5 to True]
+    !!en;
+  !!en;
 !!en;
 
 -----------------------------------------------------------------------
@@ -375,7 +381,7 @@ Dialogues: 3
 
  [Choose the type of improvement]
 
-!?FU(WOG_44_ChooseTypeImprovement);
+!?FU(WOG_44_ChooseImprovementType);
 
 !!UN:N3/3/v2/0;
 
@@ -401,16 +407,23 @@ Dialogues: 3
 
 !!MA:Nv2/?y8; [Determine number of shots: y8]
 
+; Calculate the price for increasing spells according to creature level and the number of current spells
 !!MA:Bv2/?y10; [Determine number of spell castings: y10]
-!!VRy15&y10>0:S5; [Initialize cost of extra spells to 5 Mithril: y15]
-!!VRy15|v2=13/v2=150:S20; [Archangels/Supreme Archangels = 20 Mithril: y15]
-!!VRy15|v2=131/v2=158:S18; [Phoenix/Sacred Phoenix = 18 Mithril: y15]
-!!VRy15&v2=51:S10; [Pit Lords = 10 Mithril: y15]
-!!VRy15&v2=37:S8; [Master Genies = 8 Mithril: y15]
-!!VRy15&v2=134:S5; [Faerie Dragons = 5 Mithril: y15]
-!!VRy15&v2=91:S3; [Ogre Magi = 3 Mithril: y15]
-!!VRy15|v2=123/v2=125/v2=127/v2=129:S2; [Ice/Magma/Storm/Energy Elementals = 2: y15]
-!!VRy15|v2=152/v2=173:S0; [Lords of Thunder/Santa Gremlins = n/a: y15]
+!!MA:Lv2/?y30;
+
+!!if&y10>0/y10<=12;
+  !!if&y30<=3;
+    !!VRy15:S6 -y10 F2/5;               [level 4 or lower]
+  !!el&y30=4;
+    !!VRy15:S11 -y10 F5/10;             [level 5]
+  !!el&y30=5;
+    !!VRy15:S16 -y10 F10/15;            [level 6]
+  !!el;
+    !!VRy15:S21 -y10 F15/20;            [level 7]
+  !!en;
+!!el;
+  !!VRy15:S0;
+!!en;
 
 !!VRz1:Sz144017;
 !!VRz2:Sz144018;
@@ -455,11 +468,11 @@ Dialogues: 3
 
 !!VRv4:S0;
 !!FU(WOG_44_PlayerPaysForBonus)&v3>1/1000:Py15;  [Ask player to pay for Bonus: v4=1 if player pays]
-!!VRv4&-1000/v3<>10:S1; [Set v4 to 1 if AI and not selecting special abilities]
+!!VRv4&-1000/v3<>10:S(TRUE); [Set v4 to 1 if AI and not selecting special abilities]
 
 !!VRy9&v3>=2/v3<=7:Syv3; [Bonus amount: y9]
 
-!!if&v4=(TRUE);
+!!if&v4;
   !!FU(WOG_44_AddBonusByCreatureType):Py9; [Add bonus to creature type if player paid for it]
 
   !!VRv1240&v6<0:+1; [Increment Changed Creature Counter if v4=1 and v6<0]
@@ -469,10 +482,14 @@ Dialogues: 3
   !!PM998:V(FALSE);
 !!en;
 
-!!IF&v3=-1/1000:Q4/z144028;
+!!if&1000;
+  !!IF&v3=-1:Q4/z144028;
 
-!!VRv3&v3>1/v4=0/-4/1000:S-1; [Set v3 to -1 if player can't pay but doesn't leave]
-!!FU(WOG_44_ChooseSpeciesMain)&v3=-1/-4/1000:P; [Choose another species to improve]
+  !!if&-4;
+    !!VRv3&v3>1/v4=0:S-1; [Set v3 to -1 if player can't pay but doesn't leave]
+    !!FU(WOG_44_ChooseSpeciesMain)&v3=-1:P; [Choose another species to improve]
+  !!en;
+!!en;
 
 !!OW:C?y11;        [Store current player in y11]
 !!VRy12:S550 +y11; [y12 is index for v variable with bit number for current player]
@@ -532,7 +549,6 @@ Dialogues: 3
 !!MA:Gv2/?y6; [Growth of creature: y6]
 !!VRy10:Sy6 :2; [50% of growth (rounded down): y10]
 !!VRy7:Sy6 +y10; [150% of growth (rounded down): y7]
-!!VRy7|v2=56/v2=57:S48; [Double for Skeletons or Skeleton Warriors]
 
 !!if&y7=1;
   !!VRz8:Sz3; [One]
@@ -556,7 +572,7 @@ Dialogues: 3
 
 !!if&3;
   !!DO(WOG_44_CheckIfHeroHasEnoughCreature)/0/6/1:P; [See if hero has enough creatures of the type to be enchanted]
-  !!SN:H^monname^/v2/1/?z4;
+  !!UN:N3/4/v2/1;
 
   !!if&v7>=y7;
     !!DO(WOG_44_RemoveCreatures)/0/6/1:Py7; [Remove the creatures (if enough)]
@@ -776,9 +792,7 @@ Dialogues: 3
 
 !?FU(WOG_44_ChangeCreatureName);
 
-!!VRy1:S1 R3;   [y1=random number from 1 to 4]
-!!UN:G1/v2/0/0; [Restore original singular name of species]
-!!UN:G1/v2/1/0; [Restore original plural name of species]
+!!VRy1:R0/1/4;   [y1=random number from 1 to 4]
 
  [If a new species, store creature number in v(1240+v1240)]
 !!VRy4:S1240 +v1240;
@@ -791,8 +805,7 @@ Dialogues: 3
 !!VRy3:Sy2 +1;
 
  [Store standard singular species name in z6 variable, plural in z7]
-!!UN:N3/6/v2/0;
-!!UN:N3/7/v2/1;
+!!FU(WOG_44_RestoreCreatureName):Pv2;   [return in z6 and z7]
 
  [Generate descriptor word to preface name: z5]
 !!VRz5&v3=2/y1=1:Sz144054;  [Attack]
@@ -887,9 +900,52 @@ Dialogues: 3
 
  [Set new names for species]
 !!VRzy2:S^%Z5 %Z6^; [Singular]
-!!UN:G1/v2/0/y2;
+!!UN:G1/v2/0/zy2;
 !!VRzy3:S^%Z5 %Z7^; [Plural]
-!!UN:G1/v2/1/y3;
+!!UN:G1/v2/1/zy2;
+
+!?FU(WOG_44_RestoreCreatureName);
+!#VA(mon:x);
+
+; Initialization
+!!UN:N3/z6/(mon)/0;
+!!UN:N3/z7/(mon)/1;
+
+; Check the target creature has been modified before
+!!VR(lastIndex:y):S1240 +v1240;
+
+!!re i/1241/(lastIndex);
+
+  !!br&vi=(mon);
+!!en;
+
+; If the creature has been modified, check which prefix it has
+!!if&i<=(lastIndex);
+  !!UN:N3/z2/(mon)/0;
+
+  ; Loop through all the prefixes and see if any matches the characters with the same length from the left of the name
+  !!re (index:y)/144054/144125;
+    !!SN:Kz(index)/?(preLength:y);
+    !!FU(Substr):Pz2/0/(preLength)/?z4;
+    
+    !!br&z4=z(index);
+  !!en;
+
+  ; Remove its prefix if found
+  !!if&(index)<=144125;
+    ; Set the start of the sub string as one character right to the length of the prefix
+    !!UN:N3/z3/(mon)/1;
+    !!VR(strStart:y):S(preLength) +1;
+
+    !!SN:Kz2/?(singLength);
+    !!VR(singStrEnd:y):S(singLength) +1;
+    !!FU(Substr):Pz2/(strStart)/(singStrEnd)/?z6;
+
+    !!SN:Kz3/?(plurLength);
+    !!VR(plurStrEnd:y):S(plurLength) +1;
+    !!FU(Substr):Pz3/(strStart)/(plurStrEnd)/?z7;
+  !!en;
+!!en;
 
 -----------------------------------------------------------------------
 
