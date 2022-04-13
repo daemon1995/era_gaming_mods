@@ -1,105 +1,86 @@
-ZVSE
-ERMS_ScriptDate=14.10(October).2012
-_WARNING_#1=IMPORTANT! This file is not in a plain text format. NEVER use any editor except ERM_S for making any kind of changes!
-ERMS_PoweredBy=ERM Scripter v. 2004.10.5.945
+ZVSE2
 ** Author orig.  : Berserker
+** Update        : Archer30
 ** Name          : Grand manouvre
-** Name rus.     : Великий Манёвр
-** Changes rus.  : [Algor] вынос опции в отдельный файл для мода ERA
-**                 [Algor] вынос текстов в ert-файл
+** Name rus.     : Р’РµР»РёРєРёР№ РњР°РЅС‘РІСЂ
+** Changes rus.  : [Algor] РІС‹РЅРѕСЃ РѕРїС†РёРё РІ РѕС‚РґРµР»СЊРЅС‹Р№ С„Р°Р№Р» РґР»СЏ РјРѕРґР° ERA
+**                 [Algor] РІС‹РЅРѕСЃ С‚РµРєСЃС‚РѕРІ РІ ert-С„Р°Р№Р»
 ** Options       : 997
 
-; <# Grand Elves can make a 1 hex move and then shoot with single shot: option 999
-!?BA0&1000;                             // перед битвой с человеком
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!BA:O?y1/?y2 Q?y5; !!OW:Iy1/?y3 Iy2/?y4; // y3/y4/y5 - флаги атакующий ИИ/защищающийся ИИ/быстрая битва
-!!SN:W^BA0.IsAI.0^/y3 W^BA0.IsAI.1^/y4 W^BA0.QuickBattle^/y5;  // сохранение флагов
 
-!?BA0&-1000;                            // перед ИИ-битвой
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!SN:W^BA0.IsAI.0^/1 W^BA0.IsAI.1^/1;   // сохранение флагов атакующий ИИ/защищающийся ИИ
+// Initialization
+!?FU(OnBeforeBattleUniversal);
+; Initialise variable - This must to be execute regardless of the option
+!!VRi^es_997_elfPos^:S-1;
 
-; Calculate distance between two positions
-; Arguments: Pos1, Pos2, ?Res
-!?FU(ES.opt997.DBP);                    // возврат в x3 расстояния между позициями x1 и x2
-!!VRy1:Sx1%17; !!VRy2:Sx1:17;           // ...
-!!VRy3:Sx2%17; !!VRy4:Sx2:17;           // ...
-!!VRy5:Sy2-y4; !!VRy5&y5<0:*-1; !!VRy6:Sy1-y3*2; // ...
-!!VRy7:Sy2&1;  !!VRy8:Sy4&1;            // ...
-!!VRy6:-y7+y8; !!VRy6&y6<0:*-1; !!VRy6:-y5; // ...
-!!VRy7:Sy5*2;  !!VRy7&y6>0:+y6; !!VRy7::2;  // ...
-!!VRx3:Sy7;                             // ...
+// Store the Elf's position if he has attack twice and shooting
+!?FU(OnBeforeBattleAction)&i^battle_isVisible^/i^es_997_elfPos^=-1;
+!!UN:P997/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-; Pass turn to specified stack
-; Arguments: Stack
-!?FU(ES.opt997.PTSS);                   // передача хода оттяду x1
-!!SN:W^GiveTurn^/x1 W^GiveTurn.Flags^/?y50; // выставляем флаг передачи хода отряду x1, y50 - индекс массива флагов
-!!re y2/0/41:;                          // для каждого отряда на поле
-  !!BMy2:F?y3; !!VRy3:&67108864;  !!SN:My50/y2/y3; // сохраняем флаг "уже совершил действие" в массив флагов
-  !!BMy2:F?y3; !!VRy3:&-67108865; !!BMy2:Fy3;      // и убираем флаг "уже совершил действие"
-!!en:;
+!!BMi^battle_acting_stack^:T?(type:y);
 
-; Stack receives turn
-!?FU(OnBattleStackObtainsTurn);         // при получении отрядом хода в бою
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция не включена
-!!SN:W^GiveTurn^/?y1; !!FU&y1<0:E;      // выход, если не задан отряд, получающий ход
-!!VRy2:Sy1:21; !!VRy3:Sy1%21;           // y1/y2/y3 - отряд/сторона/номер на стороне
-!!SN:Xy2/y3 W^GiveTurn^/-1 W^GiveTurn.Flags^/?y50; // передача хода отряду, сброс отряда, получающего ход, y50 - индекс массива флагов существ
-!!re y4/0/41:;                          // для всех существ на поле боя
-  !!if&y4<>y1:;                         // кроме текущего
-    !!SN:My50/y4/?y5;                   // восстанавливаем сохраненное значение флага "уже ходил"
-    !!BMy4:F?y6;                        // ...
-    !!VRy6:|y5;                         // ...
-    !!BMy4:Fy6;                         // ...
-  !!en:;                                // ...
-!!en:;                                  // ...
+!!if&(type)=(MON_GRAND_ELF);
+  !!BMi^battle_acting_stack^:F?(monflags:y);
+  !!VR(canShoot:y):S(monflags) &(MON_FLAG_SHOOTER);
+  !!VR(attackTwice:y):S(monflags) &(MON_FLAG_ATTACKS_TWICE);
 
-!?BG0;                                  // перед действием
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция не включена
-!!BG:N?y1 Q?y2 A?y3;                    // y1/y2/y3 - отряд/сторона/действие
-!!SN:W^ElvesAbility^/?y4 W^BG0.Stack^/y1; // y4 - кол-во действий эльфов, сохранение номера отряда, начинающего действие
-!!if&y4=1:;                             // если кол-во действий - одно
-  !!if|y3=2/y3=8:;                      // если ходьба или ожидание
-    !!VRz1:Sz179143; !!MM:Sz1;          // вывод сообщения о недопустимости действия во время маневра
-    !!SN:W^ElvesAbility^/2;             // кол-во действий эльфов = 2
-    !!FU(Fun_RedrawShadowAfterAction):P;// перерисовка тени после отмены действия
-    !!BG:A0; !!SN:Q;                    // отмена действия и прерывание выполнения триггера
-  !!en:;                                // ...
-!!el:;                                  // если действий несколько 
-  !!SN:W^BA0.QuickBattle^/?y50 W^BA0.IsAI.%Y2^/?y5;
-  !!FU|y3<>2/y50=1/y5=1:E;              // выход если не_ходьба или быстрая битва или ход ИИ
-  !!UN:C6919200/4/?y11; !!VRy11:+81256; !!UN:Cy11/1/?y12; !!FU&y12=1:E; // выход, если тактическая фаза
-  !!BMy1:T?y6 P?y7; !!FU&y6<>19:E;      // выход, если не гранд-эльфы
-  !!BG:D?y8;                            // y7/y8 - начальная/конечная позиция отряда
-  !!FU(ES.opt997.DBP):Py7/y8/?v2; !!FU&v2<>1:E; // выход, если отошли не на 1 гекс
-  !!FU(ES.opt997.PTSS):Py1;             // передача хода отряду
-  !!SN:W^ElvesAbility^/2;               // количество действий = 2
-  !!BMy1:F?y9; !!VRy9:&-32769; !!BMy1:Fy9; // убираем флаг двойной атаки
-  !!VRz1:Sz179144; !!MM:Sz1;            // вывод сообщения о маневре
-!!en:;
+  !!BMi^battle_acting_stack^&(canShoot)/(attackTwice):P?i^es_997_elfPos^;
+!!en;
 
-!?BG1;                                  // после действия - восстановление двойного удара после маневра
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!SN:W^ElvesAbility^/?y1; !!FU&y1=0:E;  // выход, если кол-во действий эльфов не установлено
-!!VRy1:-1; !!SN:W^ElvesAbility^/y1;     // уменьшение кол-ва действий эльфов
-!!FU&y1>0:E;                            // выход, если действия остались
-!!SN:W^BG0.Stack^/?y50;                 // y50 - отряд, начинавший действие
-!!BMy50:F?y2; !!VRy2:|32768; !!BMy50:Fy2; // даем отряду двойной удар
+// Remove the attack twice flag from the Elf if he just walk by one hex
+!?FU(OnBattleActionEnd)&i^es_997_elfPos^>-1;
+!!BG:A?(action:y);
 
-!?FU(OnAfterErmInstructions);           // при входе в игру
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!SN:M-1/42/0/0 W^GiveTurn.Flags^/v1;   // инициализация несохраняемого массива флагов существ
+!!if&(action)=(BATTLE_ACTION_WALK);
+  !!BMi^battle_acting_stack^:P?(newPos:y);
+  !!FU(ES_997_CalcDistanceBetweenHexes):Pi^es_997_elfPos^/(newPos)/?(distance:y);
 
-!?FU(OnAfterLoadGame);                  // при загрузке
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!SN:M-1/42/0/0 W^GiveTurn.Flags^/v1;   // инициализация несохраняемого массива флагов существ
+  ; Remove the possible morale flag to ensure the next attack has a chance to get morale
+  !!if&(distance)=1;
+    !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ATTACKS_TWICE);
+    !!BMi^battle_acting_stack^:Fd~(MON_FLAG_MORALE);
+  ; Set position to -1 if the elf walk for more than 1 hex or did other action than walking
+  !!el;
+    !!VRi^es_997_elfPos^:S-1;
+  !!en;
+!!el;
+  !!VRi^es_997_elfPos^:S-1;
+!!en;
 
-!?BA0&1000;                             // перед битвой с человеком
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!SN:W^GiveTurn^/-1 W^ElvesAbility^/0;  // сброс флагов
+// Restore to the Elf's turn if he just walked by one hex
+!?FU(OnBeforeBattleStackTurn)&i^es_997_elfPos^>-1;
+!#VA(stack:x);
 
-!?BA1&1000;                             // после битвы с человеком
-!!UN:P997/?y1; !!FU&y1<>1:E;            // выход, если опция отключена
-!!SN:W^GiveTurn^/-1 W^ElvesAbility^/0;  // сброс флагов
+!!VR(stack):Si^battle_acting_stack^;
+; Set position to -2 in order to restore attack twice flag
+!!VRi^es_997_elfPos^:S-2;
+
+// Give back attack twice to the Elf
+!?FU(OnBattleActionEnd)&i^es_997_elfPos^=-2;
+!!BMi^battle_acting_stack^:Fd|(MON_FLAG_ATTACKS_TWICE);
+!!VRi^es_997_elfPos^:S-1;
+
+// Funciton for calculating distance between two hexes
+!?FU(ES_997_CalcDistanceBetweenHexes);
+!#VA(hex1:x) (hex2:x) (distance:x);
+
+!!VR(x1:y):S(hex1)%17;
+!!VR(y1:y):S(hex1):17;
+!!VR(x2:y):S(hex2)%17;
+!!VR(y2:y):S(hex2):17;
+!!VR(distanceY:y):S(y1)-(y2);
+!!VR(distanceY)&(distanceY)<0:*-1;
+!!VR(x1):*2;
+!!VR(y1):&1;
+!!VR(x2):*2;
+!!VR(y2):&1;
+!!VR(distanceX:y):S(x1)-(y1)-(x2)+(y2);
+!!VR(distanceX)&(distanceX)<0:*-1;
+!!VR(distanceX):-(distanceY);
+!!VR(distance):S(distanceX);
+!!VR(distance)&(distance)<0:S0;
+!!VR(distanceY):*2;
+!!VR(distance):+(distanceY):2;
 
 ** end
