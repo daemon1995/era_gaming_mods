@@ -12,35 +12,39 @@ ZVSE2
 !?FU(OnBeforeBattleUniversal);
 ; Initialise variable - This must to be execute regardless of the option
 !!VRi^es_997_elfPos^:S-1;
+!!VRi^es_997_elfMorale^:S0;
 
-// Store the Elf's position if he has attack twice and shooting
-!?FU(OnBeforeBattleAction)&i^battle_isVisible^/i^es_997_elfPos^=-1;
+// Store the Elf's target position if he has attacks twice and shooting
+!?FU(OnBattleScreenMouseClick)&i^battle_isVisible^/i^es_997_elfPos^=-1;
 !!UN:P997/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-!!BMi^battle_acting_stack^:T?(type:y);
+!!CM:D?(clickedHex:y);
+!!FU|(clickedHex)<1/(clickedHex)>185:E;
+
+; Check the type of current stack and monster flags. store the clicked position if ideal
+!!BMi^battle_current_stack^:T?(type:y);
 
 !!if&(type)=(MON_GRAND_ELF);
-  !!BMi^battle_acting_stack^:F?(monflags:y);
+  !!BMi^battle_current_stack^:F?(monflags:y);
   !!VR(canShoot:y):S(monflags) &(MON_FLAG_SHOOTER);
-  !!VR(attackTwice:y):S(monflags) &(MON_FLAG_ATTACKS_TWICE);
+  !!VR(attacksTwice:y):S(monflags) &(MON_FLAG_ATTACKS_TWICE);
 
-  !!BMi^battle_acting_stack^&(canShoot)/(attackTwice):P?i^es_997_elfPos^;
+  !!VRi^es_997_elfPos^&(canShoot)/(attacksTwice):S(clickedHex);
 !!en;
 
-// Remove the attack twice flag from the Elf if he just walk by one hex
-!?FU(OnBattleActionEnd)&i^es_997_elfPos^>-1;
+// Reset the morale to zero to the Elf to prevent morale proc in his first move of one hex
+!?FU(OnBeforeBattleAction)&i^es_997_elfPos^>-1;
 !!BG:A?(action:y);
 
 !!if&(action)=(BATTLE_ACTION_WALK);
-  !!BMi^battle_acting_stack^:P?(newPos:y);
-  !!FU(ES_997_CalcDistanceBetweenHexes):Pi^es_997_elfPos^/(newPos)/?(distance:y);
+  !!BMi^battle_acting_stack^:P?(currPos:y);
+  !!FU(ES_997_CalcDistanceBetweenHexes):P(currPos)/i^es_997_elfPos^/?(distance:y);
 
-  ; Remove the possible morale flag to ensure the next attack has a chance to get morale
+  ; Store the current morale and reset it to 0
   !!if&(distance)=1;
-    !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ATTACKS_TWICE);
-    !!BMi^battle_acting_stack^:Fd~(MON_FLAG_MORALE);
-  ; Set position to -1 if the elf walk for more than 1 hex or did other action than walking
+    !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ATTACKS_TWICE) G212/?i^es_997_elfMorale^/d G212/0/d;
+  ; Set position to -1 if the Elf walked for more than one hex or did another action than walking
   !!el;
     !!VRi^es_997_elfPos^:S-1;
   !!en;
@@ -53,7 +57,9 @@ ZVSE2
 !#VA(stack:x);
 
 !!VR(stack):Si^battle_acting_stack^;
-; Set position to -2 in order to restore attack twice flag
+; Restore the morale so the second attack have a chance to proc morale
+!!BM(stack):G212/i^es_997_elfMorale^/d;
+; Set position to -2 in order to restore the attacks twice flag
 !!VRi^es_997_elfPos^:S-2;
 
 // Give back attack twice to the Elf
