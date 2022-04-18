@@ -1,6 +1,6 @@
 ZVSE2
 ** Author orig.  : Algor
-** Update        : Archer30
+** Rewritten by  : Archer30
 ** Name          : battle dwarves reinforcement
 ** Name rus.     : укрепление боевых гномов
 ** Options       : 761
@@ -18,51 +18,32 @@ ZVSE2
 !!MA:F(MON_BATTLE_DWARF)/?(fv:y);       [FV боевых гномов]
 !!VR(fv):*105 :100;                     [увеличиваем FV на 5%]
 !!MA:F(MON_BATTLE_DWARF)/(fv);          [обновляем FV боевых гномов]
-!!VRi^es_761_dwarfstack^:S(NO_STACK);   [инициализация]
 
-!?FU(OnMonsterPhysicalDamage)&i^es_761_dwarfstack^=(NO_STACK); [при нанесении урона]
-!!UN:P761/?(wogOption:y);               [проверяем включена ли опция 761]
-!!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
+!?FU(OnBattleActionEnd);
+!!BG:E?(stack:y) A?(action:y);
 
-!!MF:N?(stack:y);                       [номер отряда, получающего урон]
-!!BM(stack):T?(type:y);                 [тип отряда, получающего урон]
-!!VRi^es_761_dwarfstack^&(type)=(MON_BATTLE_DWARF):S(stack);[номер отряда боевых гномов, получающих физ. урон]
+; Increase the defense of Battle Dwarves if they are hit by melee attack
+!!if&(stack)>(NO_STACK)/(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
+  !!BM(stack):T?(type:y) N?(num:y);
 
-!?FU(OnAfterBattleAction)&i^es_761_dwarfstack^>(NO_STACK);[после действия]
-; Exit if the battle is ended or option is not enabled
-!!UN:P761/?(wogOption:y);               [проверяем включена ли опция 761]
-!!BU:C?(battleIsEnded:y);               [если бой закончен]
+  !!if&(type)=(MON_BATTLE_DWARF);
 
-!!if|(wogOption)<>(TRUE)/(battleIsEnded);
-  !!VRi^es_761_dwarfstack^:S(NO_STACK); [сброс, если опция не включена или бой закончен]
-  !!FU:E;                               [выход если опция не включена или бой закончен]
-!!en;
+    ; Show battle log and play animation/sound
+    !!if&i^battle_isVisible^;
+      !!if&(num)=1;
+        !!SN:H^monname^/(MON_BATTLE_DWARF)/0/?(battleDwarfName:z);
+      !!el;
+        !!SN:H^monname^/(MON_BATTLE_DWARF)/1/?(battleDwarfName);
+      !!en;
 
-; Exit if the stack is killed
-!!BMi^es_761_dwarfstack^:N?(num:y);     [текущее количество гномов в отряде]
+      !!SN:T^es.761.battleLog^?(battleLog:z)/^battleDwarf^/(battleDwarfName);
+      !!MM:S(battleLog);
 
-!!if&(num)<1;
-  !!VRi^es_761_dwarfstack^:S(NO_STACK); [сброс если отряд уничтожен]
-  !!FU:E;                               [выход, если отряд уничтожен]
-!!en;
+      !!SN:P^SHIELD^;                   [вывод звука щита]
+      !!BM(stack):V27;                  [анимация]
+    !!en;
 
-; Show battle log and play animation/sound
-!!if&i^battle_isVisible^;
-  !!if&(num)=1;
-    !!SN:H^monname^/(MON_BATTLE_DWARF)/0/?(battleDwarfName:z);
-  !!el;
-    !!SN:H^monname^/(MON_BATTLE_DWARF)/1/?(battleDwarfName);
+    ; Increase defence by 2
+    !!BM(stack):Dd2;                    [укрепление отряда]
   !!en;
-
-  !!SN:T^es.761.battleLog^?(battleLog:z)/^battleDwarf^/(battleDwarfName);
-  !!MM:S(battleLog);
-
-  !!SN:P^SHIELD^;                       [вывод звука щита]
-  !!BMi^es_761_dwarfstack^:V27;         [анимация]
 !!en;
-
-; Increase defence
-!!BMi^es_761_dwarfstack^:Dd2;           [укрепление отряда]
-!!VRi^es_761_dwarfstack^:S(NO_STACK);   [сброс]
-
-** end
