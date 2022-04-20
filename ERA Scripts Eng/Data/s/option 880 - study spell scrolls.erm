@@ -1,5 +1,6 @@
 ZVSE2
 ** Author orig.  : DracoLich
+** Rewritten by  : Archer30
 ** Name          : Study spell scrolls
 ** Name rus.     : Учеба свитков заклинаний
 ** Changes rus.  : [Algor] вынос опции в отдельный файл для мода ERA, построчные комментарии
@@ -10,51 +11,67 @@ ZVSE2
 **                 [Algor] цена за обучение привязана к базовой стоимости заклинания S (S^2 * 5)
 **                 [Algor] перенумерация функций/переменных и пр.
 ** Options       : 880
-** Dialogs       : -
-** Variables     : -
-** Tmp variables : z1
-** Timers        : -
-** Functions     : FU7935
 
 
-!?FU(OnTownMouseClick)&i^mouse_item^>=0/i^mouse_item^<=5/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^key_shift^;
-!!UN:P880/?y1;                [проверяем включена ли опция]
-!!FU&y1=0:E;
+!?FU(ES_880_WriteSpellToSpellBook);
+!!CM:R0;
 
-!!CA-1:H1/?y1 B3/y2;          [y1 - номер героя-гостя, флаг 1 ложь, если здание не построено]
-!!FU|y1=-1/-1:E;              [выход, если нет героя-гостя или гильдии]
+; Exit if no visiting hero
+!!CA(CURRENT_TOWN):H1/?(hero:y);
+!!FU&(hero)=(NO_HERO):E;
 
-!!DO7935/0/69/1:Py2/y1;       [для каждого заклинания проверяем наличие свитка и предлагаем изучение]
-!!IF:Mz179095;                [сообщение "больше нет свитков"]
+; Exit if the hero has no spell book
+!!HE(hero):A2/(ART_SPELL_BOOK)/?(backpacked:y)/?(equipped:y);
+!!FU&(backpacked)=0/(equipped)=0:E;
 
-!?FU7935;                     [x1 - уровень ГМ, x2 - герой, x16 - номер заклинания]
-!!VRy1:Sx16 +1001;            [y1 - номер артефакта-свитка]
-!!HEx2:A2/y1/?y2/?y3;         [y2/y3 - общее/одетое количество свитков у героя]
-!!FU&y2=0/y3=0:E;             [выход, если у героя нет свитков]
+; Get the guild level of the town, exit if the town has no guild
+!!re (building:y)/0/4;
+  !!CA(CURRENT_TOWN):B3/(building);
 
-!!HEx2:M=x16/1;               [флаг 1 истина, если герой уже изучил заклинание]
-!!FU&1:E;                     [выход, если заклинание уже изучено]
-
-!!SSx16:L?y4;                 [y4 - уровень заклинания (1..5)]
-!!VRy5:Sx1 +1;                [y5 - уровень гильдии (1..5)]
-!!FU&y4>y5:E;                 [выход, если гильдия недостаточно высокого уровня]
-
-!!SSx16:C0/?y6;               [y6 - базовая стоимость заклинания S]
-!!VRy6:*y6 *5;                [y6 - стоимость изучения в гильди магов S^2*5]
-!!VRz1:Sz179093;              [сообщение "хотите переписать заклинания?"]
-!!IF:Q1/9/x16/2^%Z1^;         [...]
-!!FU&-1:E;                    [выход, если ответ отрицателен]
-
-!!OW:R-1/6/?y7;               [y7 - количество золота у игрока]
-
-!!if&y7<y6;  
-  !!IF:Mz179094;              [сообщение "недостаточно золота"]
-  !!FU:E;                     [выход, если золота недостаточно]
+  !!br&-1;
 !!en;
 
-!!VRy6:*-1;                   [y6 - отрицательное количество золота для списания]
-!!OW:R-1/6/dy6;               [списание оплаты]
-!!UN:R2 R4;                   [обновление строки ресурсов и экрана города]
-!!HEx2:Mx16/1 A3/y1/1/1;      [изучение заклинания и удаление свитка]
+!!VR(guildLv:y):S(building);
 
-** end
+; Set the varaible for whether a suitable scroll has been found - use it for IF msg later
+!!VR(scrollFound:y):S(FALSE);
+
+; Loop through all the spells and try to find a scroll brought by the hero
+!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
+  !!VR(scroll:y):Si +1001;
+  !!HE(hero):A2/(scroll)/?(backpacked)/?(equipped);
+  ; Chck if the scroll level is adequate and whether the hero has learned that spell
+  !!if|(backpacked)/(equipped);
+    !!HE(hero):M=i/1;
+    !!SSi:L?(lv:y);
+
+    ; Set scroll as found if all the criteria has been meet, offer to write
+    !!if&-1/(lv)<=(guildLv);
+      !!VR(scrollFound):S(TRUE);
+
+      !!SSi:C0/?(spCost:y);
+      !!VR(cost:y):S(spCost) *(spCost) *5;
+      !!SN:T^es.880.ask^/?(ask:z)/^gold^/(cost);
+      !!IF:Q1/(PIC_TYPE_SPELL)/i/(MSG_TYPE_QUESTION)^%(ask)^;
+
+      ; Check if gold is enough, proceed to write if positve
+      !!if&1;
+        !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?(gold:y);
+
+        !!if&(gold)<(cost);  
+          !!IF:M^%T(es.880.cantAfford)^;
+        !!el;
+          !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-(cost);
+          !!HE(hero):Mi/1 A3/(scroll)/1/1;
+
+          ; Update the res bar
+          !!SN:D;
+          !!UN:R2;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Show the msg if no adequate spell scroll found
+!!IF&(scrollFound)=(FALSE):M^%T(es.880.noScroll)^;

@@ -1,5 +1,5 @@
 ZVSE2
-; Author:   Archer30 & igrik and others
+; Author:   V.A.
 ; Engine:   ERM 2.0+
 ; Requires: ERA 3.3+, Era Erm Framework
 
@@ -115,7 +115,7 @@ ZVSE2
 
 // Disable Sorcery II if Critical Sorcery is re-enabled
 !?FU(ES_789_DisableSorceryII);
-!!UN:P789/?(critSorcery:y);                [проверяем включена ли опция 789]
+!!UN:P789/?(critSorcery:y);             [проверяем включена ли опция 789]
 
 !!if&(critSorcery);
   !!UN:P213/0;                          [если включена, отключаем опцию Волшебство II]
@@ -123,6 +123,14 @@ ZVSE2
 !!en;
 
 !#FU(ES_789_DisableSorceryII):P;
+
+// Ask to write a spell to the spell book if condition has been meet
+// Execute sooner than daemon_n's Spell Research
+!?FU(OnTownMouseClick)&i^mouse_item^>=0/i^mouse_item^<=4/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^key_shift^;
+!!UN:P880/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!FU(ES_880_WriteSpellToSpellBook):P;
 
 **********************
 **** Set Up hooks ****
@@ -140,9 +148,9 @@ ZVSE2
 
 !!SN:E(address)/1/4462998/(ES_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
 !!SN:E(address)/1/4455129/(ES_HOOK_AfterAttackMainFunc); [Trigger after shooting]
-!!SN:E(address)/1/5085308/(ES_HOOK_ArtGiveSpell_Proc); [Trigger when artifact with spell given is about to be equipped]
+!!SN:E(address)/1/5085308/(ES_OnArtifactGiveSpell); [Trigger when artifact with spell given is about to be equipped]
 
-!?FU(ES_HOOK_AfterAttackMainFunc);     [by igrik]
+!?FU(ES_HOOK_AfterAttackMainFunc);      [by igrik]
 !!SN:X?(hook:y);
 !!UN:C(hook)/0/(UNC_INT)/?(stackStrucktDefender:y);   
 !!UN:C(hook)/4/(UNC_INT)/?(stackStrucktAttacker:y);  
@@ -365,7 +373,7 @@ ZVSE2
 
 // Get a monster's rank with its experience
 ; Returns R11 as R10
-!?FU(ES_GetMonRankWithExp);
+!?FU(ES_GetMonRankWithExp);             [by Hawaiing]
 !#VA(mon:x) (exp:x) (rank:x);
 
 ; Get the exp of R11
@@ -378,3 +386,55 @@ ZVSE2
   !!SN:E7503648/1/(mon)/(exp);
   !!VR(rank):Sv1;
 !!en;
+
+// Get the coordinates by battle position
+!?FU(ES_GetBattleHexCoordinates);       [by Hawaiing]
+!#VA(position:x) (x:x) (y:x);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(value:y);
+!!VR(value2:y):S(position) *112;
+!!VR(value3:y):S(value2) +(value) +452; coordinate structure
+!!VR(xAddress:y):S(value3) +4; 
+!!UN:C(xAddress)/(UNC_INT16)/?(x); x coordinate
+!!VR(yAddress:y):S(value3) +6; 
+!!UN:C(yAddress)/(UNC_INT16)/?(y); y coordinate
+
+// Calculate distance between two hexes
+!?FU(ES_CalcDistanceBetweenHexes);      [by wessonsm]
+!#VA(hex1:x) (hex2:x) (distance:x);
+
+!!VR(x1:y):S(hex1) %17;
+!!VR(y1:y):S(hex1) :17;
+!!VR(x2:y):S(hex2) %17;
+!!VR(y2:y):S(hex2) :17;
+!!VR(distanceY:y):S(y1) -(y2);
+!!VR(distanceY)&(distanceY)<0: *-1;
+!!VR(x1):*2;
+!!VR(y1):&1;
+!!VR(x2):*2;
+!!VR(y2):&1;
+!!VR(distanceX:y):S(x1) -(y1) -(x2) +(y2);
+!!VR(distanceX)&(distanceX)<0:*-1;
+!!VR(distanceX):-(distanceY);
+!!VR(distance):S(distanceX);
+!!VR(distance)&(distance)<0:S0;
+!!VR(distanceY):*2;
+!!VR(distance):+(distanceY) :2;
+
+// Turn a stack around
+!?FU(ES_TurnStackAround);              [by Hawaiing]
+!#VA(stack:x);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(value:y);
+!!VR(value2:y):S(stack) *1352 +21708 +(value);
+!!SN:E4482112/2/(value2)/1;
+
+// Initiate a melee attack
+!?FU(ES_InitiateMeleeAttack);           [by Hawaiing]
+!#VA(atkStack:x) (defStack:x);
+!#VA(direction:x);                      [0 for upper, 1 for forward and 2 for lower]
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(value:y);
+!!VR(value2:x):S(atkStack) *1352 +21708 +(value);
+!!VR(value3:x):S(defStack) *1352 +21708 +(value);
+!!SN:E4461360/2/(value2)/(value3)/(direction);
