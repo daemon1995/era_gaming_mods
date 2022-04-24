@@ -98,14 +98,18 @@ ZVSE2
 
 --------------------------------------------------------------------------------
 
- [Check for network battle: sets v9001 to 1 or 2 if it's a network battle]
- [and sets v9001 to 0 if it's not a network battle]
+ [Check for network battle: sets to 1 or 2 if it's a network battle]
+ [and sets to 0 if it's not a network battle]
  
 !?FU(OnBeforeBattleUniversal);
-!!BA:E?v9001;
+!!BA:E?i^wog_39_isRemote^;
 
---------------------------------------------------------------------------------
-!?FU(WOG_39_Initialization);
+-----------------------------------Init-----------------------------------------
+
+!#UN:P39/?i^wog_39_enabled^;
+!#VRi^wog_39_MonSpecEnabled^&i^wog_39_enabled^:S(TRUE); [Switch for monster specialists]
+
+!?FU(OnAfterErmInstructions)&i^wog_39_enabled^; [initialize of heroes w28-w32]
 
  note by Tobyn: FU(WOG_39_SetUpHeroSpec):P#1/#2/#3/#4/#5 seems to be
    #1 = w28 (lead variable for spec desc. See above how w29-32 depend on this one.)
@@ -307,9 +311,8 @@ ZVSE2
 !!FU(WOG_39_SetUpHeroSpec):P1000/90/4/154/0;    Boragus - Ogres (+0 dam, +4 HP)
 !!FU(WOG_39_SetUpHeroSpec):P2202/0/0/155/0;     Xeron - Devils
 
-
 !?FU(WOG_39_SetUpHeroSpec);
-!#VA(var1:x) (var2:x) (var3:x) (hero:x);
+!#VA(var1:x) (var2:x) (var3:x) (hero:x) (spell:x);
 
 !!IF:W(hero);
 !!VRw28:S(var1);
@@ -319,9 +322,9 @@ ZVSE2
 !!if&w28>0/w28<1000;
   !!HE(hero):Mw28/1;          //give spell
   !!VRw31:S0;
-  !!VRw32:Sx5;
-!!el&w28>=1000/w28<2000;
-  !!FU(WOG_39_UpdateMonSpecBoost):P(hero);      //monster specialists boost
+  !!VRw32:S(spell);
+!!el&w28>=1000/w28<2000/i^wog_39_MonSpecEnabled^;
+  !!FU(WOG_39_UpdateMonSpecBonus):P(hero);      //monster specialists boost
 !!en;
 
 !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y);               TOBYN: changed unused v3930 with check for commanders enabled and added control below
@@ -332,31 +335,34 @@ ZVSE2
   !!CO(hero)&w28=2002:B1/14/1;    //commanders of Navigation heroes can fly
 !!en;
 
+; Set new spec text. Don't set text for Monster Specialist if Mon Spec is disabled
+!!FU&w28>=1000/w28<2000/i^wog_39_MonSpecEnabled^<>(TRUE):E;
+
 !!if&w28>=0;
   !!FU(WOG_39_SetUpSpecDesc):P(hero)/0;      //init hint for speciality
   !!SN:H^spec^/(hero)/2/z405; TOBYN: added check to be able to circumvent HSB (if lead var w28<0)
 !!en;
 
 ---------------------------Hero level increasing--------------------------------
-!?FU(OnHeroGainLevel)&429;
+!?FU(OnHeroGainLevel)&i^wog_39_enabled^;
 !!HE(CURRENT_HERO):N?(hero:y);               get hero number
 
 !!IF:W(hero);
 ; Update the HE:X data of creature specialists
-!!FU(WOG_39_UpdateMonSpecBoost)&w28>=1000/w28<2000:P(hero);
+!!FU(WOG_39_UpdateMonSpecBonus)&w28>=1000/w28<2000/i^wog_39_MonSpecEnabled^:P(hero);
 
 !!VRw29&w28=2013:+3;                    [Mysticism and Resistance]
 !!VRw29&w28=2014:+3;
 
 -------------------------Monsters specialists boost-----------------------------
-!?FU(WOG_39_UpdateMonSpecBoost);
+!?FU(WOG_39_UpdateMonSpecBonus);
 !#VA(hero:x);
 
 !!IF:W(hero);
-; Calculate Attack and Defense bonuses
+; Calculate Attack and Defense bonuses (Half of the hero's raw attack/defense as bonus)
 !!FU(GetHeroPrimarySkillsWithoutArts):P(hero)/?(atk:y)/?(def:y)/d/d;
-!!VRw31:S(atk) F1/99;
-!!VRw32:S(def) F1/99;
+!!VRw31:S(atk) :2 F1/99;
+!!VRw32:S(def) :2 F1/99;
 
 ; Calculate Damage and Health Bonuses
 !!HE(hero):Ed/?(exp:y);
@@ -376,8 +382,11 @@ ZVSE2
 !!HE(hero):X4/w29/w31/w32/w28;
 !!VRw28:+1000;
 
+!!FU(WOG_39_SetUpSpecDesc):P(hero)/0;
+!!SN:H^spec^/(hero)/2/z405;
+
 -------------------------------After battle-------------------------------------
-!?FU(OnAfterBattleUniversal)&429/v9001=0/-998;
+!?FU(OnAfterBattleUniversal)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
 
 !!BA:H0/?v3926;                          //set v3926 is number of left hero - used in BG section
 !!BA:H1/?v3927;                          //set v3927 is number of right hero - used in BG section
@@ -403,7 +412,7 @@ ZVSE2
 !!en;
 
 ----------------------------------Before battle---------------------------------
-!?FU(OnSetupBattlefield)&429/v9001=0/-998;
+!?FU(OnSetupBattlefield)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
 !!VRv3937:S0R8;                           //v3937 = random value generator
 !!BH0:N?v3926;                          //set v3926 is number of left hero - used in BG section
 !!HEv3926&v3926>=0:F?v3938/?v3939/?v3934/?v3931;     ;set variables of attack and defense (v3938-441)
@@ -484,7 +493,7 @@ ZVSE2
 !!BMx16:Mx1/x3/x2;
 
 ------------------------When next turn of battle started------------------------
-!?FU(OnBattleRound)&429/v9001=0/-998;
+!?FU(OnBattleRound)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
 !!IF:V428/0;
 
 !!BH0:N?v3926;                          //set v3926 is number of left hero - used in BG section
@@ -500,7 +509,7 @@ ZVSE2
 ;flag428 must be set in BR section above if script enabled and tactics turn finished
 ;flag429 must be set in BF section to set up first spells procedures
 ;v3932 do not change in BG sections.
-!?FU(OnBeforeBattleAction)&429/v9001=0/-998;
+!?FU(OnBeforeBattleAction)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
 
 !!VRv3937: +1;                          //random value randomizing
 !!BG&428:Q?v3925;                       //v3925 is attacking side
@@ -587,7 +596,7 @@ ZVSE2
 
 ----------------------------When Cure spell was cast----------------------------
 ;After action
-!?FU(OnAfterBattleAction)&429/v3925=(SPELL_CURE)/v9001=0/-998;
+!?FU(OnAfterBattleAction)&i^wog_39_enabled^/v3925=(SPELL_CURE)/i^wog_39_isRemote^=0/-998;
 !!IF:Wv3926;
 !!FU&w28<1000|w28>2000:E; igrik: this function only to monster specs
 
@@ -602,7 +611,7 @@ ZVSE2
 ;x2=number of hero (or v3926)
 ;x3=1 if non first call of the function
 ;x4=line calling in script for debug (by igrik)
-!?FU(WOG_39_SetUpMonsterBonuses);
+!?FU(WOG_39_SetUpMonsterBonuses)&i^wog_39_MonSpecEnabled^;
 !!VRv3930&x1=0:Sv3938;                   //restore hero parameters      TOBYN: new local 430
 !!VRv3931&x1=0:Sv3939;                                                     |
 !!VRv3930&x1=1:Sv3940;                                                  TOBYN: new local 430
@@ -646,33 +655,21 @@ ZVSE2
 
 -----------------------Right mouse click in battle info-------------------------
 ; VRv425-v428 cannot touch   [SECTION EDITED by Tobyn]
-; VRv3925-v3928              [edit by igrik for HD mod support]
-!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/429/v9001=0/-998;
-!!CM:D?y2;
-!!FU&y2<252|y2>253:E;
+!?FU(OnBattleScreenMouseClick)&i^wog_39_enabled^/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_battleHex^>=252/i^mouse_battleHex^<=253/i^wog_39_isRemote^=0/-998;
+!!VR(side:y):Si^mouse_battleHex^ -252;
+!!FU&i^battle_hero_%(side)^=(NO_HERO):E;
 
-!!IF&y2=252:Wv3926;        attacking hero number
-!!IF&y2=253:Wv3927;        defending hero number
+!!CM:R0;
+!!VR(hero:y):Si^battle_hero_%(side)^;
+!!IF:W(hero);
 
-!!CM&v3926>=0/y2=252:R0;   disable standard handling
-!!CM&v3927>=0/y2=253:R0;
-
-!!if&v3926>=0/y2=252;
+!!ifw28>=1000/w28<2000/i^wog_39_MonSpecEnabled^<>(TRUE);
+  !!SN:H^spec^/(hero)/2/?z405;
+!!el;
   !!FU(WOG_39_SetUpSpecDesc):Pv3926/1;
-  !!IF:M1/405;     show message
 !!en;
 
-!!if&v3927>=0/y2=253;
-  !!FU(WOG_39_SetUpSpecDesc):Pv3927/1;
-  !!IF:M1/405;     show message
-!!en;
-
------------------------Hero screen specialization click-------------------------
-!?FU(OnHeroScreenMouseClick)&i^mouse_item^=118/429;                                                       [SECTION EDITED by Tobyn]
-!!HE(CURRENT_HERO):N?(hero:y);
-!!IF:W(hero);            check if w28>=0 (circumvent HSB with w28<0)
-!!FU(WOG_39_SetUpSpecDesc):P(hero)/0;
-!!SN&w28>=0:H^spec^/(hero)/2/z405; //reset spec description
+!!IF:M0/(MSG_TYPE_POPUP)/z405;
 
 -----------------------------Setting heroes info--------------------------------
 ;sets to z405 text for hero's info
@@ -813,8 +810,3 @@ ZVSE2
 !!VRz405&x1<128:+z139162;
 
 *!VRz405:+^%Z-1's stats and level determine the bonus (except for speed).^;   disabled to have a nicer msgbox
-
------------------------------------Init-----------------------------------------
-!#UN:P39/?v3925;
-!#IF&v3925:V429/1;                      [flag 429 - if script enabled]
-!#FU(WOG_39_Initialization)&429:P;      [initialize of heroes w28-w32]
