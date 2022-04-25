@@ -166,16 +166,8 @@ ZVSE2
 
 !!en;
 
-; Temporary fix for Third Upgrade Mod of a few WoG options
-
-!?FU(tum_DisableWoGOptions);
-!!SN:L^amethyst2_4.dll^/?(amethystOn:y);
-!!UN&(amethystOn):P50/(FALSE);          [Enhanced Monstere]
-!!UN:J8/1/^Third Upgrade Mod.pac^;
-!!UN&1:P67/(FALSE);                     [Neutral Town]
-
-!#FU(tum_DisableWoGOptions):P;
-
+// Get strings from text resources
+// Note: The following functions have duplicates. Ideally only one should be kept
 !?FU(WOG_GetColorOwnerString);
 !#VA(owner:x) (string:x);
 
@@ -211,3 +203,88 @@ ZVSE2
   !!VR(stringNum):*4+y2;
   !!UN:C(stringNum)/4/?y1;
   !!SN:X?y4 Xy1 X?z1 Xy4;
+
+
+// Get strings from text resources
+!?FU(WOG_GetStringByFilename);
+!#VA(txtFilename:x);                    [filename of the text]
+!#VA(lineIndex:x);                      [number of line of the string, starts from 0]
+!#VA(string:x);                         [returned string]
+
+; Standarize the filename
+!!FU(StrToLower):Pz(txtFilename)/?(text:z);
+; Remove filename extension (if applicable)
+!!SN:K(text)/?(size:y);
+!!VR(index:y):S(size) -4;
+!!SN:K(text)/(index)/?(character:z);
+!!FU(Substr)&(character)=^.^:P(text)/0/-4/?(text);
+
+!!if&(text)=^artevent^;
+  !!VR(address:y):S6909120;             [artifact events]
+!!el&(text)=^crgen1^;
+  !!VR(address):S6886304;               [creature generator 1]
+!!el&(text)=^crgen4^;
+  !!VR(address):S6887052;               [creature generator 4]
+!!el&(text)=^dwelling^;
+  !!VR(address):S6972144;               [dwelling]
+!!el&(text)=^minename^;
+  !!VR(address):S6968376;               [mine names]
+!!el&(text)=^objnames^;
+  !!VR(address):S6974640;               [object names]
+!!el&(text)=^plcolors^;
+  !!VR(address):S6976900;               [player colour]
+!!el&(text)=^priskill^;
+  !!VR(address):S6974556;               [primary skills]
+!!el&(text)=^restypes^;
+  !!VR(address):S6968208;               [resources]
+!!el&(text)=^skilllev^;
+  !!VR(address):S6979432;               [secondary skill levels]
+!!el;
+  !!VR(string):Z^Wrong txt filename!^;
+  !!FU:E;
+!!en;
+
+; @Master Of Puppets
+!!UN:C(address)/(UNC_INT)/?(value:y);            
+!!VR(address2:y):S(value) +32;
+!!UN:C(address2)/(UNC_INT)/?(value3:y);
+!!VR(address3:y):S(lineIndex) *4 +(value3);
+!!UN:C(address3)/(UNC_INT)/?(value4:y);
+!!SN:X?(value5:y) X(value4) X?z1 X(value5);
+!!VR(string):Z^%z1^;
+
+// Set up IF:N dialogue with array
+!?FU(WOG_SetupMultiPicDlg);              [by Berserker]
+!#VA(argsArr:x); SN:M array ID with picture type and subtype pairs.
+
+!!SN:M(argsArr)/?(numArgs:y);
+!!VR(numArgPairs:y):S(numArgs) :2;
+!!VR(numArgPairs)&(numArgPairs)>8:S8;
+
+!#VA(params[16]:y);
+
+!!re i/0/(params[SIZE])/1/-1;
+  !!VR(params[i]):S(NO_PIC_TYPE);
+!!en;
+
+!!VR(paramPtr:y):S(@params);
+!!VR(argInd:y):S0;
+
+!!re i/0/(numArgPairs)/1/-1;
+  !!SN:V(argsArr)/(argInd)/?(picType:y)/?(picValue:y);
+
+  !!if&(picType)<>(NO_PIC_TYPE);
+
+    !!if|(picType)<>(PIC_TYPE_MONSTER)/(picValue)>=(MON_FIRST);
+      !!VRy(paramPtr):S(picType);
+      !!VR(paramPtr):+1;
+      !!VRy(paramPtr):S(picValue);
+      !!VR(paramPtr):+1;
+    !!en;
+  !!en;
+
+  !!VR(argInd):+2;
+!!en;
+
+!!IF:N(params[0])/(params[1])/(params[2])/(params[3])/(params[4])/(params[5])/(params[6])/(params[7])/
+      (params[8])/(params[9])/(params[10])/(params[11])/(params[12])/(params[13])/(params[14])/(params[15]);

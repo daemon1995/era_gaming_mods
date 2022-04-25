@@ -1,73 +1,69 @@
 ZVSE2
 ** Author orig.  : Algor
+** Updated by    : daemon_n
 ** Name          : Mana arrow
 ** Name rus.     : Волшебная стрела маны
 ** Options       : 790
 
 
-!?FU(OnBeforeBattleAction)&-998;   [при действии в бою]
-!!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
-!!FU&y1=0:E;                  [выход, если опция не включена]
+!?FU(OnBeforeBattleAction)&-998;        [при действии в бою]
+!!UN:P790/?(wogOption:y);               [проверяем включена ли опция 790 в y1]
+!!FU&(wogOption)<>(TRUE):E;             [выход, если опция не включена]
 
-!!BG:A?(action:y);                    [y1 - тип действия (1 - герой колдует заклинание)]
+; Chcck if the hero's casting Magic Arrow
+!!BG:A?(action:y);                      [тип действия (1 - герой колдует заклинание)]
 
 !!if&(action)=(BATTLE_ACTION_HERO_CAST);
-  !!BG:S?(spell:y) Q?(side:y) H?(heroId:y);               [y2 - номер заклинания (если герой колдует)]
+  !!BG:S?(spell:y) Q?(side:y) H?(heroId:y); [номер заклинания (если герой колдует)]
   !!HE(heroId):O?(owner:y);
+
   !!if&(spell)=(SPELL_MAGIC_ARROW);
-    *!BG:H?(heroId:y);                    [y1 - номер героя]
     !!HE(heroId):I?(heroMana:y)/1 Fd/d/?(sp:y)/d;
     !!VR(skillLvl:y):S0;
+
+    ; Get the magic arrow level
     !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
       !!HE(heroId):Si/?l;
-      !!VR(skillLvl):Fl/3;
+      !!VR(skillLvl):Fl/(SKILL_EXPERT);
     !!en;
-    !!SS(SPELL_MAGIC_ARROW):C(skillLvl)/?(cost:y);
-    !!if&(heroMana)>(cost);
-      !!VR(bonus:y):S1 F1/(skillLvl);
-      !!VR(oldDamage:y):S(sp) +(bonus) *10;
-      !!VR(skillLvl):*(heroMana);
 
-      !!VR(newDamage:y):S(sp) *(heroMana) *2 +(skillLvl);
-          *!IF:L^%(newDamage) %(oldDamage)^;
+    ; Check the damage difference
+    ; Note: the old damage is calculated by the vanilla formula, it might be affected by mods (or even Remagic)
+    !!VR(bonus:y):S1 F1/(skillLvl);
+    !!VR(oldDamage:y):S(sp) +(bonus) *10;
+    !!VR(skillLvl):*(heroMana);
 
-      !!if&(newDamage)>(oldDamage);
-        !!HE(heroId):X?(spec:y)/?(spell)/d/d/d/d/d;  [y10=3,y11=15 для героя-спеца по Волшебной стреле]
-        !!if&(spec)=3/(spell)=(SPELL_MAGIC_ARROW);
-          !!HE(heroId):Ed/?(heroLvL:y);
-          !!VR(bonus):S(newDamage) *(heroLvL):20;
-          !!VR(newDamage):+(bonus);
-        !!en;
+    !!VR(newDamage:y):S(sp) *(heroMana) *2 +(skillLvl);
 
-        !!OW:I(owner:y)/?(isAi:y) Cd/?(clicked:y);                 [y9=1 для ИИ, 0 для человека]
-        !!IF:V1/(FALSE);
+    !!if&(newDamage)>(oldDamage);
+      !!HE(heroId):X?(spec:y)/?(spell)/d/d/d/d/d; [для героя-спеца по Волшебной стреле]
 
-        !!VRi^es_790_manaArrowDmg^:S0; [обнуление i^es_790_manaArrowDmg^]
-        !!if&i^battle_isVisible^/(isAi)=(FALSE)/(clicked)=(owner);
-          !!SN:T^es.790.dlg^/?z1/^dmg^/(newDamage);  [для игрока-человека получаем текст вопроса в z1]
-          !!IF:Q1/(PIC_TYPE_SPELL)/(SPELL_MAGIC_ARROW)/2/z1;       [для игрока-человека вопрос: вложить ли всю ману в заклинание]
-        !!en;
-        !!VRi^es_790_manaArrowDmg^:Sv7900;
-
-        !!VRi^es_790_manaArrowDmg^&1|(isAi):S(newDamage);          [i^es_790_manaArrowDmg^ - новый урон Волшебной стрелы]
-
-        
+      !!if&(spec)=3/(spell)=(SPELL_MAGIC_ARROW);
+        !!HE(heroId):Ed/?(heroLvL:y);
+        !!VR(bonus):S(newDamage) *(heroLvL):20;
+        !!VR(newDamage):+(bonus);
       !!en;
-      
+
+      !!OW:I(owner:y)/?(isAi:y) Cd/?(clicked:y); [для ИИ, 0 для человека]
+      !!IF:V1/(FALSE);
+
+      !!if&i^battle_isVisible^/(isAi)=(FALSE)/(clicked)=(owner);
+        !!SN:T^es.790.dlg^/?(dlg:z)/^dmg^/(newDamage); [для игрока-человека получаем текст вопроса]
+        !!IF:Q1/(PIC_TYPE_SPELL)/(SPELL_MAGIC_ARROW)/(MSG_TYPE_POPUP)/(dlg); [для игрока-человека вопрос: вложить ли всю ману в заклинание]
+      !!en;
+
+      !!VRi^es_790_manaArrowDmg^|1/(isAi):S(newDamage); [i^es_790_manaArrowDmg^ - новый урон Волшебной стрелы]
     !!en;
   !!en;
-
 !!en;
 
-
-
-!?FU(OnMagicBasicResistance); [перед расчетом сопротивления]
+!?FU(OnMagicBasicResistance)&i^es_790_manaArrowDmg^>0; [перед расчетом сопротивления]
 !!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
 !!FU&y1=0:E;                  [выход, если опция не включена]
 
 !!BG:A?y1;                    [y1 - тип действия (1 - герой колдует заклинание)]
-!!BG&y1=1:S?y2;               [y2 - номер заклинания (если герой колдует)]
-!!FU|y2<>15/i^es_790_manaArrowDmg^=0:E; [Выход если герой не колдует волшебную стрелу или если новый урон Волшебной стрелы = 0]
+!!BG&y1=(BATTLE_ACTION_HERO_CAST):S?y2; [y2 - номер заклинания (если герой колдует)]
+!!FU|y2<>15:E;
 
 !!MR:D?y1;                    [y1 - базовый урон заклинания]
 !!BG:H?y2 E?y3;               [y2 - номер героя, y3 - номер целевого стека]

@@ -1,0 +1,219 @@
+ZVSE2
+; Author:   V.A.
+; Engine:   ERM 2.0+
+; Requires: ERA 3.9+, Era Erm Framework
+
+; Standard Library for TrainerX
+
+
+// Function for getting the filenames of the hero's portrait
+!?FU(trainer_GetHeroPortrait);          [by igrik/Algor]
+!#VA(hero:x);                           [hero's number (0..155)]
+!#VA(isLarge:x);                        [portrait type (0-small, 1-large)]
+!#VA(zIndex:x);                         [The number of the z var for recording the name of the portrait]
+
+!!VRz(zIndex):S^^;
+!!FU&(hero)<=(NO_HERO):E;
+
+!!UN:C6806760/4/?(value:y);
+!!VR(isLarge):*4 +48 +(value);
+!!VR(zIndex):*512+9597416;
+!!SN:E7411341/1/(hero);
+!!VR(value):Sv1 +52;
+!!UN:C(value)/1/?(value);
+!!VR(value)&(value)<0:+256;
+!!VR(value):*92 +(isLarge);
+!!UN:C(value)/4/?(value);
+
+!!re i/1/512;
+  !!UN:C(value)/1/?(value2:y) C(zIndex)/1/(value2);
+  !!br&(value2)=0;
+
+  !!VR(value):+1;
+  !!VR(zIndex):+1;
+!!en;
+
+// Funciton to check if the first character of z1 is a number
+!?FU(trainer_CheckIfZ1FirstCharIsNum);    [by Hawaiing]
+!#VA(result:x);
+
+!!VR(result):S(FALSE);
+!!UN:C9597928/1/?(firstChar:y);
+!!VR(result)&(firstChar)>=48/(firstChar)<=57:S(TRUE);
+
+// Function to get a monster's rank with its experience
+; ; Returns R11 as R10
+!?FU(trainer_GetMonRankWithExp);
+!#VA(mon:x) (exp:x) (rank:x);
+
+; Get the exp of R11
+!!EA(mon):L?(monExpR10:y) P?(monExpTop:y);
+!!VR(monExpR11:y):S(monExpR10) +(monExpTop);
+
+!!if&(exp)=(monExpR11);
+  !!VR(rank):S11;
+!!el;
+  !!SN:E7503648/1/(mon)/(exp);
+  !!VR(rank):Sv1;
+!!en;
+
+// Funciton to show a monster's dialogue (hero slot style)
+!?FU(trainer_ShowMonDlgOfHeroSlot);        [by MoP]
+!#VA(hero:x) (slot:x) (showDismissBtn:x) (isPopup:x);
+
+!!UN:C6933756/4/?(value:y);
+!!OW:C?(player:y);
+!!VR(value2:y):S(player) *360;
+!!VR(value):-(value2);
+!!UN:C6919480/4/?(value3:y);
+
+!!HE(CURRENT_HERO)&(hero)=(CURRENT_HERO):N?(hero);
+!!VR(value2):S(hero) *1170 +(value) +3041;
+!!VR(address:y):S(slot) *4 +(value2);
+!!UN:C(address)/4/<0;
+!!FU&1:E;
+
+!!VR(address):S(value2)-145;
+!!SN:E5007632/2/(value3)/(value2)/(slot)/(address)/0/119/20/(showDismissBtn)/(isPopup);
+
+// Function to show a monster's dialogue (recruiting dialogue style)
+!?FU(trainer_ShowMonDlgRecruiting);    [by Hawaiing]
+!#VA(mon:x) (isPopup:x);
+
+!!FU&(mon)<=(NO_MON):E;
+
+!!VR(value:y):S9990 *4 +8943204;
+!!VR(value2:y):S(isPopup)* -1 +1;       [Get negative value]
+!!SN:E6243760/2/(value)/(mon)/119/32/(value2);[Create the dialogue]
+!!SN:E6289408/2/(value)/-1/-1;
+!!UN:C7998936/4/(mon);                  [For stack Exp Panel]
+
+!!if&(isPopup);
+  !!SN:E6245264/2/(value);              [Popup]
+!!el;
+  !!SN:E6245280/2/(value);              [Normal]
+!!en;
+
+!!SN:E6244736/2/(value);                [Destroy the dialogue]
+
+// Function to set the frame colour of a DL dialogue
+!?FU(trainer_SetDlgColour);             [not used for now]
+!#VA(dlg:x) (player:x);
+
+!!SN:E7510739/1/(dlg);
+!!UN:Cv1/4/?y1;
+!!VRy2:Sy1 +76;
+!!UN:Cy2/4/?y3;
+!!SN:E6288384/2/y1/512/13/y3/(player);
+
+// Function to get the string in a text file
+!?FU(trainer_GetStringByFilename);
+!#VA(txtFilename:x);                    [filename of the text]
+!#VA(lineIndex:x);                      [number of line of the string, starts from 0]
+!#VA(string:x);                         [returned string]
+
+; Standarize the filename
+!!FU(StrToLower):Pz(txtFilename)/?(text:z);
+; Reove filename extension (if applicable)
+!!SN:K(text)/?(size:y);
+!!VR(index:y):S(size) -4;
+!!SN:K(text)/(index)/?(character:z);
+!!FU(Substr)&(character)=^.^:P(text)/0/-4/?(text);
+
+!!if&(text)=^artevent^;
+  !!VR(address:y):S6909120;             [artifact events]
+!!el&(text)=^minename^;
+  !!VR(address):S6968376;               [mine names]
+!!el&(text)=^plcolors^;
+  !!VR(address):S6976900;               [player colour]
+!!el&(text)=^priskill^;
+  !!VR(address):S6974556;               [primary skills]
+!!el&(text)=^restypes^;
+  !!VR(address):S6968208;               [resources]
+!!el;
+  !!VR(string):Z^Wrong txt filename!^;
+  !!FU:E;
+!!en;
+
+; @Master Of Puppets
+!!UN:C(address)/(UNC_INT)/?(value:y);            
+!!VR(address2:y):S(value) +32;
+!!UN:C(address2)/(UNC_INT)/?(value3:y);
+!!VR(address3:y):S(lineIndex) *4 +(value3);
+!!UN:C(address3)/(UNC_INT)/?(value4:y);
+!!SN:X?(value5:y) X(value4) X?z1 X(value5);
+!!VR(string):Z^%z1^;
+
+// Function to convert a string to integers with ignorance of separators
+!?FU(trainer_ConvertStrToInts);         [by daemon_n]
+!#VA(strPtr:x);                         [Original string.]
+!#VA(numbersarrayId:x);                 [returns local array id via ?(intVar:y)]
+!#VA(amountOfNumbers:x);                [returns local array id size ]
+
+!!VRs^trainer_originalString^:S^%z(strPtr)^;
+!!SN:Ks^trainer_originalString^/?(strLength:y);
+
+!!VR(amountOfNumberArrays:y):S1;
+!!FU(NewIntArray):P?i^current_%(amountOfNumberArrays)_array_ID^;
+!!VR(breakPoint:y):S(NULL);
+!!VR(isNeedBreakPoint:y):S(FALSE);
+
+!!re i/0/(strLength)/1/-1;
+  !!SN:Ks^trainer_originalString^/i/?(checkSymbol:z);
+  !!VR(isNeedBreakPoint):S(TRUE);
+
+  !!re (commonInt:y)/0/9;
+
+    !!if&(checkSymbol)=^%(commonInt)^;
+      *!IF&(commonInt)=0:L^%(checkSymbol)^;
+      !!FU(Array_Push):Pi^current_%(amountOfNumberArrays)_array_ID^/(commonInt);
+      !!VR(isNeedBreakPoint):S(FALSE);
+      !!br;
+    !!en;
+  !!en;
+
+  !!if&(isNeedBreakPoint);
+    !!SN:Mi^current_%(amountOfNumberArrays)_array_ID^/?(arrayLength:y);
+    !!co&(arrayLength)=(NULL);
+
+    !!VR(amountOfNumberArrays):+1;
+    !!FU(NewIntArray):P?i^current_%(amountOfNumberArrays)_array_ID^;
+  !!en;
+!!en;
+
+!!VRs^trainer_originalString^:S^^;
+!!SN:Mi^current_%(amountOfNumberArrays)_array_ID^/?(arrayLength:y);
+!!VR(amountOfNumberArrays)&(arrayLength)=(NULL):-1;
+
+!!if&(amountOfNumberArrays);  
+  !!FU(NewIntArray):P?(numbersarrayId:x);
+
+  !!re i/1/(amountOfNumberArrays);
+
+    !!VR(elemSumm:y):S(NULL);
+    !!SN:Mi^current_%i_array_ID^/?(arrayLength:y);
+
+    !!re j/0/(arrayLength)/1/-1;
+
+    !!SN:Mi^current_%i_array_ID^/j/?(elemValue:y);
+    !!VR(multipler:y):S(arrayLength) -j -1;
+
+      !!if&(multipler);
+
+        !!re k/1/(multipler);
+          !!VR(elemValue):*10;
+        !!en;
+      !!en;
+
+      !!VR(elemSumm):+(elemValue);
+    !!en;
+
+    !!FU(Array_Push)&(arrayLength):P(numbersarrayId)/(elemSumm);
+    !!VRi^current_%i_array_ID^:S(NULL);
+  !!en;
+
+  !!VR(amountOfNumbers):S(amountOfNumberArrays);
+  !!SN:F^ExtendArrayLifetime^/(numbersarrayId);
+!!el;
+  !!IF:M^There is no number in the text you just entered!^;
+!!en;

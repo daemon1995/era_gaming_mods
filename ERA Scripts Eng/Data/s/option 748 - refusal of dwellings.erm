@@ -1,6 +1,6 @@
 ZVSE2
 ** Author        : Algor (Idea: Antib)
-** Updated by    : Archer30
+** Rewritten by  : Archer30
 ** Name          : Refusal of dwellings
 ** Name rus.     : Отказ от жилищ
 ** Options       : 748
@@ -11,49 +11,74 @@ ZVSE2
 ** если жилища 8го уровня функционируют не как обычные.
 
 
+// Disable Enhanced Dwelling Hint Text (WoG) if Refual of Dwellings is enabled
+!?FU(OnAfterErmInstructions);
+!!UN:P748/?(wogOption:y);               [проверяем включена ли опция 748]
+!!FU&(wogOption)<>(TRUE):E;             [выход, елси опция не включена]
+
+; Disable Enhanced Dwelling Hints
+!!UN:P24/(FALSE);
+
 !?FU(OnAdventureMapRightMouseClick);
-!!UN:P748/?y1;                [проверяем включена ли опция 748 в y1]
-!!FU&y1=0:E;                  [выход, елси опция не включена]
+!!UN:P748/?(wogOption:y);               [проверяем включена ли опция 748]
+!!FU&(wogOption)<>(TRUE):E;             [выход, елси опция не включена]
 
-!!CM:P?y1/?y2/?y3;            [y1/y2/y3 - координаты клика]
-!!TRy1/y2/y3:E?y4;            [y4 - Признак "желтого квадрата"]
-!!FU&y4<>0:E;                 [выход, если под кликом не желтый квадрат]
+; Exit if not clicking on a dwelling
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(type:y) U?(subtype:y);
+!!FU&(type)<>(OBJ_CREATURE_GENERATOR_1)/(type)<>(OBJ_CREATURE_GENERATOR_4):E;
 
-!!OBy1/y2/y3:T?y4 U?y5;       [y4/y5 - тип/подтип объекта под кликом]
-!!FU&y4<>17/y4<>20:E;         [выход, если под кликом не жилище]
+; Exit if the interacting player is not the owner of the dwelling
+!!DW(x)/(y)/(z):O?(owner:y);
+!!OW:C?(player:y)/?(interactPlayer:y);
+!!FU|(owner)<>(player)/(owner)<>(interactPlayer):E;
 
-!!UN:P0/?y6;                  [y6=0, если жилища 8го уровня функционируют не как обычные]
-!!FU&y4=17/y5>79/y5<89/y6=0:E;[выход, если жилище существ "8го уровня" и функционирует не как обычные]
+!!CM:R0;
 
-!!DWy1/y2/y3:O?y5;            [y5 - владелец жилища]
-!!OW:C?y6;                    [y6 - текущий игрок]
-!!FU&y5<>y6:E;                [выход, если жилище не принадлежит текущему игроку]
+; Set up the dialogue with monster and numbers
+!!FU(NewIntArray):P?(availMons:y);
 
-!!DWy1/y2/y3:M0/?y10/?y20 M1/?y11/?y21 M2/?y12/?y22 M3/?y13/?y23; [y10-y13/y20-23 - типы/кол-ва существ доступных для найма]
+!!re (slot:y)/0/3;
+  !!DW(x)/(y)/(z):M(slot)/?(mon:y)/?(num:y);
 
-; Set Up dialogue
-!!FU(NewIntArray):P?y50;
-!!FU(Array_Push)&y20>0:Py50/(PIC_TYPE_MONSTER)/y10;
-!!FU(Array_Push)&y21>0:Py50/(PIC_TYPE_MONSTER)/y11;
-!!FU(Array_Push)&y22>0:Py50/(PIC_TYPE_MONSTER)/y12;
-!!FU(ES_SetupMultiPicDlg):Py50;
-!!IF:N(MSG_TYPE_QUESTION)/^%T(es.748.dlg)^/?y51;
+  !!if&(mon)>(NO_MON);
+    !!VR(num):F0/32767;
+    !!VR(monAndNum:y):S65536 *(num) +(mon);
+    !!FU(Array_Push):P(availMons)/(PIC_TYPE_MONSTER)/(monAndNum);
+  !!en;
+!!en;
 
-!!if&y51;
-  !!DWy1/y2/y3:O-1/1;           [удаление владельца жилища]
+!!FU(ES_SetupMultiPicDlg):P(availMons);
 
-  !!DWy1/y2/y3:G0/?y30/?y40 G1/?y31/?y41 G2/?y32/?y42 G3/?y33/?y43; [y30-y33/y40-43 - типы/кол-ва существ в охране]
+; Get the string for the title
+!!if&(type)=(OBJ_CREATURE_GENERATOR_1);
+  !!FU(ES_GetStringByFilename):P^crgen1^/(subtype)/?(dwellName:z);
+!!el&(type)=(OBJ_CREATURE_GENERATOR_4);
+  !!FU(ES_GetStringByFilename):P^crgen4^/(subtype)/?(dwellName);
+!!en;
 
-  !!VRy40|y30=y10/y30=-1:+y20;  [y40-y43 - новые кол-ва охранников Жилища]
-  !!VRy41|y31=y11/y31=-1:+y21;  [...]
-  !!VRy42|y32=y12/y32=-1:+y22;  [...]
-  !!VRy43|y33=y13/y33=-1:+y23;  [...]
-  !!VRy30&y30=-1/y20>0:Sy10;    [обновление типов охраны, если не было]
-  !!VRy31&y31=-1/y21>0:Sy11;    [...]
-  !!VRy32&y32=-1/y22>0:Sy12;    [...]
-  !!VRy33&y33=-1/y23>0:Sy13;    [...]
-  !!DWy1/y2/y3:M0/d/0 M1/d/0 M2/d/0 M3/d/0; [обнуление кол-ва существ доступных для найма]
-  !!DWy1/y2/y3:G0/y30/y40 G1/y31/y41 G2/y32/y42 G3/y33/y43; [установка нового кол-ва охранников]
+!!FU(ES_GetStringByFilename):P^plcolors^/(owner)/?(colourStr:z);
+!!FU(StrToLower):P(colourStr)/?(lowerColourStr:z);
+!!SN:T^es.owner^/?(ownerStr:z)/^colour^/(lowerColourStr);
+
+; Open the dialogue
+!!IF:N(MSG_TYPE_QUESTION)/^%(dwellName)
+%(ownerStr)
+
+%T(es.748.dlg)^/?(choice:y);
+
+!!if&(choice);
+  !!DW(x)/(y)/(z):O(NO_OWNER)/1;           [удаление владельца жилища]
+
+  !!re (slot)/0/3;
+    !!DW(x)/(y)/(z):M(slot)/?(availMon:y)/?(availNum:y);
+    !!DW(x)/(y)/(z):G(slot)/?(guardMon:y)/?(guardlNum:y);
+
+    !!if|(guardlNum)=(availMon)/(guardMon)=(NO_MON);
+      !!DW(x)/(y)/(z):G(slot)/(availMon)/d(availNum);
+      !!DW(x)/(y)/(z):M(slot)/(availMon)/0;
+    !!en;
+  !!en;
 !!en;
 
 **end
