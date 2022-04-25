@@ -5,42 +5,61 @@ ZVSE2
 ** Options       : 790
 
 
-!?FU(OnBeforeBattleAction);   [при действии в бою]
+!?FU(OnBeforeBattleAction)&-998;   [при действии в бою]
 !!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
 !!FU&y1=0:E;                  [выход, если опция не включена]
 
-!!BG:A?y1;                    [y1 - тип действия (1 - герой колдует заклинание)]
-!!BG&y1=1:S?y2;               [y2 - номер заклинания (если герой колдует)]
-!!FU|y2<>15/y1<>1:E;          [Выход если герой не колдует волшебную стрелу]
+!!BG:A?(action:y);                    [y1 - тип действия (1 - герой колдует заклинание)]
 
-!!BG:H?y1;                    [y1 - номер героя]
-!!HEy1:I?y2 Fd/d/?y3/d;       [y2 - количество маны, y3 - сила магии героя]
-!!HEy1:S14/?y4 S15/?y5 S16/?y6 S17/?y7; [y4-y7 - Уровень навыка Огня/Воздуха/Воды/Земли героя (0..3)]
-!!VRy4&y4<y5:Sy5;             [---------------------------------------------]
-!!VRy4&y4<y6:Sy6;             [     y4 - макс. уровень Школ магии (0..3)    ]
-!!VRy4&y4<y7:Sy7;             [---------------------------------------------]
-!!VRy7:Sy3 +y4 *10;           [y7 - расчетный урон обычной Волшебной стрелы SP*10 (+10) (+20) (+30)]
-!!VRy4:*y2;                   [y4 - бонус урона от Школ магии (уровень*Мана)]
-!!VRy6:Sy3 *y2 :2 +y4;        [y6 - расчетный урон Волшебной стрелы маны SP*Mana:2 (+Mana) (+Mana*2) (+Mana*3)]
-!!FU&y6<=y7:E;                [Выход, если урон Волшебной стрелы маны меньше обычного]
+!!if&(action)=(BATTLE_ACTION_HERO_CAST);
+  !!BG:S?(spell:y) Q?(side:y) H?(heroId:y);               [y2 - номер заклинания (если герой колдует)]
+  !!HE(heroId):O?(owner:y);
+  !!if&(spell)=(SPELL_MAGIC_ARROW);
+    *!BG:H?(heroId:y);                    [y1 - номер героя]
+    !!HE(heroId):I?(heroMana:y)/1 Fd/d/?(sp:y)/d;
+    !!VR(skillLvl:y):S0;
+    !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+      !!HE(heroId):Si/?l;
+      !!VR(skillLvl):Fl/3;
+    !!en;
+    !!SS(SPELL_MAGIC_ARROW):C(skillLvl)/?(cost:y);
+    !!if&(heroMana)>(cost);
+      !!VR(bonus:y):S1 F1/(skillLvl);
+      !!VR(oldDamage:y):S(sp) +(bonus) *10;
+      !!VR(skillLvl):*(heroMana);
 
-!!HEy1:X?y10/?y11/d/d/d/d/d;  [y10=3,y11=15 для героя-спеца по Волшебной стреле]
-!!HEy1&y10=3/y11=15:Ed/?y5;   [y5 - Уровень героя-спеца]
-!!VRy7&y10=3/y11=15:Sy6 *y5 :20; [Расчет бонуса урона для героя-спеца (+5% за уровень)]
-!!VRy6&y10=3/y11=15:+y7;      [y6 - скорректированный урон для героя-спеца]
-!!HEy1:O?y8;                  [y8 - номер игрока]
-!!OW:Iy8/?y9;                 [y9=1 для ИИ, 0 для человека]
-!!VRi^es_790_manaArrowDmg^:S0; [обнуление i^es_790_manaArrowDmg^]
-!!BA:Q?f;
+      !!VR(newDamage:y):S(sp) *(heroMana) *2 +(skillLvl);
+          *!IF:L^%(newDamage) %(oldDamage)^;
 
-!!if&y9=0;
-  !!FU&f=1:E;    [герой-человек не использует усиление в быстрой битве]
+      !!if&(newDamage)>(oldDamage);
+        !!HE(heroId):X?(spec:y)/?(spell)/d/d/d/d/d;  [y10=3,y11=15 для героя-спеца по Волшебной стреле]
+        !!if&(spec)=3/(spell)=(SPELL_MAGIC_ARROW);
+          !!HE(heroId):Ed/?(heroLvL:y);
+          !!VR(bonus):S(newDamage) *(heroLvL):20;
+          !!VR(newDamage):+(bonus);
+        !!en;
 
-  !!SN:T^es.790.dlg^/?z1/^dmg^/y6;  [для игрока-человека получаем текст вопроса в z1]
-  !!IF:Q1/9/15/2/z1;       [для игрока-человека вопрос: вложить ли всю ману в заклинание]
+        !!OW:I(owner:y)/?(isAi:y) Cd/?(clicked:y);                 [y9=1 для ИИ, 0 для человека]
+        !!IF:V1/(FALSE);
+
+        !!VRi^es_790_manaArrowDmg^:S0; [обнуление i^es_790_manaArrowDmg^]
+        !!if&i^battle_isVisible^/(isAi)=(FALSE)/(clicked)=(owner);
+          !!SN:T^es.790.dlg^/?z1/^dmg^/(newDamage);  [для игрока-человека получаем текст вопроса в z1]
+          !!IF:Q1/(PIC_TYPE_SPELL)/(SPELL_MAGIC_ARROW)/2/z1;       [для игрока-человека вопрос: вложить ли всю ману в заклинание]
+        !!en;
+        !!VRi^es_790_manaArrowDmg^:Sv7900;
+
+        !!VRi^es_790_manaArrowDmg^&1|(isAi):S(newDamage);          [i^es_790_manaArrowDmg^ - новый урон Волшебной стрелы]
+
+        
+      !!en;
+      
+    !!en;
+  !!en;
+
 !!en;
 
-!!VRi^es_790_manaArrowDmg^|1/y9=1:Sy6;          [i^es_790_manaArrowDmg^ - новый урон Волшебной стрелы]
+
 
 !?FU(OnMagicBasicResistance); [перед расчетом сопротивления]
 !!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
