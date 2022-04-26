@@ -75,45 +75,47 @@ ZVSE2
 !!IF&y1<>y2/y1>-1:M^%T(es.879.gardenOwned)^; [сообщение о захвате сада]
 
 !?FU(OnAdventureMapRightMouseClick);
-!!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
-!!FU&y1=0:E;
+!!UN:P879/?(wogOption:y);               [провер€ем включена ли опци€]
+!!FU&(wogOption)<>(TRUE):E;
 
-!!CM:P?v2/?v3/?v4;            [v2-v4 - координаты клика]
-!!SN:O?v2/?v3/?v4;            [корректировка координат]         
-!!OB2:T?y1;                   [y1 - тип объекта]
-!!FU&y1<>112/y1<>109/y1<>55:E;[выход если клик не на мельнице/садке]
+!!CM:P?(x:y)/?(y:y)/?(z:y);             [координаты клика]
+!!SN:O?(x)/?(y)/?(z);                   [корректировка координат]         
+!!OB(x)/(y)/(z):T?(objType:y);          [тип объекта]
+!!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;[выход если клик не на мельнице/садке]
 
 !!CM:R0;
-!!PO2:O?y2;                   [y2 - владелец объекта]
-!!OW:C?y3/?y30;               [y3 - текущий игрок]
 
-!!FU(ES_879_GetObjectName):Pv2/v3/v4/y1/?z2;
+!!PO(x)/(y)/(z):O?(owner:y);            [владелец объекта]
+!!OW:C?(player:y)/?(interactPlayer:y);  [текущий игрок]
 
-!!if&y2>(NO_OWNER);
-  !!FU(ES_879_GetOwnerString):Py2/?z3;
-  !!VRz2:+^
-%z3^;
+!!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(rmbStr:z);
+
+!!if&(owner)>(NO_OWNER);
+  !!FU(ES_879_GetOwnerString):P(owner)/?(ownerStr:z);
+  !!VR(rmbStr):+^
+%(ownerStr)^;
 !!en;
 
 ; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
-!!if&y2=y30;
-  !!if&y1=(OBJ_WINDMILL);
-    !!VRz2:+^%T(es.879.wheelBrought)^; [сообщение "сво€ ветр€на€ мельница"]
-  !!el&y1=(OBJ_WATER_WHEEL);
-    !!VRz2:+^%T(es.879.millBrought)^; [сообщение "сво€ водн. мельница"]
-  !!el&y1=(OBJ_MYSTICAL_GARDEN);
-    !!VRz2:+^%T(es.879.gardenBrought)^; [сообщение "свой сад"]
+!!if&(owner)=(interactPlayer);
+  !!if&(objType)=(OBJ_WINDMILL);
+    !!VR(rmbStr):+^%T(es.879.millBrought)^;   [сообщение "сво€ ветр€на€ мельница"]
+  !!el&(objType)=(OBJ_WATER_WHEEL);
+    !!VR(rmbStr):+^%T(es.879.wheelBrought)^;  [сообщение "сво€ водн. мельница"]
+  !!el&(objType)=(OBJ_MYSTICAL_GARDEN);
+    !!VR(rmbStr):+^%T(es.879.gardenBrought)^; [сообщение "свой сад"]
   !!en;
 !!en;
 
-!!if&y2=(NO_OWNER);
-  !!IF:Q2/-1/-1/(MSG_TYPE_POPUP)/z2;       [вывод сообщени€ "ничейный"]
+; Show up the text
+!!if&(owner)=(NO_OWNER);
+  !!IF:M0/(MSG_TYPE_POPUP)/(rmbStr);    [вывод сообщени€ "ничейный"]
 !!el;
-  !!if&y30<>y2;
-    !!IF:Q2/(PIC_TYPE_FLAG)/y2/(MSG_TYPE_POPUP)/z2;     [вывод сообщени€ "чужой"]
+  !!if&(owner)=(interactPlayer);
+    !!PO(x)/(y)/(z):V0/?(res:y) V1/?(num:y); [тип и количество принесенных ресурсов, если объект свой]
+    !!IF:Q2/(res)/(num)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "свой"]
   !!el;
-    !!PO2:V0/?y4 V1/?y5;    [y4/y5 - тип и количество принесенных ресурсов, если объект свой]
-    !!IF:Q2/y4/y5/(MSG_TYPE_POPUP)/z2;     [вывод сообщени€ "свой"]
+    !!IF:Q2/(PIC_TYPE_FLAG)/(owner)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "чужой"]
   !!en;
 !!en;
 
@@ -159,7 +161,7 @@ ZVSE2
 
 !!if&(owner)>(NO_OWNER);
   !!FU(ES_879_GetOwnerString):P(owner)/?(ownerStr:z);
-  !!VR(newHint):+^ %(ownerStr)^;
+  !!VR(newHint):+^ - %(ownerStr)^;
 !!en;
 
 !!MM:M^%(newHint)^;

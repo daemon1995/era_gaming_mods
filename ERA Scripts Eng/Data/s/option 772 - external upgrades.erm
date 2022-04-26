@@ -40,8 +40,9 @@ ZVSE2
 
 ; Check if there is any monster from the hero's army can upgrade to one of the monster from the dwelling/Refugee Camp
 !!VR(hasUpg:y):S(FALSE);
+!!FU(NewIntArray):P?(upgradableMons:y);
 
-; Loop through all the slots of the hero and check if any has an upgrade
+; Loop through all the slots of the hero and check if any has an upgrade, store the upgradable monsters (not necessarily to dwelling monsters) in the array
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
   !!HE(CURRENT_HERO):C0/i/?(heroMon:y)/?(num:y);
 
@@ -50,41 +51,58 @@ ZVSE2
 
     ; Loop through all the monsters of the dwelling/rufugee camp and see if any is the same as the upgraded monster
     !!if&(upgMon)>(NO_MON);
+      !!FU(Array_Push):P(upgradableMons)/(heroMon);
+
       !!re (ptr:y)/1/4;
 
-        !!br 2&(upgMon)=x(ptr);
+        !!br&(upgMon)=x(ptr);
       !!en;
+
+      !!VR(hasUpg)&(ptr)<=4:S(TRUE);
     !!en;
   !!en;
 !!en;
 
-!!VR(hasUpg)&i<=(ARMY_SLOT_LAST):S(TRUE);
-
 ; Exit the function if no upgrade found
 !!FU&(hasUpg)<>(TRUE):E;
 
-; Get the multiplier of cost of this upgrade
-!!FU(ES_772_CalcCostMultiplier):P?(mult:y)/?(multFloatConverted:y);
-
-; Set up new upgrades
+; Set up new upgrades (block upgrades not related to the dwelling). Store the original upgrade chain in the array so it can be restored later
 !!FU(NewIntArray):P?(origUpgChain:y);
 
-; Loop through all the slots of the hero and check if any has an upgrade
-!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-  !!HE(CURRENT_HERO):C0/i/?(heroMon:y)/?(num:y);
+; Loop through all the upgradable monsters and set up new upgrade chain depending on whether they can upgrade to dwelling monsters
+!!FU(Array_SortedUnique):P(upgradableMons);
+!!SN:M(upgradableMons)/?(size:y);
 
-  !!FU(ES_722_SetUpNewUpgrades)&(heroMon)>(NO_MON):P(mon1)/(mon2)/(mon3)/(mon4)/(heroMon)/(origUpgChain);
+!!re (index:y)/0/(size)/1/-1;
+  !!SN:M(upgradableMons)/(index)/?(mon:y);
+
+  !!FU(ES_722_SetUpNewUpgrades)&(heroMon)>(NO_MON):P(mon1)/(mon2)/(mon3)/(mon4)/(mon)/(origUpgChain);
 !!en;
 
-; Manage the costs
-!!VRi^es_772_hillFortStatus^:S1;
-!!UN:C6548300/24/(UNC_INT)/?(patch:y);
-!!UN:C6548300/24/(UNC_INT)/(multFloatConverted);
+; Open Hill Forts for human playes or upgrade for free for AI players
+!!if&1000;
+  ; Manage the costs
+  !!VRi^es_772_hillFortStatus^:S1;
+  !!UN:C6548300/24/(UNC_INT)/?(patch:y);
+  !!FU(ES_772_CalcCostMultiplier):P?(multFloatConverted:y);
+  !!UN:C6548300/24/(UNC_INT)/(multFloatConverted);
 
-; Open Hill Fort interface
-!!HE(CURRENT_HERO):D;
-!!VRi^es_772_hillFortStatus^:S0;
-!!UN:C6548300/24/(UNC_INT)/(patch);
+  ; Open Hill Fort interface
+  !!HE(CURRENT_HERO):D;
+
+  ; Restore values
+  !!VRi^es_772_hillFortStatus^:S0;
+  !!UN:C6548300/24/(UNC_INT)/(patch);
+!!el;
+  !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+    !!HE(CURRENT_HERO):C0/i/?(heroMon)/?(num);
+
+    !!if&(heroMon)>(NO_MON);
+      !!MA:U(heroMon)/?(upgMon);
+      !!HE(CURRENT_HERO)&(upgMon)>(NO_MON):C0/i/(upgMon)/(num);
+    !!en;
+  !!en;
+!!en;
 
 ; Restore the original upgrade chain
 !!SN:M(origUpgChain)/?(size:y);
@@ -126,7 +144,7 @@ ZVSE2
 
 ; Gheck the game difficulty and Diplommatic Bargain level (if enabled) to raise or reduce the cost
 !?FU(ES_772_CalcCostMultiplier);
-!#VA(mult:x) (multFloatConverted:x);
+!#VA(multFloatConverted:x);
 
 !!UN:J2/?(diff:y);
 !!VR(coef:y):S(diff) -1;
@@ -138,7 +156,7 @@ ZVSE2
   !!VR(coef):-(discount);
 !!en;
 
-!!VR(mult):S10 +(coef) *10;
+!!VR(mult:y):S10 +(coef) *10;
 !!VR(percent:e):S(mult) :100;
 !!VR(offset:y):S(@percent) -1 *4;
 !!UN:C10784536/(offset)/(UNC_INT)/?(multFloatConverted); [10784536 - address for e1]
