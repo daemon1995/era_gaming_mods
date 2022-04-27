@@ -1,19 +1,25 @@
 ZVSE2
-
-; UNIVERSAL START TRIGGER
+; MAIN WOG Script
 
 
 !#VRi^WOG_RandomSeedValue^:R0/11/99;
-!?FU(OnStartOrLoad);
-!!FU(WOG_StartGame):P;
 
-; ******************************************************************************
+!?FU(OnAfterErmInstructions);   
+!!FU(WOG_StartGame):P0;
 
+!?FU(OnAfterLoadGame);
+!!FU(WOG_StartGame):P1;
+
+; UNIVERSAL TIMER INIT
+; (every color every day)
+!#TM1:S1/999/1/255;     
+!#TM2:S1/999/1/255;
+
+; **************************************************************************************************
 ; CREATE WOG HOOKS (need plugin: erm_hooker.era)
-
 !?FU(WOG_StartGame);
-
 !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
+
 !!if&v1<>(FALSE);
   !!VRi^WOG_IsHdMod^:S(TRUE);
 !!el;
@@ -41,8 +47,8 @@ ZVSE2
 !!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 !!SN:E(address)/1/4526215/(WOG_OnChangeWindowByResources);     [trigger WHEN counts what pic to display in status window for pickuped resource]
 
-
-; ******************************************************************************
+; **************************************************************************************************
+; Get the real type and subtype of a map object
 !?FU(WOG_MapItem_GetRealTypeAndSubtype); 
 ; Получение реального типа и подтипа объекта на карте (например, под героем)
 !#VA(x:x) (y:x) (z:x) (type:x) (subtype:x);
@@ -54,11 +60,11 @@ ZVSE2
 ; получить подтип объекта
 !!UN:C(mapItem)/34/(UNC_INT16)/?(subtype);
 ; получить правильный тип объекта
-!!SN:E5231136/(CALLCONV_THISCALL)/(mapItem); !!VR(type):Sv1;
+!!SN:E5231136/(CALLCONV_THISCALL)/(mapItem);
+!!VR(type):Sv1;
 !!UN&(type)=(NULL):C(mapItem)/30/(UNC_INT16)/?(type);
 
 ; CHECK RANDOM MAP
-
 !?FU(WOG_CheckRandomMap);
 !#VA(result:x);
 
@@ -68,8 +74,7 @@ ZVSE2
 !!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
 !!VR(result)&(value2)=114:S(TRUE);
 
-
-
+; Get random seed by coordinates
 !?FU(WOG_GetRandomSeedByCoord);
 !#VA(x:x) (y:x) (z:x) (seed:x);
 
@@ -78,10 +83,8 @@ ZVSE2
 !!VR(z)&(z)<1:Si^WOG_RandomSeedValue^;
 
 !!VR(seed):Si^WOG_RandomSeedValue^ *255 *(x) *255 *(y) +(z); +v99
-; ******************************************************************************
-
+; **************************************************************************************************
 ; HD MOD WAR MACHINES SWAP FIX
-
 !?FU(WOG_OnBeforeHeroSwap)&1000;
   !!FU&v591<1/v847<1:E;                            [v591 is WM 1, v847 is WM 3]
   !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
@@ -133,10 +136,8 @@ ZVSE2
   !!VRi^swap_hero_1^:S(FALSE);
   !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
 
-; ******************************************************************************
-
-  SKILL CLICK FUNCTION (get number of clicked skill in hero screen)
-
+; **************************************************************************************************
+; SKILL CLICK FUNCTION (get number of clicked skill in hero screen)
 !?FU(WOG_GetSkillInfoByClick);                            
 !#VA(itemId:x) (heroId:x) (skill:x) (skillArea:x) (skillSlot:x);
 !!re i/(@skill)/(@skillArea);
@@ -163,11 +164,11 @@ ZVSE2
   !!en;
 
   !!HE(heroId):S(skillSlot)/?(skill)/1;
-
 !!en;
 
-// Get strings from text resources
-// Note: The following functions have duplicates. Ideally only one should be kept
+; **************************************************************************************************
+; Get strings from text resources
+; Note: The following functions have duplicates. Ideally only one should be kept
 !?FU(WOG_GetColorOwnerString);
 !#VA(owner:x) (string:x);
 
@@ -205,7 +206,7 @@ ZVSE2
   !!SN:X?y4 Xy1 X?z1 Xy4;
 
 
-// Get strings from text resources
+; Get strings from text resources
 !?FU(WOG_GetStringByFilename);
 !#VA(txtFilename:x);                    [filename of the text]
 !#VA(lineIndex:x);                      [number of line of the string, starts from 0]
@@ -253,7 +254,8 @@ ZVSE2
 !!SN:X?(value5:y) X(value4) X?z1 X(value5);
 !!VR(string):Z^%z1^;
 
-// Set up IF:N dialogue with array
+; **************************************************************************************************
+; Set up IF:N dialogue with array
 !?FU(WOG_SetupMultiPicDlg);              [by Berserker]
 !#VA(argsArr:x); SN:M array ID with picture type and subtype pairs.
 

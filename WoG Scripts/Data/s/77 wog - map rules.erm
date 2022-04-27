@@ -51,14 +51,14 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** To use this code, put it into a Global Event, set to never happen.
 ** Make sure this event is prior to other events that may be affected by it.
 
-** Variables Used: z280-z299, z326-z328, z332-z354, v1-v4, v549-v560,
-** v564-v579, v600-v602, v610-v639, v700-v739, v1219, v1262
+** Variables Used: z280-z299, z326-z328, z352-z354, v1-v4, v549-v560,
+** v564-v579, v600-v602, v610-v639, v700-v739
 ** z680, z681-z697 (reserved for future rules!)
 ** w33 (bits 0-4 used by script02) ***JHV
 ** Flags Used: 1-3, 875
 ** Functions Used: 690-727
 ** Timers Used: 84 (was 72); 19 (reuse from script00)
-** Variables v549-v559, v572-v579, z280-z299, and z332-z354 must not be modified by other programs!
+** Variables v549-v559, v573-v579, z280-z299, and z352-z354 must not be modified by other programs!
 ** PO:N(=15) for Artifacts on the map (OB-Type 5) if double artifact rule is on
 
 ** functions for use during initialization
@@ -94,30 +94,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !#VRv576:S0; [second 11 bits of rules - none chosen yet]
 !#UN:X?v574/?v575; [get size/underground]
 !#VRv573:Sv574 :2; [get half of size = middle of map]
-!#VRv572:S0; [day of last rogue attack]
 !#VRv550:C1/2/4/8/16/32/64/128/256/512/1024; [bit table]
-
-!#VRz332:Sz101000; [rule names for menu/papyrus]
-!#VRz333:Sz101001;
-!#VRz334:Sz101002;
-!#VRz335:Sz101003;
-!#VRz336:Sz101004;
-!#VRz337:Sz101005;
-!#VRz338:Sz101006;
-!#VRz339:Sz101007;
-!#VRz340:Sz101008;
-!#VRz341:Sz101009;
-!#VRz342:Sz101010;
-!#VRz343:Sz101011;
-!#VRz344:Sz101012;
-!#VRz345:Sz101013;
-!#VRz346:Sz101014;
-!#VRz347:Sz101015;
-!#VRz348:Sz101016;
-!#VRz349:Sz101017;
-!#VRz350:Sz101018;
-!#VRz351:Sz101019;
-!#VRz680:Sz101051;
 
 !#DO720/0/7/1&v1<>5:P; [find an enemy for each player, for Perpetual Darkness]
 
@@ -213,11 +190,11 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!DO724/121/131/1|v1=0/v1=2:P;  [set v576]
 
 !!VRz326&2/v1<=1:Sz101020;
-!!IF&2/v1<=1:G0/579/v579/326/332/333/334/335/336/337/338/339/340/341; [get bit choices in v579]
+!!IF&2/v1<=1:G0/579/v579/326/101000/101001/101002/101003/101004/101005/101006/101007/101008/101009; [get bit choices in v579]
 !!VRz326&2/v1<=1:Sz101021;
-!!IF&2/v1<=1:G0/576/v576/326/342/343/344/345/346/347/348/349/350/351/680; [get bit choices in v576]
+!!IF&2/v1<=1:G0/576/v576/326/101010/101011/101012/101013/101014/101015/101016/101017/101018/101019/101051; [get bit choices in v576]
 
-!!UN|-2/v1=4:U98/8/?y1; [count confluxes]
+!!UN|-2/v1=4:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y1; [count confluxes]
 !!VRy2|-2/v1=4:S19; [normally 20 rules]
 !!VRy2&-2/y1=0:S20; [21 rules if no confluxes]
 !!VRy2&v1=4/y1=0:S20; [21 rules if no confluxes]
@@ -846,84 +823,60 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** function to generate roving bands of Rogues
 
-!?FU713;
+!?FU713&i^timerDay^<>i^wog_127_lastRogueData_%i(timerOwner)^;
+; Check if the option is enabled (use only this way as the option can be enabled at the map start)
+!!FU709:P17;
+!!FU&-3:E;
 
-!!FU709&x1=0:P17; [check for rule 17]
-!!OW&x1=0:C?y1; [get current player]
-!!OW&x1=0:Iy1/?y2; [get AI 1 or human 0]
-!!VRy1&y2=0/x1=0:S0 R15; [1 in 16 chance for human]
-!!VRy1&y2=1/x1=0:S0 R63; [1 in 64 chance for AI]
-!!VRy3&x1=0:Sc0; [get current day]
-!!IF&3/x1=0:V875/0;
-!!FU714&3/y1=0/y3<>v572/x1=0:Py2/x1; [continue if odds are met and rule active and no other Rogues today]
+!!if&i^timerIsHuman^;
+  !!VR(random:y):S0 R15; [1 in 16 chance for human]
+!!el;
+  !!VR(random)&:S0 R63; [1 in 64 chance for AI]
+!!en;
 
-!!FU&x1=0:E; [exit if land object]
+!!IF:V875/0;
 
-!!FU709:P17; [check for rule 17]
-!!OW:C?y1; [get current player]
-!!OW:Iy1/?y2; [get AI 1 or human 0]
-!!VRy1&y2=0:S0 R15; [1 in 16 chance for human]
-!!VRy1&y2=1:S0 R63; [1 in 64 chance for AI]
-!!VRy3:Sc0; [get current day]
-!!IF&3:V875/0;
-!!FU714&3/y1=0/y3<>v572:Py2/x1; [continue if odds are met and rule active and no other Rogues today]
+!!if&(random)=0; [continue if odds are met and rule active and no other Rogues today]
+  ; Check if the terrain is water
+  !!TR998:T?(terrain:y);
 
+  ; Land - Rogues / Water - Water Elementals
+  !!HE(CURRENT_HERO):N?(hero:y); [get hero number]
+  !!HE(hero):B0/?z326; [get hero name]
 
-** end of function
+  !!if&i^timerIsHuman^;
+    !!if&(terrain)<>8;
+      !!VR(mon:y):S(MON_ROGUE);
+      !!IF:Q1/21/143/1^%Z101049^;
+    !!el;
+      !!VR(mon):S(MON_WATER_ELEMENTAL);
+      !!IF:Q1/21/115/1^%Z101056^;
+    !!en;
+  !!en;
 
-
-** function to actually cause a Rogue fight
-
-!?FU714;
-
-!!HE-1&x2=0:B0/?z326; [get hero name]
-!!IF&x1=0/x2=0:Q1/21/143/1^%Z101049^;
-!!VRy1&x2=0:Sc0; [get day of game]
-!!VRy1&x2=0:+6;
-
-!!VRy1&x2=0::7; [get week of game]
-!!VRv1262&x2=0:Sy1 *10; [10 Rogues per elapsed week: v1262]
-
-!!HE-1&x2=0:Ed/?y3/1; [get hero level]
-!!VRy3&x2=0:*10; [hero level *10]
-!!VRv1262&x2=0:+y3; [#Rogues = 10*week + 10*level]
-
-!!HE-1&x2=0:P?y2/?y3/?y4; [get hero location]
-!!IF&x2=0:V875/1;           (For mithril and chest scripts)
-!!HE-1&x2=0:N?v1219; [get hero number]
-!!HE-1&x2=0:Ty2/y3/y4/143/v1262; [provoke Rogue battle]
-!!HEv1219&x2=0:O?y2; [get hero owner]
-!!VRv1262&x2=0:*10 +300; [10 gold per Rogue + 300]
-!!OW&y2<>-1/x2=0:Ry2/6/dv1262; [give gold if hero lived]
-!!IF&y2<>-1/x2=0:V875/0;    (For mithril and chest scripts)
-!!IF&x1=0/y2<>-1/x2=0:Q2/6/v1262/1/z101050;
-!!VRv572&x2=0:Sc0; [set day of last Rogue fight]
-
-!!FU&x2=0:E; [exit if land object]
+  !!VR(rogueNum:y):Si^timerWeek^ *10; [10 Rogues per elapsed week]
 
 
-!!HE-1:B0/?z326; [get hero name]
-!!IF&x1=0:Q1/21/115/1^%Z101056^;
-!!VRy1:Sc0; [get day of game]
-!!VRy1:+6;
+  !!HE(hero):Ed/?(lv:y)/1; [get hero level]
+  !!VR(rogueNum):S(lv) *10 +(rogueNum); [#Rogues = 10*week + 10*level]
 
-!!VRy1::7; [get week of game]
-!!VRv1262:Sy1 *7; [10 Water Elementals per elapsed week: v1262]
+  !!IF:V875/1;           (For mithril and chest scripts)
 
-!!HE-1:Ed/?y3/1; [get hero level]
-!!VRy3:*7; [hero level *10]
-!!VRv1262:+y3; [#Water Elementals = 10*week + 10*level]
+  !!HE(hero):Tv998/v999/v1000/(mon)/(rogueNum); [provoke Rogue battle]
+  !!HE(hero:y):O?(owner:y); [get hero owner]
 
-!!HE-1:P?y2/?y3/?y4; [get hero location]
-!!IF:V875/1;           (For mithril and chest scripts)
-!!HE-1:N?v1219; [get hero number]
-!!HE-1:Ty2/y3/y4/115/v1262; [provoke Water Elemental battle]
-!!HEv1219:O?y2; [get hero owner]
-!!VRv1262:*25; [25 gold per Rogue]
-!d!OW&y2<>-1:Ry2/6/dv1262; [give gold if hero lived]
-!!IF&y2<>-1:V875/0;    (For mithril and chest scripts)
-!d!IF&x1=0/y2<>-1:Q2/6/v1262/1/z101050;
-!!VRv572:Sc0; [set day of last Rogue fight]
+  !!if&(owner)<>(NO_OWNER);
+    !!if&(terrain)<>8;
+      !!VR(gold:y):S(rogueNum) *10 +300; [10 gold per Rogue + 300]
+      !!OW:R(owner)/(RES_GOLD)/d(gold); [give gold if hero lived]
+      !!IF&i^timerIsHuman^:Q2/(PIC_TYPE_RES_GOLD)/(gold)/(MSG_TYPE_MES)/z101050;
+    !!en;
+
+    !!IF:V875/0;    (For mithril and chest scripts)
+  !!en;
+
+  !!VRi^wog_127_lastRogueData_%i(timerOwner)^:Si^timerDay^; [set day of last Rogue fight]
+!!en;
 
 ** end of function
 
