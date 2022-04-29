@@ -46,12 +46,11 @@ ZVSE2
 
 ; Check if the current map is a random map, disable Balanced Starting Army (ES) if not
 !!if&(wogOption);
-  !!UN:C6919480/4/?(value:y);
-  !!VR(add:y):S(value) +128980;
-  !!UN:C(add)/(UNC_INT8)/?(character:y);[для рандомной карты (каталог [r]andom_maps) thanks to feanor]
+  !!FU(ES_CheckRandomMap):P?(isRandMap:y);
 
-  !!if&(character)<>114;
+  !!if&(isRandMap)<>(TRUE);
     !!UN:P764/(FALSE);                  [отключение опции для нерандомной карты]
+    !!IF:M^1^;
   ; Disable Rebalanced Starting Armies (WoG) if the map is a random map
   !!el;
     !!UN:P199/(FALSE);                  [отключаем опцию 199 "Измененные стартовые армии героев"]
@@ -150,6 +149,7 @@ ZVSE2
 !!SN:E(address)/1/4455129/(ES_HOOK_AfterAttackMainFunc); [Trigger after shooting]
 !!SN:E(address)/1/5085308/(ES_OnArtifactGiveSpell); [Trigger when artifact with spell given is about to be equipped]
 !!SN:E(address)/1/5144585/(ES_OnGetHillFortCreatureLevel); [Trigger on getting creature levels at Hill Forts]
+!!SN:E(address)/1/5893984/(ES_OnPlayerChooseSpell); [Trigger on player choosing a spell on the battlefield]
 
 !?FU(ES_HOOK_AfterAttackMainFunc);      [by igrik]
 !!SN:X?(hook:y);
@@ -476,3 +476,13 @@ ZVSE2
 !!IF&(ptr)<43200000:M^{Attention!}
 Error in getting town structure address. 
 The game may fall at any time.^; 
+
+// Check if the current map is a random map
+!?FU(ES_CheckRandomMap);
+!#VA(result:x);
+
+!!VR(result):S(FALSE);
+!!UN:C6919480/4/?(value:y);
+!!VR(address:y):S(value) +128980;
+!!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
+!!VR(result)&(value2)=114:S(TRUE);

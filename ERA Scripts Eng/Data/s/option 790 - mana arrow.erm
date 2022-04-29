@@ -1,76 +1,105 @@
 ZVSE2
 ** Author orig.  : Algor
-** Updated by    : daemon_n
+** Rewritten by  : daemon_n and Archer30
 ** Name          : Mana arrow
 ** Name rus.     : Волшебная стрела маны
 ** Options       : 790
 
+; To-do: Fix MP support
 
-!?FU(OnBeforeBattleAction)&-998;        [при действии в бою]
-!!UN:P790/?(wogOption:y);               [проверяем включена ли опция 790 в y1]
+
+!?FU(ES_OnPlayerChooseSpell)&-998;      [при действии в бою]
+!#VA(address:x);
+
+!!UN:P790/?(wogOption:y);               [проверяем включена ли опция 790]
 !!FU&(wogOption)<>(TRUE):E;             [выход, если опция не включена]
 
 ; Chcck if the hero's casting Magic Arrow
-!!BG:A?(action:y);                      [тип действия (1 - герой колдует заклинание)]
+!!UN:C(address)/40/(UNC_INT)/?(spell:y);
 
-!!if&(action)=(BATTLE_ACTION_HERO_CAST);
-  !!BG:S?(spell:y) Q?(side:y) H?(heroId:y); [номер заклинания (если герой колдует)]
-  !!HE(heroId):O?(owner:y);
+!!if&(spell)=(SPELL_MAGIC_ARROW);
+  !!BG:H?(heroId:y); [номер заклинания (если герой колдует)]
 
-  !!if&(spell)=(SPELL_MAGIC_ARROW);
-    !!HE(heroId):I?(heroMana:y)/1 Fd/d/?(sp:y)/d;
-    !!VR(skillLvl:y):S0;
+  !!HE(heroId):I?(heroMana:y)/1 Fd/d/?(power:y)/d;
+  !!VR(skillLvl:y):S(SKILL_NOT_LEARNED);
 
-    ; Get the magic arrow level
-    !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
-      !!HE(heroId):Si/?l;
-      !!VR(skillLvl):Fl/(SKILL_EXPERT);
+  ; Get the magic arrow level
+  !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+    !!HE(heroId):Si/?l;
+    !!VR(skillLvl):Fl/(SKILL_EXPERT);
+  !!en;
+
+  ; Compare the damage difference between the old damage and new damage
+  !!SS(SPELL_MAGIC_ARROW):E(skillLvl)/?(spellEffect:y) P?(spellPower:y);
+
+  !!VR(oldDamage:y):S(power) *(spellPower) +(spellEffect);
+
+  !!VR(skillLvl):F(SKILL_BASIC)/(SKILL_EXPERT);
+  !!VR(bonus:y):S(skillLvl) *(heroMana);
+  !!VR(newDamage:y):S(power) *(heroMana) :2 +(bonus);
+
+  !!HE(heroId):X?(spec:y)/?(spell)/d/d/d/d/d; [для героя-спеца по Волшебной стреле]
+
+  ; Calculate specialty bonus
+  !!if&(spec)=3/(spell)=(SPELL_MAGIC_ARROW);
+    !!VR(oldDamage):*3 :2;
+
+    !!HE(heroId):Ed/?(heroLvL:y);
+    !!VR(bonus):S(newDamage) *(heroLvL) :20;
+    !!VR(newDamage):+(bonus);
+  !!en;
+
+  ; Ask to use Mana Arrow if the new damage is greater, or choose it for AI
+  !!if&(newDamage)>(oldDamage);
+    !!HE(heroId):O?(owner:y);
+    !!OW:I(owner)/?(isAi:y) Cd/?(clicked:y); [для ИИ, 0 для человека]
+
+    !!IF:V1/(FALSE);
+
+    !!if&i^battle_isVisible^/(isAi)=(FALSE)/(clicked)=(owner);
+      !!SN:T^es.790.dlg^/?(dlg:z)/^dmg^/(newDamage); [для игрока-человека получаем текст вопроса]
+      !!IF:Q1/(PIC_TYPE_SPELL)/(SPELL_MAGIC_ARROW)/(MSG_TYPE_QUESTION)/(dlg); [для игрока-человека вопрос: вложить ли всю ману в заклинание]
     !!en;
 
-    ; Check the damage difference
-    ; Note: the old damage is calculated by the vanilla formula, it might be affected by mods (or even Remagic)
-    !!VR(bonus:y):S1 F1/(skillLvl);
-    !!VR(oldDamage:y):S(sp) +(bonus) *10;
-    !!VR(skillLvl):*(heroMana);
+    !!if|1/(isAi);
+      !!VRi^es_790_manaArrowDmg^:S(newDamage); [i^es_790_manaArrowDmg^ - новый урон Волшебной стрелы]
 
-    !!VR(newDamage:y):S(sp) *(heroMana) *2 +(skillLvl);
+      ; The following code doesn't work for now for some reason
+      !!if&i^battle_humanOnly^;
+        !!VR(enemySide:y):Si^battle_current_side^ X1;
+        !!IP:D-1;
 
-    !!if&(newDamage)>(oldDamage);
-      !!HE(heroId):X?(spec:y)/?(spell)/d/d/d/d/d; [для героя-спеца по Волшебной стреле]
+        !!VR(player:y):Si^battle_owner_%(enemySide)^;
 
-      !!if&(spec)=3/(spell)=(SPELL_MAGIC_ARROW);
-        !!HE(heroId):Ed/?(heroLvL:y);
-        !!VR(bonus):S(newDamage) *(heroLvL):20;
-        !!VR(newDamage):+(bonus);
+        !!FU(ES_PassManaArrowDmg):Di^es_790_manaArrowDmg^;
       !!en;
-
-      !!OW:I(owner:y)/?(isAi:y) Cd/?(clicked:y); [для ИИ, 0 для человека]
-      !!IF:V1/(FALSE);
-
-      !!if&i^battle_isVisible^/(isAi)=(FALSE)/(clicked)=(owner);
-        !!SN:T^es.790.dlg^/?(dlg:z)/^dmg^/(newDamage); [для игрока-человека получаем текст вопроса]
-        !!IF:Q1/(PIC_TYPE_SPELL)/(SPELL_MAGIC_ARROW)/(MSG_TYPE_POPUP)/(dlg); [для игрока-человека вопрос: вложить ли всю ману в заклинание]
-      !!en;
-
-      !!VRi^es_790_manaArrowDmg^|1/(isAi):S(newDamage); [i^es_790_manaArrowDmg^ - новый урон Волшебной стрелы]
     !!en;
   !!en;
 !!en;
 
+!?FU(ES_PassManaArrowDmg);
+!#VA(manaArrowDmg:x);
+
+!!VRi^es_790_manaArrowDmg^:S(manaArrowDmg);
+!!IF:M^2^;
+
 !?FU(OnMagicBasicResistance)&i^es_790_manaArrowDmg^>0; [перед расчетом сопротивления]
-!!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
-!!FU&y1=0:E;                  [выход, если опция не включена]
+!!UN:P790/?(wogOption:y);               [проверяем включена ли опция 790]
+!!FU&(wogOption)<>(TRUE):E;             [выход, если опция не включена]
 
-!!BG:A?y1;                    [y1 - тип действия (1 - герой колдует заклинание)]
-!!BG&y1=(BATTLE_ACTION_HERO_CAST):S?y2; [y2 - номер заклинания (если герой колдует)]
-!!FU|y2<>15:E;
+!!MR:D?(damage:y);                      [базовый урон заклинания]
 
-!!MR:D?y1;                    [y1 - базовый урон заклинания]
-!!BG:H?y2 E?y3;               [y2 - номер героя, y3 - номер целевого стека]
-!!MR&y1<i^es_790_manaArrowDmg^:Di^es_790_manaArrowDmg^;           [Установка нового базового урона заклинания, если он не меньше стандартного]
-!!HEy2&y1<i^es_790_manaArrowDmg^:I0;            [Обнуление маны героя]
-!!BA:Q?f;                     [f-статус быстрой битвы]
-!!BMy3&y1<i^es_790_manaArrowDmg^/f=0:V64 V64;   [Дополнительная анимация на целевом стеке]
-!!VRi^es_790_manaArrowDmg^:S0;                  [обнуление i^es_790_manaArrowDmg^]
+!!if&(damage)<i^es_790_manaArrowDmg^;
+  !!MR:Di^es_790_manaArrowDmg^;         [Установка нового базового урона заклинания, если он не меньше стандартного]
+  !!BG:H?(hero:y);                      [номер героя]
+  !!HE(hero):I0;                        [Обнуление маны героя]
+
+  !!if&i^battle_isQuick^<>(TRUE);
+    !!BG:E?(stack:y);
+    !!BM(stack):V64 V64;                [Дополнительная анимация на целевом стеке]
+  !!en;
+!!en;
+
+!!VRi^es_790_manaArrowDmg^:S0;          [обнуление i^es_790_manaArrowDmg^]
 
 ** end

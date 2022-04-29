@@ -1,6 +1,7 @@
-ZVSE
+ZVSE2
 
 **  Updated to support experience system: 25 august 2004
+**  Rewritten to improve compatiblity: Apr 2022
 
 ** "Masters of Life" v1.8 - Sir Four
 **  Upgrade at te beginning of each turn
@@ -9,48 +10,45 @@ ZVSE
 **  in all hero armies (except Necromancers)
 
 ** Modified by Thomas Franz (samot) 19.10.04
-** - Replaced Timer 11 by TM2
 ** - rewrote the upgrade-routine to work with Extension Heroes
 ** - do not upgrade if Town=Conflux and Neutral Town is active,
 **   otherwise it would upgrade the shooting Halflings to not shooting Rogues
 ** - set the costs of Halflings and Rogues equal if Neutral town is active to give
 **   the same changes to the Neutral town
 
+** Rewritten by Archer30 Apr 2022
+** - Used faster looping method
+
 ** To use this code, put it into a Global Event, set to never happen.
 
-** Variables Used: none
-** Flags Used: none
-** Functions Used: 100
-** Timers used: TM2 (from script00)
 
-!#UN:P19/?v1; !#UN:P67/?v2; // check if Masters of Life and Neutral town are both active
-!#MA&v1=1/v2=1:C138/6/?v3 C143/6/v3; // if yes set costs of Halfing and Rogue to the same if script active
-**                                   // allows to upgrade your Halfings for free (to give the neutral town
-**                                   // the same chances as any other)
+; Allows to upgrade your Halfings for free (to give the neutral town the same chances as any other)
+; Neutral town heroes does not upgrade automatically (otherwise it would upgrade the shooting Halflings to not shooting Rogues)
+!?FU(OnAfterErmInstructions);
+!!UN:P19/?(masterOfLife:y);
+!!UN:P67/?(neutralTown:y);              [check if Masters of Life and Neutral town are both active]
+!!MA&(masterOfLife)/(neutralTown):C(MON_HALFLING)/(RES_GOLD)/?(cost:y) C(MON_ROGUE)/(RES_GOLD)/(cost); [if yes set costs of Halfing and Rogue to the same if script active]
 
-** Timer routine
+!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerOnce^; [one times daily]
+!!UN:P19/?(masterOfLife:y);
+!!UN:P67/?(neutralTown:y);
 
-!?TM2&$once$=1; // one times daily
-!!UN:P19/?y-1; ** [asking for turn option on]
-** [1 - enabled]
-** [0 - disabled]
-!!DO100/0/155/1&y-1=1:P; [do conversion for each hero if enabled]
-** end of timer routine
+!!if&(masterOfLife);
+  !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+    !!HEi:B2/?(class:y);                [get class of the hero]
+    !!VR(townType:y):S(class):2;        [divide by 2 to get the town typ]
 
+    ; Upgrade the non-upgraded level 1 troops to upgraded for non-Necropolis and non-Neutral Town Heroes
+    !!if&(townType)<>(TOWN_NECROPOLIS);
+      !!if|(townType)<>(TOWN_CONFLUX)/(neutralTown)<>(TRUE);
+        !!UN:T(townType)/0/0/?(lv1Mon:y);
 
-** function to do conversion
-
-!?FU100;
-!!HEx16:B2/?y-2; // get class of the hero
-!!VRy-2::2;   // divide by 2 to get the town typ
-!!FU&y-2=4:E; // exit if Necro
-!!UN:P67/?y-1; // check if neutral town script is activ
-!!FU&y-2=8/y-1=1:E; // exit if neutral town active and town = conflux (otherwise
-**                     it would upgrade the shooting Halflings to not shooting Rogues)
-!!UN:Ty-2/0/0/?y-3;  [1st level creature of his town]
-!!UN:Ty-2/0/1/?y-4;  [(upg) 1st level creature of his town]
-** The new experience will be the old experience multiplied by the Upgrade Multiplier
-!!HEx16:C1/y-3/y-4/d/d/0/5; [upg 1st level creatures]
-!!HEx16:C1/139/y-4/d/d/0/5; [upg peasants]
-** end of function
-
+        !!VR(upgLv1Mon:y):S(lv1Mon) +1;
+        !!VR(upgLv1Mon)&(neutralTown)/(townType)=(TOWN_CONFLUX):S(MON_ROGUE);
+        ; The new experience will be the old experience multiplied by the Upgrade Multiplier
+        !!HEi:C1/(lv1Mon)/(upgLv1Mon)/d/d/0/5; [upg 1st level creatures]
+        !!HEi:C1/139/(upgLv1Mon)/d/d/0/5; [upg peasants]
+      !!en;
+    !!en;
+  !!en;
+!!en;
