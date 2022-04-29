@@ -29,28 +29,33 @@ ZVSE2
 !!en;
 
 ; Create the array of all the available extention heroes
-!!FU(NewIntArray):P?i^es_770_availExtentionHeroes^;
+!!FU(NewIntArray):P?(availHeros:y);
 
 !!re i/(HERO_SIR_MULLICH)/(lastHero);
   !!HEi:O?(heroOwner:y) P?(x:y)/?(y:y)/?(z:y);
 
-  !!FU(Array_Push)&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1:Pi^es_770_availExtentionHeroes^/i;
+  !!FU(Array_Push)&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1:P(availHeros)/i;
 !!en;
 
-!!FU(Array_Shuffle):Pi^es_770_availExtentionHeroes^;
+!!FU(Array_Shuffle):P(availHeros);
+
+; Get how many heroes allowed for the tyrant
+!!UN:J2/?(diff:y);
+!!UN:C6129162/(UNC_INT8)/?(memoryLimit:y);
+!!VR(heroLimit:y):S(diff) +2 F2/(memoryLimit);
 
 ; Search for neutral towns to be occupied by pink player
 !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(num:y);    [оличество городов в (num)]
 !!VR(lastId:y):S(num) -1;               [максимальный номер города на карте]
 !!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
-!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN); [передача ничейных городов розовому игроку]
+!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN)/(availHeros)/(heroLimit); [передача ничейных городов розовому игроку]
 
 ; Exit the script if there is no neutral town on the map
 !!OW:W(PLAYER_PINK)/?(townNum:y);
 
 !!if&(townNum)=0/(hasLost);
   !!OW:I(PLAYER_PINK)/1/1;              [деактивируем розового »»-игрока, если “иран не получил ни одного города и на старте не было розового игрока]
-  !!SN:W^wog_100_enabled^ Mi^es_770_availExtentionHeroes^;
+  !!SN:W^wog_100_enabled^;
 
   !!FU:E;                               [Выход, если “иран не получил ни одного города и на старте не было розового игрока]
 !!en;
@@ -97,10 +102,10 @@ ZVSE2
   !!en;
 !!en;
 
-!!SN:W^wog_100_enabled^ Mi^es_770_availExtentionHeroes^;
+!!SN:W^wog_100_enabled^;
 
 !?FU(ES_770_SearchForObjects);          [передача ничейного объекта розовому игроку]
-!#VA(objType:x);
+!#VA(objType:x) (availHeros:x) (heroLimit:x);
 
 !!UN:U(objType)/(ANY_OBJ)/-1/2;         [получаем координаты объекта в v2-v4]
 
@@ -111,17 +116,17 @@ ZVSE2
   ; Build the tavern if eligible
   !!if&(owner)=(NO_OWNER);
     !!CA2:O(PLAYER_PINK) U?(townId:y);
-    !!FU(ES_770_CheckBuildingEligibility):P(townId)/5/?(tavernIsEligible:y);
+    !!FU(ES_CheckBuildingEligibility):P(townId)/5/?(tavernIsEligible:y);
 
     !!if&(tavernIsEligible);
       !!CA2:B1/5;                       [5 - tavern]
 
       ; Check the number of the Tyrant's heroes, give more if fewer than 8 if there are still extention heroes
       !!OW:H(PLAYER_PINK)/5/0;
-      !!SN:Mi^es_770_availExtentionHeroes^/?(size:y);
+      !!SN:M(availHeros)/?(size:y);
 
-      !!if&v5<8/(size)>0;
-        !!FU(Array_Pop):Pi^es_770_availExtentionHeroes^/?(hero:y); [Get the hero of the end of the array and remove from the array]
+      !!if&v5<(heroLimit)/(size)>0;
+        !!FU(Array_Pop):P(availHeros)/?(hero:y); [Get the hero of the end of the array and remove from the array]
         !!HE(hero):Pv2/v3/v4 O(PLAYER_PINK);
       !!en;
     !!en;
@@ -137,32 +142,5 @@ ZVSE2
   !!DW2:O?(owner)/1 G0/d/?(num);                     [текущий хоз€ин жилища (тип 20), количество охранников]
   !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища без охраны (1-4 уровни)]
 !!en;
-
-; Check if it allowed to build the building in the city            [by igrik]
-!?FU(ES_770_CheckBuildingEligibility);
-!#VA(townId:x);                         [town number on map (0...47)]
-!#VA(building:x);                       [building id]
-!#VA(result:x);                         [return: bool (0-no, 1-yes)]
-
-!!VR(result):S(FALSE);   
-!!FU(ES_770_GetTownStruct):P(townId)/?(ptr:y);
-!!CA0/(townId):R?(isbuilt:y) R(FALSE);
-!!SN:E6033696/2/(ptr)/(building);
-!!VR(result)&v1<>(FALSE):S(TRUE);
-!!CA0/(townId):R(isbuilt);
-
-; Get city structure
-!?FU(ES_770_GetTownStruct);
-!#VA(townId:x);                         [Town number on map (0...47)]
-!#VA(ptr:x);                            [Return: ptr structure town]
- 
-!!IF&(townId)<=(NO_TOWN)|(townId)>47:M^Wrong town id.^;
-!!UN:C6919480/(UNC_INT)/?(value:y); 
-!!VR(value):+136724;
-!!UN:C(value)/(UNC_INT)/?(value2:y); 
-!!VR(ptr:x):S(townId) *360 +(value2);
-!!IF&(ptr)<43200000:M^{Attention!}
-Error in getting town structure address. 
-The game may fall at any time.^; 
 
 ** end

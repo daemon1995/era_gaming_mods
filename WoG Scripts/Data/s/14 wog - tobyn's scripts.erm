@@ -22,7 +22,6 @@ ZVSE2
 !#UN:P193/?v2365;          check if Warfare is enabled in WoGify Options
 !#UN:P194/?v2361;          check if Advanced Witch Huts are enabled in WoGify Options
 
-*#UN:P75/?v2360;           check if Short Skill descriptions (script75.erm, Hermann the Weird) is enabled
 !#UN:P203/?v2368;          check if Estates I (script48.erm, Arstahd) is enabled
 !#UN:P36/?v2369;           check if Mithril (script36.erm, Anders) is enabled
 
@@ -464,6 +463,7 @@ ZVSE2
 
     !!FU(WOG_GetSkillInfoByClick):Pi^mouse_item^/-1/?(skill:y)/?(skillArea:y); [call skill click function (in: click number and hero number, out: skill (y-3), area (y-4) and slot (y-5))]
 
+
     !!if&(skill)=(SKILL_ESTATES)/v2363=1;
       !!UN:P203/?(isEstates:y);          check if Estates I (script48.erm, Arstahd) is enabled
       !!UN:P75/?(isShortDescr:y);           check if Short Skill descriptions (script75.erm, Hermann the Weird) is enabled
@@ -610,17 +610,15 @@ ZVSE2
 
   if Estates I also active
 !!VRv6:S5 *(skillLvl);                        check if 5, 10 or 15 gold
-!!VRy18:Sv6 *(heroLvl);                      set 5/10/15 gold per level (from Estates I)
-!!VR(goldBonus)&v2368=1:+y18;                   total if Estates I also active
+!!VR(heroLvlBonus:y):Sv6 *(heroLvl);                      set 5/10/15 gold per level (from Estates I)
+!!VR(goldBonus)&v2368=1:+(heroLvlBonus);                   total if Estates I also active
 !!VRz-4&v2368=0:S^)^;                  if Estates I inactive
 !!VRz-4&v2368=1:Sz164036;              if Estates I active
 
   finally display msgbox (incl z var, pics and button state from above)
 !!VR(maxRes:y):S(RES_GOLD) +v2369;                     init upper resource bound (Gold or Mithril if enabled)
-*!IF:V236/1;                           init flag 236
 !!VRv2:S(goldBonus);
 !!VRv3:S(baseBonus);
-*!IF:L^%v3^;
 !!IF:Q1/(pic)/(picSub)/(resource)/(resourceNum)/(msgType)/z164037; main display
 
 !!if&-1/(skillLvl)=3/(msgType)=(MSG_TYPE_QUESTION);
@@ -650,19 +648,14 @@ ZVSE2
         !!br;
       !!en;
     !!en;
-
   !!en;
 
-
   !!VRw47&-1:S8;            set w47=8 (cycling) if final resource also rejected
-
 !!en;
 
 !!FU:E;                           exit if no Estates present
 
 !!FU&y1=0:E;                           exit if no Estates present
-*!IF:M^%^;
- init w47
 
 lvl 10+ and cycling
 
@@ -693,7 +686,6 @@ lvl 10+ and cycling
 **   hero had one before battle began, even if it was destroyed in battle.
 **
 ** uses vars v2301..23
-** uses vars i^battle_hero_1^..99 (99/98 attacking/defending hero)
 ** ONLY ACTIVE if v2364=1 (wogify option 190)
 
 
@@ -710,7 +702,6 @@ lvl 10+ and cycling
   BEFORE BATTLE
 
 !?BA52&v2364=1;                         [start combat trigger for both sides (if script active)]
-*!BA:H0/?i^battle_hero_0^ H1/?i^battle_hero_1^;            store attacking/defending hero numbers
 !!VRv2301:C0/0/0/0/0/0/0/0/0/0/0;       [init v2301..11]
 !!VRv2312:C0/0/0/0/0/0/0/0/0/0/0/0;     [init v2312..23]
 !!HEi^battle_hero_0^:         Ed/?v2301/1 S(SKILL_FIRST_AID)/?v2304 A2/6/?v2305/d M37/?v2307 M38/?v2308 M39/?v2309;
@@ -810,9 +801,7 @@ lvl 10+ and cycling
 **   Three free Expert skills for just temporarily having one artifact equipped. WOW!
 **   And you can always give it to another hero or to a commander afterwards...
 **
-** uses vars (v248)
-** uses vars i^battle_hero_1^..99 (Tobyn universal vars, i^battle_hero_0^/i^battle_hero_1^ attacking/defending hero)
-** uses fcts FU(WOG_44_Msg_SkillView),2341
+** uses fcts FU2341
 ** uses strings z237..239 for skill names
 ** ONLY ACTIVE if v2365=1 (wogify option 193)
 
@@ -905,19 +894,25 @@ lvl 10+ and cycling
     !!VR(pics[i]):*3 +2 +(skillLvl);
   !!en;  
 
-!!VRv248:S0;                           init v248
-!!VRz-1&v2360>0:Sz164045;              msgbox text if short skill description (script75) active
-!!VRz-1&v2360=0:Sz164046;              if standard skill description (script75 inactive)
+!!VRv2:S0;                           init v2
 
-!!IF&(skillArea)>1:Q248/20/(pics[0])/20/(pics[1])/20/(pics[2])/(msgType)^%Z-1^;  msg each time Warfare skill text field (name or expertise) is clicked
-*!IF:L^%v1^;
-!!if&v248>0;
-!!VRi:Sv248 -1;
+!!UN:P75/?(wogOption:y);           check if Short Skill descriptions (script75.erm, Hermann the Weird) is enabled
+
+!!if&(wogOption);
+  !!VRz-1:Sz164045;              msgbox text if short skill description (script75) active
+!!el;
+  !!VRz-1:Sz164046;              if standard skill description (script75 inactive)
+!!en;
+
+!!IF&(skillArea)>1:Q2/20/(pics[0])/20/(pics[1])/20/(pics[2])/(msgType)^%Z-1^;  msg each time Warfare skill text field (name or expertise) is clicked
+
+!!if&v2>0;
+  !!VRi:Sv2 -1;
   !!VR(answer:y):S(pics[i]) -(skillLvl) - 2 :3;
   !!FU2341:P-1/(answer)/0;              determine and set Warfare expertise (highest of all three skills) on current hero (-1)
 !!en;
 
-!!UN:R3/-1;                            redraw hero screen
+!!SN:D;                            redraw hero screen
 
 
   GET WARFARE MAIN SKILL AND EXPERTISE
@@ -989,7 +984,6 @@ lvl 10+ and cycling
 !!FU2341:P-1/w48;            update Warfare skill levels and displayed skill
 
 !?BA52&v2365=1;            battle has started (trigger for both sides)
-*!BA:H0/?i^battle_hero_0^ H1/?i^battle_hero_1^;    store attacking/defending hero numbers
 !!IF:Wi^battle_hero_0^;                 set w var reference to attacking hero
 !!FU2341:Pi^battle_hero_0^/w48;         check attacking hero
 !!IF&i^battle_hero_1^>-1:Wi^battle_hero_1^;          set w var reference to defending hero (if any)
