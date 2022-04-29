@@ -1,39 +1,45 @@
 ZVSE2
 !#DC(GEM_DLG_TOWN_MENU) = 500;
+!#DC(GEM_DLG_FIRST_BTTN_ID) = 10;
+!#DC(GEM_DLG_LAST_BTTN_ID) = 21;
+
+!#DC(GEM_DLG_FIRST_TEXT_ID) = 30;
+!#DC(GEM_DLG_LAST_TEXT_ID) = 41;
+
+!#DC(GEM_DLG_SCROLL_HANDLER_ID) = 52;
+!#DC(GEM_DLG_SCROLL_BAR_BACK_ID) = 53;
+
+!#DC(GEM_DLG_FULL_PAGE_HEIGHT) = 300;
+!#DC(GEM_DLG_OPTION_V_DISTANCE) = 16;
 
   !#SN:M(M_AUTO_ID)/0/(M_INT)/(M_TEMP)/?i^gem_left_click_array^;
   !#SN:M(M_AUTO_ID)/0/(M_STR)/(M_TEMP)/?i^gem_hint_array^;
   !#SN:M(M_AUTO_ID)/0/(M_STR)/(M_TEMP)/?i^gem_right_click_array^;
 
 
-!?FU(OnKeyPressed_Town)&i^key^=(KEY_TILDE)/999/i^gem_total_elements_amount^>0;
+
+!?FU(OnKeyPressed_Town)&i^key^=(KEY_TILDE)/999;/i^gem_total_buttons_amount^>0;
   !!SN:F^GetButtonID^/^gem_town_menu^;
   !!if&v1>0;
     !!VR(soundPlay:z):S^button.wav^;
     !!SN:P(soundPlay);
-    !!FU(gem_townDl_show):P;
+    !!FU(gem_townDL_creating):P;
   !!en;
 
 
-!?FU(OnOpenTownScreen);
+!?FU(OnKeyPressed_Town)&x1=(KEY_Q);
+
+!!FU(gem_DlgReload):P^gem_town_menu^;
 
 
-!?FU(gem_townDl_show);
-  *!VRi^gem_TpwnScreenIsOpened^:S1;
+!?FU(OnTownMouseClick)&999/i^mouse_item^=i^gem_town_menu_Button_ID^;
 
-  !!FU(gem_townDL_creating):P;
-  !!FU(gem_townDL_text_creating):P;
-  !!FU(gem_DlgTown_ChangeCoords):P(GEM_DLG_TOWN_MENU)/1/2;
-  !!DL(GEM_DLG_TOWN_MENU):S1;
-
-!?FU(OnTownMouseClick)&999;
-  !!CM:S?(clickSub:y) I?(clickedPlace:y);
-
-  !!if&(clickSub)=(MOUSE_LMB_RELEASED)/(clickedPlace)=i^gem_town_menu_Button_ID^;
-    !!FU(gem_townDl_show):P;
+  !!if&i^dlg_action^=(MOUSE_LMB_RELEASED);
+    !!FU(gem_townDL_creating):P;
+    !!FU:E;
   !!en;
 
-  !!if&(clickSub)=(MOUSE_RMB_PRESSED)/(clickedPlace)=i^gem_town_menu_Button_ID^;
+  !!if&i^dlg_action^=(MOUSE_RMB_PRESSED);
     !!FU(gem_CheckGameLang):P;
     !!SN:T^%s(gem_t).menurmb^/?(rmbText:z);
     !!IF:M0/4/(rmbText);
@@ -41,23 +47,333 @@ ZVSE2
   !!en;
 
 !?FU(gem_townDL_creating);
-
-
-  !!VRi^gem_town_menu_current_page^:S1; *i^gem_town_menu_current_page^;
-  !!UN:C7505216/1/2;                    [; до инициализации диалога - убрать тень]
+  !!UN:C7505216/1/2;                    [; before dlg ini disable "shadow"]
   !!DL(GEM_DLG_TOWN_MENU):N^gem_town_menu^;
+  !!if&(TRUE);
 
-  !!FU(gem_OnOpenButtonDlg):P;
-  !!DL(GEM_DLG_TOWN_MENU):E21/0 A21/52/3000/1; E11/0;
-  !!FU(gem_town_menu_elements_displaying):Pi^gem_total_elements_amount^/i^gem_town_menu_current_page^;/s^buton1^;
-  *!IF:M^%i(gem_total_elements_amount)^;
-  !!if&i^gem_total_elements_amount^<=6;
-    !!DL(GEM_DLG_TOWN_MENU):E20/0 E21/0 A20/52/3000/0 A21/52/3000/0;
+    !!FU(gem_OnOpenButtonDlg):P;                       [call buttons info collections]
+    sm
+    !!FU(DL_FindById):P(GEM_DLG_TOWN_MENU)/?(dlgObj:y);
+    !!UN:C(dlgObj)/(UNC_INT)/?i^gem_town_dlgObject^;
+    !!FU(gem_DlgDefProc):P62/2/3/0/0/i^gem_town_dlgObject^;            [set "arrow up" bttn correct frames]
+    !!FU(gem_town_menu_elements_displaying):Pi^gem_town_dlgObject^/0;/s^buton1^;
+
+    
+    *!VRi^gem_town_height_of_last_page^:S0;
+
+
+ REWRITE LAST PAGE HEIGHT CALCULATION! 
+
+    !!SN:Mi^gem_left_click_array^/?(elementsAmount:y);
+    
+
+
+
+ REWRITE LAST PAGE HEIGHT CALCULATION! 
+
+    !!VR(lastPageHeight:y):S0;
+
+
+    !!re j/0/(elementsAmount)/1/-1;                                 [count total height]
+      !!VR(optionId:y):S(elementsAmount) -1 -j;
+
+      !!VR(lastPageHeight:y):+i^gem_button_%(optionId)_y^; +(GEM_DLG_OPTION_V_DISTANCE);
+
+      !!VR(space:y):S(GEM_DLG_FULL_PAGE_HEIGHT) -(lastPageHeight:y);
+
+      *!IF:L^%i(gem_town_height_of_last_page) %(space)^;
+
+      *!IF&(optionId)>20:L^ %(optionId) %(lastPageHeight) %(space) %i(gem_button_%(optionId)_y)^;
+
+      !!if&(space)>(GEM_DLG_OPTION_V_DISTANCE);
+        !!VR(lastPageHeight:y):+(GEM_DLG_OPTION_V_DISTANCE);
+      !!el&(space)>=0;
+        !!VRi^gem_button_max_option_id_to_be_first^:S(optionId);
+        !!br;
+      !!el;
+        !!VRi^gem_button_max_option_id_to_be_first^:S(optionId)+1;
+        !!br;
+      !!en;
+
+    !!en;
+
+
+    !!FU(gem_DlgItemSize):P(GEM_DLG_SCROLL_BAR_BACK_ID)/d/?(barBackHeight:y)/(FALSE)/i^gem_town_dlgObject^;
+    !!FU(gem_DlgItemSize):P(GEM_DLG_SCROLL_HANDLER_ID)/d/?(hndlHeight:y)/(FALSE)/i^gem_town_dlgObject^;
+    *!VRi^gem_town_height_of_last_page^:-(GEM_DLG_OPTION_V_DISTANCE);
+    !!VR(switchesNum:y):Si^gem_button_max_option_id_to_be_first^ +1;
+
+    !!VRi^gem_townDlg_BarRemainder^:S(barBackHeight) %(switchesNum);
+    !!VRi^gem_townDlg_BarStep^:S(barBackHeight) :(switchesNum);
+
+    *!IF:L^%i(gem_button_max_option_id_to_be_first)^;
+    !!FU(gem_DlgTown_ChangeCoords):P(GEM_DLG_TOWN_MENU)/1/2;
+    !!DL(GEM_DLG_TOWN_MENU):S1;
+    !!FU(gem_town_menuDlg_Dtor):P;
   !!en;
+  !!UN:C7505216/1/18;                 [;enable shadow]
+
+!?FU(gem_town_menuDlg_Dtor);
+  !!SN:Mi^gem_left_click_array^/?(elementsAmount:y);
+
+  !!re i/0/(elementsAmount)/1/-1;
+    !!VRi^gem_button_%i_function_arg1^:S(NULL);
+    !!VRi^gem_button_%i_function_arg2^:S(NULL);
+    !!VRi^gem_button_%i_function_arg3^:S(NULL);
+    !!VRi^gem_button_%i_x^:S(NULL);
+    !!VRi^gem_button_%i_y^:S(NULL);
+  !!en;
+  !!VRi^gem_button_is_scrollBar^:S0;
+  !!VRi^gem_button_last_opt_inList^:S0;
+  !!VRi^gem_button_1st_opt_inList^:S0;
+  
+  !!VRi^gem_town_dlgObject^:S0;
+  !!VRi^gem_button_max_option_id_to_be_first^:S0;
+
+    !!SN:Mi^gem_left_click_array^/0;    [очистить массив]
+    !!SN:Mi^gem_hint_array^/0;          [очистить массив]
+    !!SN:Mi^gem_right_click_array^/0;   [очистить массив]
+
+
+!?FU(gem_AddTownButton);
+  !#VA(defName:x) (x:x) (y:x) (optionName:x) (textHint:x) (rmbMessage:x) (executeFunctionID:x) (funcArg1:x) (funcArg2:x) (funcArg3:x);
+      !!SN:Mi^gem_left_click_array^/?i;
+      !!VRs^gem_button_%i_def^:S^%z(defName)^;
+      !!VRs^gem_button_%i_hint^:S^%z(textHint)^;
+      !!VRi^gem_button_%i_x^:S(x);
+      !!VRi^gem_button_%i_y^:S(y);
+      !!VRs^gem_button_%i_name^:S^%z(optionName)^;
+
+      !!VRi^gem_button_%i_function_arg1^:S(funcArg1);
+      !!VRi^gem_button_%i_function_arg2^:S(funcArg2);
+      !!VRi^gem_button_%i_function_arg3^:S(funcArg3);
+      !!FU(Array_Push):Pi^gem_left_click_array^/(executeFunctionID) Pi^gem_hint_array^/(textHint) Pi^gem_right_click_array^/(rmbMessage); [fill arrays]
+
+
+        AMOUNT ITEMS TO BE LISTED EG PAGES = gem_button_max_option_id_to_be_first +1 !
+
+!?FU(gem_town_menu_elements_displaying);
+  !#VA(dlg:x) (firstOptId:x);
+
+
+
+  !!re i/(GEM_DLG_FIRST_BTTN_ID)/(GEM_DLG_LAST_TEXT_ID);
+    !!FU(gem_DlgShowItem):Pi/(TRUE)/(TRUE)/(FALSE)/i^gem_town_dlgObject^;
+    !!if&i<(GEM_DLG_FIRST_TEXT_ID);
+      !!FU(gem_DlgItemSize):Pi/66/32/d/i^gem_town_dlgObject^;
+      !!FU(gem_DlgItemPosition):Pi/20/40/d/i^gem_town_dlgObject^;
+    !!el;
+      !!FU(gem_DlgItemSize):Pi/128/30/d/i^gem_town_dlgObject^;
+      !!FU(gem_DlgItemPosition):Pi/88/40/d/i^gem_town_dlgObject^;
+
+    !!en;
+    !!FU(gem_DlgShowItem):Pi/(FALSE)/(FALSE)/(FALSE)/i^gem_town_dlgObject^;
+  !!en;
+
+
+
+  !!SN:Mi^gem_left_click_array^/?(elementsAmount:y);
+  !!if&(elementsAmount)=(NULL);
+    !!FU(gem_CheckGameLang):P;
+    !!SN:T^%s(gem_t).emptyfield^/?(textBg:z);
+    !!DL(GEM_DLG_TOWN_MENU):A44/(DLG_CMD_SET_TEXT)/(textBg)/0;
+  !!en;
+
+  !!DL(GEM_DLG_TOWN_MENU):A44/(DLG_CMD_SET_TEXT)/(textBg)/0;
+
+  !!if&i^gem_button_max_option_id_to_be_first^=0;
+    !!VRi^gem_button_1st_opt_inList^:S0;
+
+  *!el&(firstOptId);
+
+    *!VRi^gem_button_1st_opt_inList^: +(firstOptId);
+    *!IF:M^%i(gem_button_1st_opt_inList)^;
+  !!en;
+
+
+
+  !!VRi^gem_button_1st_opt_inList^:F0/i^gem_button_max_option_id_to_be_first^;
+  !!VR(cCounter:y):S0;
+  !!VR(lastPageHeight:y):S0;
+  !!VR(yPos:y):S32;
+
+  !!re (optionId:y)/0/(elementsAmount)/1/-1;
+
+  *!re (optionId:y)/i^gem_button_1st_opt_inList^/(elementsAmount)/1/-1;
+
+    !!VR(bttnId:y):S(cCounter) +(GEM_DLG_FIRST_BTTN_ID); +i^gem_button_1st_opt_inList^;
+    !!VR(textId:y):S(cCounter) +(GEM_DLG_FIRST_TEXT_ID); +i^gem_button_1st_opt_inList^;
+
+      !!VR(lastPageHeight:y):+i^gem_button_%(optionId)_y^; +(GEM_DLG_OPTION_V_DISTANCE);
+      !!VR(space:y):S(GEM_DLG_FULL_PAGE_HEIGHT) -(lastPageHeight:y);
+      *!IF&i^gem_button_1st_opt_inList^>21:L^ %(optionId) %(lastPageHeight) %(space) %i(gem_button_%(optionId)_y)^;
+
+      !!if&(space)>(GEM_DLG_OPTION_V_DISTANCE);
+        !!VR(lastPageHeight:y):+(GEM_DLG_OPTION_V_DISTANCE);
+      !!el&(space)>=0;
+
+        !!VRi^gem_button_1st_opt_inList^:S(optionId);
+
+        *!VRi^gem_button_max_option_id_to_be_first^:S(optionId);
+        *!br;
+      !!el;
+        !!FU:E;
+      !!en;
+
+    !!FU(gem_DlgShowItem):P(bttnId)/(TRUE)/(TRUE)/0/i^gem_town_dlgObject^ P(textId)/(TRUE)/(TRUE)/0/i^gem_town_dlgObject^;
+    !!FU(gem_DlgItemSize):P(bttnId)/i^gem_button_%(optionId)_x^/i^gem_button_%(optionId)_y^/d/i^gem_town_dlgObject^;
+
+
+    !!VR(zVar:y):S(cCounter) +1;
+    !!FU(gem_DlgItemPosition):P(bttnId)/15/(yPos)/0/i^gem_town_dlgObject^;
+    !!VR(textX:y):Si^gem_button_%(optionId)_x^ +30;
+    !!FU(gem_DlgItemPosition):P(textId)/(textX)/(yPos)/0/i^gem_town_dlgObject^;
+
+    !!SN:Vi^gem_hint_array^/(optionId)/?z(zVar);
+    !!DL(GEM_DLG_TOWN_MENU):A(bttnId)/(DLG_CMD_SET_DEF)/s^gem_button_%(optionId)_def^/0 A(textId)/(DLG_CMD_SET_TEXT)/s^gem_button_%(optionId)_name^/0;
+    !!DL(GEM_DLG_TOWN_MENU):H(bttnId)/z(zVar) H(textId)/z(zVar);
+    !!VR(cCounter):+1;
+    !!VR(yPos:y):+i^gem_button_%(optionId)_y^ +(GEM_DLG_OPTION_V_DISTANCE);
+  !!en;
+
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(GEM_DLG_TOWN_MENU)/i^mouse_item^>=(GEM_DLG_SCROLL_HANDLER_ID)/i^mouse_item^<=(GEM_DLG_SCROLL_BAR_BACK_ID);
+  !!if&i^mouse_action^=(MOUSE_LMB_RELEASED);
+    !!VRi^gem_button_is_scrollBar^:S(FALSE);
+    !!FU:E;
+  !!en;
+
+  !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
+    !!FU(DL_Coords):P(GEM_DLG_TOWN_MENU)/d/?i^gem_button_is_scrollBar^;
+
+    !!if&i^mouse_item^=(GEM_DLG_SCROLL_BAR_BACK_ID);
+      !!VR(y:y):Si^Dlg_mouseY^ -i^gem_button_is_scrollBar^ F48/304;
+      !!FU(gem_townDL_move_bar):P(y);
+    !!en;
+    !!FU:E;
+  !!en;
+
+!?FU(Dlg_OnMouseMove)&i^gem_button_is_scrollBar^;                  [scroll bar shift]
+  !!VR(y:y):Si^Dlg_mouseY^ -i^gem_button_is_scrollBar^ F48/288;
+  !!FU(gem_townDL_move_bar):P(y);
+
+!?FU(gem_townDL_move_bar);
+  !#VA(mouseY:x);
+
+
+  *!FU(FunctionName):P;
+
+  !!VR(clickPos:y):S(mouseY) -48;
+  !!FU(gem_DlgItemPosition):P(GEM_DLG_SCROLL_HANDLER_ID)/d0/?(y:y);
+
+  !!VR(handlerCenterY:y):S(mouseY) -(y) F48/288;
+
+  vr
+
+  !!if&(handlerCenterY)=8;
+    !!VR(sign:y):S-1;
+  !!el&(handlerCenterY)<8;
+    !!VR(sign:y):S1;
+  !!el;
+    !!FU:E;
+  !!en;
+  !!FU(gem_TownDlg_SwitchScrollBar):P(sign);
+
+  *!IF:L^%(mouseY) %(y)^;
+
+  *!re (optIt:y)/0/i^gem_button_max_option_id_to_be_first^/1/1;
+    
+    *!VR(length:y):+i^gem_townDlg_BarStep^;
+    *!VR(length)&(optIt)<=i^gem_townDlg_BarRemainder^:+1;
+    *!if&(length)>(clickPos);
+      *!br;
+    *!en;
+  *!en;
+
+  *!if&i^gem_button_1st_opt_inList^<>(optIt);
+    *!VRi^gem_button_1st_opt_inList^:S(optIt);
+    *!FU(gem_town_menu_elements_displaying):Pi^gem_town_dlgObject^/(NULL);
+  *!en;
+    *!VR(mouseY): F48/288;
+    *!FU(gem_DlgItemPosition):P(GEM_DLG_SCROLL_HANDLER_ID)/d/(mouseY)/(TRUE);
+
+!?FU(gem_TownDlg_SwitchScrollBar);
+!#VA(sign:x);
+  !!VRi^gem_button_1st_opt_inList^:+(sign);
+  !!if&i^gem_button_1st_opt_inList^>=i^gem_townDlg_BarRemainder^;
+    !!VR(remainder:y):Si^gem_townDlg_BarRemainder^;
+  !!el;
+    !!VR(remainder:y):Si^gem_button_1st_opt_inList^;
+  !!en;
+
+  !!VR(newPos:y):Si^gem_townDlg_BarStep^ *i^gem_button_1st_opt_inList^  +(remainder) +48 F48/288;
+  !!FU(gem_DlgItemPosition):P(GEM_DLG_SCROLL_HANDLER_ID)/d/(newPos)/(TRUE);
+
+  !!FU(gem_town_menu_elements_displaying):P(NULL)/(sign);
+
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(GEM_DLG_TOWN_MENU)/i^dlg_action^=(DLG_ACTION_MOUSE_WHEEL)/i^gem_town_dlg_block_scroll^=(FALSE);
+  !!VR(sign:y):Si^mouse_action^ *-1;
+  !!FU(gem_TownDlg_SwitchScrollBar):P(sign);
+
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(GEM_DLG_TOWN_MENU)/i^mouse_item^>=60/i^mouse_item^<=62/i^mouse_action^=(MOUSE_LMB_RELEASED);
+  !!VR(sign:y):Si^mouse_item^ -61;
+  !!FU(gem_TownDlg_SwitchScrollBar):P(sign);
+
+  
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(GEM_DLG_TOWN_MENU)/i^mouse_item^>=(GEM_DLG_FIRST_BTTN_ID)/i^mouse_item^<=(GEM_DLG_LAST_TEXT_ID);
+  !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
+    !!VRi^gem_town_dlg_block_scroll^:S(TRUE);
+    !!FU:E;
+  !!en;
+
+  !!if&i^mouse_item^<=(GEM_DLG_LAST_BTTN_ID);
+    !!VR(optionId:y):Si^mouse_item^ -(GEM_DLG_FIRST_BTTN_ID) +i^gem_button_1st_opt_inList^;
+  !!el;
+    !!VR(optionId:y):Si^mouse_item^ -(GEM_DLG_FIRST_TEXT_ID) +i^gem_button_1st_opt_inList^;
+  !!en;
+
+  !!SN:Mi^gem_left_click_array^/(optionId)/?(functionId:y);
+  !!if&(functionId)<>(FALSE);
+    !!if&i^mouse_action^=(MOUSE_LMB_RELEASED);
+      !!VRi^gem_town_dlg_block_scroll^:S(FALSE);
+      !!if&999;
+
+        !!SN:Vi^gem_left_click_array^/(optionId)/?(functionId:y);
+
+        !!if|i^gem_button_%(optionId)_function_arg1^<>(FALSE)/i^gem_button_%(optionId)_function_arg2^<>(FALSE)/i^gem_button_%(optionId)_function_arg3^<>(FALSE);
+          !!VR(arg1:y):Si^gem_button_%(optionId)_function_arg1^;
+          !!VR(arg2:y):Si^gem_button_%(optionId)_function_arg2^;
+          !!VR(arg3:y):Si^gem_button_%(optionId)_function_arg3^;
+          !!VR(rightFunctionPart:z):S^%(arg1)/%(arg2)/%(arg3)^;
+        !!el;
+          !!VR(rightFunctionPart:z):S^^;
+        !!en;
+
+        !!VR(executeFunctionID:z):S^FU%(functionId):P%(rightFunctionPart);^;
+        !!SN:F^ExecErmCmd^/(executeFunctionID);
+      !!en;
+
+      *!FU(gem_town_menuDlg_Dtor):P;
+      !!DL:C1;
+
+      !!FU:E;
+    !!en;
+
+    !!if&i^mouse_action^=(MOUSE_RMB_PRESSED);
+      !!SN:Vi^gem_right_click_array^/(optionId)/?(rmbMessage:z);
+      !!IF:M0/4/(rmbMessage);
+    !!en;
+  !!en;
+
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(GEM_DLG_TOWN_MENU);
+!!if&i^mouse_item^=30722/i^mouse_action^=(MOUSE_LMB_RELEASED)|i^dlg_action^=(DLG_ACTION_OUTDLG_CLICK);
+    *!FU(gem_town_menuDlg_Dtor):P;
+    !!DL:C1;
+!!en;
+
+
 
 !?FU(gem_DlgTown_ChangeCoords);
   !#VA(dlgId:x) (x:x) (y:x);
-  *#VA(localInt[5]:y);
   ; x1 - WoG dialog id
   ; x2 - coord X (-1 center)
   ; x3 - coord Y (-1 center)
@@ -73,138 +389,4 @@ ZVSE2
     !!UN:C(strDlg)/24/(UNC_UINT32)/(xCoordinateShift);
     !!UN:C(strDlg)/28/(UNC_UINT32)/(yCoordinateShift); 
   !!en;
-
-!?FU(gem_town_menu_elements_displaying);
-  !#VA(elementsAmount:x) (currentPage:x);
-  !!VR(firstButton:y):S(currentPage)*6 -6;
-  !!VR(lastButton:y):S(currentPage)*6 -1;
-  !!VR(maxPage:y):S0;
-  !!if&(elementsAmount)=(FALSE);
-    !!FU(gem_CheckGameLang):P;
-    !!SN:T^%s(gem_t).emptyfield^/?(textBg:z);
-    !!DL(GEM_DLG_TOWN_MENU):A12/3/(textBg)/1;
-  !!en;
-
-  !!re i/0/11;
-
-    !!if&i>=(firstButton)/i<=(lastButton)/(elementsAmount)>0;
-      !!DL(GEM_DLG_TOWN_MENU):Ei/1;
-      !!VR(temp1:y):Si +1 %3;
-      !!DL(GEM_DLG_TOWN_MENU)&(temp1)=1:Ai/52/12/1;
-      !!DL(GEM_DLG_TOWN_MENU)&(temp1)=2:Ai/52/86/1; 
-      !!DL(GEM_DLG_TOWN_MENU)&(temp1)=0:Ai/52/156/1;
-      !!VR(counter:y):Si +1;
-      *!VR(counter:y)&i>5:Si;
-      !!SN:Vi^gem_hint_array^/i/?z(counter);
-      !!VR(text:z):Sz(counter);
-
-      !!DL(GEM_DLG_TOWN_MENU):Ai/9/s^gem_button_%i_def^/0;
-      !!DL(GEM_DLG_TOWN_MENU):Hi/z(counter);   
-      !!VR(elementsAmount):-1;
-        *!IF:M^%z1 ^;
-
-    !!el;
-      !!DL(GEM_DLG_TOWN_MENU):Ai/9/^gem_trans.def^/1; Hi/zy4;   
-      !!DL(GEM_DLG_TOWN_MENU):Ei/0; Ai/52/3000/1;
-    !!en;
-
-    !!VR(temp:y)&(elementsAmount)>0:Si %6;
-    !!VR(maxPage)&(temp)=0/(elementsAmount)>0:+1;
-  !!en;
-  !!SN:Mi^gem_hint_array^/?(size:y);
-  !!if&(size);
-  *!IF:M^%(size)^;
-    !!SN:Vi^gem_hint_array^/0/?z1;
-    !!DL(GEM_DLG_TOWN_MENU):H0/z1;
-  !!en;
-
-
-  !!DL(GEM_DLG_TOWN_MENU)&(currentPage)=1:E20/1 E21/0 A20/52/189/1 A21/52/3000/1;
-  !!DL(GEM_DLG_TOWN_MENU)&(currentPage)>1/(currentPage)<>(maxPage):E20/1 A20/52/189/1 E21/1 A21/52/12/1;
-  !!DL(GEM_DLG_TOWN_MENU)&(currentPage)=(maxPage):E20/0 A20/52/3000/0 E21/1 A21/52/12/1;
-
-
-
-!?FU(gem_AddTownButton);
-  !#VA(defName:x) (textHint:x) (rmbMessage:x) (executeFunctionID:x) (funcArg1:x) (funcArg2:x) (funcArg3:x);
-  !!re i/0/11;
-    !!if&i^gem_button_%i_busy^=(FALSE);
-      !!SN:Mi^gem_left_click_array^/d1; увеличить размер массива на 1
-      !!SN:Mi^gem_hint_array^/d1; увеличить размер массива на 1
-      !!SN:Mi^gem_right_click_array^/d1; увеличить размер массива на 1
-      !!SN:Vi^gem_left_click_array^/i/(executeFunctionID);
-
-      !!SN:Vi^gem_hint_array^/i/^%z(textHint)^;
-      !!SN:Vi^gem_right_click_array^/i/^%z(rmbMessage)^;
-      !!VRs^gem_button_%i_def^:S^%z(defName)^;
-      !!VRs^gem_button_%i_hint^:S^%z(textHint)^;
-      !!VRi^gem_button_%i_function_arg1^:S(funcArg1);
-      !!VRi^gem_button_%i_function_arg2^:S(funcArg2);
-      !!VRi^gem_button_%i_function_arg3^:S(funcArg3);
-      !!VRi^gem_button_%i_busy^:S(TRUE);
-      !!VRi^gem_total_elements_amount^:+1;
-      !!br;
-    !!en;
-  !!en;
-
-!?DL&v998=(GEM_DLG_TOWN_MENU)/v999>=0/v999<=11;
-  !!if&i^gem_button_%v999_busy^<>(FALSE);
-    !!if&v1000=(MOUSE_LMB_RELEASED);
-      !!OW:C?(currentPlayer:y)/?(clickedPlayer:y);
-      !!if&(clickedPlayer)=(currentPlayer);
-        !!SN:Vi^gem_left_click_array^/v999/?(functionId:y);
-
-        !!if|i^gem_button_%v999_function_arg1^<>(FALSE)/i^gem_button_%v999_function_arg2^<>(FALSE)/i^gem_button_%v999_function_arg3^<>(FALSE);
-          !!VR(arg1:y):Si^gem_button_%v999_function_arg1^;
-          !!VR(arg2:y):Si^gem_button_%v999_function_arg2^;
-          !!VR(arg3:y):Si^gem_button_%v999_function_arg3^;
-          !!VR(rightFunctionPart:z):S^%(arg1)/%(arg2)/%(arg3)^;
-        !!el;
-          !!VR(rightFunctionPart:z):S^^;
-        !!en;
-
-        !!VR(executeFunctionID:z):S^FU%(functionId):P%(rightFunctionPart);^;
-        !!SN:F^ExecErmCmd^/(executeFunctionID);
-      !!en; 
-      !!FU(gem_town_menu_close_dlg):P;
-    !!en;
-
-    !!if&v1000=(MOUSE_RMB_PRESSED);
-      !!SN:Vi^gem_right_click_array^/v999/?(rmbMessage:z);
-      !!IF:M0/4/(rmbMessage);
-    !!en;
-  !!en;
-
-!?DL&v998=(GEM_DLG_TOWN_MENU)/v999=30722/v1000=13;
-!!FU(gem_town_menu_close_dlg):P;
-
-!?DL&v998=(GEM_DLG_TOWN_MENU)/i^dlg_action^=(DLG_ACTION_OUTDLG_CLICK);
-  !!FU(gem_town_menu_close_dlg):P;
-
-!?FU(gem_town_menu_close_dlg);
-
-
-  !!re i/0/i^gem_total_elements_amount^;
-      !!VRi^gem_button_%i_function_arg1^:S(NULL);
-      !!VRi^gem_button_%i_function_arg2^:S(NULL);
-      !!VRi^gem_button_%i_function_arg3^:S(NULL);
-    !!VRi^gem_button_%i_busy^:S(FALSE);
-  !!en;
-  !!VRi^gem_total_elements_amount^:S0;
-
-    !!SN:Mi^gem_left_click_array^/0;    [очистить массив]
-    !!SN:Mi^gem_hint_array^/0;          [очистить массив]
-    !!SN:Mi^gem_right_click_array^/0;   [очистить массив]
-
-    !!DL:C1;
-    !!UN:C7505216/1/18;                 [; после закрытия диалога - вернуть параметр тени на место]
-...
-
-!?DL&v998=(GEM_DLG_TOWN_MENU)/v999>=20/v999<=21/v1000=13;
-  !!if&v999=20;
-    !!VRi^gem_town_menu_current_page^:+1;
-  !!el;
-    !!VRi^gem_town_menu_current_page^:-1;
-  !!en;
-
-  !!FU(gem_town_menu_elements_displaying):Pi^gem_total_elements_amount^/i^gem_town_menu_current_page^;
+  

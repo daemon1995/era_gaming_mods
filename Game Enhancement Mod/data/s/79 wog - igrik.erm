@@ -19,25 +19,7 @@ SN:W ?? ?????, ????????????? ????????? key functions
 *!IF&i^mouse_action^=(MOUSE_LMB_PRESSED):M^%i(mouse_item)^;
 
 
-*?FU(OnKeyPressed)&x1=(KEY_Q);
 
-  *!SN:L^EraPlugins\erm_hooker.era^/?y1;
-
-  *!if&y1<>0;
-    *!SN:Ay1/^SetHook^/?y2;
-    *!SN:Ey2/1/5893984/(gem_OnCast);                            [нажатие клавиши на  ѕ]
-    *!SN:Ey2/1/4679396/(gem_OnGetResist);                            [нажатие клавиши на  ѕ]
-4679396
-  *!en;
-!?FU(gem_OnGetResist);
-*!IF:L^%^;
-!?FU(gem_OnCast);
-*!IF:L^%x1^;
-*!re i/0/40/2;
-  *!UN:Cx1/28/4/?y1;
-*!IF:L^%y1 %i^;
-
-*!en;
 
 
 
@@ -223,22 +205,7 @@ SN:W ?? ?????, ????????????? ????????? key functions
 
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
-** script removes all WoG abilities gained by troops from their experience - excluding stats (by igrik)
-!?FU(OnAfterErmInstructions);
-  *!FU(WogScriptsModCheck):P; *!FU&-1:E;
-  *!UN:P890/?y1 P742/?y2;
-  *!FU&y1<>1|y2=1:E;
-  *!UN:J11/1;
 
-  *!re i/0/6;
-    *!HE-1:C0/i/d/d/10/12;
-  *!en;
-  *!UN:C5093986/4/?y3; [y3 ??? ???? ???]
-  *!re i/0/(MON_LAST_WOG);
-    *!re f/6/19;
-      *!EAi:Bf/0/////////////;
-    *!en;
-  *!en;
   ; --------------------------------------------------------------------------------------------------
 **Magogs Fireball-Attack doesnt damage own troops (by PerryR)
 !?MF1;
@@ -296,21 +263,15 @@ SN:W ?? ?????, ????????????? ????????? key functions
 Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
 !?FU(OnSetupBattlefield)&1000/i^battle_isQuick^=(FALSE); 
-  *!BA:Q?f; *!FU&f=1:E;
-  *!BA:H0/?y1;                            [Attacking Hero]
-  *!BA:H1/?y2;                            [Defending Hero]
+
   !!FU(Set_Morale_and_Luck):Pi^battle_hero_0^/i^battle_hero_1^/0;
 
   !?FU(OnCombatRound)&1000/i^battle_isQuick^=(FALSE);                                                       
-  *!BA:Q?f; *!FU&f=1:E;
-  *!BA:H0/?y1;                            [Attacking Hero]
-  *!BA:H1/?y2;                            [Defending Hero]
+
   !!FU(Set_Morale_and_Luck):Pi^battle_hero_0^/i^battle_hero_1^/1;
 
   !?FU(OnAfterBattleAction)&1000/i^battle_isQuick^=(FALSE);
-  *!BA:Q?f; *!FU&f=1:E;
-  *!BA:H0/?y1;                            [Attacking Hero]
-  *!BA:H1/?y2;                            [Defending Hero]
+
   !!FU(Set_Morale_and_Luck):Pi^battle_hero_0^/i^battle_hero_1^/1;
 
   !?FU(Set_Morale_and_Luck); 
@@ -410,30 +371,98 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
 ** script that displays the distance to the end of the route is triggered by Alt/Alt + RMB on the map:
-!?CM0&1000;
-  !!UN:C(WND_MANAGER)/(UNC_INT)/?(advManager:y);
-  !!SN:E5039840/(CALLCONV_THISCALL)/(advManager);
-  !!VR(clickedPlayer:y):Sv1;
-  !!OW:A(clickedPlayer)/?(hero:y);
-  !!CM:I?(location:y) F?(flag:y) S?(subtype:y);
+!?CM0&i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^key_leftAlt^;
 
+  !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer)/?(heroId:y);
+
+  !!if&(heroId)<>(NO_HERO);
+    !!CM:R0;
+
+    !!FU(gem_MovePointsLeft):Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/(heroId)/?(pathLenght:y)/?(heroMp:y);;
+    !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-1/^hero_name^/z3;/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
+    !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
+    !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  
+    !!IF:M0/4/^%z-1^;
+
+  !!en;
+!?FU(OnAdvMapTileHint)&999;
+  !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+  !#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+  !#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
   !!FU(GetKeyModsState):P;
-  !!FU&i^key_leftAlt^=(FALSE):E;
+  !!if&i^key_leftAlt^=0;
+    !!if|(objType)=(OBJ_HERO)/(objType)=(OBJ_FIRST);
 
-  !!VR(conditions:y):S(FALSE);
-  !!VR(conditions)&(hero)>=0/(hero)<=155/(location)=37/(flag)=512/(subtype)=14:S(TRUE);
-  !!FU&(conditions)<>(TRUE):E;
+      !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
+        !!re i/0/7;
+          !!OW:O(clickedPlayer)/i/?(heroInTable:y);
+          !!co&(heroInTable)<(HERO_FIRST);
 
-  !!CM:R0;
+          !!HE(heroInTable):P?(x)/?(y)/?(z);
 
-  !!CM:P?(x:y)/?(y:y)/?(z:y);
+          !!if&(x)=(tileX)/(y)=(tileY)/(z)=(tileZ);
+            !!HE(x)/(y)/(z):G?(heroMovePoints:y) W?(heroMovePointsLesft:y)/1 O?(heroOwner:y);
+            !!br;
+          !!en;
+        !!en;
+          !!FU&i>7:E;
+          !!MM:M?(currHint:z);
 
-  !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(hero)/?(pathLenght:y)/?(heroMp:y);;
-      !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-1/^hero_name^/z3;/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
-      !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
-      !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3rmb^/?z-1/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  
-  !!IF:M0/4/^%z-1^;
+          !!FU(gem_CheckGameLang):P;
+          !!SN:T^%s(gem_m).mp_left^/?(newHint:z);
+          !!MM:M^%(currHint)  {%(newHint)} %(heroMovePointsLesft) / %(heroMovePoints){)}^;
 
+    !!FU:E;
+    !!en;
+  !!el;
+
+    !!if&(objType)<=(OBJ_WITCH_HUT)|(objType)=(OBJ_FREELANCERS_GUILD)/(objType)=(OBJ_QUEST_GUARD)/(objType)=(OBJ_TRADING_POST_2);
+      !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
+      !!OW:A(clickedPlayer)/?(activeHero:y);
+
+      !!if&(activeHero)>(NO_HERO)/(activeHero)<=(HERO_LAST_WOG);
+
+        !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(activeHero)/?(pathLenght:y)/?(heroMp:y)/?(isMemoryIssue:y);
+        !!FU&(isMemoryIssue)=1:E;
+        !!FU(gem_CheckGameLang):P;
+        !!MM:M?(orHint:z);
+        !!VRs^gem_OriginalTileHint^&s^gem_OriginalTileHint^=^^:S(orHint:z);
+        !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
+        !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
+        !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  ;
+        !!MM:M^%z-6^;
+      !!en;
+    !!en;
+  !!en;
+
+
+!?FU(OnKeyPressed_AdvMap)&i^key^=(KEY_ALT)/999;
+
+  !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer)/?(activeHero:y);
+
+  !!if&(activeHero)>(NO_HERO)/(activeHero)<=(HERO_LAST_WOG);
+    !!UN:C(ADV_MANAGER)/(UNC_INT)/?(advMgr:y);
+    !!UN:C(advMgr)/232/1/?(x:y) C(advMgr)/234/1/?(y:y) C(advMgr)/235/1/?(z:y);
+    !!VR(z):F(FALSE)/(TRUE);
+    !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(activeHero)/?(pathLenght:y)/?(heroMp:y)/?(isMemoryIssue:y);
+    !!if&(isMemoryIssue)<>(TRUE);
+      !!FU(gem_CheckGameLang):P;
+      !!MM:M?(orHint:z);
+      !!if&(orHint);
+        !!VRs^gem_OriginalTileHint^:S(orHint:z);
+      !!en;
+      !!VRi^gem_OriginalTileHint^:S(TRUE);
+
+      !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
+      !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
+      !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  ;
+      !!FU(AdvMap_SetHint):Pz-6;
+    !!en;
+
+  !!en;
+!?FU(OnKeyReleased_AdvMap)&i^gem_OriginalTileHint^;
+  !!FU(AdvMap_SetHint):Ps^gem_OriginalTileHint^;
+  !!SN:W^gem_OriginalTileHint^;
 !?FU(GetRealObjectOnMap);
 ; x1/x2/x3 - ????? ???? ? ???; ?x4/?x5 - ????????: ????? ????
   !!VRx4:S-1;  !!VRx5:S-1;
@@ -483,7 +512,6 @@ fill refugees by mons
 
   !!FU(arena_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
 
-
 //  script set correct hint for artifacts - by @Archer30;
 !?FU(OnAfterErmInstructions);
   !!re i/(ART_FIRST)/(ART_LAST_WOG);
@@ -503,124 +531,27 @@ fill refugees by mons
   !!en;
 
 
-*?FU(OnAdvMapTileHint)&1000;
-  *#VA(x:x) (y:x) (z:x);             Object entrance coordinates
-  *#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
-  *#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
-*?FU(OnKeyPressed_AdvMap)&x3=0;
- *#VA(key:x) (preventDefault:x) (isDown:x);
- *!VR(isDown):S1;
-*!IF:L^%x1 %x2 %x3^;
-*!FU(GetKeyModsState):P;
-*!if&i^key_leftAlt^=1;
-  *!IF:L^22%^;
-*!en;
-*!FU(GetKeyModsState):P;
 
-
-
-*!if&i^key_leftAlt^=1;
-;
-*!FU(AdvMap_SetHint)&i^gem_1^=(FALSE):P^1213^;
-*!VRi^gem_1^:S(TRUE);
-*!el;
-*!IF:M^%^;
-*!FU(AdvMap_SetHint):P^1213^;
-*!VRi^gem_1^:S(FALSE);
-*!VRi^gem_1^:S(FALSE);
-*!IF:L^33^;
-*!en;
-
-*?CM0;
-*?FU();
-*?FU(AdvMap_SetHint);
-  ; Immediately shows adventure map hint with new text. Chat box text may become hidden until new character input.
-  *#VA(newHint:x); New hint string.
-  *?FU87007&x1=56;                              [???????????]
-*!IF:L^%1^;*!FU(GetKeyModsState):P;
-
-
-*?FU(OnKeyPressed_AdvMap)&i^key^=(KEY_ALT)/i^key_down^=(TRUE); [We don't need no hint :)]   
-*!FU(AdvMap_SetHint):P^Move your mouse^;
-
-!?FU(OnAdvMapTileHint)&999;
-  !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
-  !#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
-  !#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
-  *!IF:L^%x1 %x2 %x3 %x4 %x5 %x6 %x7 %x8^;
-  !!FU(GetKeyModsState):P;
-  !!if&i^key_leftAlt^=0;
-*!IF:L^%(objType)^;
-    !!if|(objType)=(OBJ_HERO)/(objType)=(OBJ_FIRST);
-
-      !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
-
-        !!re i/0/7;
-          !!OW:O(clickedPlayer)/i/?(heroInTable:y);
-          !!co&(heroInTable)<(HERO_FIRST);
-
-          !!HE(heroInTable):P?(x)/?(y)/?(z);
-
-          !!if&(x)=(tileX)/(y)=(tileY)/(z)=(tileZ);
-            !!HE(x)/(y)/(z):G?(heroMovePoints:y) W?(heroMovePointsLesft:y)/1 O?(heroOwner:y);
-            !!br;
-          !!en;
-        !!en;
-
-          !!FU&i>7:E;
-          !!MM:M?(currHint:z);
-
-          !!FU(gem_CheckGameLang):P;
-          !!SN:T^%s(gem_m).mp_left^/?(newHint:z);
-          !!MM:M^%(currHint)  {%(newHint)} %(heroMovePointsLesft) / %(heroMovePoints){)}^;
-
-    !!FU:E;
-    !!en;
-  !!el;
-
-    !!if&(objType)<=(OBJ_WITCH_HUT)|(objType)=(OBJ_FREELANCERS_GUILD)/(objType)=(OBJ_QUEST_GUARD)/(objType)=(OBJ_TRADING_POST_2);
-      !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
-      !!OW:A(clickedPlayer)/?(activeHero:y);
-
-      !!if&(activeHero)>(NO_HERO)/(activeHero)<=(HERO_LAST_WOG);
-        *!HE(x)/(y)/(z):N?(isActive:y);
-        *!FU&(isActive)=(activeHero):E;
-        !!FU(gem_MovePointsLeft):P(x)/(y)/(z)/(activeHero)/?(pathLenght:y)/?(heroMp:y)/?(isMemoryIssue:y);
-        !!FU&(isMemoryIssue)=1:E;
-        !!FU(gem_CheckGameLang):P;
-        !!SN&(pathLenght)<1:T^%s(gem_m).route_1^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);
-        !!SN&(pathLenght)>=1/(heroMp)<0:T^%s(gem_m).route_2^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);/^days_requires^/i^way_days^;
-        !!SN&(pathLenght)>=1/(heroMp)>=0:T^%s(gem_m).route_3^/?z-6/^hero_name^/z3/^path_lenght^/(pathLenght)/^hero_movepoints^/(heroMp);  ;
-        !!MM:M^%z-6^;
-      !!en;
-    !!en;
-  !!en;
 
 !?FU(gem_MovePointsLeft);
-*!OW:A-1/?y1;
-  !!HEx4:W?y11/1 B0/?z3;
-  !!UN:X?y4/?y5;                          [??? ???]
-  *!IF:L^%y4 / %y5^;
-  !!VRy9:Sy4 *30 *y4 *2 *x3;*y3;              [???? ??????
-  *!IF:L^%y9^;
-  !!VRy4: *x2 +x1;*y2 +y1;
-  !!VRy4: *30;                            [???? ? ????????]
-  !!UN:C6918868/4/?y6;                    [6992D4]
-  !!VRy6:+36;
-  !!UN:Cy6/4/?y7;                         [????????]
-  *!IF:L^%y6 / %y7^;
-  !!if&y7=0;
+  !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+  !#VA(heroId:x) (path:x) (mPoints:x);
+  !!HE(heroId):W?(heroMp:y)/1 B0/?z3;
+  !!UN:X?(mapSize:y)/?(isDung:y);                      
+  !!VR(tile:y):S(mapSize) *30 *(mapSize) *2 *(z);
+  !!VR(mapSize): *(y) +(x);
+  !!VR(mapSize): *30;                            [???? ? ????????]
+  !!UN:C6918868/4/?(tileStruct:y);                    [6992D4]
+  !!VR(tileStruct:y):+36;
+  !!UN:C(tileStruct:y)/4/?(mapAddr:y);                         [????????]
+  !!if&(mapAddr:y)=0;
     !!VRx7:S1;
     !!FU:E;
   !!en;
-  !!VRy9:+y4 +y7 +24;
-  *!IF:L^%y9^;
-
-  *!IF:M^%y9^;
-  !!UN:Cy9/2/?y8;
-  !!VRy10:Sy11-y8;
-  !!VRx5:Sy8;
-  !!VRx6:Sy10;
+  !!VR(tile):+(mapSize) +(mapAddr:y) +24;
+  !!UN:C(tile)/2/?(pathLength:y);
+  !!VR(mPoints):S(heroMp:y)-(pathLength:y);
+  !!VR(path):S(pathLength:y);
 
 
 *set AB and dragon vial Blood been able to be generated on the map;
