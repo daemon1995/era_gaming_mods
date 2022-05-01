@@ -473,6 +473,7 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
 
 
   !!en;
+
 !?FU(OnKeyReleased_AdvMap)&i^key^=(KEY_ALT)/999/i^gem_OriginalTileHint^;
   !!FU(AdvMap_SetHint):Ps^gem_OriginalTileHint^;
   !!SN:W^gem_OriginalTileHint^;
@@ -766,7 +767,6 @@ fill refugees by mons
     !!CM:R0;
     !!IF:M0/4/^%Z-1^;
   !!en;
-!!FU(EquipArtToSlot):P(HERO_VALESKA)/(ART_SPYGLASS)/(NO_ART_MOD)/(ART_SLOT_MISC_1)/?(result:y);
 ;-------------------------------------------------------------------------------
 witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !?FU(OnAfterErmInstructions);
@@ -882,20 +882,31 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 *                 [TOWN SCRREN SCRIPTS  - scripts for towns]
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
-!?FU(OnKeyPressed_Town)&x1=(KEY_A);/i^key_down^;
 
-!!if&i^gem_InTownKey_A_Pressed^;
-  
-!!el;
-  !!VRi^gem_InTownKey_A_Pressed^:S(TRUE);
+!?FU(OnKeyPressed_Town)&x1=(KEY_A);/i^key_down^;
 
   !!SN:F^PluginExists^/^fast upgrade stacks in town^;
   !!FU&v1<>(TRUE):E;
-  !!CM:I?(itemID:y);
-  !!FU(gem_CheckUpgradeCostInTown)&(itemID)<>148:P(itemID);
-!!en;
-!?FU(OnTownMouseHint)&i^gem_InTownKey_A_Pressed^/i^key_down^=(FALSE);
+  !!CM:I?(itemId:y);
+
+  !!if&(itemId:y)<>148/(itemId:y)<>i^gem_InTownKey_A_Pressed^;
+    !!VRi^gem_InTownKey_A_Pressed^:S(itemId);
+    !!FU(gem_CheckUpgradeCostInTown):P(itemId:y);
+  !!en;
+
+!?FU(OnKeyReleased_Town)&x1=(KEY_A)/i^gem_InTownKey_A_Pressed^;
+
+  !!FU(H3Dlg_GetCurrentDlg):P?(currDlg:y);
+  !!FU(H3Dlg_SendCmdToItem):P(currDlg)/7001/(DLG_CMD_SET_TEXT)/^^/(DLG_CMD_TYPE_DEFAULT);
+  !!SN:D;s
   !!VRi^gem_InTownKey_A_Pressed^:S(FALSE);
+
+!?FU(OnTownMouseHint)&i^gem_InTownKey_A_Pressed^;/i^key_down^;
+  
+
+  !!ifi^gem_InTownKey_A_Pressed^<>148;
+    !!FU(gem_CheckUpgradeCostInTown):Pi^gem_InTownKey_A_Pressed^;
+  !!en;
 
 
 !?FU(gem_CheckUpgradeCostInTown);
@@ -927,13 +938,11 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
     !!FU:E;
   !!en;
 
-  !!VRi^gem_InTownCreatureClick^:S0;
-
 
 !?FU(OnOpenTownScreen);
-!!VRi^gem_TownScreenIsOpen^:S(TRUE);
+  !!VRi^gem_TownScreenIsOpen^:S(TRUE);
 !?FU(OnCloseTownScreen);
-!!VRi^gem_TownScreenIsOpen^:S(FALSE);
+  !!VRi^gem_TownScreenIsOpen^:S(FALSE);
 
 !?FU(OnDetermineMonInfoDlgUpgrade);
 !#VA(monType:x) (upgType:x) (town:x) (hero:x);
@@ -944,22 +953,18 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !?FU(gem_OnOpenCreatureScreenByLeftMouse)&i^gem_MonCanBeUpgraded^/i^gem_TownScreenIsOpen^;
   !!VRi^gem_MonCanBeUpgraded^:S(FALSE);
 
-  !!SN:X?(monStructure:y)/1;[edi]
-  !!UN:C(monStructure)/0/4/?(monType:y);
-  !!UN:C(monStructure)/76/4/?(monAmount:y); get mon num
+  !!UN:Cx1/0/4/?(monType:y);
+  !!UN:Cx1/76/4/?(monAmount:y); get mon num
   !!FU(gem_DisplayUpgradeCostInTown):P(monType)/(monAmount);/(clickPlace);
 
 !?FU(gem_OnOpenCreatureScreenByRightMouse)&i^gem_TownScreenIsOpen^;
-  !!SN:X?(monStructure:y)/1;[edi]
-  !!UN:C(monStructure)/0/4/?(monType:y);
-  !!UN:C(monStructure)/76/4/?(monAmount:y); get mon num
+  !!UN:Cx1/0/4/?(monType:y);
+  !!UN:Cx1/76/4/?(monAmount:y); get mon num
   !!FU(gem_DisplayUpgradeCostInTown):P(monType)/(monAmount);/(clickPlace
 
 !?FU(gem_DisplayUpgradeCostInTown);
 !#VA(monType:x) (monAmount:x) (clickPlace:x);
-  *!if|i^gem_InTownCreatureClick^=(clickPlace)/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^gem_InTownKey_A_Pressed^;
-    *!FU&i^mouse_action^=(MOUSE_LMB_PRESSED):E;
-    *!FU&i^mouse_action^=(MOUSE_LMB_RELEASED):E;
+
     !!SN:E7662803/1/(monType);
     !!VR(upgMonType:y):Sv1;
 
@@ -1001,13 +1006,6 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
       !!FU(H3Dlg_SendCmdToItem):P(currDlg)/7001/(DLG_CMD_SET_TEXT)/^^/(DLG_CMD_TYPE_DEFAULT);
     !!en;
 
-    *!VRi^gem_InTownCreatureClick^&i^mouse_action^=(MOUSE_LMB_PRESSED):S(NULL);
-
-  *!en;
-
-  *!if|i^gem_InTownCreatureClick^<>(clickPlace)/i^gem_InTownCreatureClick^=0;
-    *!VRi^gem_InTownCreatureClick^&i^mouse_action^=(MOUSE_LMB_PRESSED):S(clickPlace);
-  *!en;
 
 
 ; Archer30's hacks
