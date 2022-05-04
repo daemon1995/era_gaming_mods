@@ -1,4 +1,4 @@
-# era_gaming_mods
+# Era Gaming Mods
 Mods of Era Gaming Build
 
 ## Links
