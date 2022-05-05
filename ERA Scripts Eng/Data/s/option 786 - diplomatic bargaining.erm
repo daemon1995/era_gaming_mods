@@ -1,6 +1,6 @@
 ZVSE2
 ** Author orig.  : Algor
-** Updated by    : Archer30
+** Rewritten by  : daemon_n and Archer30
 ** Name          : Diplomatic bargaining
 ** Name rus.     : Дипломатические торги
 ** Options       : 786
@@ -37,13 +37,10 @@ ZVSE2
 !!SN:H^secskill^/(SKILL_DIPLOMACY)/(SKILL_EXPERT)/^{%T(es.expert)%(name)}%(desc3)^;
 
 ; Set up new art descriptions
-
 !!re i/(ART_STATESMANS_MEDAL)/(ART_AMBASSADORS_SASH);
   !!SN:H^art^/i/0/?(artName:z);
   !!SN:H^art^/i/1/^{%(artName)}%(artDes)^;
 !!en;
-
-
 
 !?FU(ES_786_RestoreMonsterCosts); [установка оригинальных цен существ]\
   !!re (monId:y)/7900/7906;
@@ -56,11 +53,12 @@ ZVSE2
 
   !!UN:P786/1;                  [устанавливаем опцию 786 в 1 (цены не снижены)]
 
-!?OB(OBJ_MONSTER);            [при атаке монстра]
-  !!UN:P786/?y1;                [проверяем включена ли опция 786 в y1]
-  !!FU&y1=0:E;                  [выход если опция не включена]
+!?OB(OBJ_MONSTER);              [при атаке монстра]
+  !!UN:P786/?(wogOption:y);     [проверяем включена ли опция 786]
+  !!FU&(wogOption)=(FALSE):E;   [выход если опция не включена]
 
-  !!MO998:R10/1;                [устанавливаем монстру максимальную агрессию]
+  !!MO998:R?(aggression:y)/1;
+  !!MO998&(aggression)>0:R10/1; [устанавливаем монстру максимальную агрессию]
 
 !?OB(OBJ_CREATURE_GENERATOR_1); [посещение внешнего жилища тип 17]
   !!UN:P786/?y1;                [проверяем включена ли опция 786 в y1]
@@ -72,6 +70,7 @@ ZVSE2
 
 !?FU(ES_786_GetDiscountLevel);
 !#VA(discount:x);
+
   !!HE-1:S(SKILL_DIPLOMACY)/?(discount);
   !!re i/66/68;
     !!HE(CURRENT_HERO):A2/i/d/?(isArt:y); [y1 - навык дипломатии, y2-y4 - кол-во надетых артефактов дипломата медаль/кольцо/лента]
@@ -88,19 +87,18 @@ ZVSE2
     !!VRv7900:C-1/-1/-1/-1/-1/-1/-1; [инициализация переменных с номерами обиталетей]
 
     !!re i/0/3;
-        !!VR(monId:y):Si +7900;
-        !!DW998:Mi/?v(monId:y)/d;
+      !!VR(monId:y):Si +7900;
+      !!DW998:Mi/?v(monId:y)/d;
 
-        !!if&v(monId)<>(NO_MON);
-          !!VR(vPrice:y):Si +7910;
-          !!MA:Cv(monId)/(RES_GOLD)/?v(vPrice:y);   [store old price into v7900-7093]
-          !!VR(newPrice:y):Sv(vPrice) *(discount) :10; [set discount]
-          !!MA:Cv(monId)/(RES_GOLD)/(newPrice:y);   [set new price]
-        !!en;
-
+      !!if&v(monId)<>(NO_MON);
+        !!VR(vPrice:y):Si +7910;
+        !!MA:Cv(monId)/(RES_GOLD)/?v(vPrice:y);   [store old price into v7900-7093]
+        !!VR(newPrice:y):Sv(vPrice) *(discount) :10; [set discount]
+        !!MA:Cv(monId)/(RES_GOLD)/(newPrice:y);   [set new price]
+      !!en;
     !!en;
-    !!UN:P786/2;                  [выставляем флаг сниженной цены (опция 786=2)]
 
+    !!UN:P786/2;                  [выставляем флаг сниженной цены (опция 786=2)]
   !!en;
 
 !$OB(OBJ_CREATURE_GENERATOR_1); [посещение внешнего жилища тип 17, посттриггер]
@@ -120,8 +118,6 @@ ZVSE2
   !!FU&y1<2:E;                  [выход если опция не включена или цены не снижались]
 
   !!FU(ES_786_RestoreMonsterCosts):P; [если цены изменены, устанавливаем оригинальные]
-
-
 
 !?FU(ES_OnGetHillFortCreatureLevel)&i^es_786_hillFortDiscount^>0;
 !#VA(address:x);
@@ -145,9 +141,7 @@ ZVSE2
       !!UN:C6548300/24/(UNC_INT)/(multFloatConverted);
 
       !!UN&(monLvl)<6:C(address)/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT8)/(MON_ANGEL);
-
     !!en;
-
   !!en;
 
 !?OB(OBJ_HILL_FORT);          [посещение форта-на-холме]
@@ -162,7 +156,6 @@ ZVSE2
   !!UN:C6548300/24/(UNC_INT)/i^es_786_originalCoefficient^;
   !!VRi^es_786_hillFortDiscount^:S(FALSE);
   !!VRi^es_786_originalCoefficient^:S(FALSE);
-
 
 !?OB(OBJ_REFUGEE_CAMP);       [посещение лагеря беженцев]
 !!UN:P786/?y1;                [проверяем включена ли опция 786 в y1]
@@ -182,11 +175,23 @@ ZVSE2
   !!UN:P786/2;                  [выставляем флаг сниженной цены (опция 786=2)]
 !!en;
 
-
 !$OB(OBJ_REFUGEE_CAMP);       [посещение лагеря беженцев, посттриггер]
 !!UN:P786/?y1;                [проверяем включена ли опция 786 в y1]
 !!FU&y1<2:E;                  [выход если опция не включена или цены не снижались]
 
 !!FU(ES_786_RestoreMonsterCosts):P; [если цены изменены, устанавливаем оригинальные]
+
+// Change the aggression of neutral stacks on mouse click (so you won't see wrong info with Vision)
+!?FU(OnAdventureMapRightMouseClick);
+!!UN:P786/?(wogOption:y);     [проверяем включена ли опция 786]
+!!FU&(wogOption)=(FALSE):E;   [выход если опция не включена]
+  
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(type:y);
+
+!!if&(type)=(OBJ_MONSTER);
+  !!MO(x)/(y)/(z):R?(aggression:y)/1;
+  !!MO(x)/(y)/(z)&(aggression)>0:R10/1;
+!!en;
 
 ** end

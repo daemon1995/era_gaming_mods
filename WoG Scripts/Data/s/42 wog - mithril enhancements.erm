@@ -89,7 +89,7 @@ Timers:
 TM99
 
 Functions:
-FU709, FU8170-FU8189
+FU(WOG_CheckMapRule), FU(WOG_36_UpgradeDwelling)-FU8189
 
 Sets up PO:N numbers at University, Mine, Water Wheel and Windmill
 entrance squares. Do not use this with another script that might do the same
@@ -104,7 +104,6 @@ entrance squares. Do not use this with another script that might do the same
 !#UN|v1=1/v2=1/v3=1/v4=1:B0/1;   (Enable Mithril)
 !#UN|v1=1/v3=1:P149/1; [Enable Mithril Display if Mithril script or Mithril Replacement is enabled]
 !#IF|v1=1/v2=1/v3=1/v4=1:V410/0; (For Sorcery/Mithril)
-*#TM99&v1=1:S1/999/1/255; (setup Mine Timer)
 !#VRv550:C1/2/4/8/16/32/64/128/256/512; (Setup table of bit values)
 !#VRz805:Sz136000;
 !#VRz806:Sz136001;
@@ -174,28 +173,19 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Display when Mithril is picked up ***
 !?OB(OBJ_RESOURCE)/(RES_MITHRIL)&999;  [Mithril is trigger]
-!#VA(usedY[5]:y);
-  !!UN:P149/?v1;
-  !!FU&v1=0:E; (If Mithril display is disabled, end function)
+  !!UN:P149/?(wogOption:y);
+  !!FU&(wogOption)<>(TRUE):E; (If Mithril display is disabled, end function)
 
-  !!OW:A-1/?(currentHero:y); (get current hero)
+  !!AR(CURRENT_OBJ):V?(resAmount:y); [Store value of Mithril bars in v1]
 
-  !!if&(currentHero)>=0;
-    *!IF:V10/0;
-    *!IF&y-21=-1:V10/1;
-    *!IF&875:V10/1;
-    *!HE-1:B0/?z1; [Store hero's name in z1]
+  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+  !!VR(mithrilText:z):Sz136091;
 
-    !!AR(CURRENT_OBJ):V?(resAmount:y); [Store value of Mithril bars in v1]
-
-    !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-    !!VR(mithrilText:z):Sz136091;
-    !!if&i^WOG_IsHdMod^;
-      !!VRi^WOG_149_mithril_pickup^:S(TRUE);
-      !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_GOLD)/(resAmount);
-    !!el;
-      !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_MITHRIL)/(resAmount);
-    !!en;
+  !!if&i^WOG_IsHdMod^;
+    !!VRi^WOG_149_mithril_pickup^:S(TRUE);
+    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_GOLD)/(resAmount);
+  !!el;
+    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_MITHRIL)/(resAmount);
   !!en;
 
 !?OB(OBJ_RESOURCE)/(RES_GOLD)&999;  [Mithril is trigger]
@@ -204,83 +194,80 @@ entrance squares. Do not use this with another script that might do the same
 !?FU(WOG_OnChangeWindowByResources)&i^WOG_149_mithril_pickup^/i^WOG_IsHdMod^;;
 451087
   !!UN:Cx1/216/(SIZEOF_INT32)/?(resType:y);                                  [is equal to line below]
-  *!UN:Cx1/8/(SIZEOF_INT32)/?(ebp:y) C(ebp)/12/(SIZEOF_INT32)/?(resType:y);
+
   !!if&(resType)=(RES_GOLD);
     !!UN:Cx1/216/(SIZEOF_INT32)/(RES_MITHRIL);                                  [is equal to line below]
-    *!UN:C(ebp)/12/(SIZEOF_INT32)/(RES_MITHRIL);
   !!en;
 
 *** Adventure map Objects ***
 !?FU(OnAdventureMapRightMouseClick)&999;
-    !!UN:P36/?v1;              (Check if Mithril Enhancements script is enabled: v1)
-    *!VRv1&-999:S0;            (check if the current player is in front of the PC that clicked)
-    !!FU&v1=0:E;               (If script is disabled or not player's turn, exit trigger)
+  !!UN:P36/?v1;              (Check if Mithril Enhancements script is enabled: v1)
+  *!VRv1&-999:S0;            (check if the current player is in front of the PC that clicked)
+  !!FU&v1=0:E;               (If script is disabled or not player's turn, exit trigger)
 
-    !!IF:V10/0;                (General abort if Flag 10 is True)
-    !!IF:V9/0;                 (special abort if Flag 9 is True)
-    !!CM:I?y-1;                (Location clicked: y-1]
-    !!IF&y-1<>37:V10/1;        (Check if clicked on Adventure Map)
-    !!CM&-10:P?v4/?v5/?v6;     (Get location: v4/v5/v6)
-    !!TRv4/v5/v6&-10:E?y-20;   (Check for yellow trigger square: y-20)
-    !!IF&y-20=1:V10/1;         (Check if entrance)
+  !!IF:V10/0;                (General abort if Flag 10 is True)
+  !!IF:V9/0;                 (special abort if Flag 9 is True)
+  !!CM:I?y-1;                (Location clicked: y-1]
+  !!IF&y-1<>37:V10/1;        (Check if clicked on Adventure Map)
+  !!CM&-10:P?v4/?v5/?v6;     (Get location: v4/v5/v6)
+  !!TRv4/v5/v6&-10:E?y-20;   (Check for yellow trigger square: y-20)
+  !!IF&y-20=1:V10/1;         (Check if entrance)
 
-    !!OBv4/v5/v6&y-1=37:T?v1;         (Get type of object)
-    !!OBv4/v5/v6&y-1=37:U?v2;         (Get Subtype)
+  !!OBv4/v5/v6&y-1=37:T?v1;         (Get type of object)
+  !!OBv4/v5/v6&y-1=37:U?v2;         (Get Subtype)
 
-    !!FU(WOG_149_SetMinesHint)&y-1=37/v1=53/y-20=1:Pv4/v5/v6/99/0/88; (update and display hint text)
+  !!FU(WOG_149_SetMinesHint)&y-1=37/v1=53/y-20=1:Pv4/v5/v6/99/0/88; (update and display hint text)
 
-    !!FU&10:E;       (If not a valid click on a yellow trigger square, exit CM trigger)
+  !!FU&10:E;       (If not a valid click on a yellow trigger square, exit CM trigger)
 
-    !!IF&v1<>43/v1<>45/v1<>88/v1<>89/v1<>90/v1<>109/v1<>112/v1<>113/v1<>104:V9/1;  (Don't do checks if not Monolith entrance, University, Shrine, Windmill, Water Wheel or Witch Hut)
-    !!OBv4/v5/v6&-9:C?y-32;   (get control word of object)
-    !!VRy-31&-9:Sy-32;        (copy to y-31 for checking later)
-    !!OW&-9:C?y-30;           (get current player: y-30)
-    !!VRy-30&-9:+550;
-    !!VRy-30&-9:Svy-30;
-    !!VRy-30&-9:*32;          (Set to bit value for checking Control Word)
-    !!VRy-32&-9:|y-30;        (Try to "or" with current player's bit)
-    !!IF&-9/y-32<>y-31:V9/1;  (Check if not same, then abort)
-    !!IF|v1=43/v1=45/v1=109/v1=112/v1=104:V9/0;   (Override above if University, Monolith, Water Wheel or Windmill)
+  !!IF&v1<>43/v1<>45/v1<>88/v1<>89/v1<>90/v1<>109/v1<>112/v1<>113/v1<>104:V9/1;  (Don't do checks if not Monolith entrance, University, Shrine, Windmill, Water Wheel or Witch Hut)
+  !!OBv4/v5/v6&-9:C?y-32;   (get control word of object)
+  !!VRy-31&-9:Sy-32;        (copy to y-31 for checking later)
+  !!OW&-9:C?y-30;           (get current player: y-30)
+  !!VRy-30&-9:+550;
+  !!VRy-30&-9:Svy-30;
+  !!VRy-30&-9:*32;          (Set to bit value for checking Control Word)
+  !!VRy-32&-9:|y-30;        (Try to "or" with current player's bit)
+  !!IF&-9/y-32<>y-31:V9/1;  (Check if not same, then abort)
+  !!IF|v1=43/v1=45/v1=109/v1=112/v1=104:V9/0;   (Override above if University, Monolith, Water Wheel or Windmill)
 
-    !!OW&-9:A-1/?y-21;           (Check which hero is selected)
-    !!IF&y-21=-1:V9/1;           (special abort if no hero selected)
-    !!HEy-21&-9:P?y-4/?y-5/?y-6; (Get Hero Location- for Shrine or Witch Hut)
+  !!OW&-9:A-1/?y-21;           (Check which hero is selected)
+  !!IF&y-21=-1:V9/1;           (special abort if no hero selected)
+  !!HEy-21&-9:P?y-4/?y-5/?y-6; (Get Hero Location- for Shrine or Witch Hut)
 
-    !!IF&-9/y-6<>v6:V9/1; (check if on same level)
-    !!VRy-10&-9:Sv4;
-    !!VRy-10&-9:-1;
-    !!VRy-11&-9:Sv4;
-    !!VRy-11&-9:+1;
-    !!VRy-13&-9:Sv5;
-    !!VRy-13&-9:+1;
-    !!IF&-9/y-4<>v4/y-4<>y-10/y-4<>y-11:V9/1;
-    !!IF&-9/y-5<>v5/y-5<>y-13:V9/1; (check if location is within range)
+  !!IF&-9/y-6<>v6:V9/1; (check if on same level)
+  !!VRy-10&-9:Sv4;
+  !!VRy-10&-9:-1;
+  !!VRy-11&-9:Sv4;
+  !!VRy-11&-9:+1;
+  !!VRy-13&-9:Sv5;
+  !!VRy-13&-9:+1;
+  !!IF&-9/y-4<>v4/y-4<>y-10/y-4<>y-11:V9/1;
+  !!IF&-9/y-5<>v5/y-5<>y-13:V9/1; (check if location is within range)
 
-    !!IF:V3/0;
-    !!OW:Cd/?(clickedPlayer:y) R(clickedPlayer)/(RES_MITHRIL)/?(mithrilBefore:y);
-    !!FU8170&v1=17:P;          (Normal Creature Generator)
-    !!FU8171&v1=20/v2=00:P;    (Conflux dwelling)
-    !!FU8185&-9/v1=43:P1/y-21;
-    !!FU8185&-9/v1=45:P2/y-21; (Monolith (with instruction on which type and what hero))
-    !!FU8172&v1=53:P;          (Mine)
-    !!FU8183&v1=87:P;          (Shipyard)
-    !!FU8173&-9/v1=88:P;       (Shrine level 1)
-    !!FU8174&-9/v1=89:P;       (Shrine level 2)
-    !!FU8175&-9/v1=90/v2=0:P;  (Shrine level 3)
-    !!FU8176&v1=98:P;          (Town)
-    !!FU8181&-9/v1=109:P;      (Water Wheel)
-    !!FU8182&-9/v1=112:P;      (Windmill)
-    !!FU8177&-9/v1=113:P;      (Witch Hut)
-    !!FU8187&-9/v1=104:P;      (University)
-    !!OW:R(clickedPlayer)/(RES_MITHRIL)/?(mithrilAfter:y);
+  !!IF:V3/0;
+  !!OW:Cd/?(clickedPlayer:y) R(clickedPlayer)/(RES_MITHRIL)/?(mithrilBefore:y);
+  !!FU(WOG_36_UpgradeDwelling)&v1=(OBJ_CREATURE_GENERATOR_1):P;          (Normal Creature Generator)
+  !!FU8171&v1=(OBJ_CREATURE_GENERATOR_4)/v2=0:P;     (Conflux dwelling)
+  !!FU8185&-9/v1=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/y-21;
+  !!FU8185&-9/v1=(OBJ_MONOLITH_TWO_WAY):P2/y-21; (Monolith (with instruction on which type and what hero))
+  !!FU(WOG_36_UpgradeMine)&v1=(OBJ_MINE):P;          (Mine)
+  !!FU8183&v1=(OBJ_SHIPYARD):P;          (Shipyard)
+  !!FU8173&-9/v1=(OBJ_SHRINE_OF_MAGIC_INCANTATION):P;       (Shrine level 1)
+  !!FU8174&-9/v1=(OBJ_SHRINE_OF_MAGIC_GESTURE):P;       (Shrine level 2)
+  !!FU8175&-9/v1=(OBJ_SHRINE_OF_MAGIC_THOUGHT)/v2=0:P;  (Shrine level 3)
+  !!FU8176&v1=(OBJ_TOWN):P;          (Town)
+  !!FU8181&-9/v1=(OBJ_WATER_WHEEL):P;      (Water Wheel)
+  !!FU8182&-9/v1=(OBJ_WINDMILL):P;      (Windmill)
+  !!FU8177&-9/v1=(OBJ_WITCH_HUT):P;      (Witch Hut)
+  !!FU8187&-9/v1=(OBJ_UNIVERSITY):P;      (University)
+  !!OW:R(clickedPlayer)/(RES_MITHRIL)/?(mithrilAfter:y);
 
-    !!if&(mithrilAfter)<>(mithrilBefore); addon by daemon_n for plugin;
-      !!UN:R2;
-    !!en;
+  !!UN&(mithrilAfter)<>(mithrilBefore):R2; addon by daemon_n for plugin;
 
 *** Upgrade Dwelling ***
-!?FU8170;
-!!DWv4/v5/v6:O?y1;       (check who owns dwelling)
+!?FU(WOG_36_UpgradeDwelling);
+!!DW4:O?y1;       (check who owns dwelling)
 !!FU&y1=(NO_OWNER):E; (abort if unowned)
 
 !!OW:Ty1/?y21;       (Check team)
@@ -288,10 +275,14 @@ entrance squares. Do not use this with another script that might do the same
 !!OW:Ty2/?y22;       (Check team)
 !!FU&y21<>y22:E; (abort if not same)
 
-; Check for upgrade of the creature. Don't allow to upgrade if no upgrade or upgrading to Level 8 (as L8 have their own dwellings)
-!!DWv4/v5/v6:M0/?y2/d;
+; Check for upgrade of the creature. Don't allow to upgrade if no upgrade or upgrading to a monster stronger than Level 8
+!!DW4:M0/?y2/d;
 !!FU(GetUpgradedMonster):Py2/?y8;
 !!FU&y8=(NO_MON):E;
+
+!!MA:F(MON_BLOOD_DRAGON)/?y34;
+!!MA:Fy8/?y30;
+!!FU&y30>=y34:E;
 !!FU&y8>=(MON_SUPREME_ARCHANGEL)/y8<=(MON_SACRED_PHOENIX):E;
 
 ; Check if the dwelling has been upgraded at least once
@@ -330,11 +321,11 @@ entrance squares. Do not use this with another script that might do the same
 !!FU&-1:E;
 
 !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-y6;               (take Mithril)
-!!DWv4/v5/v6:M0/y8/d; (Upgrade dwelling if conflux)
+!!DW4:M0/y8/d; (Upgrade dwelling if conflux)
 
 !?FU8171;
 !!VRy1:S-1;
-!!DWv4/v5/v6:O?y1;       (check who owns dwelling)
+!!DW4:O?y1;       (check who owns dwelling)
 !!FU&y1=-1:E;
 !!OW:Ty1/?y21;       (Check team)
 !!OW:C?y2;           (check current player)
@@ -342,106 +333,101 @@ entrance squares. Do not use this with another script that might do the same
 !!IF&y21<>y22:V10/1; (abort if not same)
 !!OW:R-1/7/?y7;  (get amount of mithril)
 !!IF&y7<4:V10/1; (check if has enough mithril)
-!!DWv4/v5/v6:M0/?y1/d0;
+!!DW4:M0/?y1/d0;
 !!IF&y1<>112:V10/1;(abort if not Air elementals in first slot)
 !!CM&-10:R0;         (disable standard popup)
 !!IF&-10:Q1/7/4/2/z136011;
 !!IF&-1:V10/1;
 !!OW&-10:R-1/7/d-4;        (take Mithril)
-!!DWv4/v5/v6&-10:M0/127/d0;
-!!DWv4/v5/v6&-10:M1/123/d0;
-!!DWv4/v5/v6&-10:M2/129/d0;
-!!DWv4/v5/v6&-10:M3/125/d0;(Upgrade dwelling)
+!!DW4&-10:M0/127/d0;
+!!DW4&-10:M1/123/d0;
+!!DW4&-10:M2/129/d0;
+!!DW4&-10:M3/125/d0;(Upgrade dwelling)
 
 *** Upgrade Mine ***
-!?FU8172;
-!#VA(usedY[10]:y);
+!?FU(WOG_36_UpgradeMine);
+; Warning: Mixing classic y and name y is a very bad practice. This needs to be rewritten later.
 !!PO4:V3/?i;
 !!FU&i=1:E;
-!!FU709:P12;         (check for "Mines change Resource every week" rule)
-!!FU&3:E;            (exit Function if mines change resources every week)
-!!VRy1:S-1;
-!!MNv4/v5/v6:O?y1;   (check who owns mine)
-!!FU&y1=-1:E;
-!!OW:Ty1/?y21;       (Check team)
-!!OW:C?y2;           (check current player)
-!!OW:Ty2/?y22;       (Check team)
-!!CM:R0;             (disable standard popup)
-!!FU(WOG_149_SetMinesHint)&y21<>y22:Pv4/v5/v6/99/0/0; (update and display hint text)
-!!FU&y21<>y22:E; (abort if not same)
-!!POv4/v5/v6:N?y3;
-!!FU(WOG_149_SetMinesHint)&y3<>0:Pv4/v5/v6/99/0/0; (update and display hint text)
-!!FU&y3<>0:E;     (see if mine has been upgraded earlier)
-!!IF:V3/0;
-!!MNv4/v5/v6:R?(resType:y);    (Get resource produced)
-!!VRy5:S4;            (Set base Cost)
-!d!VRy5&y4<>1/y4<3:S3; (Set cost for ore/wood) (deactivated)
-!!VRy5&(resType)=6:S7;       (Set Cost for Gold Mine)
-!!OW:R-1/(RES_MITHRIL)/?y7;       (get amount of mithril)
-!!FU(WOG_149_SetMinesHint)&y7<y5:Pv4/v5/v6/99/0/0; (update and display hint text)
-!!FU&y7<y5:E;     (check if has enough mithril)
-!!IF:V1/0;
-!!VR(zIndex:y):S(resType)+136012;
-*!IF&y4=0:Q1/7/y5/2/z136012;
-!!IF:Q1/7/y5/2/z(zIndex);
 
-*!IF&y4=1:Q1/7/y5/2/z136013;
+!!FU(WOG_CheckMapRule):P12;         (check for "Mines change Resource every week" rule)
 
-*!IF&y4=2:Q1/7/y5/2/z136014;
+; If Mines change Resources every week is disabled
+!!if&-3;
+  !#VA(usedY[10]:y);
 
-*!IF&y4=3:Q1/7/y5/2/z136015;
+  !!VRy1:S-1;
+  !!MN4:O?y1;   (check who owns mine)
+  !!FU&y1=-1:E;
 
-*!IF&y4=4:Q1/7/y5/2/z136016;
+  !!OW:Ty1/?y21;       (Check team)
+  !!OW:C?y2;           (check current player)
+  !!OW:Ty2/?y22;       (Check team)
+  !!CM:R0;             (disable standard popup)
+  !!FU(WOG_149_SetMinesHint)&y21<>y22:Pv4/v5/v6/99/0/0; (update and display hint text)
+  !!FU&y21<>y22:E; (abort if not same)
 
-*!IF&y4=5:Q1/7/y5/2/z136017;
+  !!PO4:N?y3;
+  !!FU(WOG_149_SetMinesHint)&y3<>0:Pv4/v5/v6/99/0/0; (update and display hint text)
+  !!FU&y3<>0:E;     (see if mine has been upgraded earlier)
 
-*!IF&y4=6:Q1/7/y5/2/z136018;
+  !!IF:V3/0;
+  !!MN4:R?(resType:y);    (Get resource produced)
+  !!VRy5:S4;            (Set base Cost)
+  !!VRy5&(resType)=6:S7;       (Set Cost for Gold Mine)
+  !!OW:R-1/(RES_MITHRIL)/?y7;       (get amount of mithril)
+  !!FU(WOG_149_SetMinesHint)&y7<y5:Pv4/v5/v6/99/0/0; (update and display hint text)
+  !!FU&y7<y5:E;     (check if has enough mithril)
 
-!!FU&-1:E;
-*!VRy5:*-1;                (set amount to negative)
-!!OW:R-1/7/d-y5;            (take mithril)
-!!POv4/v5/v6:N7;           (set flag so mine is upgraded)
-!!FU(WOG_149_SetMinesHint):Pv4/v5/v6/0/0/0;  (set hint text for upgraded mine)
+  !!IF:V1/0;
+  !!VR(zIndex:y):S(resType) +136012;
+  !!IF:Q1/7/y5/2/z(zIndex);
+  !!FU&-1:E;
 
-*** Special if Mines change resources every week is in effect ***
-!?FU8172;
-!!PO4:V3/?i;
-!!FU&i=1:E;
-!!FU709:P12;          (check for "Mines change Resource every week" rule)
-!!FU&-3:E;            (exit Function if mines don't change resources every week)
-!!MNv4/v5/v6:O?y1/1;  (check who owns Mine)
-!!OW:C?y2;            (check current player)
-!!FU(WOG_149_SetMinesHint)&y1<>y2:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
-!!FU&y1<>y2:E;        (abort if not same)
-!!POv4/v5/v6:N?y3;
-!!FU(WOG_149_SetMinesHint)&y3<>0:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
-!!FU&y3<>0:E;         (see if mine has been protected earlier)
-!!MNv4/v5/v6:R?y4/1;  (Get resource produced)
-!!VRy5:S3;            (Set base Cost: y5)
-!!VRy5&y4<>1/y4<3:S1; (Set cost for ore/wood: y5)
-!!VRy5&y4=6:S5;       (Set Cost for Gold Mine: y5)
-!!OW:R-1/7/?y7;       (get player's current mithril: y7)
-!!FU(WOG_149_SetMinesHint)&y7<y5:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
-!!FU&y7<y5:E;         (check if has enough mithril)
-!!VRz1&y4=0:Sz136019;
-!!VRz1&y4=1:Sz136020;
-!!VRz1&y4=2:Sz136021;
-!!VRz1&y4=3:Sz136022;
-!!VRz1&y4=4:Sz136023;
-!!VRz1&y4=5:Sz136024;
-!!VRz1&y4=6:Sz136025;
-!!CM:R0;                  (disable standard popup)
-!!IF:Q1/7/y5/2/z136026;
-!!FU&-1:E;
-!!VRy5:*-1;
-!!OW:R-1/7/dy5;           (take mithril)
-!!VRy4:+2;
-!!POv4/v5/v6:Ny4;         (set marker so mine is protected: N=2 through 8)
-!!FU(WOG_149_SetMinesHint):Pv4/v5/v6/0/0/0; (set hint text for protected mine)
+  !!OW:R-1/7/d-y5;            (take mithril)
+  !!PO4:N7;           (set flag so mine is upgraded)
+  !!FU(WOG_149_SetMinesHint):Pv4/v5/v6/0/0/0;  (set hint text for upgraded mine)
+; If Mines change Resources every week is enabled
+!!el;
+  !!MN4:O?y1/1;  (check who owns Mine)
+  !!OW:C?y2;            (check current player)
+  !!FU(WOG_149_SetMinesHint)&y1<>y2:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
+  !!FU&y1<>y2:E;        (abort if not same)
+
+  !!PO4:N?y3;
+  !!FU(WOG_149_SetMinesHint)&y3<>0:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
+  !!FU&y3<>0:E;         (see if mine has been protected earlier)
+
+  !!MN4:R?y4/1;  (Get resource produced)
+  !!VRy5:S3;            (Set base Cost: y5)
+  !!VRy5&y4<>1/y4<3:S1; (Set cost for ore/wood: y5)
+  !!VRy5&y4=6:S5;       (Set Cost for Gold Mine: y5)
+  !!OW:R-1/7/?y7;       (get player's current mithril: y7)
+  !!FU(WOG_149_SetMinesHint)&y7<y5:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
+  !!FU&y7<y5:E;         (check if has enough mithril)
+
+  !!VRz1&y4=0:Sz136019;
+  !!VRz1&y4=1:Sz136020;
+  !!VRz1&y4=2:Sz136021;
+  !!VRz1&y4=3:Sz136022;
+  !!VRz1&y4=4:Sz136023;
+  !!VRz1&y4=5:Sz136024;
+  !!VRz1&y4=6:Sz136025;
+  !!CM:R0;                  (disable standard popup)
+  !!IF:Q1/7/y5/2/z136026;
+  !!FU&-1:E;
+  
+  !!VRy5:*-1;
+  !!OW:R-1/7/dy5;           (take mithril)
+  !!VRy4:+2;
+  !!PO4:Ny4;         (set marker so mine is protected: N=2 through 8)
+  !!FU(WOG_149_SetMinesHint):Pv4/v5/v6/0/0/0; (set hint text for protected mine)
+!!en;
 
 *** Mine produce Extra, AI gets gold & Replace resource piles and campfires with Mithril ***
 !?FU(OnEveryDay)&v3340<>99;
 !#VA(day:x) (weekDay:x) (once:x) (owner:x) (isAi:x);
+
 !!IF:V9/0;
 !!IF:V10/0;
 !!UN:P36/?y-1;
@@ -475,15 +461,13 @@ entrance squares. Do not use this with another script that might do the same
   !!VRy-1&870:S1 Ry-3;    (Draw random number to see what pile to start with)
   !!VRv5:Sv70 +v70 -1;    (Get replacing frequency)
   !!DO8179/y-1/v1/1&870:P;(Cycle through all Campfires, replace one in what value v70 holds)
-
 !!en;
-
 
 !!IF:V870/0;    (set Flag to indicate that Mithril has been added)
 !!IF:V9/0;
 
 *** Mines ***
-!!FU709:P12;          (check for "Mines change Resource every week" rule)
+!!FU(WOG_CheckMapRule):P12;          (check for "Mines change Resource every week" rule)
 !!VRy-20:Sc0;
 !!VRy-20:%7;          (get day of week)
 
@@ -524,9 +508,7 @@ entrance squares. Do not use this with another script that might do the same
 !?FU8180;                    (Mystical Gardens, Water Weels and Windmills)
 !!IF:V1/0;
 !!UN&x16>1:Ux1/-1/-1/7;           (get location in v7, v8 and v9)
-*!FU(WOG_GetRandomSeedByCoord):Pv7/v8/v9/?y2;
-*!POv7/v8/v9:Hd1 H?y6;
-*!IF:L^%y6 2^;
+
 !!VRy2:S0 Rv6;               (Random number to see if to replace normal resource)
 !!GD7&x1=55:B?y7;            (Get if it is gold or resource)
 !!GD7&x1=55/y7=7:B5;         (resource is normally Gems)
@@ -545,7 +527,7 @@ entrance squares. Do not use this with another script that might do the same
 !?FU8178;
 !!UN&x16>1:U53/-1/-1/7;      (Get location of mine: v7/v8/v9)
 !!IF:V1/0;
-!!FU709:P12;            (check for "Mines change Resource every week" rule)
+!!FU(WOG_CheckMapRule):P12;            (check for "Mines change Resource every week" rule)
 !!IF&3:V1/1;            (If mines change every week, Flag 1 set to True)
 !!MNv7/v8/v9:R?y1/1;    (Get resource produced)
 !!MNv7/v8/v9&-1:O?y5/1; (get owner of mine without redrawing)
@@ -565,7 +547,7 @@ entrance squares. Do not use this with another script that might do the same
 !!FU(WOG_149_SetMinesHint)&-1:Pv7/v8/v9/0/y6/0/0; (update hint text, resetting if no longer upgraded)
 
 *** Special if mine change resource every week ***
-!!FU709:P12;            (check for "Mines change Resource every week" rule)
+!!FU(WOG_CheckMapRule):P12;            (check for "Mines change Resource every week" rule)
 !!FU&-3:E;              (Exit Function if mines don't change every week)
 !!POv7/v8/v9:N?y21;          (Get custom number)
 !!VRy20:Sy21 -2; (transform number to resource)
@@ -645,7 +627,7 @@ entrance squares. Do not use this with another script that might do the same
 !!FU&y2<1:E;
 !!IF&y2<3:V9/1;
 !!CAv4/v5/v6:N?z1;(Get Town Name)
-!!FU709:P4;       (check for "Heroes Create Magic Plains each day" rule)
+!!FU(WOG_CheckMapRule):P4;       (check for "Heroes Create Magic Plains each day" rule)
 !!IF&3:M1/z136030;
 !!CM:R0;          (disable standard popup)
 !!FU&3:E;
@@ -859,7 +841,7 @@ entrance squares. Do not use this with another script that might do the same
 !!OBx1/x2/x3:U?(mineType);     (Subtype of mine: y6)
 
 !!FU(WOG_GetMineName):P(mineType)/?z-1;
-!!FU709:P12;     (check for "Mines change Resource every week" rule)
+!!FU(WOG_CheckMapRule):P12;     (check for "Mines change Resource every week" rule)
 !!VRz-2&-3:Sz136066; (Upgraded: z-2)
 !!VRz-2&3:Sz136067; (Protected: z-2)
 

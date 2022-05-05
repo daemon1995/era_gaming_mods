@@ -75,51 +75,35 @@ ZVSE2
 !!FU&y1=0:E;   [выход если опция не включена]
 
 ** генерация события (до 1го события за каждого игрока на каждом ходу)
-!!UN:X?y1/?y2;                [y1/y2 - размер/этажность карты]
-!!VRy1:-1;                    [y1 - макс. координата]
-!!FU7916:Py1/y2;              [генерация события]
+!!UN:X?(mapSize:y)/?(twoLvlMap:y);                [y1/y2 - размер/этажность карты]
+!!VR(mapSize):-1;                    [y1 - макс. координата]
+!!FU7916:P(mapSize)/(twoLvlMap);              [генерация события]
 ** обнаружение событий для каждого героя текущего игрока
-!!OW:C?y1 Hy1/1/0 Iy1/?y4 Oy1/?y5/d/d/d/d/d/d/d/d;    [y1 - текущий игрок, v1 - кол-во героев текущего игрока, y4 - ИИ, y5 - количество активных героев]
-!!VRy2:Sv1;                   [y2 - кол-во героев текущего игрока]
-!!SN&y2>y5:W^es_heroes_in_towns^/1;
-*!OW:C?y1 Oy1/?y2/?y5 Iy1/?y4;            [y1 - текущий игрок, y2 - кол-во героев текущего игрока, y4 - ИИ] теперь работает только с активными героями @daemon_n
-!!UN:X?y3/?i;
-!!VRy3:-1;                    [y3 - макс. координата карты]
-!!DO7997/1/y2/1&y2>0:Py1/y4/y3; [поиск событий для каждого героя текущего игрока]
-!!SN:W^es_heroes_in_towns^/0;
 
-!?FU7997;                     [поиск событий для каждого героя текущего игрока. x1/x2/x3/x16 - игрок/ИИ/макс коорд./номер героя у игрока]
-!#VA(player:x) (isAi:y) (size:x);
+!#VA(hero[8]:y);
+!!OW:Oi^timerOwner^/?(hrOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
 
-!!OW:Hx1/1/x16;               [v1 - номер героя]
+!!if&(hrOnMap);
+  !!re i/0/(hrOnMap)/1/-1;
 
-!!if&i^es_heroes_in_towns^;
-  !!VRy10:S0;
-  !!OW:Ox1/?y9/?y1/?y2/?y3/?y4/?y5/?y6/?y7/?y8;
+    !!if&(hero[i])<>(NO_HERO);
+      !!HE(hero[i]):P?(x:y)/?(y:y)/?(z:y) O?(checkOwner:y);
 
-  !!re i/1/y9;
-    !!if&yi=v1;
-      !!VRy10:S1;
+      !!if&(x)>-1/(y)>-1/(checkOwner)=i^timerOwner^;
+        !!HE(hero[i]):S(SKILL_SCOUTING)/?(area:y) A2/(ART_SPECULUM)/d/?(hasSpec:y) A2/(ART_SPYGLASS)/d/?(hasSpy:y);
+        !!VR(area)&(hasSpec):+1;
+        !!VR(area)&(hasSpy):+1;
+        !!VR(area):*4 +5;
 
-      !!br;
+        !!DO(ES_SearchEventForPlayerHero)/1/(area)/1:Pi^timerOwner^/i^timerIsAi^/(mapSize)/(hero[i])/(x)/(y)/(z);
+      !!en;
     !!en;
   !!en;
-
-  !!FU&y10<>1:E;
 !!en;
 
-; Bad fix: Fix the erm error when a hero lose from a night scouting battle event. 
-; A known issue: After a hero is defeated from a night scouting battle, the hero ID from v1 would be incorrect for the rest of the heros in the hero list
-!!FU|v1<(HERO_FIRST)/v1>(HERO_LAST_WOG):E;
+!?FU(ES_SearchEventForPlayerHero);
+!#VA(player:x) (isAi:y) (size:x) (heroId:y) (x:x) (y:x) (z:x);
 
-!!VRy7:Sv1;                   [y7 - номер героя]
-!!HEy7:P?y1/?y2/?y3 S3/?y4 A2/52/d/?y5 A2/53/d/?y6;  [y1-y3/y4/y5/y6 - коодринаты/уровень Разведки/Телескопы/Подзорные трубы героя]
-!!VRy4&y5>0:+1;
-!!VRy4&y6>0:+1;               [y4 - сила разведки (0..5)]
-!!VRy4:*4 +5;                 [y4 - количество участков для разведки (5..25)]
-!!DO7998/1/y4/1:Px1/x2/x3/y7/y1/y2/y3; [поиск события]
-
-!?FU7998;                     [поиск события]
 ** x1 - игрок, x2 - ИИ, x3 - макс координата, x4 - герой, x5/x6/x7 - координаты героя, x16 - исследуемый квадрат
 !!VRy1:Sx5;
 !!VRy2:Sx6;
@@ -600,6 +584,7 @@ ZVSE2
   !!IF:N1/1;                  [показ диалога получения ресурсов]
 !!en; 
 
+; Necromancer
 !?FU8006;                     [Некромант]
 ** Преобразование самого многочисленного живого отряда в нежить
 ** P1 = критерий выбора отряда, P2 = макс.бонус уровня, P3 = грейд
