@@ -18,13 +18,23 @@ ZVSE2
 !!SN:H^monname^/(MON_ROGUE)/0/^%T(es.758.singName)^;
 !!SN:H^monname^/(MON_ROGUE)/1/^%T(es.758.plurName)^;
 !!SN:H^monname^/(MON_ROGUE)/2/?(desc:z);
-!!VR(newDesc:z):S(desc) +^%T(es.758.desc)^;
-!!SN:H^monname^/(MON_ROGUE)/2/(newDesc);
-
-; Give No Morale monster flag and increse the fight value
+!!SN:H^monname^/(MON_ROGUE)/2/^%(desc)%T(es.758.desc)^;
+; Give No Morale monster flag and increase the fight value
 !!MA:F(MON_ROGUE)/?(fv:y) X(MON_ROGUE)/d|(MON_FLAG_NO_MORALE);
 !!VR(fv):*105 :100;
 !!MA:F(MON_ROGUE)/(fv);
+
+; Compatiblity with third upgrade Rogues
+!!FU(GetUpgradedMonster):P(MON_ROGUE)/?(upgRogue:y);
+
+!!if&(upgRogue)>(NO_MON);
+  !!SN:H^monname^/(upgRogue)/2/?(desc);
+  !!SN:H^monname^/(upgRogue)/2/^%(desc)%T(es.758.desc)^;
+  ; Give No Morale monster flag and increase the fight value
+  !!MA:F(upgRogue)/?(fv:y) X(upgRogue)/d|(MON_FLAG_NO_MORALE);
+  !!VR(fv):*105 :100;
+  !!MA:F(upgRogue)/(fv);
+!!en;
 
 !?FU(OnBeforeBattleUniversal);
 ; Initialise variable - This must to be executed regardless of the option
@@ -38,9 +48,19 @@ ZVSE2
 !!BG:A?(action:y);
 !!BMi^battle_acting_stack^:T?(type:y);
 
-!!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK)/(type)=(MON_ROGUE);
-  !!BG:E?(defStack:y);
-  !!VRi^es_758_defStack^&(defStack)>(NO_MON):S(defStack);
+!!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
+  !!if&(type)=(MON_ROGUE);
+    !!BG:E?(defStack:y);
+    !!VRi^es_758_defStack^&(defStack)>(NO_MON):S(defStack);
+  ; Compatiblity with third upgrade Rogues
+  !!el;
+    !!FU(GetUpgradedMonster):P(MON_ROGUE)/?(upgRogue:y);
+
+    !!if&(upgRogue)>(NO_MON)/(type)=(upgRogue);
+      !!BG:E?(defStack:y);
+      !!VRi^es_758_defStack^&(defStack)>(NO_MON):S(defStack);
+    !!en;
+  !!en;
 !!en;
 
 // Check if Rogue is eligible to attack again
@@ -54,12 +74,12 @@ ZVSE2
 
   ; Show battle log and play animation/sound
   !!if&i^battle_isVisible^;
-    !!BMi^battle_acting_stack^:N?(cutthroatNum:y);
+    !!BMi^battle_acting_stack^:N?(cutthroatNum:y) T?(type:y);
 
     !!if&(cutthroatNum)=1;
-      !!SN:H^monname^/(MON_ROGUE)/0/?(cutthroatName:z);
+      !!SN:H^monname^/(type)/0/?(cutthroatName:z);
     !!el;
-      !!SN:H^monname^/(MON_ROGUE)/1/?(cutthroatName);
+      !!SN:H^monname^/(type)/1/?(cutthroatName);
     !!en;
 
     !!SN:T^es.758.battleLog^?(battleLog:z)/^cutthroat^/(cutthroatName);

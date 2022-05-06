@@ -14,12 +14,23 @@ ZVSE2
 !!SN:H^monname^/(MON_ZOMBIE)/0/^%T(es.762.singName)^;
 !!SN:H^monname^/(MON_ZOMBIE)/1/^%T(es.762.plurName)^;
 !!SN:H^monname^/(MON_ZOMBIE)/2/?(desc:z);
-!!VR(newDesc:z):S(desc) +^%T(es.762.desc)^;
-!!SN:H^monname^/(MON_ZOMBIE)/2/(newDesc);
+!!SN:H^monname^/(MON_ZOMBIE)/2/^%(desc)%T(es.762.desc)^;
+; Increase the fight value
+!!MA:F(MON_ZOMBIE)/?(fv:y);
+!!VR(fv):*105 :100;
+!!MA:F(MON_ZOMBIE)/(fv);
 
-!!MA:F(MON_ZOMBIE)/?(fv:y);             [FV зомби]
-!!VR(fv):*105 :100;                     [увеличиваем FV на 5%]
-!!MA:F(MON_ZOMBIE)/(fv);                [обновляем FV зомби]
+; Compatiblity with third upgrade Zombies
+!!FU(GetUpgradedMonster):P(MON_ZOMBIE)/?(upgZombie:y);
+
+!!if&(upgZombie)>(NO_MON);
+  !!SN:H^monname^/(upgZombie)/2/?(desc);
+  !!SN:H^monname^/(upgZombie)/2/^%(desc)%T(es.762.desc)^;
+  ; Increase the fight value
+  !!MA:F(upgZombie)/?(fv);
+  !!VR(fv):*105 :100;
+  !!MA:F(upgZombie)/(fv);
+!!en;
 
 !?FU(OnMonsterPhysicalDamage);
 !#VA(atkStack:x);
@@ -39,9 +50,21 @@ ZVSE2
 !!VR(defCurrTotalHp:y):S(num) *(hp) -(lostHp);
 
 ; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
-!!if&(type)=(MON_ZOMBIE)/(isAlive)/(dmg)>=(defCurrTotalHp);
-  !!VRi^es_762_regenHp^:S(defCurrTotalHp);
-  !!BM(defStack):Fd|813694976 E0 K1;    [добавляем цели флаги жертвы/клона/неизменяемости цвета]
+!!if&(isAlive)/(dmg)>=(defCurrTotalHp);
+
+  !!if&(type)=(MON_ZOMBIE);
+    !!VRi^es_762_regenHp^:S(defCurrTotalHp);
+    !!BM(defStack):Fd|813694976 E0 K1;    [добавляем цели флаги жертвы/клона/неизменяемости цвета]
+
+   ; Compatiblity with third upgrade Zombies
+  !!el;
+    !!FU(GetUpgradedMonster):P(MON_ZOMBIE)/?(upgZombie:y);
+
+    !!if&(upgZombie)>(NO_MON)/(type)=(upgZombie);
+      !!VRi^es_762_regenHp^:S(defCurrTotalHp);
+      !!BM(defStack):Fd|813694976 E0 K1;
+    !!en;
+  !!en;
 !!en;
 
 !?FU(ES_OnAfterMelee)&i^es_762_regenHp^;
@@ -71,10 +94,12 @@ ZVSE2
 
 ; Show battle log and play animation/sound
 !!if&i^battle_isVisible^/(noHpLost)<>(TRUE);
+  !!BM(zombieStack):T?(type:y);
+
   !!if&(num)=1;
-    !!SN:H^monname^/(MON_ZOMBIE)/0/?(flesheaterName:z);
+    !!SN:H^monname^/(type)/0/?(flesheaterName:z);
   !!el;
-    !!SN:H^monname^/(MON_ZOMBIE)/1/?(flesheaterName);
+    !!SN:H^monname^/(type)/1/?(flesheaterName);
   !!en;
 
   !!SN:T^es.762.battleLog^?(battleLog:z)/^flesheater^/(flesheaterName);
