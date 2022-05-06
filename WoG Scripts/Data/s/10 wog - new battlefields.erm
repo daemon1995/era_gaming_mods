@@ -1,38 +1,59 @@
-ZVSE
+ZVSE2
 
-* Скрипт "НОВЫЕ ПОЛЯ БИТВ" (старый номер script68)
-* автор: [igrik].
-* дата: 02.02.2017 г.
-* причина: я переписал скрипт, ибо слишком много людей жалуются на черный фон стандартного воговского.
-* используются материалы by HotA Crew, Morn, Dreamaker.
-* фоны лежат в "NewBattleFields.pac": по четрые фона на каждый тип земли и два фона на банки существ.
+** NEW BATTLEFIELDS
+** РќРћР’Р«Р• РџРћР›РЇ Р‘РРўР’
 
-!?FU(WOG10_SetNewBattleFields);      [функция из хука]
-!!UN:P68/?y1; !!FU&y1<>1:E;          [включен ли скрипт]
-!!UN:C6919200/4/?y13;                [Battle Manager]
-!!VRy14:Sy13 +21436;                 [указатель на объект]
-!!UN:Cy14/4/?y15;                    [структура объекта]
-!!SN:E5231136/2/y15;  !!VRy16:Sv1;   [тип посещенного объекта]
-!!BA:P?y80/?y81/?y82;                [получаем координаты битвы]
-!!OBy80/y81/y82:U?y17;               [подтип посещенного объекта]
-!!BA&y16=25:B^BkBnUt.pcx^;           [объект - утопия]
-!!BA&y16=16:B^BkBnNg.pcx^;           [объект - банк]
-!!BA&y16=53/y17=7:B^BkGr60.pcx^;     [объект - заброшенная шахта]
-!!FU&y16=53/y17=7|y16=16/y16=25/y16=98:E; [выход в ряде случаев]
-!!TRy80/y81/y82:T?y1/?y2/d/d/d/d/d/d;[получить тип и подтип почвы]
-!!if&y1>=0/y1<=7:;                   [если обычный тип почвы и не город]
-  !!BU:G?y3;                         [есть ли бонусы от спец.земли в битве]
-  !!if&y3=-1:;                       [если не модифицируемая битва от типа земли]
-    !!VRy2::20;                      [выбор фона 1 из 4 от подтипа почвы]
-    !!VRy2&y1=7/v1000=1:+4;          [инферно под землей (есть доп.фоны)]
-    !!BA:B^BkGr%Y1%Y2.pcx^;          [установить новый фон битвы]
-  !!en:;                             [конец условия_2]
-!!en:;                               [конец условия_1]
+** Option 068 by Donald X. Vaccarino, Overlord, Dutch, 
+** Jonas Gustafsson, and Timothy Pulver 
 
-!?FU(WOG_CreateERMHook);             [функция создания хука (см.80 wog)]
-!!UN:C4603972/1/235;                 [нет проверки на в подземелье (Z=1)]
-!!UN:P68/?y1; !!FU&y1<>1:E;          [включен ли скрипт]
-!!SN:Ex1/1/4601891/(WOG10_SetNewBattleFields); [ставим хук в конец настройки битвы]
+** Rewritten by igrik
 
-** end
-
+** New Battlefield pictures will often be used in combat. 
+** This has no affect on the battles but adds some visual variety.
+
+
+!#DC(WOG_OPT_NEW_BATTLE_FIELDS) = 68;
+
+
+!?FU(WOG_OPT_SetNewBattleFields);                 
+!!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(wogOption:y); 
+!!FU&(wogOption)<>(TRUE):E;                      
+
+!!FU(WOG_Battle_GetMapItem):P?(mapItem:y);       
+!!FU&(mapItem)=(FALSE):E;                        
+
+!!FU(WOG_MapItem_GetRealType):P(mapItem)/?(mitType:y);  
+!!BA:P?(x:y)/?(y:y)/?(z:y);                      
+!!OB(x)/(y)/(z):U?(mipSubType:y);              
+
+!!FU&(mitType)=(OBJ_TOWN):E;      
+
+!!if&(mitType)=(OBJ_DRAGON_UTOPIA); 
+  !!BA:B^BkBnUt.pcx^;  !!FU:E;   
+!!en;
+
+!!if&(mitType)=(OBJ_CREATURE_BANK);
+ !!BA:B^BkBnNg.pcx^;   !!FU:E;           
+!!en;
+
+!!if&(mitType)=(OBJ_MINE)/(mipSubType)=7;
+  !!BA:B^BkGr60.pcx^;  !!FU:E;  
+!!en;
+
+!!TR(x)/(y)/(z):T?(terrType:y)/?(terrSubType:y); 
+!!if&(terrType)>=0/(terrType)<=7;                [РµСЃР»Рё РѕР±С‹С‡РЅС‹Р№ С‚РёРї РїРѕС‡РІС‹]
+  !!BU:G?(bonuses:y);                             [РµСЃС‚СЊ Р»Рё Р±РѕРЅСѓСЃС‹ РѕС‚ СЃРїРµС†.Р·РµРјР»Рё РІ Р±РёС‚РІРµ]
+  !!if&(bonuses)=-1;                             [РµСЃР»Рё РЅРµ РјРѕРґРёС„РёС†РёСЂСѓРµРјР°СЏ Р±РёС‚РІР° РѕС‚ С‚РёРїР° Р·РµРјР»Рё]
+    !!VR(backImgIndex:y):S(terrSubType) %4;       [РІС‹С‡РёСЃР»СЏРµРј 1 РёР· 4 С„РѕРЅРѕРІ РїРѕ РѕСЃС‚Р°С‚РєСѓ РѕС‚ РґРµР»РµРЅРёСЏ]
+    !!VR(backImgIndex)&(terrType)=7/v1000=1:+4;   [РёРЅС„РµСЂРЅРѕ РїРѕРґ Р·РµРјР»РµР№ (РµСЃС‚СЊ РґРѕРї.С„РѕРЅС‹)]
+    !!BA:B^BkGr%(terrType)%(backImgIndex).pcx^;   [СѓСЃС‚Р°РЅРѕРІРёС‚СЊ РЅРѕРІС‹Р№ С„РѕРЅ Р±РёС‚РІС‹]
+  !!en;                                          [РєРѕРЅРµС† СѓСЃР»РѕРІРёСЏ_2]
+!!en;                                            [РєРѕРЅРµС† СѓСЃР»РѕРІРёСЏ_1]
+
+!?FU(WOG_CreateERMHook);                        [С„СѓРЅРєС†РёСЏ СЃРѕР·РґР°РЅРёСЏ С…СѓРєР° (СЃРј.1000 wog - base)]
+!!UN:C4603972/1/235;                              [РЅРµС‚ РїСЂРѕРІРµСЂРєРё РЅР° РІ РїРѕРґР·РµРјРµР»СЊРµ (Z=1)]
+!!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(wogOption:y); 
+!!FU&(wogOption)<>(TRUE):E;                       
+!!SN:Ex1/1/4601891/(WOG_OPT_SetNewBattleFields); 
+
+** End of Script **

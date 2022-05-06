@@ -1,9 +1,9 @@
-ZVSE
+ZVSE2
 
 ** ENHANCED PROTECTION FROM THE ELEMENTS
-** ”—»À≈ÕÕ¿ﬂ «¿Ÿ»“¿ Œ“ Õ≈”ƒ¿–ÕŒ… Ã¿√»» –¿«Õ€’ —“»’»…
+** –£–°–ò–õ–ï–ù–ù–ê–Ø –ó–ê–©–ò–¢–ê –û–¢ –ù–ï–£–î–ê–†–ù–û–ô –ú–ê–ì–ò–ò
 
-** Option 061 by Petyo Georgiev (script61)
+** Option 061 by Petyo Georgiev
 ** Rewritten by igrik (29.06.2020)
 
 ** The Protection from Fire, Protection from Air, Protection from Water and Protection
@@ -15,81 +15,59 @@ ZVSE
 * Basic - 33%
 * Advanced or Expert - 50%
 
-!?FU(WOG_CreateERMHook);
-!!UN:P61/?y1;
-!!SN&y1=1:Ex1/1/4474395/(WOG17_BattleStack_ApplySpell);
 
-!?FU(WOG17_BattleStack_ApplySpell);
-!!UN:P61/?y1;
-!!FU&y1<>1:E;
+!#DC(WOG_OPT_PROTECTION_FROM_SCOOLMAGIC) = 61;
+
+
+!?FU(WOG_CreateERMHook);
+!!UN:P(WOG_OPT_PROTECTION_FROM_SCOOLMAGIC)/?(wogOption:y);   
+!!SN&(wogOption)=(TRUE):Ex1/1/4474395/(WOG_OPT_PROTECTION_BattleStack_ApplySpell);
+
+!?FU(WOG_OPT_PROTECTION_BattleStack_ApplySpell);
+!!UN:P(WOG_OPT_PROTECTION_FROM_SCOOLMAGIC)/?(wogOption:y); 
+!!FU&(wogOption)<>(TRUE):E;   
 
 ; [get spell caster type]
-!!BG:A?y9;
-!!if&y9=1:;
+!!BG:A?(action:y);
+!!if&(action)=(BATTLE_ACTION_HERO_CAST);
 
 ; [get spell id]
- !!SN:X?y10;
- !!FU&y1<1:E;
- !!UN:Cy10/16/4/?y1;
- ; [EBX: y1 - spell_id]
+ !!SN:X?(hookMain:y);
+ !!UN:C(hookMain)/(ERM_HOOK_EBX)/(UNC_UINT32)/?(spellId:y);
 
  ; [if enemy & not damage spell]
- !!if&y1>14/y1<66:;              [spell limits]
-   !!SSy1:F?y2 O?y3;             [get spell params]
-   !!VRy2:&262144;               [check spell flags]
-   !!if&y2=262144/y3=-1:;        [if enemy & not damage spell]
+ !!if&(spellId)>(SPELL_EARTHQUAKE)/(spellId)<(SPELL_FIRE_ELEMENTAL);    
+   !!SS(spellId):F?(spellFlags:y) O?(spellTarget:y);               
+   !!VR(spellFlags:y):&262144;                                     
+   !!if&(spellFlags:y)=262144/(spellTarget)=-1;  [if enemy & not damage spell]
 
      ; [if stack target is true]
-     !!FU(WOG17_MR_N_GetStackID):P?y4;
-     !!if&y4<>-1;                [if stack target is true]
+     !!FU(WOG_Battle_MR_N_GetStackID):P?(stackID:y);
+     !!if&(stackID)<>(NO_MON);         [if stack target is true]
 
-       !!VRy7:Sv2;               [save v2 var]
-       !!VRv2:S-1;               [reset v2 var]
-       !!FU(WOG17_GetSpellProtectionPower):Py1/1/30/y4;   [check air   protection]
-       !!FU(WOG17_GetSpellProtectionPower):Py1/2/31/y4;   [check fire  protection]
-       !!FU(WOG17_GetSpellProtectionPower):Py1/4/32/y4;   [check water protection]
-       !!FU(WOG17_GetSpellProtectionPower):Py1/8/33/y4;   [check earth protection]
-       
-       !!VRy8:Sv2;               [save spell power]
-       !!VRv2:Sy7;               [restore v2 var]
+       !!VR(spellPower:y):S(NULL);  
+       !!FU(WOG_Battle_GetSpellProtectionLvl):P(spellId)/(SPELL_SCHOOL_AIR)/(SPELL_PROTECTION_FROM_AIR)/(stackID)/?(spellPower)   
+                                              P(spellId)/(SPELL_SCHOOL_FIRE)/(SPELL_PROTECTION_FROM_FIRE)/(stackID)/?(spellPower) 
+                                              P(spellId)/(SPELL_SCHOOL_WATER)/(SPELL_PROTECTION_FROM_WATER)/(stackID)/?(spellPower)
+                                              P(spellId)/(SPELL_SCHOOL_EARTH)/(SPELL_PROTECTION_FROM_EARTH)/(stackID)/?(spellPower);   
 
-       !!if&y8>=0/y8<=3:;
+       !!if&(spellPower)>=0/(spellPower)<=3;
          ; get spell power (rounds)
-         !!UN:Cy10/8/4/?y11;     [EBP]
-         !!UN:Cy11/12/4/?y6;     [y6 - rounds]
+         !!UN:C(hookMain)/(ERM_HOOK_EBP)/(UNC_UINT32)/?(ebp:y);  
+         !!UN:C(ebp)/12/(UNC_UINT32)/?(rounds:y);     [y6 - rounds]
          ;
-         !!VRy7&y8=0:S80;        [protection 20%]
-         !!VRy7&y8=1:S67;        [protection 33%]
-         !!VRy7&y8=2:S50;        [protection 50%]
-         !!VRy7&y8=3:S50;        [protection 50%]
+         !!VR(procents:y):S80;                  has no lvl [protection 20%]
+         !!VR(procents)&(spellPower)=(SKILL_BASIC):S67;    [protection 33%]
+         !!VR(procents)&(spellPower)=(SKILL_ADVANCED):S50; [protection 50%]
+         !!VR(procents)&(spellPower)=(SKILL_EXPERT):S50;   [protection 50%]
          
-         !!VRy9:Sy6 +1 *y7 :100; [set procents]
-         !!VRy9&y9<1:S1;         [if less than one, set one round]
-         !!UN:Cy11/12/4/y9;      [set new count rounds]
-       !!en:;
-     !!en:;
-   !!en:;
- !!en:;
-!!en:;
-
-
-!?FU(WOG17_MR_N_GetStackID);
-; x1 - return: stack_id or -1
-!!VRx1:S-1; reset x var to -1
-!!UN:C42231940/4/?y1;
-!!UN:Cy1/56/4/?y2;
-!!FU|y2<0/y2>186:E;
-!!BU:Ey2/?y3;
-!!VRx1&y3>=0/y3<42:Sy3;
-
-!?FU(WOG17_GetSpellProtectionPower);
-; x1 - spell_id
-; x2 - spell_bits
-; x4 - stack target id
-; return: v2 - protect spell power
-!!SSx1:S?y1;  !!VRy1:&x2;
-!!VRy2:S0;    !!VRy3:S0;
-!!BMx4&y1=x2:Gx3/?y2/?y3;
-!!VRv2&y2>0:Sy3;
+         !!VR(protection:y):S(rounds) +1 *(procents) :100; [set procents]
+         !!VR(protection)&(protection)<1:S1;         [if less than one, set one round]
+         !!UN:C(ebp)/12/(UNC_UINT32)/(protection);      [set new count rounds]
+       !!en;
+     !!en;
+   !!en;
+ !!en;
+!!en;
 
 ** End of Script **

@@ -1,40 +1,67 @@
-ZVSE
+ZVSE2
 
-** Dungeon of the Dragonmaster
-** Wogify Name: script53.erm
-** This strengthens all Dragon Utopias an a map. AI will visit normal DU but gets some extra bonuses.
+** ENHANCED DRAGON UTOPIAS
+** РЈРЎРР›Р•РќРќР«Р• РЈРўРћРџРР Р”Р РђРљРћРќРћР’
 
-** Замена WoG-скрипта "Темница хозяина драконов"
-** - Охрана Утопий и награда в золоте на 25..100% больше обычных
-** - После взятия не появляется специальных заграждений
-** - Золото Утопии не может быть обменяно на опыт
-** - Утопии могут быть 4х типов:
-** 1. Обычная Утопия   (+25% сила охраны и золото)  - 3x Черные,    3x Золотые,  6x Красные,       6x Зеленые драконы.
-** 2. Элитная Утопия   (+50% сила охраны и золото)  - 2x Темные,    2x Алмазные, 4x Черные,        4x Золотые драконы.
-** 3. Неживая Утопия   (+75% сила охраны и золото)  - 2x Драколичи, 4x Кровавые, 6x Призрачные,    8x Костяные драконы.
-** 4. Эпическая Утопия (+100% сила охраны и золото) - 1x Лазурные,  2x Кристаллические, 3x Ржавые, 4x Волшебные драконы.
+** Option 053 by Algor
+** Rewritten by igrik (11.10.2020)
 
-!?FU(OnAfterErmInstructions);           // Перед показом карты
-!!UN:P53/?y1;    !!FU&y1=0:E;           // выход, если опция не включена
-!!UN:U25/-1/?y1; !!VRv1:S-1;            // y1 - количество употий
-!!DO(WOG25_ChangeDU)/1/y1/1:P;          // модификация Утопий
+** All Dragon Utopias now have more diverse and existing guards. Winnings increased by 25...100%.
 
-!?FU(WOG25_ChangeDU);                   // модификация Утопий
-!!UN:U25/-1/-1/1;                       // v1-v3 - координаты Утопии
-!!CBv1/v2/v3:R6/?y4;                    // y4 - Количество золота в утопии (20/30/60/50к)
+** Utopia protection can be of 4 types:
+** 1. Common Utopia    (+25%  guard power and gold):  3x Black,     3x Gold,    6x Red,    6x Green.
+** 2. Elite Utopia     (+50%  guard power and gold):  2x Darkness,  2x Diamond, 4x Black,  4x Gold.
+** 3. Inanimate Utopia (+75%  guard power and gold):  2x Dracolich, 4x Blood,  6x Ghost, 8x Bone.
+** 4. Epic Utopia      (+100% guard power and gold):  1x Azure,     2x Crystal, 3x Rust,  4x Faerie.
 
-; 3x Черные, 3x Золотые, 6x Красные, 6x Зеленые драконы, Награда 30к золота
-!!CBv1/v2/v3&y4=20000:G0/83/3  G1/27/3  G2/82/6  G3/26/6  G4/-1/0 G5/-1/0 G6/-1/0 R6/30000;
 
-; 2x Темные, 2x Алмазные, 4x Черные, 4x Золотые драконы, Награда 50к золота
-!!CBv1/v2/v3&y4=30000:G0/155/2 G1/151/2 G2/83/4  G3/27/4  G4/-1/0 G5/-1/0 G6/-1/0 R6/50000;
+!#DC(WOG_OPT_ENHANCED_DRAGON_UTOPIAS) = 53;
 
-; 2x Драколичи, 4x Кровавые, 6x Призрачные, 8x Костяные драконы, Награда 70к золота
-!!CBv1/v2/v3&y4=40000:G0/196/2 G1/154/4 G2/69/6  G3/68/8  G4/-1/0 G5/-1/0 G6/-1/0 R6/70000;
 
-; 1x Лазурные, 2x Кристаллические, 3x Ржавые, 4x Волшебные драконы, Награда 100к золота
-!!CBv1/v2/v3&y4=50000:G0/132/1 G1/133/2 G2/135/3 G3/134/4 G4/-1/0 G5/-1/0 G6/-1/0 R6/100000;
-!!UN:P67/?y5;  // если включен скрипт "Нейтральный город"
-!!CBv1/v2/v3&y4=50000/y5=1:G2/135/d3;
+; function for passing through all map objects
+!?FU(WOG_OnIterateAllMapObjects);
+!#VA(x:x) (y:x) (z:x);
+!#VA(objType:x);
+!#VA(objSubtype:x);
+!#VA(isYellowSquare:x); boolean.
+!#VA(isPassable:x);     boolean.
 
-** end
+; check: is entry to the object
+!!FU&(isYellowSquare)<>(TRUE):E;
+
+; check option is enabled
+!!UN:P(WOG_OPT_ENHANCED_DRAGON_UTOPIAS)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+; check: object type
+!!FU&(objType)<>(OBJ_DRAGON_UTOPIA):E;
+
+; get gold utopia bonus 
+!!CB(x)/(y)/(z):R(RES_GOLD)/?(gold:y);
+
+!!if&(gold)<=20000:; 3x Black, 3x Gold, 6x Red, 6x Green. 30k gold
+  !!CB(x)/(y)/(z):G0/(MON_BLACK_DRAGON)/3 G2/(MON_RED_DRAGON)/6; 
+  !!CB(x)/(y)/(z):G1/(MON_GOLD_DRAGON)/3 G3/(MON_GREEN_DRAGON)/6; 
+  !!CB(x)/(y)/(z):G4/(NO_MON)/0 G5/(NO_MON)/0 G6/(NO_MON)/0;
+  !!CB(x)/(y)/(z):R(RES_GOLD)/30000; 
+
+!!el&(gold)<=30000:; 2x Darkness, 2x Diamond, 4x Black, 4x Gold. 50k gold
+  !!CB(x)/(y)/(z):G0/(MON_DARKNESS_DRAGON)/2 G2/(MON_BLACK_DRAGON)/4; 
+  !!CB(x)/(y)/(z):G1/(MON_DIAMOND_DRAGON)/2 G3/(MON_GOLD_DRAGON)/4; 
+  !!CB(x)/(y)/(z):G4/(NO_MON)/0 G5/(NO_MON)/0 G6/(NO_MON)/0; 
+  !!CB(x)/(y)/(z):R(RES_GOLD)/50000; 
+
+!!el&(gold)<=40000:; 2x Dracolich, 4x Blood, 6x Ghosts, 8x Bone. 70k gold
+  !!CB(x)/(y)/(z):G0/(MON_DRACOLICH)/2 G2/(MON_GHOST_DRAGON)/6; 
+  !!CB(x)/(y)/(z):G1/(MON_BLOOD_DRAGON)/4 G3/(MON_BONE_DRAGON)/8;
+  !!CB(x)/(y)/(z):G4/(NO_MON)/0 G5/(NO_MON)/0 G6/(NO_MON)/0;
+  !!CB(x)/(y)/(z):R(RES_GOLD)/70000; 
+
+!!el:;               1x Azure, 2x Crystal, 3x Rust,  4x Faerie.
+  !!CB(x)/(y)/(z):G0/(MON_AZURE_DRAGON)/1 G2/(MON_RUST_DRAGON)/3;
+  !!CB(x)/(y)/(z):G1/(MON_CRYSTAL_DRAGON)/2 G3/(MON_FAERIE_DRAGON)/4; 
+  !!CB(x)/(y)/(z):G4/(NO_MON)/0 G5/(NO_MON)/0 G6/(NO_MON)/0; 
+  !!CB(x)/(y)/(z):R(RES_GOLD)/100000; 
+!!en;
+
+** End of Script **

@@ -1,8 +1,11 @@
 ZVSE2
 
-**   Enhanced Hint Text Script Version 1.3 created by Timothy E. Pulver
-**   Updated: June 16, 2004
-**   Rewritten by Archer30 on Apr 2022
+** ENHANCED DWELLING HINT TEXT
+** ПОДРОБНЫЕ ОПИСАНИЯ ПО ВНЕШНИМ ЖИЛИЩАМ
+
+** Option 024 by Timothy Pulver
+** Rewritten by igrik (16.10.2020)
+** Special thanks to Berserker!
 
 ** This script enhances the information you see when you right-click on a
 ** dwelling. If you or an allied player own the dwelling, you'll be shown how
@@ -10,74 +13,72 @@ ZVSE2
 ** unowned or owned by another non-allied player, you'll just be shown the
 ** standard information.
 
-** To install this script in a map, simply copy & paste the code into a global
-** (timed) event. Copy the entire code, from ZVSE to the end. Make sure
-** that you disable ALL colours from receiving the event and/or change
-** the event day to something like 500 or later to avoid the ERM script
-** popping up as if it were a regular event message. The title of the event
-** is unimportant, but I would suggest something like "Enhanced Hint Text".
-** Happy right-clicking! :-)
 
-** Version 1.1 adds code to work with the new WoGify Options screen and
-** no longer uses flag 58.
+!#DC(WOG_OPT_DWELLING_HINT_TEXT) = 24;
 
-** Version 1.2 no longer sets the hint text and instead simply displays
-** the extended dialogue box on the screen; this resolves a problem with
-** incorrect text being shown when moving the mouse over other dwellings.
-** Additionally, this update displays pictures of the creatures if there's
-** fewer than 4 types available at the dwelling.
 
-** Version 1.3 is updated to work with the new 3.58 creature dwellings.
-
-** Version 2.0 is rewritten by Archer30 in order to improve the compatibility
-** with multiple scripts and mods.
-
------------------------------------------------------------------------------------------
-
-!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=37;
-!!UN:P24/?(wogOption:y);
+!?FU(OnAdventureMapRightMouseClick);
+!!UN:P(WOG_OPT_DWELLING_HINT_TEXT)/?(wogOption:y);  
 !!FU&(wogOption)<>(TRUE):E;
 
-; Exit if not clicking on a dwelling
+; get click params
+!!CM:F?(flags:y) I?(itemID:y);
+!!FU|(flags)<>(MOUSE_FLAG_RMB)/(itemID)<>37:E;
+
+; get click coordinates
 !!CM:P?(x:y)/?(y:y)/?(z:y);
-!!OB(x)/(y)/(z):T?(type:y) U?(subtype:y);
-!!FU&(type)<>(OBJ_CREATURE_GENERATOR_1)/(type)<>(OBJ_CREATURE_GENERATOR_4):E;
 
-; Exit if the interacting player is not the owner of the dwelling
-!!DW(x)/(y)/(z):O?(owner:y);
-!!OW:C?(player:y)/?(interactPlayer:y);
-!!FU&(owner)<>(interactPlayer):E;
+; get object params
+!!OB(x)/(y)/(z):T?(objectType:y) U?(dwellingType:y);
 
-!!CM:R0;
+; exit if not a dwelling
+!!FU&(objectType)<>(OBJ_CREATURE_GENERATOR_1)/(objectType)<>(OBJ_CREATURE_GENERATOR_4):E;
 
-; Set up the dialogue with monster and numbers
-!!FU(NewIntArray):P?(availMons:y);
+; get object entrance coordinates
+!!SN:O?(x)/?(y)/?(z);
 
-!!re (slot:y)/0/3;
-  !!DW(x)/(y)/(z):M(slot)/?(mon:y)/?(num:y);
+; get dwelling owner
+!!DW(x)/(y)/(z):O?(owner:y)/1;
+!!FU&(owner)=(NO_OWNER):E;
 
-  !!if&(mon)>(NO_MON);
-    !!VR(num):F0/32767;
-    !!VR(monAndNum:y):S65536 *(num) +(mon);
-    !!FU(Array_Push):P(availMons)/(PIC_TYPE_MONSTER)/(monAndNum);
+; get me player id
+!!FU(WOG_GameMgr_GetPlayer_Me):P?(mePlayerId:y);
+
+; get my team id
+!!FU(WOG_GameMgr_GetPlayer_Team):P(mePlayerId)/?(myTeam:y);
+
+; get dwelling owner team id
+!!FU(WOG_GameMgr_GetPlayer_Team):P(owner)/?(ownerTeam:y);
+
+; check is this my team dwelling
+!!FU&(myTeam)<>(ownerTeam):E;
+
+; disable standard action
+!!CM:R(FALSE);
+
+; get dwelling name
+!!FU(WOG_GameMgr_GetDwellingName):P(objectType)/(dwellingType);
+!!VR(dwellingName:z):Ss^result^;
+
+; get owner text
+!!FU(WOG_GameMgr_GetObjOwnerStr):P(owner);
+!!VR(ownerText:z):Ss^result^;
+
+; init y-vars
+!#VA(msgType[4]:y) (msgMonType[4]:y);
+!!VR(msgType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
+!!VR(msgMonType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
+
+!!re i/0/3/1;
+  !!DW(x)/(y)/(z):Mi/?(monType:y)/?(monCount:y);
+
+  !!if&(monType)<>(NO_MON);  
+    !!VR(msgType[i]):S(PIC_TYPE_MONSTER) |(PIC_TYPE_FLAG_DISPLAY_ZEROS);
+    !!VR(msgMonType[i]):S(monCount) Sd<<16 |(monType);
   !!en;
 !!en;
 
-!!FU(WOG_SetupMultiPicDlg):P(availMons);
+!!IF:N(msgType[0])/(msgMonType[0])/(msgType[1])/(msgMonType[1])/(msgType[2])/(msgMonType[2])/(msgType[3])/(msgMonType[3]);
+!!IF:N(MSG_TYPE_POPUP)/^{%(dwellingName)}
 
-; Get the string for the title
-!!if&(type)=(OBJ_CREATURE_GENERATOR_1);
-  !!FU(WOG_GetStringByFilename):P^crgen1^/(subtype)/?(dwellName:z);
-!!el&(type)=(OBJ_CREATURE_GENERATOR_4);
-  !!FU(WOG_GetStringByFilename):P^crgen4^/(subtype)/?(dwellName);
-!!en;
-
-!!FU(WOG_GetStringByFilename):P^plcolors^/(owner)/?(colourStr:z);
-!!FU(StrToLower):P(colourStr)/?(lowerColourStr:z);
-!!SN:T^wog.owner^/?(ownerStr:z)/^colour^/(lowerColourStr);
-
-; Open the dialogue
-!!IF:N(MSG_TYPE_POPUP)/^%(dwellName)
-%(ownerStr)^;
-
-** End of Script **
+%(ownerText)^;

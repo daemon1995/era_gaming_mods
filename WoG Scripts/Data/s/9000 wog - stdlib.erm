@@ -2,8 +2,6 @@ ZVSE2
 ; MAIN WOG Script
 
 
-!#VRi^WOG_RandomSeedValue^:R0/11/99;
-
 !?FU(OnAfterErmInstructions);   
 !!FU(WOG_StartGame):P0;
 
@@ -16,16 +14,20 @@ ZVSE2
 !#TM2:S1/999/1/255;
 
 ; **************************************************************************************************
+
 ; CREATE WOG HOOKS (need plugin: erm_hooker.era)
+
+!#DC(ERM_HOOK_EDI)      = 0;
+!#DC(ERM_HOOK_ESI)      = 4;
+!#DC(ERM_HOOK_EBP)      = 8;
+!#DC(ERM_HOOK_ESP)      = 12;
+!#DC(ERM_HOOK_EBX)      = 16;
+!#DC(ERM_HOOK_EDX)      = 20;
+!#DC(ERM_HOOK_ECX)      = 24;
+!#DC(ERM_HOOK_EAX)      = 28;
+!#DC(ERM_HOOK_RETURN)   = 32;
+
 !?FU(WOG_StartGame);
-!!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
-
-!!if&v1<>(FALSE);
-  !!VRi^WOG_IsHdMod^:S(TRUE);
-!!el;
-  !!VRi^WOG_IsHdMod^:S(FALSE);
-!!en;
-
 !!SN:L^erm_hooker.era^/?(hooker:y);
 !!FU&(hooker)=0:E;
 
@@ -35,17 +37,489 @@ ZVSE2
 !?FU(WOG_CreateERMHook);
 !#VA(address:x);
 
+!!SN:E(address)/1/4224443/(WOG_OnFirstDay);                    [trigger on start game - once first day]
 !!SN:E(address)/1/5013149/(WOG_OnNewDay);                      [trigger on start every day]
 !!SN:E(address)/1/5014608/(WOG_OnNewWeek);                     [trigger on start every week]
 !!SN:E(address)/1/5016587/(WOG_OnNewMonth);                    [trigger on start every month]
-!!SN:E(address)/1/7710213/(WOG_PreBeforeBattle);               [use only in exceptional cases]
 !!SN:E(address)/1/5008601/(WOG_EndOfTurn);                     [trigger on every player end of turn]
+!!SN:E(address)/1/7710213/(WOG_PreBeforeBattle);               [use only in exceptional cases]
 
 !!SN:E(address)/1/5968384/(WOG_OnUpdateHeroInteractionScreen); [trigger WHILE hero meeting screen]
 !!SN:E(address)/1/5942672/(WOG_OnBeforeHeroSwap);              [trigger AFTER OnBeforeHeroInteraction but BEFORE Dlg show (works in town screen)]
 !!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 !!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 !!SN:E(address)/1/4526215/(WOG_OnChangeWindowByResources);     [trigger WHEN counts what pic to display in status window for pickuped resource]
+
+; ******************************************************************************
+
+; GET SPECIAL VARIABLES
+!?FU(WOG_StartGame);
+
+; get count heroes
+!!UN:C4960750/(SIZEOF_UINT32)/?(heroesCount:y); 
+!!VRi^ERM_HEROES_COUNT^:S(heroesCount); 
+
+; get count creatures
+!!UN:C5093986/(SIZEOF_UINT32)/?(countCreatures:y); 
+!!VRi^ERM_CREATURES_COUNT^:S(countCreatures); 
+
+
+
+; ******************************************************************************
+; *************************** WOG FUNCTIONS LIBRARY  ***************************
+; ******************************************************************************
+
+!#DC(WOG_MNG_GAME)   = 6919480;
+!#DC(WOG_MNG_ADV)    = 6918840;
+!#DC(WOG_MNG_TOWN)   = 6919500;
+!#DC(WOG_MNG_BATTLE) = 6919200;
+
+; ******************************************************************************
+; ****************************** Game Manager **********************************
+
+!?FU(WOG_GameMgr_GetPlayer_Team);
+; x1 - me player id
+; x2 - return team id
+!#VA(playerID:x) (teamID:x);
+!!UN:C(WOG_MNG_GAME)/(UNC_UINT32)/?(gm:y); 
+!!SN:E4871632/2/(gm)/(playerID);
+!!VR(teamID):Sv1;
+
+!?FU(WOG_GameMgr_GetPlayer_Me);
+; x1 - return me player id
+!#VA(playerID:x);
+!!UN:C(WOG_MNG_GAME)/(UNC_UINT32)/?(gm:y); 
+!!SN:E5039840/2/(gm);
+!!VR(playerID):Sv1;
+
+; get text by ptr string
+!?FU(WOG_GetTextByPtr);
+; x1 - ptr string
+; always returns to global s^result^
+!!SN:X?(save:y) Xx1 X?s^result^ X(save);
+
+; get dwelling name ptr (only type 20)
+!?FU(WOG_GameMgr_GetDwellingName);
+; string returns to global s^result^
+; x1 - dwelling type
+; x2 - dwelling subtype
+!#VA(dwType:x) (dwSType:x); 
+
+!!VR(adress:y):S4275821; dwType = 17
+!!VR(adress)&(dwType)=20:S4275891;
+!!UN:C(adress)/(UNC_UINT32)/?(ptr:y);
+!!VR(offset:y):S(dwSType) *4 +(ptr); 
+!!UN:C(offset)/4/?(ptrDwellingName:y);
+!!FU(WOG_GetTextByPtr):P(ptrDwellingName);
+
+; get object on map owner text
+!?FU(WOG_GameMgr_GetObjOwnerStr);
+; string returns to global s^result^
+; x1 - owner id
+!#VA(owner:x);
+!!if&(owner)>=(PLAYER_FIRST)/(owner)<=(PLAYER_LAST):;  
+  !!VR(offset:y):S(owner) *4 +6969600; 
+  !!UN:C(offset)/4/?(ptrOwnerName:y);
+  !!FU(WOG_GetTextByPtr):P(ptrOwnerName);
+!!en;
+
+;
+!?FU(WOG_GameMgr_MapItem_ResetDef);
+; x1 - MapItem structure
+!#VA(mapItem:x);
+!!FU&(mapItem)=(FALSE):E;
+!!UN:C(WOG_MNG_GAME)/(UNC_UINT32)/?(gm:y); 
+!!SN:E5019216/(CALLCONV_THISCALL)/(gm)/(mapItem);
+
+; ******************************************************************************
+; *************************** Adventure Manager ********************************
+
+!#DC(ERM_REPLACE_NO_REDRAW) = 0;
+
+!?FU(OnAfterErmInstructions); 
+; deleting the sound in the delete object function
+; because it causes a crash
+!!UN:C4893167/2/?(patch:y);
+!!UN:C4893167/2/24555;
+; get size of the map
+!!UN:X?(mapSize:y)/?(hasUnderground:y); 
+; pass once through all cells of the map
+!!re l/0/(hasUnderground)/1:;  coord z
+  !!re k/0/(mapSize)/1/-1:;    coord y
+    !!re i/0/(mapSize)/1/-1:;  coord x
+      !!OBi/k/l:T?(objType:y) U?(objSubtype:y);
+      !!TRi/k/l:E?(isYellowSquare:y) P?(isPassable:y); 
+      !!VR(isYellowSquare):X1;  reverse param isYellowSquare
+      !!FU(WOG_OnIterateAllMapObjects):Pi/k/l/(objType)/(objSubtype)/(isYellowSquare)/(isPassable);
+    !!en:;
+  !!en:;
+!!en:;
+; restoring the source code of the sound
+; in the delete objects function
+!!UN:C4893167/2/(patch); 
+
+
+!?FU(WOG_AdvMgr_GetMapItem);
+; x1, x2, x3 - coords (x/y/z)
+;?x4 - return MapItem structure
+!#VA(x:x) (y:x) (z:x) (mapItem:x); 
+
+!!UN:C(WOG_MNG_ADV)/(UNC_UINT32)/?(am:y);
+!!UN:C(am)/92/(UNC_UINT32)/?(list:y);
+!!SN:E4228816/2/(list)/(x)/(y)/(z);
+!!VR(mapItem):Sv1;
+
+
+!?FU(WOG_MapItem_GetRealType);
+; x1 - MapItem structure
+;?x2 - return object id
+!#VA(mapItem:x) (objectId:x) ; 
+!!SN:E5231136/2/(mapItem);  
+!!VR(objectId):Sv1;  
+
+
+!?FU(WOG_PackedCoords); 
+; x1, x2, x3 - coords (x/y/z)
+; ?x4 - return packed coords
+!#VA(x:x) (y:x) (z:x) (coords:x); 
+!!SN:E7413375/1/(x)/(y)/(z);  
+!!VR(coords):Sv1;
+
+
+!?FU(WOG_UnPackedCoords);
+; ?x1, ?x2, ?x3 - return unpacked coords (x/y/z)
+; x4 - packed coords
+!#VA(x:x) (y:x) (z:x) (coords:x); 
+!!SN:E7413577/1/?(x)/?(y)/?(z)/(coords);
+
+
+!?FU(WOG_AdvMgr_SetHintString);
+; x1 - z var number
+!!UN:C(WOG_MNG_ADV)/(UNC_UINT32)/?y1;
+!!UN:Cy2/68/(UNC_UINT32)/?y2;
+!!VRy3:Sx1 *512 +9597416;
+!!SN:E7408539/1/6911016/512/y3;
+!!SN:E6288384/2/y2/512/3/200/6911016;
+!!SN:E6288864/2/y2/0/200/200;
+!!UN:C4199503/2/?y4;
+!!UN:C4199496/2/?y5;
+!!VRy4:-44;  
+!!VRy5: :2 +382;
+!!UN:C6918864/(UNC_UINT32)/?y6;
+!!SN:E6304144/2/y6/8/y4/y5/14;
+
+; ******************************************************************************
+; ****************************** Town Manager **********************************
+
+; получение структуры города
+!?FU(WOG_Town_GetStruct);
+; x1 - town number on map (0...47)
+;?x2 - return: ptr structure town
+!#VA(townId:x) (buildId:x); 
+!!IF&(townId)<(MAP_TOWN_FIRST)|(townId)>(MAP_TOWN_LAST):M^{FU(Town_GetStruct)}: Wrong town id.^;
+!!UN:C(WOG_MNG_GAME)/(UNC_UINT32)/?(game:y); 
+!!UN:C(game)/136724/(UNC_UINT32)/?(ptr:y); 
+!!VR(buildId):S(townId) *360 +(ptr);
+!!IF&(buildId)<43200000:M^{FU(Town_GetStruct): Attention!}
+Error in getting town structure address. 
+The game may fall at any time.^; 
+
+
+; получить стоимость здания 
+; v10 - дерево, v11 - ртуть ... v16 - золото
+!?FU(WOG_Town_GetBuildingCost);
+; x1 - town number on map (0...47)
+; x2 - building id
+!#VA(townId:x) (buildId:x); 
+; return v10-v16: ptr array: int cost[6]
+!!FU(WOG_Town_GetStruct):P(townId)/?(town:y);
+!!VR(ptr:y):S8943244; ptr v10
+!!SN:E6034672/2/(town)/(buildId)/(ptr);
+
+; хватает ли денег на постройку (активный игрок только!)
+!?FU(WOG_Town_CanBuildingCost);
+; x1 - town number on map (0...47)
+; x2 - building id
+; x3 - return: bool (0-no, 1-yes)
+!#VA(townId:x) (buildId:x) (result:x); 
+!!FU(WOG_Town_GetStruct):P(townId)/?(town:y);
+!!SN:E4590864/3/(town)/(buildId);
+!!VR(result):Sv1;
+
+
+; разрешено ли впринципе построить это здание в городе?
+!?FU(WOG_Town_IsPossibleToBuildBuilding);
+; x1 - town number on map (0...47)
+; x2 - building id
+; x3 - return: bool (0-no, 1-yes)
+!#VA(townId:x) (buildId:x) (result:x); 
+!!FU(WOG_Town_GetStruct):P(townId)/?(town:y);
+!!CA0/(townId):R?(canBuildToday:y) R(FALSE);
+!!SN:E6033696/2/(town)/(buildId);
+!!VR(result):S(FALSE);    
+!!VR(result)&v1<>(FALSE):S(TRUE);
+!!CA0/(townId):R(canBuildToday);
+
+
+; построено ли здание в городе?
+!?FU(WOG_Town_IsBuildingBuilt);
+; x1 - town number on map (0...47)
+; x2 - building id
+; x3 - return: bool (0-no, 1-yes)
+!#VA(townId:x) (buildId:x) (result:x); 
+!!FU(WOG_Town_GetStruct):P(townId)/?(town:y);
+!!SN:E4392352/2/(town)/(buildId)/(TRUE);
+!!VR(result):Sv1;
+
+
+; показать как строится здание 
+; только внутри экрана города
+!?FU(WOG_Town_ShowBuildingConstructionAnimation);
+; x1 - town number on map (0...47)
+; x2 - building id
+!#VA(townId:x) (buildId:x); 
+!!UN:C(WOG_MNG_TOWN)/(UNC_UINT32)/?(tm:y);
+!!UN:C(tm)/440/(UNC_UINT32)/(buildId);
+!!SN:E6123136/2/(tm)/(buildId);
+
+
+; получить id нанимаемого монстра в городе 
+!?FU(WOG_Town_GetCreatureID);
+!#VA(townType:x) (monLevel:x) (monGrade:x) (result:x);
+; x1 - тип города: 0-9
+; x2 - уровень монстра: 0-6
+; x3 - не улучшенный или улучшенный: 0-1
+; ?x4 - результат: номер нанимаего монстра 
+!!VR(townType):*14;
+!!VR(monGrade):*7;
+!!VR(id:y):S(townType) + (monGrade) + (monLevel) * 4;
+!!UN:C4365236/4/?(ptrTable:y);
+!!UN:C(ptrTable)/(id)/4/?(result);
+
+; ******************************************************************************
+; ***************************** Battle Manager *********************************
+
+!?FU(WOG_Battle_GetMapItem);
+;?x1 - return MapItem structure in Battle
+!#VA(mapItem:x);   initializate
+!!UN:C(WOG_MNG_BATTLE)/4/?(bm:y);   
+!!UN:C(bm)/21436/4/?(mapItem);   
+
+!?FU(WOG_Battle_MR_N_GetStackID);
+; x1 - return: stack_id or -1
+!#VA(result:x);   initializate
+!!VR(result):S-1; reset x var to -1
+!!UN:C42231940/(UNC_UINT32)/?(ptr:y);
+!!UN:C(ptr)/56/(UNC_UINT32)/?(gex:y);
+!!FU|(gex)<(BATTLE_GEX_FIRST)/(gex)>(BATTLE_GEX_LAST):E;
+!!BU:E(gex)/?(stackId:y);
+!!VR(result)&(stackId)>=0/(stackId)<(BATTLE_MAX_STACKS):S(stackId);
+
+!?FU(WOG_Battle_GetSpellProtectionLvl);
+; x1 - spell_id
+; x2 - spell_bits
+; x3 - protection spell id (30...33)
+; x4 - stack target id
+;?x5 - return: protect spell lvl
+!#VA(spellId:x) (bits:x) (protecId:x) (target:x) (result:x);
+
+!!VR(result):S(NULL); 
+!!FU&(spellId)<0|(spellId)>69:E;
+!!SS(spellId):S?(spBits:y);  
+!!VR(spBits):&(bits);
+!!BM(target)&(spBits)=(bits):G(protecId)/?(duration:y)/?(power:y);
+!!VR(result)&(duration)>0:S(power);
+
+
+; ******************************************************************************
+; ***************************** Another functions ******************************
+
+!?FU(WOG_CreateERMHook); 
+; пока что не нужно. Потом можно выпилить
+; потому что Берс добавил в скрипт самой ЭРЫ
+!!SN:Ex1/1/4230103/(WOG_NotUse_A); 
+!!SN:Ex1/1/4674071/(WOG_NotUse_B); 
+
+
+!?FU(WOG_NotUse_A); 
+; don't touch it at all!
+!!SN:X?(hookMain:y);
+!!UN:C(hookMain)/(ERM_HOOK_EBP)/(UNC_UINT32)/?(msg:y);
+!!UN:C(msg)/8/(UNC_UINT32)/?(subType:y);
+!!UN:C(subType)/4/(UNC_UINT32)/?(keyId:y);
+*!IF:M^Key id: %Y4^;
+!!FU(WOG_OnKeyPressed_AdvMap):P(keyId); 
+; use only this way
+; ?FU(WOG_OnKeyPressed_AdvMap)&x1=(key_id);
+
+
+!?FU(WOG_NotUse_B); 
+; don't touch it at all!
+!!SN:X?(hookMain:y);
+!!UN:C(hookMain)/(ERM_HOOK_EAX)/(UNC_UINT32)/?(keyId:y);
+*!IF:M^Key id: %(keyId)^;
+!!FU(WOG_OnKeyPressed_Battle):P(keyId); 
+; use only this way
+; ?FU(WOG_OnKeyPressed_Battle)&x1=(key_id);
+
+
+!?FU(WOG_GetKeyState);
+; ** Shift - 16
+; ** Ctrl  - 17
+; ** Alt   - 18
+; x1 - id virtual key id
+; x2 - return (1-yes, 0-no)
+!#VA(virtualKey:x) (result:x);
+!#VA(dll:y) (ptr:y);
+
+!!VR(result):S(FALSE);
+!!SN:L^user32.dll^/?(dll) A(dll)/^GetKeyState^/?(ptr) E(ptr)/1/(virtualKey);
+!!VR(keyIsOn:y):Sv1 &32768;
+!!FU&(keyIsOn)<32768:E;
+!!VR(result):S(TRUE);
+
+
+!?FU(WOG_DL_ChangeCoords);
+!#VA(dlgId:x) (x:x) (y:x);
+; x1 - WoG dialog id
+; x2 - coord X (-1 center)
+; x3 - coord Y (-1 center)
+
+!!VR(saveV1:y):Sv1;
+!!SN:E7510739/(CALLCONV_CDECL)/(dlgId);
+!!VR(ptrDlg:y):Sv1;
+
+!!if&(ptrDlg)<>(NULL):;
+  !!UN:C(ptrDlg)/(UNC_UINT32)/?(strDlg:y);
+
+  !!if&(x)>=0:;  
+    !!UN:C(strDlg)/32/(UNC_UINT32)/?(dlgWidth:y);
+    !!VR(centerX:y):S(dlgWidth) :2;
+    !!VR(x):-(centerX);
+
+    ; check for out of bounds X < 0
+    !!if&(x)<0:;
+      !!VR(x):S0; 
+    !!el:  
+      ; check for out of bounds X > HD_X
+      !!UN:C(HD_X)/(UNC_INT16)/?(gameResolutionX:y);
+      !!VR(checkXmax:y):S(gameResolutionX) -16 -(dlgWidth);
+      !!VR(x)&(x)>(checkXmax):S(checkXmax);
+    !!en;
+
+    ; set x coord
+    !!UN:C(strDlg)/24/(UNC_UINT32)/(x);
+  !!en:;
+
+
+  !!if&(y)>=0:;  
+    !!UN:C(strDlg)/36/(UNC_UINT32)/?(dlgHight:y);
+    !!VR(centerY:y):S(dlgHight) :2;
+    !!VR(y):-(centerY);
+
+    ; check for out of bounds Y < 0
+    !!if&(y)<0:;
+      !!VR(y):S0; 
+    !!el:  
+      ; check for out of bounds Y > HD_Y
+      !!UN:C(HD_Y)/(UNC_INT16)/?(gameResolutionY:y);
+      !!VR(checkYmax:y):S(gameResolutionY) -16 -(dlgHight);
+      !!VR(y)&(y)>(checkYmax):S(checkYmax);
+    !!en;
+    
+    ; set y coord
+    !!UN:C(strDlg)/28/(UNC_UINT32)/(y);  
+  !!en:; 
+  
+!!en:;
+!!VRv1:S(saveV1);
+
+
+
+; ******************************************************************************
+; ***************************** Player functions *******************************
+
+!?FU(WOG_Creature_GetCost);
+!#VA(creatureID:x) (wood:x) (mercury:x) (ore:x) (sulfur:x) (crystal:x) (gems:x) (gold:x);
+
+!!MA:C(creatureID)/(RES_WOOD)/?(wood);
+!!MA:C(creatureID)/(RES_MERCURY)/?(mercury);
+!!MA:C(creatureID)/(RES_ORE)/?(ore);
+!!MA:C(creatureID)/(RES_SULFUR)/?(sulfur);
+!!MA:C(creatureID)/(RES_CRYSTAL)/?(crystal);
+!!MA:C(creatureID)/(RES_GEMS)/?(gems);
+!!MA:C(creatureID)/(RES_GOLD)/?(gold);
+
+; -----------------------------------
+
+!?FU(WOG_Player_CheckEnoughResources);
+!#VA(result:x) (playerId:x) (wood:x) (mercury:x) (ore:x) (sulfur:x) (crystal:x) (gems:x) (gold:x);
+!!VR(result):S(FALSE);
+
+!!OW:R(playerId)/(RES_GOLD)/?(count:y);   !!FU&(count)<(gold):E;
+!!OW:R(playerId)/(RES_WOOD)/?(count);     !!FU&(count)<(wood):E;
+!!OW:R(playerId)/(RES_MERCURY)/?(count);  !!FU&(count)<(mercury):E;
+!!OW:R(playerId)/(RES_ORE)/?(count);      !!FU&(count)<(ore):E;
+!!OW:R(playerId)/(RES_SULFUR)/?(count);   !!FU&(count)<(sulfur):E;
+!!OW:R(playerId)/(RES_CRYSTAL)/?(count);  !!FU&(count)<(crystal):E;
+!!OW:R(playerId)/(RES_GEMS)/?(count);     !!FU&(count)<(gems):E;
+!!VR(result):S(TRUE);
+
+; -----------------------------------
+
+!?FU(WOG_Player_RemoveResources);
+!#VA(playerId:x) (wood:x) (mercury:x) (ore:x) (sulfur:x) (crystal:x) (gems:x) (gold:x);
+
+!!OW:R(playerId)/(RES_WOOD)/d-(wood);    
+!!OW:R(playerId)/(RES_MERCURY)/d-(mercury);   
+!!OW:R(playerId)/(RES_ORE)/d-(ore);      
+!!OW:R(playerId)/(RES_SULFUR)/d-(sulfur);    
+!!OW:R(playerId)/(RES_CRYSTAL)/d-(crystal);  
+!!OW:R(playerId)/(RES_GEMS)/d-(gems);     
+!!OW:R(playerId)/(RES_GOLD)/d-(gold);  
+
+
+; ******************************************************************************
+; ****************************** Hero functions ********************************
+
+
+!?FU(WOG_Hero_GetClassName);
+!#VA(heroID:x) (zStringID:x);
+
+!!VR(saveV1:y):Sv1;     
+!!HE(heroID):Z?(hero:y); 
+!!SN:E5083616/2/(hero);  
+!!SN:X?(saveParam:y) Xv1 X?z(zStringID) X(saveParam); 
+!!VRv1:S(saveV1); 
+
+** End of igrik's Script ** 
+
+
+** Start of Era Launcher Team's Script **
+
+!#VRi^WOG_RandomSeedValue^:R0/11/99;
+
+!?FU(WOG_StartGame);
+!!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
+
+!!if&v1<>(FALSE);
+  !!VRi^WOG_IsHdMod^:S(TRUE);
+!!el;
+  !!VRi^WOG_IsHdMod^:S(FALSE);
+!!en;
+
+; **************************************************************************************************
+; Loop through all the towns on Day 1
+!?FU(OnAfterErmInstructions);
+!!VR(x:y):S-1;
+
+; loop through all towns
+!!re i;
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
+  !!FU(WOG_OnIterateAllTowns):P(x)/(y)/(z);
+!!en;
 
 ; **************************************************************************************************
 ; Get the real type and subtype of a map object
@@ -220,6 +694,8 @@ ZVSE2
 !!SN:K(text)/(index)/?(character:z);
 !!FU(Substr)&(character)=^.^:P(text)/0/-4/?(text);
 
+!!if&(text)=^arraytxt^;
+  !!VR(address:y):S6971564;             [array text]
 !!if&(text)=^artevent^;
   !!VR(address:y):S6909120;             [artifact events]
 !!el&(text)=^crgen1^;
