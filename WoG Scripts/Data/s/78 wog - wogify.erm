@@ -575,9 +575,6 @@ Returned Values:
 !!UN:P143/?y23; [Check if New Artifacts is enabled: y23]
 !!UN:P234/?y24; [Check if Warlord's Banner is disabled: y24]
 !!UN&y22=0:A156/1; [If Stack Experience is disabled, disable Warlord's Banner]
-!!UN:P245/?y25; [Check if Level 7+ Troops Only Gain 50% Experience is enabled: y25]
-
-!!DO29/0/196/1&y22=1/y25=1:P; [Set 50% Exp. Multiplier for Level 7+ Troops]
 
  [If Stack Experience enabled, New WoG Artifacts enabled, and]
  [Warlord's Banners not banned, add Banners to Creature Banks]
@@ -1272,11 +1269,6 @@ Number replaced with Mithril: %V6^;
 !!DO677/1/v951/1&y3=1:Py2/y4/y5/y6/y7; [loop through all artifacts on map]
 
 
-** upgrade chests
-
-!!UN:P132/?y3; [check if Upgrading Treasure Chests option is enabled]
-!!FU679&y3=1:P; [upgrade some of them]
-
 ** convert monster stacks
 
 !!UN:P139/?y3; [check if Replacing Creatures option is enabled]
@@ -1284,13 +1276,6 @@ Number replaced with Mithril: %V6^;
 !!UN|y3=1/y4=1:U54/-1/?v951; [get number of monsters]
 !!VRv952:S-2; [Initialize v952 to last object for faster UN:U format]
 !!DO680/1/v951/1|y3=1/y4=1:Py3/y4; [loop through all monsters]
-
-** upgrade dwellings
-
-!!UN:P133/?y3; [check if Upgraded Dwellings option is enabled]
-!!UN&y3=1:U17/-1/?v951; [get number of dwellings]
-!!VRv952:S-1; [Initialize v952 to first object for faster UN:U format]
-!!DO684/1/v951/1&y3=1:P; [loop through dwellings]
 
 ** add SoD terrains
 
@@ -1351,9 +1336,15 @@ Number replaced with Mithril: %V6^;
 !!VRy3:S1 R3; [number of times to roll percentile dice (for extra randomness): y3]
 !!VRy2:S0 R99; [roll percentile dice: y2]
 !!VRy2&y3=4:S0 R99; [reroll percentile dice: y2]
-!!MTv952/v953/v954&y2<x5/x1=57:N?y4; [If an Obelisk is replaced, get Obelisk number: y4]
-!!UN&y2<x5/x1=57:L-2/y4/1; [If an Obelisk is replaced, set it to "visited" for all players]
-!!FU673&y2<x5:Px1/x2/x3/x4/x5; [go replace it x5 % of the time]
+
+!!if&y2<x5;
+  !!if&x1=57;
+    !!MTv952/v953/v954:N?y4; [If an Obelisk is replaced, get Obelisk number: y4]
+    !!UN:L-2/y4/1; [If an Obelisk is replaced, set it to "visited" for all players]
+  !!en;
+
+  !!FU673:Px1/x2/x3/x4/x5; [go replace it x5 % of the time]
+!!en;
 
 ** end of function
 
@@ -1599,23 +1590,6 @@ Number replaced with Mithril: %V6^;
 ** end of function
 
 
-** function to possibly upgrade a treasure chest
-
-!?FU679;
-!!VR(x:y):S-1;
-
-!!re i;
-  !!UN:U(OBJ_TREASURE_CHEST)/0/-1/(x)/(y:y)/(z:y);
-  !!br&(x)<0;
-
-  !!VR(random:y):R0/1/100;              [roll percentile dice]
-  !!CH(x)/(y)/(z)&(random)<=8:B5;       [8% chance for 2500 gold chest]
-  !!CH(x)/(y)/(z)&(random)>=99:B6;      [2% chance for 3000 gold chest]
-!!en;
-
-** end of function
-
-
 ** function to possibly convert a monster stack
 
 !?FU680;
@@ -1685,30 +1659,6 @@ Number replaced with Mithril: %V6^;
 !!MO952:Gy1; [set number of monsters and set them to grow]
 !!MO952:O0 U0; [set monsters to grow and allow them to flee]
 !!MO952&x1=159:R10/1; [Set Ghost stacks to "savage" (never join)]
-
-
-** end of function
-
-
-** function to possibly upgrade a dwelling
-** Modified by Thomas Franz (samot): FU684 (some dwellings have upgr. creatures) works for conflux
-
-!?FU684;
-
-!!UN:U17/-1/-1/952; [get x/y/l of yellow square of dwelling into v952-v954]
-!!DW952:M0/?y1/?y2; [get y1 creature type y2 qty]
-!!VRy3:S0 R3; [roll percentile dice]
-!!VRy1&y1<111:+1; [get upgraded creature number]
-!!DW952&y3=0/y1<112:M0/y1/y2; [set upgraded creature in first slot, 25% of the time for original creatures only] (not for conflux)
-!!FU&y1<112:E; // exit
-!!VRy1&y1=118:S119; // pixie
-!!VRy1&y1=112:S127; // Air Elemental
-!!VRy1&y1=115:S123; // Water Elemental
-!!VRy1&y1=114:S129; // fire Elemental
-!!VRy1&y1=113:S125; // earth Elemental
-!!VRy1&y1=120:S121; // psychic Elemental
-!!VRy1&y1=130:S131; // Firebird
-!!DW952&y3=0:M0/y1/y2; [set upgraded creature in first slot, 25% of the time for original creatures only] (not for conflux)
 
 
 ** end of function
@@ -1844,12 +1794,5 @@ Number replaced with Mithril: %V6^;
 !!VRy1:S0 R1; [Random number from 0..1: y1]
 !!CB1&y1=1:A3/156; [Add a Banner to 50% of Creature Banks]
 !!CB1&x1=25:A3/156; [Add an extra Banner to all Dragon Utopias]
-
-** end of function
-
- [Set 50% Exp. Multiplier for Level 7+ Troops]
-!?FU29;
-!!MA:Lx16/?y1; [Level of Monster: y1]
-!!EAx16&y1>=6:M500; [Set 50% Exp. Multiplier if Level 7+]
 
 ** end of function

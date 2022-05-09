@@ -1,0 +1,255 @@
+ZVSE2
+
+** TRANSFER OWNER
+** ПЕРЕДАЧА ИМУЩЕСТВА ДРУГИМ ИГРОКАМ
+
+** Option 192 by Tobyn
+** Rewritten by igrik (03.03.2021)
+
+* Enables ownership transference of own heroes,
+* towns, mines, dwellings, lighthouses, 
+* and garrisons to any active color, incl. none.
+
+* Shift click on a flagged object you own.
+
+; ==================================================================================================
+
+!#DC(WOG_OPT_TRANSFER_OWNER) = 192;
+
+; ==================================================================================================
+
+!?FU(OnAdventureMapLeftMouseClick)&999/i^key_shift^/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP);
+!!UN:P(WOG_OPT_TRANSFER_OWNER)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+; get me player id
+!!FU(WOG_GameMgr_GetPlayer_Me):P?(mePlayerId:y);
+
+; exit if I'm not an active player
+!!OW:C?(activePlayerId:y);
+!!FU&(activePlayerId)<>(mePlayerId):E;
+
+; get click coordinates
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+
+; get object params
+!!OB(x)/(y)/(z):T?(objectType:y) U?(objectSubype:y);
+
+; checking for allowed objects
+!!VR(isAllowedObjects:y):S(FALSE);
+
+; list of allowed objects
+!!VR(isAllowedObjects)&(objectType)=(OBJ_TOWN):S(TRUE);
+!!VR(isAllowedObjects)&(objectType)=(OBJ_MINE):S(TRUE);
+!!VR(isAllowedObjects)&(objectType)=(OBJ_CREATURE_GENERATOR_1):S(TRUE);
+!!VR(isAllowedObjects)&(objectType)=(OBJ_CREATURE_GENERATOR_4):S(TRUE);
+!!VR(isAllowedObjects)&(objectType)=(OBJ_LIGHTHOUSE):S(TRUE);
+!!VR(isAllowedObjects)&(objectType)=(OBJ_GARRISON):S(TRUE);
+!!VR(isAllowedObjects)&(objectType)=(OBJ_GARRISON_2):S(TRUE);
+
+!!FU&(isAllowedObjects)<>(TRUE):E;
+
+; get object entrance coordinates
+!!SN:O?(x)/?(y)/?(z);
+
+; init owner var
+!!VR(owner:y):S-1;
+
+; get object owner
+!!CA(x)/(y)/(z)&(objectType)=(OBJ_TOWN):O?(owner)/1;
+!!MN(x)/(y)/(z)&(objectType)=(OBJ_MINE):O?(owner)/1;
+!!MN(x)/(y)/(z)&(objectType)=(OBJ_LIGHTHOUSE):O?(owner)/1;
+!!DW(x)/(y)/(z)&(objectType)=(OBJ_CREATURE_GENERATOR_1):O?(owner)/1;
+!!DW(x)/(y)/(z)&(objectType)=(OBJ_CREATURE_GENERATOR_4):O?(owner)/1;
+!!GR(x)/(y)/(z)&(objectType)=(OBJ_GARRISON):O?(owner)/1;
+!!GR(x)/(y)/(z)&(objectType)=(OBJ_GARRISON_2):O?(owner)/1;
+
+; exit if I am not the owner of this object
+!!FU&(owner)<>(mePlayerId):E;
+
+; disable standard action
+!!CM:R(FALSE);
+
+!!OW:I(PLAYER_RED)/?(isAI:y)/?(isDie:y);  
+
+; инициализируем главные переменные
+!#VA(msgType[7]:y) (msgColor[7]:y) (counter:y);;
+
+; инициализируем массивы дефолнтными значениями
+!!VR(msgType[0]):C(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE); 
+!!VR(msgColor[0]):C(NULL)/(NULL)/(NULL)/(NULL)/(NULL)/(NULL)/(NULL); 
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST)/1;
+  ; проверяем жив или мертв игрок
+  !!OW:Ii/?(isAI:y)/?(isDie:y); 
+
+  ; если игрок жив, и это не Я 
+  !!if&(isDie)<>(TRUE)/i<>(mePlayerId);
+
+    ; заносим в массив тип картинки
+    !!VR(msgTypePtr:y):S(@msgType) +(counter); 
+    !!VRy(msgTypePtr):S(PIC_TYPE_FLAG);
+
+    ; заносим в массив его цвет
+    !!VR(msgColorPtr:y):S(@msgColor) +(counter); 
+    !!VRy(msgColorPtr):Si;
+
+    ; увеличиваем счетчик существующих игроков
+    !!VR(counter):+1; 
+  !!en;
+!!en;
+
+; получаем название нейтрального игрока
+!!SN:T^wog.192.neutralName^/?z1;
+!!VR(ptrErmZ1Var:y):S9597928;
+!!VR(ptrNeutralPlayerNamePtr:y):S6979200;
+
+; патч памяти (подменяем название нейтрального игрока)
+!!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/?(saveMemory:y);
+!!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/(ptrErmZ1Var);
+
+; конфигурируем сообщение 
+!!IF:N(PIC_TYPE_FLAG)/8/
+      (msgType[0])/(msgColor[0])/
+      (msgType[1])/(msgColor[1])/
+      (msgType[2])/(msgColor[2])/
+      (msgType[3])/(msgColor[3])/
+      (msgType[4])/(msgColor[4])/
+      (msgType[5])/(msgColor[5])/
+      (msgType[6])/(msgColor[6]);
+; показать сообщение 
+!!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(wog.192.mainMsg)^/?(chosenPicture:y);
+
+; патч памяти (возвращаем оригинальное название)
+!!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/(saveMemory:y);
+
+; выходим, если нажата ОТМЕНА
+!!FU&(chosenPicture)=-1:E;
+
+; дефолтное значение: chosenPicture = 0
+!!VR(newOwner:y):S(NO_PLAYER);
+
+; если цвет нового игрока был выбран
+!!if&(chosenPicture)<>0;  
+  ; получаем цвет игрока из массива картинок
+  !!VR(msgColorPtr):S(@msgColor) -1 +(chosenPicture);
+  !!VR(newOwner):Sy(msgColorPtr);
+!!en;
+
+; передаём объекты: эти не нуждаются в настройке
+!!DW(x)/(y)/(z)&(objectType)=(OBJ_CREATURE_GENERATOR_1):O(newOwner);
+!!DW(x)/(y)/(z)&(objectType)=(OBJ_CREATURE_GENERATOR_4):O(newOwner);
+!!MN(x)/(y)/(z)&(objectType)=(OBJ_LIGHTHOUSE):O(newOwner);
+!!GR(x)/(y)/(z)&(objectType)=(OBJ_GARRISON):O(newOwner);
+!!GR(x)/(y)/(z)&(objectType)=(OBJ_GARRISON_2):O(newOwner);
+
+; передаём объекты: эти нуждаются в настройке
+!!FU(WOG_192_TownTransferOwner)&(objectType)=(OBJ_TOWN):P(x)/(y)/(z)/(newOwner);
+!!FU(WOG_192_MineTransferOwner)&(objectType)=(OBJ_MINE):P(x)/(y)/(z)/(newOwner);
+
+; ==================================================================================================
+
+!?FU(WOG_192_MineTransferOwner);
+!#VA(x:x) (y:x) (z:x) (newOwnerId:x);
+; ПРОБЛЕМА:
+; если передаём шахту нейтральному игроку
+; и в шахте есть только 1 стек охранников
+; и если они не в первом (0) слоте
+; то шахта в бою берётся без боя (охранников как будто нет)
+
+; РЕШЕНИЕ: перенести охранников в первый слот
+
+; если передаём шахту нейтральному игроку
+!!if&(newOwnerId)=(NO_PLAYER);
+  ; переменная: есть ли охранники
+  !!VR(isGuard:y):S(FALSE);
+  ; init vars
+  !#VA(guardType[7]:y) (guardCount[7]:y);
+  !#VA(guardTypePtr[7]:y) (guardCountPtr[7]:y);
+
+  ; save the guards in the mine
+  !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1;
+    !!VR(guardTypePtr):S(@guardType) +i; 
+    !!VR(guardCountPtr):S(@guardCount) +i; 
+    !!MN(x)/(y)/(z):Mi/?y(guardTypePtr)/?y(guardCountPtr);    
+    ; записываем в переменную, что стража существует
+    !!VR(isGuard:y)&y(guardTypePtr)<>(NO_MON)/y(guardCountPtr)>0:S(TRUE); 
+  !!en; 
+
+  !!if&(isGuard)=(TRUE)/(guardType[0])=(NO_MON);
+    !!re i/1/(ARMY_SLOT_LAST)/1;
+      !!VR(guardTypePtr):S(@guardType) +i; 
+      !!VR(guardCountPtr):S(@guardCount) +i; 
+
+      !!if&y(guardTypePtr)<>(NO_MON);
+        !!MN(x)/(y)/(z):M(ARMY_SLOT_FIRST)/y(guardTypePtr)/y(guardCountPtr);
+        !!MN(x)/(y)/(z):Mi/(NO_MON)/(NULL);
+        !!br;
+      !!en;
+
+    !!en; 
+  !!en;
+!!en; (newOwnerId)=(NO_PLAYER)
+
+; set new mine owner
+!!MN(x)/(y)/(z):O(newOwnerId);
+
+; ==================================================================================================
+
+!?FU(WOG_192_TownTransferOwner);
+!#VA(x:x) (y:x) (z:x) (newOwnerId:x);
+
+; ПРОБЛЕМА 1: нельзя передавать город в котором есть герои
+; если гарнизонный: то этот герой тоже переходит под управление другого игрока
+; если визитёр: при передаче города противнику, и в последующем посещении города этим же героем
+;               этот герой будет драться со своей копией
+; РЕШЕНИЕ: запретить передачу при наличии героев в городе
+
+
+; ПРОБЛЕМА 2: если передать город со стражей (но без героя), то стража просто исчезнет
+; РЕШЕНИЕ: сохранить стражу перед передачей, а после передачи вернуть её городу
+
+; возможная ПРОБЛЕМА 3: наличие капитолия, но это проверять мне уже влом :)
+
+; Get a hero in the garrison
+!!CA(x)/(y)/(z):H0/?(heroUpId:y) H1/?(heroDownId:y); 
+
+; if the harrison hero exists - can't transfer the town
+!!if|(heroUpId)<>(NO_HERO)/(heroDownId)<>(NO_HERO);
+  !!IF:M^%T(wog.192.heroInTown)^;
+  !!FU:E;
+!!en;
+
+; если активный герой стоит на входе в город, его номер невозможно прочитать
+; ни через координаты объекта, ни через CA:H1
+; поэтому проверяем через номер координаты активного героя и сравниваем с координатами города
+!!OW:A(CURRENT_PLAYER)/?(heroActId:y);
+!!if&(heroActId)<>(NO_HERO);
+  !!HE(heroActId):P?(heroX:y)/?(heroY:y)/?(heroZ:y);
+
+  !!if&(heroX)=(x)/(heroY)=(y)/(heroZ)=(z);
+    !!IF:M^%T(wog.192.heroInTown)^;
+    !!FU:E;
+  !!en;
+!!en;
+
+; init vars
+!#VA(guardType[7]:y) (guardCount[7]:y);
+
+; save the guards in the town
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1;
+  !!CA(x)/(y)/(z):M2/i/?(guardType[i])/?(guardCount[i]);
+  ; нужно проверить на сохранение опыта и Знамени Полководца
+!!en;  
+
+; set new town owner
+!!CA(x)/(y)/(z):O(newOwnerId);
+
+; restore the guards in the town
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1;
+  !!CA(x)/(y)/(z):M2/i/(guardType[i])/(guardCount[i]);
+!!en;  
+
+; ==================================================================================================
+
+** End of Script **

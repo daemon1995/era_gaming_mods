@@ -1,0 +1,101 @@
+ZVSE2
+
+** TOWNS MAY BE RENAMED
+** ГОРОДА МОГУТ БЫТЬ ПЕРЕИМЕНОВАНЫ
+
+** Option 169 by Timothy Pulver
+** Rewritten by igrik (28.01.2021)
+
+
+* You may rename any town you own by [click] on the town's name in the town screen.
+
+
+!#DC(WOG_OPT_TOWNS_MAY_BE_RENAMED) = 169;
+!#DC(ITEMID_TOWN_NAME)             = 149;
+
+; ==========================================
+
+!?FU(OnTownMouseHint); 
+!!UN:P(WOG_OPT_TOWNS_MAY_BE_RENAMED)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+; display hint text
+!!CM:I?(itemId:y);
+!!SN&(itemId)=(ITEMID_TOWN_NAME):T^wog.169.hint^/?(hint:z);
+!!CM&(itemId)=(ITEMID_TOWN_NAME):M(hint);
+
+; Решаем баг центровки отображения хинта в городе с HD-модом
+!?FU(OnGameEnter); 
+!!UN:C(ADDR_GAME_SCREEN_HEIGHT)/(UNC_INT16)/?(gameScreenHeight:y);
+!!FU&(gameScreenHeight)<608:E; 
+!!VR(townHintYCoord:y):S(gameScreenHeight) :2 +278;
+!!UN:C7415917/4/(townHintYCoord);
+
+; ==========================================
+
+!?FU(OnTownMouseClick)&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^=(FALSE)/i^mouse_item^=(ITEMID_TOWN_NAME)/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!!UN:P(WOG_OPT_TOWNS_MAY_BE_RENAMED)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VR(wtf:z):S^Bers! z-1 (townName:z) doesn't work for some reason^;
+
+; get town name and owner
+!!CA(CURRENT_TOWN):N?(townName:z) O?(ownerId:y); 
+
+; exit if not my hero
+!!FU(WOG_GameMgr_GetPlayer_Me):P?(meId:y);
+!!FU&(ownerId)<>(meId):E;
+
+; disable standart action
+!!CM:R0;
+
+; set dialogue id
+!!VR(dlgId:y):S10;
+
+; get texts
+!!SN:T^wog.169.line1^/?(line1:z)/^name^/(townName);
+!!SN:T^wog.169.line2^/?(line2:z);
+
+; set empty text
+!!VR(et:z):S^^; 
+
+; Display dialogue box
+!!IF:D(dlgId)/(line1)/(line2)/(et)/(et)/(et)/(et)/(et)/(et)/(et)/(et)/(et)/(et)/(et)/(et)/(et);
+!!IF:E1/(dlgId); 
+
+; Set flag 1 to true if text entered
+;        to false if no text entered
+!!VRz1:H1; 
+
+; Exit if nothing entered
+!!FU|-1/v1<1:E; 
+
+; Change town's name
+!!CA(CURRENT_TOWN):Nz1;
+
+; redraw town's name
+!!FU(WOG_169_UpdateTownName):P;
+!!UN:R(REDRAW_TOWN_SCREEN);
+
+; ==========================================
+
+!?FU(WOG_169_UpdateTownName);
+; get town dlg pointer
+!!UN:C6919500/4/?(townMgr:y); 
+!!UN:C(townMgr)/280/4/?(townDlg:y);
+
+; set ERM vars pointers
+!!VR(ptrZ1:y):S9597928;
+!!VR(ptrV10:y):S8943244;
+
+; msg.Set(type, subtype, itemID, flags, Xabs, Yabs, newParam, dialog)
+!!VRv10:C512/3/(ITEMID_TOWN_NAME)/0/0/0/(ptrZ1)/0;
+; Dlg_SendMouseMsg(dlg, &msg)
+!!SN:E6288288/2/(townDlg)/(ptrV10);
+
+; reset v10-v17 vars
+!!VRv10:C0/0/0/0/0/0/0/0;
+
+; ==========================================
+
+** End of Script **

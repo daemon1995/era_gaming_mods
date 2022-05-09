@@ -18,7 +18,6 @@ ZVSE2
 !#UN:P189/?v2367;          check if Conflux(Rampart) Monster Change is enabled in WoGify Options
 !#UN:P190/?v2364;          check if First Aid Enhanced is enabled in WoGify Options
 !#UN:P191/?v2363;          check if Estates Enhanced is enabled in WoGify Options
-!#UN:P192/?v2362;          check if Transfer Owner is enabled in WoGify Options
 !#UN:P193/?v2365;          check if Warfare is enabled in WoGify Options
 !#UN:P194/?v2361;          check if Advanced Witch Huts are enabled in WoGify Options
 
@@ -51,31 +50,28 @@ ZVSE2
 !!VRx2&y9=0:+y1 +y2 +y3 +y4 +y5 +y6 +y7 +y8; current luck (x2) if no Hourglass (still no Spirit Guardian included)
 !!VRx2&y9=1/y7<0:Sy7 +y8;              current negative luck (if Hourglass really negates luck *bonus* only)
 
+*!FU:E;
 
-
-
-!!FU:E;
-
-!!VRy1&x1>78/x1<87:S1;                 check skill area (1 if icon clicked)
-!!VRy1&x1>86/x1<95:S2;                 ..               (2 if name clicked)
-!!VRy1&x1>94/x1<103:S3;                ..               (3 if expertise clicked)
+*!VRy1&x1>78/x1<87:S1;                 check skill area (1 if icon clicked)
+*!VRy1&x1>86/x1<95:S2;                 ..               (2 if name clicked)
+*!VRy1&x1>94/x1<103:S3;                ..               (3 if expertise clicked)
 
                   calculate skill slot (if icon)
 
 *!VRy2&y1=2:Sx1 -86;                   ..                   (if name)
 *!VRy2&y1=3:Sx1 -94;                   ..                   (if expertise)
 
-!!VRy2&y1=1/x1<100:Sx1 -78;                   calculate skill slot (if icon)
-!!VRy2&y1=2/x1<100:Sx1 -86;                   ..                   (if name)
-!!VRy2&y1=3/x1<100:Sx1 -94;                   ..                   (if expertise)
-!!HEx2&y1>0:Sy2/?y3/1;                 check which skill (y3) in slot y2   [1st bug: if no skill on that slot, it unfortunately returns 0 instead of -1, how to separate from Pathfinding then?]
-!!VRx3&y1>0:Sy3;                       set output var x3 (skill number)
-!!VRx4&y1>0:Sy1;                       set output var x4 (skill area)
-!!VRx5&y1>0:Sy2;                       set output var x5 (skill slot)
+*!VRy2&y1=1/x1<100:Sx1 -78;                   calculate skill slot (if icon)
+*!VRy2&y1=2/x1<100:Sx1 -86;                   ..                   (if name)
+*!VRy2&y1=3/x1<100:Sx1 -94;                   ..                   (if expertise)
+*!HEx2&y1>0:Sy2/?y3/1;                 check which skill (y3) in slot y2   [1st bug: if no skill on that slot, it unfortunately returns 0 instead of -1, how to separate from Pathfinding then?]
+*!VRx3&y1>0:Sy3;                       set output var x3 (skill number)
+*!VRx4&y1>0:Sy1;                       set output var x4 (skill area)
+*!VRx5&y1>0:Sy2;                       set output var x5 (skill slot)
 ; to counteract two bugs [2nd bug: click number of empty slots still set to respective number if empty icon clicked, whereas empty skill expertise/name is treated as non-functional-area and sets click number to 0]
-!!VRx3&y1>0/y2>y4:S-1;                 set output vars to none (-1) if empty skill slot (i.e. slot higher than known skills)
-!!VRx4&y1>0/y2>y4:S-1;                 ..
-!!VRx5&y1>0/y2>y4:S-1;                 ..
+*!VRx3&y1>0/y2>y4:S-1;                 set output vars to none (-1) if empty skill slot (i.e. slot higher than known skills)
+*!VRx4&y1>0/y2>y4:S-1;                 ..
+*!VRx5&y1>0/y2>y4:S-1;                 ..
 
 ******************************************************************************************
 
@@ -151,177 +147,6 @@ ZVSE2
 !!HE-1&y2=1/1:Sy1/2;         set skill to advanced then
 !!IF:W-1;                    set hero var reference to current hero
 !!VRw48&y2=1/y5=1/v2365=1:Sy1; set hero var w48 (Warfare) to appropriate Warfare skill
-
-******************************************************************************************
-
-** TRANSFER OWNER (2004 September 19)                         (for WoG v3.58)
-** by Tobyn
-**
-** Enables ownership transfer of own heroes, towns, mines, dwellings,
-** lighthouses, shipyards and garrisons to any active color, incl. none.
-** First, activate (toggle) transfer mode by right-click on status/chat line.
-** Second, right-click on any flagged object you own.
-** Third, select new owner (or renounce ownership to set "none"=grey)
-**
-** Notes: - Mine transfer to other color costs one of its resources or Mithril
-**        - You may transfer heroes with right-click while they are not in focus
-**          (i.e. not selected with left-click before)
-**        - Allies are already detected, so you could easily allow transfer mode for
-**          allies *only* (then disable normal transfer in loop fct FU2338 below)
-**
-** THE CODE WORKS AS FOLLOWS:
-** 1. right-clicked on chat line? Then toggle transfer mode active/inactive (if enough Mithril)
-** 2. right-clicked on adv map thereafter? Only then test if
-** 3. obj is hero, town, mine, dwelling, lighthouse, shipyard or garrison?
-** 4. obj owned by current color? if not, break
-** 5. ask for transfer to each color still in game
-** 6. if transfer OK, setup desired owner (with respective ERM command)
-**
-** uses temp quick vars (m, n, o, p, q, r, s, t)
-** (Note: quick vars m..t only used each transfer time, may be used outside.
-**  Could have been some x/y vars instead, but letters are better to understand)
-** uses flags 237..239
-** uses function FU2336..2339
-** ONLY ACTIVE if v2362>0 (wogify option 192)
-
-
-  CLICK DETECTED
-
-!?CM&v2362>0/999;              right-click trigger if script active
-!!UN:P36/?v2369;             =1 if Mithril active
-
-!!if&i^mouse_item^=38;   test if chat-line was clicked
-  !!IF&237/-238:V237/0 V238/1 Q1/-1/-1/4/z164006; [10 to 01] if chat bar clicked
-  !!IF&-237/-238:V237/1 Q1/-1/-1/4/z164007; [00 to 10] a set flag 237 means transfer mode active
-!!en;
-
-!!IF&-237/238:V237/0 V238/0; [01 to 00] reset if any transfer condition not met
-
-!!if&237/i^mouse_item^=37;
-  !!CM:R0;          disable standard reaction for right-click adv map if enough resources
-  !!FU2336:Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^;       call Fct 2336 if transfer mode and adv map right-clicked and enough resources
-!!en;
-
-
-  GET BASIC INFO and START
-
-!?FU2336;
-!#VA(x:x) (y:x) (z:x);
-*!CM:P?y1/?y2/?y3;           get clicked coordinates - store in y1,y2,y3
-!!OB(x)/(y)/(z):T?(obj:y); U?y5 C?y6; get type (y4), subtype (y5), ctrl number (y6)
-!!OW:C?(currentPlayer:y);                    get current player, store in quick var (p)
-
-  now get object type, store in quick var (t)
-  use type (t) to get owner (o) and compare with current player (p)
-*!VRo:S10;    init owner variable with impossible color, because elsewise
-;             FU2337 could be called even if obj has no owner (only case if
-;             player red (0) active, but not owner (0). Would still pass o=p)
-!!VR(owner:y):S-1;
-!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):O?(owner);        get owner - hero
-!!FU(GetRealObjectOnMap):P(x)/(y)/(z)/?(realObj:y);
-!!HE(x)/(y)/(z)&(realObj)=(OBJ_HERO):O?(owner);        get owner - hero
-
-!!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):O?(owner);        get owner - town
-
-!!MN(x)/(y)/(z)|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):O?(owner)/1; [check for owner but don't redraw]
-!!DW(x)/(y)/(z)|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4):O?(owner);
-*!MNy1/y2/y3&t=5:O?o;        get owner - lighthouse
-!!SY(x)/(y)/(z)&(obj)=(OBJ_SHIPYARD):O?(owner);
-!!GR(x)/(y)/(z)&(obj)=(OBJ_GARRISON):O?(owner);
-!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):O?(owner);        get owner - hero
-
-!!FU2337&(owner)=(currentPlayer):P(x)/(y)/(z)/(obj)/(owner)/(currentPlayer);      call transfer screen (only if current player owns that flaggable obj, else give following msg)
-!!IF&(owner)<>(currentPlayer):Q1/-1/-1/4/z164008; msgbox if no own flag at click location
-
-  TRANSFER SCREEN and RESOURCE CHECK
-
-!?FU2337;
-!#VA(x:x) (y:x) (z:x) (obj:x) (owner:x) (currentPlayer:x);
-
-!!IF:V239/0;                 init transfer flag to "not set"
-!!IF&(obj)<>(OBJ_HERO):Q239/10/(currentPlayer)/2/z164009; displays own flag (hero won't display this msgbox, use standard dismiss)
-!!VR(owner)&239:S-1;               set new owner to none (grey) if selected
-*!DO2338/(PLAYER_FIRST)/(PLAYER_LAST)/1&-239/(obj)<>(OBJ_TOWN):Px1/x2/x3; check with 8-time loop, ask only for active colors
-!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-
-  !!br|239/(obj)=(OBJ_TOWN);
-  !!co&i=(currentPlayer);
-  !!OW:Ii/d/?(isKilled:y);                test if color q inactive/killed (1) or alive (0)
-
-  !!if&(isKilled)=(FALSE);
-
-    !!OW:T(currentPlayer)/?(currPlayerTeam:y);              get team (quick var s) of current player
-    !!OW:Ti/?(testPlayerTeam:y);              get team (m) of tested color, compare with team of current player
-    
-
-    !!if|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2);
-
-      !!MNx1/x2/x3:R?(resource:y)/1;     check mine's resource type
-
-      !!OW:R-1/(resource)/?(resourceNum:y);         check that resource on owner
-      !!VR(mineIndicator:y)&(resource)<>(RES_GOLD)/(resourceNum):S1;
-      !!VR(mineIndicator:y)&(resource)=(RES_GOLD)/(resourceNum)>999:S1000;
-      !!OW&v2369=1/(mineIndicator)=0:R-1/7/?(mithtrilNum:y); check owner's Mithril if enabled and not enough other resources
-      !!IF&-239/(mineIndicator)=0/(mithtrilNum)=0:Q239/(resource)/0/7/0/1/z164010; call mine transfer notification
-    
-      !!if&(mithtrilNum);
-        !!VR(mineIndicator):S1;
-        !!VR(resourceNum):S7;
-      !!en;
-    !!en;
-
-    !!VRz-1:S^^;                 init z-1
-    !!VRz-1&(testPlayerTeam)=(currPlayerTeam):Sz164011;        set z-1 to ally if detected
-    !!IF&-239/(resourceNum):Q239/(resource)/(mineIndicator)/10/i/2/z164012; call mine transfer dialogue box
-    !!IF&-239/(obj)<>(OBJ_MINE)/(obj)<>(OBJ_MINE_2):Q239/10/i/2/z164013;       call transfer dialogue box
-
-
-    !!if&239;
-      !!VR(owner):Si;
-      !!if|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2);
-        !!OW&(mineIndicator)<>(RES_GOLD):R-1/(resource)/d-1; remove 1 mine resource if mine transfer initiated
-        !!OW&(mineIndicator)=(RES_GOLD):R-1/(resource)/d-1000; remove 1000 gold if gold mine transfer initiated
-      !!en;
-
-      !!br;
-    !!en;
-  !!en;
-  
-!!en;
-
-!!FU2339&(owner)<>(currentPlayer):Px1/x2/x3/(owner)/(obj); call actual transfer function
-
-
-
-  TRANSFER FUNCTION
-
-!?FU2339;                  apply respective "set owner" commands according to n,t vars
-!#VA(x:x) (y:x) (z:x) (chosen:x) (obj:x); (currentPlayer:x);
-
-*!HEx1/x2/x3&t=1/n=-1:K;     set owner - hero eliminated (if ownership was renounced)
-!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):O(chosen) G?y1 W?y2/1;  set owner - hero (if transfered to an existing color) and get movement [TESTING]
-!!VRy1&(obj)=(OBJ_HERO):-y2;              hero - calculate difference between initial and current movement
-!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO):Y10/?y3/?y4/d; check hero - don't penalize hero transfer if speed curse present
-!!HE(x)/(y)/(z)&(obj)=(OBJ_HERO)/y1>0/y4=0:Y10/y1/0/1; hero - set that difference as movement curse for current day only
-!!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):O(chosen);         set owner - town
-!!MN(x)/(y)/(z)|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):O(chosen);         set owner - mine
-!!UN|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):R2;
-!!DW(x)/(y)/(z)|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4):O(chosen)/1;       set owner - dwelling (new syntax)
-*!MN(x)/(y)/(z)&:O(chosen);         set owner - lighthouse
-!!SY(x)/(y)/(z)&(obj)=(OBJ_SHIPYARD):O(chosen);         set owner - shipyard
-!!GR(x)/(y)/(z)&(obj)=(OBJ_GARRISON):O(chosen);         set owner - garrison
-
-!?OB98&v2362=1/1000;      to counter clearing of "build-here-this-day" flag for human players
-!!CA998:R?y-1;               check that flag's condition when entering (or conquering) a town
-!!VRv2362&y-1=1:S2;          store flag in indicator
-
-!?CM1&v2362=2;            on first town screen click (might also be Town Hall or Exit button)
-!!CA-1:R1;                   set flag back to "already-built-here-this-day" if it was before
-!!VRv2362:S1;                reset indicator
-
-           
-!?FU(OnEveryDay)&v2362=2;every player each day
-!!VRv2362:S1;                reset the indicator for "built-here-this-day" flag
 
 ******************************************************************************************
 

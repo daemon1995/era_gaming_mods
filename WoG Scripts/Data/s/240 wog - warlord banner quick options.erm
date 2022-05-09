@@ -1,0 +1,185 @@
+ZVSE2
+
+** WARLORD'S BANNER QUICK-SELECT OPTIONS
+** ¡€—“–€≈ Õ¿—“–Œ » «Õ¿Ã≈Õ» œŒÀ Œ¬Œƒ÷¿
+
+** Option 240 by Timothy Pulver
+** Rewritten by igrik (30.09.2020)
+
+** Ctrl+LMC on the coloured flag in the hero screen:
+** Ctrl+LMC on the hero portrait in the adventure map:
+** - to quickly change options for all equipped Warlord's Banners in a hero's army.
+
+** Ctrl+RMC on creature slot in the hero screen:
+** - quickly remove the banner and give it to the hero
+
+
+!#DC(WOG_OPT_WARLORD_BANNER_OPTIONS) = 240;
+
+
+; ==========================================
+
+!?FU(OnAdventureMapLeftMouseClick);
+
+!!FU(WOG_OPT_BANNER_OPTIONS_GetParamsClick):P2001/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!OW:A(CURRENT_PLAYER)/?(hero:y);
+!!FU&(hero)=(NO_HERO):E;
+
+!!CM:R(FALSE); 
+
+!!FU(WOG_OPT_BANNER_OPTIONS_Main):P(hero);
+
+; ==========================================
+
+!?FU(OnHeroScreenMouseClick);
+
+!!FU(WOG_OPT_BANNER_OPTIONS_GetParamsClick):P141/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU(WOG_OPT_BANNER_OPTIONS_Main):P(hero);
+
+; ==========================================
+
+!?FU(WOG_OPT_BANNER_OPTIONS_Main);
+; x1 - hero id
+!#VA(hero:x) (title:z) (count:y);
+
+; check is my hero
+!!OW:C?(playerId:y);
+!!HE(hero):O?(owner:y);
+!!FU&(playerId)<>(owner):E;
+
+
+!!FU(WOG_OPT_BANNER_OPTIONS_GetCountBanners):P(hero)/?(count);
+
+!!HE(hero):B0/?z2; [Hero's name: z2]
+
+!!if&(count)<>(TRUE):;
+  !!SN:T^wog.240.none^/?(title)/^name^/z2; 
+  !!IF:Q1/(MSG_TYPE_ART)/(ART_WARLORDS_BANNER)/(MSG_OK)/(title); 
+  !!FU:E;
+!!en:;
+
+!!SN:T^wog.240.title^/?(title)/^name^/z2;
+!!SN:T^wog.240.hp^/?(hp:z);
+!!SN:T^wog.240.attack^/?(attack:z);
+!!SN:T^wog.240.defence^/?(defence:z);
+!!SN:T^wog.240.damage^/?(damage:z);
+!!SN:T^wog.240.speed^/?(speed:z);
+!!SN:T^wog.240.experience^/?(experience:z);
+!!SN:T^wog.240.reduce^/?(reduce:z);
+!!SN:T^wog.240.block^/?(block:z);
+!!SN:T^wog.240.retaliation^/?(retaliation:z);
+!!SN:T^wog.240.cancel^/?z3;
+
+!!IF:G(ERM_RADIO)/2/512/(title)/(hp)/(attack)/(defence)/(damage)/(speed)/(experience)/(reduce)/(block)/(retaliation)/z3/0/0;
+!!FU&v2=512:E; don't change banner option
+
+!!VR(bits:y):Sv2;
+
+; initializate y-var
+!!VR(option:y):S(NULL); 
+!!VR(option)&(bits)=1:S0;
+!!VR(option)&(bits)=2:S1;
+!!VR(option)&(bits)=4:S2;
+!!VR(option)&(bits)=8:S3;
+!!VR(option)&(bits)=16:S4;
+!!VR(option)&(bits)=32:S5;
+!!VR(option)&(bits)=64:S6;
+!!VR(option)&(bits)=128:S7;
+!!VR(option)&(bits)=256:S8;
+
+!!FU(WOG_OPT_BANNER_OPTIONS_SetBannerOption):P(hero)/(option);
+
+; ==========================================
+
+!?FU(WOG_OPT_BANNER_OPTIONS_SetBannerOption);
+; x1 - hero id
+; x2 - option type
+!#VA(hero:x) (option:x) (art:y);
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1:;
+  !!EX(hero)/i:R?(art)/d/d/d;
+  !!EX(hero)/i&(art)=(TRUE):Rd/d/(option)/d;
+!!en:;
+
+; ==========================================
+
+!?FU(WOG_OPT_BANNER_OPTIONS_GetCountBanners);
+; x1 - hero id
+;?x2 - return: 1-yes, 0-no
+!#VA(hero:x) (result:x) (art:y);
+!!VR(result):S(NULL);
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1:;
+  !!EX(hero)/i:R?(art)/d/d/d;
+  !!VR(result)&(art)=(TRUE):S(TRUE);
+!!en:;
+
+; ==========================================
+
+!?FU(WOG_OPT_BANNER_OPTIONS_GetParamsClick);
+; x1 - item id
+;?x2 - return result: 1-yes, 0-no
+!#VA(item:x) (result:x);
+!!VR(result):S(FALSE);
+
+!!UN:P(WOG_OPT_WARLORD_BANNER_OPTIONS)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(expoOption:y);  
+!!FU&(expoOption)<>(TRUE):E;
+
+!!CM:F?(flags:y) S?(subType:y) I?(itemID:y);
+
+!!FU&(flags)<>(MOUSE_FLAG_CTRL):E;
+!!FU&(subType)<>(MOUSE_LMB_PRESSED):E;
+!!FU&(itemID)<>(item):E;  
+
+!!VR(result):S(TRUE); 
+
+; ==========================================
+
+; RMC+Ctrl on creature slot in the hero screen:
+; quickly remove the banner and give it to the hero
+
+!?FU(OnHeroScreenMouseClick);
+
+!!UN:P(WOG_OPT_WARLORD_BANNER_OPTIONS)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(expoOption:y);  
+!!FU&(expoOption)<>(TRUE):E;
+
+!!CM:H?(hero:y)/?(notUsed:y) F?(flags:y) I?(itemID:y);
+
+!!FU&(flags)<>(MOUSE_FLAG_RMB):E;
+!!FU&(itemID)<68|(itemID)>74:E;  click in creature slots
+
+; check is my hero
+!!OW:C?(playerId:y);
+!!HE(hero):O?(owner:y);
+!!FU&(playerId)<>(owner):E;
+
+!!FU(WOG_GetKeyState):P(VK_CTRL)/?(isPressed:y);
+!!FU&(isPressed)<>(TRUE):E;
+
+!!VR(slot:y):S(itemID)-68;
+
+!!HE(hero):C0/(slot)/?(monType:y)/?(monCount:y);
+!!FU&(monType)=(NO_MON):E;
+!!EX(hero)/(slot):R?(isArt:y)/?(type:y)/?(option:y)/?(count:y);
+!!if&(isArt)=(TRUE):;
+  !!CM:R0;
+  !!EX(hero)/(slot)&(count)=(NULL):R(NULL)/(ART_WARLORDS_BANNER)/(NULL)/(NULL);
+  !!EX(hero)/(slot)&(count)<>(NULL):R1/(ART_WARLORDS_BANNER)/(option)/d(DECREASE);
+  !!HE(hero):A(ART_WARLORDS_BANNER);
+  !!UN:R(REDRAW_HERO_SCREEN)/(CURRENT_HERO);
+  !!VR(wav:z):S^Button.wav^;
+  !!SN:P(wav);
+!!en:;
+
+; ==========================================
+
+** End of Script **

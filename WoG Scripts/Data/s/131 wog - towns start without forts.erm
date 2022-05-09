@@ -1,0 +1,60 @@
+ZVSE2
+
+** TOWNS START WITHOUT FORTS
+** ГОРДА СТАРТУЮТ БЕЗ ФОРТОВ
+
+** Option 131 by Timothy Pulver
+** Rewritten by igrik (13.12.2020)
+
+* All towns in the game start without a fort built. To give the AI a boost, also select the option below.
+
+
+!#DC(WOG_OPT_ALL_TOWNS_WITHOUT_FORTS) = 131;
+!#DC(WOG_OPT_ALL_TOWNS_WITHOUT_FORTS_ONLY_HUMAN) = 144;
+
+
+; function for passing through all map objects
+!?FU(WOG_OnIterateAllMapObjects);
+!#VA(x:x) (y:x) (z:x);
+!#VA(objType:x);
+!#VA(objSubtype:x);
+!#VA(isYellowSquare:x); boolean.
+!#VA(isPassable:x);     boolean.
+
+; check: is entry to the object
+!!FU&(isYellowSquare)<>(TRUE):E;
+
+; check option is enabled
+!!UN:P(WOG_OPT_ALL_TOWNS_WITHOUT_FORTS)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+; if hero visitor town
+!!if&(objType)=(OBJ_HERO):;
+    !!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
+    !!FU(WOG_MapItem_GetRealType):P(mapItem)/?(objType);
+!!en;
+
+; check: object type
+!!FU&(objType)<>(OBJ_TOWN):E;
+
+; get town owner
+!!CA(x)/(y)/(z):O?(owner:y);
+ 
+; if owner exists
+!!if&(owner)<>(NO_PLAYER):;
+  !!OW:I(owner)/?(isAI:y);
+  !!if&(isAI)=(TRUE):;
+    !!UN:P(WOG_OPT_ALL_TOWNS_WITHOUT_FORTS_ONLY_HUMAN)/?(wogOption2:y); 
+    !!FU&(wogOption2)=(TRUE):E;
+  !!en;  
+!!en;
+
+; remove castle, citadel, forts
+!!CA(x)/(y)/(z):B2/9 B2/8 B2/7;
+
+; set correct def
+!!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem2:y);
+!!FU(WOG_GameMgr_MapItem_ResetDef):P(mapItem2);
+
+
+** End of Script **
