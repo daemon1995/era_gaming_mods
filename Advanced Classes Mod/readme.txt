@@ -1,7 +1,7 @@
 
-Advanced Classes Mod 1.074
+Advanced Classes Mod 1.08
 
-A Mod by Perry R, for Heroes 3 ERA 3.9 
+A Mod by Perry R, for Heroes of Might and Magic 3, ERA3 
 with the help of AlfWithCake, anti-victor, Daemon_n, Sandris and Berserker
 _________________________________________________
  
@@ -122,7 +122,6 @@ Answer: Nearly all new effects have a scaling of some sort. Check the informatio
 
 - During combat troops deal zero damage. I better report that a dozen times in Discord hehe
 Answer: Carefully read your artifact description. Some artifacts or the Druid class have the ability to block a flat amount of damage. The amount of damage block is small and will be irrelevant at later stages of the game.
-
 
 - What happens if I play with more then 10 secondary skills?
 Answer: You can try, but ACM does not support it. With more than 10 skills it will be much easier to reach several classes at once, making very strong heroes. Overall should work, but I dont know what happens. 
