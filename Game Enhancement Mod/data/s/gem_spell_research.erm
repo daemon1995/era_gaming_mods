@@ -18,8 +18,15 @@ ZVSE2
 *!en;
 *!SN:D;
 
+!?FU(gem_OnDlgProcessAction)&i^gem_DlgIsOpened^;
 
-
+!!FU(gem_DlgDefProc):P6/?(currentFrame:y)/d/d/d/i^gem_DlgIsOpened^;
+*!IF:L^%(currentFrame)^;
+!!if&(currentFrame)=24;
+  !!FU(gem_DlgShowItem):P6/(FALSE)/(FALSE)/(FALSE);
+  *!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(TRUE);
+  !!VRi^gem_DlgIsOpened^:S0;
+!!en;
 
 !?FU(OnAfterBuildTownBuilding);    [trigger after Bulding - ERA 3.9.1+]
 !?FU(OnBuildTownBuilding);
@@ -82,8 +89,12 @@ ZVSE2
     !!if&i^srm_greetings_message^;
       !!VRi^srm_greetings_message^:S2;
     !!en;
+    !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlg:y);
+    !!UN:C(dlg)/(UNC_INT)/?(dlg);
+    !!FU(gem_DlgShowItem):P6/(FALSE)/(FALSE)/(FALSE)/(dlg);
+    !!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!DL(SRM_DLG_MAGE_GUILD):S1;
-
+    !!VRi^gem_DlgIsOpened^:S0;
     [AFTER DLG WAS CLOSED]
     !!if&i^srm_rebuild_guild^|i^srm_spell_bought^;
       !!VR(realGuildLevel:y):S(guildLevel) -1;             
@@ -781,12 +792,28 @@ ZVSE2
     !!SN:T^%s(srm_lang)_spell_research_help.head^/?(head:z);
     !!SN:T^%s(srm_lang)_spell_research_help.body^/?s^srm_availableSpellsToResearchList^;
     !!SN:T^%s(srm_lang)_spell_research_help.ask^/?(ask:z);
+      !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlg:y);
+      !!UN:C(dlg)/(UNC_INT)/?i^gem_DlgIsOpened^;
+    !!IF:Q2^%(head)%s(srm_availableSpellsToResearchList)%(ask)^;
 
-    !!IF:Q1^%(head)%s(srm_availableSpellsToResearchList)%(ask)^;
+      !!FU(gem_DlgShowItem):P6/(TRUE)/(TRUE)/(TRUE);
+      !!DLx1:A6/(DLG_CMD_SET_DEF_FRAME)/0/0;
+      *!VRi^gem_DlgIsOpened^:S1;
+    !!if&2;
+      !!FU(srm_show_spells_to_research_list):P(townId)/(guildLevel);
+      !!IF:M^%s(srm_availableSpellsToResearchList)^;
+    !!el;
 
-    !!FU(srm_show_spells_to_research_list)&1:P(townId)/(guildLevel);
-    !!IF&1:M^%s(srm_availableSpellsToResearchList)^;
-    !!SN:W^srm_availableSpellsToResearchList^;
+
+    !!en;
+      !!SN:W^srm_availableSpellsToResearchList^;
+
+
+
+
+
+
+  *!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(TRUE);
   !!en;
 
   !!if&v1000=(MOUSE_RMB_PRESSED);
@@ -1172,59 +1199,57 @@ ZVSE2
     !!IF:Q1/8/0/1^%(msgSpellBook)^;
   !!en;
 
-*?FU(OnKeyPressed_Town)&x1=(KEY_F3);
-*!IF:L^%^;
-*!CA-1:U?(townId:y);
-*!FU(Town_IsSpellBanned):P(townId)/(SPELL_ARMAGEDDON)/?(isBanned:y);
-*!IF:L^isBanned: %(isBanned)^;
 
-!?FU(WOG_Town_GetStruct);
+
+!?FU(gem_Town_GetStruct);
 ; x1 - town number on map (0...47)
 ;?x2 - return: itemId structure town
 !#VA(townId:x) (buildId:x); 
-!!IF&(townId)<(MAP_TOWN_FIRST)|(townId)>(MAP_TOWN_LAST):M^{FU(Town_GetStruct)}: Wrong town id.^;
-!!UN:C(GAME_MANAGER)/(UNC_UINT32)/?(game:y); 
-!!UN:C(game)/136724/(UNC_UINT32)/?(itemId:y); 
-!!VR(buildId):S(townId) *360 +(itemId);
-!!IF&(buildId)<43200000:M^{FU(Town_GetStruct): Attention!}
-Error in getting town structure address. 
-The game may fall at any time.^; 
+  !!IF&(townId)<(MAP_TOWN_FIRST)|(townId)>(MAP_TOWN_LAST):M^{FU(Town_GetStruct)}: Wrong town id.^;
+  !!UN:C(GAME_MANAGER)/(UNC_UINT32)/?(game:y); 
+  !!UN:C(game)/136724/(UNC_UINT32)/?(itemId:y); 
+  !!VR(buildId):S(townId) *360 +(itemId);
+  !!IF&(buildId)<43200000:M^{FU(Town_GetStruct): Attention!}
+  Error in getting town structure address. 
+  The game may fall at any time.^; 
 
-!?FU(Town_IsSpellBanned);
+!?FU(Town_IsSpellBanned); @igrik - so much thanks
 !#VA(townId:x) (spellID:x) (result:x);
-!!VR(result):S(FALSE);
+  !!VR(result):S(FALSE);
 
-; получаем структуру города
-!!FU(WOG_Town_GetStruct):P(townId)/?(town:y);
+  ; получаем структуру города
+  !!FU(gem_Town_GetStruct):P(townId)/?(town:y);
 
-; работаем с битами запрета заклинаний в городе
-; bit = (1 << (id & 31) & *(spellsBits + (id >> 5)) )
-!!VR(bitsOffset:y):S(spellID) :32 *4 +212;  212=смещение до забаненых спеллов (town->0xD4: int[4])
-!!UN:C(town)/(bitsOffset)/4/?(spellsBits:y);
-!!VR(leftPart:y):S(spellID) &31;
+  ; работаем с битами запрета заклинаний в городе
+  ; bit = (1 << (id & 31) & *(spellsBits + (id >> 5)) )
+  !!VR(bitsOffset:y):S(spellID) :32 *4 +212;  212=смещение до забаненых спеллов (town->0xD4: int[4])
+  !!UN:C(town)/(bitsOffset)/4/?(spellsBits:y);
+  !!VR(leftPart:y):S(spellID) &31;
 
-!!VR(isSpellBannedInTown:y):S1 Sd<<(leftPart) &(spellsBits);
-*!IF&(SPELL_PROTECTION_FROM_FIRE)=(spellID):M^%(leftPart)  %(spellsBits)^;
+  !!VR(isSpellBannedInTown:y):S1 Sd<<(leftPart) &(spellsBits);
+  *!IF&(SPELL_PROTECTION_FROM_FIRE)=(spellID):M^%(leftPart)  %(spellsBits)^;
 
-; проверяем на запрет искомое заклинание в городе
-!!if&(isSpellBannedInTown)<>0:;
-  !!VR(result):S(TRUE);
-  !!FU:E;
-!!en;
+  ; проверяем на запрет искомое заклинание в городе
+  !!if&(isSpellBannedInTown)<>0:;
+    !!VR(result):S(TRUE);
+    !!FU:E;
+  !!en;
 
-; работаем с битами запрета заклинаний в игре
-!!UN:C6919480/4/?(gameMgr:y); 
-!!VR(spellBannedOfsset:y):S74 +(spellID);
-!!UN:C(gameMgr)/(spellBannedOfsset)/1/?(isSpellBannedInGame:y);
+  ; работаем с битами запрета заклинаний в игре
+  !!UN:C6919480/4/?(gameMgr:y); 
+  !!VR(spellBannedOfsset:y):S74 +(spellID);
+  !!UN:C(gameMgr)/(spellBannedOfsset)/1/?(isSpellBannedInGame:y);
 
-; проверяем на запрет искомое заклинание в игре
-!!if&(isSpellBannedInGame)>0:;
-  !!VR(result):S(TRUE);
-  !!FU:E;
-!!en;
+  ; проверяем на запрет искомое заклинание в игре
+  !!if&(isSpellBannedInGame)>0:;
+    !!VR(result):S(TRUE);
+    !!FU:E;
+  !!en;
 
 ; Function for setting the filename of the DL template of the main dialogue
 !?FU(srm_SetMageGuildDLGTemplate);
 !#VA(file:x);
 
 !!VR(file):Z^srm_gm_rebuild^;
+
+
