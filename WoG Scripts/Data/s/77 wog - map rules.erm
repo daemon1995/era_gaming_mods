@@ -85,9 +85,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** Initialization Code
 
-!#VRv1:S0; [make sure v1 starts as 0]
-!#UN:P101/?v1; [check wogify options number - 5 means no rules]
-!#TM84&v1<>5:S1/999/1/255; [timer every day for all players]
 !#VRv579:S0; [first 10 bits of rules - none chosen yet]
 !#VRv578:S0; [previous day in game]
 !#VRv577:S0; [creatures are normal price]
@@ -103,8 +100,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** Timer routine
 
-!?TM84;
-!!VRv1:S0; [make sure v1 starts as 0]
+!?FU(OnEveryDay);
 !!UN:P101/?v1; [check wogify options number - 5 means no rules]
 !!FU&v1=5:E; [Exit timer if map rules are disabled in wogify options]
 
@@ -186,13 +182,17 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
  [Use Map Rules selected in WoGify if this option was chosen]
  [or set these numbers to start if option 1 was chosen]
-!!DO723/111/120/1|v1=0/v1=2:P;  [set v579]
-!!DO724/121/131/1|v1=0/v1=2:P;  [set v576]
+!!if|v1=0/v1=2;
+  !!DO723/111/120/1:P;  [set v579]
+  !!DO724/121/131/1:P;  [set v576]
+!!en;
 
-!!VRz326&2/v1<=1:Sz101020;
-!!IF&2/v1<=1:G0/579/v579/326/101000/101001/101002/101003/101004/101005/101006/101007/101008/101009; [get bit choices in v579]
-!!VRz326&2/v1<=1:Sz101021;
-!!IF&2/v1<=1:G0/576/v576/326/101010/101011/101012/101013/101014/101015/101016/101017/101018/101019/101051; [get bit choices in v576]
+!!if&2/v1<=1;
+  !!VRz326:Sz101020;
+  !!IF:G0/579/v579/326/101000/101001/101002/101003/101004/101005/101006/101007/101008/101009; [get bit choices in v579]
+  !!VRz326:Sz101021;
+  !!IF:G0/576/v576/326/101010/101011/101012/101013/101014/101015/101016/101017/101018/101019/101051; [get bit choices in v576]
+!!en;
 
 !!UN|-2/v1=4:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y1; [count confluxes]
 !!VRy2|-2/v1=4:S19; [normally 20 rules]
@@ -823,7 +823,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** function to generate roving bands of Rogues
 
-!?FU713&i^timerDay^<>i^wog_127_lastRogueData_%i(timerOwner)^;
+!?FU713&i^timerDay^<>i^wog_127_lastRogueDate_%i(timerOwner)^;
 ; Check if the option is enabled (use only this way as the option can be enabled at the map start)
 !!FU(WOG_CheckMapRule):P17;
 !!FU&-3:E;
@@ -875,7 +875,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
     !!IF:V875/0;    (For mithril and chest scripts)
   !!en;
 
-  !!VRi^wog_127_lastRogueData_%i(timerOwner)^:Si^timerDay^; [set day of last Rogue fight]
+  !!VRi^wog_127_lastRogueDate_%i(timerOwner)^:Si^timerDay^; [set day of last Rogue fight]
 !!en;
 
 ** end of function
