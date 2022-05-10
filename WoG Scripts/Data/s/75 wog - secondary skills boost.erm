@@ -128,41 +128,47 @@ ZVSE2
      Eagle Eye
 *************************************************************************
 
+!#UN:P103/?(wogOption:y);
+!#VRi^wog_103_removeEagleEye^&(wogOption):S(TRUE);
+
 !?FU(OnHeroGainLevel);                  [Level up trigger for eagle eye]
 
-  !!UN:P103/?y-1;                       [Check if Eagle Eye I is enabled in WoGify Options]
-  !!FU&y-1<>1:E;                        [Exit if it isn't]
+  !!UN:P103/?(wogOption:y);                       [Check if Eagle Eye I is enabled in WoGify Options]
+  !!FU&(wogOption)<>(TRUE):E;                        [Exit if it isn't]
 
-  !!HE-1:S11/?(eeLvl:y);                [get eagle eye level]
+  !!HE(CURRENT_HERO):S11/?(eeLvl:y);                [get eagle eye level]
   !!FU&(eeLvl)=0:E;                     [Exit if no eagle eye]
 
   ** get hero name and sex, prepare strings
-  !!HE-1:B0/?z70;
-  !!HE-1:R2/?y-1;
-  !!VRz71&y-1=0:Sz103040;
-  !!VRz72&y-1=0:Sz103041;
-  !!VRz71&y-1=1:Sz103042;
-  !!VRz72&y-1=1:Sz103043;
-  !!VRz73&y-1=0:Sz103044;
-  !!VRz73&y-1=1:Sz103045;
+  !!HE(CURRENT_HERO):B0/?z70;
+  !!HE(CURRENT_HERO):R2/?(gender:y);
+
+  !!if&(gender)=0;
+    !!VRz71:Sz103040;
+    !!VRz72:Sz103041;
+    !!VRz73:Sz103044;
+  !!el;
+    !!VRz71:Sz103042;
+    !!VRz72:Sz103043;
+    !!VRz73:Sz103045;
+  !!en;
 
   ; [igrik: isGameNotYetStarted]
 
-
-  !!HE-1:O?v908;                        [get owner of this hero]
+  !!HE(CURRENT_HERO):O?v908;                        [get owner of this hero]
   !!OW&v908<>-1:Iv908/?v909;            [get AI (1) or human (0)]
   !!VR(showMsg:y):S0;                   [assume AI]
   !!VR(showMsg)&v908<>-1/v909=0:S1;     [human if has owner and that owner is human]
-  !!UN:C6915152/4/?y7;
-  !!VR(showMsg)&y7=1:S0;
-  !!HE-1:A2/0/?v911/?v906;              [see if hero has a spell book]
+  !!UN:C6915152/(UNC_INT)/?(value:y);
+  !!VR(showMsg)&(value)=1:S0;
+  !!HE(CURRENT_HERO):A2/0/?v911/?v906;              [see if hero has a spell book]
   !!IF&(showMsg)=1/v906=0:M1/z103026;   [Message if no spell book]
 
   ** Algor: begin
   !!FU&v906=0:E;                        [exit, if no spellbook]
   **daemon_n: begin
   !!VR(maxSpellLvl:y):S2;               [wisdom req. for e.eye]
-  !!HE-1:S(SKILL_WISDOM)/?(wisLvl:y);   [wisdom/e.eye skill level]
+  !!HE(CURRENT_HERO):S(SKILL_WISDOM)/?(wisLvl:y);   [wisdom/e.eye skill level]
 
   !!if&(wisLvl);
     !!VR(maxSpellLvl):S1 +(eeLvl) F0/(wisLvl) Sd2 F1/4; [wisdom req. for e.eye]
@@ -175,9 +181,9 @@ ZVSE2
     !!SS(spell):L?(spellLvl:y);         [spell level]
 
     !!if&(isLearned)=(FALSE)/(spellLvl)<=(maxSpellLvl);
-      !!FU$ban$:P(spell);
+      !!FU10932:P(spell)/?(result:y);
 
-      !!if&y-94=0/(spell)<>(SPELL_TITANS_LIGHTNING_BOLT); [is not banned and not disabled]
+      !!if&(result)=0/(spell)<>(SPELL_TITANS_LIGHTNING_BOLT); [is not banned and not disabled]
         !!FU(Array_Push):P(avSpells)/(spell);
       !!en;
     !!en;
@@ -205,11 +211,10 @@ ZVSE2
 
     !!HE(CURRENT_HERO)&2:M(leftSpell)/1;[learn left spell]
     !!HE(CURRENT_HERO)&-2:M(rightSpell)/1; [learn right spell - is default;]
-  !!el;                                 [if all spells known & Eagle Eye II is disabled];]
-    !!UN:P202/?y-3;                     [Check if Eagle Eye II is enabled in WoGify Options]
-    !!if&y-3=(FALSE);
-      !!VRy-2:S0 +(eeLvl) +35;          [Get pic for message]
-      !!IF&(showMsg)=1:Q2/20/y-2/1/z103046;
+  !!el;                                 [if all spells known & Eagle Eye II, Elem. Suppression is disabled]
+    !!if&i^wog_103_removeEagleEye^;
+      !!VR(eagleEyePic:y):S0 +(eeLvl) +35;          [Get pic for message]
+      !!IF&(showMsg)=1:Q2/20/(eagleEyePic)/1/z103046;
       !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/0; [Remove eagle eye]
     !!en;
   !!en;
