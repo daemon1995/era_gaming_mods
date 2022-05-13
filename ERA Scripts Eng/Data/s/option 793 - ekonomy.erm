@@ -9,7 +9,7 @@ ZVSE2
 
 
 !?FU(OnAfterErmInstructions);           // при старте игры
-!!UN:P793/?(economy:y);                 [проверяем включена ли опция 793]
+!!UN:P793/?(economy:y);
 !!FU&(economy)<>(TRUE):E;
 
 ; Set up new name
@@ -149,42 +149,26 @@ ZVSE2
 
 ** НАЧИСЛЕНИЯ
 
-!?FU(Event_TownGoldIncomeCalculation); [расчет дохода города]
-!!SN:W^tmp.y1^/y1 W^tmp.y2^/y2 W^tmp.y3^/y3 W^tmp.y4^/y4 W^tmp.y5^/y5 W^tmp.y6^/y6 W^tmp.y7^/y7; [сохранение значений y-переменных]
-!!SN:W^tmp.y8^/y8 W^tmp.y9^/y9 W^tmp.y10^/y10 W^tmp.y11^/y11 W^tmp.y12^/y12 W^tmp.y13^/y13;      [сохранение значений y-переменных]
-!!UN:P793/?y1;                [y1 - статус опции 793]
+; Ideally this script needs to be executed after any other OnCalculateTownIncome to grant more bonuses
+!?FU(OnCalculateTownIncome);
+!#VA(townId:x) (gold:x);
 
-!!if&y1=0;                    [если опция не включена]
-  !!SN:W^tmp.y1^/?y1;         [восстановление y1]
-  !!FU:E;                     [выход]
+!!UN:P793/?(economy:y);
+!!FU&(economy)<>(TRUE):E;
+
+!!VR(totalEstateLv:y):S0;
+; Loop through all the hero 
+!!CA0/(townId):O?(owner:y);
+!!OW:H(owner)/2;
+
+!!re i/1/v2;
+  !!VR(ptr:y):Si +2;
+  !!HEv(ptr):S(SKILL_ESTATES)/?(lv:y) X?(spec:y)/?(spec2:y);
+  !!VR(lv)&(spec)=0/(spec2)=(SKILL_ESTATES):+1;
+  !!VR(totalEstateLv):+(lv);
 !!en;
 
-!!SN:X?y1; !!VRy2:Sy1+24;
-!!UN:Cy2/4/?y3;               [структура текущего в функции города]
-!!UN:Cy3/1/?y4;               [получить номер города на карте]
-!!CA0/y4:P?y5/?y6/?y7 O?y8;   [y5/y6/y7 - координаты города, y8 - владелец]
-!!SN:W^peons_%Y5_%Y6_%Y7^/?y10; [y10 - ежедневный доход от батраков в городе]
-!!CA0/y4:B3/10; !!VRy9&1:S500;  [y9 - доход от строений Префектура..Капитолий + Грааль]
-!!CA0/y4:B3/11; !!VRy9&1:S1000; [...]
-!!CA0/y4:B3/12; !!VRy9&1:S2000; [...]
-!!CA0/y4:B3/13; !!VRy9&1:S4000; [...]
-!!CA0/y4:B3/26; !!VRy9&1:+5000; [...]
-!!OW:Hy8/940/0;               [v940 - количество героев текущего игрока]
-!!VRv942:S0;                  [v942 - суммарный уровень Экономики героев текущего игрока (обнуление)]
-!!DO(ES_793_CalcEconomyLevels)/1/v940/1&v940>0:Py8; [для каждого героя текущего игрока получаем сумму уровней Экономики в v942]
-!!VRv942:*5;                  [v942 - процент увеличения дохода от Экономик героев]
-!!VRy10:+y9 *v942 :100;       [y10 - бонус дохода города от Экономик героев]
-!!VRy3:Sy1+28; !!UN:Cy3/4/?y1;[y1 - текущий доход города]
-!!VRy1:+y10;                  [добавление дохода от батраков]
-!!UN:Cy3/4/y1;                [обновление дохода]
-!!SN:W^tmp.y1^/?y1 W^tmp.y2^/?y2 W^tmp.y3^/?y3 W^tmp.y4^/?y4 W^tmp.y5^/?y5 W^tmp.y6^/?y6 W^tmp.y7^/?y7; [восстановление значений y-переменных]
-!!SN:W^tmp.y8^/?y8 W^tmp.y9^/?y9 W^tmp.y10^/?y10 W^tmp.y11^/?y11 W^tmp.y12^/?y12 W^tmp.y13^/?y13;       [восстановление значений y-переменных]
-
-!?FU(ES_793_CalcEconomyLevels); [для каждого героя игрока x1 получаем сумму уровней Экономики в v942 а стандартный прирост золота от Поместий в v944]
-!!OW:Hx1/945/x16;             [v945=номер героя]
-!!HEv945:S13/?y11;            [y11 - Уровень Экономики]
-!!HEv945:X?y12/?y13/d/d/d/d/d;[y12=0,y13=13 для специалистов по Экономике]
-!!VRy11&y12=0/y13=13:+1;      [+1 уровень экономики, если герой - спец. по Экономике]
-!!VRv942:+y11;                [увеличиваем сумму уровней Экономики]
+!!VR(newPercent:y):S5 *(totalEstateLv) +100;
+!!VR(gold):*(newPercent) :100;
 
 ** end

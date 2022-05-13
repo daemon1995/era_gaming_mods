@@ -15,8 +15,7 @@ ZVSE2
 !!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
 
 !!SN:H^monname^/(MON_HORNED_DEMON)/2/?(desc:z);
-!!VR(newDesc:z):S(desc) +^%T(es.750.desc)^;
-!!SN:H^monname^/(MON_HORNED_DEMON)/2/(newDesc:z);
+!!SN:H^monname^/(MON_HORNED_DEMON)/2/^%(desc)%T(es.750.desc)^;
 
 !!MA:F(MON_HORNED_DEMON)/?(fv:y);       [FV рогатых демонов]
 !!VR(fv):*110 :100;                     [увеличиваем FV на 10%]
@@ -26,33 +25,40 @@ ZVSE2
 !!UN:P750/?(wogOption:y);               [провер€ем включена ли опци€ 750]
 !!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
 
-!!BG:N?(stack:y) A?(action:y);          [активный отр€д/тип действи€]
-!!BM(stack):T?(type:y);                 [тип существ в активном отр€де]
-!!FU|(action)<>(BATTLE_ACTION_WALK_AND_ATTACK)/(type)<>(MON_HORNED_DEMON):E; [выход, если не атака рогатых демонов]
+!!BG:N?(stack:y) A?(action:y);
+!!BM(stack):T?(type:y) D?(def:y);
 
-!!BM(stack):D?(def:y);                  [текуща€ защита рогатых демонов]
+!!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK)/(def)>0;
+  !!FU(ES_750_CheckIfMonIsEligible):P(type)/?(result:y);
 
-!!if&(def)>0;                           [если защита не нулева€]
-  
-  ; Show battle log and animation
-  !!if&i^battle_isVisible^;
-    !!BM(stack):N?(num:y);
+  !!if&(result);
+    ; Show battle log and animation
+    !!if&i^battle_isVisible^;
+      !!BM(stack):N?(num:y);
 
-    !!if&(num)=1;
-      !!SN:H^monname^/(MON_HORNED_DEMON)/0/?(hornedDemonName:z);
-      !!SN:T^es.750.singBattleLog^?(battleLog:z)/^hornedDemon^/(hornedDemonName);
-    !!el;
-      !!SN:H^monname^/(MON_HORNED_DEMON)/1/?(hornedDemonName);
-      !!SN:T^es.750.plurBattleLog^?(battleLog)/^hornedDemon^/(hornedDemonName);
+      !!if&(num)=1;
+        !!SN:H^monname^/(type)/0/?(hornedDemonName:z);
+        !!SN:T^es.750.singBattleLog^?(battleLog:z)/^hornedDemon^/(hornedDemonName);
+      !!el;
+        !!SN:H^monname^/(type)/1/?(hornedDemonName);
+        !!SN:T^es.750.plurBattleLog^?(battleLog)/^hornedDemon^/(hornedDemonName);
+      !!en;
+
+      !!MM:S(battleLog);                  [вывод текста в лог битвы]
+
+      !!SN:P^FRENZY^;                     [вывод звука бешенства]
+      !!BM(stack):V17;
     !!en;
 
-    !!MM:S(battleLog);                  [вывод текста в лог битвы]
-
-    !!SN:P^FRENZY^;                     [вывод звука бешенства]
-    !!BM(stack):V17;
+    !!BM(stack):Dd-1 Ad3;                 [снижение защиты, повышение атаки]
   !!en;
-
-  !!BM(stack):Dd-1 Ad3;                 [снижение защиты, повышение атаки]
 !!en;
+
+// Funciton to check if the targeted monster is eligible for rage
+!?FU(ES_750_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_HORNED_DEMON):S(TRUE);
 
 **end

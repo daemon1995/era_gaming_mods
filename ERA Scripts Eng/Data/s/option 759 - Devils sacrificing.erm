@@ -27,15 +27,6 @@ ZVSE2
 !!SN:H^monname^/(MON_HELL_BARON)/2/?(desc);
 !!SN:H^monname^/(MON_HELL_BARON)/2/^%(desc)%T(es.759.desc)^;
 
-; Set up descirption for fourth upgraded devil (if applicable)
-!!FU(GetUpgradedMonster):P(MON_HELL_BARON)/?(upgHellBar:y);
-
-!!if&(upgHellBar)>(NO_MON);
-  !!MA:B(upgHellBar)/d3;
-  !!SN:H^monname^/(upgHellBar)/2/?(desc);
-  !!SN:H^monname^/(upgHellBar)/2/^%(desc)%T(es.759.desc)^;
-!!en;
-
 !?FU(OnBeforeBattleUniversal);
 ; Initialise variable - This must to be executed regardless of the option
 !!VRi^es_759_victimStack^:S(NO_STACK);
@@ -51,13 +42,15 @@ ZVSE2
 !!MM:D?(pos:y);                            [позиция курсора]
 !!FU|(pos)<0/(pos)>186:E;                  [выход, если курсор за полем]
 
+!!BU:E(pos)/?(stack:y);                    [номер живого отряда в позиции]
+!!FU&(stack)=(NO_STACK):E;
+
 ; Exit if not a devil with spell (and not being controlled)
-!!FU(ES_759_CheckEligibleToSacrifice):Pi^battle_current_stack^/?(result:y);
+!!FU(ES_759_CheckSacrificeConditions):Pi^battle_current_stack^/?(result:y);
 !!FU&(result)<>(TRUE):E;
 
 ; Exit if the pointed stack is not from the same side with the devil/is cloned/not living
-!!BU:E(pos)/?(stack:y);                    [номер живого отряда в позиции]
-!!FU(ES_759_CheckIfVictimIsValidForHuman):P(stack)/?(result);
+!!FU(ES_759_CheckIfVictimIsValid):P(stack)/?(result);
 !!FU&(result)<>(TRUE):E;
 
 !!VRi^es_759_victimStack^:S(stack);
@@ -77,23 +70,19 @@ ZVSE2
 !!SN:T^es.759.hint^/?(hint:z)/^victim^/(victimName);
 !!MM:M(hint);                              [подмена стандартной подсказки]
 
-!?FU(ES_759_CheckEligibleToSacrifice);
+!?FU(ES_759_CheckSacrificeConditions);
 !#VA(stack:x) (result:x);
 
 !!VR(result):S(FALSE);
-!!BM(stack):E?(spell:y) T?(type:y) N?(num:y) B?(startNum:y) G(SPELL_BERSERK)/?(isBerserked:y)/d G(SPELL_HYPNOTIZE)/?(isHypotized:y)/d;
+!!BM(stack):T?(type:y);
+!!FU(ES_759_CheckIfMonIsEligible):P(type)/?(isDevil:y);
 
-!!if&(spell)>0/(num)<(startNum)/(isBerserked)<>(TRUE)/(isHypotized)<>(TRUE);
-  !!VR(result)|(type)=(MON_ARCH_DEVIL)/(type)=(MON_HELL_BARON):S(TRUE);
-
-  ; Set the stack as the fourth upgraded devil (if applicable)
-  !!FU(GetUpgradedMonster):P(MON_HELL_BARON)/?(upgHellBar:y);
-  !!VR(result)&(type)=(upgHellBar)/(upgHellBar)>(NO_MON):S(TRUE);
+!!if&(isDevil);
+  !!BM(stack):E?(spell:y) N?(num:y) B?(startNum:y) G(SPELL_BERSERK)/?(isBerserked:y)/d G(SPELL_HYPNOTIZE)/?(isHypotized:y)/d;
+  !!VR(result)&(spell)>0/(num)<(startNum)/(isBerserked)<>(TRUE)/(isHypotized)<>(TRUE):S(TRUE);
 !!en;
 
-!!FU&(result)<>(TRUE):E;
-
-!?FU(ES_759_CheckIfVictimIsValidForHuman);
+!?FU(ES_759_CheckIfVictimIsValid);
 !#VA(stack:x) (result:x);
 
 !!VR(result):S(FALSE);
@@ -160,15 +149,12 @@ ZVSE2
 *** AI
 
 // Revive devil for AI if the living number is lower than 70%
-!?FU(OnBeforeBattleAction)&i^battle_isVisible^/i^battle_round^>=0; [перед действием отряда Архидяволов, который можно восстановить]
+!?FU(OnBeforeBattleAction)&i^battle_isVisible^/i^battle_round^>=0/i^battle_ai_%i(battle_current_side)^;
 !!UN:P759/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-; Exit if not AI's turn
-!!FU&i^battle_ai_%i(battle_current_side)^<>(TRUE):E;
-
 ; Exit if not a devil with spell (and not being controlled)
-!!FU(ES_759_CheckEligibleToSacrifice):Pi^battle_acting_stack^/?(result:y);
+!!FU(ES_759_CheckSacrificeConditions):Pi^battle_acting_stack^/?(result:y);
 !!FU&(result)<>(TRUE):E;
 
 ; Exit if the devil is more than 70% of the starting number
@@ -219,5 +205,12 @@ ZVSE2
     !!en;
   !!en;
 !!en;
+
+// Funciton to check if the targeted monster is eligible for devil sacrificing
+!?FU(ES_759_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)|(mon)=(MON_ARCH_DEVIL)/(mon)=(MON_ARCH_DEVIL):S(TRUE);
 
 *** end
