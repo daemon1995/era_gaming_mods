@@ -330,27 +330,44 @@ ZVSE2
 
 ; Orb Of Inhibition (works only for human players)
 !!if&v628>0/5;
-  !!FU599:P?y30;                      [find a creature from the army - the hero could have no creature!]
+  ; Find a monater from the hero's army which did not learn either Attack Twice or No Retailiation
+  !!FU(WOG_102_GetRandMonFromHeroArmy):P?(mon:y);
 
-  !!if&y30>(NO_MON);                  [if the hero does have a creature]
-    !!UN:N3/330/y30/1;                [get plural name of creature into z330]
-    !!VRy1:R0/0/1;                    [pick no-retaliation or attack-twice to offer]
+  ; Get the ability to learn if target is found
+  !!if&(mon)>(NO_MON);                     [if the hero does have a creature]
+    !!SN:H^monname^/(mon)/1/?z330;    [get plural name of creature into z330]
+    !!MA:X(mon)/?(monFlags:y);
+    !!VR(hasAtkTwice:y):S(monFlags) &(MON_FLAG_ATTACKS_TWICE);
+    !!VR(hasNoRetail:y):S(monFlags) &(MON_FLAG_NO_RETALIATION);
 
-    !!if&y1=0;
+    !!if&(hasAtkTwice)/(hasNoRetail)=(FALSE);
+      !!VR(ability:y):S1;
+    !!el&(hasAtkTwice)=(FALSE)/(hasNoRetail);
+      !!VR(ability):S0;
+    !!el&(hasAtkTwice)=(FALSE)/(hasNoRetail)=(FALSE);
+      !!VR(ability):R0/0/1;             [pick no-retaliation or attack-twice to offer]
+    !!en;
+
+    !!if&(ability)=0;
       !!VRz331:Sz102052;
     !!el;
       !!VRz331:Sz102053;
     !!en;
 
+    ; Ask if the player wants to procced with the trade
     !!IF:Q2/z102054;
 
+    ; Remove the orb and add the ability to the found monster
     !!if&2;
       !!IF:M1/z102055;
-      !!HEv600:A3/126/1/1;          [remove an Orb Of Inhibition]
-      !!MA:Xv27/?y2;                [read current creature flags]
-      !!VRy2&y1=0:|32768;           [attack twice bit]
-      !!VRy2&y1=1:|65536;           [no retaliation bit]
-      !!MA:Xv27/y2;                 [set creature flags!]
+      !!HEv600:A3/(ART_ORB_OF_INHIBITION)/1/1; [remove an Orb Of Inhibition]
+
+      !!if&(ability)=0;
+        !!MA:X(mon)/d|(MON_FLAG_ATTACKS_TWICE); [attack twice]
+      !!el;
+        !!MA:X(mon)/d|(MON_FLAG_NO_RETALIATION); [no retaliation]
+      !!en;
+    ; Refuse the offer
     !!el;
       !!IF:M1/z102056;
     !!en;
@@ -360,9 +377,9 @@ ZVSE2
 ; Targ Of The Rampaging Ogre
 !!if&v613>0;
   !!IF&5:M1/z102057;
-  !!VRy1:S30;
-  !!VRy1:*v631; [Surcoat factor]
-  !!HEv600:Tv604/v605/v606/90/y1; [ogre fight]
+  !!VR(qty:y):S30;
+  !!VR(qty):*v631; [Surcoat factor]
+  !!HEv600:Tv604/v605/v606/90/(qty); [ogre fight]
 !!en;
 
 ** end of function
@@ -455,9 +472,9 @@ ZVSE2
 ** end of function
 
 
-** function to check a slot for creatures
+** function to get a creature form the hero's army which didn't learn either Attack Twice or No Retaliation
 
-!?FU599;
+!?FU(WOG_102_GetRandMonFromHeroArmy);
 !#VA(randMon:x);
 
 !!VR(randMon):S(NO_MON);
@@ -466,7 +483,14 @@ ZVSE2
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
   !!HEv600:C0/i/?(mon:y)/?(qty:y);
 
-  !!FU(Array_Push)&(mon)>(NO_MON)/(qty)>0:P(armyMons)/(mon);
+  !!if&(mon)>(NO_MON)/(qty)>0;
+    !!MA:X(mon)/?(monFlags:y);
+
+    !!VR(hasAtkTwice:y):S(monFlags) &(MON_FLAG_ATTACKS_TWICE);
+    !!VR(hasNoRetail:y):S(monFlags) &(MON_FLAG_NO_RETALIATION);
+
+    !!FU(Array_Push)|(hasAtkTwice)=(FALSE)/(hasNoRetail)=(FALSE):P(armyMons)/(mon);
+  !!en;
 !!en;
 
 !!SN:M(armyMons)/?(size:y);
