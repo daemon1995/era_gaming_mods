@@ -1512,7 +1512,6 @@ ERM Numbers used: 184
    Select Neutral Town Types
 ********************************************************************************
 
-Functions used: FU50..FU53
 ERM Numbers: 220
 Variables used: v1..v4, z-1..z-10, y1..y6, y-1..y-13, x1, x16
 
@@ -1520,120 +1519,69 @@ Variables used: v1..v4, z-1..z-10, y1..y6, y-1..y-13, x1, x16
 
  [Select Neutral Town Types]
 !?FU(OnAfterErmInstructions);
-!!UN:P220/?y-13; [Check if script is enabled: y-13=1 if yes]
-!!FU&y-13<>1:E; [Exit if not enabled]
+!!UN:P220/?(wogOption:y); [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E; [Exit if not enabled]
 
-!!FU50:P; [Select town types]
-!!UN:U(OBJ_TOWN)/-1/?y-11; [Number of towns: y-11]
+!!FU(WOG_220_SelectTownTypes):P; [Select town types]
+!!FU&i^wog_220_chosenTownBits^=511:E;
+
+!!UN:U(OBJ_TOWN)/-1/?(numTowns:y); [Number of towns: y-11]
 !!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO51/1/y-11/1&y-10<9/y-11>0:P; [Cycle through towns if any disallowed]
+!!DO(WOG_220_CycleThroughTowns)/1/(numTowns)/1&(numTowns)>0:P; [Cycle through towns if any disallowed]
 
 --------------------------------------------------------------------------------
 
  [Select town types]
-!?FU50;
-!!VRz-1:Sz125053;
-!!VRz-2:Sz125054;
-!!VRz-3:Sz125055;
-!!VRz-4:Sz125056;
-!!VRz-5:Sz125057;
-!!VRz-6:Sz125058;
-!!VRz-7:Sz125059;
-!!VRz-8:Sz125060;
-!!VRz-9:Sz125061;
-!!VRz-10:Sz125062;
-
+!?FU(WOG_220_SelectTownTypes);
 ; Read and store choices in ini
-!!VRz2:S^wog.ini^;
-!!FU(ReadIniInts):Pz2/^Select Neutral Town Types^/^Town_Choices_Bits^/?y30/511;
+!!VR(filename:z):S^wog.ini^;
+!!FU(ReadIniInts):P(filename)/^Select Neutral Town Types^/^Town_Choices_Bits^/?(chosenTownBits:y)/511;
 
-!!IF:G0/1/y30/-1/-2/-3/-4/-5/-6/-7/-8/-9/-10/0/0/0;
+!!IF:G0/1/(chosenTownBits)/125053/125054/125055/125056/125057/125058/125059/125060/125061/125062/0/0/0;
+!!VRi^wog_220_chosenTownBits^:Sv1;
+!!FU&i^wog_220_chosenTownBits^=511:E;
 
-!!FU(WriteIniInts):Pz2/^Select Neutral Town Types^/^Town_Choices_Bits^/v1;
-!!FU(SaveIni):Pz2;
+!!VR(chosenTownBits):Si^wog_220_chosenTownBits^;
 
- [Initialize y-1..y-9 to -1]
-!!VRy-1:S-1;
-!!VRy-2:S-1;
-!!VRy-3:S-1;
-!!VRy-4:S-1;
-!!VRy-5:S-1;
-!!VRy-6:S-1;
-!!VRy-7:S-1;
-!!VRy-8:S-1;
-!!VRy-9:S-1;
+!!FU(WriteIniInts):P(filename)/^Select Neutral Town Types^/^Town_Choices_Bits^/(chosenTownBits);
+!!FU(SaveIni):P(filename);
 
-!!VRy-10:S0; [Initialize y-10 (index) to 0: y-10]
+!!FU(NewIntArray):P?i^wog_220_chosenTownsArray^/(M_TEMP);
 
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&1; [Check for Castle: y1=1 if selected: y1]
-!!VRy-10&y1=1:-1; [Subtract 1 from index if Castle selected: y-10]
-!!VRyy-10&y1=1:S0; [Store Castle (0) if selected: yy-10]
+!!re i/(TOWN_FIRST)/(TOWN_LAST_WOG);
+  !!VR(townBits:y):S1 Sd<<i;
+  !!VR(isAllowed:y):S(chosenTownBits) &(townBits);
 
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&2; [Check for Rampart: y1=1 if selected: y1]
-!!VRy-10&y1=2:-1; [Subtract 1 from index if Rampart selected: y-10]
-!!VRyy-10&y1=2:S1; [Store Rampart (1) if selected: yy-10]
+  !!FU(Array_Push)&(isAllowed)<>(FALSE):Pi^wog_220_chosenTownsArray^/i;
+!!en;
 
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&4; [Check for Tower: y1=1 if selected: y1]
-!!VRy-10&y1=4:-1; [Subtract 1 from index if Tower selected: y-10]
-!!VRyy-10&y1=4:S2; [Store Tower (2) if selected: yy-10]
+!!if&(chosenTownBits)=0;
+  !!IF:Mz125063;
+  !!FU(WOG_220_SelectTownTypes):P; [Call function again if no towns chosen]
+!!en;
 
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&8; [Check for Inferno: y1=1 if selected: y1]
-!!VRy-10&y1=8:-1; [Subtract 1 from index if Inferno selected: y-10]
-!!VRyy-10&y1=8:S3; [Store Inferno (3) if selected: yy-10]
-
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&16; [Check for Necropolis: y1=1 if selected: y1]
-!!VRy-10&y1=16:-1; [Subtract 1 from index if Necropolis selected: y-10]
-!!VRyy-10&y1=16:S4; [Store Necropolis (4) if selected: yy-10]
-
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&32; [Check for Dungeon: y1=1 if selected: y1]
-!!VRy-10&y1=32:-1; [Subtract 1 from index if Dungeon selected: y-10]
-!!VRyy-10&y1=32:S5; [Store Dungeon (5) if selected: yy-10]
-
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&64; [Check for Stronghold: y1=1 if selected: y1]
-!!VRy-10&y1=64:-1; [Subtract 1 from index if Stronghold selected: y-10]
-!!VRyy-10&y1=64:S6; [Store Stronghold (6) if selected: yy-10]
-
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&128; [Check for Fortress: y1=1 if selected: y1]
-!!VRy-10&y1=128:-1; [Subtract 1 from index if Fortress selected: y-10]
-!!VRyy-10&y1=128:S7; [Store Fortress (7) if selected: yy-10]
-
-!!VRy1:Sv1; [Set y1 to options selected: y1]
-!!VRy1:&256; [Check for Conflux: y1=1 if selected: y1]
-!!VRy-10&y1=256:-1; [Subtract 1 from index if Conflux selected: y-10]
-!!VRyy-10&y1=256:S8; [Store Conflux (8) if selected: yy-10]
-
-!!IF&v1=0:M1/z125063;
-!!FU50&v1=0:P; [Call function again if no towns chosen]
+!!VRi^wog_220_chosenTownBits^:S(chosenTownBits);
 
 --------------------------------------------------------------------------------
 
  [Cycle through towns]
-!?FU51;
+!?FU(WOG_220_CycleThroughTowns);
 !!UN:U98/-1/-1/2; [Store next town's coordinates in v2/v3/v4]
 !!CA2:O?y1; [Owner of town: y1]
 !!FU&y1>=0:E; [Exit function if town is owned]
 
 !!CA2:T?y2; [Type of town: y2]
-!!VRy3:Sy-10 *-1; [Convert y-10 (index) to positive number: y3]
-!!VRy-12:S0; [Initialize y-12 to 0]
+!!VRy30:S1 Sd<<y2;                      [Convert to bits]
+!!VRy-12:Si^wog_220_chosenTownBits^ &y30; [Check if town type is allowed]
+!!FU&y-12<>(FALSE):E; [Exit function if town type is allowed]
 
-!!DO52/1/y3/1:Py2; [Check if town type is allowed: y-12=1 if yes]
-!!FU&y-12=1:E; [Exit function if town type is allowed]
-
-!!VRy4:Sy3 -1; [Subtract 1 from y3: y4]
-!!VRy5:Sy-10 Ry4; [Generate number from y-10 to y-10+(random y4): y5]
-!!VRy6:Syy5; [New random allowable town type: y6]
+!!SN:Mi^wog_220_chosenTownsArray^/?y31;
+!!VRy31:-1;
+!!VRy32:R0/0/y31;
+!!SN:Mi^wog_220_chosenTownsArray^/y32/?y6;
 !!CA2:Ty6 I0; [Set town to new allowable town type and redraw outside: y6]
 
-!!DO53/0/6/1:Py6; [Change garrison creatures to match new town type]
+!!DO(WOG_220_ChangeGarrisonMons)/0/6/1:Py6; [Change garrison creatures to match new town type]
 
  [Adjust Mage Guild enabling]
 !!VRy7:S0;
@@ -1764,16 +1712,20 @@ Variables used: v1..v4, z-1..z-10, y1..y6, y-1..y-13, x1, x16
 
  [Check if town type is allowed]
  [x1=town type]
-!?FU52;
-!!VRy1:Sx16 *-1; [Convert x16 to negative number: y1]
-!!VRy-12&x1=yy1:S1; [Set y-12 to 1 if town type is allowed]
-!!VRx16&x1=yy1:S99; [Exit loop if town type is allowed]
+!?FU(WOG_220_CheckIfTownIsAllowed);
+*!VRy1:Sx16 *-1; [Convert x16 to negative number: y1]
+*!VRy-12&x1=yy1:S1; [Set y-12 to 1 if town type is allowed]
+*!VRx16&x1=yy1:S99; [Exit loop if town type is allowed]
+*#VA(townType:x) (result:x);
+
+*!VR()
+
 
 --------------------------------------------------------------------------------
 
  [Change garrison creatures to match new town type]
  [x1=town type, v2/v3/v4=coordinates]
-!?FU53;
+!?FU(WOG_220_ChangeGarrisonMons);
 !!CA2:M2/x16/?y1/?y2; [Type: y1, Number: y2]
 !!FU|y1<0/y2=0:E; [Exit if slot empty]
 
@@ -1847,7 +1799,7 @@ Variables used: v1-v3
 !!en;
 
  [Post Town-Hall Trigger]
-!?TH1;
+!?FU(OnLeaveTownHall);
 !!UN:P228/?y-1; [Check if Build Twice a Day option is enabled: y-1=1 if Yes]
 !!FU&y-1<>1:E; [Exit if option not enabled]
 
