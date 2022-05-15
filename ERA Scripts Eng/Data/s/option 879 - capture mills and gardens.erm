@@ -83,35 +83,33 @@ ZVSE2
 !!OB(x)/(y)/(z):T?(objType:y);          [тип объекта]
 !!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;[выход если клик не на мельнице/садке]
 
-!!CM:R0;
 
 !!PO(x)/(y)/(z):O?(owner:y);            [владелец объекта]
-!!OW:C?(player:y)/?(interactPlayer:y);  [текущий игрок]
+!!if&(owner)<>(NO_OWNER);
 
-!!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(rmbStr:z);
+  !!CM:R0;
 
-!!if&(owner)>(NO_OWNER);
-  !!VR(ownerStrIndex:y):S(owner) +23;
-  !!FU(ES_GetStringByFilename):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
-  !!VR(rmbStr):+^
-%(ownerStr)^;
-!!en;
+  !!OW:C?(player:y)/?(interactPlayer:y);  [текущий игрок]
 
-; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
-!!if&(owner)=(interactPlayer);
-  !!if&(objType)=(OBJ_WINDMILL);
-    !!VR(rmbStr):+^%T(es.879.millBrought)^;   [сообщение "сво€ ветр€на€ мельница"]
-  !!el&(objType)=(OBJ_WATER_WHEEL);
-    !!VR(rmbStr):+^%T(es.879.wheelBrought)^;  [сообщение "сво€ водн. мельница"]
-  !!el&(objType)=(OBJ_MYSTICAL_GARDEN);
-    !!VR(rmbStr):+^%T(es.879.gardenBrought)^; [сообщение "свой сад"]
+  !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(rmbStr:z);
+
+  !!if&(owner)>(NO_OWNER);
+    !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
+    !!VR(rmbStr):+^
+  %(ownerStr)^;
   !!en;
-!!en;
 
-; Show up the text
-!!if&(owner)=(NO_OWNER);
-  !!IF:M0/(MSG_TYPE_POPUP)/(rmbStr);    [вывод сообщени€ "ничейный"]
-!!el;
+  ; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
+  !!if&(owner)=(interactPlayer);
+    !!if&(objType)=(OBJ_WINDMILL);
+      !!VR(rmbStr):+^%T(es.879.millBrought)^;   [сообщение "сво€ ветр€на€ мельница"]
+    !!el&(objType)=(OBJ_WATER_WHEEL);
+      !!VR(rmbStr):+^%T(es.879.wheelBrought)^;  [сообщение "сво€ водн. мельница"]
+    !!el&(objType)=(OBJ_MYSTICAL_GARDEN);
+      !!VR(rmbStr):+^%T(es.879.gardenBrought)^; [сообщение "свой сад"]
+    !!en;
+  !!en;
+
   !!if&(owner)=(interactPlayer);
     !!PO(x)/(y)/(z):V0/?(res:y) V1/?(num:y); [тип и количество принесенных ресурсов, если объект свой]
     !!IF:Q2/(res)/(num)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "свой"]
@@ -136,7 +134,7 @@ ZVSE2
 !!VR(isUpg:y):S(FALSE);
 !!UN:P36/?(enhMithril:y);
 !!PO(x)/(y)/(z)&(enhMithril):N?(isUpg);
-!!VR(objName)&(isUpg):S^%T(es.879.improved)%(objName)^;
+!!VR(objName)&(isUpg):S^%T(es.879.improved)^ +(objName);
 !!VR(objNamePtr):Z(objName);
 
 !?FU(OnAdvMapTileHint);
@@ -181,19 +179,15 @@ ZVSE2
 
 !!UN:P36/?y9;                 [y9 - проверка скрипта Mithril Enhancements]
 !!PO1&y9>0:N?y10;             [y10 - пользовательское число, если Mithril Enhancements активен (см. скрипт 42wog)]
-
-!!if&x2=(OBJ_WINDMILL);
-  !!ML1:B?y2/?y3 By2/0;  [y2/y3 - тип/количество текущих ресурсов объекта. обнул€ем количество]
-!!el&x2=(OBJ_WATER_WHEEL);
-  !!WM1:B?y3 B0;         [...]
-  !!VRy3:*500;           [...]
-  !!VRy2:S6;             [...]
-!!el&x2=(OBJ_MYSTICAL_GARDEN);
-  !!GD1:B?y2;             [...]
-  !!VRy3&y2<>6:S5;        [...]
-  !!VRy3&y2=6:S500;       [...]
-!!en;
-
+!!ML1&x2=112:B?y2/?y3 By2/0;  [y2/y3 - тип/количество текущих ресурсов объекта. обнул€ем количество]
+!!VRy3&x2=112/y9>0/y10<4/y10>1:*2; [*2 количества ресурсов за апгрейд]
+!!WM1&x2=109:B?y3 B0;         [...]
+!!VRy3&x2=109:*500;           [...]
+!!VRy2&x2=109:S6;             [...]
+!!VRy3&x2=109/y9>0/y10<4/y10>1:*2; [х2 количества денег за апгрейд]
+!!GD1&x2=55:B?y2;             [...]
+!!VRy3&x2=55/y2<>6:S5;        [...]
+!!VRy3&x2=55/y2=6:S500;       [...]
 !!PO1:V0/y2 V1/y3;            [устанавливаем тип/количество текущих ресурсов в V0/V1 значени€ клетки]
 !!OW:Rx1/y2/dy3;              [увеличиваем ресурсы игрока]
 
