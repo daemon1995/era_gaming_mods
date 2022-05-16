@@ -45,16 +45,6 @@ Timers used: 28
 Functions used: 5200-5208, 5210-5210, (5211 reserved but not used)
 Note: Function 5209 is used in the update of WoGify: script00.erm.
 
-----------------------------------------------------------------------------------------
-
-[Check version of ERM to see if it's current enough]
-[Display warning message if it isn't]
-!#IF:V1/0;
-!#UN:V?v234/?v247;
-!#IF&v234<357:V1/1;
-!#IF&v247<260:V1/1;
-!#IF&1:M1/z131000;
-
 ---------------------------------------------------------------------------------------
 
 !#UN:P31/?v1; [Check if script is enabled: v1]
@@ -62,41 +52,31 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
  [ERM Enable Treasure Chest 2]
 !#UN&v1=1:B5/1;
 
- [Initialize Flag 409 to True]
-!#IF&v1=1:V409/1;
-
- [Set up Timer 28]
-!#TM28&v1=1:S1/999/1/255;
-
 ---------------------------------------------------------------------------------------
 
-[Timer 28 - Tome of Knowledge Learning]
+ [If first day, cycle through Heroes to reset w52/w53 variables]
 
-[Section Variables: v1, v2, flag 409]
+!?FU(OnAfterErmInstructions);
+!!UN:P31/?(wogOption:y);                [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
-*?TM28;
-!?FU(OnEveryDay);
-*!IF:L^%x1 %x2 %x3 %x4 %x5^;
-!!UN:P31/?y-1; [Check if script is enabled: y-1]
-!!FU&y-1<>1:E; [Exit if script isn't enabled]
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!IF:Wi;                              [Set w variable to currently checked Hero]
+  !!VRw52:S0;
+  !!VRw53:S(NO_SKILL);
+  !!VRw54:S0;
+!!en;
 
- [If first day (first time only), cycle through Heroes to reset w52/w53 variables]
- !!if&x1=1;
-  !!re i/0/(HERO_LAST_WOG);
-    !!IF:Wi; [Set w variable to currently checked Hero]
-    !!VRw52:S0;
-    !!VRw53:S0;
-  !!en;
-   
- !!en;
+ [Cycle through all Heroes - check if they're currently studying, if not the first day]
 
- [Set Flag 409 to False]
-!!IF:V409/0;
+!?FU(OnEveryDay)&i^timerDay^>1;
+!!UN:P31/?(wogOption:y);                [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
- [Get current player]
-
- [Cycle through all Heroes - check if they're currently studying]
-!!DO5203/0/155/1:Px4;
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:O?(owner:y);
+  !!FU(WOG_31_StudyTomeOfKnowledge)&(owner)=i^timerOwner^:Pi;
+!!en;
 
 -------------------------------------------------------------------------------
 ** function to preload one TC1 object, called by script00 after wogification
@@ -112,6 +92,7 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!re i/0/2;
   !!VRy1:Si +1;
   !!FU$spell$:Py1/y1/0/0/1/0;
+
   !!if&y-99<>(NO_SPELL);
     !!PO952:Vi/y-99; store spell #
   !!el;
@@ -119,8 +100,8 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
   !!en;
 !!en;
 
-
 !!FU$spell$:P4/4/0/0/1/0;
+
 !!if&y-99<>(NO_SPELL);
   !!PO952:Sy-99; store spell #
 !!el;
@@ -128,6 +109,7 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!en;
 
 !!FU$spell$:P5/5/0/0/1/0;
+
 !!if&y-99<>(NO_SPELL);
   !!PO952:Ty-99; store spell #
 !!el;
@@ -300,7 +282,7 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!VRz7&v1<>-1/v2<>-1/y9=1:Sz131007;    [Skill level in 2nd skill if Basic: z7]
 !!VRz7&v1<>-1/v2<>-1/y9=2:Sz131008; [Skill level in 2nd skill if Advanced: z7]
 
-!!IF&1000/v1<>-1/v2<>-1:Q2/20/y3/20/y4/7/z131009;
+!!IF&1000/v1<>-1/v2<>-1:Q2/20/y3/20/y4/(MSG_TYPE_CHOOSE_PIC)/z131009; [Choose which skill to proceed]
 
  [If Hero is controlled by AI, choose randomly]
 !!VRy5&-1000/v1<>-1/v2<>-1:S0 R1;
@@ -314,7 +296,6 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!VRy6&-2/v1<>-1/v2<>-2:Sy4; [y6 = dialogue display number of skill]
 !!VRy7&2/v1<>-1/v2<>-2:Sv1;  [y7 = actual number of skill]
 !!VRy7&-2/v1<>-1/v2<>-2:Sv2; [y7 = actual number of skill]
-
 
 !!IF&1000/v1<>-1/v2<>-1:Q2/20/y6/2/z131012; [ask if player wants daily reminders]
 
@@ -350,30 +331,18 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 
 ---------------------------------------------------------------------------------------
 
-[Function 5203 - Cycle through all Heroes and see if they're currently studying]
-
-[Section Variables: x1 (current player), x16, y1, w52]
-
-!?FU5203;
-
- [Check if owner of Hero being checked is the current player]
-!!HEx16:O?y1; [Owner of Hero]
-
-!!IF&x1=y1:Wx16; [Set w variables for Hero being checked]
-
- [Call function 5204 if current player owns Hero and Hero is studying]
-!!FU5204&x1=y1/w52>0:Px16;
-
----------------------------------------------------------------------------------------
-
-[Function 5204 - Hero is studying]
+[Hero is studying]
 
 [Section Variables: x1, y1-y5, w52-w53, z1-z5, flags 2 & 1000]
 
-!?FU5204;
+!?FU(WOG_31_StudyTomeOfKnowledge);
+!#VA(hero:x);
+
+!!IF:Wx1;
+!!FU&w53=(NO_SKILL):E;
 
 !!HEx1:B0/?z1; [Store hero's name in z1]
-!!UN:N4/2/w53; [Store name of manual in z2]
+!!SN:H^secskill^/w53/(SKILL_NOT_LEARNED)/?z2; [Store name of manual in z2]
 !!HEx1:R2/?y1; [Store hero's sex in y1]
 !!VRz3&y1=0:Sz131013;  [Set z3 to "he" for a male hero]
 !!VRz3&y1=1:Sz131014; [Set z3 to "she" for a female hero]
@@ -381,32 +350,42 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!VRz5&y1=1:Sz131016; [Set z5 to "hers for a female hero]
 !!VRy2:Sw53 *3 +5; [Secondary Skill # used for dialogue box display]
 !!VRy3:Sw52 -1;    [Days left -1 for message display]
-!!VRy5:S0 R144; [Generate number for one of the study messages]
-!!UN:N3/4/y5/1; [Store study monster name in z5]
+!!FU(WOG_GetRandomMonster):P?y5; [Generate number for one of the study messages]
+!!SN:H^monname^/y5/1/?z4; [Store study monster name in z4]
 
  [Check if hero has learned skill at expert before finishing studying the book]
 !!HEx1:Sw53/?y4; [Hero's skill level in skill being studied]
-!!IF&1000/y4=3:Q2/20/y2/1/z131017;
-!!VRw52&y4=3:S0; [Set days left to 0]
+
+!!if&y4=(SKILL_EXPERT);
+  !!IF&1000:Q2/20/y2/1/z131017;
+  !!VRw52:S0; [Set days left to 0]
+!!en;
 
  [If not finished studying, display progress message if w54=99]
-!!IF&1000/w52=7/w54=99:Q2/20/y2/1/z131018;
-!!IF&1000/w52=6/w54=99:Q2/20/y2/1/z131019;
-!!IF&1000/w52=5/w54=99:Q2/20/y2/1/z131020;
-!!IF&1000/w52=4/w54=99:Q2/20/y2/1/z131021;
-!!IF&1000/w52=3/w54=99:Q2/20/y2/1/z131022;
-!!IF&1000/w52=2/w54=99:Q2/20/y2/1/z131023;
+!!if&1000/w54=99;
+  !!IF&w52=7:Q2/20/y2/1/z131018;
+  !!IF&w52=6:Q2/20/y2/1/z131019;
+  !!IF&w52=5:Q2/20/y2/1/z131020;
+  !!IF&w52=4:Q2/20/y2/1/z131021;
+  !!IF&w52=3:Q2/20/y2/1/z131022;
+  !!IF&w52=2:Q2/20/y2/1/z131023;
+!!en;
 
  [If finished studying, display completion message]
-!!IF&1000/w52=1:Q2/20/y2/1/z131024;
+!!if&w52=1;
+  !!IF&1000:Q2/20/y2/1/z131024;
 
- [If finished studying, give Hero skill at Expert level]
-!!HEx1&w52=1:Sw53/3;
+   [If finished studying, give Hero skill at Expert level]
+  !!HEx1:Sw53/(SKILL_EXPERT);
+!!en;
 
  [Decrement number of days left]
 !!VRw52&w52>0:-1;
-!!VRw53&w52=0:S0; [If studying completed, set w53 to 0]
-!!VRw54&w52=0:S0; [If studying completed, set w54 to 0]
+
+!!if&w52=0;
+  !!VRw53:S(NO_SKILL); [If studying completed, set w53 to 0]
+  !!VRw54:S0; [If studying completed, set w54 to 0]
+!!en;
 
 ---------------------------------------------------------------------------------------
 
