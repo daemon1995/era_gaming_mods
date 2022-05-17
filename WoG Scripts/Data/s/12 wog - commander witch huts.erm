@@ -1,4 +1,4 @@
-ZVSE
+ZVSE2
 
 ** Commander Witch Huts ERM script v1.0 - Donald X. Vaccarino
 ** Updated: Oct. 25. 2003 by Hermann the Weird
@@ -45,36 +45,29 @@ ZVSE
 
 
 ** initialization
-!#UN:P66/?v1;     [Check for WoG option]
 
-!?FU6303; [function for clearing a w variable]
-!!IF:Wx16; [use hero x16's w variables]
-!!VRw40:S0; [clear our variable (tracking types of witch huts visited)]
+!?FU(OnAfterErmInstructions);
+!!UN:P66/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
-!#DO6303/0/155/1&v1=1:P; [loop through all heroes to clear w variable]
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);    [loop through all heroes to clear w variable]
+  !!IF:Wi;                              [use hero i's w variables]
+  !!VRw40:S0;                           [clear our variable (tracking types of witch huts visited)]
+!!en;
 
 ** end of initialization
 
 
 ** Witch Hut object trigger
 
-!?OB113;
-!!UN:P66/?y-1;     [Check for WoG option]
-!!FU&y-1=0:E;     [Exit if its disabled]
+!?OB(OBJ_WITCH_HUT);
+!!UN:P66/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
-!!FU6304:P; [do everything in a function for safety]
+!!CO(CURRENT_HERO):D?(isDead:y) E?(isAllowed:y);
+!!FU6300&(isDead)<>(TRUE)/(isAllowed):P;[handle witch hut if alive enabled commander]
 
 ** end of object trigger
-
-
-** function to do witch hut stuff if commander present
-
-!?FU6304;
-
-!!CO-1:D?y1 E?y2; [get y1 = 0 if alive, y2 = 1 if enabled]
-!!FU6300&y1=0/y2=1:P; [handle witch hut if alive enabled commander]
-
-** end of function
 
 
 ** function to handle witch hut for commanders
@@ -117,7 +110,7 @@ ZVSE
 !!VRz326&x1=26:Sz166013;
 !!VRz326&x1=27:Sz166014;
 
-!!CO-1:B0/?y1;  [get bonuses]
+!!CO(CURRENT_HERO):B0/?y1;  [get bonuses]
 !!VRy2:Sy1 &x2; [check for bit already set]
 
 !!VRz1:Sz166015;
@@ -138,12 +131,14 @@ ZVSE
 !!VRz2&x1=26:S^../data/zvs/lib1.res/_AT_DF_0.bmp^;
 !!VRz2&x1=27:S^../data/zvs/lib1.res/_HP_SP_0.bmp^;
 
-!!IF&1000/y2=0:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
-!!IF&1000/y2=0:F10/0/0/0/0/0;     [Disable cancel button]
-!!IF&1000/y2=0:E1/10;     [Display message box]
+!!if&1000/y2=0;
+  !!IF:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
+  !!IF:F10/0/0/0/0/0;     [Disable cancel button]
+  !!IF:E1/10;     [Display message box]
+!!en;
 
 !!VRy2:Sy1 |x2; [logical-or our bonus]
-!!CO-1:B0/y2; [set bonuses]
+!!CO(CURRENT_HERO):B0/y2; [set bonuses]
 
 ** end of function
 
@@ -154,8 +149,8 @@ ZVSE
 !?FU6302;
 
 !!VRx2:-100; [get stat number]
-!!CO-1:Sx2/?y1 S6/?y5; [get current skill level]
-!!IF:W-1; [refer to current hero's w variables]
+!!CO(CURRENT_HERO):Sx2/?y1 S6/?y5; [get current skill level]
+!!IF:W(CURRENT_HERO); [refer to current hero's w variables]
 
 !!VRv600:C1/2/4/8/16/32/64/128/256/512; [bit table for skills]
 !!VRv610:C1024/2048/4096/16384/32768/65536/131072/262144/524288/1048576;
@@ -165,9 +160,11 @@ ZVSE
 !!VRy3:Svy2; [get bit value]
 !!VRy4:Sw40 &y3; [look at just our bit of w40]
 
-!!CO-1&y4=0/y1<5:Sx2/d1; [give skill level if haven't yet and below grandmaster]
-!!CO-1&y4=0/y1<5/y5<5/x2=4:S6/d1; [increase Magic Resistance along with Magic Power, doesn't work automatically]
-!!VRw40&y4=0/y1<5:|y3; [remember so we don't give it again later]
+!!if&y4=0/y1<5;
+  !!CO(CURRENT_HERO):Sx2/d1; [give skill level if haven't yet and below grandmaster]
+  !!CO(CURRENT_HERO)&y5<5/x2=4:S6/d1; [increase Magic Resistance along with Magic Power, doesn't work automatically]
+  !!VRw40:|y3; [remember so we don't give it again later]
+!!en;
 
 !!VRz326&x2=0:Sz166016;
 !!VRz326&x2=1:Sz166017;
@@ -184,8 +181,10 @@ ZVSE
 !!VRz2&x2=4:S^../data/zvs/lib1.res/_MP4.bmp^;
 !!VRz2&x2=5:S^../data/zvs/lib1.res/_SP4.bmp^;
 
-!!IF&1000/y4=0/y1<5:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
-!!IF&1000/y4=0/y1<5:F10/0/0/0/0/0;     [Disable cancel button]
-!!IF&1000/y4=0/y1<5:E1/10;     [Display message box]
+!!if&1000/y4=0/y1<5;
+  !!IF:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
+  !!IF:F10/0/0/0/0/0;     [Disable cancel button]
+  !!IF:E1/10;     [Display message box]
+!!en;
 
 ** end of function

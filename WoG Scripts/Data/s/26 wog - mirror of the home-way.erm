@@ -5,6 +5,7 @@ ZVSE2
 
 ** Option 052 by Sir Four
 ** Rewritten by igrik (02.10.2020)
+** Updated by Archer30 (May 2022)
 
 ** This building works as a 'Town Portal' spell:
 **   - for player 1000 coins.
@@ -25,35 +26,58 @@ ZVSE2
 !!UN:P(WOG_OPT_MIRROR_HOME_WAY)/?(wogOption:y);  
 !!FU&(wogOption)<>(TRUE):E;
 
-!!if&(ERM_FLAG_IS_HUMAN):; gamer
-  !!HE(ANY_HERO):O?(owner:y);
+!!HE(ANY_HERO):O?(owner:y);
+
+; Human player - pay 1000 to teleport to a selected owned town
+!!if&(ERM_FLAG_IS_HUMAN);
   !!OW:R(owner)/(RES_GOLD)/?(gold:y);
 
-  !!if&(gold)<1000:;
+  !!if&(gold)<1000;
     !!SN:T^wog.52.noMoney^/?(pauper:z);
     !!IF:M1/(pauper);
     !!FU:E;    
   !!en;  
 
   !!OW:R(owner)/(RES_GOLD)/d-1000;
-!!en:;
 
-!!UN:C4314462/1/?(patch1:y);    [патч: сохраняем значения]
-!!UN:C4315628/2/?(patch2:y);    [патч: сохраняем значения]
+  !!UN:C4314462/1/?(patch1:y);    [патч: сохраняем значения]
+  !!UN:C4315628/2/?(patch2:y);    [патч: сохраняем значения]
 
-!!UN:C4314462/1/235;            [патч: временно убираем проверку на мувпоинты]
-!!UN:C4315628/2/15851;          [патч: временно убираем стоимость мувов и маны]
-!!UN:C6918840/4/?(advMgr:y);    [менеджер КП]
+  !!UN:C4314462/1/235;            [патч: временно убираем проверку на мувпоинты]
+  !!UN:C4315628/2/15851;          [патч: временно убираем стоимость мувов и маны]
+  !!UN:C6918840/4/?(advMgr:y);    [менеджер КП]
 
-!!if&(ERM_FLAG_IS_HUMAN):; gamer
-  !!UN:R7/0/0 R5/0/0;           [включаем курсор мыши]  
-  !!SN:E4314336/2/(advMgr)/3;   [открыть диалог городского портала]
-  
-!!el:; AI
-  !!SN:E4314336/2/(advMgr)/1;   [AI прыгает в ближайший город (базовый уровень)]
-!!en:;
+  !!UN:R7/0/0 R5/0/0;             [включаем курсор мыши]  
+  !!SN:E4314336/2/(advMgr)/3;     [открыть диалог городского портала]
 
-!!UN:C4314462/1/(patch1);       [патч: возвращаем проверку на мувпоинты]
-!!UN:C4315628/2/(patch2);       [патч: возвращаем параметры стоимости мувов и маны]
+  !!UN:C4314462/1/(patch1);       [патч: возвращаем проверку на мувпоинты]
+  !!UN:C4315628/2/(patch2);       [патч: возвращаем параметры стоимости мувов и маны]
+; AI player - teleoport to a random owned town
+!!el;
+  !!FU(NewIntArray):P?(aiTowns:y);
+  !!VR(x:y):S-1;
+
+  !!re i;
+    !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+
+    !!CA(x)/(y)/(z):O?(townOwner:y);
+
+    !!if&(owner)=(townOwner);
+      !!CA(x)/(y)/(z):U?(townId:y);
+      !!FU(Array_Push):P(aiTowns)/(townId);
+    !!en;
+  !!en;
+!!en;
+
+!!SN:M(aiTowns)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(lastIndex:y):S(size) -1;
+  !!VR(random:y):R0/0/(lastIndex);
+  !!SN:M(aiTowns)/(random)/?(townId);
+  !!CA0/(townId):P?(x)/?(y)/?(z);
+  !!HE(CURRENT_HERO):P(x)/(y)/(z);
+!!en;
 
 ** End of Script **
