@@ -4,6 +4,7 @@ ZVSE2
 
 ** By Arstahd
 ** Version: 1.11   updated 22.2(Febrary).2012 by rennyo
+** Updated May 2022 by Archer30
 ** Special thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 *  Variables used: s, r, j
@@ -11,7 +12,7 @@ ZVSE2
 *  Z Variables used: z1-z3, z700-z706, z722-z725
 *  Y Variables used: y1-y11
 *  W Variables used: w4-w8
-*  Functions used: 7000-7026   (7016, 7018, 7022 not used)
+*  Functions used: 7001-7026   (7016, 7018, 7022 not used)
 *  Timers used: 50, 51
 *  Flags used: 1, 2
 
@@ -174,15 +175,15 @@ ZVSE2
 ** end of movement trigger
 
 ** start of battle-start trigger
-!?BA0|v7186=1/v7189=1/v7192=1;
+!?FU(OnBeforeBattle)|v7186=1/v7189=1/v7192=1;
 
 ** artillery
 !!BA&v7186=1:H0/?v7020;                             [get attacking hero #]
 !!HEv7020&v7186=1/v7020>-1:A2/4/?y-7/?y-8;          [see if attacking hero has a Ballista]
-!!FU7000&v7186=1/y-8>0/v7020>-1:P1;                 [shoot something - attacker]
+!!FU(WOG_201_KillWithArtillery)&v7186=1/y-8>0/v7020>-1:P(BATTLE_LEFT);     [shoot something - attacker]
 !!BA&v7186=1:H1/?v7020;                             [get defending hero #]
 !!HEv7020&v7186=1/v7020>-1:A2/4/?y-7/?y-8;          [see if defending hero has a Ballista]
-!!FU7000&v7186=1/y-8>0/v7020>-1:P2;                 [shoot something - defender]
+!!FU(WOG_201_KillWithArtillery)&v7186=1/y-8>0/v7020>-1:P(BATTLE_RIGHT);    [shoot something - defender]
 
 ** first aid
 !!VRv7040&v7189=1:C0/0/0/0/0/0/0;                   [no creatures to resurrect after battle attacker]
@@ -365,44 +366,64 @@ ZVSE2
 ** end of battle end trigger
 
 
-
-
 ** function to handle artillery, hero v7020, skill level y1
-!?FU7000;
+!?FU(WOG_201_KillWithArtillery);
+!#VA(side:x);
 
-!!HEv7020:A2/5/?y7/?y8 E?y3/?y4/1 S20/?y1;          [check for Ammo Cart, get hero's level, artillery level]
-!!VRy5:S1;                                          [set multiplier to 1]
-!!VRy5&y8>0:+1;                                     [ammo cart bonus]
-!!VRy5&y1>0:+y1;                                    [artillery bonus]
-!!VRy3:S0 +1 T49 +y4 *y5;                           [ballista damage: (1-50 + hero level) x bonus multiplier]
-!!VRy2:S0 T6;                                       [random slot # to start search from]
-!!VRj:S7;                                           [7 = slot not found]
-!!DO7001/0/6/1:Px1/y2/y3;                           [shoot next slot with >= 2 monsters]
+!!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLv:y)/1 S(SKILL_ARTILLERY)/?(artilleryLv:y); [check for Ammo Cart, get hero's level, artillery level]
+!!VR(mult:y):S1;                        [set multiplier to 1]
+!!VR(mult)&(equipped)>0:+1;             [ammo cart bonus]
+!!VR(mult)&(artilleryLv)>(SKILL_NOT_LEARNED):+(artilleryLv); [artillery bonus]
+!!VR(dmg:y):R0/1/50 +(heroLv) *(mult);  [ballista damage: (1-50 + hero level) x bonus multiplier]
+
+!!VR(enemySide:y):S(side) X1;
+!!VR(stack:y):S(NO_STACK);
+!!VR(killFv:y):S0;
+!!VR(killCount:y):S0;
+
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!BA:M(enemySide)/i/?(mon:y)/?(qty:y);
+
+  !!if&(mon)>(NO_MON)/(qty)>1;
+    !!MA:P(mon)/?(hp:y) F(mon)/?(fv:y);
+    !!VR(maxKillCount:y):S(qty) -1;
+    !!VR(currKillCount:y):S(dmg) :(hp) F0/(maxKillCount);
+    !!VR(currKillFv:y):S(currKillCount) *(fv);
+
+    ; Store the values if killing at least one
+    !!if&(currKillCount)>0/(currKillFv)>(killFv);
+      !!VR(stack):Si;
+      !!VR(killFv):S(currKillFv);
+      !!VR(killCount):S(currKillCount);
+    !!en;
+  !!en;
+!!en;
+
+!!if&(stack)>(NO_STACK);
+  !!BA:M(enemySide)/(stack)/?(mon)/?(qty);
+  !!MA:P(mon)/?(hp);
+  !!VR(qty):-(killCount);
+  !!BA:M(enemySide)/(stack)/d/(qty);
+  !!VR(expGain:y):S(killCount) *(hp);
+  !!OW:C?(player:y)/?(interactPlayer:y);
+
+  !!if&1000;                            [Legacy - there could be a problem mixing up erm/erm 2 vars!]
+    !!VRy2:S(mon);
+    !!VRy1:S(expGain);
+    !!HEi^battle_hero_%(side)^:B0/?z1;
+    !!VRx3:S(killCount);
+
+    !!if&x3>1;
+      !!IF:Q2/21/y2/1/z148005;
+    !!el;
+      !!IF:Q2/21/y2/1/z148006;
+    !!en;
+  !!en;
+  
+  !!HEi^battle_hero_%(side)^&x3>0:Edx3; [give experience]
+!!en;
 ** end of function
 
-** function to check one stack for monsters to shoot
-!?FU7001;               x1=slot#   x2=slot    x3=damage
-
-!!HEv7020:B0/?z1;                                   [get hero's name]
-!!VRy4:Sx2 %7;                                      [get an actual slot number]
-!!BA&x1=1:M1/y4/?y5/?y6;                            [get y5 type and y6 qty in slot of defender]
-!!BA&x1=2:M0/y4/?y5/?y6;                            [get y5 type and y6 qty in slot of attacker]
-!!IF:V2/0;                                          [assume not shooting this stack]
-!!IF&j=7/y6>1:V2/1;                                 [shoot if haven't yet and more than 1 monster]
-!!VRj&2:Sy4;                                        [note we found a slot]
-!!MA&y5>-1:Py5/?y7;                                 [get hit points of monster type y5]
-!!VRx3&2/y7>0::y7;                                  [divide damage by hit points per monster to get monsters killed]
-!!VRx3&2/x3>y6:Sy6;                                 [never kill entire stack]
-!!VRx3&2/x3=y6:-1;                                  [broken into two lines since it didn't work as one]
-!!VRy6&2/x3>0:-x3;                                  [kill some monsters]
-!!BA&2/x1=1/x3>0:M1/y4/?y5/y6;                      [store the new monster qty for defender]
-!!BA&2/x1=2/x3>0:M0/y4/?y5/y6;                      [store the new monster qty for attacker]
-!!VRy1&2/x3>0:Sx3 *y7;                              [monsters x hit points]
-!!IF&1000/2/x3>1:Q2/21/y5/1/z148005;
-!!IF&1000/2/x3=1:Q2/21/y5/1/z148006;
-!!HEv7020&2/x3>0:Edx3;                              [give experience]
-!!VRx2:+1;                                          [next slot]
-** end of function
 
 ** function to handle first aid tent
 !?FU7002;                 y1= HP   y2=slot y9= first aid
