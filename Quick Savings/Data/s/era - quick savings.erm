@@ -1,17 +1,17 @@
-ZVSE
+ZVSE2
 ; New events and corresponding x1-x16 parameters in brackets:
-;  (eqs.OnAutosave) (z-var index with name to use for autosave);
-;  (eqs.OnSave)     (this day save (0) or quick save (1), z-index of savegame name, z-index of message to print in chat)
+;  (eqs_OnAutosave) (z-var index with name to use for autosave);
+;  (eqs_OnSave)     (this day save (0) or quick save (1), z-index of savegame name, z-index of message to print in chat)
 
 ; New functions:
-;  (eqs.SoundControl) (sound on (1) or off (0), v-index to place sound settings if first argument is 0 or to restore sound settings from if first argument is 1)
+;  (eqs_SoundControl) (sound on (1) or off (0), v-index to place sound settings if first argument is 0 or to restore sound settings from if first argument is 1)
 ;    Allows to turn off sound and restore full settings later
-;  (eqs.QuietMessage)
+;  (eqs_QuietMessage)
 ;    Prints z1 contents as chat message (IF:L) without sound notification
 
-!?FU(eqs.SoundControl)&999;
+!?FU(eqs_SoundControl)&999;
 ; Arguments: SoundIsOn: boolean; OldValue: v-index
-!!if&x1=1:;
+!!if&x1=1;
   !!VRy4:Svx2;
   !!VRy1:Sy4%256;
   !!VRy4::256;
@@ -19,20 +19,20 @@ ZVSE
   !!VRy4::256;
   !!VRy3:Sy4%256;
   !!UN:C6916016/1/y1 C6916020/1/y2 C6916028/1/y3;
-!!el:;
+!!el;
   !!UN:C6916016/1/?y1 C6916020/1/?y2 C6916028/1/?y3 C6916016/1/0 C6916020/1/0 C6916028/1/0;
   !!VRy3:*65536;
   !!VRy2:*256;
   !!VRvx2:Sy1+y2+y3;
-!!en:;
+!!en;
 
-!?FU(eqs.QuietMessage)&999;
-; Arguments: Message: z1;
+!?FU(eqs_QuietMessage)&999;
+; Arguments: Message: z1
 !!VRy1:Sv2;
 
-!!FU(eqs.SoundControl):P0/2;
+!!FU(eqs_SoundControl):P0/2;
 !!IF:Lz1;
-!!FU(eqs.SoundControl):P1/2;
+!!FU(eqs_SoundControl):P1/2;
 
 !!VRv2:Sy1;
 
@@ -40,21 +40,17 @@ ZVSE
 !!SN&x1=0:W^eqs.InChat^/1;
 !!SN&x1=2:W^eqs.InChat^/0;
 
-!?GM0&999;
+!?FU(OnAfterLoadGame)&999;
 !!SN:W^eqs.InChat^/0;
 
-!?CM0&999;
+!?FU(OnAdventureMapRightMouseClick)&999;
 !!SN:W^eqs.IsAutosave^/0;
 
-!?CM5&999;
+!?FU(OnAdventureMapLeftMouseClick)&999;
 !!SN:W^eqs.IsAutosave^/0;
-!!CM:I?y1;
-!!FU&y1<>12:E;
-!!SN:W^eqs.IsAutosave^/1;
+!!SN&i^mouse_item^=12:W^eqs.IsAutosave^/1;
 
-!?GM1&999;
-!!SN:W^eqs.IsAutosave^/?y1;
-!!FU&y1<>1:E;
+!?FU(OnBeforeSaveGame)&999/i^eqs.IsAutosave^;
 !!SN:W^eqs.IsAutosave^/0;
 
 !!VRy2:Sc-1%7+1;
@@ -62,40 +58,31 @@ ZVSE
 !!SN:T^eqs.end_turn_autosave_name^/?z3/^day^/y2;
 !!SN:F^lstrcpyA^/6828940/z3;
 
-!!FU(eqs.OnAutosave):P;
-
 !!SN:Xz3;
 
-!?FU(OnKeyPressed)&999;
-!!SN:W^eqs.InChat^/?y1;
-!!SN&y1=1:Q;
-
+!?FU(OnKeyPressed)&999/i^eqs.InChat^<>(TRUE);
 !!SN:F^GetGameState^/?y10;
 !!FU|y10<>y11/y10<>4205280:E; Adventure Map Dialog only
 
-!!if|x1=83/x1=116:; 'S' or 'F5' pressed
-  !!if&x1=83:; 'S' pressed
+!!if|x1=(KEY_S)/x1=(KEY_F5); 'S' or 'F5' pressed
+  !!if&x1=(KEY_S); 'S' pressed
     !!VRy3:Sc-1%7+1;
     !!VRz3:S^%Gc^;
     !!SN:T^eqs.this_day_savegame_name^/?z2/^day^/y3/^player^/z3;
     !!SN:T^eqs.saved_msg^/?z3;
     !!VRz4:S^{~w}%Z3{~}^;
-
-    !!FU(eqs.OnSave):P0/2/4;
-  !!el&x1=116:; 'F5' pressed
+  !!el&x1=(KEY_F5); 'F5' pressed
     !!VRy3:Sc-1%7+1;
     !!VRz3:S^%Gc^;
     !!SN:T^eqs.quicksave_name^/?z2;
     !!SN:T^eqs.quicksaved_msg^/?z3;
     !!VRz4:S^{~w}%Z3{~}^;
-
-    !!FU(eqs.OnSave):P1/2/4;
-  !!en:;
+  !!en;
 
   !!UN:C6919480/4/?y5; y5 - game manager
   !!SN:E4975456/2/y5/z2/1/1/1/0 F^lstrcpyA^/6828940/z2;
   
   !!VRz1:Sz4;
-  !!FU(eqs.QuietMessage):P;
+  !!FU(eqs_QuietMessage):P;
   !!SN:X?y9/1;
-!!en:;
+!!en;
