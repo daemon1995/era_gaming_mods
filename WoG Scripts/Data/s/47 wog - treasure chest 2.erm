@@ -39,7 +39,7 @@ ZVSE2
 
 
 Flags used: 1-2, 409, 1000
-Variables used: v1-v6, z1-z7, w52-w54, w64 (check only)
+Variables used: v1-v6, z1-z7, w64 (check only)
 Local variables: y1-y7, x1-x3, x16
 Timers used: 28
 Functions used: 5200-5208, 5210-5210, (5211 reserved but not used)
@@ -51,32 +51,6 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 
  [ERM Enable Treasure Chest 2]
 !#UN&v1=1:B5/1;
-
----------------------------------------------------------------------------------------
-
- [If first day, cycle through Heroes to reset w52/w53 variables]
-
-!?FU(OnAfterErmInstructions);
-!!UN:P31/?(wogOption:y);                [Check if script is enabled]
-!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
-
-!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!IF:Wi;                              [Set w variable to currently checked Hero]
-  !!VRw52:S0;
-  !!VRw53:S(NO_SKILL);
-  !!VRw54:S0;
-!!en;
-
- [Cycle through all Heroes - check if they're currently studying, if not the first day]
-
-!?FU(OnEveryDay)&i^timerDay^>1;
-!!UN:P31/?(wogOption:y);                [Check if script is enabled]
-!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
-
-!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!HEi:O?(owner:y);
-  !!FU(WOG_31_StudyTomeOfKnowledge)&(owner)=i^timerOwner^:Pi;
-!!en;
 
 -------------------------------------------------------------------------------
 ** function to preload one TC1 object, called by script00 after wogification
@@ -135,14 +109,11 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 
 [Treasure Chest type 5 is trigger]
 
-[Section Variables: v3, w52]
+[Section Variables: v3]
 
 !?OB101/5&-875;
 !!UN:P31/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
-
- [Set w variables to refer to current Hero]
-!!IF:W-1;
 
  [Generate random chest result from 1-5 - store in v3]
 !!PO998:N?v3; get pre-set rndm #
@@ -150,11 +121,8 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
  [If result is 1, Call Deed function]
 !!FU5206&v3=1:P;
 
- [If Hero is already studying and result is 2 or 3, change result to 4 (Scroll)]
-!!VRv3&v3>=2/v3<=3/w52>0:S4;
-
  [If result is 2 or 3, Call Tomes of Knowledge function]
-!!FU5201&v3>=2/v3<=3/w52<1:P;
+!!FU5201&v3>=2/v3<=3:P;
 
  [If result is 4 or 5, Call Scroll/Spell Points and Gold function]
 !!FU5200&v3>=4/v3<=5:P;
@@ -240,152 +208,94 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 
 [Function 5201 - Tomes of Knowledge]
 
-[Section Variables: y1-y9, v1-v3, z1-z3, w52-w53, flags 2 & 1000]
+[Section Variables: y1-y9, v1-v3, z1-z3, flags 2 & 1000]
 
 !?FU5201;
 
- [Initialize v1 and v2 to -1]
-!!VRv1:S-1;
-!!VRv2:S-1;
+!!FU(WOG_31_GetRandomBasicOrAdvancedSecSkills):P?y30/?y31;
 
- [Choose random starting number for first secondary skill]
-!!PO998:B0/?y1;
-!!VRy2:Sy1 -1; [Subtract 1 from y1]
+; If Hero does not have at least 2 skills Basic or Advanced, change result to 4 (Scroll)
+!!if&y31=(NO_SKILL);
+  !!VRv3:S4;
+  !!FU:E;
+!!en;
 
- [Call function 5202 - 1st skill, part 1 - search for Basic or
- [Advanced secondary skill known by Hero - store in v1]
-!!DO5202/y1/27/1:P;
+; If hero has two Basic or Advanced Secondary Skills, display dialogue with choice]
+!!HE(CURRENT_HERO):Sy30/?y8;            [Level in 1st Skill (y8)]
+!!HE(CURRENT_HERO):Sy31/?y9;            [Level in 2nd Skill (y9)]
+!!VRy32:Sy8 +1;                         [Get new levels]
+!!VRy33:Sy9 +1;
+!!VRy3:Sy30 *3 +2 +y32;                 [1st Secondary Skill # used for dialogue box display]
+!!VRy4:Sy31 *3 +2 +y33;                 [2nd Secondary Skill # used for dialogue box display]
+!!SN:H^secskill^/y30/(SKILL_NOT_LEARNED)/?z1; [Lookup name of 1st Secondary Skill - store in z1]
+!!SN:H^secskill^/y31/(SKILL_NOT_LEARNED)/?z2; [Lookup name of 2nd Secondary Skill - store in z2]
 
- [Call function 5202 - 1st skill, part 2 - continue search for skill]
-!!DO5202/0/y2/1&y1<>0/v1=-1:P;
+!!VRz6&y8=1:Sz131005;                   [Skill level in 1st skill if Basic: z6]
+!!VRz6&y8=2:Sz131006;                   [Skill level in 1st skill if Advanced: z6]
+!!VRz7&y9=1:Sz131005;                   [Skill level in 2nd skill if Basic: z7]
+!!VRz7&y9=2:Sz131006;                   [Skill level in 2nd skill if Advanced: z7]
 
- [Choose random starting number for second secondary skill]
-!!PO998:B1/?y1;
-!!VRy2:Sy1 -1; [Subtract 1 from y1]
+; Show dialog for human players to choose a skill
+!!if&1000;
+  !!IF&y30<>-1/y31<>-1:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_SEC_SKILL)/y4/(MSG_TYPE_CHOOSE_PIC)/z131009; [Choose which skill to proceed]
+; If Hero is controlled by AI, choose randomly]
+!!el;
+  !!VRy5:R0/0/1;
 
- [Call function 5202 - 2nd skill, part 1 - search for Basic or
- [Advanced secondary skill known by Hero - store in v2]
-!!DO5202/y1/27/1&v1<>-1:P;
+  !!if&y5=0;
+    !!IF:V2/0;
+  !!el;
+    !!IF:V2/1;
+  !!en;
+!!en;
 
- [Call function 5202 - 2nd skill, part 2 - continue search for skill]
-!!DO5202/0/y2/1&y1<>0/v1<>-1/v2=-1:P;
+; Set z3, y6 and y7 according to choice made]
+!!if&1000;
+  !!if&2;
+    !!VRz3:Sz1;
+    !!VRy6:Sy3;                         [dialogue display number of skill]
+  !!el;
+    !!VRz3:Sz2;
+    !!VRy6:Sy4;                         [dialogue display number of skill]
+  !!en;
 
- [If hero has two Basic or Advanced Secondary Skills, display dialogue with choice]
-!!VRy3&v1<>-1/v2<>-1:Sv1 *3 +5; [1st Secondary Skill # used for dialogue box display]
-!!VRy4&v1<>-1/v2<>-1:Sv2 *3 +5; [2nd Secondary Skill # used for dialogue box display]
-!!UN&v1<>-1/v2<>-1:N4/1/v1; [Lookup name of 1st Secondary Skill - store in z1]
-!!UN&v1<>-1/v2<>-1:N4/2/v2; [Lookup name of 2nd Secondary Skill - store in z2]
-!!HE-1&v1<>-1:Sv1/?y8; [Level in 1st Skill (y8)]
-!!HE-1&v1<>-1/v2<>-1:Sv2/?y9; [Level in 2nd Skill (y9)]
-!!VRz6&v1<>-1/y8=1:Sz131005;    [Skill level in 1st skill if Basic: z6]
-!!VRz6&v1<>-1/y8=2:Sz131006; [Skill level in 1st skill if Advanced: z6]
-!!VRz7&v1<>-1/v2<>-1/y9=1:Sz131007;    [Skill level in 2nd skill if Basic: z7]
-!!VRz7&v1<>-1/v2<>-1/y9=2:Sz131008; [Skill level in 2nd skill if Advanced: z7]
+  !!HE(CURRENT_HERO):B0/?z4;
+  !!IF:Q2/(PIC_TYPE_SEC_SKILL)/y6/(MSG_TYPE_MES)/z131024;
+!!en;
 
-!!IF&1000/v1<>-1/v2<>-1:Q2/20/y3/20/y4/(MSG_TYPE_CHOOSE_PIC)/z131009; [Choose which skill to proceed]
+!!if&2;
+  !!VRy7:Sy30;                          [actual number of skill]
+!!el;
+  !!VRy7:Sy31;                          [actual number of skill]
+!!en;
 
- [If Hero is controlled by AI, choose randomly]
-!!VRy5&-1000/v1<>-1/v2<>-1:S0 R1;
-!!IF&-1000/v1<>-1/v2<>-1/y5=0:V2/0;
-!!IF&-1000/v1<>-1/v2<>-1/y5=1:V2/1;
-
- [Set z3, y6 and y7 according to choice made]
-!!VRz3&2/1000/v1<>-1/v2<>-1:Sz131010;
-!!VRz3&-2/1000/v1<>-1/v2<>-1:Sz131011;
-!!VRy6&2/v1<>-1/v2<>-2:Sy3;  [y6 = dialogue display number of skill]
-!!VRy6&-2/v1<>-1/v2<>-2:Sy4; [y6 = dialogue display number of skill]
-!!VRy7&2/v1<>-1/v2<>-2:Sv1;  [y7 = actual number of skill]
-!!VRy7&-2/v1<>-1/v2<>-2:Sv2; [y7 = actual number of skill]
-
-!!IF&1000/v1<>-1/v2<>-1:Q2/20/y6/2/z131012; [ask if player wants daily reminders]
-
- [Store number of days in w52, skill number in w53,]
- [and 99 if daily reminders wanted in w54]
-!!VRw52&v1<>-1/v2<>-1:S7; [Number of days left to learn skill]
-**VRw52&v1<>-1/v2<>-1:S1; [Number of days left to learn skill] [JHV version]
-!!VRw53&v1<>-1/v2<>-1:Sy7; [Number of skill being studied at Expert level]
-!!VRw54&2:S99; [Store 99 in w54 if daily reminders wanted]
-
- [If two appropriate Secondary Skills weren't found, set v3 to 4 - Scroll result]
-!!VRv3|v1=-1/v2=-1:S4;
+!!HE(CURRENT_HERO):Sy7/d1;
 
 ---------------------------------------------------------------------------------------
 
-[Function 5202 - Search for Basic or Advanced Secondary Skill known by Hero]
+[Search for Basic or Advanced Secondary Skill known by Hero]
 
-[Section Variables: x16, y1-y2, v1-v2]
+!?FU(WOG_31_GetRandomBasicOrAdvancedSecSkills);
+!#VA(skill1:x) (skill2:x);
 
-!?FU5202;
+!!VR(skill1):S(NO_SKILL);
+!!VR(skill2):S(NO_SKILL);
 
- [Check Hero's skill level with current skill being checked (x16) - store in y1]
-!!HE-1:Sx16/?y1;
+!!FU(NewIntArray):P?(basicOrAdvSecSkills:y);
 
- [If level is 1 or 2, store value in v1 or v2 and exit loop (x16 set to 999)]
-!!VRy2&y1>=1/y1<=2/v1=-1:S999; [Set y2 to 999 if first skill found]
-!!VRv1&y1>=1/y1<=2/v1=-1:Sx16; [Store 1st skill in v1]
-!!VRy2&y1>=1/y1<=2/v1<>-1/v1<>x16:S999; [Set y2 to 999 if second skill found]
-!!VRv2&y1>=1/y1<=2/v1<>-1/v1<>x16:Sx16; [Store 2nd skill in v2]
+!!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+  !!HE(CURRENT_HERO):Si/?(skillLv:y);
 
- [If skill found (y2=999), set x16 to 999]
-!!VRx16&y2=999:S999;
-
----------------------------------------------------------------------------------------
-
-[Hero is studying]
-
-[Section Variables: x1, y1-y5, w52-w53, z1-z5, flags 2 & 1000]
-
-!?FU(WOG_31_StudyTomeOfKnowledge);
-!#VA(hero:x);
-
-!!IF:Wx1;
-!!FU&w53=(NO_SKILL):E;
-
-!!HEx1:B0/?z1; [Store hero's name in z1]
-!!SN:H^secskill^/w53/(SKILL_NOT_LEARNED)/?z2; [Store name of manual in z2]
-!!HEx1:R2/?y1; [Store hero's sex in y1]
-!!VRz3&y1=0:Sz131013;  [Set z3 to "he" for a male hero]
-!!VRz3&y1=1:Sz131014; [Set z3 to "she" for a female hero]
-!!VRz5&y1=0:Sz131015; [Set z5 to "his for a male hero]
-!!VRz5&y1=1:Sz131016; [Set z5 to "hers for a female hero]
-!!VRy2:Sw53 *3 +5; [Secondary Skill # used for dialogue box display]
-!!VRy3:Sw52 -1;    [Days left -1 for message display]
-!!FU(WOG_GetRandomMonster):P?y5; [Generate number for one of the study messages]
-!!SN:H^monname^/y5/1/?z4; [Store study monster name in z4]
-
- [Check if hero has learned skill at expert before finishing studying the book]
-!!HEx1:Sw53/?y4; [Hero's skill level in skill being studied]
-
-!!if&y4=(SKILL_EXPERT);
-  !!IF&1000:Q2/20/y2/1/z131017;
-  !!VRw52:S0; [Set days left to 0]
+  !!FU(Array_Push)|(skillLv)=(SKILL_BASIC)/(skillLv)=(SKILL_ADVANCED):P(basicOrAdvSecSkills)/i;
 !!en;
 
- [If not finished studying, display progress message if w54=99]
-!!if&1000/w54=99;
-  !!IF&w52=7:Q2/20/y2/1/z131018;
-  !!IF&w52=6:Q2/20/y2/1/z131019;
-  !!IF&w52=5:Q2/20/y2/1/z131020;
-  !!IF&w52=4:Q2/20/y2/1/z131021;
-  !!IF&w52=3:Q2/20/y2/1/z131022;
-  !!IF&w52=2:Q2/20/y2/1/z131023;
-!!en;
+; Exit if there are fewer than 2 skills at Basic or Advanced level
+!!SN:M(basicOrAdvSecSkills)/?(size:y);
+!!FU&(size)<2:E;
 
- [If finished studying, display completion message]
-!!if&w52=1;
-  !!IF&1000:Q2/20/y2/1/z131024;
-
-   [If finished studying, give Hero skill at Expert level]
-  !!HEx1:Sw53/(SKILL_EXPERT);
-!!en;
-
- [Decrement number of days left]
-!!VRw52&w52>0:-1;
-
-!!if&w52=0;
-  !!VRw53:S(NO_SKILL); [If studying completed, set w53 to 0]
-  !!VRw54:S0; [If studying completed, set w54 to 0]
-!!en;
+!!VR(lastIndex:y):S(size) -1;
+!!FU(Array_Shuffle):P(basicOrAdvSecSkills);
+!!FU(Array_Pop):P(basicOrAdvSecSkills)/?(skill1)/?(skill2);
 
 ---------------------------------------------------------------------------------------
 
@@ -432,23 +342,26 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 
  [Check owner of mine - store in y1. Check type of mine - store in y2]
 !!MNv4/v5/v6:O?y1 R?y2;
+!!FU&y1<>-1:E;
 
  [Check current player - store in y3]
 !!OW:C?y3;
 
  [If mine is unowned, make player the owner and reveal 3 squares of the shroud around it]
  [Also, set v1 to 1]
-!!MNv4/v5/v6&y1=-1:Oy3;
-!!UN&y1=-1:Sv4/v5/v6/y3/3;
-!!VRv1&y1=-1:S1;
+!!MNv4/v5/v6:Oy3;
+!!UN:Sv4/v5/v6/y3/3;
+!!VRv1:S1;
 
  [If mine was unowned, display message and then change point of view to the mine]
-!!FU5208&y1=-1:Py2; [Store mine string in z1]
-!!IF&1000/y1=-1:Q2/y2/v2/1/z131025;
-!!UN&1000/y1=-1:Lv4/v5/v6/2500; [Move view for 2.5 seconds to mine]
+!!if&1000;
+  !!FU5208:Py2; [Store mine string in z1]
+  !!IF:Q2/y2/v2/1/z131025;
+  !!UN:Lv4/v5/v6/2500; [Move view for 2.5 seconds to mine]
+!!en;
 
  [Set x16 to 999 to exit loop]
-!!VRx16&y1=-1:S999;
+!!VRx16:S999;
 
 ---------------------------------------------------------------------------------------
 
