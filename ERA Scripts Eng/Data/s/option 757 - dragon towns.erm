@@ -97,12 +97,42 @@ ZVSE2
 !!HE(CURRENT_HERO):P(heroX)/(entranceY)/v1000;
 
 ; Remove obstacles if existing
-!!UN:Ov998/v999/v1000/1;
-!!UN&(result1)=2:O(townX)/v999/v1000/1;
-!!UN&(result2)=2:O(townX)/(objY)/v1000/1;
-!!UN&(result3)=2:O(objX)/v999/v1000/1;
-!!UN&(heroResult)=2:O(heroX)/(entranceY)/v1000/1;
-!!HE(CURRENT_HERO):P(heroX)/v999/v1000;
+!!FU(ES_757_RemoveObject):Pv998/v999/v1000;
+!!FU(ES_757_RemoveObject)&(result1)=2:P(townX)/v999/v1000;
+!!FU(ES_757_RemoveObject)&(result2)=2:P(townX)/(objY)/v1000;
+!!FU(ES_757_RemoveObject)&(result3)=2:P(objX)/v999/v1000;
+!!FU(ES_757_RemoveObject)&(heroResult)=2:P(heroX)/(entranceY)/v1000;
+
+; Wipe out every single tile of the new town just to be safe (or maybe not?)
+; Start from the leftmost spot in the middle row
+*!VR(extraX:y):Sv998 -3;
+*!VR(extraY:y):Sv999 -1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile right
+*!VR(extraX):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile down
+*!VR(extraY):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; Entrance of the Town
+*!VR(extraX):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; Top of the Entrance
+*!VR(extraY):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile right
+*!VR(extraX):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile Up
+*!VR(extraY):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; All the way to the left
+*!VR(extraX):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+*!VR(extraX):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+
+!!HE(CURRENT_HERO):P(entranceX)/v999/v1000;
 !!VR(random:y):R0/1/15;
 
 ; Place and set up the new town
@@ -138,6 +168,28 @@ ZVSE2
 !!el;
   ; Set the result to 0 if the tile is on the water or rock
   !!VR(result):S0;
+!!en;
+
+// Remove objects in the given coordinates
+// The function would be executed for 3 times at most if there are multiple obstacles in the targeted location
+!?FU(ES_757_RemoveObject);
+!#VA(x:x) (y:x) (z:x);
+
+!!OB(x)/(y)/(z):T?(type:y);
+
+!!if&(type)<>(OBJ_STUB);
+  !!UN:O(x)/(y)/(z)/0;
+  !!OB(x)/(y)/(z):T?(type);
+
+  !!if&(type)<>(OBJ_STUB);
+    !!UN:O(x)/(y)/(z);
+    !!OB(x)/(y)/(z):T?(type);
+
+    !!if&(type)<>(OBJ_STUB);
+      !!UN:O(x)/(y)/(z);
+      !!OB(x)/(y)/(z):T?(type);
+    !!en;
+  !!en;
 !!en;
 
 // Place and set up the town for every player in MP
