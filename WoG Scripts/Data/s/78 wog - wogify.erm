@@ -234,19 +234,16 @@ Returned Values:
  y-98 : Element (1=air, 2=fire, 4=water, 8=earth, 15=all elements)
 
 --------------------------------------------------------------------------------
-*?FU(OnKeyPressed)&x1=(KEY_1);
-
-  *!FU$spell$:P5/5/0/0/0/5/69/68/66/1/2; (Get a fifth level spell)
 
 !?FU7777;
 ; x1=min. level, x2=max. level, x3=type, x4=element, x5=banning
 ; x6=number of exclusions, x7..x15=specific exclusions
 !#VA(minLvl:x) (maxLvl:x) (spType:x) (schoolBit:x) (restrictBanned:x);
 !#VA(numExclSpells:x) (spell[9]:x);
-!!VRy-99:S-1; [Initialize y-99 to -1]
-*!IF:M^%v1^;
 
-!!if|(minLvl)<0/(minLvl)>5/(maxLvl)<0/(maxLvl)>5/(spType)<0/(spType)>2/(schoolBit)<0/(schoolBit)>15/x5<0/x5>3/(numExclSpells)<0/(numExclSpells)>9;
+!!VRy-99:S-1; [Initialize y-99 to -1]
+
+!!if|(minLvl)<0/(minLvl)>5/(maxLvl)<0/(maxLvl)>5/(spType)<0/(spType)>2/(schoolBit)<0/(schoolBit)>15/(restrictBanned)<0/(restrictBanned)>3/(numExclSpells)<0/(numExclSpells)>9;
   ; Set y-99 to 99 for an invalid parameter: mast skip loop
   !!VRy-99:S99;
   !!IF:M^{ERM Error:} FU$spell$ function was called with invalid arguments^;
@@ -271,16 +268,12 @@ Returned Values:
         !!en;
       !!en;
 
-      *!IF&(minLvl)=1:L^%(randSpellLoop) %i(WOG_main_rand_spell)^;
       !!FU7778:P(minLvl)/(maxLvl)/(spType)/(schoolBit)/(restrictBanned); [call fuction without extra args]
       !!VRi^WOG_main_rand_spell^:S0;                                     [clear variable]
     !!en; 
-
   !!el;
-
     !!FU:E;                                                              [exit FU, if was found the spell]
   !!en;
-
 !!en;
 
 !!FU:E;
@@ -291,7 +284,6 @@ Returned Values:
 
 !!if&y-99<0|y-99>69;
   ; generate ERA debug information in folder Debag/Era if y-99 no valid spell id
-  *!SN:F^GenerateDebugInfo^;
   ; Attention: y-99 mast be 0...69
   ; igrik (fix - always return valid id spell)
   !!VRy-99:S99;[check to invalid spell id]
@@ -526,7 +518,8 @@ Returned Values:
 !#UN&v1=1:A155/1; (Disable Commander Artifacts if commanders are inactive)
 *** End of Additions by Anders Jonsson ***
 
-!#VRi^wog78_howlingHollow_on^:S(TRUE);  [compatibility setting with mods - Archer]
+!#VRi^wog_195_objReplaceMult^:S100;   [Default percentage of the original WoG replacement chance]
+!#VRi^wog_195_howlingHollow_on^:S(TRUE);    [compatibility setting with mods - Archer]
 
 ** end of Initialization Code
 
@@ -646,10 +639,13 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C63/15/0/-1/0/1/0; [death chamber]
 
-!!FU671&y20>0:P88/-1/0/y20/60; [replace 60% of level 1 magic shrines]
-!!FU671&y20>0:P100/-1/0/y20/20; [replace 20% of learning stones]
-!!FU671&y20>0:P113/-1/0/y20/15; [replace 15% of witch huts]
-!!FU671&y20>0:P112/-1/0/y20/10; [replace 10% of windmills]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P60/?y30;
+  !!FU671:P88/-1/0/y20/y30; [replace 60% of level 1 magic shrines]
+  !!FU671:P100/-1/0/y20/20; [replace 20% of learning stones]
+  !!FU671:P113/-1/0/y20/15; [replace 15% of witch huts]
+  !!FU671:P112/-1/0/y20/10; [replace 10% of windmills]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -720,9 +716,12 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C213/0/3/-1/0/1/0; [freelancer's guild]
 
-!!FU671&y20>0:P16/1/3/y20/80; [replace 80% of dwarven treasuries]
-!!FU671&y20>0:P55/0/3/y20/80; [replace 80% of mystical gardens]
-!!FU671&y20>0:P84/0/3/y20/80; [replace 80% of crypts]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P80/?y30;
+  !!FU671:P16/1/3/y20/y30; [replace 80% of dwarven treasuries]
+  !!FU671:P55/0/3/y20/y30; [replace 80% of mystical gardens]
+  !!FU671:P84/0/3/y20/y30; [replace 80% of crypts]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -772,7 +771,7 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C17/96/1/-1/0/0/0; [sylvan homestead]
 
-!!if&i^wog78_howlingHollow_on^;    [compatibility setting with mods - Archer]
+!!if&i^wog_195_howlingHollow_on^;       [compatibility setting with mods - Archer]
   !!VRy3&y21=0:S0; [set y3 to 0 if Replace Objects isn't enabled]
 
   !!if&y3=1;
@@ -790,10 +789,15 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C80/0/1/-1/0/0/0; [sanctuary]
 
-!!FU671&y20>0:P16/3/1/y20/70; [replace 70% of imp caches]
-!!FU671&y20>0:P16/2/1/y20/70; [replace 70% of griffin conservatories]
-!!FU671&y20>0:P64/-1/1/y20/75; [replace 75% of rally flags]
-!!FU671&y20>0:P23/-1/1/y20/25; [replace 25% of marletto towers]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P70/?y30;
+  !!FU(WOG_195_CalcReplaceChance):P75/?y31;
+  !!FU(WOG_195_CalcReplaceChance):P25/?y32;
+  !!FU671:P16/3/1/y20/y30; [replace 70% of imp caches]
+  !!FU671:P16/2/1/y20/y30; [replace 70% of griffin conservatories]
+  !!FU671:P64/-1/1/y20/y31; [replace 75% of rally flags]
+  !!FU671:P23/-1/1/y20/y32; [replace 25% of marletto towers]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -834,10 +838,14 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C17/88/1/-1/0/1/0; [spirit pyre]
 
-!!FU671&y20>0:P16/3/1/y20/40; [replace 40% of imp caches]
-!!FU671&y20>0:P16/2/1/y20/40; [replace 40% of griffin conservatories]
-!!FU671&y20>0:P64/-1/1/y20/50; [replace 50% of rally flags]
-!!FU671&y20>0:P23/-1/1/y20/10; [replace 10% of marletto towers]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P40/?y30;
+  !!FU(WOG_195_CalcReplaceChance):P50/?y31;
+  !!FU671:P16/3/1/y20/y30; [replace 40% of imp caches]
+  !!FU671:P16/2/1/y20/y30; [replace 40% of griffin conservatories]
+  !!FU671:P64/-1/1/y20/y31; [replace 50% of rally flags]
+  !!FU671:P23/-1/1/y20/10; [replace 10% of marletto towers]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -931,14 +939,18 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C95/ 0/2/-1/0/1/0; [tavern]
 
-
-!!FU671&y20>0:P16/4/2/y20/70; [replace 70% of medusa stores]
-!!FU671&y20>0:P16/0/2/y20/70; [replace 70% of cyclops stockpiles]
-!!FU671&y20>0:P16/5/2/y20/70; [replace 70% of naga banks]
-!!FU671&y20>0:P96/-1/2/y20/75; [replace 75% of temples]
-!!FU671&y20>0:P106/-1/2/y20/75; [replace 75% of war machine factories]
-!!FU671&y20>0:P28/-1/2/y20/75; [replace 75% of fairy rings]
-!!FU671&y20>0:P14/-1/2/y20/80; [replace 80% of swan ponds]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P70/?y30;
+  !!FU(WOG_195_CalcReplaceChance):P75/?y31;
+  !!FU(WOG_195_CalcReplaceChance):P80/?y32;
+  !!FU671:P16/4/2/y20/y30; [replace 70% of medusa stores]
+  !!FU671:P16/0/2/y20/y30; [replace 70% of cyclops stockpiles]
+  !!FU671:P16/5/2/y20/y30; [replace 70% of naga banks]
+  !!FU671:P96/-1/2/y20/y31; [replace 75% of temples]
+  !!FU671:P106/-1/2/y20/y31; [replace 75% of war machine factories]
+  !!FU671:P28/-1/2/y20/y31; [replace 75% of fairy rings]
+  !!FU671:P14/-1/2/y20/y32; [replace 80% of swan ponds]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -962,12 +974,16 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C17/87/2/-1/0/1/0; [chaos pool]
 
-!!FU671&y20>0:P16/4/2/y20/25; [replace 25% of medusa stores]
-!!FU671&y20>0:P16/0/2/y20/25; [replace 25% of cyclops stockpiles]
-!!FU671&y20>0:P16/5/2/y20/25; [replace 25% of naga banks]
-!!FU671&y20>0:P28/-1/2/y20/40; [replace 40% of fairy rings]
-!!FU671&y20>0:P14/-1/2/y20/60; [replace 60% of swan ponds]
-
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P25/?y30;
+  !!FU(WOG_195_CalcReplaceChance):P40/?y31;
+  !!FU(WOG_195_CalcReplaceChance):P60/?y32;
+  !!FU671:P16/4/2/y20/y30; [replace 25% of medusa stores]
+  !!FU671:P16/0/2/y20/y30; [replace 25% of cyclops stockpiles]
+  !!FU671:P16/5/2/y20/y30; [replace 25% of naga banks]
+  !!FU671:P28/-1/2/y20/y31; [replace 40% of fairy rings]
+  !!FU671:P14/-1/2/y20/y32; [replace 60% of swan ponds]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -995,8 +1011,11 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C17/63/1/-1/0/0/0; [crystal caverns] [table of Crystal Dragon dwelling]
 
-!!FU671&y20>0:P78/-1/1/y20/10; [replace 10% of Refugee Camps]
-!!FU671&y20>0:P97/-1/1/y20/30; [replace 30% of Den of Thieves]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P30/?y30;
+  !!FU671:P78/-1/1/y20/10; [replace 10% of Refugee Camps]
+  !!FU671:P97/-1/1/y20/y30; [replace 30% of Den of Thieves]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1037,7 +1056,10 @@ Returned Values:
   !!VRvy10:C63/32/5/-1/0/1/0; [battle academy]
 !!en;
 
-!!FU671&y20>0:P(OBJ_DRAGON_UTOPIA)/-1/4/y20/40; [replace 40% of dragon utopias]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P40/?y30;
+  !!FU671:P(OBJ_DRAGON_UTOPIA)/-1/4/y20/y30; [replace 40% of dragon utopias]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1058,7 +1080,10 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C63/66/1/-1/1/0/0; [mirror portal]
 
-!!FU671&y20>0:P107/-1/3/y20/60; [replace 60% of schools of war]
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P60/?y30;
+  !!FU671:P107/-1/3/y20/y30; [replace 60% of schools of war]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1079,9 +1104,10 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C101/5/0/-1/0/0/0; [2nd new treasure chest (type 5)]
 
-!!FU671&y20>0:P101/0/0/y20/50; [replace 50% of treasure chests]
-
-
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P50/?y30;
+  !!FU671:P101/0/0/y20/y30; [replace 50% of treasure chests]
+!!en;
 
 
 ** JHV mod to load random selections into POx/y/L after wogification
@@ -1115,7 +1141,6 @@ Returned Values:
 !!VRvy10&y3=1:C5/0/0/-1/0/0/0; [spellbook]
 
 !!FU671&y20>0:P93/-1/0/y20/10; [replace 10% of scrolls]
-
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1196,10 +1221,13 @@ Returned Values:
 !!VRy10&y3=1:S593 +y11; [new index number]
 !!VRvy10&y3=1:C63/22/0/-1/0/0/0; [Forgotten Shrine]
 
-!!FU671&y20>0:P89/-1/0/y20/40; [replace 40% of level 2 magic shrines]
-!!FU671&y20>0:P90/-1/0/y20/40; [replace 40% of level 3 magic shrines]
-!!FU671&y20>0:P38/-1/0/y20/50; [replace 50% of idols of fortune]
-
+!!if&y20>0;
+  !!FU(WOG_195_CalcReplaceChance):P40/?y30;
+  !!FU(WOG_195_CalcReplaceChance):P50/?y30;
+  !!FU671:P89/-1/0/y20/y30; [replace 40% of level 2 magic shrines]
+  !!FU671:P90/-1/0/y20/y30; [replace 40% of level 3 magic shrines]
+  !!FU671:P38/-1/0/y20/y31; [replace 50% of idols of fortune]
+!!en;
 
 
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1232,9 +1260,7 @@ Returned Values:
 !!VRv5:Sv70 +v70 -1;    (Get replacing frequency)
 !!VRv6:S0; (Check for number of replaced piles of Mithril)
 !!DO8179/y1/v1/1&870:P; (Cycle through all resource piles, replace one in what value v70 holds)
-!d!IF:M^Total number of resource piles: %V1.
-Number replaced with Mithril: %V6^;
-*!IF&870:M^%F870^;
+
 *** Campfires ***
 !!IF:V9/1;
 !!UN&870:U12/-1/?v1;   (Get number of campfires on map(for replacing with Mithril))
@@ -1243,7 +1269,6 @@ Number replaced with Mithril: %V6^;
 !!VRy1&870:S1 Ry3;     (Draw random number to see what pile to start with)
 !!VRv5:Sv70 +v70 -1;    (Get replacing frequency)
 !!DO8179/y1/v1/1&870:P;(Cycle through all Campfires, replace one in what value v70 holds)
-*!IF&870:M^%F870^;
 
 !!IF:V870/0;    (set Flag to indicate that Mithril has been added)
 ** End of Mithril section.
@@ -1286,9 +1311,15 @@ Number replaced with Mithril: %V6^;
 
 ** redraw screen
 
-!!UN:R1;
+!!SN:D;
 
 ** end of function
+
+
+!?FU(WOG_195_CalcReplaceChance);
+!#VA(chance:x) (newChance:x);
+
+!!VR(newChance):S(chance) *i^wog_195_objReplaceMult^ :100;
 
 
 !?FU(OnEveryDay)&i^timerDay^=1/v950=1/v508=0/v3340<>99;
