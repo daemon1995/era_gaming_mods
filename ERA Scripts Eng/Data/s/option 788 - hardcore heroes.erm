@@ -1,6 +1,6 @@
 ZVSE2
 ** Author orig.  : Algor
-** Updated by    : Archer30
+** Updated by    : Archer30 and deamon_n
 ** Name          : Hardcore heroes
 ** Name rus.     : Смертные герои
 ** Options       : 788
@@ -27,6 +27,18 @@ ZVSE2
 !!FU(ES_788_Rebirth)&y2>=0/y4<0:Py2;    // перерождение защищающегося героя, если он погиб
 
 !?FU(ES_788_Rebirth);                   // Перерождение героя x1
+!#VA(hero:x);
+
+; Reset the hero
+!!HE(hero):Z?(heroPtr:y);
+!!SN:E5081488/(CALLCONV_THISCALL)/(heroPtr)/(hero);
+; Restore the original starting army
+!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameManager:y);
+!!SN:E5018608/(CALLCONV_THISCALL)/(gameManager)/(hero)/0/0;
+; Restore Movement Points
+!!SN:E5132288/(CALLCONV_THISCALL)/(heroPtr);
+!!HE(hero):Gv1 Wv1/1;
+
 !!SN:W^opt788.h%X1r^/1;                 // установка герою признака перерожденного
 !!HEx1:B2/?y2;
 !!VRy1:Sy2 :2;                          // y1 - раса героя 0..8
@@ -34,20 +46,15 @@ ZVSE2
 !!VRi:R0/0/2;
 !!VRy2&i=2:S0;                          // y2 - класс героя -1/0/1 = Воин/Странник/Маг
 
-** удаление БМ и артефактов
-!!re i/0/82;
-  !!HEx1:A1/?j/i;
-  !!FU(UnequipArtFromSlot)&j>(NO_ART)/j<>(ART_CATAPULT)/j<>(ART_SPELL_BOOK):Px1/i;
-!!en;
-
-!!HEx1:A1/(ART_CATAPULT)/16 A1/(ART_SPELL_BOOK)/17;                 // выдам катапульту и книгу всем героям
-
 ** установка первичных параметров
 !!VRy11:R0/1/2 -y2;
 !!VRy12:R0/1/2 -y2;                      // y11/y12/y13/y14 - первичные параметры нового героя
 !!VRy13:R0/2/3 +y2;
 !!VRy14:R0/2/3 +y2;                      // ...
 !!HEx1:Fy11/y12/y13/y14;                // Установка первичных параметров
+
+; Add in spell book
+!!HEx1:A1/(ART_SPELL_BOOK)/17;                 // выдам катапульту и книгу всем героям
 
 ** выбор специализации
 !!VRy3:R0/0/1;
@@ -238,9 +245,6 @@ ZVSE2
 ** удаление ассасинов
 !!SN:W^opt795.11.%X1^/?y15 W^opt795.11.%X1.rebirth^/y15 W^opt795.11.%X1^/0; // удаление ассасинов
 
-** обнуление уровня и опыта
-!!HEx1:E0/1/0/1;                        // обнуление уровня и опыта
-
 ** очистка командира/артефактов командира
 !!UN:P3/?i P6/?j P51/?k;                // i/j/k - статус опций Командиры / Обязательный найм командиров / Измененные командиры
 
@@ -287,21 +291,21 @@ ZVSE2
 !!if&(heroType)=-1;
   ; Skill Master
   !!if&(random1)=0;
-    !!SN:H^spec^/(hero)/2/^%T(es.788.skillMaster)^;
+    !!SN:T^es.788.skillMaster^/?(spec:z);
   !!el&(random1)=1;
     ; Creature Specialist
     !!UN:P740/?(enhCreaSpec:y);
 
     !!if&(enhCreaSpec);
-      !!VR(spec:z):S^%T(es.740.spec)^;
+      !!SN:T^es.740.spec^/?(spec);
     !!el;
-      !!VR(spec):S^%T(es.788.creaSpec)^;
+      !!SN:T^es.788.creaSpec^/?(spec);
     !!en;
 
     !!if&(random2);
       ; Creature Trainer
       !!if&(param)=(MON_MONK);
-        !!SN:T^es.788.creaTrainer^/?(spec:z)/^mon1^/(param)/^mon2^/(MON_ZEALOT)/^upg^/(MON_WAR_ZEALOT);
+        !!SN:T^es.788.creaTrainer^/?(spec)/^mon1^/(param)/^mon2^/(MON_ZEALOT)/^upg^/(MON_WAR_ZEALOT);
       !!el&(param)=(MON_GREMLIN);
         !!SN:T^es.788.creaTrainer^/?(spec)/^mon1^/(param)/^mon2^/(MON_MASTER_GREMLIN)/^upg^/(MON_SANTA_GREMLIN);
       !!el&(param)=(MON_STONE_GOLEM);
@@ -319,27 +323,25 @@ ZVSE2
         !!SN:T^es.788.scholarOfDeath^/?(spec)/^mon1^/(param)/^mon2^/(MON_BLACK_DRAGON)/^upg^/(MON_BLOOD_DRAGON);
       !!en;
     !!en;
-
-    !!SN:H^spec^/(hero)/2/^%(spec)^;
   !!en;
 ; Adventurers;
 !!el&(heroType)=0;
   ; Skill Master
   !!if&(random1)=0;
-    !!SN:H^spec^/(hero)/2/^%T(es.788.skillMaster)^;
+    !!SN:T^es.788.skillMaster^/?(spec);
   ; Supplier
   !!el&(random1)=1;
     !!if&(param)<>(RES_GOLD);
-      !!SN:H^spec^/(hero)/2/^%T(es.788.supplier1)^;
+      !!SN:T^es.788.supplier1^/?(spec);
     !!el;
-      !!SN:H^spec^/(hero)/2/^%T(es.788.supplier2)^;
+      !!SN:T^es.788.supplier2^/?(spec);
     !!en;
   !!en;
 ; Mages
 !!el&(heroType)=1;
   ; Skill Master
   !!if&(random1)=0;
-    !!SN:H^spec^/(hero)/2/^%T(es.788.skillMaster)^;
+    !!SN:T^es.788.skillMaster^/?(spec);
   !!el&(random1)=1;
     ; Aura of Curse
     !!if&(random2)=1/(param)>=7/(param)<=10;
@@ -349,10 +351,10 @@ ZVSE2
     !!el;
       !!SN:T^es.788.battlemage^/?(spec);
     !!en;
-
-    !!SN:H^spec^/(hero)/2/^%(spec)^;
   !!en;
 !!en;
+
+!!SN:H^spec^/(hero)/2/^%(spec)%T(es.788.reborn)^;
 
 ** Подержка специализаций на заклинаниях перерожденных героев
 !?FU(OnMagicCorrectedResistance);       // при нанесении урона заклинанием

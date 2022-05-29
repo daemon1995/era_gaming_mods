@@ -2,9 +2,9 @@ ZVSE2
 
 * Updated: September 12, 2004 by Hermann the Weird
 * Updated: Febrary 26, 2012 by rennyo
-* Updated: May 2022 by Archer30 and daemon_n
 * Further Updated: September 15, 2004 by Timothy to change local y variables
 * used in triggers to y- variables.
+* Rewritten by Archer30 and daemon_n on May 2022
 
 *War Machine script 0.9 by Overlord
 *Reserved: TM41, v591, v2000-v2074, FU901-FU927, w81-83
@@ -30,33 +30,34 @@ ZVSE2
 
 ************************ before action combat screen ***************************
 
-!#UN:P54/?i^wog_54_enabled^; [Check if script is enabled]
+!#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Check if script is enabled]
+
+!?FU(OnAfterErmInstructions)&i^wog_54_enabled^;
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Legacy - double check the option]
+!!FU&i^wog_54_enabled^<>(TRUE):E;
 
 ; Temporary fix for the issue stacks become First Aide Tent
 !?FU(OnBattleRound)&i^battle_round^=0/i^wog_54_enabled^;
-!!BA:S?(isSiege:y);
-
 !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
   !!BMi:T?(type:y);
 
   !!if&(type)=(MON_FIRST_AID_TENT);
     !!BMi:I?(side:y);
     !!VRi^wog_54_tent_%(side)^:Si;
-  !!el&(type)=(MON_CATAPULT)/(isSiege)<>(TRUE);
+  !!el&(type)=(MON_CATAPULT)/i^wog_isSiege^<>(TRUE)/i^wog_isCreatureBankBattle^<>(TRUE);
     !!BMi:I?(side:y);
     !!VRi^wog_54_catapult_%(side)^:Si;
   !!en;
 !!en;
 
 !?FU(OnBeforeBattleAction)&i^wog_54_enabled^; get before action
-!!BA:S?(isSiege:y);
 !!BG:E?(targetStack:y) H?(actingHero:y) A?(actionType:y);
 
 !!BMi^battle_acting_stack^:T?(type:y) I?(side:y) N?(num:y) F?(monFlags:y); monster flags (132165 = catapult if not siege)
 
 ; Catapult
 ; 132165 - no moral, immume to mind spell, siege weapon, shooting, double hex
-!!if&(monFlags)=132165/(isSiege)<>(TRUE);
+!!if&(monFlags)=132165/i^wog_isSiege^<>(TRUE)/i^wog_isCreatureBankBattle^<>(TRUE);
   !!FU925&(type)=(MON_CATAPULT):P(actionType); catapult first stage
   !!FU901&(type)=(MON_MAGOG)/v2059=1:P1/(actionType)/(actingHero)/(num); catapult second stage
 !!en;
