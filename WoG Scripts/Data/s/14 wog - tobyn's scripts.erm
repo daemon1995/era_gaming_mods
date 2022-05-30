@@ -16,7 +16,7 @@ ZVSE2
 
 !#UN:P188/?v2366;          check if (Conflux)Rampart Monster Change is enabled in WoGify Options
 !#UN:P189/?v2367;          check if Conflux(Rampart) Monster Change is enabled in WoGify Options
-!#UN:P190/?v2364;          check if First Aid Enhanced is enabled in WoGify Options
+!#UN:P190/?i^wog_190_enabled^; check if First Aid Enhanced is enabled in WoGify Options
 !#UN:P191/?v2363;          check if Estates Enhanced is enabled in WoGify Options
 !#UN:P193/?v2365;          check if Warfare is enabled in WoGify Options
 !#UN:P194/?v2361;          check if Advanced Witch Huts are enabled in WoGify Options
@@ -49,29 +49,6 @@ ZVSE2
 !!VRy8:*33;                            set 33 bonus if "maximum luck cheat" flag is set
 !!VRx2&y9=0:+y1 +y2 +y3 +y4 +y5 +y6 +y7 +y8; current luck (x2) if no Hourglass (still no Spirit Guardian included)
 !!VRx2&y9=1/y7<0:Sy7 +y8;              current negative luck (if Hourglass really negates luck *bonus* only)
-
-*!FU:E;
-
-*!VRy1&x1>78/x1<87:S1;                 check skill area (1 if icon clicked)
-*!VRy1&x1>86/x1<95:S2;                 ..               (2 if name clicked)
-*!VRy1&x1>94/x1<103:S3;                ..               (3 if expertise clicked)
-
-                  calculate skill slot (if icon)
-
-*!VRy2&y1=2:Sx1 -86;                   ..                   (if name)
-*!VRy2&y1=3:Sx1 -94;                   ..                   (if expertise)
-
-*!VRy2&y1=1/x1<100:Sx1 -78;                   calculate skill slot (if icon)
-*!VRy2&y1=2/x1<100:Sx1 -86;                   ..                   (if name)
-*!VRy2&y1=3/x1<100:Sx1 -94;                   ..                   (if expertise)
-*!HEx2&y1>0:Sy2/?y3/1;                 check which skill (y3) in slot y2   [1st bug: if no skill on that slot, it unfortunately returns 0 instead of -1, how to separate from Pathfinding then?]
-*!VRx3&y1>0:Sy3;                       set output var x3 (skill number)
-*!VRx4&y1>0:Sy1;                       set output var x4 (skill area)
-*!VRx5&y1>0:Sy2;                       set output var x5 (skill slot)
-; to counteract two bugs [2nd bug: click number of empty slots still set to respective number if empty icon clicked, whereas empty skill expertise/name is treated as non-functional-area and sets click number to 0]
-*!VRx3&y1>0/y2>y4:S-1;                 set output vars to none (-1) if empty skill slot (i.e. slot higher than known skills)
-*!VRx4&y1>0/y2>y4:S-1;                 ..
-*!VRx5&y1>0/y2>y4:S-1;                 ..
 
 ******************************************************************************************
 
@@ -509,9 +486,11 @@ lvl 10+ and cycling
 **   of three spells during that combat (Cure, Animate Dead and Resurrection)
 **   First Aid Specialty will also restore First Aid Tent Warmachine *if*
 **   hero had one before battle began, even if it was destroyed in battle.
+** - If Enhanced Warmachines II is eanbled, the additional tents would be
+**   reduced to 2. One for learning First Aid and one for First Aid specialty.
 **
 ** uses vars v2301..23
-** ONLY ACTIVE if v2364=1 (wogify option 190)
+** ONLY ACTIVE if i^wog_190_enabled^ (wogify option 190)
 
 
   INIT SKILL DESCRIPTION moved to script75.erm (skill descriptions)
@@ -526,11 +505,21 @@ lvl 10+ and cycling
 
   BEFORE BATTLE
 
-!?BA52&v2364=1;                         [start combat trigger for both sides (if script active)]
+!?FU(OnBeforeBattleUniversal)&i^wog_190_enabled^; [start combat trigger for both sides (if script active)]
 !!VRv2301:C0/0/0/0/0/0/0/0/0/0/0;       [init v2301..11]
 !!VRv2312:C0/0/0/0/0/0/0/0/0/0/0/0;     [init v2312..23]
-!!HEi^battle_hero_0^:         Ed/?v2301/1 S(SKILL_FIRST_AID)/?v2304 A2/6/?v2305/d M37/?v2307 M38/?v2308 M39/?v2309;
-!!HEi^battle_hero_1^&i^battle_hero_1^>-1:Ed/?v2311 Fd/d/?v2312/d S(SKILL_FIRST_AID)/?v2314 A2/6/?v2315/d M37/?v2317 M38/?v2318 M39/?v2319;
+!!HEi^battle_hero_0^:Ed/?v2301/1 S(SKILL_FIRST_AID)/?v2304 A2/6/?v2305/d M37/?v2307 M38/?v2308 M39/?v2309;
+!!HEi^battle_hero_1^&i^battle_hero_1^>(NO_HERO):Ed/?v2311/1 S(SKILL_FIRST_AID)/?v2314 A2/6/?v2315/d M37/?v2317 M38/?v2318 M39/?v2319;
+
+; Compatibility with Enhanced Warmachines II, reduce the additional tents to 1 ~ 2
+!!if&i^wog_55_enabled^;
+  !!VRv2301:S1;
+  !!VRv2301&i^battle_hero_1^>(NO_HERO):S1;
+; Tents = 1/4 hero level + 1 if Enhanced Warmachines II is disabled
+!!el;
+  !!VRv2302::4 +1;
+  !!VRv2301&i^battle_hero_1^>(NO_HERO)::4 +1;
+!!en;
 
   First Aid Specialty
 !!HEi^battle_hero_0^:X?y-1/?y-2/d/d/d/d/d; [get Attacker skill specialty]
@@ -549,50 +538,54 @@ lvl 10+ and cycling
 
   IN BATTLE (summon Tents and apply Cure spell)
 
-!?FU(OnSetupBattlefield)&v2364=1;                                     [start battlefield trigger (if script active)]
-!!BU&v2304>0:E153/?v2306;                                               [check if attacker already has tents]
-!!BU&v2314>0:E168/?v2316;                                               [check if defender already has tents]
-!!BMv2306&v2304>0/v2306>0:Ndv2301;                                      [add Tents for attacker]
-!!BMv2316&v2314>0/v2316>0:Ndv2311;                                      [add Tents for defender]
-!!BU&v2304>0/v2306=-1:S(MON_FIRST_AID_TENT)/v2301/153/0/-1/0;                            [summons Tents for attacker]
-!!BU&v2314>0/v2316=-1:S(MON_FIRST_AID_TENT)/v2311/168/1/-1/0;                            [summons Tents for defender]
+!?FU(OnSetupBattlefield)&i^wog_190_enabled^; [start battlefield trigger (if script active)]
+!!if&v2304>(SKILL_NOT_LEARNED);
+  !!BU:E153/?v2306;                     [check if attacker already has tents]
 
-!?BG&v2364=1;                                                           [battleground action (useable by both sides) (if script active)]
+  !!if&v2306>(NO_STACK);
+    !!BMv2306:Ndv2301;                  [add Tents for attacker]
+  !!el;
+    !!BU:S(MON_FIRST_AID_TENT)/v2301/153/0/-1/0; [summons Tents for attacker]
+  !!en;
+!!en;
 
-!!BG:A?(action:y);                                                           [get current action (wait for Tent Healing)]
+!!if&v2314>(SKILL_NOT_LEARNED);
+  !!BU:E168/?v2316;                     [check if defender already has tents]
+
+  !!if&v2306>(NO_STACK);
+    !!BMv2316:Ndv2311;                  [add Tents for defender]
+  !!el;
+    !!BU:S(MON_FIRST_AID_TENT)/v2311/168/1/-1/0; [summons Tents for defender]
+  !!en;
+!!en;
+
+!?FU(OnBeforeBattleAction)&i^wog_190_enabled^; [battleground action (useable by both sides) (if script active)]
+!!BG:A?(action:y);                      [get current action (wait for Tent Healing)]
+
 !!if&(action)=(BATTLE_ACTION_TENT_HEAL);
-  !!BG:N?(tentStack:y) D?(healPos:y) Q?(side:y);                                  [get Tent number, destination position, owner]
+  !!BG:N?(tentStack:y) D?(healPos:y) Q?(side:y); [get Tent number, destination position, owner]
 
   !!BU:E(healPos)/?(stack:y);
   !!BM(stack):P?(stackPos:y);
 
-  !!BM(tentStack):N?(tents:y);                                             [get current amount of Tents]
-  !!BM(tentStack)&(side)=0/v2304>0:C(SPELL_CURE)/(stackPos)/v2304/(tents)/1;             [cast Cure on destination (left side)]
-  !!BM(tentStack)&(side)=1/v2314>0:C(SPELL_CURE)/(stackPos)/v2314/(tents)/1;             [cast Cure on destination (right side)]
-
+  !!BM(tentStack):N?(tents:y);          [get current amount of Tents]
+  !!BM(tentStack)&(side)=(BATTLE_LEFT)/v2304>(SKILL_NOT_LEARNED):C(SPELL_CURE)/(stackPos)/v2304/(tents)/1; [cast Cure on destination (left side)]
+  !!BM(tentStack)&(side)=(BATTLE_RIGHT)/v2314>(SKILL_NOT_LEARNED):C(SPELL_CURE)/(stackPos)/v2314/(tents)/1; [cast Cure on destination (right side)]
 !!en;
 
 
-
   AFTER BATTLE (restore values given by First Aid Specialty)
-!?FU(OnAfterBattleUniversal);
-*!FU(WOG_UpdateWarMachinesBattleVars):P;
 
-!?BG1&v2364=1;                                                          [post-action trigger, if script active]
-!!BU:C?y-1;                                                             [check if combat has ended this turn]
-!!FU&y-1=0:E;                                                           [exit if it hasn't]
+!?FU(OnAfterBattleAction)&i^wog_190_enabled^; [post-action trigger, if script active]
+!!BU:C?(battleIsEnded:y);               [check if combat has ended this turn]
+!!FU&(battleIsEnded)<>(TRUE):E;         [exit if it hasn't]
+
   attacker
-!!HEi^battle_hero_0^&v2303=1/v2305>0:A1/(ART_FIRST_AID_TENT)/15;        [restore Tent if given and hero specialty]
-!!HEi^battle_hero_0^:M37/v2307 M38/v2308 M39/v2309;                     [remove Cure, Res, AnDead spells if only given by Specialty]
+!!HEi^battle_hero_0^&v2303=1/v2305>0:A1/(ART_FIRST_AID_TENT)/15; [restore Tent if given and hero specialty]
+!!HEi^battle_hero_0^:M37/v2307 M38/v2308 M39/v2309; [remove Cure, Res, AnDead spells if only given by Specialty]
   defender
-!!HEi^battle_hero_1^&v2313=1/v2315>0:A1/(ART_FIRST_AID_TENT)/15;        [restore Tent if given and hero specialty]
+!!HEi^battle_hero_1^&v2313=1/v2315>0:A1/(ART_FIRST_AID_TENT)/15; [restore Tent if given and hero specialty]
 !!HEi^battle_hero_1^&i^battle_hero_1^>-1:M37/v2317 M38/v2318 M39/v2319; [remove Cure, Res, AnDead spells if only given by Specialty]
-*!VRy1:S56 :55 *34 -33 +33 %4;
-*!FU(WOG_UpdateWarMachinesBattleVars):P;
-
-*!IF:L^2^;
-
-*!DO7805/0/41/1:Pi^battle_hero_0^/i^battle_hero_1^; //get the actual number of machines for both side, updates w vars
 
 ******************************************************************************************
 
@@ -677,12 +670,8 @@ lvl 10+ and cycling
   !!VR(msgType:y):S(MSG_TYPE_CHOOSE_PIC_OR_CANCEL);
 !!en;
 
-*!CM&y4=0:R1;                          enable standard reaction if unidentified click and exit
-*!FU&y4=0:E;       BUG COUNTERMEASURE (clicking non-functional-areas after Estates (with disabled std reaction) erroneously gives another msgbox and nasty side effects)
 !!IF:W-1;                              set w var reference to current hero
 !!VRy5:S0;                             init y5
-
-*!IF:L^%^;
 
 !!VRy5&(skillArea)>1/(mouseAction)=(MOUSE_RMB_PRESSED):S1;                  set cycling "flag" y5 if right-clicked on text field (name or expertise)
 !!FU(WOG_193_UpdateWarFareLevel):P-1/(skill)/y5;                    determine and set Warfare expertise (highest of all three skills) on current hero (-1)
