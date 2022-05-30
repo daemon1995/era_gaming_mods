@@ -126,13 +126,13 @@ ZVSE2
 !#UN:P103/?(wogOption:y);
 !#VRi^wog_103_removeEagleEye^&(wogOption):S(TRUE);
 
-!?FU(OnHeroGainLevel);                  [Level up trigger for eagle eye]
+!?FU(OnAfterHeroGainLevel);             [Post Level up trigger for eagle eye]
 
-  !!UN:P103/?(wogOption:y);                       [Check if Eagle Eye I is enabled in WoGify Options]
-  !!FU&(wogOption)<>(TRUE):E;                        [Exit if it isn't]
+  !!UN:P103/?(wogOption:y);             [Check if Eagle Eye I is enabled in WoGify Options]
+  !!FU&(wogOption)<>(TRUE):E;           [Exit if it isn't]
 
-  !!HE(CURRENT_HERO):S11/?(eeLvl:y);                [get eagle eye level]
-  !!FU&(eeLvl)=0:E;                     [Exit if no eagle eye]
+  !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/?(eeLvl:y); [get eagle eye level]
+  !!FU&(eeLvl)=(SKILL_NOT_LEARNED):E;   [Exit if no eagle eye]
 
   ** get hero name and sex, prepare strings
   !!HE(CURRENT_HERO):B0/?z70;
@@ -148,26 +148,24 @@ ZVSE2
     !!VRz73:Sz103045;
   !!en;
 
-  ; [igrik: isGameNotYetStarted]
+  !!HE(CURRENT_HERO):O?v908;            [get owner of this hero]
+  !!OW&v908<>(NO_OWNER):Iv908/?v909;    [get AI (1) or human (0)]
+  !!VR(showMsg:y):S(FALSE);             [assume AI]
+  !!VR(showMsg)&v908<>-1/v909=0:S(TRUE);[human if has owner and that owner is human]
 
-  !!HE(CURRENT_HERO):O?v908;                        [get owner of this hero]
-  !!OW&v908<>-1:Iv908/?v909;            [get AI (1) or human (0)]
-  !!VR(showMsg:y):S0;                   [assume AI]
-  !!VR(showMsg)&v908<>-1/v909=0:S1;     [human if has owner and that owner is human]
-  !!UN:C6915152/(UNC_INT)/?(value:y);
-  !!VR(showMsg)&(value)=1:S0;
-  !!HE(CURRENT_HERO):A2/0/?v911/?v906;              [see if hero has a spell book]
+  !!UN:C6915152/(UNC_INT)/?(gameNotStarted:y); [igrik: isGameNotYetStarted]
+  !!VR(showMsg)&(gameNotStarted):S(FALSE);
+
+  !!HE(CURRENT_HERO):A2/0/?v911/?v906;  [see if hero has a spell book]
   !!IF&(showMsg)=1/v906=0:M1/z103026;   [Message if no spell book]
 
   ** Algor: begin
   !!FU&v906=0:E;                        [exit, if no spellbook]
+  
   **daemon_n: begin
-  !!VR(maxSpellLvl:y):S2;               [wisdom req. for e.eye]
-  !!HE(CURRENT_HERO):S(SKILL_WISDOM)/?(wisLvl:y);   [wisdom/e.eye skill level]
-
-  !!if&(wisLvl);
-    !!VR(maxSpellLvl):S1 +(eeLvl) F0/(wisLvl) Sd2 F1/4; [wisdom req. for e.eye]
-  !!en;
+  !!HE(CURRENT_HERO):S(SKILL_WISDOM)/?(wisLvl:y); [wisdom/e.eye skill level]
+  !!VR(maxWisSpellLvl:y):S(wisLvl) +2 F2/4;
+  !!VR(maxSpellLvl:y):S1 +(eeLvl) F2/(maxWisSpellLvl); [wisdom req. for e.eye]
 
   !!FU(NewIntArray):P?(avSpells:y);     [create spells arr;]
 
