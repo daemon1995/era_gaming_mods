@@ -1,0 +1,350 @@
+ZVSE2
+
+
+
+************************************************************************
+************************************************************************
+****************************** GAME FIXES ******************************
+************************************************************************
+************************************************************************
+
+// disable tactics message before tactics - 0x462D98 JMP SHORT 0x462DCA
+!#UN:C4599192/2/12523;
+!#UN:C4599194/4/2425393296;
+
+*?FU(OnKeyPressed_AdvMap)&x1=(KEY_Q);
+*!VRx2:S1; 
+  *!UN:T(TOWN_DUNGEON)/4/0/?(monId:y);
+  *!IF:L^%(monId)^;
+  *!VRy1:S4;
+  *!UN:T(TOWN_DUNGEON)/4/0/?y1;
+
+// reduce the AI values of all creatures by 15 times
+!?FU(OnAfterErmInstructions); by @Archer30
+  ; Check if the AI value of peasant is original - exit if noton
+  !!MA:I(MON_PEASANT)/?(aiValuePeasant:y);
+
+  !!FU&(aiValuePeasant)<>15:E;
+  !!FU(GetMaxMonsterId):P?(lastMon:y);
+  ; Divide by 15 for all AI values
+  !!re i/(MON_FIRST)/(lastMon);
+    !!MA:Ii/d:15;
+  !!en;
+
+
+!?FU(OnGameEnter);
+  !!UN:C6052891/1/4;                    [центрируем текст названия города в окне города (id 149)]
+  ; радус открытия всей карты
+  !!UN:C5196631/4/320;                  [чит-меню (ориг = 180)]
+  !!UN:C4204282/4/360;                  [чит wogeyeofsauron (ориг = 200)]
+  ; радус закрытия всей карты
+  !!UN:C4204369/4/360;                  [чит wogeyeofsauron (ориг = 200)]
+  !!UN:C5125902/4/34281 C5125907/1/144; [; отключить сообщение об ограничении опыта © Berserker]
+
+  // Fix of the speed overload
+  !!SN:F^GetModuleHandleA^/^BattleSpeed.era^; [check plugin is loaded]
+  !!if&v1<1;
+    !!UN:C6916156/4/?(gameSpeed:y);     [if not loaded and speed >2]
+    !!UN&(gameSpeed)>2:C6916156/4/2;    [set speed to 2]
+  !!en;
+
+  // 4 lines of the creature description instead of 3 
+  !!UN:C6241867/1/4/230 C6243446/1/4/230 C6244497/1/4/230; [yPos of the creature desc in Battle/notBattle/buy creature info DLGs]
+  !!UN:C6241860/1/1/54  C6243439/1/1/54  C6244490/1/1/54;  [height of the creature desc in Battle/notBattle/buy creature info DLGs]
+
+4C841C
+// Fix of the crash in map veiew dlg with random Theme Music mod
+!?FU(gem_OnOpenMapViewDlg);
+  !!FU(gem_Buttons_Interaction):P(TRUE);
+
+!?FU(gem_OnCLoseMapViewDlg);
+  !!FU(gem_Buttons_Interaction):P;
+
+// Removing bttns from Town Dlg - hook from gem_core.erm
+!?FU(gem_OnPlaceTownBttns);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y);
+  !!UN:C(ebp)/-16/(UNC_INT)/?(dlg:y);
+
+  !!UN:P724/?(isBankEnabled:y);
+  !!if&(isBankEnabled)=(FALSE);
+    !!SN:F^GetButtonID^/^bank^;
+    !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
+  !!en;
+
+  !!UN:P785/?(isPeonsEnabled:y);
+  !!if&(isPeonsEnabled)=(FALSE);
+    !!SN:F^GetButtonID^/^Peons^;
+    !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
+  !!en;
+
+  !!SN:F^GetButtonID^/^gem_town_menu^;
+  !!if&v1;
+    !!FU(gem_OnOpenButtonDlg):P;                      [count bttns]
+    !!SN:Mi^gem_left_click_array^/?(elementsAmount:y);
+
+    !!if&(elementsAmount);
+      !!FU(gem_town_menuDlg_Dtor):P;
+      !!VRi^gem_total_elements_amount^:S(elementsAmount);
+    !!el;
+      !!FU(gem_DlgShowItem):Pv1/0/0/0/(dlg);/1;
+      !!VRi^gem_total_elements_amount^:S(NULL);
+    !!en;
+
+  !!en;
+
+!?FU(gem_OnPlaceBattleBttns)&i^gem_IsHdModLoaded^=(FALSE);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/8/(UNC_INT)/?(dlg:y);
+  !!SN:F^GetButtonID^/^gem_alt_btn^;
+  !!if&v1/(dlg);      
+    !!FU(gem_DlgItemPosition):Pv1/d/d-1/0/(dlg);
+
+    !!re i/2001/2010;
+      !!FU(gem_DlgItemPosition):Pi/d/d-1/0/(dlg);
+    !!en;
+    !!FU(gem_DlgItemPosition):P2300/d/d-1/0/(dlg);
+    !!FU(gem_DlgItemPosition):P30722/d/d-1/0/(dlg);
+
+    *!FU(gem_DlgDefProc):Pv1/3/4/0/(FALSE)/(dlg);
+    *!FU(gem_DlgShowItem):Pv1/(FALSE)/(FALSE)/(FALSE)/(dlg);
+    *!FU(gem_DlgDisableBtn):Pv1/(FALSE)/d/(FALSE)/(dlg);
+  !!en;
+
+
+
+
+
+************************************************************************
+************************************************************************
+***************************** BATTLE FIXES *****************************
+************************************************************************
+************************************************************************
+
+//fix of the gold disappearing OnBattleReplay
+!?FU(OnBeforeBattleReplay);
+!!if&i^battle_owner_1^<>(NO_OWNER);
+  !!OW:Ri^battle_owner_1^/(RES_GOLD)/?i^gem_DefPlayerGold^;
+!!en;
+
+!?FU(OnBattleReplay)&i^gem_DefPlayerGold^;
+  !!OW:Ri^battle_owner_1^/(RES_GOLD)/i^gem_DefPlayerGold^;
+  !!VRi^gem_DefPlayerGold^:S0;
+!?FU(OnBattleReplay);
+!!FU(UpdateBattleVars):P;
+
+
+** Shackles of war (retreat vs neutrals bttles with SW)
+!?BG0; !!BG:A?y1; !!BA:H1/?y2;          [??? ????????]
+!!UN&y1=4/y2=-2:C4689325/1/2;           [????? ?????]
+!?BA52;  !!UN:C4689325/1/125;           [???? ?????]
+
+
+** War Machines Cost 1 gold when surrend
+!?FU(OnBeforeBattleUniversal);
+  !!UN:P73/?(isEnabled:y);                       [check if option is enabled]
+
+  !!if&(isEnabled)=(FALSE);
+    !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
+      !!MA:Ci/(RES_GOLD)/?i^gem_%i_machine_cost^ Ci/(RES_GOLD)/1;
+    !!en;
+  !!en;
+!?FU(OnAfterBattleUniversal);
+!!UN:P73/?(isEnabled:y);                       [check if option is enabled]
+!!if&(isEnabled)=(FALSE);
+
+  !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
+    !!MA:Ci/(RES_GOLD)/i^gem_%i_machine_cost^;
+    !!VRi^gem_%i_machine_cost^:S(NULL);
+  !!en;
+!!en;
+
+
+** 2-Hex creatures now can return after back attack 
+!?FU(gem_OnBeforeHarpyTryMoveBack);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stack:y);                        [Get Stack structure]
+  !!UN:C(stack)/132/4/?f;                                                 [Get Stack flags]
+  !!VRf:&(MON_FLAG_WIDE);
+
+  !!if&f;                                                                 [if 2-Hex]
+    !!UN:C(stack)/68/4/?(secondHexOrient:y) C(stack)/244/4/?(stackSide:y);
+
+    !!if&(secondHexOrient)=(stackSide);                                   [If creature was turned to the other side]
+
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(startPos:y);                 [Get start Stack pos]
+
+      !!if&(stackSide);
+        !!VR(startPos):-1;
+      !!el;
+        !!VR(startPos):+1;
+      !!en;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/(startPos);                    [Correct start Stack pos depending on stackSide]
+    !!en;
+
+  !!en;
+
+************************************************************************
+************************************************************************
+************************** ADVENTURE MAP FIXES *************************
+************************************************************************
+************************************************************************
+
+
+witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
+!?FU(OnAfterErmInstructions);
+  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(value:y);
+  !!VR(address:y):S(value) +128980;
+  !!UN:C(address)/1/?(mapType:y); [y11=114 ?? ???????? (????[r]andom_maps)] 
+  !!if&(mapType)=114;
+
+    *#VA(x:y) (y:y) (z:y) (skillWh:y) (randValue:y); [define variables to store object coordinates]
+    *!VR(x):S-1;                            [setting x-coordinate to -1 will force to start search from scratch]
+    *!re i;                                 [endless loop]
+      *!UN:U(OBJ_WITCH_HUT)/(ANY_OBJ)/-1/(x)/(y)/(z); [find next monster, (x) = -1 on failure]
+      *!br&(x)<0;                          [exit loop if nothing found]
+      *!WH(x)/(y)/(z):S?(skillWh);
+      *!SN:H^secskill^/(skillWh)/0/?z-1;
+      *!IF:L^%(skillWh) %z-1^;
+      *!if&(skillWh)<(SKILL_WATER_MAGIC);
+        *!re f;
+          *!VR(randValue):S(SEC_SKILL_FIRST) R(SEC_SKILL_LAST);
+          *!br&(randValue)<>(SKILL_NAVIGATION)/(randValue)<>(SKILL_NECROMANCY);
+        *!en;
+        *!WH(x)/(y)/(z):S(randValue);
+        *!WH(x)/(y)/(z):S?(skillWh);
+      *!en;
+    *!en;
+
+    !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsAmount:y);
+    !!UN:U(OBJ_RANDOM_TOWN)/(ANY_OBJ)/?(randomTownsAmount:y);
+    !!VR(townsAmount)&(randomTownsAmount):+(randomTownsAmount);
+
+    !!re i/(MAP_TOWN_FIRST)/(townsAmount)/1/-1;
+      !!FU(Town_CanBuildingBuilt):Pi/31/?(canBuild:y);
+      !!CA0/i&(canBuild):B6/31;
+    !!en;
+  !!en;
+
+
+; Archer30's hacks
+
+
+; Disable right-click on Kingdom Overview for mithril
+; The definition of FU(WOG42_DisplayMithril) is in WoG Scripts - 42 wog - mithril enhancements.erm
+; The function must be executed sooner than the funciton with the same name in 42 wog - mithril enhancements.erm
+!?FU(WOG42_DisplayMithril);
+!!SN:Q;
+
+
+; Remove buggy neutral stacks by mouse hovering. Occasionally a stack with the size 4095 is generated on the map with UN:I command.
+; This script is better executed before everything else.
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
+
+!!if&(objType)=(OBJ_MONSTER);
+  !!VR(qty:y):S0;
+  !!MO(x)/(y)/(z):G?(qty);
+  !!UN&(qty)<=0:O(x)/(y)/(z)/1;
+!!en;
+
+** Fix of the reorderin heroes and towns
+!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_PRESSED);/i^WOG_IsHdMod^=(TRUE);
+!!UN:J8/1/^wog scripts.pac^;  // if wog scripts mod is loaded
+
+!!if&-(TRUE);
+  !!if&i^mouse_item^>39/i^mouse_item^<=43:;  heroes listing
+    
+    !!VR(itemID:y):Si^mouse_item^-39; 
+    
+    !!if&i^key_alt^;
+      !#VA(hero[8]:y);
+      !!OW:O(CURRENT_PLAYER)/?(hrOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
+      !!OW:O(CURRENT_PLAYER)/(itemID)/?(clickHero:y);
+
+      !!if&(clickHero)<>(NO_HERO);
+        !!re i/0/(hrOnMap)/1/-1;
+          !!if&(hero[i])=(clickHero);
+            !!VR(hero[i]):S(hero[0]);
+            !!VR(hero[0]):S(clickHero);
+            !!OW:O(CURRENT_PLAYER)/(hrOnMap)/(hero[0])/(hero[1])/(hero[2])/(hero[3])/(hero[4])/(hero[5])/(hero[6])/(hero[7]);
+            !!CM:R0;
+            !!UN:R(REDRAW_ADV_MAP);
+            !!br;
+          !!en;
+            
+        !!en;
+        
+      !!en;
+      !!FU:E;
+    !!en;
+
+    !!if&i^key_shift^;
+      !!OW:O(CURRENT_PLAYER)/1/(itemID)/0;
+      !!CM:R0;
+      !!UN:R(REDRAW_ADV_MAP);
+      !!FU:E;
+    !!en;
+
+  !!el&i^mouse_item^>32/i^mouse_item^<=36;
+    !!VR(itemID:y):Si^mouse_item^-32; 
+
+    !!if&i^key_alt^;
+      !!OW:W(CURRENT_PLAYER)/?(townsOnMap:y) N(CURRENT_PLAYER)/(itemID)/?(clickTown:y);
+
+      !!re i/0/(townsOnMap)/1/-1;
+        !!OW:W(CURRENT_PLAYER)/i/?(townId:y);
+        !!if&(clickTown)=(townId);
+          !!OW:W(CURRENT_PLAYER)/0/?(firstTownId:y) W(CURRENT_PLAYER)/0/(townId) W(CURRENT_PLAYER)/i/(firstTownId);
+          !!CM:R0;
+          !!UN:R(REDRAW_ADV_MAP);
+          !!br;
+        !!en;
+      !!en;
+
+      !!FU:E;
+    !!en;
+
+    !!if&i^key_shift^;
+      !!OW:N(CURRENT_PLAYER)/1/(itemID)/0;
+      !!CM:R0;
+      !!UN:R(REDRAW_ADV_MAP);
+    !!en;
+   
+  !!en;
+
+  ** End of Script **
+!!en;
+
+************************************************************************
+************************************************************************
+**************************** COMMANDER FIXES ***************************
+************************************************************************
+************************************************************************
+
+// Fix occasionally commander receiving incorrect exp with campaign transfer
+!?FU(OnTransferHero);
+!#VA(hero:x);
+
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(cmdDisabled:y);
+!!FU&(cmdDisabled):E;
+
+!!CO(hero):X1/?i^cmd_exp_%(hero)^;
+
+!?FU(OnAfterErmInstructions);
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(cmdDisabled:y);
+!!FU&(cmdDisabled):E;
+
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!if&i^cmd_exp_%i^>0;
+    !!COi:X1/i^cmd_exp_%i^;
+    !!VRi^cmd_exp_%i^:S0;
+  !!en;
+!!en;
+
+
+************************************************************************
+************************************************************************
+******************************* FUNCTIONS ******************************
+************************************************************************
+************************************************************************

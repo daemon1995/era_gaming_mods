@@ -1,7 +1,4 @@
 ZVSE2
-; отключение надоедливого сообщения тактики в начале боя 0x462D98 JMP SHORT 0x462DCA
-!#UN:C4599192/2/12523;
-!#UN:C4599194/4/2425393296;
 
 ; --------------------------------------------------------------------------------------------------
 ; ----------------- скажем так: тут системные функции, не требующие вмешательства ------------------
@@ -17,94 +14,8 @@ UNIVERSAL START TRIGGER by igrik
 
 *!OW:Ry1/6/?y3 Ry2/6/?y4;
 *!IF:M^%y1 %y3 %y2 %y4^;
-!?FU(OnBeforeBattleReplay);
-!!if&i^battle_owner_1^<>(NO_OWNER);
-  !!OW:Ri^battle_owner_1^/(RES_GOLD)/?i^gem_DefPlayerGold^;
-!!en;
-
-!?FU(OnBattleReplay)&i^gem_DefPlayerGold^;
-  !!OW:Ri^battle_owner_1^/(RES_GOLD)/i^gem_DefPlayerGold^;
-  !!VRi^gem_DefPlayerGold^:S0;
 
 
-!?FU(OnAdventureMapRightMouseClick);
-*!CM:R0;
-*!FU(ClearScreenLog):P;
-*!VR(tileX:y):S0;i^mouse_mapX^;
-*!VR(tileY:y):S0;i^mouse_mapY^;
-
-*!re j/1/8;
-  *!if&j;
-    *!VR(signY:y):Sj +3 %4; F0/3 *-1 F-1/1;
-    *!VR(signX:y):Sj +4 %4;   X-1 F-1/1;
-
-    *!VR(stepY:y):Sj %2; *(signY);
-    *!VR(stepY)&(signY)=0:*-1; *(signY);
-
-    *!VR(stepX:y):Sj +1 %2; *(signX);
-    *!VR(stepX)&(signX)=0:*-1; *(signY);
-
-    *!IF:L^%(stepX) %(stepY)^;
-
-    *!VR(stepY)&(signY):*(signY);
-    *!VR(tileY):Si^mouse_mapY^ +(signY);
-
-    *!VR(stepX)&(signX):*(signX);
-
-  *!en;
-
-  *!VR(tileY):S(stepY);
-  *!VR(tileX):S(stepX);
-
-
-*!en;
-
-
-
-!?FU(OnAfterErmInstructions); by @Archer30
-  ; Check if the AI value of peasant is original - exit if noton
-  !!MA:I(MON_PEASANT)/?(aiValuePeasant:y);
-
-  !!FU&(aiValuePeasant)<>15:E;
-  !!FU(GetMaxMonsterId):P?(lastMon:y);
-  ; Divide by 15 for all AI values
-  !!re i/(MON_FIRST)/(lastMon);
-    !!MA:Ii/d:15;
-  !!en;
-
-!?FU(gem_OnPlaceTownBttns);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y);
-  !!UN:C(ebp)/-16/(UNC_INT)/?(dlg:y);
-
-  !!UN:P724/?(isBankEnabled:y);
-  !!if&(isBankEnabled)=(FALSE);
-    !!SN:F^GetButtonID^/^bank^;
-    !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
-  !!en;
-
-  !!UN:P785/?(isPeonsEnabled:y);
-  !!if&(isPeonsEnabled)=(FALSE);
-    !!SN:F^GetButtonID^/^Peons^;
-    !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
-  !!en;
-
-  *!if&i^gem_total_elements_amount^=0;
-    !!SN:F^GetButtonID^/^gem_town_menu^;
-    !!if&v1;
-      !!FU(gem_OnOpenButtonDlg):P;
-      !!SN:Mi^gem_left_click_array^/?(elementsAmount:y);
-      !!if&(elementsAmount);
-        !!FU(gem_town_menuDlg_Dtor):P;
-        !!VRi^gem_total_elements_amount^:S(elementsAmount);
-      !!el;
-        !!FU(gem_DlgShowItem):Pv1/0/0/0/(dlg);/1;
-        !!VRi^gem_total_elements_amount^:S(FALSE);
-
-      !!en;
-
-
-    !!en;
-  *!en;
 !?FU(gem_OnPlaceRandMons);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(monAmount:y); edx mon amount
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(x:y); edx mon amount
@@ -123,11 +34,30 @@ UNIVERSAL START TRIGGER by igrik
     (x)=%(x) (y)=%(y) (z)=%(z) (monAmount)=%(monAmount) (monType)=%(monType)^;
   !!en;
 
-
 : EDI (0), ESI (4), EBP (8), ESP (12), EBX (16), EDX (20), ECX (24), EAX (28)
 : RetAddr (32)
 
+*?FU(OnBattleScreenMouseClick);
+*!IF:L^%i(mouse_item)^;
+*!if&i^mouse_item^>10000;
+*!re i/0/1;
+  *!VR(itemId:y):Si^mouse_item^ +i;
+  *!FU(gem_DlgItemPosition):P(itemId)/d/d/d/d/?(parrent:y);
+  *!IF:L^%(parrent)^;
+*!en;
+  *!FU(gem_GetItemStructure):P11000/?(str:y);
+  *!IF:L^%(str)^;
+  *!SN:E4519584/(CALLCONV_THISCALL)/(str);
+  *!FU(gem_DlgItemPosition):Pi^mouse_item^/?(x:y)/?(y:y);
+  *!FU(gem_DlgItemSize):Pi^mouse_item^/?(width:y)/?(height:y);
+  *!FU(gem_DlgItemPosition):Pi^mouse_item^/0/d/1;
+  *!FU(gem_DlgShowItem):Pi^mouse_item^/0/0/1;
 
+  *!UN:C(WND_MANAGER)/(UNC_INT)/?(wndMgr:y);
+  *!SN:E6304144/(CALLCONV_THISCALL)/(wndMgr)/(x)/(y)/(width)/(height);
+  *!SN:D;
+  *!BU:R;
+*!en;
 !?FU(gem_CheckGameLang);
   !!SN:W^gem_CheckGameLang^/0;
   !!UN:J8/1/^era rus.pac^; !!SN&1:W^gem_CheckGameLang^/1;
@@ -142,14 +72,6 @@ UNIVERSAL START TRIGGER by igrik
   !!VRs^gem_f^:S^%i(gem_CheckGameLang)_gem_faq^;
 
 !?FU(OnStartOrLoad);
-  !!SN:F^GetModuleHandleA^/^BattleSpeed.era^;
-  !!if&v1<1;
-    !!UN:C6916156/4/?(gameSpeed:y);
-    !!UN&(gameSpeed)>2:C6916156/4/2;
-  !!en;
-    *#SN:M(M_AUTO_ID)/0/(M_INT)/(M_TEMP)/?i^gem_left_click_array^;
-
-  *!SN:M(M_AUTO_ID)//(M_STR)/(M_TEMP)/?i^gem_ButtonsIdArray^;
 
   !!UN:V?y1/?y1/?i^gem_amount_of_players^/?i^gem_several_PC^/?y1;
   !!VRi^gem_OnlyOneBattleReplayIsAllowed^:S(FALSE);
@@ -211,31 +133,15 @@ UNIVERSAL START TRIGGER by igrik
     !!en;
   !!en;
 
-  !!UN:C6052891/1/4;                      [центрируем текст названия города в окне города (id 149)]
-  ; радус открытия всей карты
-  !!UN:C5196631/4/320;                    [чит-меню (ориг = 180)]
-  !!UN:C4204282/4/360;                    [чит wogeyeofsauron (ориг = 200)]
-  ; радус закрытия всей карты
-  !!UN:C4204369/4/360;                    [чит wogeyeofsauron (ориг = 200)]
-
-  !!UN:C5125902/4/34281 C5125907/1/144;   [; отключить сообщение об ограничении опыта © Berserker]
-
   !!FU(gem_CheckGameLang):P;
-  !!OW:C?i^gem_CurPlay^;
-*!FU(gem_skillLvl):P;
-  
-*?FU(gem_OnDlgProcessAction);
-!?FU(Dlg_OnMouseMove);© daemon_n просто пошёл дальше 
-  !#VA(dlg:x);
 
+!?FU(Dlg_OnMouseMove);©daemon_n
+  !#VA(dlg:x);
   !!UN:C(dlg)/40/4/?i^Dlg_mouseX^; получили точную х- координату мыши В игре ! Аналог CM:A?(x:y)/d;
   !!UN:C(dlg)/44/4/?i^Dlg_mouseY^; получили точную y- координату мыши В игре ! Аналог CM:Ad/?(y:y);
-*!IF:L^%^;
-Нужен наш второй хук DlgItem_ShowHint
- 
+
 !?FU(DlgItem_ShowHint);
   !#VA(itemId:x);
-  *!IF:L^%^;
   !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
 
   !!SN:E6289824/2/(currentDlgStruct)/i^Dlg_mouseX^/i^Dlg_mouseY^; (get item id by pos)
@@ -244,16 +150,9 @@ UNIVERSAL START TRIGGER by igrik
   !!en;
 
 !?FU(Hero_SSkillAdd);
-  *!IF:L^Hero_SSkillAdd^;
-  *!SN:X?y1;
   !!SN:X?y1;
-
-  *!re i/0/100/2;
-    !!UN:Cy1/40/4/?y2;
-    *!IF&y2>-1/y2<100:L^ %y2^;
-  *!en;
+  !!UN:Cy1/40/4/?y2;
   !!SN:H^secskill^/y2/0/?z-1;
-  *!IF:L^%z-1^;
 
 !?FU(Hero_GetSSkillToUpgrade);
   *!IF:M^0^;
@@ -277,9 +176,7 @@ UNIVERSAL START TRIGGER by igrik
 
 
   5213968
-    *!SN:Ex1/1/5121344/(Hero_SSkillAdd);                                .text 004E2540  00000061  0000000C  00000005  R . . . B T .
-    *!SN:Ex1/1/5091184/(Hero_GetSSkillToUpgrade); .text 004DAF70  00000283  00000020  00000008  R . . . B T .
-    *!SN:Ex1/1/6021760/(SetupTown);              [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
+
   *?FU(OnAssArt);
   *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?y1 Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?y2;
   *!VRy2:+8;
@@ -288,88 +185,20 @@ UNIVERSAL START TRIGGER by igrik
   *!UN:Cy2/4/?y4; 
   *!IF:M^%y1 %y3 %y4^;
 !?FU(her_lvlpDlg);
-  *!IF:M^12^;
-  *!HL:S0/2/3;
+  !!UN:Cx1/4/4/?(left:y);
+  !!UN:Cx1/4/?(right:y);
 
-    !!UN:Cx1/4/4/?(left:y);
-    !!UN:Cx1/4/?(right:y);
+  !!if&(left)>=0/(left)<=(SEC_SKILL_LAST);
+    !!SN:H^secskill^/(left)/0/?z-1;
 
-    !!if&(left)>=0/(left)<=(SEC_SKILL_LAST);
-      !!SN:H^secskill^/(left)/0/?z-1;
-      *!IF:M^%z-1^;
-    !!en;
+  !!en;
 
-    !!if&(right)>=0/(left)<=(SEC_SKILL_LAST);
-      !!SN:H^secskill^/(right)/0/?z-1;
-      *!VRz-2:S^{~>Secskill.def:0:%(right) align=center}
-      %z-1^;
-      *!IF:M^%z-1^;
-      *!SN:H^secskill^/(right)/0/z-2;
+  !!if&(right)>=0/(left)<=(SEC_SKILL_LAST);
+    !!SN:H^secskill^/(right)/0/?z-1;
 
-    !!en;
-  *!re i/0/4/4;
-    *!UN:Cx1/i/4/?y2;
-    *!if&y2>=1/y2<=(SEC_SKILL_LAST);
-      *!IF:L^ %y2 %i^;
-      *!SN:H^secskill^/y2/0/?z-1;
-      *!IF:M^%z-1 %i^;
-    *!en;
-  *!en;
-  *!SN:D;
-
-!?FU(OnDetermineMonInfoDlgUpgrade);
-*!IF:L^%^;
-
-!?FU(OnStartOrLoad);
-*!VRz1:S^^;
+  !!en;
 
 
-
-005F3E46
-
-
-*!UN:C6240041/1/500;
-*!UN:C6240046/1/500;
-*!UN:C6241861/1/400;
-*!UN:C6241868/1/250;
-*!UN:C6241308/2/400;
-
-*!UN:C6241861/1/85;
-*!UN:C6253546/1/12;
-*!UN:C6252992/4/?y1;
-*!UN:Cy1/4/2;
-*!IF:L^%y1^;
-*!UN:C6252995/4/5;
-
-6252999
-*!re i/1/10/2;
-  *!VRz1:+^1^;
-  *!VRz1:+^{~>dlg_npc3.def:%i}^;
-
-*!en;
-*!VRz2:S^{~text valign=bottom %z1}^;
-
-*!re i/0/194;
-  *!SN:H^monname^/i/2/^%z2^;
-*!en;
-005F3E44
-!?FU(gem_OnOpenMapViewDlg);
-  !!FU(gem_Buttons_Interaction):P(TRUE);
-  *!SN:F^GetButtonID^/^gem_map_menu^;
-  *!FU(gem_DlgShowItem):Pv1/(FALSE)/(FALSE)/(TRUE);
-  *!SN:D;
-!?FU(gem_OnCLoseMapViewDlg);
-  !!FU(gem_Buttons_Interaction):P;
-  *!SN:F^GetButtonID^/^gem_map_menu^;
-
-  *!FU(gem_DlgShowItem):Pv1/(TRUE)/(TRUE)/(TRUE);
-  *!SN:D;
-
-
-  *!SN:Ex1/1/6032576/(OnBuildUpTownStructure);
-o  
-005F6994
-  *!SN:Ex1/1/6021760/(OnSetupTownStruct);
 !?FU(OnBattleCreatureInfoDlg);&i^my_test^=0;
 *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/-32/(UNC_INT)/?(hope:y); C(hope)/(UNC_INT)/?(hopeValue:y);
 *!UN:C(ebp)/-32/(UNC_INT)/5 C(ebp)/-32/(UNC_INT)/?(hope:y); C(hope)/(UNC_INT)/?(hopeValue:y);
@@ -382,20 +211,8 @@ o
 *!SN:E6386834/(CALLCONV_CDECL)/72;
 6750372
 *!SN:E5154816/(CALLCONV_THISCALL)/v1/130/186/48/36/12/6750372/25/0/0/0/16;
-!?FU(OnStartOrLoad);
-  *!UN:C6687592/(UNC_INT)/?(artMgr:y);
-  *!VR(offset:y):S(ART_ARMAGEDDONS_BLADE) *32 +29; *(ART_LIONS_SHIELD_OF_COURAGE);
-  *!UN:C(artMgr)/(offset)/(UNC_INT16)/(SPELL_DIMENSION_DOOR);
-  *!UN:C6896216/2222/(UNC_INT16)/?(artSetup:y);
-*!re i/0/123;
 
-  *!UN:C(artSetup)/4/(UNC_INT)/?y4;
-  *!IF:L^%y1^;
-*!en;
 
-*!IF:L^%y1^;
-!?FU(OnBattleCreatureInfoDlg2);&i^my_test^=0;
-*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/(UNC_INT)/?(eax:y); C(hope)/(UNC_INT)/?(hopeValue:y);
 !?FU(ArtGiveSpell_Switch);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/?(artId:y);
 
@@ -410,41 +227,67 @@ o
 
     !!FU:E;
   !!en;
-*?FU(OnKeyPressed)&x1=(KEY_Q);
 
-  *!SN:L^EraPlugins\erm_hooker.era^/?y1;
 
-  *!if&y1<>0;
-    *!SN:Ay1/^SetHook^/?y2;
-
-4679396
-  *!en;
-!?FU(gem_OnGetResist);
-*!IF:L^%^;
 !?FU(gem_OnPlayerChosenSpell);
   !!UN:Cx1/40/(UNC_INT)/?(spell:y);
-=
   *!IF:L^%(spell) ^;
+!?FU(gem_OnMergeStack);
+!!IF:M^%^;
 !?FU(gem_CreateERMHook);                [функция хуков (x1 - адрес установки хука)\]
-  *!SN:Ex1/1/5893984/(gem_OnPlayerChosenSpell);                            [нажатие клавиши на  ѕ]
-  *!SN:Ex1/1/4679396/(gem_OnGetResist);                            [нажатие клавиши на  ѕ]
+  *!SN:Ex1/1/5893984/(gem_OnPlayerChosenSpell);            [нажатие клавиши на  ѕ]
+  *!SN:Ex1/1/4679396/(gem_OnGetResist);                    [нажатие клавиши на  ѕ]
   *!SN:Ex1/1/6275904/(gem_OnOpenMapViewDlg);
   *!SN:Ex1/1/6276482/(gem_OnCLoseMapViewDlg);
-  !!SN:Ex1/1/5017243/(gem_OnPlaceRandMons);
   *!SN:Ex1/1/4680672/(OnTakeArtsFromKilledHero);
   *!SN:Ex1/1/5085308/(ArtGiveSpell_Switch);
+  *!SN:Ex1/1/4292703/(gem_OnSetActiveHero);
 
   *!SN:Ex1/1/4599331/(OnBeforeDeterminateFirstActingStack);
   *!SN:Ex1/1/4597707/(OnBattleSetupAfterPlaceObstacles);
   *!SN:Ex1/1/6252992/(OnBattleCreatureInfoDlg);
   *!SN:Ex1/1/6253135/(OnBattleCreatureInfoDlg2);
   *!SN:Ex1/1/4686528/(OnBeforeAttackAftereMove);
-  !!SN:Ex1/1/6053008/(gem_OnPlaceTownBttns);
 
+  *!SN:Ex1/1/7712292/(gem_OnAfterBattleInit);              [ 7712292 0x75AE24]
+  *!SN:Ex1/1/5008214/(gem_OnCreatureScreenClose3);         [trigger on every player end of turn]
+  *!SN:Ex1/1/6242032/(gem_OnCreatureScreenClose4);         [trigger on every player end of turn]
+  *!SN:Ex1/1/5008358/(gem_OnCreatureScreenClose);          [trigger on every player end of turn]
+  *!SN:Ex1/1/4289408/(AdvMgr_FullUpdate);                  [00417380 4289408 __thiscall AdvMgr_FullUpdate]
+  *!SN:Ex1/1/5144585/(OnHillFortCreatureLevelGet);         [trigger on every player end of turn]
+
+  *!SN:Ex1/1/5121344/(Hero_SSkillAdd);                     [.text 004E2540  00000061  0000000C  00000005  R . . . B T .]
+  *!SN:Ex1/1/5091184/(Hero_GetSSkillToUpgrade);            [.text 004DAF70  00000283  00000020  00000008  R . . . B T .]
+  *!SN:Ex1/1/6021760/(SetupTown);                          [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
+
+  *!SN:Ex1/1/6289408/(Dlg_ItemAtPos);                      [005FF9A0 6289824 Dlg_ItemAtPos __this]
+  *!SN:Ex1/1/6289824/(Dlg_GetItem_byID);                   [005FF5B0 6288816 Dlg_GetItem_byID __this]
+  *!SN:Ex1/1/6287088/(DlgItem_ShowHint);                   [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
 
   1: [esp] 005FFE2E h3era hd.005FFE2E
-  *!SN:Ex1/1/4230103/87021;                            [нажатие клавиши]
-  *!SN:Ex1/1/4674071/87022;                            [нажатие клавиши в бою]
+  *!SN:Ex1/1/4230103/87021;                                [нажатие клавиши]
+  *!SN:Ex1/1/4674071/87022;                                [нажатие клавиши в бою]
+
+  !!SN:Ex1/1/4686683/(gem_OnBeforeHarpyTryMoveBack);                                [нажатие клавиши в бою]
+  !!SN:Ex1/1/4686693/(gem_OnAfterHarpyTryMoveBack);                                [нажатие клавиши в бою]
+  !!SN:Ex1/1/4674049/(gem_OnBattleHintProc);                                [нажатие клавиши в бою]
+
+    *!SN:Ex1/1/4607760/(gem_OnStackGetTurn);                                [нажатие клавиши в бою]
+
+  !!SN:Ex1/1/4478576/(gem_OnHarpyMove1);                                [нажатие клавиши в бою]
+  !!SN:Ex1/1/4478724/(gem_OnHarpyMove2);                                [нажатие клавиши в бою]
+  *!SN:Ex1/1/4478636/(gem_OnHarpyMove3);                                [нажатие клавиши в бою]
+
+
+  *!SN:Ex1/1/7443018/(gem_OnMergeStack);                                [нажатие клавиши в бою]
+
+  !!SN:Ex1/1/6053008/(gem_OnPlaceTownBttns);           [hook for buttons.era, a bit later "place in town"]
+  !!SN:Ex1/1/4634299/(gem_OnPlaceBattleBttns);           [hook for buttons.era, a bit later "place in battle"]
+
+4634155
+  !!SN:Ex1/1/5017243/(gem_OnPlaceRandMons);
+  5C5C90
+46B608
   !!SN:Ex1/1/6290592/(Dlg_OnMouseMove);                [005FFCA0 6290592 Dlg_OnMouseMove __this]
   !!SN:Ex1/1/4254399/(gem_WayDays);                    [вызвать функцию хука]
   !!SN:Ex1/1/4658912/(Dlg_BattleResults_Proc);
@@ -459,7 +302,7 @@ o
   !!SN:Ex1/1/4305184/(gem_OnDlgProcessAction);               [0041B120 4305184 __thiscall Dlg_ProcessAction]
 
 
-  !!FU(WogScriptsModCheck):P;
+  !!UN:J8/1/^wog scripts.pac^;  // if wog scripts mod is loaded
 
   !!if&-1;
     !!SN:Ex1/1/5013149/(WOG_OnNewDay);                       [trigger on start every day]
@@ -472,44 +315,78 @@ o
     !!SN:Ex1/1/4893738/(WOG_OnAfterHeroSwap);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   !!en;
 
+  *!SN:Ex1/1/4607760/(gem_ObtTurn);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/4903264/(gem_StartBattle);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 
 
-    *!SN:Ex1/1/7712292/(gem_OnAfterBattleInit);                [ 7712292 0x75AE24]
-    *!SN:Ex1/1/5008214/(gem_OnCreatureScreenClose3);           [trigger on every player end of turn]
-    *!SN:Ex1/1/6242032/(gem_OnCreatureScreenClose4);           [trigger on every player end of turn]
-    *!SN:Ex1/1/5008358/(gem_OnCreatureScreenClose);            [trigger on every player end of turn]
-    *!SN:Ex1/1/4289408/(AdvMgr_FullUpdate);                    [00417380 4289408 __thiscall AdvMgr_FullUpdate]
-    *!SN:Ex1/1/5144585/(OnHillFortCreatureLevelGet);           [trigger on every player end of turn]
-
-
-    *!SN:Ex1/1/6289408/(Dlg_ItemAtPos);                      [005FF9A0 6289824 Dlg_ItemAtPos __this]
-    *!SN:Ex1/1/6289824/(Dlg_GetItem_byID);                   [005FF5B0 6288816 Dlg_GetItem_byID __this]
-    *!SN:Ex1/1/6287088/(DlgItem_ShowHint);                   [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
-
-
-!?FU(WogScriptsModCheck);
-!!UN:J8/1/^wog scripts.pac^;  // отключаем повторную выдачу хуков
-
-
-!?FU87021;                              [нажатие клавиши]
-  !!SN:X?y1;
-  !!VRy2:Sy1 +8;  !!UN:Cy2/4/?y3;
-  !!VRy4:Sy3 +8;  !!UN:Cy4/4/?y5;
-  !!VRy6:Sy5 +4;  !!UN:Cy6/4/?y7;
-  *!IF:L^клавиша: %Y7^;
-  !!FU87007:Py7;                          [нажатие клавиши]
-
-!?FU87022;                              [нажатие клавиши в бою]
-  !!SN:X?y1;
-  !!VRy2:Sy1 +28;  !!UN:Cy2/4/?y8;
-  *!IF:L^клавиша: %Y8^;
-  !!FU87008:Py8;                          [нажатие клавиши в бою]
-  !!FU:E;
   ** end igrik script-79.wog
 
 ********************************************************************************
 another battle features
 ********************************************************************************
+on
+*?FU(gem_StartBattle);
+*!IF:M^% gem_StartBattle^;
+*?FU(OnSetupBattlefield);
+*!IF:M^% OnBeforeBattle^;
+
+
+!?FU(gem_ObtTurn);
+
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?y2 C(ebp)/12/4/?y3;
+*!IF:L^%y2 %y3^;
+
+*!BU:S(MON_CATAPULT)/1/134/1/-1/0;
+*!BU:E134/?(stack:y);
+*!BM(stack):Fd|4 U1/22 U2/44;
+447079
+
+*!re i/0/i^battle_hero_vs_hero^;
+  *!VR(pos:y):Si* 14 +120;
+  *!BU:S(MON_CATAPULT)/1/(pos:y)/i/-1/1;
+  *!BU:E(pos:y)/?(stack:y);
+  *!BM(stack):Fd|4 U1/22 U2/44 Fd|(MON_FLAG_DESTROYS_WALLS) Fd~(MON_FLAG_DESTROYS_WALLS) Fd~(MON_FLAG_SIEGE_WEAPON);
+*!en;
+
+
+!?FU(OnBattleStackObtainsTurn);
+*!if&;
+  
+*!en;
+*!if&i^battle_ai_%x1^;
+  *!UN:C4666758/4/1;
+
+*!el;
+  *!UN:C4666758/4/0;
+
+*!en;
 ;-------------------------------------------------------------------------------
-!?FU(OnKeyPressed)&x1=(KEY_6);
+!?FU(gem_OnCata);
+  *!IF:M^%^;
+
+*!IF:L^%a^;
+
+;
+*!IF:L^test eax/eax = %y1  cmp = %y2^;
+642DB4
+
+
+*!UN:C6790348/4/?(addr:y);
+*!UN:C6790348/32/4/?(addr);
+*!IF:L^%(addr)^;
+*!VRy1:S
+*!SN:B6790348/d/?z1;
+*!IF:L^%z1^;
+*!UN:C4666829/2/1/9;9;
+*!IF:L^%y1^;
 *!SN:E5212752/(CALLCONV_FASTCALL)/2200; pause
+  *!UN:C4667465/1/-1/?y2;
+  *!re i/0/1;
+    *!re j/-1/1/2;
+      *!UN:C4667355/i/j/?y1;
+      *!IF:L^%y1^;
+    *!en;
+  *!en;
+  *!UN:C  /2/-1/15;
+    *!UN:C4667567/0/-1/?y1;
+    *!IF:L^%y1 %y2^;
