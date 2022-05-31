@@ -46,7 +46,6 @@ ZVSE2
 
 Flags Used in this Script: 1-2, 266-271
 Variables used in this Script: v234,v247,v266-284,v1255-i^wog_106_Asmodeus^,v4600,v9300,z266-268
-Functions used in this Script: FU6664-FU6670
 Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hsex$, $hnumber$, $aknow$, $hcolour$, $aname$, $hrname$, $hisher$
 
 ----------------------------------------------------------------------------------------
@@ -97,7 +96,7 @@ Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hs
 !!if&i^wog_106_Asmodeus^=(NO_HERO);
   !!IF:M^%z106001^;
   !!UN:P106/(FALSE);
-; Change the name of Hourglass of Asmodeus and the descriptions
+; Change the name and the description of Hourglass of Asmodeus
 !!el;
   !!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/z106002;
   !!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/z106003;
@@ -106,7 +105,7 @@ Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hs
 !?FU(WOG_56_SetHeroToAsmodeus);
 !#VA(hero:x);
 
-!!HE(hero):R3/?(canBeRecruited:y);
+!!HE(hero):R3/?(canBeRecruited:y)/255;
 !!VRi^wog_106_Asmodeus^&(canBeRecruited)<>(TRUE):S(hero);
 
 ---------------------------------------------------------------------------------------
@@ -122,24 +121,24 @@ Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hs
 
 !!FU|y-1=0/y-4<>0:E; [Exit if script isn't enabled or if it's an AI]
 
-!!FU6669:P; [Check if network battle - set flag 270 to true if it is]
+[Check for network battle]
+!!IF:V270/0; [assume not a network hero battle]
+!!BA:E?y1; [Check state of battle: y1>0 means network battle]
+!!IF&y1>0:V270/1; [Set flag 270 to true if network battle]
 
- [Call Start of Battle function]
-!!FU6670&-270/-998:P;
+!!FU|270/998:E;
 
----------------------------------------------------------------------------------------
-
- [Start of Function  6670 - Start of Battle]
-!?FU6670;
-
+ [Start of Battle]
 !!IF:V266/0;  [Sets flag 266 to false]
 
 !!BA:H0/?v269; [Get attacking hero's hero # - store in v269]
 !!HEv269:A2/85/>0/>0;  [Checks if attacking hero has an Hourglass artifact equipped]
 
  [If hero has hour glass object equipped, do the following...]
-!!HEv269&1:B0/?z267;  [Store current hero's name in z267]
-!!HEv269&1:R2/?$hsex$ N?$hnumber$; [Store current hero's sex in $hsex$ and hero number in $hnumber$]
+!!if&1;
+  !!HEv269:B0/?z267;  [Store current hero's name in z267]
+  !!HEv269:R2/?$hsex$ N?$hnumber$; [Store current hero's sex in $hsex$ and hero number in $hnumber$]
+!!en;
 
  [Set Flag 2 to 0]
 !!IF:V2/0;
@@ -147,13 +146,9 @@ Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hs
  [If hero is *Not* the AI, has the hourglass artifact equipped and has fewer than 8 active heroes, ask if he/she wishes to summon Asmodeus]
 !!IF&1/1000:Q2/z106004;
 
- [If hero agrees to summon Demon Lord, call function 6664]
-!!FU6664&2/1000:P;
+!!FU|-2/-1000:E;
 
----------------------------------------------------------------------------------------
-
-[Start of function 6664 - sets up Asmodeus and brings him into battle instead of hero]
-!?FU6664;
+[Sets up Asmodeus and brings him into battle instead of hero]
 !!IF:V266/1;  [Set flag 266 to true]
 
  [Store hero numbers for order of hero list]
@@ -184,45 +179,54 @@ Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hs
 !!HE$hnumber$:O-1; [Set player's hero to "unowned"]
 !!HEi^wog_106_Asmodeus^:O$hcolour$; [Set Asmodeus to be owned by current player]
 !!BA:H0/i^wog_106_Asmodeus^;  [Set Asmodeus as attacking battle hero]
+!!VRi^battle_hero_0^:Si^wog_106_Asmodeus^; [Era Erm Framework compatibility]
 
 ---------------------------------------------------------------------------------------
 
 [Battle trigger for end of battle (after it's over)]
 !?FU(OnAfterBattle)&i^wog_106_Asmodeus^>(NO_HERO);
 
-!!UN:P106/?y-1; [Check if Hourglass of Asmodeus script is enabled in WoGify Options]
-!!FU&y-1=0:E; [Exit trigger if script isn't enabled]
+!!UN:P106/?(asmodeus:y);                [Check if Hourglass of Asmodeus script is enabled in WoGify Options]
+!!FU&(asmodeus)<>(TRUE):E;              [Exit trigger if script isn't enabled]
+!!FU&-266:E;                            [Exit if Asmodeus was not summoned]
 
-!!FU6665&266:P; [If flag 266 is true (means Asmodeus was summoned), calls function 6665]
+[Asmodeus takes payment, is improved and removed]
+!!IF:V266/0;                            [Set flag 266 to false]
 
----------------------------------------------------------------------------------------
+!!IF:V267/1 V268/0 V269/1;              [Set flags 267 and 269 to true, flag 268 to false]
+!!HEi^wog_106_Asmodeus^:O=-1;           [Check if Asmodeus was defeated in battle]
+!!IF&1:V268/1;                          [flg#268, If defeated, set flag 268 to true]
 
-[Start of function 6665 - Asmodeus takes payment, is improved and removed]
-!?FU6665;
+[Start of function 6666 - checks all of summoning hero's slots to see if they're empty]
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HE$hnumber$:C0/i/?(mon:y)/?(qty:y);
 
-!!IF:V266/0; [Set flag 266 to false]
+  !!if&(mon)>(NO_MON)/(qty)>0;
+    !!IF:V269/0;
+    !!br;
+  !!en;
+!!en;
 
-!!IF:V267/1 V268/0 V269/1;  [Set flags 267 and 269 to true, flag 268 to false]
-!!HEi^wog_106_Asmodeus^:O=-1;        [Check if Asmodeus was defeated in battle]
-!!IF&1:V268/1;       [If defeated, set flag 268 to true]
-!!DO6666/0/6/1:P;       [Check if all hero's slots are empty]
-!!HE$hnumber$&269:C0/0/42/1 C0/1/42/1 C0/2/42/1;  [If all slots empty, give summoning hero 3 Imps]
-!!IF&269:Q2/21/196650/1/z106008;
+!!if&269;
+  !!HE$hnumber$:C0/0/42/1 C0/1/42/1 C0/2/42/1;  [If all slots empty, give summoning hero 3 Imps]
+  !!IF:Q2/(PIC_TYPE_MONSTER)/196650/(MSG_TYPE_MES)/z106008;
+!!en;
+
 !!HEi^wog_106_Asmodeus^:F<95/d/d/d;     [Check if Asmodeus' stats have reached 95]
 !!HEi^wog_106_Asmodeus^&1/-268:Fd1/d1/d1/d1; [If Asmodeus won and stats not 95, increase his stats by 1 each]
 !!HEi^wog_106_Asmodeus^:K; [Remove Asmodeus from map]
 
  [Restore player's hero to map]
-!!HE$hnumber$:O$hcolour$; [Set player's hero back to player's colour]
+!!HE$hnumber$:O$hcolour$;               [Set player's hero back to player's colour]
 !!UN:Lv998/v999/v1000/0;
-!!HE$hnumber$:Pd/d/d; [Teleport hero on the spot to restore focus]
+!!HE$hnumber$:Pd/d/d;                   [Teleport hero on the spot to restore focus]
 
  [Restore order of player's hero in hero list]
-!!OW:O-1/d/v277/v278/v279/v280/v281/v282/v283/v284;
+!!OW:O(CURRENT_PLAYER)/d/v277/v278/v279/v280/v281/v282/v283/v284;
 
  [Check summoning hero's *true* Power level and Power with artifacts]
 !!FU(GetHeroPrimarySkillsWithoutArts):P$hnumber$/d/d/?$hpower$/d; [true Power - Archer]
-!!HE$hnumber$:Fd/d/?$apower$/d;   [Power with artifacts]
+!!HE$hnumber$:Fd/d/?$apower$/d;         [Power with artifacts]
 
   [Calculate hero's newly reduced Power (if 2 or more)]
 !!VR$rpower$&$hpower$>1:S$hpower$;
@@ -230,82 +234,51 @@ Macro Names used in this Script: $xpos$, $ypos$, $lpos$, $hpower$, $apower$, $hs
 !!VR$apower$&$hpower$>1:-1;
 
  [If summoning hero has a base Power of 2 or more, display this message or the following message if hero has no artifacts]
-!!IF&$hpower$>1/$rpower$<>$apower$/1000:Q1/33/0/1/z106009;
-!!IF&$hpower$>1/$rpower$=$apower$/1000:Q1/33/0/1/z106010;
-!!HE$hnumber$&$hpower$>1:Fd/d/d-1/d; [And remove 1 Power from summoning hero]
+!!if&$hpower$>1;
+  !!if&1000;
+    !!if&$rpower$<>$apower$;
+      !!IF:Q1/33/0/1/z106009;
+    !!el;
+      !!IF:Q1/33/0/1/z106010;
+    !!en;
+  !!en;
 
+  !!HE$hnumber$:Fd/d/d-1/d;             [And remove 1 Power from summoning hero]
  [If summoning hero has Power of less than 2, display this message]
-!!IF&$hpower$<2/1000:Q1/21/54/1/z106011;
+!!el&1000;
+  !!IF:Q1/21/54/1/z106011;
+!!en;
 
-!!HE$hnumber$:P?y1/?y2/?y3; [Store hero's position in y1/y2/y3]
+!!HE$hnumber$:P?(x:y)/?(y:y)/?(z:y);    [Store hero's position]
 
-!!UN:P56/?y4; [Check if Metamoprh script is enabled: y4]
-!!DO9602/0/41/1&y4=1/$hpower$<2:P; [If enabled and Power < 2, recombine Metamorphs, as needed]
-!!VRv4600&y4=1/$hpower$<2:S2; [If enabled, and Power <2, set v4600 to 2 to prevent extra Metamorphs appearing]
-!!HE$hnumber$&$hpower$<2:A3/85/1/1 Ty1/y2/y3/54/3;  [Remove hourglass and send 3 Devils to attack hero]
+!!UN:P56/?(metamorphs:y);               [Check if Metamoprh script is enabled: y4]
+
+!!if&$hpower$<2;
+  !!if&(metamorphs:y);
+    !!DO9602/0/41/1:P;                  [If enabled and Power < 2, recombine Metamorphs, as needed]
+    !!VRv4600:S2;                       [If enabled, and Power <2, set v4600 to 2 to prevent extra Metamorphs appearing]
+  !!en;
+
+  !!HE$hnumber$:A3/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/1 T(x)/(y)/(z)/(MON_DEVIL)/3; [Remove hourglass and send 3 Devils to attack hero]
+!!en;
 
   [Disable Asmodeus so he won't appear in any taverns later in the game]
-!!HEi^wog_106_Asmodeus^:R3/0;
+!!HEi^wog_106_Asmodeus^:R3/(FALSE)/255;
 
-!!FU6667:P;
-
----------------------------------------------------------------------------------------
-
-[Start of function 6666 - checks all of summoning hero's slots to see if they're empty]
-!?FU6666;
-!!HE$hnumber$:C0/x16/d/>0;
-!!IF&1:V269/0;
-
----------------------------------------------------------------------------------------
-
-[Start of function 6667 - removes Asmodeus from tavern if he retreated/surrendered]
-!?FU6667;
-
- [Get current player - store in y1]
-!!OW:C?y1;
+ [Removes Asmodeus from tavern if he retreated/surrendered]
+ [Get current player]
+!!OW:C?(player:y);
 
  [Get current tavern heroes - store in y2 and y3]
-!!OW:Vy1/?y2/?y3;
+!!OW:V(player)/?(leftHero:y)/?(rightHero:y);
 
  [If hero is #i^wog_106_Asmodeus^, generate a new hero]
-!!VRy4:Sy2;
-!!VRy5:Sy3;
-!!VRy4&y2=i^wog_106_Asmodeus^:R0/0/144;
-!!VRy5&y3=i^wog_106_Asmodeus^:R0/0/144;
-!!OW:Vy1/y4/y5;
-
- [Check new hero owners and if either belongs to another player, call function 6668]
-!!HEy4:O?y6;
-!!HEy5:O?y7;
-!!FU6668|y6<>-1/y7<>-1/y4=y5:Py1;
-
----------------------------------------------------------------------------------------
-
-[Start of function 6668 - replace any owned heroes in tavern]
-!?FU6668;
-
- [Generate new random hero numbers]
-!!VRy1:R0/0/154;
-!!VRy2:R0/0/154;
-
- [Replace heroes with new ones]
-!!OW:Vx1/y1/y2;
-
- [Check new hero owners and if either belongs to another player]
- [or if either is a disabled hero, call function again]
-!!HEy1:O?y3;
-!!HEy2:O?y4;
-!!HEy1:R3/?y5;
-!!HEy2:R3/?y6;
-!!FU6668|y3<>-1/y4<>-1/y1=y2/y5=0/y6=0:Px1;
-
----------------------------------------------------------------------------------------
-
-[Start of function 6669 - check for network battle]
-!?FU6669;
-
-!!IF:V270/0; [assume not a network hero battle]
-!!BA:E?y1; [Check state of battle: y1>0 means network battle]
-!!IF&y1>0:V270/1; [Set flag 270 to true if network battle]
+!!if&(leftHero)=i^wog_106_Asmodeus^;
+  !!FU(WOG_GetRandomUnoccupiedHero):P?(randHero:y)/(player);
+  !!OW:V(player)/(randHero)/d;
+!!el&(rightHero)=i^wog_106_Asmodeus^;
+  !!FU(WOG_GetRandomUnoccupiedHero):P?(randHero)/(player);
+  !!OW:V(player)/d/(randHero);
+!!en;
 
 ** End of Script **

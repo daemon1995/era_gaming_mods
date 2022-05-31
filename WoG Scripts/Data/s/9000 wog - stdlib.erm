@@ -716,7 +716,7 @@ The game may fall at any time.^;
 ; Get strings from text resources
 !?FU(WOG_GetStringByFilename);
 !#VA(txtFilename:x);                    [filename of the text]
-!#VA(lineIndex:x);                      [number of line of the string, starts from 0]
+!#VA(rowIndex:x);                       [index of row, starts from 0]
 !#VA(string:x);                         [returned string]
 
 ; Standarize the filename
@@ -758,10 +758,36 @@ The game may fall at any time.^;
 !!UN:C(address)/(UNC_INT)/?(value:y);            
 !!VR(address2:y):S(value) +32;
 !!UN:C(address2)/(UNC_INT)/?(value3:y);
-!!VR(address3:y):S(lineIndex) *4 +(value3);
+!!VR(address3:y):S(rowIndex) *4 +(value3);
 !!UN:C(address3)/(UNC_INT)/?(value4:y);
 !!SN:X?(value5:y) X(value4) X?z1 X(value5);
 !!VR(string):Z^%z1^;
+
+; Get or set string in a text table file
+!?FU(WOG_GetTxtTableString);            [by daemon_n]
+!#VA(txtFilename:x);                    [filename of the text table]
+!#VA(rowNum:x);                         [index of row]
+!#VA(colNum:x);                         [index of column]
+!#VA(string:x);                         [returend string]
+
+; Standarize the filename
+!!FU(StrToLower):Pz(txtFilename)/?(text:z);
+; Reove filename extension (if applicable)
+!!SN:K(text)/?(size:y);
+!!VR(index:y):S(size) -4;
+!!SN:K(text)/(index)/?(character:z);
+!!FU(Substr)&(character)=^.^:P(text)/0/-4/?(text);
+
+!!if&(text)=^znpc00^;
+  !!VR(address:y):S42338084;
+!!el;
+  !!VR(string):Z^Wrong txt filename!^;
+  !!FU:E;
+!!en;
+
+!!SN:E7827723/(CALLCONV_CDECL)/(rowNum)/(colNum)/(address);
+!!SN:Bv1/d/?(text:z);
+!!VR(string):Z(text);
 
 ; **************************************************************************************************
 ; Set up IF:N dialogue with array
@@ -799,32 +825,6 @@ The game may fall at any time.^;
 
 !!IF:N(params[0])/(params[1])/(params[2])/(params[3])/(params[4])/(params[5])/(params[6])/(params[7])/
       (params[8])/(params[9])/(params[10])/(params[11])/(params[12])/(params[13])/(params[14])/(params[15]);
-
-; **************************************************************************************************
-; Get a random valid monster, aka all except not-used, warmachines, emissaries and commanders
-!?FU(WOG_GetRandomMonster);             [by Archer30]
-!#VA(mon:x);
-
-!!VR(mon):S(NO_MON);
-!!FU(GetMaxMonsterId):P?(lastMon:y);
-!!FU(NewIntArray):P?(validMons:y);
-
-!!re i/(MON_FIRST)/(lastMon);
-  !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
-  !!co&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS);
-  !!co&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE);
-  !!co&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D);
-
-  !!FU(Array_Push):P(validMons)/i;
-!!en;
-
-!!SN:M(validMons)/?(size:y);
-
-!!if&(size)>0;
-  !!VR(lastIndex:y):S(size) -1;
-  !!VR(random:y):R0/0/(lastIndex);
-  !!SN:M(validMons)/(random)/?(mon);
-!!en;
 
 ; **************************************************************************************************
 ; Get a valid position for BU:S summoning or moving a stack to a new position
@@ -945,4 +945,95 @@ The game may fall at any time.^;
   !!SN:E4625904/2/(battleMgr)/(pos);  if position prohibited
   ; needed for positions 95 and 96 near the town gate
   !!VR(isFree)&v1=1:S(FALSE);
+!!en;
+
+; **************************************************************************************************
+; Get a random valid monster, aka all except not-used, warmachines, emissaries and commanders
+!?FU(WOG_GetRandomMonster);             [by Archer30]
+!#VA(mon:x);
+
+!!VR(mon):S(NO_MON);
+!!FU(GetMaxMonsterId):P?(lastMon:y);
+!!FU(NewIntArray):P?(validMons:y);
+
+!!re i/(MON_FIRST)/(lastMon);
+  !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
+  !!co&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS);
+  !!co&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE);
+  !!co&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D);
+
+  !!FU(Array_Push):P(validMons)/i;
+!!en;
+
+!!SN:M(validMons)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(lastIndex:y):S(size) -1;
+  !!VR(random:y):R0/0/(lastIndex);
+  !!SN:M(validMons)/(random)/?(mon);
+!!en;
+
+; **************************************************************************************************
+; Get a random unoccupied hero from the pool
+!?FU(WOG_GetRandomUnoccupiedHero);      [by Archer30]
+!#VA(randHero:x);                       [Out. Random Hero number]
+!#VA(player:x);                         [Optional. Check whether the player is eligible to recruite the hero. value other than -1 ~ 7 would skip the check]
+
+; Standarise variables
+!!FU:A?(numArgs:y);
+!!VR(player)&(numArgs)<2:S-2;
+!!VR(player)&(player)<(ANY_PLAYER)/(player)>(PLAYER_LAST):S-2;
+
+!!if&(player)>-2;
+  !!if&(player)>(ANY_PLAYER);
+    !!VR(playerBits:y):S1 Sd<<(player);
+  !!el;
+    !!VR(playerBits):S255;
+  !!en;
+!!en;
+
+!!VR(randHero):S(NO_HERO);
+
+; Check if Hourglass of Asmodeus is enabled
+!!UN:P56/?(hourglassOn:y);
+
+!!FU(NewIntArray):P?(availHeroes:y);
+
+; Loop through all the heroes
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  ; Skip if the hero is Asmodeus (When Hourglass of Asmodeus is enabled)
+  !!co&(hourglassOn)/i=i^wog_106_Asmodeus^;
+
+  ; Skip if the hero is not allowed for the player
+  !!if&(player)>-2;
+    !!HEi:R3/?(isEnabled:y)/(playerBits);
+
+    !!co&(isEnabled)<>(TRUE);
+  !!en;
+
+  ; Check if the hero has an owner or is in a prison
+  !!HEi:O?(owner:y) P?(x:y)/?(y:y)/?(z:y);
+
+  ; Check if the hero is in a tavern if both no owner and not in a prison
+  !!if&(owner)=(NO_OWNER)/(x)<0/(y)<0/(z)<0;
+
+    !!re j/(PLAYER_FIRST)/(PLAYER_LAST);
+      !!OW:Vj/?(leftHero:y)/?(rightHero:y);
+
+      !!br&i=(leftHero);
+      !!br&i=(rightHero);
+    !!en;
+
+      ; Push the hero to the available heroes array if all the criteria are matched
+    !!FU(Array_Push)&j>(PLAYER_LAST):P(availHeroes)/i;
+  !!en;
+!!en;
+
+; Get the random hero from the array
+!!SN:M(availHeroes)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(lastIndex:y):S(size) -1;
+  !!VR(random:y):R0/0/(lastIndex);
+  !!SN:M(availHeroes)/(random)/?(randHero);
 !!en;

@@ -109,7 +109,7 @@ ZVSE2
 // Function to get the string in a text file
 !?FU(trainer_GetStringByFilename);
 !#VA(txtFilename:x);                    [filename of the text]
-!#VA(lineIndex:x);                      [number of line of the string, starts from 0]
+!#VA(rowIndex:x);                       [index of row, starts from 0]
 !#VA(string:x);                         [returned string]
 
 ; Standarize the filename
@@ -139,10 +139,36 @@ ZVSE2
 !!UN:C(address)/(UNC_INT)/?(value:y);            
 !!VR(address2:y):S(value) +32;
 !!UN:C(address2)/(UNC_INT)/?(value3:y);
-!!VR(address3:y):S(lineIndex) *4 +(value3);
+!!VR(address3:y):S(rowIndex) *4 +(value3);
 !!UN:C(address3)/(UNC_INT)/?(value4:y);
 !!SN:X?(value5:y) X(value4) X?z1 X(value5);
 !!VR(string):Z^%z1^;
+
+// Function to get or set string in a text table file
+!?FU(trainer_GetTxtTableString);        [by daemon_n]
+!#VA(txtFilename:x);                    [filename of the text table]
+!#VA(rowNum:x);                         [index of row]
+!#VA(colNum:x);                         [index of column]
+!#VA(string:x);                         [returend string]
+
+; Standarize the filename
+!!FU(StrToLower):Pz(txtFilename)/?(text:z);
+; Reove filename extension (if applicable)
+!!SN:K(text)/?(size:y);
+!!VR(index:y):S(size) -4;
+!!SN:K(text)/(index)/?(character:z);
+!!FU(Substr)&(character)=^.^:P(text)/0/-4/?(text);
+
+!!if&(text)=^znpc00^;
+  !!VR(address:y):S42338084;
+!!el;
+  !!VR(string):Z^Wrong txt filename!^;
+  !!FU:E;
+!!en;
+
+!!SN:E7827723/(CALLCONV_CDECL)/(rowNum)/(colNum)/(address);
+!!SN:Bv1/d/?(text:z);
+!!VR(string):Z(text);
 
 // Function to convert a string to integers with ignorance of separators
 !?FU(trainer_ConvertStrToInts);         [by daemon_n]
@@ -288,10 +314,3 @@ The game may fall at any time.^;
     !!en;
   !!en;
 !!en;
-
-!?FU(trainer_GetTxtTableString);        [by daemon_n]
-!#VA(txtLoadAddres:x) (rowNum:x) (colNum:x) (string:x);
-
-!!SN:E7827723/(CALLCONV_CDECL)/(rowNum)/(colNum)/(txtLoadAddres);
-!!SN:Bv1/d/?(text:z);
-!!VR(string):Z(text);
