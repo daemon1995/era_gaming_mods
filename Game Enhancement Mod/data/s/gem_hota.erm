@@ -36,3 +36,372 @@ ZVSE2
 !!SN:Mi^hota_defsList_%(gender)^/(class)/?s^hota_battleHeroDef^;
 
 !!SN:A(hotaHero)/^HAWAIING_CHANGE_HERO_BATTLE_DEF^/?(result);
+
+;Battle Attack Selection Type
+
+!#DC(GEM_MON_ATTACK_DEFAULT) = 0;
+!#DC(GEM_MON_ATTACK_MELEE) = 1;
+!#DC(GEM_MON_ATTACK_SHOOT) = 2;
+!#DC(GEM_MON_ATTACK_CAST) = 3;
+!#DC(GEM_MON_ATTACK_WALK) = 4;
+!#DC(GEM_MON_ATTACK_RETURN) = 5;
+!#DC(GEM_MON_ATTACK_STAY) = 6;
+
+
+//SET NEW BTTN SIZE AND POS
+!?FU(OnGameEnter);
+  !!UN:C4633296/1/51 C4633292/1/44;       [surrender btn xPos and width 2001]
+  !!UN:C4633429/1/98 C4633425/1/44;       [retreat btn xPos and width 2002]
+  !!UN:C4633558/1/44;                     [systemOpt btn width 2003]
+  !!UN:C4633695/1/145 C4633691/1/44;      [autoBattle btn xPos and width 2004]
+  !!UN:C4634632/4/194 C4634625/4/391;     [log pcx xpos 2005]
+
+  !!UN:C4634751/4/590 C4634904/4/590;     [arrow btns up and down xPos 2006, 2007]
+
+  !!UN:C4633831/4/611 C4633827/1/44;      [spellBook btn xPos and width 2008]
+  !!UN:C4633967/4/705 C4633963/1/44;      [wait btn xPos and width 2009]
+  !!UN:C4634103/4/752 C4634099/1/44;      [defend btn xPos and width 2010]
+
+  !!UN:C4635680/4/192;                    [NEXT CREATURE btn xPos 2300]
+  !!UN:C4635792/4/392;                    [START BATTLE btn xPos 30722]
+
+!?FU(gem_OnPlaceBattleBttns);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/8/(UNC_INT)/?(dlg:y);
+  !!VR(savedV1:y):Sv1;
+
+  !!SN:F^GetButtonID^/^gem_alt_btn^;
+  !!if&v1/(dlg);
+    !!VRi^gem_battle_altbttn_id^:Sv1;
+    !!VRi^gem_battle_dlg^:S(dlg);
+    !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
+    !!FU(gem_DlgItemPosition):P2/194/d-1/d/(dlg);                           [set input chat position and size]
+    !!FU(gem_DlgItemSize):P2/391/d/d/(dlg);
+
+    *!FU(gem_GetItemStructure):Pi^gem_battle_altbttn_id^/?(struct:y);
+    !!SN:E6288816/2/(dlg)/i^gem_battle_altbttn_id^;
+    !!if&v1;
+      !!UN:Cv1/32/(UNC_INT)/?i^gem_BattleBtn_HintPointer^;
+    !!en;
+
+  !!en;
+  !!VRv1:S(savedV1);
+!?FU(OnKeyPressed_Battle)&x1=(KEY_ALT)/i^gem_IsHdModLoaded^=(FALSE)/i^key_down^=1;
+!!BG:Q?(actSide:y);
+!!FU(gem_BattleBtn_Proc):Pi^battle_current_stack^/(actSide)/(FALSE);
+
+!?FU(gem_BattleBtn_Proc);
+!#VA(stackId:x) (side:x) (obtainedTurn:x);
+  !!BA:Q?(isQuick:y);
+
+  !!if&(isQuick)=(FALSE);
+    !!BU:T?(isTacticks:y);
+    !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/78532/(UNC_INT)/?(isAuto:y);
+    !!if&(isAuto)=(FALSE)/(isTacticks)=(FALSE);
+
+      !!OW:Cd/?(clickedPlayer:y);
+
+      !!if&i^battle_isNetwork^=(FALSE)/i^battle_humanOnly^;
+        !!VR(clickedPlayer):Si^battle_owner_%(side)^;
+      !!en;
+
+      !!if&i^battle_owner_%(side)^=(clickedPlayer)/i^gem_BattleBtn_StackBits^;
+        !!FU(gem_DlgDisableBtn):Pi^gem_battle_altbttn_id^/(TRUE);           [enable bttn]
+        !!VRi^gem_battleBttn_isDisabled^:S(FALSE);
+
+        !!if&(obtainedTurn)/i^gem_BattleBtn_StackChoice_%(stackId)^/i^gem_BattleBtn_StackBits_old_%(stackId)^=i^gem_BattleBtn_StackBits^;
+          !!VRi^gem_BattleBtn_CurrentAbility^:Si^gem_BattleBtn_StackChoice_%(stackId)^;  if obtained turn + was choice before + possible to repeat]
+        !!en;
+
+        !!FU(gem_BattleBtn_GetNextAbility):Pi^gem_BattleBtn_CurrentAbility^/?(nextAbility:y);
+        *!IF:L^%(nextAbility)^;
+        !!if&(obtainedTurn)=(FALSE);
+          !!VRi^gem_BattleBtn_CurrentAbility^:S(nextAbility);
+          !!FU(gem_BattleBtn_GetNextAbility):Pi^gem_BattleBtn_CurrentAbility^/?(nextAbility);
+        !!en;
+
+        !!VRi^gem_BattleBtn_NextAbility^:S(nextAbility);
+
+        !!FU(gem_BattleBtn_AffectCreature):P(stackId)/i^gem_BattleBtn_CurrentAbility^;
+
+        !!VR(frame:y):S(nextAbility) *3;
+        !!SN:E4684800/(CALLCONV_THISCALL)/(cmbMgr); [(recalc all stack properies ) -makes all the game needs]
+        *!SN:E4793280/(CALLCONV_THISCALL)/(cmbMgr)/7;
+
+        !!SN:E4797616/(CALLCONV_THISCALL)/(cmbMgr)/0/1; [redraw grid]
+
+        !!VR(whenPressedFrame:y):S(frame) +1; !!VR(whenDisabledFrame:y):S(frame) +2;
+        !!FU(gem_DlgDefProc):Pi^gem_battle_altbttn_id^/(frame)/(whenPressedFrame)/(whenDisabledFrame); [set def frame]
+
+        !!if&i^mouse_battleHex^=>0/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
+          !!SN:E4800272/(CALLCONV_THISCALL)/(cmbMgr)/i^mouse_battleHex^/i^mouse_battleHex^;    [refresh shadow under mouse]
+        !!en;
+
+      !!el&i^battle_owner_%(side)^=(clickedPlayer);
+        !!FU(gem_DlgDisableBtn):Pi^gem_battle_altbttn_id^/(FALSE)/(GEM_MON_ATTACK_DEFAULT);
+        !!VRi^gem_battleBttn_isDisabled^:S(TRUE);
+      !!el;
+        !!FU(gem_DlgDisableBtn):Pi^gem_battle_altbttn_id^/(FALSE);
+      !!en;
+
+      !!SN:E6288864/2/i^gem_battle_dlg^/1/i^gem_battle_altbttn_id^/i^gem_battle_altbttn_id^; [refresh btn]
+
+    !!el&i^gem_battleBttn_isDisabled^=(FALSE);
+      !!VRi^gem_battleBttn_isDisabled^:S(TRUE);
+      !!FU(gem_DlgDisableBtn):Pi^gem_battle_altbttn_id^/0/(GEM_MON_ATTACK_DEFAULT);/(currentFrame)/d/i^gem_battle_dlg^;
+      !!SN:E6288864/2/i^gem_battle_dlg^/1/i^gem_battle_altbttn_id^/i^gem_battle_altbttn_id^; [refresh btn]
+    !!en;
+    !!FU(gem_BattleBtn_SetNewHint):Pi^gem_BattleBtn_NextAbility^;
+    *!SN:D;
+    *!FU(H3Dlg_UpdateItemRange):Pi^gem_battle_dlg^/6009/7001;
+  !!en;
+*?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+*!IF:L^%i(mouse_item)^;
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_item^=i^gem_battle_altbttn_id^;
+  !!CM:R(FALSE);
+  !!FU(gem_CheckGameLang):P;
+  !!SN:T^%s(gem_b).altBttn.%i(gem_BattleBtn_NextAbility)^/?(text:z);
+  !!IF:M0/4^%(text)^;
+
+!?FU(gem_BattleBtn_SetNewHint);
+!#VA(ability:x) (text:z) (hint:z);
+!!SN:T^%s(gem_b).altBttn.%(ability)^/?(text);
+
+  !!SN:K(text)/0/?(char:z);
+  !!if&(char)=^{^;
+    !!SN:K(text)/0/^ ^;
+  !!en;
+
+  !!SN:Bi^gem_BattleBtn_HintPointer^/d/(text);
+
+  !!VR(itemId:y):S7000;
+
+  !!SN:E6288816/2/i^gem_battle_dlg^/(itemId);
+  !!if&v1/i^mouse_x^>0/i^mouse_y^>0;
+
+
+    !!FU(H3Dlg_SendCmdToItem):Pi^gem_battle_dlg^/(itemId)/(DLG_CMD_SET_TEXT)/(text);
+    !!SN:E6288864/2/i^gem_battle_dlg^/1/(itemId)/(itemId); [refresh btn]
+  !!en;
+
+!?FU(gem_OnBeforeHarpyTryMoveBack)&i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY);
+  !!UN:C4478599/2/4/0;                  [break move back ability]
+
+!?FU(gem_OnAfterHarpyTryMoveBack)&i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY);
+  !!UN:C4478599/2/4/187;                [restore move back ability]
+
+!?FU(gem_BattleBtn_AffectCreature);
+!#VA(stackId:x) (ability:x);
+
+  !!if&(ability)=(GEM_MON_ATTACK_SHOOT);
+    !!BM(stackId):E0 U3/i^gem_stack_shoots^;
+    !!VRi^gem_need_to_restore_shoots^:S(FALSE);
+    !!VRi^gem_need_to_restore_spells^:S(TRUE);
+
+  !!el|(ability)=(GEM_MON_ATTACK_MELEE)/(ability)=(GEM_MON_ATTACK_WALK); 
+    !!BM(stackId):E0 U3/0;
+    !!VRi^gem_need_to_restore_shoots^:S(TRUE);
+    !!VRi^gem_need_to_restore_spells^:S(TRUE);
+
+  !!el&(ability)=(GEM_MON_ATTACK_CAST);
+    !!BM(stackId):Ei^gem_stack_spells^ U3/(NULL);
+    !!VRi^gem_need_to_restore_shoots^:S(TRUE);
+    !!VRi^gem_need_to_restore_spells^:S(FALSE);
+  !!en;
+
+  !!if&i^gem_stack_do_not_affect_spells^;
+    !!BM(stackId):Ei^gem_stack_spells^;
+    !!VRi^gem_need_to_restore_spells^:S(FALSE);
+  !!en;
+
+
+!?FU(gem_BattleBtn_GetNextAbility);
+!#VA(currentAbility:x) (nextAbility:x);
+
+  !!VR(firstAbility:y):S0;
+  !!VR(thisAbilityReached:y):S(FALSE);
+  !!VR(nextAbility):S0;
+  *!IF:L^%(currentAbility)^;
+  !!re j/1/6;
+    !!VRi:S1 Sd<<j;
+    !!VR(bitCheck:y):Si^gem_BattleBtn_StackBits^ &i; [check bits]
+    *!IF:M^%j %(currentAbility) %(firstAbility) %(nextAbility) %(thisAbilityReached)^;
+    !!if&j=(currentAbility);
+       !!VR(thisAbilityReached):S(TRUE);
+    !!el&(bitCheck);
+      !!if&(thisAbilityReached);  [check if we passed current ability in loop]
+
+        !!VR(nextAbility):Sj;
+        !!FU:E;                 //EXIT FUNCTION
+      !!el&(firstAbility)=0; 
+        !!VR(firstAbility:y):Sj; //only once set 1st ability
+      !!en;
+    !!en;
+  !!en;
+
+  !!VR(nextAbility):S(firstAbility); // only of didn't EXIT
+
+
+// 0 nothing 0
+// 2 melee 1
+// 4 shoot 2 
+// 8 cast  3
+// 16 walk 4
+// 32 attack and back 5
+// 64 attack and stay 6
+
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_item^=2010;
+  !!CM:R(FALSE); [disable defend bttn stnadard reaction]
+  !!FU(gem_GetTxtTableString):P6976896/387/1/?(text:z);
+  !!IF:M0/4^%(text)^;
+
+
+!?FU(gem_BattleBtn_CollectStackFlags);
+!#VA(stackId:x);
+
+  !!BM(stackId):F?f E?i^gem_stack_spells^ U3/?i^gem_stack_shoots^ T?t O?(heroStack:y);
+  !!VRi^gem_BattleBtn_StackBits^:S0;
+  !!VRi^gem_BattleBtn_NextAbility^:S(GEM_MON_ATTACK_DEFAULT);
+  !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_DEFAULT);
+  !!VRi^gem_stack_do_not_affect_spells^:S0;
+
+  !!if&t>=(MON_CATAPULT)/t<=(MON_ARROW_TOWERS);
+    !!FU:E;
+  !!en;
+
+  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);
+    !!COi^battle_hero_0^:B1/4/?(shooting:y);
+    !!if&(shooting);
+      !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
+    !!en;
+  !!en;
+
+  !!VRf:&(MON_FLAG_SHOOTER);
+  !!if|f/i^gem_stack_shoots^;
+    !!BM(stackId):Z?(stack:y);
+    !!SN:E4466192/(CALLCONV_THISCALL)/(stack)/0;
+    !!if&v1=(TRUE);
+      !!VRi^gem_BattleBtn_StackBits^:|(BIT_1) |(BIT_2);
+      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_SHOOT);
+    !!en;
+  !!en;
+
+  !!if&i^gem_stack_spells^;
+
+    !!if&t=(MON_FAERIE_DRAGON);
+      !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
+      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
+    !!el;
+      !!BM(stackId):Z?(stack:y) U4/?(spell:y);
+      !!SS(spell):O?(target:y);
+
+      !!if&(target)=-1;                     [if spell target = hostile troop]
+        !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
+        !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
+      !!el;                                                        [if spell target = any(empty) hex]
+        !!VRi^gem_stack_do_not_affect_spells^:S(TRUE);
+
+        !!re i/0/(BATTLE_HEX_LAST);
+          !!SN:E4485360/(CALLCONV_THISCALL)/(stack)/i;                 [(if can cast any(empty) hex)]
+          !!if&v1;
+            !!VRi^gem_BattleBtn_StackBits^:|(BIT_3)  |(BIT_4);
+            !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
+            !!VRi^gem_stack_do_not_affect_spells^:S(FALSE);
+            !!br;
+          !!en;
+        !!en;
+
+      !!en;
+    !!en;
+
+  !!en;
+
+  !!if&i^battle_isNetwork^=(FALSE);
+    !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
+      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
+      !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
+    !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^/(heroStack)<>(NO_STACK);
+      !!BM:I?(side:y);
+      !!HEi^battle_hero_%(side)^:C0/(heroStack)/d/d/?(lvl:y)/12 C0/(heroStack)/d/d/(lvl)/12; [necessary to repeat cause of bug]
+
+      !!VR(eaStack:y):S(stackId) +1 *-1;
+      !!EA(eaStack):F102/98/?(abLine:y);
+      !!if&(abLine);
+        !#VA(abVal[11]:y);
+        !!EA(eaStack):B(abLine)/?(isEnabled:y)/?(type:y)/?(subType:y)/?(abVal[0])/?(abVal[1])/?(abVal[2])/?(abVal[3])/?(abVal[4])/?(abVal[5])/?(abVal[6])/?(abVal[7])/?(abVal[8])/?(abVal[9])/?(abVal[10]);
+        !!if&(isEnabled)=(TRUE)/(type)=102/(subType)=98/(abVal[lvl])=(TRUE);
+          !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
+          !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
+        !!en;
+
+      !!en;
+    !!en;
+  !!en;
+
+!?FU(OnBattleStackObtainsTurn);&i^battle_isVisible^/i^battle_isQuick^=(FALSE);
+  !!FU(gem_BattleBtn_CollectStackFlags):Pi^battle_current_stack^;
+  !!FU(gem_BattleBtn_Proc):Pi^battle_current_stack^/x1/(TRUE);
+
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_item^=i^gem_battle_altbttn_id^/i^gem_BattleBtn_StackBits^;
+  !!BG:Q?(actSide:y);
+  !!FU(gem_BattleBtn_Proc):Pi^battle_current_stack^/(actSide)/(FALSE);
+
+!?FU(OnBattleActionEnd)&i^gem_battle_altbttn_id^;
+  !!BG:A?(actionType:y);
+  !!if&(actionType)=(BATTLE_ACTION_HERO_CAST);                               [if hero casts check the abilities]
+
+    !!FU(gem_BattleBtn_RestoreAbilities):Pi^battle_current_stack^;
+    !!FU(gem_BattleBtn_CollectStackFlags):Pi^battle_current_stack^;
+    !!FU(gem_BattleBtn_Proc):Pi^battle_current_stack^/i^battle_current_side^/(TRUE);
+  !!el&(actionType);
+    !!FU(gem_BattleBtn_RestoreAbilities):Pi^battle_current_stack^;
+  !!en;
+
+!?FU(gem_BattleBtn_RestoreAbilities);
+!#VA(stackId:x);
+  !!if&i^gem_need_to_restore_shoots^;
+    !!BM(stackId):U3/i^gem_stack_shoots^;
+    !!VRi^gem_need_to_restore_shoots^:S0;
+  !!en;
+  !!if&i^gem_need_to_restore_spells^;
+    !!BM(stackId):Ei^gem_stack_spells^;
+    !!VRi^gem_need_to_restore_spells^:S0;
+  !!en;
+
+  !!VRi^gem_BattleBtn_StackChoice_%(stackId)^:Si^gem_BattleBtn_CurrentAbility^;
+  !!VRi^gem_BattleBtn_StackBits_old_%(stackId)^:Si^gem_BattleBtn_StackBits^;
+
+!?FU(OnAfterBattleUniversal)&i^gem_battle_dlg^;
+!!FU(gem_BattleBtn_Dtor):P;
+!?FU(OnBeforeBattleReplay)&i^gem_battle_dlg^;
+!!FU(gem_BattleBtn_Dtor):P;
+*!IF:L^%^;
+!?FU(gem_BattleBtn_Dtor);
+  !!VRi^gem_battle_dlg^:S0;
+  !!VRi^gem_battle_altbttn_id^:S0;
+  *!SN:F^lstrcpyA^/i^gem_BattleBtn_HintPointer^/^1^;
+
+  !!VRi^gem_BattleBtn_HintPointer^:S0;
+
+
+  !!VRi^gem_battleBttn_isDisabled^:S(FALSE);
+
+
+
+  !!VRi^gem_BattleBtn_CurrentAbility^:S0;
+  !!VRi^gem_BattleBtn_NextAbility^:S0;
+  !!VRi^gem_BattleBtn_StackBits^:S0;
+
+  !!VRi^gem_stack_spells^:S0;
+  !!VRi^gem_stack_shoots^:S0;
+  !!VRi^gem_need_to_restore_spells^:S0;
+  !!VRi^gem_need_to_restore_shoots^:S0;
+  !!VRi^gem_stack_do_not_affect_spells^:S(FALSE);
+
+  !!VRi^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^:S0;
+
+
+  !!re i/0/(BATTLE_STACK_LAST);
+    !!VRi^gem_BattleBtn_StackChoice_%i^:S(NULL);
+    !!VRi^gem_BattleBtn_StackBits_old_%i^:S(NULL);
+  !!en;
+
