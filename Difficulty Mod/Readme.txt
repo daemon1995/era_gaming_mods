@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.033 ******************
+                 ************** version: 1.036 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -68,6 +68,14 @@ Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Upd
 
 
 Changelog:
+1.036
+- Added two new levels for Neutral Stats gain (Insane I+II)
+
+
+1.035
+- Added new configuration window for Enhanced Henchman Mod (done by Archer)
+- removed random hero and karmic battle script file from mod
+
 
 1.033
 - New Option: Stack Experience Rebalance: Removes most OP or unnecessary stack abilities from all new TUM monsters and WoG units, leaving them only with 1 important skill at ACE level. Reduces all other stack exp values aswell
