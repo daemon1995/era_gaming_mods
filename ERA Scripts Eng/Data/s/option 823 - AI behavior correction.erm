@@ -44,22 +44,10 @@ ZVSE2
 !!MA:I(MON_FIRST_AID_TENT)/i^es_823_firstAidTentAv^;
 !!MA:I(MON_AMMO_CART)/i^es_823_ammoCartAv^;
 
-!?FU(OnBattleStackObtainsTurn)&i^battle_hasHuman^/i^battle_humanOnly^<>(TRUE)/i^battle_ai_1^;;
-!!UN:P823/?(wogOption:y);
-!!FU&(wogOption)=0:E;
+// Catapult special treatment
+!?FU(OnBattleRound)&i^battle_round^=0/i^battle_ai_0^<>(TRUE)/i^battle_ai_1^; [Make catapult unreachable]
+!!VRi^es_823_ballistaStack^:S(NO_STACK);
 
-; Exit if not in siege
-!!BA:S=0;
-!!FU&1:E;
-
-; Change the catapult to 1 hex on AI's turn, change it back for human
-!!if&i^battle_acting_side^=(BATTLE_RIGHT);
-  !!MA:X(MON_CATAPULT)/d~(MON_FLAG_WIDE);[Catapult 1 sq]
-!!el;
-  !!MA:X(MON_CATAPULT)/d|(MON_FLAG_WIDE);[Catapult 2 sq]
-!!en;
-
-!?FU(OnBattleRound)&i^battle_round^=0/i^battle_hasHuman^/i^battle_humanOnly^<>(TRUE)/i^battle_ai_1^; [Make catapult unreachable]
 !!UN:P823/?(wogOption:y);
 !!FU&(wogOption)=0:E;
 
@@ -69,15 +57,26 @@ ZVSE2
 
 ; Look for the catapult on the attacker's side
 !!re i/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST);
-  !!BMi:T?(type:y);
+  !!BMi:T?(type:y) N?(num:y);
 
-  !!br&(type)=(MON_CATAPULT);
+  ; Place a rock on the hex of the back if the catapult is found
+  !!if&(type)=(MON_CATAPULT)/(num)>0;
+    !!VRi^es_823_ballistaStack^:Si;
+    !!BMi:P?(pos:y);
+    !!BF:O19/(pos);
+    !!br;
+  !!en;
 !!en;
 
-; Place a rock on the hex of the back if the catapult is found
-!!if&i<=(BATTLE_ATTACKER_STACK_LAST);
-  !!BMi:P?(pos:y);
-  !!BF:O19/(pos);
+!?FU(OnBattleStackObtainsTurn)&i^battle_ai_0^<>(TRUE)/i^battle_ai_1^/i^es_823_ballistaStack^>(NO_STACK);
+!!UN:P823/?(wogOption:y);
+!!FU&(wogOption)=0:E;
+
+; Change the catapult to 1 hex on AI's turn, change it back for human
+!!if&i^battle_current_side^=(BATTLE_RIGHT);
+  !!BMi^es_823_ballistaStack^:Fd~(MON_FLAG_WIDE); [Catapult 1 sq]
+!!el;
+  !!BMi^es_823_ballistaStack^:Fd|(MON_FLAG_WIDE); [Catapult 2 sq]
 !!en;
 
 ** end

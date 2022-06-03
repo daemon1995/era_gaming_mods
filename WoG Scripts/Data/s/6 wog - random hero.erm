@@ -27,7 +27,7 @@ ZVSE2
   !!if&(randHero)>(NO_HERO);
     !!BA:H1/(randHero);
     !!VRi^battle_hero_1^:S(randHero);   [Era Erm Framework compatibility]
-    *!FU(WOG_72_SetRandomHeroOwner):P(randHero); [Get an ideal owner for the random hero - currently not needed]
+    !!FU(WOG_72_SetRandomHeroOwner):P(randHero); [Get an ideal owner for the random hero - currently not needed]
   !!el;
     !!VRi^wog_72_randHeroActive^:S(FALSE);
   !!en;
@@ -35,29 +35,25 @@ ZVSE2
   !!VRi^wog_72_randHeroActive^:S(FALSE);
 !!en;
 
+!!VRi^wog_72_randHero^:S(randHero);
+
 // Store neutral stacks in global vars (in order to return them on battle replay)
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
   !!BA:M1/i/?i^wog_72_replayType_%i^/?i^wog_72_replayNum_%i^;
 !!en;
 
-// Restore neutral stacks on battle replay
 !?FU(OnBattleReplay)&i^wog_72_randHeroActive^;
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
   !!BA:M1/i/i^wog_72_replayType_%i^/i^wog_72_replayNum_%i^;
 !!en;
 
-// Prevent neutral hero from surrendering
-!?FU(OnBeforeBattleAction)&i^wog_72_randHeroActive^;
+// Prevent neutral hero from escaping
+!?FU(OnBeforeBattleAction)&i^wog_72_randHeroActive^/i^battle_current_side^=(BATTLE_RIGHT);
 !!BG:A?(actionType:y);
 
-!!if&(actionType)=(BATTLE_ACTION_RETREAT)/i^battle_current_side^=(BATTLE_RIGHT);
-  !!BMi^battle_current_stack^:T?t;
-
-  !!if|t<(MON_CATAPULT)/t>(MON_ARROW_TOWERS);
-    !!BG:A(BATTLE_ACTION_WALK_AND_ATTACK);
-  !!el;
-    !!BG:A(BATTLE_ACTION_DEFEND);
-  !!en;
+!!if&(actionType)=(BATTLE_ACTION_RETREAT);
+  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatMgr:y);
+  !!SN:E4334448/(CALLCONV_THISCALL)/(combatMgr)/(BATTLE_RIGHT);
 !!en;
 
 // Reset variables
@@ -70,42 +66,42 @@ ZVSE2
 // Function for setting an owner for the random hero (for compatibility with HD Mod 5.2 R95+)
 // Fighting a hero with no owner will prevent entering quick combat
 // Currently no longer needed
-*?FU(WOG_72_SetRandomHeroOwner);
-*#VA(hero:x);
+!?FU(WOG_72_SetRandomHeroOwner);
+!#VA(hero:x);
 
 ; Look for a player that isn't in the game
-*!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-  *!OW:Ii/?(isAi:y)/?(hasLost:y);
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!OW:Ii/?(isAi:y)/?(hasLost:y);
 
-  *!br&(hasLost);
-*!en;
+  !!br&(hasLost);
+!!en;
 
-*!if&i<=(PLAYER_LAST);
-  *!HE(hero):Oi;
-*!el;
+!!if&i<=(PLAYER_LAST);
+  !!HE(hero):Oi;
+!!el;
   ; Look for an enemy AI player if the game has all 8 players
-  *!OW:T(CURRENT_PLAYER)/?(currTeam:y);
+  !!OW:T(CURRENT_PLAYER)/?(currTeam:y);
 
-  *!re j/(PLAYER_FIRST)/(PLAYER_LAST);
-    *!OW:Ij/?(isAi:y);
-    *!OW:Tj/?(team:y);
+  !!re j/(PLAYER_FIRST)/(PLAYER_LAST);
+    !!OW:Ij/?(isAi:y);
+    !!OW:Tj/?(team:y);
 
-    *!br&(isAi)/(currTeam)<>(team);
-  *!en;
+    !!br&(isAi)/(currTeam)<>(team);
+  !!en;
 
-  *!if&j<=(PLAYER_LAST);
-    *!HE(hero):Oj;
-  *!el;
+  !!if&j<=(PLAYER_LAST);
+    !!HE(hero):Oj;
+  !!el;
     ; Just look for a player differs with current
-    *!OW:C?(currPlayer:y);
+    !!OW:C?(currPlayer:y);
 
-    *!re k/(PLAYER_FIRST)/(PLAYER_LAST);
+    !!re k/(PLAYER_FIRST)/(PLAYER_LAST);
 
-      *!if&k<>(currPlayer);
-        *!HE(hero):Ok;
+      !!if&k<>(currPlayer);
+        !!HE(hero):Ok;
 
-        *!br;
-      *!en;
-    *!en;
-  *!en;
-*!en;
+        !!br;
+      !!en;
+    !!en;
+  !!en;
+!!en;
