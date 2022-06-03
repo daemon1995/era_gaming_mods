@@ -7,27 +7,30 @@ ZVSE2
 
 
 !?FU(OnBeforeBattleAction);             // перед действием в бою
-!!UN:P788/?y1;
-!!FU&y1=0:E;                            // выход, если опция не включена
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;             // выход, если опция не включена
 
-!!BG:A?y1;
-!!SN:W^opt788.a^/y1;                    // сохраняем последнее выполненное действие
+!!BG:A?i^es_788_heroRunAway^;           // сохраняем последнее выполненное действие
 
 !?FU(OnAfterBattleUniversal);           // после боя
-!!UN:P788/?y1;
-!!FU&y1=0:E;                            // выход, если опция не включена
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;             // выход, если опция не включена
+!!FU|i^es_788_heroRunAway^=(BATTLE_ACTION_RETREAT)/i^es_788_heroRunAway^=(BATTLE_ACTION_SURRENDER):E;                       // выход, если герой сбежал/откупился
 
-!!BA:H0/?y1 H1/?y2;                     // y1/y2 - атакующий/защищающийся герои, выход, если не битва двух героев
-!!SN:W^opt788.a^/?y3;
-!!FU|y3=4/y3=5:E;                       // выход, если герой сбежал/откупился
+!!BA:H0/?(leftHero:y) H1/?(rightHero:y);                     // атакующий/защищающийся герои, выход, если не битва двух героев
+!!HE(leftHero):O?(leftOwner:y);
+!!FU(ES_788_Rebirth)&(leftHero)>(NO_HERO)/(leftOwner)=(NO_OWNER):P(leftHero);    // перерождение атакующего героя, если он погиб
 
-!!HEy1:O?y3;
-!!HEy2&y2>=0:O?y4;                      // y3/y4 - владельцы атакующеего/защищающегося героя
-!!FU(ES_788_Rebirth)&y1>=0/y3<0:Py1;    // перерождение атакующего героя, если он погиб
-!!FU(ES_788_Rebirth)&y2>=0/y4<0:Py2;    // перерождение защищающегося героя, если он погиб
+!!if&(rightHero)>(NO_HERO);
+  !!HE(rightHero):O?(rightOwner:y);                          // владельцы атакующеего/защищающегося героя
+  !!FU(ES_788_Rebirth)(rightOwner)=(NO_OWNER):P(rightHero);  // перерождение защищающегося героя, если он погиб
+!!en;
 
 !?FU(ES_788_Rebirth);                   // Перерождение героя x1
 !#VA(hero:x);
+
+; Exit if the defeated hero is Asmodeus
+!!FU&(hero)=i^wog_106_Asmodeus^:E;
 
 ; Reset the hero
 !!HE(hero):Z?(heroPtr:y);

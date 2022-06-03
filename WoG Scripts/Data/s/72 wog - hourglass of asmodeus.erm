@@ -60,17 +60,6 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
 
 --------------------------------------------------------------------------------------------------------------------
 
-[Store information about creature type (Metamorphs)]
-[in v variables if Metamorph script is enabled]
-!?FU(OnBattleRound)&i^battle_round^=0/i^battle_isNetwork^<>(TRUE)/266;
-
-!!UN:P56/?(metamorphs:y); [Check if script is enabled]
-!!FU&(metamorphs)<>(TRUE):E; [Exit if script isn't enabled]
-
-!!DO9600/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST)/1:P; [Cycle through all battlefield stacks]
-
-----------------------------------------------------------------------------------------
-
 [Post-Instruction trigger]
 !?FU(OnAfterErmInstructions);
 !!VRi^wog_106_Asmodeus^:S(NO_HERO);
@@ -79,39 +68,64 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
 !!FU&(wogOption)<>(TRUE):E; [Exit if script is disabled]
 
 ; Check if Xeron (Hero #155) is disabled at start of game
-!!FU(WOG_56_SetHeroToAsmodeus):P(HERO_XERON);
+!!FU(WOG_106_SetHeroToAsmodeus):P(HERO_XERON);
 ; If Xeron's not available, see if Kilgor (#149) is available instead
-!!FU(WOG_56_SetHeroToAsmodeus)&i^wog_106_Asmodeus^=(NO_HERO):P(HERO_KILGOR);
+!!FU(WOG_106_SetHeroToAsmodeus)&i^wog_106_Asmodeus^=(NO_HERO):P(HERO_KILGOR);
 ; If neither Xeron nor Kilgor are available, see if Roland (#152) is available instead
-!!FU(WOG_56_SetHeroToAsmodeus)&i^wog_106_Asmodeus^=(NO_HERO):P(HERO_ROLAND);
+!!FU(WOG_106_SetHeroToAsmodeus)&i^wog_106_Asmodeus^=(NO_HERO):P(HERO_ROLAND);
 
 ; If Xeron, Kilgor and Roland aren't available, disable script
 !!if&i^wog_106_Asmodeus^=(NO_HERO);
-  !!IF:M^%z106001^;
+  !!IF:Q1/(PIC_TYPE_ART)/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/(MSG_TYPE_MES)/^%z106001^;
   !!UN:P106/(FALSE);
 ; Change the name and the description of Hourglass of Asmodeus
 !!el;
   !!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/z106002;
   !!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/z106003;
+  !!VR(asmodeus:y):Si^wog_106_Asmodeus^;
   !!VR$aname$:Sz106007; [Put name "Asmodeus" into $aname$]
-  !!HEi^wog_106_Asmodeus^:E24320/13/1 F13/13/13/13 B0/z266; [Set Asmodeus' level, primary skills, name and portrait]
-  !!HEi^wog_106_Asmodeus^:S19/0 S25/3 S14/3 S26/3 S7/3 S24/3 S6/3 S9/3 S10/3 S20/3 S22/3; [Remove Asmodeus' tactics skill but give expert Wisdom, Sorcery, Fire Magic, Leadership, Resistance, Luck, Intelligence, Artillery, Ballistics and Offense]
-  !!HEi^wog_106_Asmodeus^:A1/1000/17 M59/1 M21/1 M22/1 M26/1 M29/1 M40/1 M13/1; [Give Asmodeus a spell book and the following spells: Wall of Fire, Berserk, Inferno, Fire Shield, Fireball, Sacrifice, and Armageddon]
+  !!HE(asmodeus):E600000/31/1 F13/13/13/13 B0/z266; [Set Asmodeus' level, primary skills and name]
+
+  ; Remove all the skills of Asmodeus and give new ones
+  !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+    !!HE(asmodeus):Si/(SKILL_NOT_LEARNED);
+  !!en;
+
+  !!HE(asmodeus):S(SKILL_WISDOM)/3 S(SKILL_SORCERY)/3 S(SKILL_FIRE_MAGIC)/3 S(SKILL_LEADERSHIP)/3;
+  !!HE(asmodeus):S(SKILL_RESISTANCE)/3 S(SKILL_LUCK)/3 S(SKILL_INTELLIGENCE)/3 S(SKILL_ARCHERY)/3;
+  !!HE(asmodeus):S(SKILL_BALLISTICS)/3 S(SKILL_OFFENCE)/3; [Give expert Wisdom, Sorcery, Fire Magic, Leadership, Resistance, Luck, Intelligence, Archery, Ballistics and Offense]
+  !!HE(asmodeus):A1/(ART_META_SPELLBOOK)/17 M(SPELL_FIRE_WALL)/1 M(SPELL_BERSERK)/1 M(SPELL_INFERNO)/1;
+  !!HE(asmodeus):M(SPELL_FIRE_SHIELD)/1 M(SPELL_FIREBALL)/1 M(SPELL_SACRIFICE)/1 M(SPELL_ARMAGEDDON)/1; [Give Asmodeus a spell book and the following spells: Wall of Fire, Berserk, Inferno, Fire Shield, Fireball, Sacrifice, and Armageddon]
   
   ; Set Asmodeus's protrait
   !!SN:F^PcxPngExists^/^asmodeuS.pcx^;
 
   !!if&v1;
-    !!HEi^wog_106_Asmodeus^:L1/^asmodeuS.pcx^ L2/^asmodeuL.pcx^;
+    !!HE(asmodeus):L1/^asmodeuS.pcx^ L2/^asmodeuL.pcx^;
   !!el;
-    !!HEi^wog_106_Asmodeus^:L4/(HERO_CALID);
+    !!HE(asmodeus):L4/(HERO_XERON);
   !!en;
 
    [Disable Asmodeus' Commander]
-  !!COi^wog_106_Asmodeus^:E0;
+  !!CO(asmodeus):E0;
+
+  ; Set new class and specialty for Kilgor and Roland if they are Asmodeus
+  !!if&(asmodeus)=(HERO_KILGOR);
+    !!HE(asmodeus):B2/(HERO_CLASS_DEMONIAC);
+    !!HE(asmodeus):X0/(SKILL_RESISTANCE);
+  !!el&(asmodeus)=(HERO_ROLAND);
+    !!HE(asmodeus):B2/(HERO_CLASS_HERETIC);
+    !!HE(asmodeus):X0/(SKILL_SORCERY);
+  !!en;
+
+  ; Set up new price and class for Hourglass of Asmodeus
+  !!UN:A(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/?(price:y);
+  !!VR(price):*2;                       [Double the original price]
+  !!UN:A(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/(price:y);
+  !!UN:A(ART_HOURGLASS_OF_THE_EVIL_HOUR)/3/(ART_LEVEL_MINOR);
 !!en;
 
-!?FU(WOG_56_SetHeroToAsmodeus);
+!?FU(WOG_106_SetHeroToAsmodeus);
 !#VA(hero:x);
 
 !!HE(hero):R3/?(canBeRecruited:y)/255;
@@ -137,7 +151,7 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
   !!HE(hero):B0/?z267;  [Store current hero's name in z267]
 
    [If hero is *Not* the AI, has the hourglass artifact equipped and has fewer than 8 active heroes, ask if he/she wishes to summon Asmodeus]
-  !!IF:Q2/z106004;
+  !!IF:Q2/(PIC_TYPE_ART)/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/(MSG_TYPE_QUESTION)/^%z106004^;
 !!en;
 
 !!FU&-2:E;
@@ -147,8 +161,12 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
 
  [Set "his" or "her" variable depending on Hero's sex]
 !!HE(hero):R2/?(gender:y); [Store current hero's sex]
-!!VR$hisher$&(gender)=0:Sz106005;
-!!VR$hisher$&(gender)=1:Sz106006;
+
+!!if&(gender)=0;
+  !!VR$hisher$:Sz106005;
+!!el;
+  !!VR$hisher$:Sz106006;
+!!en;
 
  [Set Amodeus' spell points to 20 x his Knowledge]
 !!HEi^wog_106_Asmodeus^:Fd/d/d/?(knowledge:y);
@@ -186,11 +204,16 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
 !!VR(hero:y):Si^wog_106_origHero^;
 !!HEi^wog_106_Asmodeus^:O?(owner:y);    [Check if Asmodeus was defeated in battle]
 
+; If Asmodeus won, increase the stats of Asmodeus and kill him
 !!if&(owner)>(NO_OWNER);
   ; Manage Asmodeus
   !!HEi^wog_106_Asmodeus^:F?(attack:y)/d/d/d;     [Check if Asmodeus' stats have reached 95]
   !!HEi^wog_106_Asmodeus^&(attack)<95:Fd1/d1/d1/d1; [If Asmodeus won and stats not 95, increase his stats by 1 each]
   !!HEi^wog_106_Asmodeus^:O(NO_OWNER) K; [Remove Asmodeus from map]
+; If Asmodeus lose, kill the summoned hero and empty all his slots
+!!el&i^wog_surrendered_0^<>(TRUE);
+  !!HE(hero):K;
+  !!HE(hero):C0/(ARMY_SLOT_FIRST)/(NO_MON)/0;
 !!en;
 
  [Restore player's hero to map]
@@ -213,7 +236,7 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
 !!en;
 
  [Check summoning hero's *true* Power level and Power with artifacts]
-!!FU(GetHeroPrimarySkillsWithoutArts):P(hero)/d/d/?(basicPower:y)/d; [true Power - Archer]
+!!FU(GetHeroPrimarySkillsWithoutArts):P(hero)/d/d/?(basicPower:y)/d; [Get true Power]
 
  [Calculate hero's newly reduced Power (if 2 or more)]
 !!if&(basicPower)>1/(basicPower)<=249;
@@ -228,29 +251,23 @@ Macro Names used in this Script: $rpower$, $aname$, $hrname$, $hisher$
   !!el;
     !!IF:Q1/(PIC_TYPE_SKILL_POWER)/0/(MSG_TYPE_MES)/z106010;
   !!en;
-
-  !!HE(hero):Fd/d/d-1/d;                [And remove 1 Power from summoning hero]
+  ; And remove 1 Power from summoning hero
+  !!HE(hero):Fd/d/d-1/d;
  [If summoning hero has Power of less than 2, display this message]
 !!el;
   !!IF:Q1/(PIC_TYPE_MONSTER)/(MON_DEVIL)/(MSG_TYPE_MES)/z106011;
-  !!UN:P56/?(metamorphs:y);               [Check if Metamoprh script is enabled: y4]
-
-  !!if&(metamorphs:y);
-    !!DO9602/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST)/1:P; [If enabled and Power < 2, recombine Metamorphs, as needed]
-    !!VRv4600:S2;                       [If enabled, and Power <2, set v4600 to 2 to prevent extra Metamorphs appearing]
-  !!en;
-
-  !!HE(hero):A3/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/1 Ti^wog_106_xPos^/i^wog_106_yPos^/i^wog_106_zPos^/(MON_DEVIL)/3; [Remove hourglass and send 3 Devils to attack hero]
+  ; Remove hourglass and send 3 Devils to attack hero
+  !!HE(hero):A3/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/1 Ti^wog_106_xPos^/i^wog_106_yPos^/i^wog_106_zPos^/(MON_DEVIL)/3;
 !!en;
 
-  [Disable Asmodeus so he won't appear in any taverns later in the game]
+ [Disable Asmodeus so he won't appear in any taverns later in the game]
 !!HEi^wog_106_Asmodeus^:R3/(FALSE)/255;
 
  [Removes Asmodeus from tavern if he retreated/surrendered]
  [Get current player]
 !!OW:C?(player:y);
 
- [Get current tavern heroes - store in y2 and y3]
+ [Get current tavern heroes]
 !!OW:V(player)/?(leftHero:y)/?(rightHero:y);
 
  [If hero is #i^wog_106_Asmodeus^, generate a new hero]
