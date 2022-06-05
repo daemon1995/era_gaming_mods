@@ -17,3 +17,4 @@ Astaroth
 FCst1
 Raistlin
 GrayFace
+Dalion

@@ -1,7 +1,7 @@
 ZVSE2
 
 ** Updated: September 16, 2004
-** Updated: Oct 2021 by Archer30
+** Updated: June 2022 by Archer30
 
 ** Week of Monsters ERM Script Version 1.7 created by Timothy Pulver
 ** with minor modifications by Anders Jonnson
@@ -70,7 +70,7 @@ ZVSE2
 Flags Used in this Script: 1, 2, 56, 170-172, 205, 412
 v Variables used: v1-v7, v166-v200, v205, v361-v367, v372-v373, v1200-v1210
 z Variables used: z190-z199, z495
-Functions used: FU180-FU184, FU5300-FU5310, FU8000
+Functions used: FU(WOG_20P_ManageDietyOfFire)-FU184, FU5301-FU5310, FU8000
 ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 --------------------------------------------------------------------------------------
@@ -81,8 +81,8 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !#IF:V412/1;
 
  [Set up selection for player cycle for monster type selection]
-!#VRv372:S0 R9; [Random number for "X" for selecting next player]
-!#VRv373:S1 R9; [Random number for selecting "R" for selecting a player - constant]
+!#VRv372:R0/0/9; [Random number for "X" for selecting next player]
+!#VRv373:R0/1/9; [Random number for selecting "R" for selecting a player - constant]
 
 !#VRv1200:C-1/-1/-1/-1/-1/-1/-1/-1/-1/-1;
 
@@ -98,10 +98,13 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!CM:S?v1 I?v2; [Check if it's a right-click on the End-Turn button]
 
  [Set up v3 and v4 for type/subtype of message display picture]
-!!VRv3&v170>=0:S21;
-!!VRv3&v170<0/v170<>-100:Sv170 *-1 -1;
-!!VRv4&v170>=0:Sv170;
-!!VRv4&v170<0/v170<>-100:S0;
+!!if&v170>=0;
+  !!VRv3:S21;
+  !!VRv4&v170>=0:Sv170;
+!!el&v170<0/v170<>-100;
+  !!VRv3:Sv170 *-1 -1;
+  !!VRv4:S0;
+!!en;
 
  [Display Week of Monsters info]
 !!if&v1=14/v2=12;
@@ -131,7 +134,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!VRv189:Sc; [Set day check to current day]
 
  [Function 181 checks if Diety of Fire is built and if so, makes it Week of the Imp]
-!!FU181:P;
+!!FU(WOG_20P_ManageDietyOfFire):P;      [This is excuted twice every week, why?]
 
 !!VRz190:S^^;  [Initialize z190 to a null string]
 
@@ -239,13 +242,13 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!en;
 
  [Function 5300 calculates the next player to base this week's monster type on]
-!!FU5300:P;
+!!FU(WOG_20_GetBasicTypeOfWeek):P;      [v372 is changed here]
 
  [Function 180 gets number for new "Week of" monster and stores in v180]
-!!DO180/0/999/0:P; [Infinite loop until x16 is set to 1000]
+!!FU(WOG_20_SetActualTypeOfWeek):P;
 
  [Function 181 checks if Diety of Fire is built and if so, makes it Week of the Imp]
-!!FU181:P;
+!!FU(WOG_20P_ManageDietyOfFire):P;
 
  [Store "Week of" monster's default values in v181-v187 unless it's Week of Resources]
 !!MA&v180>=0:Av180/?v181 Dv180/?v182 Sv180/?v183 Pv180/?v184 Mv180/?v185 Ev180/?v186 Gv180/?v187;
@@ -272,25 +275,29 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 --------------------------------------------------------------------------------------
 
->>[Function 5300 calculates the next player to base monster type on]
-!?FU5300;
+>>[Calculates the next player to base monster type on]
+!?FU(WOG_20_GetBasicTypeOfWeek);
+; Create a new array for all the valid options of the week with 2 elements
+!!FU(NewIntArray):P2/?(weekOptions:y);
+; Set up initial elements (8 for a random monster from the pool, 9 for a random resource)
+!!SN:V(weekOptions)/0/8/9;
 
- [Determine which player is next]
-!!VRv372:+v373 %11; [Add "R" to "X", MOD 11]
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!OW:Ii/d/?(isAlive:y);
 
- [Check if this player is "alive" (if v372 is less than 8)]
-!!OW&v372<8:Iv372/d/?y1; [Store alive (0) or not (1) in y1]
-!!FU5300&v372<8/y1=1:P;  [Call function 5300 again if player isn't alive]
+  !!FU(Array_Push)&(isAlive):P(weekOptions)/i;
+!!en;
 
- [If result is 10, call function again]
-!!FU5300&v372=10:P;
+!!SN:M(weekOptions)/?(size:y);
+!!VR(lastIndex:y):S(size) -1;
+!!VR(random:y):R0/0/(lastIndex);
+!!SN:M(weekOptions)/(random)/?v372;
 
 --------------------------------------------------------------------------------------
 
->>[Function 180 gets number for new "Week of" monster and stores in v180]
-!?FU180;
+>>[Gets number for new "Week of" monster and stores in v180]
+!?FU(WOG_20_SetActualTypeOfWeek);
 
-!!VRx16:S1000; [Initialize x16 to 1000 so it will exit the Function if not changed]
 !!VRv180:S-100;  [Initialize new monster number to -100]
 !!VRy9:S0;
 
@@ -300,7 +307,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!VRy3:S1200 +v372;
 !!VRy4:Svy3;
 
-!!VRy1:S(HERO_FIRST) R(HERO_LAST_WOG); [Random start number for choosing a hero]
+!!VRy1:R0/(HERO_FIRST)/(HERO_LAST_WOG); [Random start number for choosing a hero]
 !!VRy2:Sy1 -1;  [End number for second loop]
 
 !!if&v180=-100;
@@ -314,13 +321,14 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 !!VRy9&v372=8:S1; [If random monster week, choose random monster: y9=1]
 
- [Random # for "Week of" monster 0..195, excluding "not used", Emissaries, Commanders]
-
-!!FU(WOG_20_GetRandomMon)|v372=8/y9=1:P?v180;
-
-!!VRv180&v372=9:S-7 R6; [Random number for resource week]
-
-!!IF&v180<0/v180<>-100:V172/1;  [If week is less than 0 (but not -100), it's a resource week - set flag 172 to true]
+ [Random # for "Week of" monster, excluding "not used", Emissaries, Commanders if v372=8]
+!!if|v372=8/y9=1;
+  !!FU(WOG_20_GetRandomMonWithExclusion):Pv170/y4/?v180;
+; Random resource week if v372=9
+!!el&v372=9;
+  !!VRv180:R0/-7/-1; [Random number for resource week]
+  !!IF:V172/1;  [If week is less than 0 (but not -100), it's a resource week - set flag 172 to true]
+!!en;
 
 !!VRy5:Sc;  [set y5 to current day]
 !!VRy6:Sy5 -1; [set y6 to current day -1]
@@ -332,27 +340,6 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!if&v180>=0;
   !!MA:Lv180/?y7; [Store monster level (0-6) in y7]
   !!VRy7:+1;      [set y7 to "true" monster level (1-7)]
-!!en;
-
- [Get a new number if monster number is same as previous week,]
- ["Not Used" number, Emissaries, Arrow Towers or higher level than the week divided by 2]
- [Also, skip level 8 monsters and Commanders]
-!!VRx16|v180=v170/v180=y4:S0; [No duplicates of previous week or previous player week]
-!!VRx16|v180=(MON_NOT_USED_1)/v180=(MON_NOT_USED_2)/v180=(MON_NOT_USED_3)/v180=(MON_NOT_USED_4)/v180=(MON_ARROW_TOWERS):S0; [No "not used" or arrow towers]
-!!VRx16&v180>=(MON_EMISSARY_OF_WAR)/v180<=(MON_EMISSARY_OF_LORE):S0; [No Emissaries]
-!!VRx16&v180>=(MON_PALADIN_A)/v180<=(MON_ASTRAL_SPIRIT_D):S0; [No Commanders]
-
-!!if&y9=1;
-  !!VRx16&v180>=(MON_AZURE_DRAGON)/v180<=(MON_RUST_DRAGON):S0; [No Level 8 Neutral Dragons unless in a hero's army]
-  !!VRx16&v180>=(MON_SUPREME_ARCHANGEL)/v180<=(MON_SACRED_PHOENIX):S0; [No Level 8 Monsters unless in a hero's army]
-  !!VRx16&y7>y10:S0; [y7=monster level, y10=current week divided by 2 (skip creatures of too high level unless in a hero's army)]
-!!en;
-
-!!VRy18:+1; [Count loops: y18]
-
-!!if&y18>100;
-  !!VRv180:S(MON_PEASANT); [If too many loops, set it to Peasant: v180]
-  !!VRx16:S1000; [If too many loops, just exit: x16]
 !!en;
 
  [Keep track of previous monster weeks for each player]
@@ -397,21 +384,36 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
  [Change monster type of Refugee Camp to match "week of" Monster type]
  [Don't call function if it's a war machine, resource week or disabled]
 !!UN:P200/?y19; [Check if Refugee Camp synchronization is enabled: y19]
-!!FU5306&y19=1/y13>=0/v170<>(MON_CATAPULT)/v170<>(MON_BALLISTA)/v170<>(MON_FIRST_AID_TENT)/v170<>(MON_AMMO_CART):Py13;
+!!FU(WOG_20_SyncRefugeeMonster)&y19=1/y13>=0/v170<>(MON_CATAPULT)/v170<>(MON_BALLISTA)/v170<>(MON_FIRST_AID_TENT)/v170<>(MON_AMMO_CART):Py13;
 
-!?FU(WOG_20_GetRandomMon);
-!#VA(mon:x);
+!?FU(WOG_20_GetRandomMonWithExclusion);
+!#VA(excludeMon1:x) (excludeMon2:x) (mon:x);
 
-!!FU(GetMaxMonsterId):P?(result:y);
-!!VR(mon):R0/0/(result);
+!!VR(mon):S(NO_MON);
+!!FU(GetMaxMonsterId):P?(lastMon:y);
+!!FU(NewIntArray):P?(validMons:y);
 
-!!VR(flag:y):S(TRUE);
-!!VR(flag)|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):S(FALSE); [not used]
-!!VR(flag)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE); [Emissaries]
-!!VR(flag)&(mon)>=(MON_PALADIN_A)/(mon)<=(MON_ASTRAL_SPIRIT_D):S(FALSE); [Commanders]
-!!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE); [war_machines]
+!!re i/(MON_FIRST)/(lastMon);
+  !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
+  !!co&i=(MON_ARROW_TOWERS);            [War Machines are valid except for Arrow Towers!]
+  !!co&i>=(MON_EMISSARY_OF_WAR)/i<=(MON_EMISSARY_OF_LORE);
+  !!co&i>=(MON_COMMANDER_FIRST_A)/i<=(MON_COMMANDER_LAST_D);
 
-!!FU(WOG_20_GetRandomMon)&(flag)=(FALSE):P?(mon);
+  !!FU(Array_Push):P(validMons)/i;
+!!en;
+
+!!SN:M(validMons)/?(size:y);
+
+!!if&(size)>0;
+  !!FU(Array_Shuffle):P(validMons);
+
+  ; Loop for 5 times at most to find a monster not the same as the excluding monsters
+  !!re i/0/4;
+    !!FU(Array_Pop):P(validMons)/?(mon);
+
+    !!br&(mon)<>(excludeMon1)/(mon)<>(excludeMon2);
+  !!en;
+!!en;
 
 --------------------------------------------------------------------------------------
 
@@ -452,7 +454,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 --------------------------------------------------------------------------------------
 
 >>[Function 181 checks if Deity of Fire is built, and if so, makes it Week of the Imp]
-!?FU181;
+!?FU(WOG_20P_ManageDietyOfFire);
 
 !!UN:U98/3/?y1; [Count Infernos]
 !!IF:V171/0;
@@ -683,7 +685,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 >>[Set up any Refugee Camps to match "Week of" Monster]
   [x1=monster type]
-!?FU5306;
+!?FU(WOG_20_SyncRefugeeMonster);
 
  [Store weekly growth of monster in y1]
 !!MA:Gx1/?y1;

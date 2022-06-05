@@ -1,4 +1,4 @@
-ZVSE
+ZVSE2
 
 ** ENHANCED COMMANDERS  -  ERM script 51 (ERA II: 27-wog)
 
@@ -10,7 +10,7 @@ ZVSE
 ** Note: Commander Enhancements are disabled for network human-to-human battles.
 
 ** Variables used:
-** V variables:    v7080-v7092, v7185
+** V variables:    v7080-v7092, i^wog_51_enabled^
 ** Timers used:  none
 
 *** commander stats are calculated to new formulae
@@ -54,39 +54,39 @@ ZVSE
 **    sapphire - gives either +1 to Defense skill or Hit Points skill
 **    emerald - gives either +1 to Magic skill or Speed skill
 
+
 ** initialization
-!?PI;
-!!UN:P51/?y1;                                    [check if Enhanced Commanders is enabled in WoGify Options]
-!!FU&y1<>1:E;                                    [exit if not enabled]
-!!VRv7185:S1;                                    [set var v7185 is true]
-!!UN:P3/?v1;                                     [check if Commanders are enabled]
-!!VRv7185&v1=1:S0;                               [disable if Commanders aren't enabled]
-!!CO-2&v7185=1:P1;                               [enable custom primary skill control]
+!?FU(OnAfterErmInstructions);
+!!UN:P51/?(enhCommander:y) P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y); [check if Enhanced Commanders is enabled in WoGify Options and if Commanders are enabled]
+
+!!VRi^wog_51_enabled^&(enhCommander)/(commanderDisabled)<>(TRUE):S(TRUE); [set var i^wog_51_enabled^ to true]
+!!FU&i^wog_51_enabled^<>(TRUE):E;
+
+; Set up basic stuff
+!!CO-2&i^wog_51_enabled^:P1;                               [enable custom primary skill control]
 !!UN:B6/1;                                       [set new chest 6 to advanced setting (disabled)]
 
-** function to make commanders alive
-!!DO(WOG27_SetNPC_Alive)/174/191/1&v7185=1:P;    [iterate through all commander types and make alive]
+** make commanders alive
+!!re i/(MON_COMMANDER_FIRST_A)/(MON_COMMANDER_LAST_D); [iterate through all commander types and make alive]
+  !!co|i=(MON_SOUL_EATER_A)/i=(MON_SOUL_EATER_D)/i=(MON_ASTRAL_SPIRIT_A)/i=(MON_ASTRAL_SPIRIT_D); [Skip if Soul Eater or Astral Spirit]
 
-!?FU(WOG27_SetNPC_Alive);
-!!MA:Xx16/?y1;                                   [get flags]
-!!VRy1:|16;                                      [add alive bit]
-!!VRy1|x16=178/x16=187/x16=182:-16;
-!!MA:Xx16/y1;                                    [reset flags]
+  !!MA:Xi/d|(MON_FLAG_ALIVE);
+!!en;
 
 
 ** commander screen open trigger
-!?CO0&v7185=1;                                   [check if Enhanced Commanders is enabled]
+!?CO0&i^wog_51_enabled^;                                   [check if Enhanced Commanders is enabled]
 !!HE-1:N?y1;                                     [get hero's (commander's) number]
-!!FU(WOG27_NPC_EditStats):Py1;
+!!FU(WOG_51_NPC_EditStats):Py1;
 ** end of hero level trigger
 
 ** start of pre-battle trigger **
-!?BA0&v7185=1/-998;                              [check if Enhanced Commanders is enabled]
+!?BA0&i^wog_51_enabled^/-998;                              [check if Enhanced Commanders is enabled]
 !!VRv7080:C-1/-1/-1/-1/-1/-1/-1/-1/-1/-1;        [initialize variables]
 !!BA:H0/?y1 H1/?y2;                              [get heroes (commanders) number]
 
-!!FU(WOG27_NPC_EditStats)&y1>-1:Py1;             [modify commander stats - attacker]
-!!FU(WOG27_NPC_EditStats)&y2>-1:Py2;             [modify commander stats - defender]
+!!FU(WOG_51_NPC_EditStats)&y1>-1:Py1;             [modify commander stats - attacker]
+!!FU(WOG_51_NPC_EditStats)&y2>-1:Py2;             [modify commander stats - defender]
 
 !!COy1&y1>-1:B0/?y3 T?v7088;                     [check skill bits, get type - attacker]
 !!COy2&y2>-1:B0/?y4 T?v7089;                     [check skill bits, get type - defender]
@@ -104,26 +104,26 @@ ZVSE
 
 
 ** start of battlefield trigger **
-!?BF&v7185=1/-998;                               [continue if enabled]
-!!DO(WOG27_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
+!?BF&i^wog_51_enabled^/-998;                               [continue if enabled]
+!!DO(WOG_51_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
 ** end of battlefield trigger
 
 
 ** start of battle turn trigger **
-!?BR&v7185=1/-998;                               [continue if enabled]
-!!DO(WOG27_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
+!?BR&i^wog_51_enabled^/-998;                               [continue if enabled]
+!!DO(WOG_51_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
 ** end of battle turn trigger **
 
 
 ** pre-action trigger for death stare**
-!?BG0&v7185=1/-998;
+!?BG0&i^wog_51_enabled^/-998;
 !!BA:H0/?y1 H1/?y2;                              [get heroes (commanders) number]
 !!COy1&y1>-1/v7084=4096:B1/12/0;                 [remove death stare - attacker]
 !!COy2&y2>-1/v7086=4096:B1/12/0;                 [remove death stare - defender]
 
 
 ** pre-action trigger **
-!?BG&v7185=1/-998;                               [continue if enabled]
+!?BG&i^wog_51_enabled^/-998;                               [continue if enabled]
 !!BG:N?v7080 A?v7081 E?v7082;                    [get current stack, action type, destination stack]
 !!BMv7082&v7082>-1:R?v7087;                      [get retaliations of target creature stack]
 !!BMv7080&v7080>-1:T?v7092;                      [get type of current creature stack]
@@ -137,16 +137,16 @@ ZVSE
 ** end of pre-action trigger **
 
 ** post-action trigger **
-!?BG1&v7185=1/-998;                              [continue if enabled]
+!?BG1&i^wog_51_enabled^/-998;                              [continue if enabled]
 !!BMv7080&v7080>-1:T?y-3 I?y-4;                  [get acting monster type and side]
-!!FU(WOG27_NPC_CastSpell)&y-3>=174/y-3<=191/v7081=10:Pv7080/y-3;  [cast extra spell if commander cast]
+!!FU(WOG_51_NPC_CastSpell)&y-3>=174/y-3<=191/v7081=10:Pv7080/y-3;  [cast extra spell if commander cast]
 
 !!BMv7082&v7082>-1:F?y-7 P?y-8;                  [get target's flags, position]
 
 !!VRy-10&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7084=4096/y-4=0:S0 R99;          [random roll - attacker]
 !!VRy-11&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7086=4096/y-4=1:S0 R99;          [random roll - defender]
-!!FU(WOG27_NPC_CastPoison)&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7084=4096/y-4=0/y-10<50:Py-7/y-8;  [50% cast poison if commander with death stare attacked or shot - attacker]
-!!FU(WOG27_NPC_CastPoison)&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7086=4096/y-4=1/y-11<50:Py-7/y-8;  [50% cast poison if commander with death stare attacked or shot - defender]
+!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7084=4096/y-4=0/y-10<50:Py-7/y-8;  [50% cast poison if commander with death stare attacked or shot - attacker]
+!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7086=4096/y-4=1/y-11<50:Py-7/y-8;  [50% cast poison if commander with death stare attacked or shot - defender]
 
 !!BMv7080&v7092=182/v7081=10:U4/58;              [astral spirit - revert spell to counterstrike]
 !!BMv7080&v7092=191/v7081=10:U4/58;              [astral spirit - revert spell to counterstrike]
@@ -161,8 +161,8 @@ ZVSE
 !!BMv7080&v7080>-1:F?y-7 P?y-8;                                             [get acting creature's flags, position]
 !!VRy-10&y-3>=174/y-3<=191/v7081=6/v7084=4096/v7087>0/y-4=0/y-6>-1/y-9=0:S0 R99;          [random roll - attacker]
 !!VRy-11&y-3>=174/y-3<=191/v7081=6/v7086=4096/v7087>0/y-4=1/y-6>-1/y-9=0:S0 R99;          [random roll - defender]
-!!FU(WOG27_NPC_CastPoison)&y-3>=174/y-3<=191/v7081=6/v7084=4096/v7087>0/y-4=0/y-10<50/y-6>-1/y-9=0:Py-7/y-8;  [50% cast poison if commander with death stare retaliates - attacker]
-!!FU(WOG27_NPC_CastPoison)&y-3>=174/y-3<=191/v7081=6/v7086=4096/v7087>0/y-4=1/y-11<50/y-6>-1/y-9=0:Py-7/y-8;  [50% cast poison if commander with death stare retaliates - defender]
+!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081=6/v7084=4096/v7087>0/y-4=0/y-10<50/y-6>-1/y-9=0:Py-7/y-8;  [50% cast poison if commander with death stare retaliates - attacker]
+!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081=6/v7086=4096/v7087>0/y-4=1/y-11<50/y-6>-1/y-9=0:Py-7/y-8;  [50% cast poison if commander with death stare retaliates - defender]
 
 !!BA:H0/?y1 H1/?y2;                              [get heroes (commanders) number]
 !!BU:C?y3;                                       [check for end of battle]
@@ -174,7 +174,7 @@ ZVSE
 
 
 ** post-buy commander trigger **
-!?CO2&v7185=1;                                   [continue if enabled and "choose commanders" isn't]
+!?CO2&i^wog_51_enabled^;                                   [continue if enabled and "choose commanders" isn't]
 !!UN:P186/?y1;                                   [check if choose Commanders is enabled in WoGify Options]
 !!FU&y1=1:E;                                     [exit if choose Commanders script is enabled]
 !!HE-1:P?y1/?y2/?y3;                             [get hero position]
@@ -183,7 +183,7 @@ ZVSE
 ** end of post-buy commander trigger **
 
 ** function to edit commander stats
-!?FU(WOG27_NPC_EditStats);
+!?FU(WOG_51_NPC_EditStats);
 * x1 - hero number
 !!COx1:X2/?y2 T?y5;                              [get commander level & type]
 ** attack - base 5 + 1/2 x level - skill adds +25%,+50%,+75%,+100%,+125%
@@ -253,7 +253,7 @@ ZVSE
 
 ** function to cast spell    x1=acting stack x2=type x3=rank x4=power x5=no retaliation flag
 * x1=spell x2=position x3=rank x4=power
-!?FU(WOG27_NPC_CastSpell);
+!?FU(WOG_51_NPC_CastSpell);
 !!BMv7082&v7082>-1:P?y8;                         [get position of target creature stack]
 !!HE-1:N?y5;                                     [get hero's (commander's) number]
 !!COy5:P4/?y6;                                   [get power]
@@ -267,14 +267,14 @@ ZVSE
 ** end of function **
 
 ** function to cast poison   x1=flags   x2=position
-!?FU(WOG27_NPC_CastPoison);
+!?FU(WOG_51_NPC_CastPoison);
 !!VRx1:&16;                                      [just check alive bit]
 !!BG:N?y1;                                       [get current stack #]
 !!BMy1&x1=16:C71/x2/1/3/1;                       [if target is alive have current stack cast poison]
 ** end of function **
 
 ** function to cycle through all stacks  (give magic mirror)
-!?FU(WOG27_NPC_SetMagicMirror);
+!?FU(WOG_51_NPC_SetMagicMirror);
 !!BMx16:T?y1;                                          [get stack's monster type]
 !!BMx16&y1>=174/y1<=191/v7090=128/x16<21:M36/100/3;    [give commander with fire shield exp. magic mirror - attacker]
 !!BMx16&y1>=174/y1<=191/v7091=128/x16>20:M36/100/3;    [give commander with fire shield exp. magic mirror - defender]
@@ -287,7 +287,7 @@ ZVSE
 
 
 **  object trigger - opal
-!?OB101/7&v7185=1;
+!?OB101/7&i^wog_51_enabled^;
 !!HE-1:N?y1;
 !!VRy4:S0 T14;                                   [random roll 0-14]
 !!VRy2:S151000 +y4;                              [apply string]
@@ -303,18 +303,18 @@ ZVSE
 
 
 **  object trigger - ruby
-!?OB101/8&v7185=1;
-!!FU(WOG27_NPC_AddSSkill):P0/3/151017/151018/151019/151020/151021;
+!?OB101/8&i^wog_51_enabled^;
+!!FU(WOG_51_NPC_AddSSkill):P0/3/151017/151018/151019/151020/151021;
 
 **  object trigger - sapphire
-!?OB101/9&v7185=1;
-!!FU(WOG27_NPC_AddSSkill):P1/2/151022/151023/151024/151025/151026;
+!?OB101/9&i^wog_51_enabled^;
+!!FU(WOG_51_NPC_AddSSkill):P1/2/151022/151023/151024/151025/151026;
 
 **  object trigger - emerald
-!?OB101/10&v7185=1;
-!!FU(WOG27_NPC_AddSSkill):P4/5/151027/151028/151029/151030/151031;
+!?OB101/10&i^wog_51_enabled^;
+!!FU(WOG_51_NPC_AddSSkill):P4/5/151027/151028/151029/151030/151031;
 
-!?FU(WOG27_NPC_AddSSkill)&v7185=1;
+!?FU(WOG_51_NPC_AddSSkill)&i^wog_51_enabled^;
 * refactoring by [igrik] 15/05/2020
 * x1 - first  sskill
 * x2 - second sskill
@@ -337,16 +337,18 @@ ZVSE
 
 
 ** raise commander skill limit with particular options enabled **
-!?FU(OnGameEnter);                      [Allow commander to learn 6 skills if Commander Witch Huts is enabled, or Enhanced Commander + Power Stones are enabed]
+!?FU(OnStartOrLoad);                    [Allow commander to learn 6 skills if Commander Witch Huts is enabled, or Enhanced Commander + Power Stones are enabed]
 !!UN:C7770979/1/?y30;
 !!UN:P3/?y1;                            [Check Commander option]
 !!FU|y1=1/y30<>4:E;
+
 !!VRy4:S0;
 !!UN:P196/?y2;                          [Check Power Stones]
 !!UN:P66/?y3;                           [Check Commander Witch Huts]
-!!VRy4&v7185=1/y2=1:S1;
+!!VRy4&i^wog_51_enabled^/y2=1:S1;
 !!VRy4&y3=1:S1;
 !!FU&y4<>1:E;
+
 !!UN:C7770979/1/6;
 !!SN:W^commander_Skill_Changed^/1;
 

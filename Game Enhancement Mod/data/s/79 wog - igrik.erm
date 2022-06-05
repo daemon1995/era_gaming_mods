@@ -241,9 +241,10 @@ SN:W ?? ?????, ????????????? ????????? key functions
   !!en;
 
   !!if&(showHeroDlg);
-    !!FU7026&v7195=1:Pi^battle_hero_%(side)^/(TRUE); [reset skill levels - i^battle_hero_%(side)^]
-    !!SN:E5118576/3/i^battle_hero_%(side)^/1/1/1;
-    !!FU7026&v7195=1:Pi^battle_hero_%(side)^/(FALSE); [reset skill levels - i^battle_hero_%(side)^]
+    !!UN:P210/?(resistanceII:y);
+    !!FU(WOG_210_SetOrRestoreResistance)&(resistanceII):Pi^battle_hero_%(side)^/(TRUE); [Restore Resistance II skill levels]
+    !!SN:E5118576/3/i^battle_hero_%(side)^/1/1/1; [Open hero screen]
+    !!FU(WOG_210_SetOrRestoreResistance)&(resistanceII):Pi^battle_hero_%(side)^/(FALSE); [Set Resistance II skill levels]
     !!CM:R0;
   !!en;
 
@@ -1056,12 +1057,19 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !!VRi^wog_149_kingdomRMBEnabled^:S(FALSE);
 
 ; Remove buggy neutral stacks by mouse hovering. Occasionally a stack with the size 4095 is generated on the map with UN:I command.
-; This script is better executed before everything else.
+; This script is better executed before anything else.
+; It removes a buggy stack silently
 !?FU(OnAdvMapTileHint);
 !#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
 
 !!if&(objType)=(OBJ_MONSTER);
-  !!VR(qty:y):S0;
-  !!MO(x)/(y)/(z):G?(qty);
-  !!UN&(qty)<=0:O(x)/(y)/(z)/1;
+  !!UN:P904/1 P905/0;                   [Option 904 - Disable Error msg. Option 905 - error found]
+  !!MO(x)/(y)/(z):G?(qty:y);
+  !!UN:P905/?(hasError:y);
+
+  !!if&(hasError);
+    !!UN:O(x)/(y)/(z)/1;                [Debug msg can be added here to help collect debug info from players]
+    !!UN:P904/0;
+    !!SN:Q;
+  !!en;
 !!en;

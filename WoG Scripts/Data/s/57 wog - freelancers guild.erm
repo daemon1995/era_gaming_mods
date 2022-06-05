@@ -33,7 +33,9 @@ Variables: z1-z5, v213-247, v249, v250-257,z210-z231
 Flags: 49-51
 Functions: 1400-1409
 Dialogues: 30-32
-Timers: 64
+
+; This script is better executed earlier than other stuff with monster battles (BA:D1 and SN:Q)
+
 
 ----------------------------------------------------------------------------------------
 
@@ -49,11 +51,11 @@ Timers: 64
 
  [Reset Freelancer's Guilds each week]
 !?FU(OnEveryDay)&i^timerOnce^/i^timerWeekday^=1;
-!!UN:P21/?(freelancersOn:y);            [Check if script is enabled]
-!!FU&(freelancersOn)<>(TRUE):E;         [Exit if script isn't enabled]
+!!UN:P21/?(wogOption:y);            [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;         [Exit if script isn't enabled]
 
- [Set up initial creature variables - v215-v220 with values of -1]
-!!VRv215:C-1/-1/-1/-1/-1/-1;
+ [Set up initial creature variables - v215-v220]
+!!FU(WOG_21_Get6RandomMonsters):P?v215/?v216/?v217/?v218/?v219/?v220;
 
  [Set up v variables with z variable index numbers - v241-v246]
 !!VRv241:C215/216/217/218/219/220;
@@ -82,15 +84,23 @@ Timers: 64
 !!FU&y-1=0:E; [Exit if script isn't enabled]
 
  [Set up new text for artifacts used as dialogue box pictures]
-!!VRz210:Sz121001; !!VRz211:Sz121002;
-!!VRz212:Sz121003; !!VRz213:Sz121004;
-!!UN:A(ART_ENDLESS_BAG_OF_GOLD)/9/210; !!UN:A(ART_ENDLESS_BAG_OF_GOLD)/10/211; !!UN:A(ART_TITANS_GLADIUS)/9/212; !!UN:A(ART_TITANS_GLADIUS)/10/213;
+!!VRz210:Sz121001;
+!!VRz211:Sz121002;
+!!VRz212:Sz121003;
+!!VRz213:Sz121004;
+!!UN:A(ART_ENDLESS_BAG_OF_GOLD)/9/210;
+!!UN:A(ART_ENDLESS_BAG_OF_GOLD)/10/211;
+!!UN:A(ART_TITANS_GLADIUS)/9/212;
+!!UN:A(ART_TITANS_GLADIUS)/10/213;
 
  [Display dialogue box asking if player wishes to buy or sell creatures]
 !!IF:Q2/(PIC_TYPE_ART)/(ART_ENDLESS_BAG_OF_GOLD)/(PIC_TYPE_ART)/(ART_TITANS_GLADIUS)/(MSG_TYPE_CHOOSE_PIC)/z121005;
 
  [Restore artifact text]
-!!UN:A(ART_ENDLESS_BAG_OF_GOLD)/9/0; !!UN:A(ART_ENDLESS_BAG_OF_GOLD)/10/0; !!UN:A(ART_TITANS_GLADIUS)/9/0; !!UN:A(ART_TITANS_GLADIUS)/10/0;
+!!UN:A(ART_ENDLESS_BAG_OF_GOLD)/9/0;
+!!UN:A(ART_ENDLESS_BAG_OF_GOLD)/10/0;
+!!UN:A(ART_TITANS_GLADIUS)/9/0;
+!!UN:A(ART_TITANS_GLADIUS)/10/0;
 
  [Check if a monster is already present at the Guild]
 !!VRy-1:Sv998 -1;
@@ -238,9 +248,6 @@ Timers: 64
  [Set y1 to current day]
 !!VRy1:Sc;
 
- [Call Function 1402 - Choose Creature Number if one's not already chosen this week]
-!!FU1402&vx16=-1:Px16;
-
  [Check creature's level - store in y2]
 !!MA:Lvx16/?y2;
 
@@ -270,19 +277,33 @@ Timers: 64
 
 -------------------------------------------------------------------------------------
 
- [Start of Function 1402 - Choose Creature Number]
-!?FU1402;
+ [Choose Creature Number]
 
- [Store random creature number (0 to 173) in y1]
-!!VRy1:R0/(MON_FIRST)/(MON_SANTA_GREMLIN);
+!?FU(WOG_21_Get6RandomMonsters);
+!#VA(mon1:x) (mon2:x) (mon3:x) (mon4:x) (mon5:x) (mon6:x);
 
- [Assign creature number to v(x16)]
-!!VRvx1:Sy1;
+!!re i/1/6;
+  !!VRxi:S(NO_MON);
+!!en;
 
- [Call function again if creature number is invalid]
-!!FU1402&y1>=(MON_CATAPULT)/y1<=(MON_ARROW_TOWERS):Px1;
-!!FU1402&y1>=(MON_GHOST)/y1<=(MON_EMISSARY_OF_LORE):Px1;
-!!FU1402|y1=(MON_NOT_USED_1)/y1=(MON_NOT_USED_2)/y1=(MON_NOT_USED_3)/y1=(MON_NOT_USED_4):Px1;
+!!FU(GetMaxMonsterId):P?(lastMon:y);
+!!FU(NewIntArray):P?(validMons:y);
+
+!!re i/(MON_FIRST)/(lastMon);
+  !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
+  !!co&i>=(MON_CATAPULT)/i<=(MON_ARROW_TOWERS);
+  !!co&i>=(MON_EMISSARY_OF_WAR)/i<=(MON_EMISSARY_OF_LORE);
+  !!co&i>=(MON_COMMANDER_FIRST_A)/i<=(MON_COMMANDER_LAST_D);
+
+  !!FU(Array_Push):P(validMons)/i;
+!!en;
+
+!!SN:M(validMons)/?(size:y);
+
+!!if&(size)>0;
+  !!FU(Array_Shuffle):P(validMons);
+  !!FU(Array_Pop):P(validMons)/?(mon1)/?(mon2)/?(mon3)/?(mon4)/?(mon5)/?(mon6);
+!!en;
 
 -------------------------------------------------------------------------------------
 
@@ -506,16 +527,24 @@ Timers: 64
 !!en;
 
  [Set up new text for artifacts used as dialogue box pictures]
-!!VRz210:Sz121064; !!VRz211:Sz121065+z2+z121082;
-!!VRz212:Sz121066; !!VRz213:Sz121067+z2+z121083;
-!!UN:A(ART_THUNDER_HELMET)/9/210; !!UN:A(ART_THUNDER_HELMET)/10/211; !!UN:A(ART_AMBASSADORS_SASH)/9/212; !!UN:A(ART_AMBASSADORS_SASH)/10/213;
+!!VRz210:Sz121064;
+!!VRz211:Sz121065+z2+z121082;
+!!VRz212:Sz121066;
+!!VRz213:Sz121067+z2+z121083;
+!!UN:A(ART_THUNDER_HELMET)/9/210;
+!!UN:A(ART_THUNDER_HELMET)/10/211;
+!!UN:A(ART_AMBASSADORS_SASH)/9/212;
+!!UN:A(ART_AMBASSADORS_SASH)/10/213;
 
  [Display dialogue asking if player wants freelancers to go after a specific hero]
  [or a whole faction]
 !!IF:Q2/(PIC_TYPE_ART)/(ART_THUNDER_HELMET)/(PIC_TYPE_ART)/(ART_AMBASSADORS_SASH)/(MSG_TYPE_CHOOSE_PIC)/z121068;
 
  [Restore artifact text]
-!!UN:A(ART_THUNDER_HELMET)/9/0; !!UN:A(ART_THUNDER_HELMET)/10/0; !!UN:A(ART_AMBASSADORS_SASH)/9/0; !!UN:A(ART_AMBASSADORS_SASH)/10/0;
+!!UN:A(ART_THUNDER_HELMET)/9/0;
+!!UN:A(ART_THUNDER_HELMET)/10/0;
+!!UN:A(ART_AMBASSADORS_SASH)/9/0;
+!!UN:A(ART_AMBASSADORS_SASH)/10/0;
 
  [Function 1403 - Player can specify a specific hero for monsters to hunt]
 !!if&2;
@@ -627,18 +656,18 @@ Timers: 64
 
  [Start of trigger for when a hero attacks a monster -- check if it's a WM]
 !?OB(OBJ_MONSTER);
-!!UN:P21/?y-1; [Check if script is enabled: y-1]
-!!FU&y-1=0:E; [Exit if script isn't enabled]
+!!UN:P21/?(wogOption:y);                [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
  [Check if it's a wandering monster: v1=WM # (so >0 if it's a WM)]
-!!MW:Cv998/v999/v1000/?v1;
+!!MW:Cv998/v999/v1000/?(mwId:y);
 
  [If v1 > 0, check WM's "y destination" and see if it's greater than 0]
-!!if&v1>0;
-  !!MWv1:A2/d/?v2/d;
+!!if&(mwId)>0;
+  !!MW(mwId):A2/d/?(destination:y)/d;
 
  [If v1 > 0 and v2 > 0, it means it's a wandering monster sent out by a player]
-  !!FU1409&v2>0:Pv1/v2;
+  !!FU1409&(destination)>0:P(mwId)/(destination)/?(betrayed:y);
 !!en;
 
 ---------------------------------------------------------------------------------------
@@ -646,55 +675,52 @@ Timers: 64
  [Start of attacking a Freelancer's Guild wandering monster]
  [x1=wandering monster #, x2=player colour+1]
 !?FU1409;
+!#VA(mwId:x) (destination:x) (betrayed:x);
 
- [Get colour of hero who attacked: store in y1]
-!!HE(CURRENT_HERO):O?y1;
+!!VR(betrayed):S(FALSE);
+ [Get colour of hero who attacked]
+!!HE(CURRENT_HERO):O?(owner:y);
 
- [Subtract one from x1 to get player colour that sent the WM: store in y2]
-!!VRy2:Sx2 -1;
-
- [Get type of monster: store in y3]
-!!OB998:U?y3;
-
- [Get number of monsters: store in y4]
-!!MO998:G?y4;
-
- [Set words depending on number of monsters: store in z2]
-; Lookup name of monster (plural): store in z1
-!!if&y4>1;
-  !!UN:N3/1/y3/1;
-  !!VRz2:Sz121073;
-  !!VRz3:Sz121075;
-  !!VRz4:Sz121077;
-  !!VRz5:Sz121079;
-; Lookup name of monster (singular): store in z1
-!!el;
-  !!UN:N3/1/y3/0;
-  !!VRz2:Sz121074;
-  !!VRz3:Sz121076;
-  !!VRz4:Sz121078;
-  !!VRz5:Sz121080;
-!!en;
+ [Subtract one from x1 to get player colour that sent the WM]
+!!VR(targetPlayer:y):S(destination) -1;
 
  [If attacking player is the same one that hired the WM, it gives a message and leaves]
-!!if&y1=y2;
+!!if&(owner)=(targetPlayer);
+   [Get type of monster]
+  !!OB998:U?(type:y);
+
+   [Get number of monsters]
+  !!MO998:G?(num:y);
+
+   [Set words depending on number of monsters: store in z2]
+  ; Lookup name of monster (plural): store in z1
+  !!if&(num)>1;
+    !!SN:H^monname^/(type)/0/?z1;
+    !!VRz2:Sz121073;
+    !!VRz3:Sz121075;
+    !!VRz4:Sz121077;
+    !!VRz5:Sz121079;
+  ; Lookup name of monster (singular): store in z1
+  !!el;
+    !!SN:H^monname^/(type)/1/?z1;
+    !!VRz2:Sz121074;
+    !!VRz3:Sz121076;
+    !!VRz4:Sz121078;
+    !!VRz5:Sz121080;
+  !!en;
+
   !!MO998:Mz121081;
+  !!VRi^wog_21_betrayed^:S(TRUE);
 
  [Change number of monsters to 0 and delete their wandering monster message]
  [if attacking player colour is also the hiring player colour]
   !!MO998:G0;
-  !!VRv3405:S99; [Set v3405 to 99 to disable battle]
 !!en;
 
----------------------------------------------------------------------------------------
+!?FU(OnBeforeBattle)&i^wog_21_betrayed^;
+!!BA:D1;
+!!SN:Q;
+!!VRi^wog_21_betrayed^:S(FALSE);
 
- [Disable battle against hired freelancers if attacked by hiring player]
-!?FU(OnBeforeBattle)&v3405=99;
-!!BA:D1; [Disable battle--hero wins (against 0 creatures)]
-!!VRv3405:S0; [Reset v3405 to 0]
-
----------------------------------------------------------------------------------------
-
- [Post-Visit trigger for when a hero attacks a monster hired by the same player]
-!$OB(OBJ_MONSTER)&v3405=99;
-!!VRv3405:S0; [Reset v3405 to 0]
+!?FU(OnAfterLoadGame);
+!!VRi^wog_21_betrayed^:S(FALSE);

@@ -36,17 +36,14 @@ ZVSE2
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_II)/?i^wog_55_enabled^; [check if Enhanced Warmachines is enabled in WoGify Options]
 
 !?FU(OnAfterErmInstructions)&i^wog_55_enabled^;
-  !!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_II)/?i^wog_55_enabled^; [Legacy - double check the option]
-  !!FU&i^wog_55_enabled^<>(TRUE):E;
-
   !!MA:M(MON_BALLISTA)/4 E(MON_BALLISTA)/6 C(MON_BALLISTA)/(RES_GOLD)/1000; [Ballista Dam Low 4/ Dam High 6/ Cost 1000]
   !!MA:P(MON_FIRST_AID_TENT)/150 C(MON_FIRST_AID_TENT)/(RES_GOLD)/1000; [First Aid Tent HP 150/ Cost 1000]
   !!MA:P(MON_AMMO_CART)/150 C(MON_AMMO_CART)/(RES_GOLD)/1000; [Ammo Cart HP 150/Cost 1000]
 
   !!SN:H^monname^/(MON_CATAPULT)/0/?(single:z) H^monname^/(MON_CATAPULT)/1/?(plural:z);
   !!SN:H^monname^/(MON_NOT_USED_2)/0/(single) H^monname^/(MON_NOT_USED_2)/1/(plural);
-  !!MA:X(MON_CATAPULT)/?(balF:y);
 
+  ; Set up flags for Catapult in non-siege
   !!MA:X(MON_NOT_USED_2)/132201 M(MON_NOT_USED_2)/650 C(MON_NOT_USED_2)/(RES_GOLD)/1; [set NU2 flags {catapult flags (132197) + shooter (4)}    NU2 Fight Value 650  ]
   !!MA:A(MON_NOT_USED_2)/10 D(MON_NOT_USED_2)/10 P(MON_NOT_USED_2)/250 N(MON_NOT_USED_2)/24; [NU2 Attack 10 NU2 Defense 10 NU2 HP 250  NU2 Shots 24]
 
@@ -68,15 +65,18 @@ ZVSE2
     !!en; 
   !!en;
 
-  ; Set up new commander descriptions for Hierophant and Ogre Leader
+  ; Set up new commander descriptions for Hierophant and Ogre Leader since they provide only one additional War Machine now
   !!SN:E7827723/(CALLCONV_CDECL)/20/1/42338084;
   !!SN:Bv1/d/z155008;
   !!SN:E7827723/(CALLCONV_CDECL)/25/1/42338084;
   !!SN:Bv1/d/z155009;
 
-!?FU(OnSetupBattlefield)&i^wog_55_enabled^/i^wog_isSiege^<>(TRUE)/i^wog_isCreatureBankBattle^<>(TRUE);
-  !!FU(WOG_55_PlaceCatapult):P(BATTLE_LEFT);
-  !!FU(WOG_55_PlaceCatapult)&i^battle_hero_1^>(NO_HERO):P(BATTLE_RIGHT);
+!?FU(OnSetupBattlefield)&i^wog_55_enabled^;
+  ; Set up Catapult in non-siege and non-CB battles
+  !!if&i^wog_isSiege^<>(TRUE)/i^wog_isCreatureBankBattle^<>(TRUE);
+    !!FU(WOG_55_PlaceCatapult):P(BATTLE_LEFT);
+    !!FU(WOG_55_PlaceCatapult)&i^battle_hero_1^>(NO_HERO):P(BATTLE_RIGHT);
+  !!en;
 
   ; Restrain the quantities of First Aid Tents and Ballistas to max of 2 (1 from War Machine artifact, the other from Commander)
   !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
@@ -116,10 +116,15 @@ ZVSE2
     !!BU:S(MON_CATAPULT)/(skillBall)/(catPos)/(side)/-1/(FALSE); [add catapults]
     !!BU:E(catPos)/?(catStack:y);
 
-    !!HEi^battle_hero_%(side)^:F?(att:y)/?(def:y)/d/d;
-    !!VR(maxDamage:y):S(att) +(def) +10;
-    !!BM(catStack):T(MON_NOT_USED_2) U1/5 U2/(maxDamage) H250 B(skillBall);
-    !!BM(catStack):F132201;
+    !!if&(catStack)>(NO_STACK);
+      !!BM(catStack):T?(type:y);
+
+      !!if&(type)=(MON_CATAPULT);
+        !!HEi^battle_hero_%(side)^:F?(att:y)/?(def:y)/d/d;
+        !!VR(maxDamage:y):S(att) +(def) +10;
+        !!BM(catStack):T(MON_NOT_USED_2) U1/5 U2/(maxDamage) H250 B(skillBall);
+      !!en;
+    !!en;
   !!en;
 
 
@@ -297,8 +302,9 @@ ZVSE2
   !!en;
 
 
+; Critical hit for Catapult in non-siege and non-CB battles
 ** start of pre-damage trigger
-!?FU(OnStackToStackDamage)&i^wog_55_enabled^/i^WOG_55_BattleIsSiege^=0/x7/x9=0; [x7 = shot, x9 = 0.. only for real damage]
+!?FU(OnStackToStackDamage)&i^wog_55_enabled^/i^wog_isSiege^=0/x7/x9=0; [x7 = shot, x9 = 0.. only for real damage]
 !#VA(attacker:x) (defender:x);
 
   !!BM(attacker):T?(monType:y);
@@ -307,17 +313,20 @@ ZVSE2
     !!BM(attacker):N?(catNum:y);
     !!BM(defender):N?(defNum:y);
 
-    !!VR(rnd:y):R0/0/99;                [random roll - 1% chance per level]
+    !!VR(random:y):R0/0/99;             [random roll - 1% chance per level]
     !!VR(oldFlag:y):S1;
 
     !!HEi^battle_hero_%i(battle_acting_side)^:Ed/?(heroLvl:y)/1;
-    !!VR(chance:y):S(heroLvl) *(catNum) :2; [multiply level by catapults and reduced by 2]
-    !!VR(chance)&(chance)>74:S74;       [cap at 75%]
-    !!if&(chance)>(rnd);
-      
-      !!BM(defender):V82 Nd-1;          [show animation, set target quantity and reduce target quantity by 1]
-      !!VR(logMsg:z):Sz155007;
-      !!MM:S(logMsg);
+    !!VR(chance:y):S(heroLvl) *(catNum) :2 F0/74; [multiply level by catapults and divide by 2, capped at 75%]
+
+    !!if&(chance)>(random);
+      !!BM(defender):Nd-1;              [show animation, set target quantity and reduce target quantity by 1]
+
+      !!if&i^battle_isQuick^<>(TRUE);
+        !!BM(defender):V82;
+        !!VR(logMsg:z):Sz155007;
+        !!MM:S(logMsg);
+      !!en;
     !!en;
   !!en;
 ** end of pre-damage trigger **

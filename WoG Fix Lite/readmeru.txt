@@ -18,3 +18,4 @@ Astaroth
 Fcst1
 Raistlin
 Grayface
+Dalion

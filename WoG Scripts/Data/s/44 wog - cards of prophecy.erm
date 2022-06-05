@@ -26,64 +26,78 @@ ZVSE2
 ** 1.7 changes: message deactivation code added.
 ** 1.7.1 changes: compatibility with quick combat added
 ** 1.7.2 changes: compatibility with Mysticism II added
+** 2.0 changes: fix multiple compatibility issues with popular ERA mods by Archer30
 
-!#UN:P34/?i^wog_34_enable^; [is script active?]
+; This script must be executed ealier than Mysticism II or any other script changes hero primary skills (as it should not interfere external PS)
 
-!?FU(OnAfterErmInited)&i^wog_34_enable^; [set new artifact text if active]
+
+!#UN:P34/?i^wog_34_enabled^; [is script active?]
+
+!?FU(OnAfterErmInstructions)&i^wog_34_enabled^; [set new artifact text if active]
 !!SN:H^art^/(ART_CARDS_OF_PROPHECY)/1/?(desc:z);
 !!SN:H^art^/(ART_CARDS_OF_PROPHECY)/1/^%(desc)%T(wog.34.desc)^;
 
-!?FU(OnBeforeBattle)&i^wog_34_enable^/-998; [start of battle]
-!!BA:E?v1331; [check for multiplayer]
-!!FU13502&v1331=0:P; [if it isn't, then continue with the rest of the script.
+!?FU(OnBeforeBattle)&i^wog_34_enabled^/i^battle_isNetwork^<>(TRUE); [start of battle]
+!!HEi^battle_hero_0^:A2/(ART_CARDS_OF_PROPHECY)/?(has:y)/?i^wog_34_cardEquipped_0^; [Attacker has Cards of Prophecy equipped?]
+!!FU(WOG_34_SetCardBonuses)&i^wog_34_cardEquipped_0^:Pi^battle_hero_0^; [if any equipped, generate bonus for attacker]
 
-!?FU13502; [start of main script]
-!!BA:H0/?v1300; [get attacking hero's number]
-!!BA:H1/?v1310; [get defending hero's number]
+!!if&i^battle_hero_1^>(NO_HERO);
+  !!HEi^battle_hero_1^:A2/(ART_CARDS_OF_PROPHECY)/?(has)/?i^wog_34_cardEquipped_1^; [Defender has Cards of Prophecy equipped?]
+  !!FU(WOG_34_SetCardBonuses)&i^wog_34_cardEquipped_1^:Pi^battle_hero_1^; [if any equipped, generate bonus for defender]
+!!en;
 
-!!HEv1300:A2/(ART_CARDS_OF_PROPHECY)/0/?v1301; [Attacker has Cards of Prophecy equipped?]
-!!HEv1310&v1310>(NO_HERO):A2/(ART_CARDS_OF_PROPHECY)/0/?v1311; [Defender has Cards of Prophecy equipped?]
-!!FU13500&v1301>0/v1300>=0:Pv1300; [if any equipped, generate bonus for attacker]
-!!FU13500&v1311>0/v1310>=0:Pv1310; [if any equipped, generate bonus for defender]
-
-!?FU(OnAfterBattle)&i^wog_34_enable^/v1331=0/-998; [end of battle]
-!!FU13507&v1301>0/v1300>=0/v1307<=34:Pv1300/v1308/v1309/v1328/v1326/v1306/v1307/v1307; [undo attacker bonus]
-!!FU13507&v1311>0/v1310>=0/v1317<=34:Pv1310/v1318/v1319/v1320/v1327/v1316/v1317/v1317; [undo defender bonus]
+!?FU(OnAfterBattle)&i^wog_34_enabled^/i^battle_isNetwork^<>(TRUE); [end of battle]
+!!FU(WOG_34_RestoreCardBonuses)&i^wog_34_cardEquipped_0^/v1307<=34:Pi^battle_hero_0^/v1308/v1309/v1328/v1326; [undo attacker bonus]
+!!FU(WOG_34_RestoreCardBonuses)&i^wog_34_cardEquipped_1^/i^battle_hero_1^>(NO_HERO)/v1317<=34:Pi^battle_hero_1^/v1318/v1319/v1320/v1327; [undo defender bonus]
 
 ** function to generate card and apply its effect
 
-!?FU13500;
+!?FU(WOG_34_SetCardBonuses);
 !!UN:J2/?y11; [get difficulty level of map]
-!!VRv1307&x1=v1300/y11=4:T0/0/34; [attacker's card, if impossible]
-!!VRv1317&x1=v1310/y11=4:T0/0/34; [defender's card, if impossible]
-!!VRv1307&x1=v1300/y11=3:T0/0/33; [attacker's card, if difficult]
-!!VRv1317&x1=v1310/y11=3:T0/0/33; [defender's card, if difficult]
-!!VRv1307&x1=v1300/y11=2:T0/0/29; [attacker's card, if hard]
-!!VRv1317&x1=v1310/y11=2:T0/0/29; [defender's card, if hard]
-!!VRv1307&x1=v1300/y11<=1:T0/0/25; [attacker's card, if easy or normal]
-!!VRv1317&x1=v1310/y11<=1:T0/0/25; [defender's card, if easy or normal]
 
-!!HEx1&x1=v1300:F?v1302/?v1303/?v1304/?v1305; [if attacker, get hero statistics]
-!!HEx1&x1=v1310:F?v1312/?v1313/?v1314/?v1315; [if defender, get hero statistics]
+!!if&x1=i^battle_hero_0^;
+  !!VRv1307&y11=4:R0/0/34; [attacker's card, if impossible]
+  !!VRv1307&y11=3:R0/0/33; [attacker's card, if difficult]
+  !!VRv1307&y11=2:R0/0/29; [attacker's card, if hard]
+  !!VRv1307&y11<=1:R0/0/25; [attacker's card, if easy or normal]
+
+  !!VRv1307:S25;                     [test]
+
+  !!HEx1:F?v1302/?v1303/?v1304/?v1305; [if attacker, get hero statistics]
+!!el&x1=i^battle_hero_1^;
+  !!VRv1317&y11=4:R0/0/34; [defender's card, if impossible]
+  !!VRv1317&y11=3:R0/0/33; [defender's card, if difficult]
+  !!VRv1317&y11=2:R0/0/29; [defender's card, if hard]
+  !!VRv1317&y11<=1:R0/0/25; [defender's card, if easy or normal]
+  !!HEx1:F?v1312/?v1313/?v1314/?v1315; [if defender, get hero statistics]
+!!en;
+
 !!HEx1:I?y10; [get hero's current spell points]
-!!VRv1306&x1=v1300:Sy10; [if attacker's hero, store current spell points]
-!!VRv1316&x1=v1310:Sy10; [if defender's hero, store current spell points]
-!!FU13505&x1=v1300:Px1/v1302/v1303/v1304/v1305/v1306/v1307; [if v1.3 card]
-!!FU13505&x1=v1310:Px1/v1312/v1313/v1314/v1315/v1316/v1317; [if v1.3 card]
+
+!!if&x1=i^battle_hero_0^;
+  !!FU(WOG_34_ManageCardBonuses):Px1/v1302/v1303/v1304/v1305/v1307/(BATTLE_LEFT); [if v1.3 card]
+!!el&x1=i^battle_hero_1^;
+  !!FU(WOG_34_ManageCardBonuses):Px1/v1312/v1313/v1314/v1315/v1317/(BATTLE_RIGHT); [if v1.3 card]
+!!en;
+
 !!HEx1:F?y1/?y2/?y3/?y4; [get modified stats]
-!!VRv1308&x1=v1300:Sv1302-y1; [get -attacker's attack change]
-!!VRv1309&x1=v1300:Sv1303-y2; [get -attacker's defnese change]
-!!VRv1328&x1=v1300:Sv1304-y3; [get -attacker's spell power change]
-!!VRv1326&x1=v1300:Sv1305-y4; [get -attacker's knowledge change]
-!!VRv1318&x1=v1310:Sv1302-y1; [get -defender's attack change]
-!!VRv1319&x1=v1310:Sv1303-y2; [get -defender's defnese change]
-!!VRv1320&x1=v1310:Sv1304-y3; [get -defender's spell power change]
-!!VRv1327&x1=v1310:Sv1305-y4; [get -defender's knowledge change]
-** End of function 13500
+
+!!if&x1=i^battle_hero_0^;
+  !!VRv1308:Sv1302-y1; [get -attacker's attack change]
+  !!VRv1309:Sv1303-y2; [get -attacker's defnese change]
+  !!VRv1328:Sv1304-y3; [get -attacker's spell power change]
+  !!VRv1326:Sv1305-y4; [get -attacker's knowledge change]
+!!el&x1=i^battle_hero_1^;
+  !!VRv1318:Sv1302-y1; [get -defender's attack change]
+  !!VRv1319:Sv1303-y2; [get -defender's defnese change]
+  !!VRv1320:Sv1304-y3; [get -defender's spell power change]
+  !!VRv1327:Sv1305-y4; [get -defender's knowledge change]
+!!en;
+** End of function (WOG_34_SetCardBonuses)
 
 ** Function to apply bonus, if it is a statistic bonus.
 
-!?FU13504;
+!?FU(WOG_34_SetNewStats);
 !!VRx2:%4; [calculate hero primary stat]
 !!VRx3::4; [calculate bonus to stat]
 !!VRx3&x3=0:S-1; [if random bonus is 0, then make it -1]
@@ -93,12 +107,10 @@ ZVSE2
 !!VRy4&x2=3:Sx3; [If primary stat is 3, set y4 to bonus]
 !!HEx1:Fdy1/dy2/dy3/dy4; [add bonus]
 ** [Check if Cards of Prophecy Start of Battle messages are disabled]
-!!OW:C?y10; [Current player: y10]
-!!VRy10:+1; [Add 1 to y10]
-!!FU13501:Py10; [Convert to bit number: y-100]
-!!VRy11:Sv3323; [Set y11 to v3323]
-!!VRy11:&y-100; [Check if message is disabled for current player: y4]
-!!FU&y11=y-100:E; [Exit Function if messages are disabled for current player]
+!!OW:C?y10;                             [Current player: y10]
+!!VRy30:S1 Sd<<y10;                     [Convert to bit number]
+!!VRy31:Sv3323 &y30;                    [Check if message is disabled for current player]
+!!FU&y31=y30:E;                         [Exit Function if messages are disabled for current player]
 
 ** z1, z2, and z3 contain words needed for the start-of-battle message.
 ** Chaeck script34.ert for actual text.
@@ -122,136 +134,178 @@ ZVSE2
 !!HEx1:O?y6; [get hero owner]
 !!OW:Iy6/?y7; [is owner an AI?- if so, message will not display]
 !!VRz9:Sz134018;
-!!IF&y7=0:Q1/8/(ART_CARDS_OF_PROPHECY)/1^%Z9^;
-** end of function 13504
+!!IF&y7=0:Q1/(PIC_TYPE_ART)/(ART_CARDS_OF_PROPHECY)/(MSG_TYPE_MES)^%Z9^;
+** end of function (WOG_34_SetNewStats)
 
 ** version 1.3 cards
-!?FU13505;
-!!VRy1:Sx2+x3+x4+x5-2; [set y1 to sum of hero stats, less 2]
-!!VRy1&x7=32|x7=33:+1; [add one to y1 if Hermit or Magician card]
-!!VRy11&x7=26:Sx2+2:3; [if inverted Emperor, set y11 to attack/3]
-!!VRy11&x7=27:Sx3+2:3; [if inverted Empress, set y11 to defense/3]
-!!VRy11&x7=28:Sx4+1:3; [if inverted Magician, set y11 to power/3]
-!!VRy11&x7=29:Sx5+1:3; [if inverted Hermit, set y11 to knowledge/3]
-!!HEx1&x7=30:Fy1/0/1/1; [If Emperor, shift all primary stats to attack]
-!!HEx1&x7=31:F0/y1/1/1; [If Empress, shift all primary stats to defense]
-!!HEx1&x7=33:F0/0/y1/1; [If Magician, shift all primary stats to power]
-!!HEx1&x7=32:F0/0/1/y1; [If Hermit, shift all primary stats to knowledge]
-!!HEx1&x7=26:F0/dy11/dy11/dy11; [If inv.Emperor, shift attack to other stats]
-!!HEx1&x7=27:Fdy11/0/dy11/dy11; [If inv.Empress, shift defense to other stats]
-!!HEx1&x7=28:Fdy11/dy11/1/dy11; [If inv.Magician, shift power to other stats]
-!!HEx1&x7=29:Fdy11/dy11/dy11/1; [If inv.Hermit, shift knowledge to other stats]
-!!HEx1&x7=34:F0/0/1/1; [If Inverted Fool, remove all primary stats]
-!!VRy1&x7=24:+5;
-!!VRy1&x7=24::4; [Get average of primary stats, rounded up, if Hierophant]
-!!HEx1&x7=24:Fy1/y1/y1/y1; [If Hierophant, balance statistics]
-!!FU13506&x7=25:Px1/x2/x3/x4/x5; [If Fool, call stat shuffle routine]
-!!FU13504&x7<=23:Px1/x7/x7; [if card is an original bonus/penalty]
-!!HEx1&x1=v1300:F?v1322/?v1323/?v1324/?v1325; [store new stats for attacker]
-!!HEx1&x1=v1310:F?v1332/?v1333/?v1334/?v1335; [store new stats for defender]
-!!VRy5&x1=v1300:Sv1325-x5; [set y5 to change in knowledge skill (attacker)]
-!!VRy5&x1=v1310:Sv1335-x5; [set y5 to change in knowledge skill (defender)]
-!!HEx1:S24/?y9; [get level of hero's intelligence skill. Specialty is ignored]
-!!VRy5&y9=0:*10; [spell points with no intelligence]
-!!VRy5&y9=1:*25; [spell points with basic intelligence, part 1]
-!!VRy5&y9=1::2; [spell points with basic intelligence, part 2]
-!!VRy5&y9=2:*15; [spell points with advanced intelligence]
-!!VRy5&y9=3:*20; [spell points with expert intelligence]
-!!HEx1:Idy5; [add/subtract bonus/penalty spell points]
-!!HEx1:I?y13;
-!!HEx1&y13<0:I0; [if spell points are less than 0, set them to 0]
-!!VRv1329&x1=v1300:Sy5; [store spell point change for attacker]
-!!VRv1330&x1=v1310:Sy5; [store spell point change for defender]
+!?FU(WOG_34_ManageCardBonuses);
+!#VA(hero:x) (atk:x) (def:x) (pwr:x) (knl:x) (cardType:x) (side:x);
 
-!!HEx1:B0/?z1; [get hero name]
-!!HEx1:O?y6; [get hero owner]
+!!VRy1:S(atk)+(def)+(pwr)+(knl)-2; [set y1 to sum of hero stats, less 2]
+!!VRy1&(cardType)=32|(cardType)=33:+1; [add one to y1 if Hermit or Magician card]
+!!VRy11&(cardType)=26:S(atk)+2:3; [if inverted Emperor, set y11 to attack/3]
+!!VRy11&(cardType)=27:S(def)+2:3; [if inverted Empress, set y11 to defense/3]
+!!VRy11&(cardType)=28:S(pwr)+1:3; [if inverted Magician, set y11 to power/3]
+!!VRy11&(cardType)=29:S(knl)+1:3; [if inverted Hermit, set y11 to knowledge/3]
+!!HE(hero)&(cardType)=30:Fy1/0/1/1; [If Emperor, shift all primary stats to attack]
+!!HE(hero)&(cardType)=31:F0/y1/1/1; [If Empress, shift all primary stats to defense]
+!!HE(hero)&(cardType)=33:F0/0/y1/1; [If Magician, shift all primary stats to power]
+!!HE(hero)&(cardType)=32:F0/0/1/y1; [If Hermit, shift all primary stats to knowledge]
+!!HE(hero)&(cardType)=26:F0/dy11/dy11/dy11; [If inv.Emperor, shift attack to other stats]
+!!HE(hero)&(cardType)=27:Fdy11/0/dy11/dy11; [If inv.Empress, shift defense to other stats]
+!!HE(hero)&(cardType)=28:Fdy11/dy11/1/dy11; [If inv.Magician, shift power to other stats]
+!!HE(hero)&(cardType)=29:Fdy11/dy11/dy11/1; [If inv.Hermit, shift knowledge to other stats]
+!!HE(hero)&(cardType)=34:F0/0/1/1; [If Inverted Fool, remove all primary stats]
+!!VRy1&(cardType)=24:+5;
+!!VRy1&(cardType)=24::4; [Get average of primary stats, rounded up, if Hierophant]
+!!HE(hero)&(cardType)=24:Fy1/y1/y1/y1; [If Hierophant, balance statistics]
+
+!!FU(WOG_34_ShuffleFoolStats)&(cardType)=25:P(hero)/(atk)/(def)/(pwr)/(knl); [If Fool, call stat shuffle routine]
+!!FU(WOG_34_SetNewStats)&(cardType)<=23:P(hero)/(cardType)/(cardType); [if card is an original bonus/penalty]
+
+!!if&(side)=(BATTLE_LEFT);
+  !!HE(hero):F?v1322/?v1323/?v1324/?v1325; [store new stats for attacker]
+  !!VRy5:Sv1325-(knl); [set y5 to change in knowledge skill (attacker)]
+!!el;
+  !!HE(hero):F?v1332/?v1333/?v1334/?v1335; [store new stats for defender]
+  !!VRy5:Sv1335-(knl); [set y5 to change in knowledge skill (defender)]
+!!en;
+
+!!FU(WOG_34_GetSpellPointsDifference):P(hero)/y5/?y5;
+
+; add/subtract bonus/penalty spell points
+; If the mana change is negative, prevent it to be greater tha nthe current mana
+!!if&y5<0;
+  !!HE(hero):I?y13/1;
+  !!VRy5:Sy5 *-1 F0/y13;
+  !!VRy5:Sy5 *-1;
+  !!HE(hero):Idy5;
+!!en;
+
+; store spell point change
+!!FU(WOG_34_SetSpellPointsChanged):P(side)/y5;
+
+!!HE(hero):B0/?z1; [get hero name]
+!!HE(hero):O?y6; [get hero owner]
 !!OW:Iy6/?y7; [is owner an AI?- if so, message will not display]
 
 ** [Check if Cards of Prophecy Start of Battle messages are disabled]
-!!OW:C?y10; [Current player: y10]
-!!VRy10:+1; [Add 1 to y10]
-!!FU13501:Py10; [Convert to bit number: y-100]
-!!VRy11:Sv3323; [Set y11 to v3323]
-!!VRy11:&y-100; [Check if message is disabled for current player: y4]
-!!FU&y11=y-100:E; [Exit Function if messages are disabled for current player]
+!!OW:C?y10;                             [Current player: y10]
+!!VRy30:S1 Sd<<y10;                     [Convert to bit number]
+!!VRy31:Sv3323 &y30;                    [Check if message is disabled for current player]
+!!FU&y31=y30:E;                         [Exit Function if messages are disabled for current player]
 
 !!if&y7=0;
-  !!VRz9&x7=30:Sz134019;
-  !!VRz9&x7=31:Sz134020;
-  !!VRz9&x7=33:Sz134021;
-  !!VRz9&x7=32:Sz134022;
-  !!VRz9&x7=24:Sz134023;
-  !!VRz9&x7=34:Sz134024;
-  !!VRz9&x7=25:Sz134025;
-  !!VRz9&x7=26:Sz134026;
-  !!VRz9&x7=27:Sz134027;
-  !!VRz9&x7=28:Sz134028;
-  !!VRz9&x7=29:Sz134029;
-  !!IFz9&x7>=24/x7<=34:Q1/8/(ART_CARDS_OF_PROPHECY)/1^%Z9^;
+  !!VRz9&(cardType)=30:Sz134019;
+  !!VRz9&(cardType)=31:Sz134020;
+  !!VRz9&(cardType)=33:Sz134021;
+  !!VRz9&(cardType)=32:Sz134022;
+  !!VRz9&(cardType)=24:Sz134023;
+  !!VRz9&(cardType)=34:Sz134024;
+  !!VRz9&(cardType)=25:Sz134025;
+  !!VRz9&(cardType)=26:Sz134026;
+  !!VRz9&(cardType)=27:Sz134027;
+  !!VRz9&(cardType)=28:Sz134028;
+  !!VRz9&(cardType)=29:Sz134029;
+  !!IFz9&(cardType)>=24/(cardType)<=34:Q1/8/(ART_CARDS_OF_PROPHECY)/1^%Z9^;
 !!en;
-** end of function 13505
+** end of function (WOG_34_ManageCardBonuses)
 
 ** Fool stat-shuffle
-!?FU13506;
-!!VRy1:T0/0/22; [choose a permutation. next 23 lines sets it. No-change permutation is not allowed]
-!!HEx1&y1=0:Fx2/x3/x5/x4;
-!!HEx1&y1=1:Fx2/x4/x3/x5;
-!!HEx1&y1=2:Fx2/x4/x5/x3;
-!!HEx1&y1=3:Fx2/x5/x3/x4;
-!!HEx1&y1=4:Fx2/x5/x4/x3;
-!!HEx1&y1=5:Fx3/x2/x4/x5;
-!!HEx1&y1=6:Fx3/x2/x5/x4;
-!!HEx1&y1=7:Fx3/x4/x2/x5;
-!!HEx1&y1=8:Fx3/x4/x5/x2;
-!!HEx1&y1=9:Fx3/x5/x2/x4;
-!!HEx1&y1=10:Fx3/x5/x4/x2;
-!!HEx1&y1=11:Fx4/x2/x3/x5;
-!!HEx1&y1=12:Fx4/x2/x5/x3;
-!!HEx1&y1=13:Fx4/x3/x2/x5;
-!!HEx1&y1=14:Fx4/x3/x5/x2;
-!!HEx1&y1=15:Fx4/x5/x2/x3;
-!!HEx1&y1=16:Fx4/x5/x3/x2;
-!!HEx1&y1=17:Fx5/x2/x3/x4;
-!!HEx1&y1=18:Fx5/x2/x4/x3;
-!!HEx1&y1=19:Fx5/x3/x2/x4;
-!!HEx1&y1=20:Fx5/x3/x4/x2;
-!!HEx1&y1=21:Fx5/x4/x2/x3;
-!!HEx1&y1=22:Fx5/x4/x3/x2;
-** end of function 13506
+!?FU(WOG_34_ShuffleFoolStats);
+!#VA(hero:x) (atk:x) (def:x) (pwr:x) (knl:x);
+
+; choose a permutation. next 23 lines sets it. No-change permutation is not allowed
+!!FU(NewIntArray):P3/?(foolVariants:y);
+!!SN:V(foolVariants)/0/0/1/2;
+
+; Power and Knowledge must be higher than 1
+!!FU(Array_Push)&(atk)>=1:P(foolVariants)/3/4/5/6/7/8/9/10;
+!!FU(Array_Push)&(def)>=1:P(foolVariants)/11/12/13/14/15/16/17/18;
+!!FU(Array_Push)&(atk)>=1/(def)>=1:P(foolVariants)/19/20/21/22;
+
+; Get random result from the array
+!!SN:M(foolVariants)/?(size:y);
+!!VR(lastIndex:y):S(size) -1;
+!!VR(random:y):R0/0/(lastIndex);
+!!SN:M(foolVariants)/(random)/?(variant:y);
+
+; Set new stats with the result
+!!HE(hero)&(variant)=0:F(atk)/(def)/(knl)/(pwr);
+!!HE(hero)&(variant)=1:F(def)/(atk)/(pwr)/(knl);
+!!HE(hero)&(variant)=2:F(def)/(atk)/(knl)/(pwr);
+
+!!HE(hero)&(variant)=3:F(def)/(pwr)/(atk)/(knl);
+!!HE(hero)&(variant)=4:F(def)/(pwr)/(knl)/(atk);
+!!HE(hero)&(variant)=5:F(def)/(knl)/(atk)/(pwr);
+!!HE(hero)&(variant)=6:F(def)/(knl)/(pwr)/(atk);
+!!HE(hero)&(variant)=7:F(pwr)/(def)/(atk)/(knl);
+!!HE(hero)&(variant)=8:F(pwr)/(def)/(knl)/(atk);
+!!HE(hero)&(variant)=9:F(knl)/(def)/(atk)/(pwr);
+!!HE(hero)&(variant)=10:F(knl)/(def)/(pwr)/(atk);
+
+!!HE(hero)&(variant)=11:F(atk)/(pwr)/(def)/(knl);
+!!HE(hero)&(variant)=12:F(atk)/(pwr)/(knl)/(def);
+!!HE(hero)&(variant)=13:F(atk)/(knl)/(def)/(pwr);
+!!HE(hero)&(variant)=14:F(atk)/(knl)/(pwr)/(def);
+!!HE(hero)&(variant)=15:F(pwr)/(atk)/(def)/(knl);
+!!HE(hero)&(variant)=16:F(pwr)/(atk)/(knl)/(def);
+!!HE(hero)&(variant)=17:F(knl)/(atk)/(def)/(pwr);
+!!HE(hero)&(variant)=18:F(knl)/(atk)/(pwr)/(def);
+
+!!HE(hero)&(variant)=19:F(pwr)/(knl)/(atk)/(def);
+!!HE(hero)&(variant)=20:F(pwr)/(knl)/(def)/(atk);
+!!HE(hero)&(variant)=21:F(knl)/(pwr)/(atk)/(def);
+!!HE(hero)&(variant)=22:F(knl)/(pwr)/(def)/(atk);
+** end of function (WOG_34_ShuffleFoolStats)
 
 ** undo routine
-!?FU13507;
-!!HEx1:Fdx2/dx3/dx4/dx5; [restore hero stats to pre-battle levels]
-!!HEx1:I?y1; [get final spell-point total]
-!!HEx1:O?y2; [get hero owner]
-!!VRy2:+3393; [get quick combat variable number]
-!!UN:P233/?y3; [get quick-combat option status]
-!!UN:P207/?y4; [get mysticism (reduced spell points) status]
-!!HEv1300&x1=v1310/y4<>0:S8/?y6; [get attacker's mysticism skill for defender]
-!!HEv1310&v1310>=0/x1=v1300/y4<>0:S8/?y6; [get defender's mysticism skill for attacker]
-!!VRy5:S100; [mysticism percentage if inactive or no skill]
+!?FU(WOG_34_RestoreCardBonuses);
+!#VA(hero:x) (atkChg:x) (defChg:x) (pwrChg:x) (knlChg:x);
 
-!!if&y4=1;
-  !!VRy5&y6=1:S80; {mysticism percentage for basic]
-  !!VRy5&y6=2:S70; {mysticism percentage for advanced]
-  !!VRy5&y6>2:S60; {mysticism percentage for expert or overloaded]
+!!HE(hero):Fd(atkChg)/d(defChg)/d(pwrChg)/d(knlChg); [restore hero stats to pre-battle levels]
+
+!!if&(hero)=i^battle_hero_0^;
+  !!VR(side:y):S(BATTLE_LEFT);
+!!el;
+  !!VR(side:y):S(BATTLE_RIGHT);
 !!en;
 
-!!VRvy2&y3=0:S0; [if quick-combat script is not active, set option status to 0]
-!!VRy1&x1=v1300/v1329<0:-v1329; [remove penalty to attacker's spell points]
-!!VRy1&x1=v1310/v1330<0:-v1330; [remove penalty to defender's spell points]
-!!VRy7:Sx6*y5:100; [set y7 to mysticism-modified starting spell points]
-!!VRy1:F0/y7; [if spell points are more than before battle (but after mysticism modifications), reduce to that level]
-!!HEx1&vy2<>4:Iy1; [set hero spell points to correct total, unless quick-combat already did so]
+!!HE(hero):Id-i^wog_34_manaDiff_%(side)^;
+
+; Fix negative mana
+!!HE(hero):I?(mana:y)/1;
+!!HE(hero)&(mana)<0:I0;
 **end of 1.3 undo function
 
-** bit conversion routine
-!?FU13501;
-!!VRv1336:S1; [set default bit value to 1]
-!!DO13503/2/x1/1:P; [if bit number is 2 or larger, multiply by 2^n-1]
-!!VRy-100:Sv1336; [get converted bit value]
-!!VRy-100&x1=0:S0; [if bit number is 0, set value to 0]
+** version 2.0 cards
+!?FU(WOG_34_GetSpellPointsDifference);
+!#VA(hero:x) (knowledge:x) (result:x);
 
-!?FU13503;
-!!VRv1336:*2; [double bit value]
-** end of bit conversion.
+!!HE(hero):Z?(heroStruct:y);            [get hero structure]
+!!SN:E5131040/(CALLCONV_THISCALL_FLOAT)/(heroStruct); [get Intelligence power]
+!!VRe1:*10 *(knowledge);                [e1, emul to get max SP]
+!!VR(result):Se1;                       [return max hero SP]
+
+!?FU(WOG_34_SetSpellPointsChanged);
+!#VA(side:x) (manaChg:x);
+
+; Set default mana difference variable
+!!VRi^wog_34_manaDiff_%(side)^:S(manaChg);
+
+; Change the value if Mysticism II is enabled plus mana changed was greater than zero
+!!UN:P207/?(mysticismII:y);
+
+!!if&(mysticismII)/(manaChg)>0;
+  !!VR(enemySide:y):S(side) X1;
+
+  !!if&i^battle_hero_%(enemySide)^>(NO_HERO);
+    !!HEi^battle_hero_%(enemySide)^:S(SKILL_MYSTICISM)/?(mysticismLv:y);
+
+    !!if&(mysticismLv)>(SKILL_NOT_LEARNED);
+      !!FU(WOG_207_GetManaPercentage):P(mysticismLv)/?(percent:y);
+      !!VRi^wog_34_manaDiff_%(side)^:S(manaChg) *(percent) :100;
+    !!en;
+  !!en;
+!!en;
+**end of 2.0 function
