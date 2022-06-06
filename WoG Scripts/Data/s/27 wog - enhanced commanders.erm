@@ -5,6 +5,7 @@ ZVSE2
 ** By Arstahd
 ** Version: 1.11        updated October 2 2004
 ** Updated September 15, 2004 to change local y variables in instructions to v variables
+** Version 1.2 updated June 2022 by Archer30
 ** Special Thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 ** Note: Commander Enhancements are disabled for network human-to-human battles.
@@ -104,13 +105,13 @@ ZVSE2
 
 
 ** start of battlefield trigger **
-!?BF&i^wog_51_enabled^/-998;                               [continue if enabled]
+!?FU(OnSetupBattlefield)&i^wog_51_enabled^/-998;  [continue if enabled]
 !!DO(WOG_51_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
 ** end of battlefield trigger
 
 
 ** start of battle turn trigger **
-!?BR&i^wog_51_enabled^/-998;                               [continue if enabled]
+!?FU(OnBattleRound)&i^wog_51_enabled^/-998;       [continue if enabled]
 !!DO(WOG_51_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
 ** end of battle turn trigger **
 
@@ -336,23 +337,48 @@ ZVSE2
 ** end of object trigger
 
 
+** update Magic Mirror and Poison skill icons and descriptions **
+!?FU(OnStartOrLoad)&i^wog_51_enabled^;
+; New skill iconcs
+!!SN:R^dlg_npc2.def:0_86.png^/^Data\s\pic\mirror2d.png^;
+!!SN:R^dlg_npc2.def:0_87.png^/^Data\s\pic\mirror2l.png^;
+!!SN:R^dlg_npc2.def:0_96.png^/^Data\s\pic\poison2d.png^;
+!!SN:R^dlg_npc2.def:0_97.png^/^Data\s\pic\poison2l.png^;
+
+!!SN:R^dlg_npc3.def:0_15.png^/^Data\s\pic\mirror3l.png^;
+!!SN:R^dlg_npc3.def:0_16.png^/^Data\s\pic\mirror3d.png^;
+!!SN:R^dlg_npc3.def:0_25.png^/^Data\s\pic\poison3l.png^;
+!!SN:R^dlg_npc3.def:0_26.png^/^Data\s\pic\poison3d.png^;
+
+; New descriptions
+; Magic Mirror basic desc
+!!SN:E7827723/(CALLCONV_CDECL)/38/1/42338084;
+!!SN:Bv1/d/z151032;
+!!SN:E7827723/(CALLCONV_CDECL)/74/1/42338084;
+!!SN:Bv1/d/z151033;
+; Poison basic desc
+!!SN:E7827723/(CALLCONV_CDECL)/50/1/42338084;
+!!SN:Bv1/d/z151034;
+!!SN:E7827723/(CALLCONV_CDECL)/86/1/42338084;
+!!SN:Bv1/d/z151035;
+** end of update Magic Mirror and Poison skill icons and descriptions**
+
+
 ** raise commander skill limit with particular options enabled **
-!?FU(OnStartOrLoad);                    [Allow commander to learn 6 skills if Commander Witch Huts is enabled, or Enhanced Commander + Power Stones are enabed]
-!!UN:C7770979/1/?y30;
-!!UN:P3/?y1;                            [Check Commander option]
-!!FU|y1=1/y30<>4:E;
+; Allow commander to learn 6 skills if Commander Witch Huts is enabled, or Enhanced Commander + Power Stones are enabed
+!?FU(OnStartOrLoad);
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y);
 
-!!VRy4:S0;
-!!UN:P196/?y2;                          [Check Power Stones]
-!!UN:P66/?y3;                           [Check Commander Witch Huts]
-!!VRy4&i^wog_51_enabled^/y2=1:S1;
-!!VRy4&y3=1:S1;
-!!FU&y4<>1:E;
+!!if&(commanderDisabled)<>(TRUE);
+  !!VR(enable6Skills:y):S(FALSE);
+  !!UN:P66/?(commWitchHuts:y) P196/?(powerStones:y);
+  !!VR(enable6Skills)&i^wog_51_enabled^/(powerStones):S(TRUE);
+  !!VR(enable6Skills)&(commWitchHuts):S(TRUE);
 
-!!UN:C7770979/1/6;
-!!SN:W^commander_Skill_Changed^/1;
+  !!UN:C7770979/(UNC_INT8)/?i^wog_comm_patch^;
+  !!UN:C7770979/(UNC_INT8)/6;
+!!en;
 
-!?FU(OnGameLeave);                      [restore commander skill limit]
-!!SN:W^commander_Skill_Changed^/?y1;
-!!UN&y1>0:C7770979/1/4;
-** end **
+!?FU(OnGameLeave);
+!!UN&i^wog_comm_patch^>0:C7770979/(UNC_INT8)/i^wog_comm_patch^;
+** end of commander skill limit **
