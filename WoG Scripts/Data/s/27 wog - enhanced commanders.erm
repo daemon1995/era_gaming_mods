@@ -10,10 +10,6 @@ ZVSE2
 
 ** Note: Commander Enhancements are disabled for network human-to-human battles.
 
-** Variables used:
-** V variables:    v7080-v7092, i^wog_51_enabled^
-** Timers used:  none
-
 *** commander stats are calculated to new formulae
 **    display will be inaccurate when hero levels up, re-open commander screen to update stat display, ignore skill descriptions
 **    attack          - base 5 + 1/2 x level - skill adds +25%,+50%,+75%,+100%,+125%
@@ -55,6 +51,8 @@ ZVSE2
 **    sapphire - gives either +1 to Defense skill or Hit Points skill
 **    emerald - gives either +1 to Magic skill or Speed skill
 
+; Note: Currently Death Stare and Fire Shield from Random Heroes won't be replaced as Random Heroes executes later than this script
+
 
 ** initialization
 !?FU(OnAfterErmInstructions);
@@ -64,7 +62,7 @@ ZVSE2
 !!FU&i^wog_51_enabled^<>(TRUE):E;
 
 ; Set up basic stuff
-!!CO-2&i^wog_51_enabled^:P1;                               [enable custom primary skill control]
+!!CO-2&i^wog_51_enabled^:P1;                     [enable custom primary skill control]
 !!UN:B6/1;                                       [set new chest 6 to advanced setting (disabled)]
 
 ** make commanders alive
@@ -76,32 +74,34 @@ ZVSE2
 
 
 ** commander screen open trigger
-!?CO0&i^wog_51_enabled^;                                   [check if Enhanced Commanders is enabled]
-!!HE-1:N?y1;                                     [get hero's (commander's) number]
-!!FU(WOG_51_NPC_EditStats):Py1;
+!?FU(OnOpenCommanderWindow)&i^wog_51_enabled^;   [check if Enhanced Commanders is enabled]
+!!FU(WOG_51_NPC_EditStats):P(CURRENT_HERO);
 ** end of hero level trigger
 
+
 ** start of pre-battle trigger **
-!?BA0&i^wog_51_enabled^/-998;                              [check if Enhanced Commanders is enabled]
-!!VRv7080:C-1/-1/-1/-1/-1/-1/-1/-1/-1/-1;        [initialize variables]
-!!BA:H0/?y1 H1/?y2;                              [get heroes (commanders) number]
+!?FU(OnBeforeBattle)&i^wog_51_enabled^/-998;     [check if Enhanced Commanders is enabled]
+!!VRi^wog_52_deathStare_0^:S-1;
+!!VRi^wog_52_deathStare_1^:S-1;
+!!VRi^wog_52_fireShield_0^:S-1;
+!!VRi^wog_52_fireShield_1^:S-1;
 
-!!FU(WOG_51_NPC_EditStats)&y1>-1:Py1;             [modify commander stats - attacker]
-!!FU(WOG_51_NPC_EditStats)&y2>-1:Py2;             [modify commander stats - defender]
+!!FU(WOG_51_NPC_EditStats):Pi^battle_hero_0^;            [modify commander stats - attacker]
+!!COi^battle_hero_0^:B0/?(monFlags:y);                     [check skill bits, get type - attacker]
+!!VRi^wog_52_deathStare_0^:S(monFlags) &4096;                       [check death stare bit - attacker]
+!!COi^battle_hero_0^&i^wog_52_deathStare_0^<>0:B1/12/0;                 [remove death stare - attacker]
+!!VRi^wog_52_fireShield_0^:S(monFlags) &128;                        [check fire shield bit - attacker]
+!!COi^battle_hero_0^&i^wog_52_fireShield_0^<>0:B1/7/0;                   [remove fire shield - attacker]
 
-!!COy1&y1>-1:B0/?y3 T?v7088;                     [check skill bits, get type - attacker]
-!!COy2&y2>-1:B0/?y4 T?v7089;                     [check skill bits, get type - defender]
-
-!!VRv7084&y1>-1:Sy3 &4096;                       [check death stare bit - attacker]
-!!VRv7086&y2>-1:Sy4 &4096;                       [check death stare bit - defender]
-!!COy1&y1>-1/v7084=4096:B1/12/0;                 [remove death stare - attacker]
-!!COy2&y2>-1/v7086=4096:B1/12/0;                 [remove death stare - defender]
-!!VRv7090&y1>-1:Sy3 &128;                        [check fire shield bit - attacker]
-!!VRv7091&y2>-1:Sy4 &128;                        [check fire shield bit - defender]
-!!COy1&y1>-1/v7090=128:B1/7/0;                   [remove fire shield - attacker]
-!!COy2&y2>-1/v7091=128:B1/7/0;                   [remove fire shield - defender]
+!!if&i^battle_hero_1^>(NO_HERO);
+  !!FU(WOG_51_NPC_EditStats):Pi^battle_hero_1^;            [modify commander stats - defender]
+  !!COi^battle_hero_1^:B0/?(monFlags:y);                     [check skill bits, get type - defender]
+  !!VRi^wog_52_deathStare_1^:S(monFlags) &4096;                       [check death stare bit - defender]
+  !!COi^battle_hero_1^&i^wog_52_deathStare_1^<>0:B1/12/0;                 [remove death stare - defender]
+  !!VRi^wog_52_fireShield_1^:S(monFlags) &128;                        [check fire shield bit - defender]
+  !!COi^battle_hero_1^&i^wog_52_fireShield_1^<>0:B1/7/0;                   [remove fire shield - defender]
+!!en;
 ** end of pre-battle trigger
-
 
 
 ** start of battlefield trigger **
@@ -116,72 +116,77 @@ ZVSE2
 ** end of battle turn trigger **
 
 
-** pre-action trigger for death stare**
-!?BG0&i^wog_51_enabled^/-998;
-!!BA:H0/?y1 H1/?y2;                              [get heroes (commanders) number]
-!!COy1&y1>-1/v7084=4096:B1/12/0;                 [remove death stare - attacker]
-!!COy2&y2>-1/v7086=4096:B1/12/0;                 [remove death stare - defender]
-
-
+; Manage spell casting
 ** pre-action trigger **
-!?BG&i^wog_51_enabled^/-998;                               [continue if enabled]
-!!BG:N?v7080 A?v7081 E?v7082;                    [get current stack, action type, destination stack]
-!!BMv7082&v7082>-1:R?v7087;                      [get retaliations of target creature stack]
-!!BMv7080&v7080>-1:T?v7092;                      [get type of current creature stack]
+!?FU(OnBeforeBattleAction)&i^wog_51_enabled^/-998; [continue if enabled]
+!!BG:A?(action:y);                      [get current stack, action type, destination stack]
+!!BMi^battle_acting_stack^:T?(type:y);    [get type of current creature stack]
 
-
-!!VRy-2&v7092=182/v7081=10:S66 T3;               [if astral spirit is casting - choose random elemental spell]
-!!BMv7080&v7092=182/v7081=10:U4/y-2;             [if astral spirit is casting - change spell to summon elemental]
-!!VRy-2&v7092=191/v7081=10:S66 T3;               [if astral spirit is casting - choose random elemental spell]
-!!BMv7080&v7092=191/v7081=10:U4/y-2;             [if astral spirit is casting - change spell to summon elemental]
+!!if&(action)=(BATTLE_ACTION_MONSTER_CAST);
+  !!if|(type)=(MON_ASTRAL_SPIRIT_A)/(type)=(MON_ASTRAL_SPIRIT_D);
+    !!VR(random:y):R0/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL); [if astral spirit is casting - choose random elemental spell]
+    !!BMi^battle_acting_stack^:U4/(random); [if astral spirit is casting - change spell to summon elemental]
+  !!en;
+!!en;
 
 ** end of pre-action trigger **
 
+
 ** post-action trigger **
-!?BG1&i^wog_51_enabled^/-998;                              [continue if enabled]
-!!BMv7080&v7080>-1:T?y-3 I?y-4;                  [get acting monster type and side]
-!!FU(WOG_51_NPC_CastSpell)&y-3>=174/y-3<=191/v7081=10:Pv7080/y-3;  [cast extra spell if commander cast]
+!?FU(OnBattleActionEnd)&i^wog_51_enabled^/-998; [continue if enabled]
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_MONSTER_CAST):E;
 
-!!BMv7082&v7082>-1:F?y-7 P?y-8;                  [get target's flags, position]
+!!BMi^battle_acting_stack^:T?(type:y);  [get acting monster type and side]
+!!FU(WOG_51_NPC_CastSpell)&(type)>=(MON_COMMANDER_FIRST_A)/(type)<=(MON_COMMANDER_LAST_D):P; [cast extra spell if commander cast]
 
-!!VRy-10&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7084=4096/y-4=0:S0 R99;          [random roll - attacker]
-!!VRy-11&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7086=4096/y-4=1:S0 R99;          [random roll - defender]
-!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7084=4096/y-4=0/y-10<50:Py-7/y-8;  [50% cast poison if commander with death stare attacked or shot - attacker]
-!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081>=6/v7081<=7/v7086=4096/y-4=1/y-11<50:Py-7/y-8;  [50% cast poison if commander with death stare attacked or shot - defender]
+; astral spirit - revert spell to counterstrike for easier casting of elementals
+!!BMi^battle_acting_stack^|(type)=(MON_ASTRAL_SPIRIT_A)/(type)=(MON_ASTRAL_SPIRIT_D):U4/(SPELL_COUNTERSTRIKE);
 
-!!BMv7080&v7092=182/v7081=10:U4/58;              [astral spirit - revert spell to counterstrike]
-!!BMv7080&v7092=191/v7081=10:U4/58;              [astral spirit - revert spell to counterstrike]
+!?FU(OnAfterBattleAction)&i^wog_51_enabled^/-998;
+!!BU:C?(battleIsEnded:y);               [check for end of battle]
 
-**  retaliation attack
-!!BMv7082&v7082>-1:T?y-3 I?y-4 P?y-5;            [get target monster type, side, position]
-!!BU&v7082>-1:Ey-5/?y-6;                         [check if target is still alive]
+!!if&(battleIsEnded);
+  !!COi^battle_hero_0^&i^wog_52_deathStare_0^<>0:B1/12/1; [restore death stare - attacker]
+  !!COi^battle_hero_0^&i^wog_52_fireShield_0^<>0:B1/7/1; [restore fire shield - attacker]
 
-!!BMv7080&v7080>-1:F?y-9;                        [get flags of attacking creature stack]
-!!VRy-9&v7080>-1:&65536;                         [check for no retaliation]
-
-!!BMv7080&v7080>-1:F?y-7 P?y-8;                                             [get acting creature's flags, position]
-!!VRy-10&y-3>=174/y-3<=191/v7081=6/v7084=4096/v7087>0/y-4=0/y-6>-1/y-9=0:S0 R99;          [random roll - attacker]
-!!VRy-11&y-3>=174/y-3<=191/v7081=6/v7086=4096/v7087>0/y-4=1/y-6>-1/y-9=0:S0 R99;          [random roll - defender]
-!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081=6/v7084=4096/v7087>0/y-4=0/y-10<50/y-6>-1/y-9=0:Py-7/y-8;  [50% cast poison if commander with death stare retaliates - attacker]
-!!FU(WOG_51_NPC_CastPoison)&y-3>=174/y-3<=191/v7081=6/v7086=4096/v7087>0/y-4=1/y-11<50/y-6>-1/y-9=0:Py-7/y-8;  [50% cast poison if commander with death stare retaliates - defender]
-
-!!BA:H0/?y1 H1/?y2;                              [get heroes (commanders) number]
-!!BU:C?y3;                                       [check for end of battle]
-!!COy1&y1>-1/v7084=4096/y3=1:B1/12/1;            [restore death stare - attacker]
-!!COy2&y2>-1/v7086=4096/y3=1:B1/12/1;            [restore death stare - defender]
-!!COy1&y1>-1/v7090=128/y3=1:B1/7/1;              [restore fire shield - attacker]
-!!COy2&y2>-1/v7091=128/y3=1:B1/7/1;              [restore fire shield - defender]
+  !!if&i^battle_hero_1^>(NO_HERO);
+    !!COi^battle_hero_1^&i^wog_52_deathStare_1^<>0:B1/12/1; [restore death stare - defender]
+    !!COi^battle_hero_1^&i^wog_52_fireShield_1^<>0:B1/7/1; [restore fire shield - defender]
+  !!en;
+!!en;
 ** end of post-action trigger **
 
 
+** post-attck tigger (hook) **
+!?FU(WOG_OnAfterAttack);
+!#VA(atkStack:x) (defStack:x);
+
+!!BM(atkStack):T?(atkType:y) I?(side:y);
+
+!!if&(atkType)>=(MON_COMMANDER_FIRST_A)/(atkType)<=(MON_COMMANDER_LAST_D)/i^wog_52_deathStare_%(side)^<>0;
+  !!BM(defStack):N?(num:y) F?(monFlags:y) P?(pos:y);
+  !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);
+
+  !!if&(num)>0/(isAlive);
+    !!VR(random:y):R0/0/99;             [random roll]
+    !!BM(atkStack)&(random)<50:C71/(pos)/1/3/1; [if target is alive have current stack cast poison]
+  !!en;
+!!en;
+** end of post-attck tigger (hook) **
+
+
+; Change the type of commander hero bought to match the type of town unless choose Commanders script is enabled
 ** post-buy commander trigger **
-!?CO2&i^wog_51_enabled^;                                   [continue if enabled and "choose commanders" isn't]
-!!UN:P186/?y1;                                   [check if choose Commanders is enabled in WoGify Options]
-!!FU&y1=1:E;                                     [exit if choose Commanders script is enabled]
-!!HE-1:P?y1/?y2/?y3;                             [get hero position]
-!!OBy1/y2/y3:U?y4;                               [get subtype of town]
-!!CO-1:Ty4;                                      [set commander type]
+!?FU(OnAfterCommanderBuy)&i^wog_51_enabled^; [continue if enabled and "choose commanders" isn't]
+!!UN:P186/?(chooseComm:y);              [check if choose Commanders is enabled in WoGify Options]
+!!FU&(chooseComm):E;                    [exit if choose Commanders script is enabled]
+
+!!HE(CURRENT_HERO):P?(x:y)/?(y:y)/?(z:y);[get hero position]
+!!OB(x)/(y)/(z):U?(type:y);             [get subtype of town]
+!!CO(CURRENT_HERO)&(type)<=(TOWN_LAST_WOG):T(type); [set commander type]
 ** end of post-buy commander trigger **
+
 
 ** function to edit commander stats
 !?FU(WOG_51_NPC_EditStats);
@@ -252,53 +257,58 @@ ZVSE2
 ** end of function
 
 
-** function to cast spell    x1=acting stack x2=type x3=rank x4=power x5=no retaliation flag
-* x1=spell x2=position x3=rank x4=power
+** function to cast spell
 !?FU(WOG_51_NPC_CastSpell);
-!!BMv7082&v7082>-1:P?y8;                         [get position of target creature stack]
-!!HE-1:N?y5;                                     [get hero's (commander's) number]
-!!COy5:P4/?y6;                                   [get power]
+; Get the real power of the commander
+!!BG:H?(hero:y) E?(targetStack:y);
+!!CO(hero):S4/?(magicLv:y) T?(type:y);
+!!VR(power:y):S(magicLv) *3 +3;           [Does Soul Eater and Astral Spirit cast with positive power?]
 
-!!BMv7082|x2=174/x2=183:V36 M41/y6/2;            [apply bless - paladin]
-!!BMv7082|x2=175/x2=184:V20 M49/y6/2;            [apply mirth - heirophant]
-!!BMv7082|x2=177/x2=186:V51 M43/y6/2;            [apply bloodlust - succubus]
-!!BMv7082|x2=179/x2=188:V54 M46/y6/2;            [apply stoneskin - brute]
-!!BMv7082|x2=180/x2=189:V7 M58/y6/2;             [apply counterstrike - ogre leader]
-!!BMv7082|x2=181/x2=190:V18 M51/y6/2;            [apply fortune - shaman]
+; Add an additional spell to casting
+!!BM(targetStack)&(type)=(TOWN_CASTLE):V36 M(SPELL_BLESS)/(power)/(SKILL_ADVANCED); [apply bless - paladin]
+!!BM(targetStack)&(type)=(TOWN_RAMPART):V20 M(SPELL_MIRTH)/(power)/(SKILL_ADVANCED); [apply mirth - heirophant]
+!!BM(targetStack)&(type)=(TOWN_INFERNO):V51 M(SPELL_BLOODLUST)/(power)/(SKILL_ADVANCED); [apply bloodlust - succubus]
+!!BM(targetStack)&(type)=(TOWN_DUNGEON):V54 M(SPELL_STONE_SKIN)/(power)/(SKILL_ADVANCED); [apply stoneskin - brute]
+!!BM(targetStack)&(type)=(TOWN_STRONGHOLD):V7 M(SPELL_COUNTERSTRIKE)/(power)/(SKILL_ADVANCED); [apply counterstrike - ogre leader]
+!!BM(targetStack)&(type)=(TOWN_FORTRESS):V18 M(SPELL_FORTUNE)/(power)/(SKILL_ADVANCED); [apply fortune - shaman]
+
 ** end of function **
 
-** function to cast poison   x1=flags   x2=position
-!?FU(WOG_51_NPC_CastPoison);
-!!VRx1:&16;                                      [just check alive bit]
-!!BG:N?y1;                                       [get current stack #]
-!!BMy1&x1=16:C71/x2/1/3/1;                       [if target is alive have current stack cast poison]
-** end of function **
 
 ** function to cycle through all stacks  (give magic mirror)
 !?FU(WOG_51_NPC_SetMagicMirror);
-!!BMx16:T?y1;                                          [get stack's monster type]
-!!BMx16&y1>=174/y1<=191/v7090=128/x16<21:M36/100/3;    [give commander with fire shield exp. magic mirror - attacker]
-!!BMx16&y1>=174/y1<=191/v7091=128/x16>20:M36/100/3;    [give commander with fire shield exp. magic mirror - defender]
+!!BMx16:T?(type:y);                                          [get stack's monster type]
 
-!!BMx16&y1=176/v997=0:U4/48;                     [temple guardian - change spell to prayer (on turn 0)]
-!!BMx16&y1=185/v997=0:U4/48;                     [temple guardian - change spell to prayer (on turn 0)]
+!!if&(type)>=(MON_COMMANDER_FIRST_A)/(type)<=(MON_COMMANDER_LAST_D);
+  !!BMx16&i^wog_52_fireShield_0^<>0/x16<=(BATTLE_ATTACKER_STACK_LAST):M(SPELL_MAGIC_MIRROR)/100/(SKILL_EXPERT);    [give commander with fire shield exp. magic mirror - attacker]
+  !!BMx16&i^wog_52_fireShield_1^<>0/x16>=(BATTLE_DEFENDER_STACK_FIRST):M(SPELL_MAGIC_MIRROR)/100/(SKILL_EXPERT);    [give commander with fire shield exp. magic mirror - defender]
+!!en;
+
+!!if&i^battle_round^=0;
+  !!BMx16|(type)=(MON_TEMPLE_GUARDIAN_A)/(type)=(MON_TEMPLE_GUARDIAN_D):U4/(SPELL_PRAYER); [temple guardian - change spell to prayer (on turn 0)]
+!!en;
 
 ** end of function **
-
 
 
 **  object trigger - opal
 !?OB101/7&i^wog_51_enabled^;
-!!HE-1:N?y1;
-!!VRy4:S0 T14;                                   [random roll 0-14]
+!!VRy4:R0/0/14;                                   [random roll 0-14]
 !!VRy2:S151000 +y4;                              [apply string]
 !!VRz2:Szy2;                                     [set string]
 
-!!COy1:B1/y4/?y5 D?y6 E?y7 N?z1;                 [check if commander has skill, is alive, is enabled, get name]
-!!OB998&y6=0/y7=1:T101 U6;                       [set to chest 6 if commander is alive, enabled]
-!!COy1&y5=0/y6=0/y7=1:B1/y4/1;                   [give skill if commander doesn't have it and is alive, enabled]
+!!CO(CURRENT_HERO):B1/y4/?y5 D?y6 E?y7 N?z1;                 [check if commander has skill, is alive, is enabled, get name]
 
-!!IF&y5=0/y6=0/y7=1/1000:M1/z151015;
+!!if&y6=0/y7=1;
+  !!OB998:T101 U6;                       [set to chest 6 if commander is alive, enabled]
+
+  !!if&y5=0;
+    !!CO(CURRENT_HERO):B1/y4/1;                   [give skill if commander doesn't have it and is alive, enabled]
+
+    !!IF&1000:M1/z151015;
+  !!en;
+!!en;
+
 !!IF&y5=1/1000:M1/z151016;
 ** end of object trigger
 
@@ -320,35 +330,46 @@ ZVSE2
 * x1 - first  sskill
 * x2 - second sskill
 * x3 - ert string id
-!!HE-1:N?y1;
+!!HE(CURRENT_HERO):N?y1;
 !!COy1:Sx1/?y2 Sx2/?y3 D?y6 E?y7 N?z1;
-!!OB998&y6=0/y7=1:T101 U6;
-!!COy1&y6=0/y7=1/y2>y3:Sx2/d1;
-!!COy1&y6=0/y7=1/y2<y3:Sx1/d1;
-!!VRy4&y6=0/y7=1/y2=y3/y2<5:S0 T99;
-!!COy1&y6=0/y7=1/y2=y3/y2<5/y4<50:Sx2/d1;
-!!COy1&y6=0/y7=1/y2=y3/y2<5/y4>49:Sx1/d1;
 
-!!IF&1000/y6=0/y2>y3:M1/zx3;
-!!IF&1000/y6=0/y2<y3:M1/zx4;
-!!IF&1000/y6=0/y2=y3/y2<5/y4<50:M1/zx5;
-!!IF&1000/y6=0/y2=y3/y2<5/y4>49:M1/zx6;
-!!IF&1000/y6=0/y2=y3/y2>4:M1/zx7;
+!!if&y6=0;
+  !!if&y7=1;
+    !!OB998:T101 U6;
+    !!COy1&y2>y3:Sx2/d1;
+    !!COy1&y2<y3:Sx1/d1;
+    !!VRy4&y2=y3/y2<5:R0/0/99;
+    !!COy1&y2=y3/y2<5/y4<50:Sx2/d1;
+    !!COy1&y2=y3/y2<5/y4>49:Sx1/d1;
+  !!en;
+
+  !!if&1000;
+    !!IF&y2>y3:M1/zx3;
+    !!IF&y2<y3:M1/zx4;
+    !!IF&y2=y3/y2<5/y4<50:M1/zx5;
+    !!IF&y2=y3/y2<5/y4>49:M1/zx6;
+    !!IF&y2=y3/y2>4:M1/zx7;
+  !!en;
+!!en;
 ** end of object trigger
 
 
 ** update Magic Mirror and Poison skill icons and descriptions **
 !?FU(OnStartOrLoad)&i^wog_51_enabled^;
 ; New skill iconcs
-!!SN:R^dlg_npc2.def:0_86.png^/^Data\s\pic\mirror2d.png^;
-!!SN:R^dlg_npc2.def:0_87.png^/^Data\s\pic\mirror2l.png^;
-!!SN:R^dlg_npc2.def:0_96.png^/^Data\s\pic\poison2d.png^;
-!!SN:R^dlg_npc2.def:0_97.png^/^Data\s\pic\poison2l.png^;
+!!SN:F^PcxPngExists^/^mirror2d.pcx^;
 
-!!SN:R^dlg_npc3.def:0_15.png^/^Data\s\pic\mirror3l.png^;
-!!SN:R^dlg_npc3.def:0_16.png^/^Data\s\pic\mirror3d.png^;
-!!SN:R^dlg_npc3.def:0_25.png^/^Data\s\pic\poison3l.png^;
-!!SN:R^dlg_npc3.def:0_26.png^/^Data\s\pic\poison3d.png^;
+!!if&v1;
+  !!SN:R^dlg_npc2.def:0_86.png^/^mirror2d.png^;
+  !!SN:R^dlg_npc2.def:0_87.png^/^mirror2l.png^;
+  !!SN:R^dlg_npc2.def:0_96.png^/^poison2d.png^;
+  !!SN:R^dlg_npc2.def:0_97.png^/^poison2l.png^;
+
+  !!SN:R^dlg_npc3.def:0_15.png^/^mirror3l.png^;
+  !!SN:R^dlg_npc3.def:0_16.png^/^mirror3d.png^;
+  !!SN:R^dlg_npc3.def:0_25.png^/^poison3l.png^;
+  !!SN:R^dlg_npc3.def:0_26.png^/^poison3d.png^;
+!!en;
 
 ; New descriptions
 ; Magic Mirror basic desc

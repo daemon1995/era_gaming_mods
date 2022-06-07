@@ -48,6 +48,33 @@ ZVSE2
 !!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);               [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 !!SN:E(address)/1/4526215/(WOG_OnChangeWindowByResources);     [trigger WHEN counts what pic to display in status window for pickuped resource]
 
+!!SN:E(address)/1/4462998/(WOG_HOOK_AfterAttackMainFunc);      [Trigger after melee attack, before retaliation]
+!!SN:E(address)/1/4455129/(WOG_HOOK_AfterAttackMainFunc);      [Trigger after shooting]
+
+!?FU(WOG_HOOK_AfterAttackMainFunc);
+!!SN:X?(hook:y);
+!!UN:C(hook)/0/(UNC_INT)/?(stackStrucktDefender:y);   
+!!UN:C(hook)/4/(UNC_INT)/?(stackStrucktAttacker:y);  
+!!BG:A?(typeAttack:y);
+!!VR(stackAttackerID:y):S(NO_MON); 
+!!VR(stackDefenderID:y):S(NO_MON); 
+
+!!if&(stackStrucktAttacker)<>(FALSE); 
+  !!UN:C(stackStrucktAttacker)/244/(UNC_INT)/?(attakerSide:y); 
+  !!UN:C(stackStrucktAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
+  !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide); 
+!!en;
+
+!!if&(stackStrucktDefender)<>(FALSE);
+  !!UN:C(stackStrucktDefender)/244/(UNC_INT)/?(defenderSide:y);
+  !!UN:C(stackStrucktDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
+  !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
+!!en;
+
+!!FU(WOG_OnAfterMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
+!!FU(WOG_OnAfterShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+!!FU(WOG_OnAfterAttack)|(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK)/(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+
 ; ******************************************************************************
 
 ; GET SPECIAL VARIABLES
@@ -55,7 +82,7 @@ ZVSE2
 
 ; get count heroes
 !!UN:C4960750/(SIZEOF_UINT32)/?(heroesCount:y); 
-!!VRi^ERM_HEROES_COUNT^:S(heroesCount); 
+!!VRi^ERM_HEROWOG_COUNT^:S(heroesCount); 
 
 ; get count creatures
 !!UN:C5093986/(SIZEOF_UINT32)/?(countCreatures:y); 
@@ -533,28 +560,34 @@ The game may fall at any time.^;
 
 ; Creature bank battle - currently used in Enhanced War Machines
 !?OB(OBJ_CREATURE_BANK);
-!!VRi^wog_isCreatureBankBattle^:S(TRUE);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
 !?OB(OBJ_DERELICT_SHIP);
-!!VRi^wog_isCreatureBankBattle^:S(TRUE);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
 !?OB(OBJ_DRAGON_UTOPIA);
-!!VRi^wog_isCreatureBankBattle^:S(TRUE);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
 !?OB(OBJ_NEW_WOG_OBJECTS);
-!!VRi^wog_isCreatureBankBattle^:S(TRUE);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
 !?OB(OBJ_CRYPT);
-!!VRi^wog_isCreatureBankBattle^:S(TRUE);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
 !?OB(OBJ_SHIPWRECK);
-!!VRi^wog_isCreatureBankBattle^:S(TRUE);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
+
+!?OB(OBJ_CREATURE_GENERATOR_1);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
+
+!?OB(OBJ_CREATURE_GENERATOR_4);
+!!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
 !?FU(OnAfterBattleUniversal);
-!!VRi^wog_isCreatureBankBattle^:S(FALSE);
+!!VRi^wog_isDwellOrCBBattle^:S(FALSE);
 
 !?FU(OnAfterLoadGame);
-!!VRi^wog_isCreatureBankBattle^:S(FALSE);
+!!VRi^wog_isDwellOrCBBattle^:S(FALSE);
 
 ; Battle variables
 !?FU(OnBeforeBattleUniversal);
