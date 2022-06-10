@@ -8,6 +8,30 @@ ZVSE2
 ; Ultimate trainer for ERA
 
 
+; Initialization
+!?FU(OnAfterErmInstructions);
+!!FU(GetMaxMonsterId):P?(lastMon:y);
+!!VR(extraMons:y):S(lastMon) -(MON_LAST_WOG);
+
+!!VR(monLastPage:y):S(extraMons) :16 +10;
+!!VR(oneExtraPage:y):S(extraMons) %16;
+!!VR(monLastPage)&(oneExtraPage):+1;
+
+!!VRi^trainer_monTableLastPage^:S(monLastPage);
+
+!!FU(GetMaxArtifactId):P?(lastArt:y);
+!!VR(extraArts:y):S(lastArt) -(ART_LAST_WOG);
+
+!!VR(artLastPage:y):S(extraArts) :15 +10;
+!!VR(oneExtraPage):S(extraMons) %15;
+!!VR(artLastPage)&(oneExtraPage):+1;
+
+!!VRi^trainer_artTableLastPage^:S(artLastPage);
+
+****************************************************************
+**** Adv Map - Press F2 to edit any hero by name or hero ID ****
+****************************************************************
+
 !?FU(OnKeyPressed_AdvMap)&i^key^=(KEY_F2)/999;
 !#VA(key:x) (preventDefault:x) (isDown:x);
 
@@ -1280,7 +1304,7 @@ ZVSE2
 !!en;
 
 // Get primary skill cap of the game
-!?FU(trainer_GetPrimSkillCap);          [by Archer30]
+!?FU(trainer_GetPrimSkillCap);
 !!UN:C4342141/1/?(value:y);
 !!SN:F^PluginExists^/^prima^;
 
@@ -1352,14 +1376,16 @@ ZVSE2
   !!en;
 !!en;
 
+
 ; Monster Table
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=8/i^mouse_action^=(MOUSE_LMB_RELEASED); [browse towns/right button]
 !!VR(page:y):Si^trainer_monTablePage^;
+!!VR(pageMax:y):Si^trainer_monTableLastPage^;
 
-!!if&(page)<10;
+!!if&(page)<(pageMax);
   !!VR(pageNew:y):S(page) +1;
 ; if last page, return to the first
-!!el&(page)=10;
+!!el&(page)=(pageMax);
   !!VR(pageNew):S(TOWN_CASTLE);
 !!en;
 
@@ -1368,10 +1394,11 @@ ZVSE2
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=7/i^mouse_action^=(MOUSE_LMB_RELEASED); [browse towns/left button]
 !!VR(page:y):Si^trainer_monTablePage^;
+!!VR(pageMax:y):Si^trainer_monTableLastPage^;
 
 ; if first page, jump to the last
 !!if&(page)=(TOWN_CASTLE);
-  !!VR(pageNew:y):S10;
+  !!VR(pageNew:y):S(pageMax);
 !!el&(page)>(TOWN_CASTLE);
   !!VR(pageNew):S(page) -1;
 !!en;
@@ -1385,19 +1412,43 @@ ZVSE2
 !!if&(page)<=(TOWN_LAST_WOG);
   !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF)/^itpt.def^;
   !!VR(townCadre:y):S(page) *2;
-!!el(page)>(TOWN_LAST_WOG);
+  !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF_FRAME)/(townCadre);
+!!el&(page)>(TOWN_LAST_WOG);
   ; Neutrals
   !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF)/^trn_neut.def^;
   !!VR(townCadre):S(page) -1 %2;
+  !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF_FRAME)/(townCadre);
 !!en;
 
-!!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF_FRAME)/(townCadre);
+!!FU(GetMaxMonsterId):P?(lastMon:y);    [XE for new creatures]
 
 !!re (item:y)/83/98;
   !!FU(trainer_GetMonOfTheTable):P(page)/(item)/?(mon:y);
   !!VR(monCad:y):S(mon) +2;
+  !!VR(monCad)&(mon)>(lastMon):S0;      [if (mon) exceed limit, set cr img to background.XE]
   !!DL(TRAINER_MAIN_DLG):A(item)/(DLG_CMD_SET_DEF_FRAME)/(monCad);
+
+  !!if&i^Zulu_Mod_On^;
+    !!VR(monFromZuluTown:y):S(FALSE);   [XE for zulu creatures]
+    !!VR(monFromZuluTown)&i^XCr_Start^<=(mon)/(mon)<=i^XCr_End^:S(TRUE); [mark as from zulu town.XE]
+  !!en;
 !!en;
+
+*[In zulu town mod, conflux creatures are neutral, and zulu town uses conflux town id.XE]
+!!if&i^Zulu_Mod_On^;
+  !!if&(page)=(TOWN_CONFLUX);
+    !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF)/^trn_neut.def^;
+    !!VR(townCadre):S1;
+    !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF_FRAME)/(townCadre);
+  !!en;
+
+  !!if&(monFromZuluTown);
+    !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF)/^itpt.def^;
+    !!VR(townCadre):S(TOWN_CONFLUX) *2;
+    !!DL(TRAINER_MAIN_DLG):A3/(DLG_CMD_SET_DEF_FRAME)/(townCadre);
+  !!en;
+!!en;
+
 
 !?FU(trainer_GetMonOfTheTable);
 !#VA(page:x) (item:x) (mon:x);
@@ -1458,16 +1509,25 @@ ZVSE2
   !!VR(mon)&(item)=0:S(MON_GHOST);
   !!VR(mon)&(item)>=1/(item)<=10:S(MON_FIRE_MESSENGER) +(item) -1;
   !!VR(mon)&(item)>=11/(item)<=15:S(MON_SYLVAN_CENTAUR) +(item) -11;
+  
+!!el&(page)>=11;
+
+  !!VR(mon):S(page)-11*16+197+(item);[(mon) may exceed the max creature id. Will be handled outside the function. XE]
+
 !!en;
 
 ; Right-click to Show info of the creature
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=83/i^mouse_item^<=98/i^mouse_action^=(MOUSE_RMB_PRESSED);
 !!FU(trainer_GetMonOfTheTable):Pi^trainer_monTablePage^/i^mouse_item^/?(mon:y);
-!!FU(trainer_ShowMonDlgRecruiting):P(mon)/(TRUE);
+!!FU(GetMaxMonsterId):P?(lastMon:y);    [Handle if (mon) is off limit. XE]
+!!FU(trainer_ShowMonDlgRecruiting)&(mon)<=(lastMon):P(mon)/(TRUE);
 
 ; Click to transfer creatures from the table to the hero's army
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>82/i^mouse_item^<99/i^mouse_action^=(MOUSE_LMB_PRESSED);
 !!FU(trainer_GetMonOfTheTable):Pi^trainer_monTablePage^/i^mouse_item^/?(mon:y);
+!!FU(GetMaxMonsterId):P?(lastMon:y);    [Handle if (mon) is off limit. XE]
+!!FU&(mon)>(lastMon):E;                 [Handle if (mon) is off limit. XE]
+
 !!SN:H^monname^/(mon)/0/?z3;
 
 !!VR(hero:y):Si^trainer_hero^;
@@ -3099,7 +3159,7 @@ ZVSE2
     !!OW:C?(player:y);
     !!MT(x)/(y)/(z):N?(obelisk:y);
     !!UN:L(player)/(obelisk)/?(isVisited:y); [delete obelisk only if visited]
-    !!UN&(isVisited)=(TRUE):O(x)/(y)/(z);
+    !!UN&(isVisited):O(x)/(y)/(z);
   !!en;
 
   !!UN|(obj)=(OBJ_TOWN)/(obj)=(OBJ_HERO):R1; [refresh if deleted object was hero or town]
