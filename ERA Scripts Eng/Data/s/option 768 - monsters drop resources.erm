@@ -6,7 +6,7 @@ ZVSE2
 ** Changes rus.  : [Algor] вынос опции в отдельный файл для мода ERA, построчные комментарии
 ** Options       : 768
 ** Dialogs       : -
-** Variables     : v66-v67, v762-v769, v8654
+** Variables     : v762-v769
 ** Tmp variables : -
 ** Timers        : -
 ** Functions     : FU17777
@@ -38,18 +38,20 @@ ZVSE2
 
 ** If a monster stack has an artifact, it won't have any resources.
 
-** v66-v67, v762-v769
+** i^es_768_totalNeutralMonCost^-i^es_768_heroOwnedNeutralMonNum^, v762-v769
 
 
-!#VRv67:S-1; [Initialize v67 to -1]
-!#VRv762:C0/0/0/0/0/0/0/0; [Initialize v762-v769 to 0]
+; Initialization
+!#VRi^es_768_heroOwnedNeutralMonNum^:S-1;
+!#VRi^es_768_monResMsg_enabled^:S(TRUE);
+!#VRv762:C0/0/0/0/0/0/0/0;              [Initialize v762-v769 to 0]
 
-!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=1;  **VR add, click on minimap to reinitialize options display
-!!UN:P768/?(wogOption:y); [Check if script is enabled: y-1]
-!!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
+!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=1; [**VR add, click on minimap to reinitialize options display]
+!!UN:P768/?(wogOption:y);               [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
 ** Check if Monster Stack Resource messages are disabled **
-!!FU&v8654<>99:E; exit if disable options active
+!!FU&i^es_768_monResMsg_enabled^:E; exit if disable options active
 
 !!VRz1:S^%T(es.768.select)^;
 !!VRz2:S^%T(es.768.enable)^;
@@ -58,50 +60,59 @@ ZVSE2
 
 !!CM:R0;
 
-!!VRv8654&v1=1:S1;
+!!VRi^es_768_monResMsg_enabled^&v1=1:S(TRUE);
 
 ** [Give Heroes resources for defeating monster stacks]
 !?OB(OBJ_MONSTER);
+!!UN:P768/?(monRes:y);                  [Check if script is enabled]
+!!FU&(monRes)<>(TRUE):E;                [Exit if script isn't enabled]
+
+; Skip if monster has an artifact
+!!UN:P769/?(neutralArt:y);
+
+!!if&(neutralArt);
+  !!PO998:V0/?(art:y);
+  !!FU&(art)>=(ART_CENTAUR_AXE)/(art)<(ART_META_SPELLBOOK):E;
+!!en;
+
+; Get cost of the neutral monster
+!!VRi^es_768_totalNeutralMonCost^:S0;   [Initialize i^es_768_totalNeutralMonCost^ to 0]
+!!VRi^es_768_heroOwnedNeutralMonNum^:S-1;      [Initialize i^es_768_heroOwnedNeutralMonNum^ to -1]
+!!MO998:G?(num:y);                      [Number of monsters in stack]
+!!OB998:U?(type:y);                     [Type of monster]
+
+!!MA:C(type)/(RES_GOLD)/?(cost:y);      [Gold Cost of 1 Monster]
+!!VRi^es_768_totalNeutralMonCost^:S(cost) *(num); [Total Gold Cost of Monsters: i^es_768_totalNeutralMonCost^]
+!!HE(CURRENT_HERO):N?(hero:y);          [Hero number]
+!!FU(ES_768_GetNumOfMonFromHeroArmy):P(hero)/(type)/?i^es_768_heroOwnedNeutralMonNum^;[Count number of troops of type y-2 in hero's army]
+
+!?FU(OnBeforeBattle)&i^es_768_heroOwnedNeutralMonNum^>=0; [Start of Battle Trigger]
 !!UN:P768/?(wogOption:y); [Check if script is enabled]
 !!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
 
-!!VRv66:S0; [Initialize v66 to 0]
-!!VRv67:S-1; [Initialize v67 to -1]
-!!MO998:G?(num:y); [Number of monsters in stack: y-1]
-!!OB998:U?(type:y); [Type of monster]
-!!PO998:V0/?(hasArt:y);
-!!FU&(hasArt)>0:E; [Skip if monster has an artifact]
-
-!!MA:C(type)/(RES_GOLD)/?(cost:y); [Gold Cost of 1 Monster]
-!!VRv66:S(cost) *(num); [Total Gold Cost of Monsters: v66]
-!!HE(CURRENT_HERO):N?(hero:y); [Hero number]
-!!FU(ES_768_GetNumOfMonFromHeroArmy):P(hero)/(type)/?v67;[Count number of troops of type y-2 in hero's army]
-
-!?FU(OnBeforeBattle)&v67>=0; [Start of Battle Trigger]
-!!UN:P768/?(wogOption:y); [Check if script is enabled]
-!!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
-
 !!OB998:U?(type:y); [Type of monster]
 !!HE(CURRENT_HERO):N?(hero:y); [Hero number]
-!!FU(ES_768_GetNumOfMonFromHeroArmy):P(hero)/(type)/?v67;[Count number of troops of type y-2 in hero's army]
-!!VRv66:*-1; [Set v66 to negative number if there's a battle]
+!!FU(ES_768_GetNumOfMonFromHeroArmy):P(hero)/(type)/?i^es_768_heroOwnedNeutralMonNum^;[Count number of troops of type y-2 in hero's army]
+!!VRi^es_768_totalNeutralMonCost^:*-1; [Set i^es_768_totalNeutralMonCost^ to negative number if there's a battle]
 
-!$OB(OBJ_MONSTER)&v66<>0/v67>=0;
+!$OB(OBJ_MONSTER)&i^es_768_totalNeutralMonCost^<>0/i^es_768_heroOwnedNeutralMonNum^>=0;
 !!UN:P768/?y4; [Check if script is enabled: y-1]
 !!FU&y4<>1:E; [Exit if script isn't enabled]
 
 !!OB998:U?y-1; [Type of monster: y-1]
 !!HE(CURRENT_HERO):N?y-2 O?y-10; [Hero number: y-2, Owner: y-10]
 !!FU(ES_768_GetNumOfMonFromHeroArmy):Py-2/y-1/?y-6;[Count number of troops of type y-2 in hero's army]
-!!VRy-23|y-6>v67/y-10<0:S1; [Set y-23 to 1 if troops joined hero or if hero lost the battle: y-23]
-!!VRv67:S-1; [Reset v67 to -1]
-!!FU&y-23=1:E; [Exit if hero has more of this troop type now (i.e., if they joined) or if hero lost the battle]
 
-!!if&v66>0;
+!!VRy-23:S(FALSE);
+!!VRy-23|y-6>i^es_768_heroOwnedNeutralMonNum^/y-10<=(NO_OWNER):S(TRUE); [Set y-23 to 1 if troops joined hero or if hero lost the battle: y-23]
+!!VRi^es_768_heroOwnedNeutralMonNum^:S-1; [Reset i^es_768_heroOwnedNeutralMonNum^ to -1]
+!!FU&y-23:E; [Exit if hero has more of this troop type now (i.e., if they joined) or if hero lost the battle]
+
+!!if&i^es_768_totalNeutralMonCost^>0;
   !!VRy-3:S1; [Set y-3 to 1 if stack flees]
-!!el&v66<0;
+!!el&i^es_768_totalNeutralMonCost^<0;
   !!VRy-3:S2; [Set y-3 to 2 if stack fought combat]
-  !!VRv66:*-1; [Make v66 a positive value again if it isn't]
+  !!VRi^es_768_totalNeutralMonCost^:*-1; [Make i^es_768_totalNeutralMonCost^ a positive value again if it isn't]
 !!en;
 
 ** [Check for resource specialty hero]
@@ -114,17 +125,17 @@ ZVSE2
 !!VRy-14|y-2=15/y-2=70/y-2=52/y-2=79/y-2=84/y-2=18/y-2=47/y-2=142/y-2=143:S6; [Gold specialists: y-14=6]
 !!VRy-15&y-14>=0/y-14<6:S1 R9; [Random number 1-10 (70% chance of resource specialist finding their resource): y-15]
 ** [Calculate Stack's Treasure]
-!!VRv66&y-3=1::2; [50% if stack flees: v66]
-!!VRy-4:Sv66 :24; [1/24th of stack's recruiting cost is gold: y-4]
-!!VRy-4|y-1=16/y-1=17/y-14=6:Sv66 :18; [1/18th is gold for Dwarves, Battle Dwarves and Gold Resource specialists: y-4]
-!!VRy-4&y-1=116:Sv66 :10; [1/10th is gold for Gold Golems: y-4]
-!!VRy-4|y-1=26/y-1=27/y-1=68/y-1=69/y-1=82/y-1=83:Sv66 :12; [1/12th is gold for Dragons: y-4]
-!!VRy-4|y-1=132/y-1=133/y-1=134/y-1=135/y-1=151/y-1=154/y-1=155/y-1=196:Sv66 :12; [1/12th is gold for Dragons: y-4]
+!!VRi^es_768_totalNeutralMonCost^&y-3=1::2; [50% if stack flees: i^es_768_totalNeutralMonCost^]
+!!VRy-4:Si^es_768_totalNeutralMonCost^ :24; [1/24th of stack's recruiting cost is gold: y-4]
+!!VRy-4|y-1=16/y-1=17/y-14=6:Si^es_768_totalNeutralMonCost^ :18; [1/18th is gold for Dwarves, Battle Dwarves and Gold Resource specialists: y-4]
+!!VRy-4&y-1=116:Si^es_768_totalNeutralMonCost^ :10; [1/10th is gold for Gold Golems: y-4]
+!!VRy-4|y-1=26/y-1=27/y-1=68/y-1=69/y-1=82/y-1=83:Si^es_768_totalNeutralMonCost^ :12; [1/12th is gold for Dragons: y-4]
+!!VRy-4|y-1=132/y-1=133/y-1=134/y-1=135/y-1=151/y-1=154/y-1=155/y-1=196:Si^es_768_totalNeutralMonCost^ :12; [1/12th is gold for Dragons: y-4]
 !!VRy-11:S0 R4; [0=none, 1=wood, 2=ore, 3=precious, 4=wood/ore+precious: y-11]
-!!VRy-11&v66<4000:S0 R3; [0=none, 1=wood, 2=ore, 3=precious: y-11]
-!!VRy-11&v66<2000:S0 R2; [0=none, 1=wood, 2=ore: y-11]
+!!VRy-11&i^es_768_totalNeutralMonCost^<4000:S0 R3; [0=none, 1=wood, 2=ore, 3=precious: y-11]
+!!VRy-11&i^es_768_totalNeutralMonCost^<2000:S0 R2; [0=none, 1=wood, 2=ore: y-11]
 !!VRy-11&y-15>=4:S3; [Resource specialist has 70% chance of finding their specialty resource: y-11]
-!!VRy-4&y-11=0/y-1<>116:Sv66 :18; [If gold only, increase the amount to 1/18th of recruiting cost: y-4]
+!!VRy-4&y-11=0/y-1<>116:Si^es_768_totalNeutralMonCost^ :18; [If gold only, increase the amount to 1/18th of recruiting cost: y-4]
 !!VRy-12&y-11=4:S1 R1; [If wood/ore+precious 1=wood, 2=ore: y-12]
 !!VRy-11|y-1=22/y-1=23:S1; [Dendroids and Dendroid Guards always have wood: y-11]
 !!VRy-11|y-1=32/y-1=33:S2; [Stone and Iron Golems always have ore: y-11]
@@ -135,15 +146,15 @@ ZVSE2
 !!VRy-5&y-11=4/y-12=2:S2; [Set to 2 for Ore: y-5]
 !!VRy-5&y-11=1:S0; [Set to 0 for Wood: y-5]
 !!VRy-5&y-11=2:S2; [Set to 2 for Ore: y-5]
-!!VRy-7:Sv66 :1000; [1/1000 of recruit cost is wood or ore: y-7]
-!!VRy-7&y-7>=5:Sv66 :4000 +4; [1/4000 of recruit cost after first 4 wood/ore: y-7]
-!!VRy-7&y-7>=9:Sv66 :8000 +7; [1/8000 of recruit cost after first 8 wood/ore: y-7]
-!!VRy-7&y-7>=15:Sv66 :16000 +11; [1/16000 of recruit cost after first 14 wood/ore: y-7]
-!!VRy-7&y-7>=20:Sv66 :32000 +16; [1/32000 of recruit cost after first 19 wood/ore: y-7]
-!!VRy-7&y-7>=30:Sv66 :64000 +23; [1/64000 of recruit cost after first 29 wood/ore: y-7]
-!!VRy-7&y-7>=50:Sv66 :128000 +37; [1/128000 of recruit cost after first 49 wood/ore: y-7]
-!!VRy-7&y-7>=100:Sv66 :256000 +69; [1/256000 of recruit cost after first 99 wood/ore: y-7]
-!!VRy-7&y-7>=200:Sv66 :512000 +135; [1/512000 of recruit cost after first 199 wood/ore: y-7]
+!!VRy-7:Si^es_768_totalNeutralMonCost^ :1000; [1/1000 of recruit cost is wood or ore: y-7]
+!!VRy-7&y-7>=5:Si^es_768_totalNeutralMonCost^ :4000 +4; [1/4000 of recruit cost after first 4 wood/ore: y-7]
+!!VRy-7&y-7>=9:Si^es_768_totalNeutralMonCost^ :8000 +7; [1/8000 of recruit cost after first 8 wood/ore: y-7]
+!!VRy-7&y-7>=15:Si^es_768_totalNeutralMonCost^ :16000 +11; [1/16000 of recruit cost after first 14 wood/ore: y-7]
+!!VRy-7&y-7>=20:Si^es_768_totalNeutralMonCost^ :32000 +16; [1/32000 of recruit cost after first 19 wood/ore: y-7]
+!!VRy-7&y-7>=30:Si^es_768_totalNeutralMonCost^ :64000 +23; [1/64000 of recruit cost after first 29 wood/ore: y-7]
+!!VRy-7&y-7>=50:Si^es_768_totalNeutralMonCost^ :128000 +37; [1/128000 of recruit cost after first 49 wood/ore: y-7]
+!!VRy-7&y-7>=100:Si^es_768_totalNeutralMonCost^ :256000 +69; [1/256000 of recruit cost after first 99 wood/ore: y-7]
+!!VRy-7&y-7>=200:Si^es_768_totalNeutralMonCost^ :512000 +135; [1/512000 of recruit cost after first 199 wood/ore: y-7]
 !!VRy-7|y-1=22/y-1=23:Sy-7 *2 +1; [Dendroids and Dendroid Guards have more wood: y-7]
 !!VRy-7|y-1=32/y-1=33:Sy-7 *2 +1; [Stone and Iron Golems have more ore: y-7]
 !!VRy-7&y-7>=250:S250; [Maximum 250 wood/ore: y-7]
@@ -154,7 +165,7 @@ ZVSE2
 !!if&y-11>=3;
   !!VRy-8&m>0:S1 R4; [Determine precious resource: y-8]
   !!VRy-8&m<1:S1 R3; [Determine precious resource: y-8 (if no Mithril)]
-  !!VRy-8&v66<10000:S1 R3; [If mithril amount would be 0, exclude it from chance: y-8]
+  !!VRy-8&i^es_768_totalNeutralMonCost^<10000:S1 R3; [If mithril amount would be 0, exclude it from chance: y-8]
   !!VRy-8&y-8>=2:+1; [Skip ore: y-8]
   !!VRy-8&y-8>=6:+1; [Skip gold: y-8]
 !!en;
@@ -196,7 +207,7 @@ ZVSE2
 !!VRy-20:&y-100; [Check if message is disabled for current player: y-20]
 ** If y-20=y-100, messages are disabled for current player **
 
-!!if&v8654<>99;
+!!if&i^es_768_monResMsg_enabled^<>(TRUE);
    !!VRy-20:S0;
    !!VRy-100:S1;
 !!en;
@@ -210,7 +221,7 @@ ZVSE2
 !!VRy-21&v1=0:S2; [Default to no for AI]
 !!VRy-21|v1=1/v1=4:S1; [Set y-21 to Yes option selected: y-21]
 !!VRy-21|v1=2/v1=8:S2; [Set y-21 to No option selected: y-21]
-!!VRv8654|v1=4/v1=8:S99; **VR add
+!!VRi^es_768_monResMsg_enabled^|v1=4/v1=8:S(FALSE); **VR add
 !!VRvy-17&1000/y-20<>y-100:Sy-21; [Store selected option in vy-17 (v762-v769) unless disabled]
 !!VRy-21&1000/y-20=y-100:Sy-18; [If message disabled, use last selected option for human hero: y-21]
 !!VRz1:S^Message Disabling^; [Section name: z1]
@@ -251,7 +262,7 @@ ZVSE2
 !!VR(totalNum):S0;
 
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-  !!HEi:C0/i/?(mon:y)/?(num:y);
+  !!HE(hero):C0/i/?(mon:y)/?(num:y);
 
   !!VR(totalNum)&(type)=(mon):+(num);
 !!en;
