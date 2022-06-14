@@ -598,61 +598,69 @@ ZVSE2
 !!HEx16:O?v7021;                              [get owner of iterated hero]
 
 !!if&v7021=i^timerOwner^;
-  !!HEx16:S13/?y1;                            [get hero's estates level]
-  !!FU(WOG_203_SetUpEstatesWeeklyBonus)&i^wog_203_enabled^/y1>0:Py1;     [if hero in use and it's that hero's owner's turn, continue in function 7013 (estates) - if enabled]
-  !!HEx16:S18/?y1;                            [get hero's scholar skill level]
-  !!FU7014&i^wog_211_enabled^/y1>0:Py1;                  [if hero in use and it's that hero's owner's turn, continue in function 7014 (scholar) - if enabled]
+  !!HEx16:S(SKILL_ESTATES)/?y1;                            [get hero's estates level]
+  !!FU(WOG_203_SetUpEstatesWeeklyBonus)&i^wog_203_enabled^/y1>(SKILL_NOT_LEARNED):Px16/y1;     [if hero in use and it's that hero's owner's turn, continue in function 7013 (estates) - if enabled]
+  !!HEx16:S(SKILL_SCHOLAR)/?y1;                            [get hero's scholar skill level]
+  !!FU7014&i^wog_211_enabled^/y1>(SKILL_NOT_LEARNED):Px16/y1;                  [if hero in use and it's that hero's owner's turn, continue in function 7014 (scholar) - if enabled]
 !!en;
 ** end of function
 
-** function for estates      x1=estates level
+** function for estates      x2=estates level
 !?FU(WOG_203_SetUpEstatesWeeklyBonus);
-!!HEv7020:B0/?z700;                           [get hero's name]
-!!HEv7020:R2/?y1;                             [get hero's sex]
-!!IF:Wv7020;                                  [enable hero variables]
-!!VRw5&w8<1/x1>0:S0 R5;                       [if not set, get random resource #]
-!!VRw6&w8<2/x1>1:S0 R5;
-!!VRw7&w8<3/x1=3:S0 R5;
-!!VRw8&w8=0/x1>0:S1;                          [set to lock resources]
-!!VRw8&w8=1/x1>1:S2;
-!!VRw8&w8=2/x1=3:S3;
+!#VA(hero:x) (estatesLv:x);
+
+!!HE(hero):B0/?z700;                           [get hero's name]
+!!HE(hero):R2/?y1;                             [get hero's sex]
+!!IF:W(hero);                                  [enable hero variables]
+!!VRw5&w8<1/(estatesLv)>=1:S0 R5;                       [if not set, get random resource #]
+!!VRw6&w8<2/(estatesLv)>=2:S0 R5;
+!!VRw7&w8<3/(estatesLv)>=3:S0 R5;
+!!VRw8&w8=0/(estatesLv)>=1:S1;                          [set to lock resources]
+!!VRw8&w8=1/(estatesLv)>=2:S2;
+!!VRw8&w8=2/(estatesLv)>=3:S3;
 !!VRy3:S1 R2;                                 [set quantity for resource 1]
 !!VRy3&w5=0|w5=2:*2;                          [double for wood or ore]
 !!VRy4:S1 R2;                                 [set quantity for resource 2]
 !!VRy4&w6=0|w6=2:*2;                          [double for wood or ore]
 !!VRy5:S1 R2;                                 [set quantity for resource 3]
 !!VRy5&w7=0|w7=2:*2;                          [double for wood or ore]
-!!IF&1000/x1=1:Q2/w5/y3/1/z148013;
-!!IF&1000/x1=2:Q2/w5/y3/w6/y4/1/z148014;
-!!IF&1000/x1=3:Q2/w5/y3/w6/y4/w7/y5/1/z148015;
-!!OW&x1=1:Rv7021/w5/dy3;                      [give the resources]
-!!OW&x1=2:Rv7021/w5/dy3 Rv7021/w6/dy4;        [give the resources]
-!!OW&x1=3:Rv7021/w5/dy3 Rv7021/w6/dy4 Rv7021/w7/dy5; [give the resources]
+
+!!if&1000;
+  !!IF&(estatesLv)=1:Q2/w5/y3/1/z148013;
+  !!IF&(estatesLv)=2:Q2/w5/y3/w6/y4/1/z148014;
+  !!IF&(estatesLv)=3:Q2/w5/y3/w6/y4/w7/y5/1/z148015;
+!!en;
+
+!!OW&(estatesLv)=1:Rv7021/w5/dy3;                      [give the resources]
+!!OW&(estatesLv)=2:Rv7021/w5/dy3 Rv7021/w6/dy4;        [give the resources]
+!!OW&(estatesLv)=3:Rv7021/w5/dy3 Rv7021/w6/dy4 Rv7021/w7/dy5; [give the resources]
 ** end of function
 
-** function for scholar       x1=scholar level
+** function for scholar       x2=scholar level
 !?FU7014;
-!!HEv7020:B0/?z700;                           [get hero's name]
-!!HEv7020:S7/?y2;                             [get hero's wisdom skill level]
-!!VRy3&x1=1:S57;                              [set basic scholar picture]
-!!VRy3&x1=2:S58;                              [set advanced scholar picture]
-!!VRy3&x1=3:S59;                              [set expert scholar picture]
-!!HEv7020:A2/0/?y7/?y8;                       [see if hero has a spell book]
+!#VA(hero:x) (scholarLv:x);
+
+!!HE(hero):B0/?z700;                           [get hero's name]
+!!HE(hero):S7/?y2;                             [get hero's wisdom skill level]
+!!VRy3&(scholarLv)=1:S57;                              [set basic scholar picture]
+!!VRy3&(scholarLv)=2:S58;                              [set advanced scholar picture]
+!!VRy3&(scholarLv)=3:S59;                              [set expert scholar picture]
+!!HE(hero):A2/0/?y7/?y8;                       [see if hero has a spell book]
 !!VRy6:S0 R99;                                [random roll for chance to learn spell]
-!!VRy6&x1=2:+10;                              [advanced bonus]
-!!VRy6&x1=3:+20;                              [expert bonus]
+!!VRy6&(scholarLv)=2:+10;                              [advanced bonus]
+!!VRy6&(scholarLv)=3:+20;                              [expert bonus]
 !!VRv7027:S0;                                 [loop counter]
 
 ** Algor: begin
 !!if&y8>0/y6>59;
   !!VRv1:S-1;
-  !!DO7015/0/69/1:Pv7020/y2/-1/x1;            [count number of avaliable spells in v1]
+  !!DO7015/0/69/1:P(hero)/y2/-1/(scholarLv);            [count number of avaliable spells in v1]
 
   !!if&v1>-1;
     !!VRv1:-1;
     !!VRy10:S0 Rv1;                           [y10 - random avaliable spell]
     !!VRv1:S-1;
-    !!DO7015/0/69/1:Pv7020/y2/y10/x1;         [learn y10 avaliable spell]
+    !!DO7015/0/69/1:P(hero)/y2/y10/(scholarLv);         [learn y10 avaliable spell]
   !!en;
 !!en;
 
