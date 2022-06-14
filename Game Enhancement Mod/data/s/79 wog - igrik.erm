@@ -175,59 +175,31 @@ SN:W ?? ?????, ????????????? ????????? key functions
 
 
 ; --------------------------------------------------------------------------------------------------
-*?BR1;
-*!SN:W^gem_SheroOwnerW_COMBAT_MOUSE_HEX_OPT^/?y1;
-*!UN:C6916112/4/y1;
+
 ; --------------------------------------------------------------------------------------------------
-** Shackles of war (retreat vs neutrals bttles with SW)
-!?BG0; !!BG:A?y1; !!BA:H1/?y2;          [??? ????????]
-!!UN&y1=4/y2=-2:C4689325/1/2;           [????? ?????]
-!?BA52;  !!UN:C4689325/1/125;           [???? ?????]
+** **  Fast tactic troop replacement (by igrik)
+!?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST)/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_flags^=(NO_MOUSE_FLAGS);
 
-** War Machines Cost 1 gold when surrend
-!?BA52;
-!!UN:P73/?(isEnabled:y);                       [check if option is enabled]
-
-!!if&(isEnabled)=(FALSE);
-  !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
-    !!MA:Ci/(RES_GOLD)/?i^gem_%i_machine_cost^ Ci/(RES_GOLD)/1;
-  !!en;
-!!en;
-
-
-!?BA53;
-!!UN:P73/?(isEnabled:y);                       [check if option is enabled]
-!!if&(isEnabled)=(FALSE);
-
-  !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
-    !!MA:Ci/(RES_GOLD)/i^gem_%i_machine_cost^;
-    !!VRi^gem_%i_machine_cost^:S(NULL);
-  !!en;
-!!en;
-; --------------------------------------------------------------------------------------------------
-** ** ????? ?????? ??????/ Fast tactic troop replacement (by igrik)
-!?CM4;
-  !!CM:S?y1 F?y2 I?y3 D?y4;
-  !!FU|y1<>13/y3>10/y2<>0/y4<0/y4>186:E;
-  *!IF:L^%y1 %y2 %y3^;
-
-  *!SN:L/?y1 L^HD_MCR.dll^/?y2;
   !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
-  !!BU:T?y3;
-  !!FU|v1<>0/y3<>1:E; 
-  !!BU:Ey4/?y5;
-  !!FU&y5=-1:E;
-  !!BG:N?y6 Q?y7;
-  !!BMy5:I?y8 T?y9;
-  !!FU&y9>144/y9<150:E;
-  !!FU&y7<>y8|y6=y5:E;
-  !!VRy5&y7=1:-21;
-  !!CM:R0;
-  !!UN:C6919200/4/?y1;
-  !!SN:E4607760/2/y1/y8/y5;
+  !!BU:T?(isTactics:y);
+
+  !!if&(isTactics)/v1=0;
+    !!BU:Ei^mouse_battleHex^/?(stackId:y);
+    !!if&(stackId)<>(NO_STACK);
+
+      !!BG:N?(activeStack:y) Q?(activeSide:y);
+      !!BM(stackId):I?(stackSide:y) T?(monType:y);
+      !!FU&(monType)>144/(monType)<150:E;
+      !!FU&(stackSide)<>(activeSide)|(activeStack)=(stackId):E;
+      !!VR(stackId)&(stackSide)=(BATTLE_RIGHT):-21;
+      !!CM:R0;
+      !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+      !!SN:E4607760/2/(cmbMgr)/(stackSide)/(stackId);
+
+    !!en;
+  !!en;
 
 ** open heroscreens in the battle by right click
-
 !?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_battleHex^>=252/i^mouse_battleHex^<=253;
 
   !!VR(side:y):Si^mouse_battleHex^ -252;
@@ -253,9 +225,8 @@ SN:W ?? ?????, ????????????? ????????? key functions
 
   ; --------------------------------------------------------------------------------------------------
 **Magogs Fireball-Attack doesnt damage own troops (by PerryR)
-!?MF1;
-!!SN:W^Magog_Fireball_Enable^/?y1;
-!!FU&y1=0:E;
+!?MF1&i^Magog_Fireball_Enable^;
+
 !!BG:N?y1;                             [Get attacking stack number]
 !!MF:N?y4;                             [Get defending stack number]
 !!BMy1:I?y5;                           [Get attacking stack side]
@@ -263,9 +234,8 @@ SN:W ?? ?????, ????????????? ????????? key functions
 !!UN:C42149568/4/?y10;                 [Judgement basis (028326c0)]
 !!MF&y10=4454752/y5=y6:E0;             [Disable taking damage if Magog Fireball and own team]
 
-!?MR2;                                 [Magogs Fireball-Cast that comes with Stack Expierence doesnt damage own troops]
-!!SN:W^Magog_Fireball_Enable^/?y1;
-!!FU&y1=0:E;
+!?MR2&i^Magog_Fireball_Enable^;        [Magogs Fireball-Cast that comes with Stack Expierence doesnt damage own troops]
+
 !!BG:A?y1;                             [Aktion in y1]
 !!if|y1=7/y1=6;                        [if ranged or melee attack]
   !!MR:S?y2 F?y3;
@@ -531,44 +501,8 @@ Fix the Luck and Morale bug from 8th level creatures in WoG (by PerryR)
   !!VRy1:Sv1 +30;  !!UN:Cy1/2/?x4;
   !!VRy1:+4;       !!UN:Cy1/2/?x5;
 
-fill refugees by mons
-!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
 
-    !!FU(GetMaxMonsterId):P?(lastMon:y);
-    !!UN:P200/?(isRefugeeSync:y);
-    !!if&(lastMon)=(MON_DRACOLICH)/(isRefugeeSync)<>(TRUE);
 
-      !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(campsAmount:y);
-      !!if&(campsAmount);
-        !!re i/1/(campsAmount);
-          !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/i/2;
-          !!FU(gem_GetRandomMon):P?(mon:y)/5/(MON_AZURE_DRAGON)/(MON_RUST_DRAGON)/(MON_FAERIE_DRAGON)/(MON_CRYSTAL_DRAGON)/(MON_DRACOLICH);
-          !!MA:G(mon)/?(growth:y);
-          !!OB2:U(mon) C(growth);
-          !!SN:H^monname^/(mon)/0/?z-1;
-        !!en;
-      !!en;
-    !!en;
-
-!?FU(gem_GetRandomMon);
-  !#VA(mon:x) (monsToExcl:x) (mons[10]:x);
-
-  !!FU(GetMaxMonsterId):P?(result:y);
-  !!VR(mon):R0/0/(result);
-
-  !!VR(flag:y):S(TRUE);
-  !!VR(flag)|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):S(FALSE); [not used]
-  !!VR(flag)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE); [Emissaries]
-  !!VR(flag)&(mon)>=(MON_PALADIN_A)/(mon)<=(MON_ASTRAL_SPIRIT_D):S(FALSE); [Commanders]
-  !!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE); [war_machines]
-  
-  !!if&(monsToExcl);
-    !!re i/0/(monsToExcl)/1/-1;
-      !!VR(flag)&(mon)=(mons[i]):S(FALSE); [ultra dragons]
-    !!en;
-  !!en;
-
-  !!FU(arena_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
 
 //  script set correct hint for artifacts - by @Archer30;
 !?FU(OnAfterErmInstructions);
@@ -655,7 +589,7 @@ fill refugees by mons
             !!if&(heroInTable)=(objSubtype);
               !!if&i^mouse_flags^=(MOUSE_FLAG_SHIFT);
                 *!VRy1:Si+39;
-                !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+                !!UN:C(ADV_MANAGER)/(UNC_INT)/?(advMgr:y);
                 !!SN:E4291200/(CALLCONV_THISCALL)/(advMgr)/(objSubtype)/0/0/1;
                 !!CM:R0;                
               !!el;
@@ -766,13 +700,7 @@ fill refugees by mons
 
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
-; ??????? ??? ??? ???? (by igrik)
 
-!?FU(OnHeroesMeetScreenMouseClick);                   [disable clicks on chat and outside hero swap screen @daemon_n]
-  *!if|i^mouse_item^=37/i^mouse_x^>800/i^mouse_y^>622;
-    *!CM:R0;
-    *!IF:L^%^;
-  *!en;
 ; give Banners to Hero from stacks by CTRL + RMB on stack in hero screen (by igrik)
 !?FU(OnHeroScreenMouseClick)&999/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^key_leftCtrl^/i^mouse_item^>=68/i^mouse_item^<=74;
 
@@ -809,67 +737,11 @@ fill refugees by mons
     !!IF:M0/4/^%Z-1^;
   !!en;
 ;-------------------------------------------------------------------------------
-witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
-!?FU(OnAfterErmInstructions);
-  !!UN:C6919480/4/?(value:y);
-  !!VR(address:y):S(value) +128980;
-  !!UN:C(address)/1/?(mapType:y); [y11=114 ?? ???????? (????[r]andom_maps)] 
-  !!if&(mapType)=114;
-
-    *#VA(x:y) (y:y) (z:y) (skillWh:y) (randValue:y); [define variables to store object coordinates]
-    *!VR(x):S-1;                            [setting x-coordinate to -1 will force to start search from scratch]
-    *!re i;                                 [endless loop]
-      *!UN:U(OBJ_WITCH_HUT)/(ANY_OBJ)/-1/(x)/(y)/(z); [find next monster, (x) = -1 on failure]
-      *!br&(x)<0;                          [exit loop if nothing found]
-      *!WH(x)/(y)/(z):S?(skillWh);
-      *!SN:H^secskill^/(skillWh)/0/?z-1;
-      *!IF:L^%(skillWh) %z-1^;
-      *!if&(skillWh)<(SKILL_WATER_MAGIC);
-        *!re f;
-          *!VR(randValue):S(SEC_SKILL_FIRST) R(SEC_SKILL_LAST);
-          *!br&(randValue)<>(SKILL_NAVIGATION)/(randValue)<>(SKILL_NECROMANCY);
-        *!en;
-        *!WH(x)/(y)/(z):S(randValue);
-        *!WH(x)/(y)/(z):S?(skillWh);
-      *!en;
-    *!en;
-
-    !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsAmount:y);
-    !!UN:U(OBJ_RANDOM_TOWN)/(ANY_OBJ)/?(randomTownsAmount:y);
-    !!VR(townsAmount)&(randomTownsAmount):+(randomTownsAmount);
-
-    !!re i/(MAP_TOWN_FIRST)/(townsAmount)/1/-1;
-      *!CA0/i&(canBuild):B6/30;
-      !!FU(Town_CanBuildingBuilt):Pi/31/?(canBuild:y);
-      !!CA0/i&(canBuild):B6/31;
-    !!en;
-  !!en;
-
-!?FU(Town_CanBuildingBuilt);
-  ; x1 - town number on map (0...47)
-  ; x2 - building id
-  ; x3 - return: bool (0-no, 1-yes)
-  !!FU(Town_GetStruct):Px1/?y1;
-  !!CA0/x1:R?y2 R0;
-  !!SN:E6033696/2/y1/x2;
-  !!VRx3:S0;    
-  !!VRx3&v1<>0:S1;
-  !!CA0/x1:Ry2;
-
-!?FU(Town_GetStruct);
-  ; x1 - town number on map (0...47)
-  ; x2 - return: ptr structure town
-  !!IF&x1<0|x1>47:M^Wrong town id.^;
-  !!UN:C6919480/4/?y1; 
-  !!VRy1:+136724;
-  !!UN:Cy1/4/?y2; 
-  !!VRx2:Sx1 *360 +y2;
-  !!IF&x2<43200000:M^{Attention!}
-  Error in getting town structure address. 
-  The game may fall at any time.^; 
 
 
-!?FU(OnBattleScreenMouseClick);|(BATTLE_TYPE_FLAG_RIGHT_HAS_HERO);
+
+
+!?FU(OnBattleScreenMouseClick)&i^mouse_item^=2001/i^mouse_action^=(MOUSE_RMB_PRESSED);|(BATTLE_TYPE_FLAG_RIGHT_HAS_HERO);
   !!CM:I?(clickPosition:y) S?(clickType:y);
   !!if&(clickPosition)=2001/(clickType)=(MOUSE_RMB_PRESSED);            [surrender button]
     !!OW:C?(currPlayer:y)/?(clickedPlayer:y) R(clickedPlayer)/(RES_GOLD)/?(goldAmount:y);
@@ -879,45 +751,33 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
     !!SN:T^%s(gem_b).surrendGold^/?(goldAmountMessage:z)/^gold^/(goldAmount);
     !!VR(rmbMessage:z):S(goldAmountMessage);
 
-    !!if&(attackingHero)>(NO_HERO)/(defendingHero)>(NO_HERO);
+    !!if&i^battle_hero_1^>(NO_HERO);
       !!BG:Q?(activeSide:y);
       !!VR(isNeedWait:y):S(TRUE);
 
-      !!if&(clickedPlayer)=(currPlayer)/(activeSide)=0;
-        !!UN:C6919200/4/?(idBattleMgr:y);
-        !!SN:E4682544/2/(idBattleMgr)/(clickedPlayer);      [call of the calculation retreatPrice]
-        !!VR(retreatPrice:y):Sv1;
-        !!SN:T^%s(gem_b).surrendPrice^/?(retreatPriceMessage:z)/^price^/(retreatPrice);
-        !!VR(isNeedWait):S(FALSE);
-        *!VR(rmbMessage):+(retreatPriceMessage);
-      !!en;
-      
-      !!if&(clickedPlayer)<>(currPlayer)/(activeSide)=1;
-        !!UN:C6919200/4/?(idBattleMgr:y);
-        !!SN:E4682544/2/(idBattleMgr)/(clickedPlayer);      [call of the calculation retreatPrice]
-        !!VR(retreatPrice:y):Sv1;
-        !!SN:T^%s(gem_b).surrendPrice^/?(retreatPriceMessage:z)/^price^/(retreatPrice);
-        !!VR(isNeedWait):S(FALSE);
-        *!VR(rmbMessage):+(retreatPriceMessage);
+      !!if&(clickedPlayer)=(currPlayer);
+        !!VR(clickSide:y):S(BATTLE_LEFT);
+      !!el;
+        !!VR(clickSide:y):S(BATTLE_RIGHT);
       !!en;
 
-      !!if&(isNeedWait)=(TRUE);
+      !!if&(clickSide)=(activeSide);
+        !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+        !!SN:E4682544/2/(cmbMgr)/(clickedPlayer);      [call of the calculation retreatPrice]
+        !!VR(retreatPrice:y):Sv1;
+        !!SN:T^%s(gem_b).surrendPrice^/?(retreatPriceMessage:z)/^price^/(retreatPrice);
+        !!VR(isNeedWait):S(FALSE);
+      !!el;
         !!SN:T^%s(gem_b).surrendWait^/?(retreatPriceMessage:z);
       !!en;
+
       !!VR(rmbMessage):+(retreatPriceMessage);
     !!en;
 
-
-    !!IF:M0/4/(rmbMessage);%(retreatPriceMessage)^;
+    !!IF:M0/4/(rmbMessage);
   !!en;
 
-  *?FU(OnAfterErmInstructions);
-  *!re i/0/155;
-    *!HEi:A1/0/17;
-  *!en;
-  *!MA:X1/d32768;             [Lizard Warrior gets Double Shot]
 
-  *!MA:X(MON_HYDRA)/d(MON_FLAG_ATTACKS_TWICE);
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
 *                 [TOWN SCRREN SCRIPTS  - scripts for towns]
@@ -944,8 +804,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 
 !?FU(OnTownMouseHint)&i^gem_InTownKey_A_Pressed^;/i^key_down^;
   
-
-  !!ifi^gem_InTownKey_A_Pressed^<>148;
+  !!if&i^gem_InTownKey_A_Pressed^<>148;
     !!FU(gem_CheckUpgradeCostInTown):Pi^gem_InTownKey_A_Pressed^;
   !!en;
 
@@ -1047,29 +906,3 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
       !!FU(H3Dlg_SendCmdToItem):P(currDlg)/7001/(DLG_CMD_SET_TEXT)/^^/(DLG_CMD_TYPE_DEFAULT);
     !!en;
 
-
-
-; Archer30's hacks
-
-
-; Disable right-click on Kingdom Overview for mithril
-!?FU(OnAfterErmInstructions);
-!!VRi^wog_149_kingdomRMBEnabled^:S(FALSE);
-
-; Remove buggy neutral stacks by mouse hovering. Occasionally a stack with the size 4095 is generated on the map with UN:I command.
-; This script is better executed before anything else.
-; It removes a buggy stack silently
-!?FU(OnAdvMapTileHint);
-!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
-
-!!if&(objType)=(OBJ_MONSTER);
-  !!UN:P904/1 P905/0;                   [Option 904 - Disable Error msg. Option 905 - error found]
-  !!MO(x)/(y)/(z):G?(qty:y);
-  !!UN:P905/?(hasError:y);
-
-  !!if&(hasError);
-    !!UN:O(x)/(y)/(z)/1;                [Debug msg can be added here to help collect debug info from players]
-    !!UN:P904/0;
-    !!SN:Q;
-  !!en;
-!!en;

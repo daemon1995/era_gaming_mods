@@ -1,56 +1,9 @@
 ZVSE2
 ; gem_functions.erm
-; version 1.00
+; version 2.00
 ; author: daemon_n.
 
-********************************Add Own Button In Town Menu Dialog**********************************
-Allows to add own inTown interaction via Custom Dialog i ve made
-You need set .def of the button -- recomend size is 66x32 px
-buttons are added one by one, depend on the called "gem_AddTownButton" function amount
 
-
-
-!?FU(gem_OnOpenButtonDlg); 
-Triggers when buttons been added. Occurs when Dialog being called;
-Use this for adding your button;
-You can only set!
-
-;*!FU(gem_AddTownButton):P(z1)/(z2)/(z3)/(y1)/(y2)/(y3)/(y4); function of the btn adding
-;(z1) = ^myOwnDef.def^ - Name of The .def file for the button;
-;(z2) = ^textHintWhenMouseOver^ - contents Hint for the button in bottom part
-;(z3) = ^RightCLickingText^ - PopUp message on the Right-CLicking on the your button
-;(y1) = (FunctionNameToLaunch) - name of the function, use without symbols like (!FU) and (;)
-;(y2) = optional integer 1st value for the your function launch, leave it empty, if not needed
-;(y3) = optional integer 2nd value for the your function launch, leave it empty, if not needed
-;(y4) = optional integer 3rd value for the your function launch, leave it empty, if not needed
-
-!?FU(gem_OnOpenButtonDlg);&i^gem_TownScreenIsOpened^=1; 
-  *!re i/0/13;
-    *!VR(odd:y):R0/7/60;
-    *!if&(odd);
-      *!FU(gem_AddTownButton):P^smalres.def^/15/(odd)/^{~text align=left} what for %i  }^/^hint for me %i^/^text for me %i^/(gem_some_rand_fu)/i/2/1;
-
-    *!el;
-      *!FU(gem_AddTownButton):P^resource.def^/64/64/^{~text align=left} what for %i }^/^hint for me %i^/^rmb for me %i^/(gem_some_rand_fu)/i/1/2;
-    *!en;
-    *!FU(gem_AddTownButton):P^resource.def^/35/35/^hint for me1^/^text for me^/(gem_some_rand_fu)/0/0/1;
-    *!FU(gem_AddTownButton):P^smalres.def^/35/15/^hint for me3^/^text for me^/(gem_some_rand_fu)/0/0/2;
-    *!FU(gem_AddTownButton):P^resource.def^/35/35/^hint for me2^/^text for me^/(gem_some_rand_fu)/0/1/0;
-    *!FU(gem_AddTownButton):P^smalres.def^/35/15/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/1/2;
-  *!en;
-  *!FU(gem_AddTownButton):P^artifact.def^/20/20/^123^/^321^/^456^/(MyNum)/(arg1:y)/(arg2:y)/(arg3:y);
-
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/2/0;
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/2/1;
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/0/2/2;
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/(gem_some_rand_fu)/1/0/0;
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me4^/^text for me^/^gem_some_rand_fu^/4/5/6;
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me1^/^text for me^/(gem_some_rand_fu)/4/5/6;
-  *!FU(gem_AddTownButton):P^smalres.def^/^hint for me3^/^text for me^/(gem_some_rand_fu)/4/5/6;
-  *!VRi^gem_TownScreenIsOpened^:S2;
-
-!?FU(gem_some_rand_fu);
-  *!IF:L^%x1 %x2 %x3^;
 
 !?FU(gem_CheckModFolderNameExists);         [that function get mod list in array from !FU(gem_GetModList) and compare each folder with]
 !#VA(modNameForCheck:x) (isExist:x);
@@ -266,6 +219,25 @@ You can only set!
   !!en;
 
 
+!?FU(gem_GetRandomMon);
+  !#VA(mon:x) (monsToExcl:x) (mons[10]:x);
+
+  !!FU(GetMaxMonsterId):P?(result:y);
+  !!VR(mon):R0/0/(result);
+
+  !!VR(flag:y):S(TRUE);
+  !!VR(flag)|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):S(FALSE); [not used]
+  !!VR(flag)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE); [Emissaries]
+  !!VR(flag)&(mon)>=(MON_PALADIN_A)/(mon)<=(MON_ASTRAL_SPIRIT_D):S(FALSE); [Commanders]
+  !!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE); [war_machines]
+  
+  !!if&(monsToExcl);
+    !!re i/0/(monsToExcl)/1/-1;
+      !!VR(flag)&(mon)=(mons[i]):S(FALSE); [ultra dragons]
+    !!en;
+  !!en;
+
+  !!FU(arena_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
 
 
 +16 | id
@@ -283,61 +255,71 @@ You can only set!
 +68 | Does the dialog close: 0-no, 1-yes; - only set
 ^;
 *!en;
+************************************************************************
+************************************************************************
+************************ D I A L O G   I T E M S ***********************
+************************************************************************
+************************************************************************
 
 !?FU(gem_DlgDefProc);
-!#VA(itemId:x) (currentFrame:x) (whenPressedFrame:x) (whenDisabledFrame:x) (closeDlg:x) (customDlgStruct:x);
+!#VA(itemId:x) (currentFrame:x) (whenPressedFrame:x) (whenDisabledFrame:x) (closeDlg:x) (dlgObj:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
     should be 0 and higher^;
     !!FU:E;
   !!en;
 
-  !!VR(savedV1:y):Sv1;
-
-  !!if&(customDlgStruct);
-    !!VR(currentDlgStruct:y):S(customDlgStruct);
-  !!el;
-    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
-  !!en;
-
-  !!SN:E6288816/2/(currentDlgStruct)/(itemId);
-
-  !!if&v1<1;
-  *!IF:L^%^;
-    !!FU:E;
-  !!en;
-  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
-
-  !!FU:S(@currentFrame)/?(cFSyntax:y) S(@whenPressedFrame)/?(wPFSyntax:y) S(@whenDisabledFrame)/?(wDFSyntax:y) S(@closeDlg)/?(closeDlgSyntax:y);
-
-  !!VR(itemAction:y):S(itemStructure) +52;
-    !!UN&(cFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(currentFrame);
-    !!UN&(cFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(currentFrame);
-    
-    !!if&(cFSyntax)=(ARG_SYNTAX_ADD);
-      !!VR(addNumber:y):S(currentFrame);
-      !!UN:C(itemAction)/4/?(currentFrame);
-      !!VR(currentFrame):+(addNumber);
-      !!UN:C(itemAction)/4/(currentFrame);
+  !!FU:A?(numArgs:y);
+  !!if&(numArgs)>=(@currentFrame);
+    !!VR(savedV1:y):Sv1;
+    !!if&(dlgObj)=0;
+      !!FU(H3Dlg_GetCurrentDlg):P?(dlgObj);
     !!en;
 
+    !!SN:E6288816/2/(dlgObj)/(itemId);     [Get item obj]
 
-  !!VR(itemAction:y):S(itemStructure) +56;
-    !!UN&(wPFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(whenPressedFrame);
-    !!UN&(wPFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(whenPressedFrame);
+    !!if&v1>0;
 
-  !!VR(itemAction:y):S(itemStructure) +60;
-    !!UN&(wDFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(whenDisabledFrame);
-    !!UN&(wDFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(whenDisabledFrame);
+      !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+      *!FU:A?(numArgs:y);
 
-  !!VR(itemAction:y):S(itemStructure) +68;
-    !!UN&(closeDlgSyntax)=(ARG_SYNTAX_GET):C(itemAction)/2/?(closeDlg);
-    !!UN&(closeDlgSyntax)=(ARG_SYNTAX_SET):C(itemAction)/2/(closeDlg);  
+      !!FU:S(@currentFrame)/?(cFSyntax:y) S(@whenPressedFrame)/?(wPFSyntax:y) S(@whenDisabledFrame)/?(wDFSyntax:y) S(@closeDlg)/?(closeDlgSyntax:y);
+
+      !!VR(itemAction:y):S(itemStructure) +52; 
+
+      !!if&(cFSyntax)=(ARG_SYNTAX_GET);
+        !!UN:C(itemAction)/4/?(currentFrame);
+        
+      !!el&(cFSyntax)=(ARG_SYNTAX_SET);
+        !!UN:C(itemAction)/4/(currentFrame);
+
+      !!el;
+        !!VR(addNumber:y):S(currentFrame);
+        !!UN:C(itemAction)/4/?(currentFrame);
+        !!VR(currentFrame):+(addNumber);
+        !!UN:C(itemAction)/4/(currentFrame);
+      !!en;
+
+      !!if&(numArgs)>=(@whenPressedFrame);
+        !!VR(itemAction:y):S(itemStructure) +56;
+        !!UN&(wPFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(whenPressedFrame);
+        !!UN&(wPFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(whenPressedFrame);
+      !!en;
+
+      !!VR(itemAction:y):S(itemStructure) +60;
+        !!UN&(wDFSyntax)=(ARG_SYNTAX_GET):C(itemAction)/4/?(whenDisabledFrame);
+        !!UN&(wDFSyntax)=(ARG_SYNTAX_SET):C(itemAction)/4/(whenDisabledFrame);
+
+      !!VR(itemAction:y):S(itemStructure) +68;
+        !!UN&(closeDlgSyntax)=(ARG_SYNTAX_GET):C(itemAction)/2/?(closeDlg);
+        !!UN&(closeDlgSyntax)=(ARG_SYNTAX_SET):C(itemAction)/2/(closeDlg);  
+    !!en;
+  !!en;
 
   !!VRv1:S(savedV1);
 
 !?FU(gem_DlgDisableBtn);
-!#VA(itemId:x) (enable:x) (whenDisabledFrame:x) (redraw:x) (customDlgStruct:x);
+!#VA(itemId:x) (enable:x) (whenDisabledFrame:x) (redraw:x) (dlgObj:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
     should be 0 and higher^;
@@ -346,32 +328,33 @@ You can only set!
 
   !!VR(savedV1:y):Sv1;
 
-  !!if&(customDlgStruct);
-    !!VR(currentDlgStruct:y):S(customDlgStruct);
-  !!el;
-    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!if&(dlgObj)=0;
+    !!FU(H3Dlg_GetCurrentDlg):P?(dlgObj);
   !!en;
 
-   !!SN:E6288816/2/(currentDlgStruct)/(itemId);
-   !!if&v1<1;
-   
-     !!FU:E;
+  !!SN:E6288816/2/(dlgObj)/(itemId);
+  !!if&v1>0;
+   !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+   !!FU:A?(numArgs:y);
+   !!if&(numArgs)>2;
+     !!VR(itemAction:y):S(itemStructure) +60;
+     !!UN:C(itemAction)/4/(whenDisabledFrame);
    !!en;
-  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
 
-  !!FU:A?(numArgs:y);
-  !!if&(numArgs)>2;
-    !!VR(itemAction:y):S(itemStructure) +60;
-    !!UN:C(itemAction)/4/(whenDisabledFrame);
+   !!SN:E6287104/2/(itemStructure)/(enable);
+   !!if&(redraw);
+     !!SN&(redraw)=1:E6288864/2/(dlgObj)/1/-65535/65535; [update currentDlg;]
+     !!SN&(redraw)=-1:E6288864/2/(dlgObj)/1/(itemId)/(itemId); [update onlyItem;]
+   !!en;
+
   !!en;
 
-  !!SN:E6287104/2/(itemStructure)/(enable);
-  !!SN&(redraw):E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
 
   !!VRv1:S(savedV1);
 
 !?FU(gem_DlgShowItem);
-!#VA(itemId:x) (showItem:x) (clickableItem:x) (redraw:x) (customDlgStruct:x);
+!#VA(itemId:x) (showItem:x) (clickableItem:x) (redraw:x) (currentDlgStruct:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
     should be 0 and higher^;
@@ -381,114 +364,115 @@ You can only set!
 
   !!VR(savedV1:y):Sv1;
 
-  !!if&(customDlgStruct);
-    !!VR(currentDlgStruct:y):S(customDlgStruct);
-  !!el;
-    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
+  !!if&(currentDlgStruct)=0;
+    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct);
   !!en;
 
   !!SN:E6288816/2/(currentDlgStruct)/(itemId);
 
-  !!if&v1<1;
-  
-    !!FU:E;
-  !!en;
-  !!VR(itemStructure:y):Sv1; 
+  !!if&v1>0;
+    !!VR(itemStructure:y):Sv1; 
 
-  !!if&(showItem);
+    !!if&(showItem);
 
-    !!SN:E6286720/2/(itemStructure)/5/6;
-  !!el;
+      !!SN:E6286720/2/(itemStructure)/5/6;
+    !!el;
 
-    *!FU:S(@clickableItem)/?(clickableItemSyntax:y);
+      *!FU:S(@clickableItem)/?(clickableItemSyntax:y);
 
-    *!if&(clickableItemSyntax)=(ARG_SYNTAX_SET);
+      *!if&(clickableItemSyntax)=(ARG_SYNTAX_SET);
       !!if&(clickableItem);
         !!SN:E6286720/2/(itemStructure)/6/4;
       !!el;
         !!SN:E6286720/2/(itemStructure)/6/6;
       !!en;
-    *!en;
-
-
+      *!en;
+    !!en;
+    !!if&(redraw);
+      !!SN&(redraw)=1:E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
+      !!SN&(redraw)=-1:E6288864/2/(currentDlgStruct)/1/(itemId)/(itemId); [update onlyItem;]
+    !!en;
   !!en;
-*!IF:L^%(itemId)^;
-  !!SN&(redraw):E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
 
   !!VRv1:S(savedV1);
 
 !?FU(gem_DlgItemSize);
-!#VA(itemId:x) (width:x) (height:x) (redraw:x) (customDlgStruct:x);
+!#VA(itemId:x) (width:x) (height:x) (redraw:x) (currentDlgStruct:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
     should be 0 and higher^;
     !!FU:E;
   !!en;
 
-  !!VR(savedV1:y):Sv1;
 
-  !!if&(customDlgStruct);
-    !!VR(currentDlgStruct:y):S(customDlgStruct);
-  !!el;
-    !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
-  !!en;
-  !!SN:E6288816/2/(currentDlgStruct)/(itemId);
-    !!if&v1<1;
-    *!IF:M^itemId is incorrect!^;
-    !!VR(width):S0;
-    !!VR(height):S0;
-    !!VRv1:S(savedV1);
-    !!FU:E;
-  !!en;
-  !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+  !!FU:A?(argc:y);
 
-  !!FU:S(@width)/?(widthSyntax:y) S(@height)/?(heightSyntax:y) A?(argc:y);
 
-  !!VR(itemAction:y):S(itemStructure) +28;
+  !!if&(argc)>(@itemId);
+    !!VR(savedV1:y):Sv1;
 
-    !!if&(widthSyntax)=(ARG_SYNTAX_GET);
-      !!UN:C(itemAction)/2/?(width);
-    !!el&(widthSyntax)=(ARG_SYNTAX_SET);
-      !!UN:C(itemAction)/2/(width);
-    !!el;
-      !!UN:C(itemAction)/2/?(currWidth:y);
-      !!VR(width):+(currWidth);
+    !!if&(currentDlgStruct)=0;
+      !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct);
+    !!en;
 
-      !!if&(width)>0;
+    !!SN:E6288816/2/(currentDlgStruct)/(itemId);
+
+    !!if&v1>0;
+      !!VR(itemStructure:y):Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+      !!FU:S(@width)/?(widthSyntax:y) S(@height)/?(heightSyntax:y);
+
+      !!VR(itemAction:y):S(itemStructure) +28;
+
+      !!if&(widthSyntax)=(ARG_SYNTAX_GET);
+        !!UN:C(itemAction)/2/?(width);
+      !!el&(widthSyntax)=(ARG_SYNTAX_SET);
         !!UN:C(itemAction)/2/(width);
       !!el;
-        !!UN:C(itemAction)/2/0;
+        !!UN:C(itemAction)/2/?(currWidth:y);
+        !!VR(width):+(currWidth);
+
+        !!if&(width)>0;
+          !!UN:C(itemAction)/2/(width);
+        !!el;
+          !!UN:C(itemAction)/2/0;
+        !!en;
       !!en;
 
-    !!en;
+      !!if&(argc)>(@width);
+      
+        !!VR(itemAction:y):S(itemStructure) +30;
+        
+        !!if&(heightSyntax)=(ARG_SYNTAX_GET);
+          !!UN:C(itemAction)/2/?(height);
+        !!el&(heightSyntax)=(ARG_SYNTAX_SET);
+          !!UN:C(itemAction)/2/(height);
+        !!el;
+          !!UN:C(itemAction)/2/?(currHeight:y);
+          !!VR(height):+(currHeight);
+          !!UN:C(itemAction)/2/(height);
 
-  !!if&(argc)>(@width);
-  
-    !!VR(itemAction:y):S(itemStructure) +30;
+          !!if&(height)>0;
+            !!UN:C(itemAction)/2/(height);
+          !!el;
+            !!UN:C(itemAction)/2/0;
+          !!en;
+        !!en;
+
+      !!if&(redraw);
+        !!SN&(redraw)=1:E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
+        !!SN&(redraw)=-1:E6288864/2/(currentDlgStruct)/1/(itemId)/(itemId); [update onlyItem;]
+      !!en;
+
+      !!en;
     
-    !!if&(heightSyntax)=(ARG_SYNTAX_GET);
-      !!UN:C(itemAction)/2/?(height);
-    !!el&(heightSyntax)=(ARG_SYNTAX_SET);
-      !!UN:C(itemAction)/2/(height);
-    !!el;
-      !!UN:C(itemAction)/2/?(currHeight:y);
-      !!VR(height):+(currHeight);
-      !!UN:C(itemAction)/2/(height);
-
-      !!if&(height)>0;
-        !!UN:C(itemAction)/2/(height);
-      !!el;
-        !!UN:C(itemAction)/2/0;
-      !!en;
     !!en;
 
-
-    !!SN&(redraw):E6288864/2/(currentDlgStruct)/1/-65535/65535; [update currentDlg;]
-
+    !!VRv1:S(savedV1);
+    
   !!en;
 
 
-  !!VRv1:S(savedV1);
 
 
 !?FU(gem_DlgItemPosition);
@@ -545,20 +529,24 @@ You can only set!
       !!VR(yPos):+(currY);
       !!UN:C(itemAction)/2/(yPos);    
     !!en;
-
-  !!SN&(redraw):E6288864/2/(dlgStruct)/1/-65535/65535; [update currentDlg;]
+    !!if&(redraw);
+      !!SN&(redraw)=1:E6288864/2/(dlgStruct)/1/-65535/65535; [update currentDlg;]
+      !!SN&(redraw)=-1:E6288864/2/(dlgStruct)/1/(itemId)/(itemId); [update onlyItem;]
+    !!en;
 
   !!VRv1:S(savedV1);
-!?FU(gem_GetItemByStructure);
-!#VA(itemStructure:x) (itemId:x);
-
-*!UN:C(itemAction)/2/?(y);
 
 !?FU(gem_GetItemStructure);
 !#VA(itemId:x) (itStructure:x);
+  !!VR(savedV1:y):Sv1;
+
   !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
   !!SN:E6288816/2/(currentDlgStruct)/(itemId);
   !!VR(itStructure)&v1>0:Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
+
+  !!VRv1:S(savedV1);
+
+
 
 !?FU(gem_DlgReload);
 !#VA(dlgFileName:x);
@@ -569,7 +557,14 @@ You can only set!
   !!SN:E5624576/3/v1;
   *!IF:L^done!^;
 
-
+!?FU(gem_DlgSetColor);
+!#VA(dlgId:x) (setColor:x);
+  !!SN:E7510739/1/(dlgId);
+  !!UN:Cv1/4/?(dlgObj:y);
+  *!VRy2:Sy1 +76;
+  !!UN:C(dlgObj)/76/4/?(backGroundId:y);
+  !!SN:E6288384/2/(dlgObj)/512/13/(backGroundId)/(setColor);
+4C
 !?FU(ChangeDwellingName);
 !#VA(objSubtype:x) (name:x);
 !!UN:C6886304/(UNC_INT)/?(txtPtr:y) C(txtPtr)/32/(UNC_INT)/?(txtPtr);
@@ -718,14 +713,6 @@ Garrison.txt
 !!VR(string):Z(text);
 
 
-
-!?FU(gem_DlgSetColor);
-  !#VA(dlgStruct:x) (setColor:x);
-  !!SN:E7510739/1/(dlgStruct);
-  !!UN:Cv1/4/?y1;
-  !!VRy2:Sy1 +76;
-  !!UN:Cy2/4/?y3;
-  !!SN:E6288384/2/y1/512/13/y3/(setColor);
 
 
 !?FU(gem_Town_GetStruct);

@@ -128,14 +128,19 @@ ZVSE2
 !?FU(OnBattleReplay)&i^gem_DefPlayerGold^;
   !!OW:Ri^battle_owner_1^/(RES_GOLD)/i^gem_DefPlayerGold^;
   !!VRi^gem_DefPlayerGold^:S0;
+
 !?FU(OnBattleReplay);
 !!FU(UpdateBattleVars):P;
 
-
 ** Shackles of war (retreat vs neutrals bttles with SW)
-!?BG0; !!BG:A?y1; !!BA:H1/?y2;          [??? ????????]
-!!UN&y1=4/y2=-2:C4689325/1/2;           [????? ?????]
-!?BA52;  !!UN:C4689325/1/125;           [???? ?????]
+
+!?BG0&i^battle_hero_1^<(HERO_FIRST);
+!!BG:A?(actionType:y);
+!!if&(actionType)=(BATTLE_ACTION_RETREAT);
+  !!UN:C4689325/1/(ART_GRAIL);           [replace checked artId on hero to Grail from Shakles]
+!!en;
+!?FU(OnAfterBattleUniversal);
+!!UN:C4689325/1/(ART_SHACKLES_OF_WAR);           [setback correct art id ]
 
 
 ** War Machines Cost 1 gold when surrend
@@ -186,7 +191,23 @@ ZVSE2
 ************************** ADVENTURE MAP FIXES *************************
 ************************************************************************
 ************************************************************************
+fill refugees by mons to evade pikeman creatures there
+!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
 
+    !!FU(GetMaxMonsterId):P?(lastMon:y);
+    !!UN:P200/?(isRefugeeSync:y);
+    !!if&(lastMon)=(MON_DRACOLICH)/(isRefugeeSync)<>(TRUE);
+
+      !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(campsAmount:y);
+      !!if&(campsAmount);
+        !!re i/1/(campsAmount);
+          !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/i/2;
+          !!FU(gem_GetRandomMon):P?(mon:y)/5/(MON_AZURE_DRAGON)/(MON_RUST_DRAGON)/(MON_FAERIE_DRAGON)/(MON_CRYSTAL_DRAGON)/(MON_DRACOLICH);
+          !!MA:G(mon)/?(growth:y);
+          !!OB2:U(mon) C(growth);
+        !!en;
+      !!en;
+    !!en;
 
 witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !?FU(OnAfterErmInstructions);
@@ -235,14 +256,19 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 
 
 ; Remove buggy neutral stacks by mouse hovering. Occasionally a stack with the size 4095 is generated on the map with UN:I command.
-; This script is better executed before everything else.
+; This script is better executed before anything else.
+; It removes a buggy stack silently
 !?FU(OnAdvMapTileHint);
 !#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
-
 !!if&(objType)=(OBJ_MONSTER);
-  !!VR(qty:y):S0;
-  !!MO(x)/(y)/(z):G?(qty);
-  !!UN&(qty)<=0:O(x)/(y)/(z)/1;
+  !!UN:P904/1 P905/0;                   [Option 904 - Disable Error msg. Option 905 - error found]
+  !!MO(x)/(y)/(z):G?(qty:y);
+  !!UN:P905/?(hasError:y);
+  !!if&(hasError);
+    !!UN:O(x)/(y)/(z)/1;                [Debug msg can be added here to help collect debug info from players]
+    !!UN:P904/0;
+    !!SN:Q;
+  !!en;
 !!en;
 
 ** Fix of the heroes and towns reordering
@@ -266,7 +292,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
               !!VR(hero[0]):S(clickHero);
               !!OW:O(CURRENT_PLAYER)/(hrOnMap)/(hero[0])/(hero[1])/(hero[2])/(hero[3])/(hero[4])/(hero[5])/(hero[6])/(hero[7]);
               !!CM:R0;
-              !!UN:R(REDRAW_ADV_MAP);
+              !!UN:R1;
               !!br;
             !!en;
               
@@ -279,7 +305,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
       !!if&i^key_shift^;
         !!OW:O(CURRENT_PLAYER)/1/(itemID)/0;
         !!CM:R0;
-        !!UN:R(REDRAW_ADV_MAP);
+        !!UN:R1;
         !!FU:E;
       !!en;
 
@@ -294,7 +320,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
           !!if&(clickTown)=(townId);
             !!OW:W(CURRENT_PLAYER)/0/?(firstTownId:y) W(CURRENT_PLAYER)/0/(townId) W(CURRENT_PLAYER)/i/(firstTownId);
             !!CM:R0;
-            !!UN:R(REDRAW_ADV_MAP);
+            !!UN:R1;
             !!br;
           !!en;
         !!en;
@@ -305,7 +331,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
       !!if&i^key_shift^;
         !!OW:N(CURRENT_PLAYER)/1/(itemID)/0;
         !!CM:R0;
-        !!UN:R(REDRAW_ADV_MAP);
+        !!UN:R1;
       !!en;
      
     !!en;
