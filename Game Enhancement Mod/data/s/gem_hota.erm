@@ -74,6 +74,12 @@ ZVSE2
     !!VRi^gem_battle_altbttn_id^:Sv1;
     !!VRi^gem_battle_dlg^:S(dlg);
     !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
+
+    !!SN:L^Amethyst2_4.dll^/?(amethyst:y);
+    !!if&(amethyst);
+      !!SN:A(amethyst)/^check_harpy^/?i^gem_amethyst_isHarpyFunc^;
+    !!en;
+
     !!FU(gem_DlgItemPosition):P2/194/d-1/d/(dlg);                           [set input chat position and size]
     !!FU(gem_DlgItemSize):P2/391/d/d/(dlg);
 
@@ -316,25 +322,26 @@ ZVSE2
   !!en;
 
   !!if&i^battle_isNetwork^=(FALSE);
-    !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
-      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
-      !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
-    !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^/(heroStack)<>(NO_STACK);
-      !!BM:I?(side:y);
-      !!HEi^battle_hero_%(side)^:C0/(heroStack)/d/d/?(lvl:y)/12 C0/(heroStack)/d/d/(lvl)/12; [necessary to repeat cause of bug]
+    !!BM(stackId):Z?(stack:y);
+    !!VR(result:y):S(FALSE);
 
-      !!VR(eaStack:y):S(stackId) +1 *-1;
-      !!EA(eaStack):F102/98/?(abLine:y);
-      !!if&(abLine);
-        !#VA(abVal[11]:y);
-        !!EA(eaStack):B(abLine)/?(isEnabled:y)/?(type:y)/?(subType:y)/?(abVal[0])/?(abVal[1])/?(abVal[2])/?(abVal[3])/?(abVal[4])/?(abVal[5])/?(abVal[6])/?(abVal[7])/?(abVal[8])/?(abVal[9])/?(abVal[10]);
-        !!if&(isEnabled)=(TRUE)/(type)=102/(subType)=98/(abVal[lvl])=(TRUE);
-          !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
-          !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
-        !!en;
-
-      !!en;
+    !!if&i^gem_amethyst_isHarpyFunc^;
+      !!SN:Ei^gem_amethyst_isHarpyFunc^/(CALLCONV_CDECL)/(stack);
+      !!VR(result):Sv1;
     !!en;
+
+    !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
+      !!VR(result):S(TRUE);
+    !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
+      !!SN:E7463987/(CALLCONV_CDECL)/(stack);                        [does this stack have strike and return stack ability]
+      !!VR(result):Sv1;
+    !!en;
+
+    !!if&(result);
+      !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
+      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
+    !!en;
+
   !!en;
 
 !?FU(OnBattleStackObtainsTurn);&i^battle_isVisible^/i^battle_isQuick^=(FALSE);
@@ -376,16 +383,12 @@ ZVSE2
 !!FU(gem_BattleBtn_Dtor):P;
 *!IF:L^%^;
 !?FU(gem_BattleBtn_Dtor);
-  !!VRi^gem_battle_dlg^:S0;
-  !!VRi^gem_battle_altbttn_id^:S0;
-  *!SN:F^lstrcpyA^/i^gem_BattleBtn_HintPointer^/^1^;
+  !!VRi^gem_battle_dlg^:S0;             [remove dlg ptr]
+  !!VRi^gem_battle_altbttn_id^:S0;      [remove bttn id]
 
   !!VRi^gem_BattleBtn_HintPointer^:S0;
 
-
   !!VRi^gem_battleBttn_isDisabled^:S(FALSE);
-
-
 
   !!VRi^gem_BattleBtn_CurrentAbility^:S0;
   !!VRi^gem_BattleBtn_NextAbility^:S0;
@@ -398,6 +401,7 @@ ZVSE2
   !!VRi^gem_stack_do_not_affect_spells^:S(FALSE);
 
   !!VRi^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^:S0;
+  !!VRi^gem_amethyst_isHarpyFunc^:S0;
 
 
   !!re i/0/(BATTLE_STACK_LAST);
