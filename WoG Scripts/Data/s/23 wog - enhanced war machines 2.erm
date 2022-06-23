@@ -72,6 +72,11 @@ ZVSE2
   !!SN:Bv1/d/z155009;
 
 !?FU(OnSetupBattlefield)&i^wog_55_enabled^;
+  ; Initialise catapult variables
+  !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+    !!VRi^wog_55_catapult_%i^:S(NO_STACK);
+  !!en;
+
   ; Set up Catapult in non-siege and non-CB battles
   !!if&i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
     !!FU(WOG_55_PlaceCatapult):P(BATTLE_LEFT);
@@ -126,13 +131,21 @@ ZVSE2
       !!BM(catStack):T?(type:y);
 
       !!if&(type)=(MON_CATAPULT);
+        ; Store stack number to be used later after Tactic Phase
+        !!VRi^wog_55_catapult_%(side)^:S(catStack);
+        ; Set up basic stats except for monster type as setting here would conflict with HD fast troop placements
         !!HEi^battle_hero_%(side)^:F?(att:y)/?(def:y)/d/d;
         !!VR(maxDamage:y):S(att) +(def) +10;
-        !!BM(catStack):T(MON_NOT_USED_2) U1/5 U2/(maxDamage) H250 B(skillBall);
+        !!BM(catStack):U1/5 U2/(maxDamage) H250 B(skillBall);
       !!en;
     !!en;
   !!en;
 
+; Change catapult ID to 124
+!?FU(OnAfterTacticsPhase)&i^wog_55_enabled^;
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!BMi^wog_55_catapult_%i^&i^wog_55_catapult_%i^>(NO_STACK):T(MON_NOT_USED_2);
+!!en;
 
 -------------------------- B E F O R E   S T A C K    T U R N --------------------------
 !?FU(OnBattleStackObtainsTurn)&i^wog_55_enabled^;

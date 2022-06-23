@@ -5,12 +5,6 @@ ZVSE2
 ** Name rus.     : Ресурсы монстров
 ** Changes rus.  : [Algor] вынос опции в отдельный файл для мода ERA, построчные комментарии
 ** Options       : 768
-** Dialogs       : -
-** Variables     : v762-v769
-** Tmp variables : -
-** Timers        : -
-** Functions     : FU17777
-** PO-values     : -
 
 ** All monster stacks on the map have gold and possibly either wood or ore or
 ** a precious resource (or sometimes wood/ore + a precious resource) that you
@@ -38,20 +32,26 @@ ZVSE2
 
 ** If a monster stack has an artifact, it won't have any resources.
 
-** i^es_768_totalNeutralMonCost^-i^es_768_heroOwnedNeutralMonNum^, v762-v769
-
 
 ; Initialization
-!#VRi^es_768_heroOwnedNeutralMonNum^:S-1;
-!#VRi^es_768_monResMsg_enabled^:S(TRUE);
-!#VRv762:C0/0/0/0/0/0/0/0;              [Initialize v762-v769 to 0]
+!?FU(OnAfterErmInstructions);
+!!UN:P768/?(wogOption:y);               [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
-!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=1; [**VR add, click on minimap to reinitialize options display]
+!!VRi^es_768_heroOwnedNeutralMonNum^:S-1;
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!VRi^es_768_monResMsg_enabled_%i^:S(TRUE);
+  !!VRi^es_768_collectRes_%i^:S(TRUE);
+!!en;
+
+!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=1/999; [**VR add, click on minimap to reinitialize options display]
 !!UN:P768/?(wogOption:y);               [Check if script is enabled]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
 ** Check if Monster Stack Resource messages are disabled **
-!!FU&i^es_768_monResMsg_enabled^:E; exit if disable options active
+!!OW:C?(player:y);
+!!FU&i^es_768_monResMsg_enabled_%(player)^:E; exit if disable options active
 
 !!VRz1:S^%T(es.768.select)^;
 !!VRz2:S^%T(es.768.enable)^;
@@ -60,7 +60,7 @@ ZVSE2
 
 !!CM:R0;
 
-!!VRi^es_768_monResMsg_enabled^&v1=1:S(TRUE);
+!!VRi^es_768_monResMsg_enabled_%(player)^&v1=1:S(TRUE);
 
 ** [Give Heroes resources for defeating monster stacks]
 !?OB(OBJ_MONSTER);
@@ -87,17 +87,17 @@ ZVSE2
 !!FU(ES_768_GetNumOfMonFromHeroArmy):P(hero)/(type)/?i^es_768_heroOwnedNeutralMonNum^;[Count number of troops of type y-2 in hero's army]
 
 !?FU(OnBeforeBattle)&i^es_768_heroOwnedNeutralMonNum^>=0; [Start of Battle Trigger]
-!!UN:P768/?(wogOption:y); [Check if script is enabled]
-!!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
+!!UN:P768/?(wogOption:y);               [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
-!!OB998:U?(type:y); [Type of monster]
-!!HE(CURRENT_HERO):N?(hero:y); [Hero number]
+!!OB998:U?(type:y);                     [Type of monster]
+!!HE(CURRENT_HERO):N?(hero:y);          [Hero number]
 !!FU(ES_768_GetNumOfMonFromHeroArmy):P(hero)/(type)/?i^es_768_heroOwnedNeutralMonNum^;[Count number of troops of type y-2 in hero's army]
-!!VRi^es_768_totalNeutralMonCost^:*-1; [Set i^es_768_totalNeutralMonCost^ to negative number if there's a battle]
+!!VRi^es_768_totalNeutralMonCost^:*-1;  [Set i^es_768_totalNeutralMonCost^ to negative number if there's a battle]
 
 !$OB(OBJ_MONSTER)&i^es_768_totalNeutralMonCost^<>0/i^es_768_heroOwnedNeutralMonNum^>=0;
-!!UN:P768/?y4; [Check if script is enabled: y-1]
-!!FU&y4<>1:E; [Exit if script isn't enabled]
+!!UN:P768/?(wogOption:y);               [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
 !!OB998:U?y-1; [Type of monster: y-1]
 !!HE(CURRENT_HERO):N?y-2 O?y-10; [Hero number: y-2, Owner: y-10]
@@ -190,70 +190,61 @@ ZVSE2
 !!VRy-8|y-9<1/y-11<3:S-1; [Set to -1 if no precious resource: y-8]
 !!FU&y-4<1:E; [Exit if no resource treasure]
 
-!!VRy-17:S762 +y-10; [Index for v variable storing this player's last selected option: y-17]
-!!VRy-18:Svy-17; [Last selected option: vy-17 (v762-v769)]
-!!VRy-18&y-18=0:S1; [If no option was selected, default to option 1]
-** [** Check if Monster Stack Resource messages are disabled **]
-!!VRy-19:Sy-10 +1; [Add 1 to y-10: y-19]
-!_!FU$bit$:Py-19; [Convert to bit number: y-100]
-!!VRy-100:S0;
-!!VRy-100&y-19>0:S1;
-
-!!re i/2/y-19;
-  !!VRy-100:*2;
-!!en;
-
-!!VRy-20:Sv3328; [Set y-20 to v3328]
-!!VRy-20:&y-100; [Check if message is disabled for current player: y-20]
-** If y-20=y-100, messages are disabled for current player **
-
-!!if&i^es_768_monResMsg_enabled^<>(TRUE);
-   !!VRy-20:S0;
-   !!VRy-100:S1;
-!!en;
-
-!!HEy-2:W?y-22; [Hero's remaining movement points: y-22] **VR add
-!!UN:N3/4/y-1/1; [Name of Monster: z4]
-!!SN:T^es.768.ask^/?z-1/^mon^/z4 T^es.768.opt1^/?z-2/^movement^/y-22;
-!!SN:T^es.768.opt2^/?z-3 T^es.768.opt3^/?z-4 T^es.768.opt4^/?z-5;
-!!VRv1:S0; [Initialize v1 to 0]
-!!IF&y-20<>y-100/1000:G1/1/y-18/-1/-2/-3/-4/-5/0/0/0/0/0/0/0/0; [Display option list unless disabled: choice in v1]
-!!VRy-21&v1=0:S2; [Default to no for AI]
-!!VRy-21|v1=1/v1=4:S1; [Set y-21 to Yes option selected: y-21]
-!!VRy-21|v1=2/v1=8:S2; [Set y-21 to No option selected: y-21]
-!!VRi^es_768_monResMsg_enabled^|v1=4/v1=8:S(FALSE); **VR add
-!!VRvy-17&1000/y-20<>y-100:Sy-21; [Store selected option in vy-17 (v762-v769) unless disabled]
-!!VRy-21&1000/y-20=y-100:Sy-18; [If message disabled, use last selected option for human hero: y-21]
-!!VRz1:S^Message Disabling^; [Section name: z1]
-!!DO10938/3320/3328/1|v1=4/v1=8:P0; [Load the disabling state variables from disk file]
-!!VRv3328|v1=4/v1=8:|y-100; [Add message disabled state to v3328 for this player: v3328]
-!!DO10938/3320/3328/1|v1=4/v1=8:P1; [Save the disabling state variables to disk file]
 !!HEy-2:W?y-22; [Hero's remaining movement points: y-22]
-!!VRy-21&-1000/y-22<500:S1; [AI hero only gathers resources if it has less than 500 movement points remaining]
-!!FU&y-21=2:E; [Exit if hero doesn't gather resources]
 
-!!VRy-22:-500; [Remove 500 movement points: y-22]
-!!VRy-22&y-22<0:S0; [Minimum 0: y-22]
-!!HEy-2:Wy-22; [Remove 500 movement points from hero]
-!!HEy-2:B0/?z1; [Hero's name]
+!!VR(collectRes:y):Si^es_768_collectRes_%y-10^;
 
-!!if&y-3=1;
-  !!SN:T^es.768.fled^/?z3/^mon^/z4/^hero^/z1;
-!!el&y-3=2;
-  !!SN:T^es.768.defeated^/?z3/^mon^/z4/^hero^/z1;
+; Show selection dialogue for humna player unless it's disabled
+!!if&1000/i^es_768_monResMsg_enabled_%y-10^;
+  !!HEy-2:W?y-22; [Hero's remaining movement points: y-22] **VR add
+  !!SN:H^monname^/y-1/0/?z4; [Name of Monster: z4]
+  !!SN:T^es.768.ask^/?z-1/^mon^/z4 T^es.768.opt1^/?z-2/^movement^/y-22;
+  !!SN:T^es.768.opt2^/?z-3 T^es.768.opt3^/?z-4 T^es.768.opt4^/?z-5;
+  !!VRv1:S0; [Initialize v1 to 0]
+
+  !!if&(collectRes);
+    !!VR(defaultChoice:y):S1;
+  !!el;
+    !!VR(defaultChoice):S2;
+  !!en;
+
+  !!IF:G1/1/(defaultChoice)/-1/-2/-3/-4/-5/0/0/0/0/0/0/0/0; [Display option list unless disabled: (collectRes) in v1]
+  !!VR(collectRes)|v1=1/v1=4:S(TRUE); [Set (collectRes) to Yes option selected: (collectRes)]
+  !!VR(collectRes)|v1=2/v1=8:S(FALSE); [Set (collectRes) to No option selected: (collectRes)]
+  !!VRi^es_768_monResMsg_enabled_%y-10^|v1=4/v1=8:S(FALSE); **VR add
+  !!VRi^es_768_collectRes_%y-10^:S(collectRes); [Store selected option unless disabled]
 !!en;
+
+; Set collectRes to FALSE for AI unless they have fewer than 500 mp
+!!if&-1000;
+  !!VR(collectRes):S(FALSE); [Default to no for AI]
+  !!VR(collectRes)&y-22<500:S(TRUE); [AI hero only gathers resources if it has less than 500 movement points remaining]
+!!en;
+
+!!FU&(collectRes)<>(TRUE):E; [Exit if hero doesn't gather resources]
+
+!!VRy-22:-500 F0/(INT_MAX); [Remove 500 movement points: y-22. Minimum 0]
+!!HEy-2:Wy-22; [Remove 500 movement points from hero]
 
 !!if&1000;
+  !!HEy-2:B0/?z1; [Hero's name]
+
+  !!if&y-3=1;
+    !!SN:T^es.768.fled^/?z3/^mon^/z4/^hero^/z1;
+  !!el&y-3=2;
+    !!SN:T^es.768.defeated^/?z3/^mon^/z4/^hero^/z1;
+  !!en;
+
   !!IF&y-11=0:Q1/6/y-4/(MSG_TYPE_MES)^%Z3^; [Gold alone]
   !!IF&y-11>=1/y-11<=2:Q1/6/y-4/y-5/y-7/1^%Z3^; [Gold + Wood/Ore]
   !!IF&y-11=3:Q1/6/y-4/y-8/y-9/1^%Z3^; [Gold + Precious Resource]
   !!IF&y-11=4:Q1/6/y-4/y-5/y-7/y-8/y-9/1^%Z3^; [Gold + Wood/Ore + Precious Resource]
 !!en;
 
-!!OW:R-1/6/dy-4; [Give player gold: y-4]
-!!OW&y-5>=0/y-7>0:R-1/y-5/dy-7; [Give player wood or ore: y-7]
-!!OW&y-8>=0/y-9>0:R-1/y-8/dy-9; [Give player precious resource: y-9]
-!!UN:R2;
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/dy-4; [Give player gold: y-4]
+!!OW&y-5>=0/y-7>0:R(CURRENT_PLAYER)/y-5/dy-7; [Give player wood or ore: y-7]
+!!OW&y-8>=0/y-9>0:R(CURRENT_PLAYER)/y-8/dy-9; [Give player precious resource: y-9]
+!!UN:R2;                                [Update res bar]
 
 !?FU(ES_768_GetNumOfMonFromHeroArmy);
 ** [x1=hero number, x2=monster type, total number in hero's army]
