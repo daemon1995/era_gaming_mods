@@ -1,0 +1,93 @@
+ZVSE2
+**
+**  Written by Matteo "Ameranth" T. 2022.
+**
+**  Improves the strength of AI by hiring more heroes than they the few they usually can.
+**
+**  Each day, AI checks heroes available in their tavern and hires one if they do not have 5 heroes,
+**  and if an owned town's entrance is open to hire one in (if the town has a tavern).
+**  6 is SoD's maximum count of heroes for an AI when playing on Impossible, however this maximum is
+**  rarely met due to a global hero cap (9-21!, depending on difficulty) that *only the AI* must obey.
+**  We hire one fewer hero than defined in the ini, so that the AI has some room to hire leveled heroes
+**  (>=10), when they appear.
+**  --------------------------
+
+
+**    Every day for AI.
+!?FU(OnEveryDay)&i^timerIsAi^=(TRUE);
+    !!FU&i^huAI_hireMoreHeroes^<=0:E;    //Exit if hero hiring is not enabled.
+    
+    !!VR(day:y):Sc;     //Get day.
+    !!FU&(day)=1:E;     //Don't do this on day 1, attempting to do so causes problems.
+    
+    !!VR(allowedHeroes:y):Si^huAI_hireMoreHeroes^;      //From setting defined in ini.
+    !!OW:C?(currentPlayer:y);                           //Get current player.
+    !!OW:H(currentPlayer)/2/0;                          //Get count of heroes owned by current player in v2.
+    !!VR(heroCount:y):Sv2;
+    !!FU&(heroCount)>=(allowedHeroes):E;                //Exit if already at maximum.
+    
+    !!FU(huAI_GetOpenTown):P(currentPlayer)/?(x:y)/?(y:y)/?(z:y);    //Get the x,y,l of first town with no visiting hero owned by current player.
+    !!FU&(x)=-1:E;        //Exit if we did not manage to find a valid town.
+    
+    !!OW:V(currentPlayer)/?(leftHero:y)/?(rightHero:y);                     //Get tavern heroes.
+    !!VR(hiredHero:y):S-1;                                                  //This will become our hired hero.
+    !!VR(allowedHeroes):-1;                                                 //one fewer than is defined in ini file, since we want to save a slot for a leveled hero.
+    !!if&(heroCount)<(allowedHeroes):;                                      //If we don't yet have one fewer than defined heroes, hire the more experienced of the two.
+        !!HE(leftHero)&(leftHero)>-1:E?(leftXP:y)/d;                        //Get XP of left hero.
+        !!HE(rightHero)&(rightHero)>-1:E?(rightXP:y)/d;                     //Get XP of right hero.
+        !!VR(hiredHero:y)&(leftXP)>=(rightXP)/(leftHero)>-1:S(leftHero);    //Set hired hero to left if >= xp of right.
+        !!VR(hiredHero)&(leftXP)<(rightXP)/(rightHero)>-1:S(rightHero);     //Set hired hero to right if > xp of left.
+    !!el:;                                                                  //We have one fewer than defined heroes, see if either available hero is very experienced.
+        !!HE(leftHero)&(leftHero)>-1:Ed/?(leftLevel:y);                     //Get level of left hero.
+        !!HE(rightHero)&(rightHero)>-1:Ed/?(rightLevel:y);                  //Get level of right hero.
+        !!VR(hiredHero)&(leftLevel)>=(rightLevel)/(leftLevel)>=10/(leftHero)>-1:S(leftHero);        //Set hired hero to left if at least level 10, and >= level of right.
+        !!VR(hiredHero)&(leftLevel)<(rightLevel)/(rightLevel)>=10/(rightHero)>-1:S(rightHero);      //Set hired hero to right if at least level 10, and > level of left.
+    !!en:;
+    !!FU&(hiredHero)<0:E;    //Exit if we did not find a valid hero.
+    
+    !!OW&(leftHero)=(hiredHero):V(currentPlayer)/-1/(rightHero);        //Remove hired hero from the tavern.
+    !!OW&(rightHero)=(hiredHero):V(currentPlayer)/(leftHero)/-1;
+    !!HE(hiredHero):P(x)/(y)/(z)/0;        //Add new hero.
+    !!HE(hiredHero):O(currentPlayer);                //Set new hero's owner to current player.
+    
+    //!HE(hiredHero):B0/?(heroHired:z);         TEST - New hero name
+    //!VR(playerIndex:z):M3/(currentPlayer);      TEST - Player number
+    //!IF:L^Player %(playerIndex) hired %(heroHired).^;  TEST - Report hired hero.    
+    
+    
+    
+**  --------------------------
+**  Returns the coords of the first town owned by player that does not have a visiting hero.
+!?FU(huAI_GetOpenTown);
+    !#VA(player:x);
+    !#VA(returnX:x);
+    !#VA(returnY:x);
+    !#VA(returnZ:x);
+    !#VA(x:y) (y:y) (z:y);
+    
+    !!VR(x):S-1;            //setting x-coordinate to -1 will force to start search from scratch
+    !!VR(returnX):S-1;      //Parent function can check for -1 to detect failure.
+
+    !!re i;     //infinite loop
+        !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y)/(z);      //Get next town. -1=iterate forward.
+        !!br&(x)<0:;                                    //break if nothing found
+        
+        !!OB(x)/(y)/(z):T?(foundObj:y);     //(foundObj)=type of object at coords. This may not be a town if a hero is visiting the town.
+        !!co&(foundObj)<>(OBJ_TOWN):;      //Exit if the object type is not a town.
+        
+        !!CA(x)/(y)/(z):O?(objOwner:y);
+        !!co&(objOwner)<>(player):; //Exit if not owned by current player.
+        
+        !!CA(x)/(y)/(z):B3/5;       //Get if tavern is built for this town, in flag 1.
+        !!co&-1:;                  //Exit if no tavern (flag 1 not set).
+        
+        !!CA(x)/(y)/(z):H1/?(visitingHero:y);   //Check for visiting hero.
+        !!co&(visitingHero)>-1:;               //Exit if there *is* a visiting hero (town entrance is full).
+        
+        !!VR(returnX):S(x); !!VR(returnY):S(y); !!VR(returnZ):S(z);
+        !!br:;            //Escape the loop, we've found a town.
+    !!en:;
+**  --------------------------
+    
+    
+    

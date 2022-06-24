@@ -1,0 +1,253 @@
+ZVSE2
+**
+**    Written by Matteo "Ameranth" T. 2022.
+**
+**    Improves the strength of AI by guiding the AI toward heroes with "good" specializations.
+**
+**    On day 1, Replace AI heroes to use heroes who have more useful specializations.
+**    Do not use heroes already on the map or in a tavern.
+**    Block AI from hiring heroes who have "bad" specializations.
+**  --------------------------
+
+
+
+!?TM2&$day$=1/$once$=1; // only once at day 1
+    !!FU&i^huAI_replaceHeroes^=(FALSE):E;       //Exit if hero replacement is not enabled.
+    !!FU(huAI_replaceBadHeroes):P;
+    
+!?FU(OnEveryDay)&i^timerIsAi^=(TRUE);
+    !!FU&i^huAI_replaceHeroes^=(FALSE):E;       //Exit if hero replacement is not enabled.
+    !!FU(huAI_replaceBadHeroes_Taverns)&i^timerWeekDay^=1:P;          //Loop taverns to replace newly added heroes.
+
+
+
+**  --------------------------
+!?FU(huAI_replaceBadHeroes);
+**    Replace "bad" heroes owned by AI with "good" ones.
+    !!re i/(HERO_FIRST)/(HERO_LAST_WOG):;
+    
+        !!HEi:O?(owner:y);                          //get hero's owner
+        !!if&(owner)>(NO_PLAYER):;                  //hero is owned
+            !!OW:I(owner)/?(isAI:y);                //get if owner is AI
+            !!if&(isAI)=(TRUE):;                    //continue if AI
+                !!FU(huAI_GetIsSpecBad):Pi/?(specIsBad:y);       //get if hero should be replaced.
+                !!FU&(specIsBad)=(FALSE):E;                     //exit if hero should be kept.
+                
+                //!HEi:B0/?z1;              TEST
+                //!IF:L^Should swap %z1^;   TEST
+                
+                !!VR(heroesOfTownFirst:y):Si:16*16;                    //get first index of heroes within this hero's town. There are 16 standard heroes for each town, these operations gives us the first of those.
+                !!VR(heroesOfTownLast:y):S(heroesOfTownFirst)+15;     //get *last* index of heroes within this hero's town.
+                //!VRz1:M3/(heroesOfTownFirst);    TEST
+                //!IF:Lz1;                          TEST
+                //!VRz1:M3/(heroesOfTownLast);     TEST
+                //!IF:Lz1;                          TEST
+                !!FU(huAI_GetReplacementHero):P?(replacementHero:y)/(heroesOfTownFirst)/(heroesOfTownLast);         //Get a replacement hero within this town.
+                !!FU&(replacementHero)=-1:E;                //exit if no valid replacement could be found.
+                
+                !!HEi:P?(x:y)/?(y:y)/?(z:y);                //get xyl of current "bad" hero.
+                !!HEi:K;                                    //Remove current hero, else crash when disabling owned hero.
+                !!FU(huAI_BlockHero):Pi;            //Disable hero for all AI players. Doc says disabling an owned hero kills it, but it appears to crash the game instead.
+                !!HE(replacementHero):P(x)/(y)/(z)/0;       //Add new hero.
+                !!HE(replacementHero):O(owner);             //Set new hero's owner to old hero's owner.
+                
+                //!HEi:B0/?(loopHeroName:z);                         TEST
+                //!HE(replacementHero):B0/?(replacementHeroName:z);  TEST
+                //!IF:L^%(loopHeroName) -> %(replacementHeroName)^;  TEST
+            !!en:;
+        !!el:;        //Hero is not owned
+            !!FU(huAI_GetIsSpecBad):Pi/?(specIsBad:y);        //get if hero should be replaced.
+            !!FU(huAI_BlockHero)&(specIsBad)=(TRUE):Pi;        //Disable hero for all AI players if it was "bad".
+        !!en:;
+        
+    !!en:;
+**  --------------------------
+    
+    
+    
+**  --------------------------
+!?FU(huAI_replaceBadHeroes_Taverns);
+**    Replace "bad" heroes in AI taverns with "good" ones.
+    !!OW:C?(currentPlayer:y);
+    
+    !!OW:V(currentPlayer)/?(leftHero:y)/?(rightHero:y);         //get left and right hero of tavern.
+    !!FU(huAI_GetIsSpecBad):P(leftHero)/?(specIsBad:y);         //get if left hero should be replaced.
+    !!if&(specIsBad)=(TRUE):;
+        !!VR(heroesOfTownFirst:y):S(leftHero):16*16;            //get first index of heroes within this hero's town. (Left hero is an on-town hero, if possible). There are 16 standard heroes for each town.
+        !!VR(heroesOfTownLast:y):S(heroesOfTownFirst)+15;       //get *last* index of heroes within this hero's town.
+        !!FU(huAI_GetReplacementHero):P?(replacementHero:y)/(heroesOfTownFirst)/(heroesOfTownLast);         //Get a replacement hero within this town. 
+        !!FU(huAI_GetReplacementHero)&(replacementHero)=-1:P?(replacementHero);         //If none could be found, try to get a replacement hero from any town.
+        //!HE(leftHero):B0/?(leftHeroName:z);  TEST
+        !!VR(leftHero)&(replacementHero)>-1:S(replacementHero);        //Set left hero var to new hero, if one was found.
+        
+        //!HE(replacementHero)&(replacementHero)>-1:B0/?(replacementHeroName:z);     TEST
+        //!VR(replacementHeroName)&(replacementHero)=-1:S^FAILED^;                   TEST
+        //!IF:L^Tavern replace left %(leftHeroName) with %(replacementHeroName)^;    TEST
+    !!en:;
+    
+    !!FU(huAI_GetIsSpecBad):P(rightHero)/?(specIsBad);              //get if right hero should be replaced.
+    !!if&(specIsBad)=(TRUE):;
+        !!FU(huAI_GetReplacementHero):P?(replacementHero);          //get a replacement hero from any town (right hero is not town-specific).
+        //!HE(rightHero):B0/?(rightHeroName:z);  TEST
+        !!VR(rightHero)&(replacementHero)>-1:S(replacementHero);    //Set right hero var to new hero, if one was found.
+        
+        //!HE(replacementHero)&(replacementHero)>-1:B0/?(replacementHeroName:z);     TEST
+        //!VR(replacementHeroName)&(replacementHero)=-1:S^FAILED^;                   TEST
+        //!IF:L^Tavern replace right %(rightHeroName) with %(replacementHeroName)^;  TEST
+    !!en:;
+    !!OW:V(currentPlayer)/(leftHero)/(rightHero);        //set heroes.
+**  --------------------------
+
+
+
+**  --------------------------
+!?FU(huAI_GetReplacementHero);
+**  Returns number of an unused "good" hero, which matches the passed town.
+**  if only return param is provided, default hero range of 0-155 is searched.
+    !#VA(returnHero:x);
+    !#VA(heroRangeFirst:x);
+    !#VA(heroRangeLast:x);
+    
+    !!VR(returnHero):S-1;
+    !!FU:A?(numArgs:y);
+    !!VR(heroRangeFirst)&(numArgs)=1:S(HERO_FIRST);    //Default to 0 start range if none is provided.
+    !!VR(heroRangeLast)&(numArgs)<3:S(HERO_LAST_WOG);  //Default to 155 end range if none is provided.
+    
+    //!VR(firstStr:z):M3/(heroRangeFirst);   TEST
+    //!VR(lastStr:z):M3/(heroRangeLast);     TEST
+    //!IF:L^GetReplacementHero: range1: %(firstStr), range2: %(lastStr)^;     TEST
+    !!re i/(heroRangeFirst)/(heroRangeLast):;
+        !!FU(huAI_GetIsSpecBad):Pi/?(specIsBad:y);  //get if target hero is "bad"(1) or not(0).
+        !!if&(specIsBad)=(FALSE);                   //continue if the target hero is good.
+            !!VR(x:y):S-1;
+            !!HEi:P?(x)/?(y:y)/?(z:y);              //Get target hero x coord. Using this with any params as 'd' can cause a crash!
+            !!HEi:O?(owner:y);                      //get target hero's owner
+            !!co|(x)>-1/(owner)>(NO_HERO):;         //Don't use this hero if it is on the map already or is already owned.
+            
+            !!FU(huAI_HeroInTavern):Pi/?(isInTavern:y);
+            !!co&(isInTavern)=(TRUE):;              //Don't use this hero if it is in a tavern already.
+            
+            !!VR(returnHero):Si;    //Return value is set.
+            !!br:;                  //Break since we found a valid hero.
+        !!en:;
+    !!en:;
+    //!HE(returnHero)&(returnHero)>-1:B0/?(returnHeroName:z);    TEST
+    //!VR(returnHeroName)&(returnHero)=-1:S^FAILED^;             TEST
+    //!IF:L^GetReplacementHero: return %(returnHeroName)^;       TEST
+**  --------------------------
+
+
+
+**  --------------------------
+!?FU(huAI_BlockHero);
+**    Disables the hero x1 for all AI players.
+    !#VA(hero:x);
+    
+    !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
+        !!OW:Ii/?(isAI:y)/?(isDead:y);      //get if target player is AI and alive.
+        //!HE(hero)&(isAI)=(TRUE)/(isDead)=(FALSE)/i<>(owner):R3/0/i;        //disable hero for the player. Not for owning player, this causes a crash.
+        !!HE(hero)&(isAI)=(TRUE)/(isDead)=(FALSE):R3/0/i;        //disable hero for the player. Not for owning player.    EDIT: No crash, I must have been mistaken.
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+!?FU(huAI_HeroInTavern);
+**    Checks if hero(x1) is in tavern for player range iterated.
+**    Returns x2=1 if yes, 0 if no.
+    !#VA(hero:x);
+    !#VA(returnBool:x);
+    
+    !!VR(returnBool):S(FALSE);
+    
+    !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
+        !!OW:Ii/d/?(isDead:y);                //get if target player is alive.
+        !!if&(isDead)=(FALSE):;
+            !!OW:Vi/?(leftHero:y)/?(rightHero:y);           //get left and right hero of tavern.
+            !!if|(leftHero)=(hero)/(rightHero)=(hero):;     //if hero is in tavern, return 1 and exit loop.
+                !!VR(returnBool):S(TRUE);
+                //!HE(hero):B0/?(heroName:z);        TEST
+                //!IF:L^In tavern: %(heroName)^;     TEST
+                !!FU:E;     //exit since a return value was found.
+            !!en:;
+        !!en:;
+    !!en:;
+**  --------------------------
+    
+
+
+**  --------------------------
+!?FU(huAI_GetIsSpecBad);
+**    Returns 1 if hero should be replaced.
+**    x1=hero
+**    x2=return value 0 or 1.
+    !#VA(hero:x);
+    !#VA(returnBool:x);
+    
+    !!VR(returnBool):S(FALSE);
+    //!HE(hero):B0/?z1;          TEST
+    //!IF:L^Is %z1 bad?^;        TEST
+    
+    !!HE(hero):X?(specType:y)/?(spec:y)/d/d/d/d/d;            //Get hero specialization.
+    !!UN:P726/?(remagicEnabled:y);        //Check if ReMagic script is enabled.
+    **    -----
+    **    Master of secondary skill
+    !!if&(specType)=0:;
+        !!if|(spec)=(SKILL_NAVIGATION)/(spec)=(SKILL_MYSTICISM)/(spec)=(SKILL_EAGLE_EYE)/(spec)=(SKILL_ESTATES)/(spec)=(SKILL_ARTILLERY)/(spec)=(SKILL_INTELLIGENCE):;            //Don't keep if specialization is Navigation, Mysticism, Eagle Eye, Estates, Artillery, Intelligence.
+            !!VR(returnBool):S(TRUE);            //Flag for replace and exit - theses skills don't benefit a main hero very well, or the AI does not play well to the strength of these.
+            //!IF:L^%z1 is bad^;        TEST
+        !!en:;
+        !!FU:E;
+    !!en:;
+    **    -----
+    **    Master of creatures
+    !!if&(specType)=1:;
+        !!if|(spec)=(MON_BALLISTA)/(spec)=(MON_TROGLODYTE)/(spec)=(MON_IMP)/(spec)=(MON_GNOLL)/(spec)=(MON_DWARF)/(spec)=(MON_WALKING_DEAD)/(spec)=(MON_GOBLIN):;    //Don't keep master of Ballista, Troglodytes, Imps, Gnolls, Dwarves, Walking Dead, or Goblins.
+            !!VR(returnBool):S(TRUE);            //Flag to replace and exit - These units just aren't good enough at base for the AI stack them well, and they're not very strong even with mastery.
+            //!IF:L^%z1 is bad^;        TEST
+        !!en:;
+        !!FU:E;
+    !!en:;
+    **    -----
+    **    Master of resources
+    !!if&(specType)=2:;
+        !!VR(returnBool):S(TRUE);            //Flag for replace and exit - AI resource benefits make these redundant, and these are not suitable for a main hero.
+        //!IF:L^%z1 is bad^;        TEST
+        !!FU:E;
+    !!en:;
+    **    -----
+    **    Master of spells
+    !!if&(specType)=3:;
+        //Replace spells *other* than: Bless, Prayer, Hypnotize, Chain Lightning, Haste, Meteor Shower, Stone Skin.
+        !!if&(spec)<>(SPELL_BLESS)/(spec)<>(SPELL_PRAYER)/(spec)<>(SPELL_HYPNOTIZE)/(spec)<>(SPELL_CHAIN_LIGHTNING)/(spec)<>(SPELL_HASTE)/(spec)<>(SPELL_METEOR_SHOWER)/(spec)<>(SPELL_STONE_SKIN);
+            !!VR(returnBool):S(TRUE);            //Flag for replace - AI likely cannot use other specialties effectively.
+            //!IF:L^%z1 is bad^;        TEST
+        !!en:;
+        !!if&(remagicEnabled)=(TRUE):;        //Allow additional spells if ReMagic is enabled.
+            !!if|(spec)=(SPELL_DEATH_RIPPLE)/(spec)=(SPELL_INFERNO):;
+                !!VR(returnBool):S(FALSE);            //Flag to keep.
+            !!en:;
+        !!en:;
+        !!FU:E;
+    !!en:;
+    **    -----
+    **    Grandmaster of creatures
+    !!if&(specType)=4:;
+        !!if|(spec)=(MON_BALLISTA)/(spec)=(MON_TROGLODYTE)/(spec)=(MON_IMP)/(spec)=(MON_GNOLL)/(spec)=(MON_DWARF)/(spec)=(MON_WALKING_DEAD)/(spec)=(MON_GOBLIN):;    //Don't keep master of Troglodytes, Imps, Gnolls, Dwarves, Walking Dead, or Goblins.
+            !!VR(returnBool):S(TRUE);            //Flag to replace and exit - These units just aren't good enough at base for the AI to stack them well, and they're not very strong even with mastery.
+            //!IF:L^%z1 is bad^;        TEST
+        !!en:;
+        !!FU:E;
+    !!en:;
+    **    -----
+    **    Master of WoG specialty - Walking Shroud/Builder.
+    !!if&(specType)=8/(spec)=1:;
+        !!VR(returnBool):S(TRUE);            //Flag for replace and exit - Builder is actually good, if it ever exists.
+        //!IF:L^%z1 is bad^;        TEST
+        !!FU:E;
+    !!en:;
+**  --------------------------
+
+
+

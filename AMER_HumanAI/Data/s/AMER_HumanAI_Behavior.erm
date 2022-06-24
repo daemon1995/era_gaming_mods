@@ -1,0 +1,650 @@
+ZVSE2
+**
+**  Written by Matteo "Ameranth" T. 2022.
+**
+**  Improves AI strength by faking human tactics/advantages, rather than very obviously cheated handicaps.
+**  - Emulates necromancy. It is normally bugged and does nothing for AI.
+**  - Emulates demon-farming with Pit Lords.
+**      At end of combat, AI sacrifices a portion of low-tier/off-faction units to match their Pit Lord's potential.
+**  - Emulates using 1-stacks to minimize losses from neutral stacks.
+**      This is done by resurrecting most T1-3 losses, and all T4+ losses.
+**  - Simulates human secondary skill choices, by replacing AI's "bad" choices.
+**  - (Experimental) AI attacks Dragon Utopias more frequently.
+**  - AI "thinking" radius raised to match SoD default.
+**  - Force AI to stop a hero when it's stuck in a two-way monolith.
+**
+**  --------------------------
+
+
+!?BA53&-(ERM_FLAG_IS_HUMAN);    //Battle-end for AI.
+    !!BA:H0/?(attackingHero:y);                 //Get attacking hero.
+    !!FU(huAI_BattleEnd):P(attackingHero)/0;    //Perform features for attacking hero.
+    !!BA:H1/?(defendingHero:y);                 //Get defending hero.
+    !!FU(huAI_BattleEnd):P(defendingHero)/1;    //Perform features for defending hero.
+    
+    
+!?FU(huAI_BattleEnd);
+    !#VA(hero:x);
+    !#VA(attackerOrDefender:x);
+    
+    !!if&(hero)>-1:;
+        //Set variable offsets based on if we are handling attacker/defender.
+        !!VR(otherArmyIndex:y):S(attackerOrDefender)+1%2;   //if (attackerOrDefender) is 0, this becomes 1. If it's 1, this becomes 0. So we get the opposite index.
+        
+        !!HE(hero):O?(owner:y);             //Get owner.
+        !!if&(owner)>-1:;                   //Not neutral.
+            !!FU(huAI_ResLosses)&i^huAI_lossRecovery^>0:P(attackerOrDefender);  //recover losses if enabled.
+            !!FU(huAI_FakeDemonFarm)&i^huAI_demonFarm^=(TRUE):P(hero);          //demon farm if enabled.
+            
+            !!HE(hero):S(SKILL_NECROMANCY)/?(necro:y);          //Get attacker Necro level.
+            !!if&(necro)>0:;                                    //If necro, emulate necromancy, because it does nothing for AI.
+                !!VR(otherArmyTotalSize:y):S0;
+                !!VR(otherArmyTotalHP:y):S0;
+                !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+                    !!SN:W^huAI_Behavior_PreBattleMonCount_%(otherArmyIndex)_%i^/?(otherArmyMonCount:y);
+                    !!VR(otherArmyTotalSize):+(otherArmyMonCount);
+                    
+                    !!SN:W^huAI_Behavior_PreBattleMon_%(otherArmyIndex)_%i^/?(otherArmyMon:y);
+                    !!if&(otherArmyMon)>(NO_MON):;
+                        !!MA:P(otherArmyMon)/?(monHP:y);        //HP of creature in slot.
+                        !!VR(monHP):*(otherArmyMonCount);       //multiplied by number of creatures in slot.
+                        !!VR(otherArmyTotalHP):+(monHP);        //Running total.
+                    !!en:;
+                !!en:;
+                
+                !!FU(huAI_FakeNecro)&i^huAI_necromancy^>0:P(necro)/(otherArmyTotalSize)/(attackerOrDefender)/(hero)/(otherArmyTotalHP);   //Emulate necro if enabled.
+            !!en:;
+        !!en:;
+    !!en:;
+
+
+**  Store AI hero army when combat starts, to use later when combat ends.
+!?BF;   //Combat trigger.
+    !!re j/0/1:;        //Loop 0-1 to store data for both attacker and defender.
+        !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+            !!BA:Mj/i/?(mon:y)/?(monCount:y);
+            !!SN:W^huAI_Behavior_PreBattleMon_%j_%i^/(mon);
+            !!SN:W^huAI_Behavior_PreBattleMonCount_%j_%i^/(monCount);
+        !!en:;
+    !!en:;
+**--------------------------------------------------
+
+
+
+**--------------------------------------------------
+**  AI combat loss prevention.
+**  At end of combat, compares troops in army to troops
+**  the hero had before combat. If losses are detected,
+**  they are restored. Some tier 1-3 units are not restored.
+**  This emulates a human using low-tier stacks as "meat"
+**  and how a player might reload to try a fight again.
+!?FU(huAI_ResLosses);
+    !#VA(attackerOrDefender:x);
+    
+    !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+        !!SN:W^huAI_Behavior_PreBattleMonCount_%(attackerOrDefender)_%i^/?(monCountOld:y);   //Get old monCount.
+        !!co&(monCountOld)<=0:;                              //co if this slot didn't have any creatures in it before.
+        
+        !!SN:W^huAI_Behavior_PreBattleMon_%(attackerOrDefender)_%i^/?(monOld:y);
+        
+        !!BA:M(attackerOrDefender)/i/?(mon:y)/?(monCount:y);    //Get mon and monCount in slot i.
+        //!IF&(monOld)<>(mon)/(mon)<>(NO_MON)/(mon)<>(MON_WEREWOLF):L^oldMon%(monOld) is not same as newMon%(mon)in slot%i!^;       TEST
+        //co if old mon and mon are *not* the same--this means something happened to change
+        //the mon in the slot during combat--excluding NO_MON, that means the stack died,
+        //and excluding Werewolf because Werewolf transformation is something a player would
+        //almost always reload for anyway.
+        !!co&(monOld)<>(mon)/(mon)<>(NO_MON)/(mon)<>(MON_WEREWOLF):;    
+        
+        !!VR(amountToRes:y):S(monCountOld)-(monCount);          //Get amount lost.
+        !!co&(amountToRes)<1:;                                  //co if nothing was lost.
+        
+        !!MA:L(monOld)/?(monLevel:y);                       //Get Tier of stack to recover less of tiers 1-3. Simulates a real player using these as "meat."
+        !!VR(amountToRes)&(monLevel)=0:*2:3;                //2/3 of lost T1.
+        !!VR(amountToRes)&(monLevel)=1:*3:4;                //3/4 of lost T2.
+        !!VR(amountToRes)&(monLevel)=2:*4:5;                //4/5 of lost T3.
+        !!co&(amountToRes)<1:;                              //co if nothing to res.
+        
+        !!VR(newAmount:y):S(monCountOld)+(amountToRes);
+        !!BA:M(attackerOrDefender)/i/(monOld)/(newAmount);  //Do res.
+        
+        //!VR(amountToResStr:z):M3/(amountToRes);    TEST
+        //!SN:H^monname^/(monOld)/0/?(monOldStr:z);  TEST
+        //!IF:L^* %(amountToResStr) %(monOldStr)^;   TEST
+        //!IF&(monOld)<>(mon)/(mon)=(MON_WEREWOLF):L^Avoiding werewolf transformation of %(newAmount) %(monOldStr)!^;       TEST
+    !!en:;
+**--------------------------------------------------
+    
+    
+    
+**--------------------------------------------------
+**  AI Demon farming emulation.
+**  At end of combat, calculates how much HP Pit Lords in
+**  army can raise as demons. Then, searches for an ideal
+**  stack to remove and use for raising demons.
+!?FU(huAI_FakeDemonFarm);
+    !#VA(hero:x);
+    
+    !!FU(huAI_GetCountOfUnit):P(hero)/(MON_PIT_LORD)/(MON_PIT_LORD)/?(pitCount:y);        //Get count of Pit Lord.
+    !!FU&(pitCount)<1:E;        //exit if no Pit Lords.
+    
+    !!VR(hpRaisedMax:y):S(pitCount)*50;            //Possible HP raised (50 hp created per Lord).
+    
+    **    Discover a stack to sacrifice. 
+    !!FU(huAI_GetDemonFarmSacrifice):P(hero)/(hpRaisedMax)/?(hpRaisedActual:y)/?(sacrificedCount:y)/?(sacrificedSlot:y);    //Get HP raised -as a function of sacrificed stack- sacrificed mon count, and sacrificed mon slot.
+    //!IF&(sacrificedSlot)=-1:L^No demonFarm sacrifice found.^;          TEST
+    !!FU&(sacrificedSlot)=-1:E;     //exit if no sacrifice was found.
+    
+    !!MA:P(MON_DEMON)/?(demonHP:y);
+    !!VR(demonsRaised:y):S(hpRaisedActual):(demonHP);           //Count of demons raised.
+    //!IF&(demonsRaised)<1:L^No demons can be raised.^;          TEST
+    !!FU&(demonsRaised)<1:E;        //exit if no demons can be raised.
+    
+    **    Add Demons.
+    !!FU(huAI_GetSlotOfUnit):P(hero)/(MON_DEMON)/(MON_HORNED_DEMON)/?(existingDemonSlot:y);        //Get slot of demons or horned demons (normally cannot directly raise horned demons, but this is much easier for AI and me).
+    !!if&(existingDemonSlot)>-1:;
+        !!HE(hero):C0/(existingDemonSlot)/d/d(demonsRaised);    //add demons.
+        //!IF:L^existing stack^;    TEST
+    !!el:;            //add a new stack if none already existed.
+        !!HE(hero):C2/(MON_DEMON)/(demonsRaised)/0;
+        //!IF:L^new stack...^;      TEST
+        !!FU(huAI_GetSlotOfUnit):P(hero)/(MON_DEMON)/(MON_HORNED_DEMON)/?(newDemonSlot:y);
+        //!IF&(newDemonSlot)=-1:L^Not accepted.^;       TEST
+        !!FU&(newDemonSlot)=-1:E;       //If AI did not accept the demons, do not sacrifice units.
+    !!en:;
+    
+    !!HE(hero):C0/(sacrificedSlot)/?(sacrificedMonType:y)/d(sacrificedCount);      //remove sacrificed creatures.
+    //!VR(demonsRaisedStr:z):M3/(demonsRaised);         TEST
+    //!VR(sacrificedCountStr:z):M3/(sacrificedCount);   TEST
+    //!SN:H^monname^/(sacrificedMonType)/0/?(sacrificedMonTypeStr:z);    TEST
+    //!IF:L^+%(demonsRaisedStr) Demons; sacced %(sacrificedCountStr) %(sacrificedMonTypeStr)^;           TEST
+    //!IF:L^-----^;          TEST
+    
+
+**    Returns a stack to sacrifice for demon farming.
+!?FU(huAI_GetDemonFarmSacrifice);
+    !#VA(hero:x);
+    !#VA(hpRaisedMax:x);
+    !#VA(hpRaisedActual:x);     //return
+    !#VA(sacrificedCount:x);    //return
+    !#VA(sacrificedSlot:x);     //return
+    
+    !!VR(hpRaisedActual):S-1;
+    !!VR(sacrificedCount):S-1;
+    !!VR(sacrificedSlot):S-1;
+    
+    !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+        !!HE(hero):C0/i/?(monType:y)/?(monCount:y);     //Get mon type and count.
+        !!co&(monType)=(NO_MON):;    //Nothing in the slot.
+        
+        !!MA:L(monType)/?(monLevel:y);              //Get creature tier.
+        !!MA:O(monType)/?(monTown:y);               //Get creature town.
+        !!VR(sacrificeLevelLimit:y):S2;                             //Sacrifice up to T2.
+        !!VR(sacrificeLevelLimit)&(monTown)<>(TOWN_INFERNO):+3;     //Allow sacrificing up to T5 if not an inferno unit.
+        !!co&(monLevel)>=(sacrificeLevelLimit):;    //Only allow valid level.
+        
+        !!MA:X(monType)/?(monFlags:y);              //Get bits of creature's flags.
+        !!VR(monFlags):&(MON_FLAG_ALIVE);           //(monFlags)=0 if not living, 1 if living.
+        !!co&(monFlags)=0:;                         //Only allow sacrificing living mons.
+        
+        !!HE(hero):X?(heroSpecType:y)/?(heroSpec:y);        //Get hero specialization.
+        !!if|(heroSpecType)=1/(heroSpecType)=4:;            //Check for creature/grandmaster of creature specialty.
+            !!co&(monType)=(heroSpec):;                     //Don't allow sacrificing hero's creature specialty.
+            !!FU(GetUpgradedMonster):P(monType)/?(upgradedMon:y);       //Get troop upgrade, if it exists.
+            !!co&(upgradedMon)<>(NO_MON)/(upgradedMon)=(heroSpec):;     //Don't allow sacrificing *upgrade* of hero's creature specialty.
+        !!en:;
+        
+        !!MA:P(monType)/?(monHP:y);                         //Get sacrifice mon HP.
+        !!VR(stackTotalHP:y):S(monHP)*(monCount);           //Total stack HP.
+        !!VR(stackTotalHP)&(stackTotalHP)>(hpRaisedMax):S(hpRaisedMax);     //Limit raised HP by Pit Lord's power.
+        !!if|(stackTotalHP)>(hpRaisedActual)/(hpRaisedActual)=-1:;
+            !!VR(hpRaisedActual):S(stackTotalHP);               //Store new amount if it was better.
+            !!VR(sacrificedCount):S(stackTotalHP):(monHP)*-1;   //Store new count sacrificed (as negation).
+            !!VR(sacrificedSlot):Si;                            //Store the slot as well.
+        !!en:;
+    !!en:;
+**--------------------------------------------------
+
+
+
+**--------------------------------------------------
+**    AI Necromancy emulation.
+**    TODO: Currently assumes ONE amplifier, regardless of number owned.
+**    *Does* consider: hero spec., hp of slain army vs hp of raised creature, artifacts including CotUK, upStack penalty.
+!?FU(huAI_FakeNecro);
+    !#VA(necroLevel:x);
+    !#VA(otherArmyTotalSize:x);
+    !#VA(attackerOrDefender:x);
+    !#VA(hero:x);
+    !#VA(otherArmyTotalHP:x);
+    
+    !!VR(necroAmount:e):S(necroLevel);
+    !!VR(necroAmount):+1;                                       //Add 1 to assume 1 Necro Amplifier.
+    !!HE(hero):X?(heroSpecType:y)/?(heroSpec:y);                //Get hero specialization.
+    !!if&(heroSpecType)=0/(heroSpec)=(SKILL_NECROMANCY):;       //If spec is necro, add the spec multiplier to necro percentage.
+        !!HE(hero):Xd/?(specMultiplier:e);                      //Get hero level.
+        !!VR(specMultiplier)::20+1;                             //build multiplier of 0.05 per level +1. Multiplying directly by 0.05 errors.
+        !!VR(necroAmount):*(specMultiplier);
+    !!en:;
+    //(necroAmount) is now 1 per Necro level, +1 from Amp. Additionally, +5% per hero level if necro spec. Effectively, 1=10% necro at this point.
+    
+    **    Necro bonus from artifacts.
+    !!VR(artiBonusTotal:e):S0;
+    !!HE(hero):A2/(ART_AMULET_OF_THE_UNDERTAKER)/d/?(arti:y);   //Get equipped Amulet of the Undertaker.
+    !!VR(artiBonus:e):S(arti):2;                                //Gives 5% (dividing by 2 = x0.5, but x0.5 errors).
+    !!VR(artiBonusTotal):+(artiBonus);
+    
+    !!HE(hero):A2/(ART_VAMPIRES_COWL)/d/?(arti);        //Get equipped Vampire's Cowl.
+    !!VR(artiBonusTotal):+(arti);                       //Gives 10%.
+    
+    !!HE(hero):A2/(ART_DEAD_MANS_BOOTS)/d/?(arti);      //Get equipped Dead Man's Boots.
+    !!VR(artiBonus):S(arti)*3:2;                        //Gives 15% (x3, divide by 2, because x1.5 errors).
+    !!VR(artiBonusTotal):+(artiBonus);
+    
+    !!VR(necroAmount):+(artiBonus);                //Add artifact bonus to necro.
+    //(necroAmount) now has the previous values plus any artifacts. Again, 1=10% necro at this point.
+    
+    !!VR(necroAmount)::10;                                      //(necroAmount) now becomes a proper multiplier.
+    !!VR(settingMultiplier:y):Si^huAI_necromancy^:100;            //(settingMultiplier) becomes a multiplier derived from ini settings.
+    !!VR(necroAmount):*(settingMultiplier);
+    !!VR(necroAmount)&(necroAmount)>1:S1;                       //Capped at 100%, like normal necro.
+    !!VR(totalRaised:y):S(otherArmyTotalSize)*(necroAmount);    //Number of creatures can necro, before HP cap.
+    //!VRz1:M3/(totalRaised);       TEST - Creatures raised, before HP cap.
+    !!FU&(totalRaised)<1:E;                                     //If we don't have at least 1 to raise, exit.
+    
+    **    Determine creature raised (always skelies unless CotUK).
+    !!VR(monRaisedType:y):S(MON_SKELETON);                          //Default type raised is Skeleton / Skeleton Warrior.
+    !!VR(monRaisedUpgType:y):S(MON_SKELETON_WARRIOR);
+    !!HE(hero):A2/(ART_CLOAK_OF_THE_UNDEAD_KING)/d/?(arti);         //Get equipped Cloak of the Undead King.
+    !!if&(arti)>0:;
+        !!VR(monRaisedType)&(necroLevel)=(SKILL_BASIC):S(MON_WALKING_DEAD);      //Walking Dead / Zombies with Necro 1.
+        !!VR(monRaisedUpgType)&(necroLevel)=(SKILL_BASIC):S(MON_ZOMBIE);
+        !!VR(monRaisedType)&(necroLevel)=(SKILL_ADVANCED):S(MON_WIGHT);          //Wight / Wraith with Necro 2.
+        !!VR(monRaisedUpgType)&(necroLevel)=(SKILL_ADVANCED):S(MON_WRAITH);
+        !!VR(monRaisedType)&(necroLevel)>=(SKILL_EXPERT):S(MON_LICH);            //Lich / Power Lich with Necro 3.
+        !!VR(monRaisedUpgType)&(necroLevel)>=(SKILL_EXPERT):S(MON_POWER_LICH);
+    !!en:;
+    
+    !!FU(huAI_GetSlotOfUnit):P(hero)/(monRaisedType)/(monRaisedUpgType)/?(existingStack:y);        //Try to find the army slot of the raised creature, if it already exists.
+    **    Add the necro to an existing stack, if found.
+    !!if&(existingStack)>-1:;
+        !!BA:M(attackerOrDefender)/(existingStack)/?(existingStackMonType:y)/d;     //Get the unit type at the existing stack, we need to modify the necro amount if it is an upgraded stack.
+        !!MA:P(existingStackMonType)/?(raisedHP:y);                                 //Get HP of existing stack.
+        !!VR(raisedHPCapped:y):S(otherArmyTotalHP):(raisedHP);                      //(raisedHPCapped)=possible amount raised respecting slain HP.
+        !!VR(totalRaised)&(raisedHPCapped)<(totalRaised):S(raisedHPCapped);         //cap necro amount by the HP slain cap.
+        !!VR(totalRaised)&(existingStackMonType)=(monRaisedUpgType)::3*2;           //If it was an upgraded stack, reduce necro amount to 2/3.
+        !!VR(totalRaised):-1;                                                       //Adjust for the one unit necro normally gives.
+        !!FU&(totalRaised)<1:E;                                                     //If we don't have at least 1 to raise, exit.
+        !!BA:M(attackerOrDefender)/(existingStack)/?(existingStackMonType)/d(totalRaised);
+    !!el:;
+        !!MA:P(monRaisedType)/?(raisedHP:y);                                        //Get HP of new stack.
+        !!VR(raisedHPCapped:y):S(otherArmyTotalHP):(raisedHP);                      //(raisedHPCapped)=possible amount raised respecting slain HP.
+        !!VR(totalRaised)&(raisedHPCapped)<(totalRaised):S(raisedHPCapped);         //cap necro amount by the HP slain cap.
+        !!VR(totalRaised):-1;                                                       //Adjust for the one unit necro normally gives.
+        !!FU&(totalRaised)<1:E;                                                     //If we don't have at least 1 to raise, exit.
+        !!HE(hero):C2/(monRaisedType)/(totalRaised)/0;                              //add a new stack if no existing was found. Use unupgraded unit type in this case.
+    !!en:;
+    
+    //!VRz2:M3/(totalRaised);        TEST - Creatures raised.
+    //VRz3:M3/(existingMonHP);     TEST - HP of new stack
+    //VRz4:M3/x5;                  TEST - HP slain
+    //VRz5:M3/(raisedHPCapped);    TEST - HP cap
+    //!VRz7:M3/(hero);              TEST - Hero late.
+    //!IF:L^Necro: %z2^;             TEST
+    //!IF:L^Before HPcap: %z1. HP slain: %z4. HP cap: %z5^;     TEST
+    //!IF:L^-----^;                  TEST
+**--------------------------------------------------
+    
+    
+
+**--------------------------------------------------
+**  replace "bad" secondary skills for "good" ones.
+**  TODO: Prevent AI from getting (potentially) infinite skills via visitables that give "bad" skills. No idea how to accomplish this though.
+
+//$OB113&-(ERM_FLAG_IS_HUMAN);        //Post witch hut for AI.        Removed, else they spam witch huts. They still might, to some extent, but not as severely.
+    //!HE-1:N?y-1;
+    //!FU(huAI_ReplaceBadSkills):Py-1;
+
+!$OB104&-(ERM_FLAG_IS_HUMAN);        //Post university for AI.
+    !!HE(CURRENT_HERO):N?(hero:y);
+    !!FU(huAI_ReplaceBadSkills):P(hero);
+    
+!?OB54&-(ERM_FLAG_IS_HUMAN);        //Combat for AI.
+    !!HE(CURRENT_HERO):N?(hero:y);
+    !!FU(huAI_ReplaceBadSkills):P(hero);
+    
+!?FU(OnAfterHeroGainLevel)&-(ERM_FLAG_IS_HUMAN);    //Post level-up for AI.
+    !!HE(CURRENT_HERO):N?(hero:y);
+    !!FU(huAI_ReplaceBadSkills):P(hero);
+    
+
+!?FU(huAI_ReplaceBadSkills)&i^huAI_replaceSkills^=(TRUE);
+    !#VA(hero:x);
+    
+    //List of skills we try to replace. Some are only conditionally replaced.
+    !#FU(NewIntArray):P20/?i^huAI_badSkillsList^/(M_STORED);
+    !#SN:Mi^huAI_badSkillsList^/0/(SKILL_SCOUTING);
+    !#SN:Mi^huAI_badSkillsList^/1/(SKILL_EAGLE_EYE);
+    !#SN:Mi^huAI_badSkillsList^/2/(SKILL_ESTATES);
+    !#SN:Mi^huAI_badSkillsList^/3/(SKILL_SCHOLAR);
+    !#SN:Mi^huAI_badSkillsList^/4/(SKILL_NAVIGATION);
+    !#SN:Mi^huAI_badSkillsList^/5/(SKILL_BALLISTICS);     <-
+    !#SN:Mi^huAI_badSkillsList^/6/(SKILL_ARTILLERY);       | Combined with Wogify.
+    !#SN:Mi^huAI_badSkillsList^/7/(SKILL_FIRST_AID);      <-
+    !#SN:Mi^huAI_badSkillsList^/8/(SKILL_LEARNING);
+    !#SN:Mi^huAI_badSkillsList^/9/(SKILL_FIRE_MAGIC);
+    !#SN:Mi^huAI_badSkillsList^/10/(SKILL_WATER_MAGIC);
+    !#SN:Mi^huAI_badSkillsList^/11/(SKILL_SORCERY);
+    !#SN:Mi^huAI_badSkillsList^/12/(SKILL_LUCK);
+    !#SN:Mi^huAI_badSkillsList^/13/(SKILL_TACTICS);       //only if NOT Stronghold, Necro, or Fortress.
+    !#SN:Mi^huAI_badSkillsList^/14/(SKILL_RESISTANCE);    //only if NOT Rampart.
+    !#SN:Mi^huAI_badSkillsList^/15/(SKILL_ARCHERY);       //only if Necro, Fortress, Inferno, or Rampart.
+    !#SN:Mi^huAI_badSkillsList^/16/(SKILL_LEADERSHIP);    //only if Necro.
+    !#SN:Mi^huAI_badSkillsList^/17/(SKILL_DIPLOMACY);     //if don't have Leadership. This also means Necro will never keep Diplo, since they don't keep Leadership.
+    !#SN:Mi^huAI_badSkillsList^/18/(SKILL_NECROMANCY);    //if not Necro.
+    !#SN:Mi^huAI_badSkillsList^/19/(SKILL_MYSTICISM);
+    
+    //List of skills we try to get instead of bad skills. Some are only conditionally taken. Skills are listed in order of priority.
+    !#FU(NewIntArray):P14/?i^huAI_goodSkillsList^/(M_STORED);
+    !#SN:Mi^huAI_goodSkillsList^/0/(SKILL_OFFENCE);
+    !#SN:Mi^huAI_goodSkillsList^/1/(SKILL_EARTH_MAGIC);
+    !#SN:Mi^huAI_goodSkillsList^/2/(SKILL_ARMORER);
+    !#SN:Mi^huAI_goodSkillsList^/3/(SKILL_ARCHERY);     //Only if Tower or Stronghold.
+    !#SN:Mi^huAI_goodSkillsList^/4/(SKILL_WISDOM);
+    !#SN:Mi^huAI_goodSkillsList^/5/(SKILL_AIR_MAGIC);   //Only if ReMagic is *not* active.
+    !#SN:Mi^huAI_goodSkillsList^/6/(SKILL_WATER_MAGIC); //Only if ReMagic *is* active.
+    !#SN:Mi^huAI_goodSkillsList^/7/(SKILL_PATHFINDING);
+    !#SN:Mi^huAI_goodSkillsList^/8/(SKILL_LOGISTICS);
+    !#SN:Mi^huAI_goodSkillsList^/9/(SKILL_LEADERSHIP);
+    !#SN:Mi^huAI_goodSkillsList^/10/(SKILL_DIPLOMACY);  //Only if hero has Leadership.
+    !#SN:Mi^huAI_goodSkillsList^/11/(SKILL_TACTICS);    //Only if Stronghold, Fortress, or Necro.
+    !#SN:Mi^huAI_goodSkillsList^/12/(SKILL_RESISTANCE); //Only if Rampart.
+    !#SN:Mi^huAI_goodSkillsList^/13/(SKILL_INTELLIGENCE);
+    
+    //Begin skill replacement:
+    !!HE(hero):B2/?(heroClass:y);           //Get hero class.
+    !!VR(heroTown:y):S(heroClass):2;        //Divide class by 2 for town index.
+    !!UN:P726/?(remagicEnabled:y);          //Check if ReMagic script is enabled.
+    
+    !!SN:Mi^huAI_badSkillsList^/?(badSkillArrayIndex:y);    //get size of array.
+    !!VR(badSkillArrayIndex):-1;                    //index starts at zero.
+    
+    !!SN:Mi^huAI_goodSkillsList^/?(goodSkillArrayIndex:y);  //get size of array.
+    !!VR(goodSkillArrayIndex):-1;                   //index starts at zero.
+    
+    !!re i/0/(badSkillArrayIndex):;                 //loop through possible bad skills.
+        !!SN:Mi^huAI_badSkillsList^/i/?(loopedBadSkill:y);
+        !!HE(hero):S(loopedBadSkill)/?(badSkillLevel:y);        //Get level of iterated bad skill.
+        !!co&(badSkillLevel)=(SKILL_NOT_LEARNED):;              //Only care about skills the hero has.
+            
+            
+        //Determine if the bad skill should be replaced or not:
+        !!if&(loopedBadSkill)=(SKILL_LEADERSHIP):;      //Keep Leadership if not Necro (AI commonly mixes town types to a heavy degree).
+            !!co&(heroTown)<>(TOWN_NECROPOLIS):;
+        !!en:;
+        !!if&(loopedBadSkill)=(SKILL_DIPLOMACY):;       //Keep Diplo if we have Leadership or we are Inferno (Inferno wants diplo for demon farming; therefore won't suffer morale penalty).
+            !!HE(hero):S(SKILL_LEADERSHIP)/?(leadershipLevel:y);
+            !!co|(leadershipLevel)>(SKILL_NOT_LEARNED)/(heroTown)=(TOWN_INFERNO):;
+        !!en:;
+        !!if&(loopedBadSkill)=(SKILL_TACTICS):;         //Keep Tactics if Stronghold, Necro, or Fortress.
+            !!co|(heroTown)=(TOWN_STRONGHOLD)/(heroTown)=(TOWN_NECROPOLIS)/(heroTown)=(TOWN_FORTRESS):;
+        !!en:;
+        !!if&(loopedBadSkill)=(SKILL_RESISTANCE):;      //Keep Resistance if Rampart.
+            !!co&(heroTown)=(TOWN_RAMPART):;
+        !!en:;
+        !!if&(loopedBadSkill)=(SKILL_ARCHERY):;         //Keep Archery if Stronghold or Tower.
+            !!co|(heroTown)=(TOWN_STRONGHOLD)/(heroTown)=(TOWN_TOWER):;
+        !!en:;
+        !!if&(loopedBadSkill)=(SKILL_WATER_MAGIC):;     //Keep Water magic if ReMagic is enabled.
+            !!co&(remagicEnabled)=(TRUE):;
+        !!en:;
+        !!if&(loopedBadSkill)=(SKILL_NECROMANCY):;      //Keep Necromancy if Necro (other towns can acquire necro via modded events, most commonly with WoG "secret" skills).
+            !!co&(heroTown)=(TOWN_NECROPOLIS):;
+        !!en:;
+        !!HE(hero):X?(specType:y)/?(spec:y);            Get hero specialization.
+        !!co&(specType)=0/(spec)=(loopedBadSkill)/(loopedBadSkill)<>(SKILL_NAVIGATION)/(loopedBadSkill)<>(SKILL_EAGLE_EYE)/(loopedBadSkill)<>(SKILL_ESTATES)/(loopedBadSkill)<>(SKILL_ARTILLERY)/(loopedBadSkill)<>(SKILL_FIRST_AID):;  //Don't replace hero secondary skill specialization, unless it's navigation, eagle eye, estates, artillery, or first aid.
+    
+    
+        //Get a good skill to replace the bad skill:
+        !!VR(replacementSkill:y):S-1;
+        !!re j/0/(goodSkillArrayIndex):;
+            !!SN:Mi^huAI_goodSkillsList^/j/?(loopedGoodSkill:y);
+            !!FU(huAI_ReplaceBadSkills_GoodSkillCondition):P(hero)/(specType)/(spec)/(heroTown)/(remagicEnabled)/(loopedGoodSkill)/?(useSkill:y);   //Check special-case conditions to know if some good skills should be used or not.
+            !!if&(useSkill)=(TRUE):;
+                !!VR(replacementSkill):S(loopedGoodSkill);
+                !!br:;
+            !!en:;
+        !!en:;
+        
+        !!FU(huAI_ReplaceSkill)&(replacementSkill)>-1:P(hero)/(loopedBadSkill)/(badSkillLevel)/(replacementSkill);
+    !!en:;
+    
+    
+    
+//Return whether or not (loopedGoodSkill) should be used to replace the bad skill.
+!?FU(huAI_ReplaceBadSkills_GoodSkillCondition);
+    !#VA(hero:x);
+    !#VA(specType:x);
+    !#VA(spec:x);
+    !#VA(heroTown:x);
+    !#VA(remagicEnabled:x);
+    !#VA(loopedGoodSkill:x);
+    !#VA(useSkill:x);
+    
+    !!VR(useSkill):S(FALSE);    //Default return false.
+    
+    !!HE(hero):S(loopedGoodSkill)/?(replacementSkillLevel:y);       //Check level of replacement skill.
+    !!FU&(replacementSkillLevel)>(SKILL_NOT_LEARNED):E;             //Exit if skill already learned.
+    
+    !!if&(loopedGoodSkill)=(SKILL_ARCHERY):;            //Only replace with Archery if Tower or Stronghold.
+        !!FU&(heroTown)<>(TOWN_TOWER)/(heroTown)<>(TOWN_STRONGHOLD):E;
+    !!en:;
+    !!if&(loopedGoodSkill)=(SKILL_AIR_MAGIC):;          //Only replace with Air magic if ReMagic script is *not* active.
+        !!if&(remagicEnabled)=(TRUE):;
+            !!FU:E;
+        !!el:;                //If ReMagic script *is* active, replace with Air magic if the hero's spell spec depends on it.
+            !!if&(specType)=3:;                         //Continue if this is a spell specialization hero.
+                !!SS(spec):S?(magicSchool:y);               //Get Spell of spec's magic school bits.
+                !!VR(magicSchool):&(SPELL_SCHOOL_AIR);      //Isolate bit of Air Magic.
+                !!if&(magicSchool)>0:;                      //Continue if the spell spec is Air Magic based.
+                    !!HE(hero):S(SKILL_AIR_MAGIC)/?(replacementSkillLevel:y);
+                    !!if&(replacementSkillLevel)=(SKILL_NOT_LEARNED):;
+                        !!VR(useSkill):S(TRUE);
+                    !!en:;
+                !!en:;
+            !!en:;
+            !!FU:E;
+        !!en:;
+    !!en:;
+    !!if&(loopedGoodSkill)=(SKILL_WATER_MAGIC):;        //Only replace with Water magic if ReMagic script *is* active.
+        !!if&(remagicEnabled)=(FALSE):;
+            !!FU:E;
+        !!el:;                //If ReMagic script *is* active, replace with Water magic if the hero's spell spec depends on it.
+            !!if&(specType)=3:;                         //If this is a spell specialization hero.
+                !!SS(spec):S?(magicSchool:y);           //Get Spell of spec's magic school bits.
+                !!VR(magicSchool):&(SPELL_SCHOOL_WATER);    //Isolate bit of Water Magic.
+                !!if&(magicSchool)>0:;                      //If the spell spec is Water Magic based.
+                    !!HE(hero):S(SKILL_WATER_MAGIC)/?(replacementSkillLevel:y);
+                    !!if&(replacementSkillLevel)=(SKILL_NOT_LEARNED):;
+                        !!VR(useSkill):S(TRUE);
+                    !!en:;
+                !!en:;
+            !!en:;
+            !!FU:E;
+        !!en:;
+    !!en:;
+    !!if&(loopedGoodSkill)=(SKILL_DIPLOMACY):;        //Only replace with Diplomacy if hero has Leadership.
+        !!HE(hero):S(SKILL_LEADERSHIP)/?(leadershipLevel:y);            Get level of Leadership.
+        !!FU&(leadershipLevel)=(SKILL_NOT_LEARNED):E;
+    !!en:;
+    !!if&(loopedGoodSkill)=(SKILL_TACTICS):;        //Only replace with Tactics if Stronghold, Necro, or Fortress
+        !!FU&(heroTown)<>(TOWN_STRONGHOLD)/(heroTown)<>(TOWN_NECROPOLIS)/(heroTown)<>(TOWN_FORTRESS):E;
+    !!en:;
+    !!if&(loopedGoodSkill)=(TOWN_RAMPART):;        //Only replace with Resistance if Rampart.
+        !!FU&(heroTown)<>(TOWN_RAMPART):E;
+    !!en:;
+    !!if&(loopedGoodSkill)=(TOWN_RAMPART):;        //Only replace with Resistance if Rampart.
+        !!FU&(heroTown)<>(TOWN_RAMPART):E;
+    !!en:;
+    !!VR(useSkill):S(TRUE);     //If passed any conditions, return true.
+    
+    
+    
+//Perform swapping of skill (loopedBadSkill) with (replacementSkill).
+!?FU(huAI_ReplaceSkill);
+    !#VA(hero:x);
+    !#VA(loopedBadSkill:x);
+    !#VA(badSkillLevel:x);
+    !#VA(replacementSkill:x);
+    
+    !!HE(hero):S(loopedBadSkill)/0;     //Remove bad skill
+    
+    !!UN:P193/?(warfareScript:y);       //Check if Warfare script is enabled, which combines these three skills. 
+    !!if&(warfareScript)=(TRUE):;
+        !!if|(loopedBadSkill)=(SKILL_BALLISTICS)/(loopedBadSkill)=(SKILL_ARTILLERY)/(loopedBadSkill)=(SKILL_FIRST_AID):;        //if the removed skill was one of warfare, remove all of these three.
+            !!HE(hero):S(SKILL_BALLISTICS)/0;
+            !!HE(hero):S(SKILL_ARTILLERY)/0;
+            !!HE(hero):S(SKILL_FIRST_AID)/0;
+        !!en:;
+    !!en:;
+    
+    !!HE(hero):S(replacementSkill)/(badSkillLevel);    Add good skill at level of the bad skill
+    
+    //!UN:N4/2/(loopedBadSkill)/0;       TEST
+    //!UN:N4/3/(replacementSkill)/0;     TEST
+    //!IF:L^%Z2 -> %Z3^;                 TEST
+**--------------------------------------------------
+
+
+
+**--------------------------------------------------
+**  Attempt to make AI seek-out Dragon Utopias.
+**  Sometimes AI gets stuck at remote locations, wishing they could be at the waypoint, but
+**  I believe this code handles these problem scenarios reasonably well.
+**  However, this slows down AI turn slows down *significantly* when they have a waypoint.
+**  It seems like the AI reevaluates their entire turn with each step, sort of like with DD.
+!?FU(huAI_dailyAIBestHeroes)&i^huAI_utopiaSearchDistance^>0;
+    !#VA(owner:x);
+    !#VA(bestHero:x);
+    !#VA(secondBestHero:x);
+    
+    //If we have a stored failure day, do not attempt to search for utopias until
+    //several days have past. Else we will stall the AI hero.
+    !!VR(ownerStr:z):M3/(owner);
+    !!SN:W^huAI_SearchUtopiaCooldown_%(owner)^/?(failureDay:y);
+    !!if&(failureDay)>0:;
+        !!VR(daysSinceFailure:y):Si^timerDay^-(failureDay);
+        !!if&(daysSinceFailure)>=5:;
+            !!SN:W^huAI_SearchUtopiaCooldown_%(owner)^/0;
+        !!el:;
+            //!IF:L^Utopia cooldown.^;    TEST
+            !!FU:E;
+        !!en:;
+    !!en:;
+    
+    !!UN:P53/?(enhancedTopiaEnabled:y);         //Check if enhanced dragon utopia script is enabled.
+    //!VR(enhancedTopiaEnabled):*2;
+    !!VR(minWeek:y):S3+(enhancedTopiaEnabled);  //Wait one more week before seeking topes if enhanced utopia script is enabled, because they are much more difficult.
+    !!FU&i^timerWeek^<(minWeek):E;              //Wait a minimum amount of time before hunting topes, else AI may reach the tope and refuse to fight it, wasting time.
+    
+    !!FU(huAI_GetNearestToHero):P(bestHero)/(OBJ_DRAGON_UTOPIA)/(ANY_OBJ)/1/?(x:y)/?(y:y)/?(z:y)/?(distance:y);
+    !!FU|(x)=-1/(distance)>i^huAI_utopiaSearchDistance^:E;        //if -1, no valid tope was found. Also only try to reach tope if it was within defined amount of squares.
+    //!IF:L^Valid tope found...^;    TEST
+    
+    !!SN:W^huAI_bestHeroNoStep^/1;         //Will be used to determine whether or not the hero has moved this turn, since AI:S can cause heroes to stall.
+    
+    //If distance is <=0, the AI hero is almost certainly stuck because it does not think
+    //it can successfully defeat the utopia. In this situation we store the day and prevent
+    //trying to search for utopias for several days.
+    !!if&(distance)<=2:;
+        //!IF:L^Forced tope failed for player%(owner).^;    TEST
+        !!SN:W^huAI_SearchUtopiaCooldown_%(owner)^/i^timerDay^;
+        !!FU:E;
+    !!en:;
+    
+    !!AI:S(bestHero)/(owner)/1/(x)/(y)/(z)/5000/1;
+    //!IF:L^NearestTope: %(x), %(y), %(z).^;    TEST
+    
+    
+    
+//Need to track if bestHero has moved this turn, because AI:S can potentially stall the hero.
+!?HM-1&i^huAI_bestHeroNoStep^=(TRUE);
+    !!HE-1:N?(hero:y);
+    !!FU&(hero)<>i^huAI_bestHero^:E;     //Exit if not best hero.
+    
+    !!SN:W^huAI_bestHeroNoStep^/(FALSE);      //Set that best hero has moved.
+    
+    
+    
+//Clear the AI waypoint at turn end. This also ensures AI waypoints don't endure after a hero dies.
+!?FU(huAI_OnEndOfTurn)&i^huAI_utopiaSearchDistance^>0;
+    !!OW:C?(player:y);                  //Get current player.
+    !!OW:I(player)/?(isAI:y)/?(isDead:y);
+    !!FU|(isAI)=(FALSE)/(isDead)=(TRUE):E;          //Exit if player is not AI or is dead.
+    
+    !!VR(bestHero:y):Si^huAI_bestHero^;
+    !!HE(bestHero):O?(owner:y);
+    !!AI:D(bestHero)/(owner)/1;         //Remove the AI waypoint as turn ends.
+    
+    //If hero ends turn without moving, we need to assume that AI:S has caused a stall (because it could).
+    //Therefore, force a cooldown before searching for utopia again.
+    !!if&i^huAI_bestHeroNoStep^=(TRUE):;
+        !!SN:W^huAI_SearchUtopiaCooldown_%(owner)^/i^timerDay^;
+        //!IF:L^Forced tope failed for player%(owner).^;    TEST
+    !!en:;
+    
+    
+
+//After a hero reaches the designated Utopia, set a cooldown before searching for another.
+//This prevents locking AI out of usual behavior, and also prevents AI being stuck on a
+//Utopia that they refuse to fight.
+!$OB(OBJ_DRAGON_UTOPIA)/(ANY_OBJ);
+    !!HE-1:N?(hero:y);
+    !!HE(hero):P?(x:y)/?(y:y)/?(z:y)/d;
+    !!HE(hero):O?(owner:y);
+    !!AI:S(hero)/(owner)/1/(x)/(y)/(z)/?(value:y)/d;
+    !!if&(value)>0:;
+        //!IF:L^Reached Tope, now cooling down.^;    TEST
+        !!SN:W^huAI_SearchUtopiaCooldown_%(owner)^/i^timerDay^;
+    !!en:;
+    
+**--------------------------------------------------
+
+
+
+**--------------------------------------------------
+**  Prevent AI monolith looping.
+**  This is done by tracking uses of a monolith with similar
+**  amount of movement. After a few uses, the movement of the
+**  using hero is set to zero, to force doing something else.
+!$OB45&-(ERM_FLAG_IS_HUMAN);        //Post two-way lith usage.
+    !!HE-1:N?(hero:y);              //Get using hero.
+    !!SN:W^huAI_lithLooping_MP^/?(storedMP:y);          //Get stored movement points.
+    !!SN:W^huAI_lithLooping_Uses^/?(storedUses:y);      //Get stored lith uses.
+    !!HE(hero):W?(currentMP:y);                         //Get current movement points.
+    !!VR(mpDelta:y):S(storedMP)-(currentMP);            //Difference between current and stored movement points.
+    //!IF:L^Lith used, delta%(mpDelta) and Usage%(storedUses).^;       TEST
+    
+    !!if&(mpDelta)=1:;              //AI lith usage costs 1 movement.
+        !!VR(storedUses):+1;
+        !!if&(storedUses)>2:;
+            !!HE(hero):W0;                              //Force hero turn to end by setting movement to zero.
+            //!IF:L^Forcing turn-end for hero%(hero).^;       TEST
+        !!el:;
+            //!IF:L^Tracking lith use...^;       TEST
+            !!SN:W^huAI_lithLooping_Uses^/(storedUses); //Update stored uses.
+        !!en:;
+    !!el:;
+        !!SN:W^huAI_lithLooping_Uses^/0;
+    !!en:;
+    
+    //!IF:L^Setting storedMP to %(currentMP).^;     TEST
+    !!SN:W^huAI_lithLooping_MP^/(currentMP);
+    
+
+!?FU(huAI_OnEndOfTurn)&i^huAI_lithLooping_Uses^<>0;
+    !!SN:W^huAI_lithLooping_MP^/-1;
+    !!SN:W^huAI_lithLooping_Uses^/0;
+
+**--------------------------------------------------
+    
+    

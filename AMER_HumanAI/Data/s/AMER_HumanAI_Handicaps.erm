@@ -1,0 +1,169 @@
+ZVSE2
+**
+**    Written by Matteo "Ameranth" T. 2022.
+**
+**    Improves the strength of AI by granting "directly cheated" benefits.
+**
+**    Many of these options are inspired by Conquistador's options.
+**    They are included because some of Human AI's features are incompatible with Conquistador's immutable features.
+**  --------------------------
+
+
+
+**  --------------------------
+** Controller code.
+
+**    Every day for AI.
+!?FU(OnEveryDay)&i^timerIsAi^=(TRUE);
+    !!VR(weekDay:y):Si^timerWeekDay^;
+    
+    !!OW:C?(currentPlayer:y);            //Get current player.
+    
+    !!FU(huAI_Gold)&i^huAI_handicap_goldPerTurn^>0:P(currentPlayer);
+    !!FU(huAI_Resources)&i^huAI_handicap_resources^>0:P(currentPlayer);
+    
+    !!FU(huAI_XP)&i^huAI_handicap_XP^>0:P(currentPlayer);
+    
+    !!FU&(weekDay)<>1:E;            //Exit if not a new week- only weekly events below here.
+
+    !!if&i^huAI_handicap_neutralGrowth^>0:;    //Only run if neutral growth setting is >0.
+        !!VR(humanPlayer:y):S-1;
+        !!FU(AMER_GetFirstHumanIndex):P?(humanPlayer);
+        !!FU(huAI_NeutralGrowth)&(currentPlayer)=(humanPlayer):P;       //Only run neutral growth once each week- on the turn of the first human player.
+    !!en:;
+**  --------------------------
+    
+    
+
+**  --------------------------
+**    Grant Gold.
+!?FU(huAI_Gold);
+    !#VA(player:x);
+    !!OW:R(player)/(RES_GOLD)/di^huAI_handicap_goldPerTurn^;    //Add Gold.
+    
+    
+**    Grant Resources.
+!?FU(huAI_Resources);
+    !#VA(player:x);
+    !!VR(woodOre:y):Si^huAI_handicap_resources^*2;              //Resource x2 for wood/ore.
+    !!OW:R(player)/(RES_WOOD)/d(woodOre);                       //Add Wood.
+    !!OW:R(player)/(RES_ORE)/d(woodOre);                        //Add Ore.
+    
+    !!OW:R(player)/(RES_MERCURY)/di^huAI_handicap_resources^;   //Add Mercury.
+    !!OW:R(player)/(RES_SULFUR)/di^huAI_handicap_resources^;    //Add Sulfur.
+    !!OW:R(player)/(RES_CRYSTAL)/di^huAI_handicap_resources^;   //Add Crystal.
+    !!OW:R(player)/(RES_GEMS)/di^huAI_handicap_resources^;      //Add Gems.
+**  --------------------------
+    
+    
+    
+**  --------------------------
+**    Grant XP growth.
+**    Note that granting XP to a hero also grants rank XP to their army.
+!?FU(huAI_XP);
+    !#VA(player:x);
+    
+    !!OW:H(player)/2/0;              //Get count of heroes owned by current player in v2.
+    !!VR(heroCount:y):Sv2;
+    
+    !!re i/1/(heroCount):;                  //iterate all heroes of current player. i=iterated hero. 1=first hero index for HE:H
+        !!OW:H(player)/2/i;          //Get id of iterated hero in v2.
+        !!VR(loopHero:y):Sv2;
+        !!FU(huAI_XP_Internal):P(loopHero); 
+    !!en:;
+    
+    
+!?FU(huAI_XP_Internal);
+    !#VA(hero:x);
+    
+    !!HE(hero):E?(xp:y)/?(level:y);                 //Get XP/level.
+    !!FU&(level)>=70:E;                             //Exit if at or above 70th level. Conquistador has this check, and I will trust the author's wisdom to stay below level 70.
+    
+    !!VR(growth:e):Si^huAI_handicap_XP^:100+1;      //Build a multiplier from defined amount.
+    !!VR(xp):*(growth);
+    !!HE(hero):E(xp);                               //Grant XP.
+**  --------------------------
+
+
+
+**  --------------------------
+**    Refill mana for AI heroes at end of  turn.
+!?FU(huAI_OnEndOfTurn)&i^huAI_handicap_manaRefill^=(TRUE);
+    
+    !!OW:C?(player:y);                  //Get current player.
+    
+    !!OW:I(player)/?(isAI:y)/?(isDead:y);
+    !!FU|(isAI)=(FALSE)/(isDead)=(TRUE):E;          //Exit if player is not AI or is dead.
+    
+    !!OW:H(player)/2/0;                 //Get count of heroes owned by player in v2.
+    !!VR(heroCount:y):Sv2;
+    !!re i/1/(heroCount):;              //iterate all heroes of player. i=iterated hero. 1=first hero index for HE:H
+        !!OW:H(player)/2/i;             //Get id of iterated hero in v2.
+        !!VR(loopHero:y):Sv2;
+        !!FU(huAI_ManaRefill_Internal):P(loopHero); 
+    !!en:;
+    
+    
+!?FU(huAI_ManaRefill_Internal);
+    !#VA(hero:x);
+    
+    !!HE(hero):Fd/d/d/?(know:y);                            //Get Knowledge
+    !!HE(hero):I?(manaCurrent:y);                           //Get current mana.
+    !!VR(manaMax:y):S(know)*10;                             //Base mana from Knowledge.
+    !!HE(hero):S(SKILL_INTELLIGENCE)/?(intel:y);            //Get Intelligence.
+    !!VR(intelBonus:e)&(intel)=(SKILL_NOT_LEARNED):S1;      //If no intelligence, no change to mana.
+    !!VR(intelBonus:e)&(intel)=(SKILL_BASIC):S1:4+1;        //If Basic Int, multiply mana by 1.25.
+    !!VR(intelBonus:e)&(intel)=(SKILL_ADVANCED):S1:2+1;     //If Advanced, multiply by 1.5.
+    !!VR(intelBonus:e)&(intel)>=(SKILL_EXPERT):S2;          //If Expert, multiply by 2.
+    !!VR(manaMax):*(intelBonus);
+    !!if&(manaCurrent)<(manaMax):;                          //Only change mana if current mana is less than target amount.
+        !!HE(hero):I(manaMax);                              //set mana to full.
+        //!HE(hero):B0/?(heroStr:z);         TEST
+        //!IF:L^manaRefill %(heroStr).^;     TEST
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**    Grow all neutral stacks.
+!?FU(huAI_NeutralGrowth);
+    !#VA(x:y) (y:y) (z:y);
+    
+    !!VR(week:y):Sc+6:7;        //Get week. +6 so that week 1 does not become 0.
+    !!FU&(week)=1:E;            //Exit if week 1, only do growth on 2+.
+    
+    !!VR(x):S-1;                //setting x-coordinate to -1 will force to start search from scratch
+
+    !!re i;     //infinite loop
+        !!UN:U(OBJ_MONSTER)/(ANY_OBJ)/-1/(x)/(y)/(z);       //Get next mon. -1=iterate forward.
+        !!br&(x)<0:;                                        //break if nothing found
+        
+        !!OB(x)/(y)/(z):U?(monType:y);          //Get monster subtype
+        !!MA:L(monType)/?(monLevel:y);          //Get monster level
+        !!VR(minWeek:y):S(monLevel)+1:2;        //Get min week to start growing.
+        !!br&(week)<(minWeek):;                 //Break if not at least min week.
+        
+        !!MA:G(monType)/?(monGrowth:y);               //Get monster growth
+        !!VR(growSetting:e):Si^huAI_handicap_neutralGrowth^:100;        //Build a multiplier from defined value, which causes it to function as a percent of weekly growth.
+        !!VR(monGrowth):*(growSetting);             //Multiply growth.
+        !!VR(monGrowth)&(monGrowth)<1/(week)>4:S1;  //If not enough growth to add +1, wait until week 5, then add +1.
+        !!br&(monGrowth)<1:;                        //Break if not adding at least 1.
+        
+        !!MO(x)/(y)/(z):G?(oldSize:y);              //Get old size.
+        !!VR(newSize:y):S(oldSize)+(monGrowth);     //Determine new size.
+        !!VR(newSize)&(newSize)>4000:S4000;         //Conquistador limited stack growth to 4000, assuming there is a technical issue with going above that, I will do the same.
+        
+        !!MO(x)/(y)/(z):G(newSize);                 //Set new size.
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**    Level up for AI, grant spells.
+!?HL-1&-1000;
+    !!HE-1:Ed/?(level:y);        //Get Level.
+    !!HE-1&i^huAI_handicap_townPortal^>-1/(level)>=i^huAI_handicap_townPortal^:M(SPELL_TOWN_PORTAL)/1;        //Give Town Portal if at least the defined level.
+    !!HE-1&i^huAI_handicap_fly^>-1/(level)>=i^huAI_handicap_fly^:M(SPELL_FLY)/1;        //Give Fly if at least the defined level.
+**  --------------------------

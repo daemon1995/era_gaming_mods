@@ -1,0 +1,250 @@
+ZVSE2
+**
+**  Written by Matteo "Ameranth" T. 2022.
+**
+**  Improves AI strength by simulating how a human consolidates troops on thier powerful hero(s).
+**
+**  Specifically, AI heroes who are not visible to any human in the game send their troops to their
+**  two highest level heroes, who must also not be visible. Troops sent are those that match
+**  troops the receiving heroes already have (upgraded or not). At least 1 of troops Tier <=5
+**  are kept, to ensure heroes don't end up with no army at all.
+**  --------------------------
+
+    
+    
+**  --------------------------
+**  Send troops from weaker heroes to AI's best/second-best:
+!?FU(huAI_dailyAIBestHeroes)&i^huAI_funnelTroops^=(TRUE);
+    !#VA(owner:x);
+    !#VA(bestHero:x);
+    !#VA(secondBestHero:x);
+    
+    !!FU&i^timerDay^<5:E;       //Don't do troop sending before day 5. This gives the AI some time to establish who their major hero(es) will be.
+    
+    !!OW:H(owner)/2/0;          //Get count of heroes owned by current player in v2.
+    !!VR(heroCount:y):Sv2;
+    
+    !!FU&(heroCount)<2:E;       //Exit if player doesn't own at least 2 heroes.
+    
+    !!FU(huAI_CanPlayerSee):P(bestHero)/(secondBestHero)/?(bestVisible:y)/?(secondVisible:y);       //Get if any human player can see best/second-best heroes.
+    !!FU&(bestVisible)=1/(secondVisible)=1:E;       //Exit if both best/second-best hero are visible, since we have nothing to do.
+    
+    !!re i/1/(heroCount):;                  // 1=first hero index for HE:H
+        !!OW:H(owner)/2/i;          //Get id of iterated hero in v2.
+        !!VR(loopHero:y):Sv2;
+        
+        !!if&(loopHero)<>(bestHero):;               //If iterated hero is not best hero, send troops.
+            !!FU(huAI_CanPlayerSee):P(loopHero)/-1/?(loopHeroVisible:y)/1;        //Get if any human player can see iterated hero.
+            !!if&(loopHeroVisible)=(FALSE):;        //Only send troops if donor hero is not visible.
+                !!VR(donorHasArmy:y):S(FALSE);      //Default false, this may be set to true during huAI_SendTroops.
+                !!FU(huAI_SendTroops)&(bestVisible)=(FALSE):P(loopHero)/(bestHero)/?(donorHasArmy);
+                !!FU(huAI_SendTroops)&(secondVisible)=(FALSE)/(loopHero)<>(secondBestHero)/(donorHasArmy)=(TRUE):P(loopHero)/(secondBestHero)/?(donorHasArmy);    //If also not second best and still have an army, try sending troops there as well.
+                !!FU(huAI_PreventNoArmy)&(donorHasArmy)=(FALSE):P(loopHero);        //If hero has no army, provide them with 1 troop from their starting army.
+            !!en:;
+        !!en:;
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**  Grant 1 troop of slot0 from hero's starting army.
+!?FU(huAI_PreventNoArmy);
+    !#VA(hero:x);
+    !!HE(hero):H0/?(monType:y)//;         //Get type of troop to create.
+    !!HE(hero):C2/(monType)/1/(ARMY_SLOT_FIRST);        //Give 1 of the troop.
+    //!HEx1:B0/?z1;                     TEST - Hero name
+    //!UN:N3/2/y1/1;                    TEST - Name of troop received.
+    //!IF:L^%z1 prevented no army with 1 %z2.^;    TEST
+**  --------------------------
+    
+    
+    
+**  --------------------------
+**  Can any human player see passed hero(es). returns 1 if yes, else returns 0.
+!?FU(huAI_CanPlayerSee);
+    !#VA(firstHero:x);
+    !#VA(secondHero:x);             //Optional, use -1 to ignore.
+    !#VA(firstHeroOutput:x);
+    !#VA(secondHeroOutput:x);
+    
+    !!VR(firstHeroOutput):S(FALSE);     //Default not visible.
+    !!VR(secondHeroOutput):S(FALSE);
+    
+    !!FU&i^huAI_funnelTroops_whileVisible^=(TRUE):E;    //Force return false if funnel always option is enabled, which results in always funneling.
+    
+    !!VR(visionBitToCheck:y):S1;            //Bit to check for vision on tile. This is 1/2/4/8/16/32/64/128 for each player, respectively.
+    !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
+        !!OW:Ii/?(isAI:y)/?(isKilled:y);    //Get if looped player is AI/killed.
+        
+        !!if&(isAI)=0/(isKilled)=0:;        //Only continue if looped player is human and alive.
+            !!if&(firstHeroOutput)=0:;
+                !!HE(firstHero):P?(x:y)/?(y:y)/?(z:y)//0;       //get coords of hero.
+                !!TR(x)/(y)/(z):V?(visionBits:y);               //Get bits of who sees this location.
+                !!VR(visionBits):&(visionBitToCheck);           //Check if player sees it.
+                !!if&(visionBits)>0:;
+                    !!VR(firstHeroOutput):S(TRUE);              //If yes, set return value.
+                    //!HE(firstHero):B0/?(firstHeroName:z);                  TEST
+                    //!IF:L^Human can see firstHero %(firstHeroName).^;      TEST
+                !!en:;
+            !!en:;
+            !!if&(secondHeroOutput)=0/(secondHero)>-1:;
+                !!HE(secondHero):P?(x:y)/?(y:y)/?(z:y)//0;      //get coords of hero.
+                !!TR(x)/(y)/(z):V?(visionBits:y);               //Get bits of who sees this location.
+                !!VR(visionBits):&(visionBitToCheck);           //Check if player sees it.
+                !!if&(visionBits)>0:;
+                    !!VR(secondHeroOutput):S(TRUE);             //If yes, set return value.
+                    //!HE(secondHero):B0/?(secondHeroName:z);                TEST
+                    //!IF:L^Human can see secondHero %(secondHeroName).^;    TEST
+                !!en:;
+            !!en:;
+        !!en:;
+        
+        !!if&(firstHeroOutput)=1/(secondHeroOutput)=1:;
+            !!FU:E;         //Exit since we know both heroes are visible, there is no need to keep checking.
+        !!en:;
+        
+        !!VR(visionBitToCheck):*2;      //set to bit for next player. This needs to happen even if the player was a human/not alive.
+    !!en:;
+**  --------------------------
+    
+    
+    
+**  --------------------------
+**  Send troops from donorHero to receivingHero.
+**  This is done by looping donorHero's army slots, and using a nested loop to see if it matches any of receivingHero's army slots.
+**  Failing that, HE:C2 is used to offer the troops to AI even if it did not match any of receivingHero's army. If receivingHero
+**  dismisses troops to accept those offered, we give the dismissed troops to donorHero, which emulates a "trade."
+!?FU(huAI_SendTroops);
+    !#VA(donorHero:x);
+    !#VA(receivingHero:x);
+    !#VA(armyRemains:x);        //Set to 1 if donorHero has any army remaining after sending troops. We use this to know if we need to give the donorHero a troop to prevent 0 army.
+    
+    
+    !!re (donorSlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+        
+        !!HE(donorHero):C0/(donorSlot)/?(monType:y)/?(monCount:y);      //Get troop in donorHero's army slot.
+        !!co&(monType)=(NO_MON);                                        //co if this slot is empty.
+        
+        !!MA:L(monType)/?(monTier:y);            //get tier of troop
+        !!if&(monTier)<3:;
+            !!VR(monCount):-1;          //Reduce monster count by 1 if not a T4+, to prevent ending up with no army. If we do end up with no army, we will later grant 1 of hero's starting creatures.
+            !!VR(armyRemains):S(TRUE);  //We've reduced count by 1, so we know this hero will still have army.
+        !!en:;
+        !!co&(monCount)<=0:;            //co if the new count is none.
+        
+        !!FU(huAI_SendTroops_Internal):P(donorHero)/(receivingHero)/(monType)/(monCount)/(donorSlot)/?(donorSuccess:y);      //Send troops from donorHero's donorSlot to receivingHero.
+        !!co&(donorSuccess)=1:;         //co if we successfully added this stack to an existing stack.
+        
+        //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
+        //!HE(receivingHero):B0/?(receivingHeroName:z);      TEST - Receiving hero name
+        //!VR(monCountStr:z):M3/(monCount);                  TEST - Number of troops to send.
+        //!SN:H^monname^/(monType)/0/?(monTypeStr:z);        TEST - Name of troop to send.
+        //!IF:L^%(donorHeroName) asking if %(receivingHeroName) wants (%(monCountStr)) %(monTypeStr)...^;      TEST
+        
+        //If we did *not* send troops to a similar stack in receivingHero's army, try to offer the troops to the AI instead, using HE:C2:
+        
+        !!HE(receivingHero):C2/(monType)/(monCount)/0;      //Offer AI the troop stack. (monType) of count (monCount).
+        !!FU(huAI_HasTroop):P(receivingHero)/(monType)/?(hasTroop:y)/?(receivingSlot:y);        //(donorSuccess)=1 if hero accepted the troops. (receivingSlot)=slot the troop was placed in.
+        !!if&(hasTroop)=(FALSE):;
+            !!VR(armyRemains):S(TRUE);          //Troop was not accepted, so we know donorHero will still have army.
+            !!co:;                              //co if the troop was not found (not accepted)
+        !!en:;
+        
+        !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/?(oldMon:y);               //
+        !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/?(oldMonCount:y);     //Get old mon type and count, so we can give it to donorHero to facilitate a "trade."
+        !!VR(monCountNegation:y):S(monCount)*-1;                        //Negation of troop count, to remove army from donor.
+        !!if&(oldMon)>(NO_MON):;
+            !!HE(donorHero):C0/(donorSlot)/(oldMon)/(oldMonCount);      //If receiving hero replaced an old troop to accept, set donor hero's sent troop slot to be the receiving hero's old troop.
+            //!SN:H^monname^/(oldMon)/0/?(oldMonTypeStr:z);   TEST
+            //!VR(oldMonCountStr:z):M3/(oldMonCount);         TEST - Old troop count
+            //!IF:L^%(donorHeroName) TRADED: (%(monCountStr)) %(monTypeStr) for (%(oldMonCountStr)) %(oldMonTypeStr) to %(receivingHeroName).^;       TEST
+        !!el:;
+            !!HE(donorHero):C0/(donorSlot)/(monType)/d(monCountNegation);    //Else, just remove donor hero's sent troop count.
+            //!IF:L^%(donorHeroName) sent NEW stack (%(monCountStr)) %(monTypeStr) to %(receivingHeroName).^;    TEST
+        !!en:;
+        !!VR(oldMon):S(monType);        //Update receiving hero's army vars to the new creature type/count.
+        !!VR(oldMonCount):S(monCount);
+    !!en:;
+    
+    
+!?FU(huAI_SendTroops_Internal);
+**    Send troops from donor if receiving hero has the troop, its upgrade, or its degrade.
+**    Also store the troops that receiving hero has, so that we can potentially facilitate a trade of stacks back in the parent function.
+    !#VA(donorHero:x);
+    !#VA(receivingHero:x);
+    !#VA(donorMonType:x);
+    !#VA(donorMonCount:x);
+    !#VA(donorMonArmySlot:x);
+    !#VA(donorSuccess:x);           //Returns 1 if success.
+        
+    !!VR(donorSuccess):S(FALSE);      //Default return failure.
+    
+    !!re (receivingSlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+    
+        !!HE(receivingHero):C0/(receivingSlot)/?(existingMon:y)/?(existingMonCount:y);        //Get Receving Hero's troop in this slot. (existingMon)=receiving hero's troop. (existingMonCount=receiving hero's troop's count.
+        !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/(existingMon);
+        !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/(existingMonCount);
+        
+        !!co&(existingMon)<0:;      //co if nothing in this slot.
+        
+        //Era framework function to find mon degrade mentions that is not 100% accurate,
+        //and it is slow. Due to this, we use a simple but fast method to find degrade.
+        //This is still not accurate, but it is efficient and good enough for this.
+        //Minus 1 to troop index, then get its upgrade. If they match, degrade was found.
+        !!VR(degradedMon:y):S-1;
+        !!if&(donorMonType)>0:;         //Don't attempt this if it's creature index 0, else we'll error since -1 is not valid.
+            !!VR(degradedMon:y):S(donorMonType)-1;                                  //(degradedMon) might become *de*graded version of the troop passed.
+            !!FU(GetUpgradedMonster):P(degradedMon)/?(degradedMonUpgrade:y);        //Get upgrade of degraded mon.
+            !!VR(degradedMon)&(degradedMonUpgrade)<>(donorMonType):S-1;             //If the upgrade of degraded mon is *not* the original mon, then this method of finding degrade failed.
+        !!en:;
+        
+        !!FU(GetUpgradedMonster):P(donorMonType)/?(upgradedMon:y);       //Get troop upgrade, if it exists.
+        
+        !!if|(existingMon)=(donorMonType)/(existingMon)=(degradedMon)/(existingMon)=(upgradedMon):;        //Hero has passed troop, it's degrade, or its upgrade.
+            //!SN:H^monname^/(donorMonType)/0/?(donorMonTypeStr:z);      TEST - Name of troop to send.
+            //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
+            //!HE(receivingHero):B0/?(receivingHeroName:z);      TEST - Receiving hero name
+            //!VR(donorMonCountStr:z):M3/(donorMonCount);        TEST - Number of troops to send.
+            !!if&(existingMon)=(degradedMon):;
+                !!HE(receivingHero):C0/(receivingSlot)/(donorMonType)/d(donorMonCount);        //Donor has upgraded troops, and ours are degrade, so pass troops and upgrade the stack.
+                //!IF:L^%(donorHeroName) sent UPG (%(donorMonCountStr)) %(donorMonTypeStr) to %(receivingHeroName).^;      TEST
+            !!el:;
+                !!HE(receivingHero):C0/(receivingSlot)/(existingMon)/d(donorMonCount);        //Grant receiving hero the troops.
+                //!SN:H^monname^/(existingMon)/0/?(existingMonStr:z);        TEST - Name of troop to send.
+                //!IF:L^%(donorHeroName) sent (%(donorMonCountStr)) %(existingMonStr) to %(receivingHeroName).^;      TEST
+            !!en:;
+            !!VR(donorMonCount):*-1;                    //Negation to remove from donor.
+            !!HE(donorHero):C0/(donorMonArmySlot)/(donorMonType)/d(donorMonCount);        //Remove donor hero's troop.
+            !!VR(donorSuccess):S(TRUE);                        //Return success.
+            !!FU:E;                        //Exit since we're done with this troop.
+        !!en:;
+        
+    !!en:;
+**  --------------------------
+    
+    
+**  --------------------------
+!?FU(huAI_HasTroop);
+**  Determine if hero has monType in any slot of their army.
+    !#VA(hero:x);
+    !#VA(monType:x);
+    !#VA(monFound:x);               //Returns 1 if the troop was found.
+    !#VA(monFoundSlot:x);           //Returns slot the troop was found in.
+    
+    !!VR(monFound):S(FALSE);
+    
+    !!re (heroArmySlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+    
+        !!HE(hero):C0/(heroArmySlot)/?(slotMon:y)/?(slotCount:y);        //Get Receving Hero's troop in this slot. y=4 receiving hero's troop.
+        
+        !!if&(slotMon)=(monType):;          //If the looped troop is = the troop we're searching for.
+            !!VR(monFound):S(TRUE);              //Set return value.
+            !!VR(monFoundSlot):S(heroArmySlot);
+            !!FU:E;                //Exit since we're done.
+        !!en:;
+        
+    !!en:;
+**    --------------------------
+    
+    
