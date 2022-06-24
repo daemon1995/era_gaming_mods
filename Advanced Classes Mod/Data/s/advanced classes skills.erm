@@ -30914,15 +30914,24 @@ Set hooks at Map Start/Load
   **Mouse Over hooks - sets text for skill name and prepare sec skill def frame id;
     !!SN:Ey2/1/5094933/(acm_OnHeroScreen_HeroSpec_MouseOver);              [Set Hook provided by Daemon :*]
     !!SN:Ey2/1/5095015/(acm_OnHeroScreen_SecSkill_MouseOver);              [Set Hook provided by Daemon :*]
+
     !!SN:Ey2/1/5379483/(acm_OnKingdomOverView_SecSkill_MouseOver);         [Set Hook provided by Daemon :*]
+    !!SN:Ey2/1/5371153/(acm_OnKingdomOverView_SecSkill_MouseClick);         [Set Hook provided by Daemon :*]
+
+
+    !!SN:Ey2/1/4234696/(acm_OnKingdomOverView_Close);         [Set Hook provided by Daemon :*]
     !!SN:Ey2/1/5967453/(acm_OnLeftHeroMeetingScreen_SecSkill_MouseOver);   [Set Hook provided by Daemon :*]
     !!SN:Ey2/1/5967500/(acm_OnRightHeroMeetingScreen_SecSkill_MouseOver);  [Set Hook provided by Daemon :*]
+
+
 
   **When MsgBox prepared we set own def frame
     !!SN:Ey2/1/5201399/(acm_OnMsgBox_SetSecSkillPicture);                  [Set Hook provided by Daemon :*]
     !!SN:Ey2/1/5201196/(acm_OnMsgBox_SetSecSkillName);                  [Set Hook provided by Daemon :*]
 
   !!en;
+
+
 
 !?FU(acm_OnHeroScreen_HeroSpec_MouseOver);
   !!HE(CURRENT_HERO):X?(specType:y)/?(specSkill:y) N?(heroId:y);
@@ -30940,7 +30949,7 @@ Set hooks at Map Start/Load
     !!el&(skillLvl)=0;
       !!SN:W^acm_text_currentSkillLevel^/^^ W^acm_text_currentSkillLevel^/-2;
     !!en;
-      !!VRz5:Ss^acm_text_currentSkillLevel^;
+
   !!en;
 
 !?FU(acm_OnLeftHeroMeetingScreen_SecSkill_MouseOver);
@@ -30963,12 +30972,21 @@ Set hooks at Map Start/Load
     !!SN:W^acm_text_currentSkillLevel^;
   !!en;
 
-!?FU(acm_OnKingdomOverView_SecSkill_MouseOver);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(clickSlot:y);
-  !!VR(skillSlot:y):S(clickSlot) -158 +1;
+!?FU(acm_OnKingdomOverView_SecSkill_MouseClick);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(clickSlot:y);
+  !!FU(acm_KingdomOverviewGetHeroSkillLvl):P(hero)/(clickSlot);
 
-  !!UN:C(esi)/26/4/?(heroId:y);
+!?FU(acm_OnKingdomOverView_SecSkill_MouseOver);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(clickSlot:y);
+
+  !!FU(acm_KingdomOverviewGetHeroSkillLvl):P(hero)/(clickSlot);
+
+!?FU(acm_KingdomOverviewGetHeroSkillLvl);
+!#VA(hero:x) (itemId:x);
+  !!VR(skillSlot:y):S(itemId) -158 +1;
+
+  !!UN:C(hero)/26/4/?(heroId:y);
   !!HE(heroId):S(skillSlot)/?(skill:y)/1;
   !!if&(skill)<>(NO_SKILL);
     !!FU(acm_UNC_SetSecSkillLevel_Text):P(heroId)/(skill);
@@ -30977,6 +30995,8 @@ Set hooks at Map Start/Load
   !!el;
     !!SN:W^acm_text_currentSkillLevel^;
   !!en;
+!?FU(acm_OnKingdomOverView_Close);
+!!FU(acm_UNC_ClearVariables):P;
 
 !?FU(acm_OnHeroScreen_SecSkill_MouseOver);
   !!UN:C6916976/4/?(hero:y);
@@ -31008,6 +31028,7 @@ Set hooks at Map Start/Load
   !!UN:C(ebx)/4/(picNum);                                           [replace current pic id by own]
 
 !?FU(acm_OnKingdomOverViewGetHeroSkill);
+
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y);                    [esi here is skill id]
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(ecx:y);                    [ecx here is heroStructure]
   !!if&(ecx)/(esi);
@@ -31159,42 +31180,30 @@ On open hero screen set correct def cadres and skill tags
 !?FU(OnPostHeroScreen);
   !!FU(acm_UNC_ClearVariables):P;
 
-
 ********************************************************************************
 !?FU(acm_UNC_SetSecSkillLevel_Text);
 !#VA(heroId:x) (skill:x) (skillLvlCheck:x);
-  !!VR(zVar:y):S9597416 +2560;
-  *!VRz5:S^%T(AC_Misc.Expert)^;
-
-      !!FU(H3_Mod_Check_Skill_Level):P(heroId)/?(masterLvl:y)/?(gmLvl:y)/(skill); [get M/GM level of secondary skill]
-
-      !!if&(gmLvl);
-        !!VRz5:S^%T(AC_Misc.Grandmaster)^;
-        !!SN:W^acm_text_currentSkillLevel^/^%T(AC_Misc.Grandmaster)^ W^acm_text_currentSkillLevel^/2;
-        !!UN:C6976992/4/(zVar);
-
-        !!FU:E;
-      !!en;
-
-      !!if&(masterLvl);
-
-        !!VRz5:S^%T(AC_Misc.Master)^;
-
-        !!SN:W^acm_text_currentSkillLevel^/^%T(AC_Misc.Master)^ W^acm_text_currentSkillLevel^/1;
-        !!UN:C6976992/4/(zVar);
-
-        !!FU:E;
-      !!en;
 
   !!UN:C6976992/4/?(expLvlTextPtr:y);
+
+  !!FU(H3_Mod_Check_Skill_Level):P(heroId)/?(masterLvl:y)/?(gmLvl:y)/(skill); [get M/GM level of secondary skill]
+
+  !!if&(gmLvl);
+    !!SN:B(expLvlTextPtr)/d/^%T(AC_Misc.Grandmaster)^ W^acm_text_currentSkillLevel^/^%T(AC_Misc.Grandmaster)^ W^acm_text_currentSkillLevel^/2;
+    !!FU:E;
+  !!en;
+
+  !!if&(masterLvl);
+    !!SN:B(expLvlTextPtr)/d/^%T(AC_Misc.Master)^ W^acm_text_currentSkillLevel^/^%T(AC_Misc.Master)^ W^acm_text_currentSkillLevel^/1;
+    !!FU:E;
+  !!en;
+
   !!SN:B(expLvlTextPtr)/d/^%T(AC_Misc.Expert)^ W^acm_text_currentSkillLevel^;
   
 
 !?FU(acm_UNC_ClearVariables);
-  !!VR(zVar:y):S9597416 +2560;
-  !!VRz5:S^%T(AC_Misc.Expert)^;
-  !!UN:C6976992/4/(zVar);
-  !!SN:W^acm_text_currentSkillLevel^; W^acm_SSLvl_namePtr^;
+  !!UN:C6976992/4/?(expLvlTextPtr:y);
+  !!SN:B(expLvlTextPtr)/d/^%T(AC_Misc.Expert)^ W^acm_text_currentSkillLevel^;
 
 !?FU(WOG_OnBeforeHeroSwap)&1000;
   !!UN:C6962576/(UNC_INT32)/?(heroSwapStructure:y);
@@ -31220,7 +31229,7 @@ On open hero screen set correct def cadres and skill tags
 
 !?FU(OnAfterHeroInteraction);
 !!VRi^acm_SwapActionOnce^:S(FALSE);
-
+!!FU(acm_UNC_ClearVariables):P;
 
 !?FU(ACM_HeroMeetingScreen_SetCorrectDescription);
 
