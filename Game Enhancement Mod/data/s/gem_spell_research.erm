@@ -1,37 +1,44 @@
 ZVSE2
+
 !#DC(SRM_DLG_MAGE_GUILD) = 506;
 !#DC(SRM_DLG_ASK_FOR_RESEARCH) = 507;
 !#DC(SRM_DLG_SPELL_CHOICE) = 508;
+!#DC(SRM_DLG_AVAILABLE_SPELLS) = 509;
+
 !#DC(SRM_ITEM_BACKGROUND) = 45;
 !#DC(SRM_ITEM_BACKGROUND_ANIM) = 6;
+!#DC(STRUCT_SPELL_LEVEL)           = 24;
+!#DC(SPELL_TABLE_POINTER)           = 6848424;
+
 
 ;spellResearch mod is rewritten in ERM 2.0
-;current version is 1.05
+;current version is 1.3
 ;author - daemon_n
 ;original idea - HotA Crew (Horn of the Abyss game)
 ;requires ERA 3.9.0 +, ERA ERM Framework mod;
-;used dialogs ID - 506, 507, 508
+;used dialogs ID - 506, 507, 508, 509
 ;used z-vars - 1-15, 20-23, 30-32, 40, 41, 50;
+;added NewSpells Mod support
 
 !?FU(gem_OnDlgProcessAction)&i^gem_DlgIsOpened^;
 
-!!FU(gem_DlgDefProc):P6/?(currentFrame:y)/d/d/d/i^gem_DlgIsOpened^;
-*!IF:L^%(currentFrame)^;
-!!if&(currentFrame)=24;
-  !!FU(gem_DlgShowItem):P6/(FALSE)/(FALSE)/(FALSE);
-  *!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(TRUE);
-  !!VRi^gem_DlgIsOpened^:S0;
-!!en;
+  !!FU(gem_DlgDefProc):P6/?(currentFrame:y)/d/d/d/i^gem_DlgIsOpened^;
+  !!if&(currentFrame)=24;
+    !!FU(gem_DlgShowItem):P6/(FALSE)/(FALSE)/(FALSE);
+    *!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(TRUE);
+    !!VRi^gem_DlgIsOpened^:S0;
+  !!en;
+
 
 !?FU(OnAfterBuildTownBuilding);    [trigger after Bulding - ERA 3.9.1+]
 !?FU(OnBuildTownBuilding);
 !?FU(OnAfterBuildTownBuilding)&i^srm_mod_is_enabled^;    [trigger after Bulding - ERA 3.9.1+]
 !#VA(townId:x) (buildingId:x);
-!!CA0/(townId):T?(townType:y);
+  !!CA0/(townId):T?(townType:y);
 
-!!if&(townType)=(TOWN_TOWER)/(buildingId)=22;                               [when building the library in Tower]
-  !!FU(srm_remove_library_spells_from_arrays_when_built):P(townId);   [start remove library_spells from_arrays_when_built FU]
-!!en;
+  !!if&(townType)=(TOWN_TOWER)/(buildingId)=22;                       [when building the library in Tower]
+    !!FU(srm_remove_library_spells_from_arrays_when_built):P(townId); [start remove library_spells from_arrays_when_built FU]
+  !!en;
 
 !?FU(OnTownMouseClick)&i^srm_mod_is_enabled^/i^mouse_action^=(MOUSE_LMB_PRESSED);
   !!CM:S?(clickSub:y) I?(clickedPlace:y);
@@ -163,7 +170,9 @@ ZVSE2
   !!if&v1000=(MOUSE_RMB_PRESSED);
 
     !!if&i^current_researchable_spell_in_town%(townId)^>-1/i^current_researchable_spell_in_town%(townId)^=(spellId);           [if click on researcheable scroll or shard]
-      !!SN:H^spell^/(spellId)/(SPELL_TEXT_DESCR)/?(spellDescription:z);
+      *!SN:H^spell^/(spellId)/(SPELL_TEXT_DESCR)/?(spellDescription:z);
+      !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_DESCR)/?(spellDescription:z);
+
       !!SN:T^%s(srm_lang)_spell_scroll_texts.rolled_scroll^/?(rolledScrollDescription:z);
       !!IF:Q1/9/(spellId)/4/^%(rolledScrollDescription)%(spellDescription)^;                                          [show long popup on right click]
     !!el;
@@ -221,7 +230,19 @@ ZVSE2
 !?FU(OnEveryDay)&i^timerOnce^;                 [reset ability to research each town again;]
 
   !!re i/0/i^srm_townsAmount^/1/-1;
-    !!VRi^srm_%i_cant_research_today^&i^srm_%i_cant_research_today^:S(FALSE);
+    !!VRi^srm_%i_cant_research_today^:S(FALSE);
+  !!en;
+
+
+
+!?FU(srm_GetSpellLevel);
+!#VA(spellId:x) (lvl:x);
+  !!if&(spellId)<=(SPELL_LAST_WOG);
+    !!SS(spellId):L?(lvl);
+  !!el;
+    !!UN:C(SPELL_TABLE_POINTER)/(UNC_INT)/?(spellsTable:y);
+    !!VR(spellPtr:y):S(spellId) *(SIZEOF_SPELL_STRUCT) +(spellsTable);
+    !!UN:C(spellPtr)/(STRUCT_SPELL_LEVEL)/(UNC_INT)/?(lvl);
   !!en;
 
 !?FU(srm_ask_player_for_researching);
@@ -229,7 +250,6 @@ ZVSE2
   !!UN:C7505216/1/18;                                                 [; после закрытия диалога - вернуть параметр тени на место]
   !!DL(SRM_DLG_ASK_FOR_RESEARCH):N^srm_gm_ask^;
   !!FU(gem_DlgSetColor):P(SRM_DLG_ASK_FOR_RESEARCH)/(clickedPlayer); 
-
 
 
   !!DL(SRM_DLG_ASK_FOR_RESEARCH):E20/0 E21/0;                                                 [disabling "researh for free" button for evading random effects]
@@ -241,19 +261,13 @@ ZVSE2
     !!DL(SRM_DLG_ASK_FOR_RESEARCH):E30722/0;
   !!en;
 
-  !!VR(paymentLevel:y):S10;
+  !!FU(srm_GetSpellLevel):P(spellId)/?(spellLevel:y);
 
-  !!re (resType:y)/(RES_FIRST)/(RES_GOLD);
-    !!OW:R(clickedPlayer)/(resType)/?(resValue:y);
-    !!co|(resType)=(RES_WOOD)/(resType)=(RES_ORE);
-    !!VR(paymentLevel)&(paymentLevel)>(resValue)/(resType)<>(RES_GOLD):S(resValue);
-    !!VR(paymentLevel)&(resValue)<1000/(resType)=(RES_GOLD):S0;
-  !!en;
-    
-    !!VR(paymentLevel)::2;
-    !!SS(spellId):L?(spellLevel:y);
+  !!VR(researchCost:y):S(spellLevel) *2;
+  !!FU(srm_CheckPlayerResources):P(clickedPlayer)/0/(researchCost)/0/(researchCost)/(researchCost)/(researchCost)/1000/?(canPay:y);
 
-  !!if|i^srm_%(townId)_cant_research_today^/(paymentLevel)<(spellLevel);
+
+  !!if|i^srm_%(townId)_cant_research_today^/(canPay)=(FALSE);
     !!DL(SRM_DLG_ASK_FOR_RESEARCH):E30722/0;
   !!en;
   !!CA0/(townId):O?(townOwner:y);
@@ -262,9 +276,27 @@ ZVSE2
     !!DL(SRM_DLG_ASK_FOR_RESEARCH):E20/0 E30722/0;
   !!en;
 
-  !!FU(srm_ask_research_DL_text_creating):P(spellId)/(townId)/(currPlayer)/(clickedPlayer);
+  !!FU(srm_ask_research_DL_text_creating):P(spellId)/(spellLevel)/(townId)/(currPlayer)/(clickedPlayer);
   !!VRi^srm_research_current_displayed_spell^:S(spellId);
   !!DL(SRM_DLG_ASK_FOR_RESEARCH):S1;
+
+!?FU(srm_CheckPlayerResources); if res >0 then check, else then decrease
+!#VA(playerID:x) (resType[7]:x) (result:x); 
+
+  !!VR(result):S(TRUE);
+
+  !!re i/0/(resType[SIZE])/1/-1;
+
+    !!if&(resType[i])>0;
+      !!OW:R(playerID)/i/?(resNum:y);
+      !!if&(resNum)<(resType[i]);
+        !!VR(result):S(FALSE);
+      !!en;
+    !!el;
+      !!OW:R(playerID)/i/d(resType[i]);
+    !!en;
+  !!en;
+
 
 !?FU(srm_display_spell_choice_DL);
   !#VA(spellId:x) (townId:x) (clickedPlayer:x);
@@ -272,10 +304,10 @@ ZVSE2
   !!DL(SRM_DLG_SPELL_CHOICE):E1/0 E2/0;                                                         [disabling buttons vefore user press any]
   !!VRi^srm_current_user_pressed_picture^:S(NULL);
 
-  !!SS(spellId):L?(spellLevel:y);
-  !!VR(costCoef:y):S(spellLevel) *2;
-  !!OW:R(clickedPlayer)/(RES_GOLD)/d-1000 R(clickedPlayer)/(RES_MERCURY)/d-(costCoef) R(clickedPlayer)/(RES_SULFUR)/d-(costCoef); take off resources 
-  !!OW:R(clickedPlayer)/(RES_CRYSTAL)/d-(costCoef) R(clickedPlayer)/(RES_GEMS)/d-(costCoef);
+  !!FU(srm_GetSpellLevel):P(spellId)/?(spellLevel:y);
+  !!VR(researchCost:y):S(spellLevel) *-2;
+
+  !!FU(srm_CheckPlayerResources):P(clickedPlayer)//(researchCost)//(researchCost)/(researchCost)/(researchCost)/-1000;
 
   !!FU(srm_generate_researchable_spells):P(spellId)/(townId);
   !!FU(srm_spell_choice_DL_text_creating):Pi^firstSpellFromStore^/i^secondSpellFromStore^;
@@ -428,11 +460,36 @@ ZVSE2
   !!DL:C1;
   !!UN:C7505216/1/18;                   [return shadow after DL closing]
 
+!?FU(srm_GetSpellName);
+!#VA(spellId:x) (nameType:x) (spellName:x);
+  !!if&(spellId)<=(SPELL_LAST_WOG);
+    !!SN:H^spell^/(spellId)/(nameType)/?(spellDescription:z);
+  !!el;
+    !!UN:C(SPELL_TABLE_POINTER)/(UNC_INT)/?(spellsTable:x);
+    !!VR(spellPtr:y):S(spellId) *(SIZEOF_SPELL_STRUCT) +(spellsTable);
+
+    !!if&(nameType)=(SPELL_TEXT_NAME);
+      !!VR(nameType):S(STRUCT_SPELL_NAME);
+
+    !!el&(nameType)=(SPELL_TEXT_SHORT_NAME);
+      !!VR(nameType):S(STRUCT_SPELL_SHORT_NAME);
+
+    !!el&(nameType)=(SPELL_TEXT_DESCR);
+      !!VR(nameType):S(STRUCT_SPELL_DESCR);
+    !!en;
+
+    !!UN:C(spellPtr)/(nameType)/(UNC_INT)/?(strPtr:y);
+    !!SN:B(strPtr)/d/?(spellDescription);
+    *!IF:L^%(strPtr)^;
+
+  !!en;
+  !!VR(spellName):Z(spellDescription);
 
 !?FU(srm_spell_description_and_picture_message);
   !#VA(spellId:x) (clickSubtype:x)  (elementId:x) (dlgId:x) (messageType:y);
   !!FU&(clickSubtype)<>(MOUSE_LMB_PRESSED)/(clickSubtype)<>(MOUSE_RMB_PRESSED)|(spellId)>99:E;
-  !!SN:H^spell^/(spellId)/(SPELL_TEXT_DESCR)/?(spellDescription:z);
+  !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_DESCR)/?(spellDescription:z);
+  *!SN:H^spell^/(spellId)/(SPELL_TEXT_DESCR)/?(spellDescription:z);
 
   !!if&(clickSubtype)=(MOUSE_LMB_PRESSED);
     !!VR(messageType):S1;
@@ -441,7 +498,9 @@ ZVSE2
   !!en; 
 
   !!if&(dlgId)=(SRM_DLG_MAGE_GUILD);
-    !!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+    !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+
+    *!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
     !!SN:K(spellName)/?(spellNameLength:y);
     !!VR(spellNameLength):+1;
     !!SN:K(spellDescription)/?(spellDescriptionLength:y);
@@ -483,40 +542,48 @@ ZVSE2
       !!VR(paymentLevel)&(paymentLevel)>(resValue)/(resType)<>(RES_GOLD):S(resValue);
       !!VR(paymentLevel)&(resValue)<1000/(resType)=(RES_GOLD):S0;
     !!en;
-      !!VR(paymentLevel)::2;
+
+
+    !!VR(paymentLevel)::2;
 
   !!re i/0/42;                              [resetting all useless variables]
     !!if&i^srm_spell_%i^;
-      !!VR(anyId:y)&i>0:Si;
-      !!VR(anyId:y)&i=0:S6;
+      !!VR(zVarId:y)&i>0:Si;
+      !!VR(zVarId:y)&i=0:S6;
       !!VR(spellId:y):Si^srm_spell_%i^ -100;
 
+      !!if&(spellId)<=i^srm_MAX_SPELL_ID^;
+        !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
 
-      !!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
-      !!SS(spellId):L?(spellLevel:y);
+        *!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+        !!FU(srm_GetSpellLevel):P(spellId)/?(spellLevel:y);
+      !!el;
+      
+      !!en;
+
 
       !!if&i^current_researchable_spell_in_town%(townId)^>-1; [if researching is in progress]
-        !!SN&i^current_researchable_spell_in_town%(townId)^<>(spellId):T^%s(srm_lang)_spell_research_hints.another_researh^/?z(anyId)/^spellName^/(spellName);
-        !!SN&i^current_researchable_spell_in_town%(townId)^=(spellId):T^%s(srm_lang)_spell_research_hints.is_researching^/?z(anyId)/^spellName^/(spellName);
+        !!SN&i^current_researchable_spell_in_town%(townId)^<>(spellId):T^%s(srm_lang)_spell_research_hints.another_researh^/?z(zVarId)/^spellName^/(spellName);
+        !!SN&i^current_researchable_spell_in_town%(townId)^=(spellId):T^%s(srm_lang)_spell_research_hints.is_researching^/?z(zVarId)/^spellName^/(spellName);
       !!el;
 
         !!if&i^srm_%(townId)_cant_research_today^=(FALSE);
 
           !!if&(currPlayer)=(clickedPlayer);
-            !!SN&(paymentLevel)<(spellLevel):T^%s(srm_lang)_spell_research_hints.no_resources^/?z(anyId)/^spellName^/(spellName);
-            !!SN&(paymentLevel)>=(spellLevel)/(townOwner)=(clickedPlayer):T^%s(srm_lang)_spell_research_hints.do_research^/?z(anyId)/^spellName^/(spellName);
+            !!SN&(paymentLevel)<(spellLevel):T^%s(srm_lang)_spell_research_hints.no_resources^/?z(zVarId)/^spellName^/(spellName);
+            !!SN&(paymentLevel)>=(spellLevel)/(townOwner)=(clickedPlayer):T^%s(srm_lang)_spell_research_hints.do_research^/?z(zVarId)/^spellName^/(spellName);
 
-            !!VRz(anyId)&(paymentLevel)>=(spellLevel)/(townOwner)<>(clickedPlayer):S^%(spellName)^;
+            !!VRz(zVarId)&(paymentLevel)>=(spellLevel)/(townOwner)<>(clickedPlayer):S^%(spellName)^;
           !!el;
-            !!VRz(anyId):S^%(spellName)^;
+            !!VRz(zVarId):S^%(spellName)^;
           !!en;
 
         !!el;
-          !!SN:T^%s(srm_lang)_spell_research_hints.was_researching^/?z(anyId)/^spellName^/(spellName);
+          !!SN:T^%s(srm_lang)_spell_research_hints.was_researching^/?z(zVarId)/^spellName^/(spellName);
         !!en;
       !!en;
 
-      !!DL(SRM_DLG_MAGE_GUILD):H(anyId)/z(anyId);
+      !!DL(SRM_DLG_MAGE_GUILD):H(zVarId)/z(zVarId);
 
     !!en;
   !!en;
@@ -530,7 +597,9 @@ ZVSE2
       !!SN:Mi^srm_town%(townId)_researched_slots^/i/?(blockedScroll:y); [setting description for the blocked scrolls (learned spells)]
       !!VR(spellId:y):Si^srm_spell_%(blockedScroll)^ -100;
       !!co&(spellId)<0;
-      !!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+      !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+
+      *!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
       !!VR(realElementID:y):S200 +(blockedScroll);
 
       !!if&(blockedScroll)>0;
@@ -556,7 +625,7 @@ ZVSE2
 
 
 !?FU(srm_ask_research_DL_text_creating);
-  !#VA(spellId:x) (townId:x) (currPlayer:x) (clickedPlayer:x);
+  !#VA(spellId:x) (spellLevel:x) (townId:x) (currPlayer:x) (clickedPlayer:x);
   !#VA(headerText:z) (textForResearchInfo:z);
 
 
@@ -576,24 +645,14 @@ ZVSE2
 
   !!DL(SRM_DLG_ASK_FOR_RESEARCH):A1/(DLG_CMD_SET_TEXT)/(headerText)/0;
 
-  !!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+  *!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+  !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_NAME)/?(spellName:z);
+
   !!DL(SRM_DLG_ASK_FOR_RESEARCH):A2/(DLG_CMD_SET_TEXT)/(spellName)/0;
 
   !!DL(SRM_DLG_ASK_FOR_RESEARCH):A3/(DLG_CMD_SET_TEXT)/(textForResearchInfo)/0;
 
-  !!VR(paymentLevel:y):S10;
-
-  !!re (resType:y)/(RES_FIRST)/(RES_GOLD);
-    !!OW:R(clickedPlayer)/(resType)/?(resValue:y);
-    !!co|(resType)=(RES_WOOD)/(resType)=(RES_ORE);
-    !!VR(paymentLevel)&(paymentLevel)>(resValue)/(resType)<>(RES_GOLD):S(resValue);
-    !!VR(paymentLevel)&(resValue)<1000/(resType)=(RES_GOLD):S0;
-  !!en;
-
-    !!VR(paymentLevel)::2;
-    !!SS(spellId):L?(spellLevel:y);
-
-    !!VR(researchCost:y):S(spellLevel) *2;
+  !!VR(researchCost:y):S(spellLevel) *2;
 
   !!re i/6/9;
     !!DL(SRM_DLG_ASK_FOR_RESEARCH):Ai/(DLG_CMD_SET_TEXT)/^%(researchCost)^/0;
@@ -601,7 +660,7 @@ ZVSE2
     !!DL(SRM_DLG_ASK_FOR_RESEARCH):A10/(DLG_CMD_SET_TEXT)/^1000^/0;
 
 
-
+  !!FU(srm_CheckPlayerResources):P(clickedPlayer)/0/(researchCost)/0/(researchCost)/(researchCost)/(researchCost)/1000/?(canPay:y);
 
   !!if&i^current_researchable_spell_in_town%(townId)^=(spellId);
 
@@ -610,8 +669,12 @@ ZVSE2
       !!SN:T^%s(srm_lang)_spell_research_main.this_turn_was_research^/?(smallInfoLine:z);
     !!el;
 
-      !!SN&(paymentLevel)<(spellLevel):T^%s(srm_lang)_spell_research_main.no_resources^/?(smallInfoLine:z);
-      !!SN&(paymentLevel)>=(spellLevel):T^%s(srm_lang)_spell_research_main.available^/?(smallInfoLine:z);       
+      !!if&(canPay);
+        !!SN:T^%s(srm_lang)_spell_research_main.available^/?(smallInfoLine:z);       
+      !!el;
+        !!SN:T^%s(srm_lang)_spell_research_main.no_resources^/?(smallInfoLine:z);
+      !!en;
+
     !!en;
 
   !!el&i^current_researchable_spell_in_town%(townId)^>-1;
@@ -625,8 +688,11 @@ ZVSE2
       !!SN:T^%s(srm_lang)_spell_research_main.this_turn_was_research^/?(smallInfoLine:z);
     !!el;
 
-      !!SN&(paymentLevel)<(spellLevel):T^%s(srm_lang)_spell_research_main.no_resources^/?(smallInfoLine:z);
-      !!SN&(paymentLevel)>=(spellLevel):T^%s(srm_lang)_spell_research_main.available^/?(smallInfoLine:z);        
+      !!if&(canPay);
+        !!SN:T^%s(srm_lang)_spell_research_main.available^/?(smallInfoLine:z);       
+      !!el;
+        !!SN:T^%s(srm_lang)_spell_research_main.no_resources^/?(smallInfoLine:z);
+      !!en;      
     !!en;
 
   !!en;
@@ -647,7 +713,9 @@ ZVSE2
     *!VRz-1:S^{~>RESOURCE.def:1 align = center} {~>RESOURCE.def:3} {~>RESOURCE.def:4} {~>RESOURCE.def:5} {~>RESOURCE.def:6}^;
 
     *!DL(SRM_DLG_ASK_FOR_RESEARCH):A5/(DLG_CMD_SET_TEXT)/z-1/1;
-    !!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?z7;
+    *!SN:H^spell^/(spellId)/(SPELL_TEXT_NAME)/?z7;
+    !!FU(srm_GetSpellName):P(spellId)/(SPELL_TEXT_NAME)/?z7;
+
     !!SN:T^%s(srm_lang)_spell_research_hints.cancel^/?z9;
 
     !!DL(SRM_DLG_ASK_FOR_RESEARCH):H15/z7 H30722/z15 H20/z8 H30721/z9;
@@ -656,7 +724,8 @@ ZVSE2
 
   !!if&(rigthSpellId)>=0;
     !!SN:T^%s(srm_lang)_spell_choice.head^/?(head:z);
-    !!SN:H^spell^/(rigthSpellId)/(SPELL_TEXT_SHORT_NAME)/?z4;
+    *!SN:H^spell^/(rigthSpellId)/(SPELL_TEXT_SHORT_NAME)/?z4;
+    !!FU(srm_GetSpellName):P(rigthSpellId)/(SPELL_TEXT_SHORT_NAME)/?z4;
     !!VRz4:M4/?(rigthSpellLength:y);
   !!el;
     !!SN:T^%s(srm_lang)_spell_choice.head_one_spell^/?(head:z);
@@ -668,7 +737,8 @@ ZVSE2
   !!SN:T^%s(srm_lang)_spell_choice.accept_hint^/?z1;
   !!SN:T^%s(srm_lang)_spell_choice.decline_hint^/?z2;
 
-  !!SN:H^spell^/(leftSpellId)/(SPELL_TEXT_SHORT_NAME)/?z3;
+  *!SN:H^spell^/(leftSpellId)/(SPELL_TEXT_SHORT_NAME)/?z3;
+  !!FU(srm_GetSpellName):P(leftSpellId)/(SPELL_TEXT_SHORT_NAME)/?z3;
 
   !!VRz3:M4/?(leftSpellLength:y); 
 
@@ -777,74 +847,103 @@ ZVSE2
 
 
 
-
-!?FU(OnCustomDialogEvent)&x1=(SRM_DLG_MAGE_GUILD)/v999=43;
+// SHOW HINT
+!?FU(OnCustomDialogEvent)&x1=(SRM_DLG_MAGE_GUILD)/v999=43/v1000<>(MOUSE_LMB_PRESSED);
   !!CA-1:U?(townId:y) G?(guildLevel:y);
 
   !!VR(guildLevel):-1;
-
+  !!IF:V2/(TRUE);
   !!if&v1000=(MOUSE_LMB_RELEASED);
     !!SN:T^%s(srm_lang)_spell_research_help.head^/?(head:z);
     !!SN:T^%s(srm_lang)_spell_research_help.body^/?s^srm_availableSpellsToResearchList^;
     !!SN:T^%s(srm_lang)_spell_research_help.ask^/?(ask:z);
-      !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlg:y);
-      !!UN:C(dlg)/(UNC_INT)/?i^gem_DlgIsOpened^;
+
     !!IF:Q2^%(head)%s(srm_availableSpellsToResearchList)%(ask)^;
-
-      !!FU(gem_DlgShowItem):P6/(TRUE)/(TRUE)/(TRUE);
-      !!DLx1:A6/(DLG_CMD_SET_DEF_FRAME)/0/0;
-      *!VRi^gem_DlgIsOpened^:S1;
-    !!if&2;
-      !!FU(srm_show_spells_to_research_list):P(townId)/(guildLevel);
-      !!IF:M^%s(srm_availableSpellsToResearchList)^;
-    !!el;
-
-
-    !!en;
-      !!SN:W^srm_availableSpellsToResearchList^;
-
-
-
-
-
-
-  *!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(TRUE);
-  !!en;
-
-  !!if&v1000=(MOUSE_RMB_PRESSED);
-    !!FU(srm_show_spells_to_research_list):P(townId)/(guildLevel);
-
-    !!IF:M0/4/^%s(srm_availableSpellsToResearchList)^;
     !!SN:W^srm_availableSpellsToResearchList^;
   !!en;
+  !!FU(srm_Dlg_spells_to_research_Create)&2:P(SRM_DLG_AVAILABLE_SPELLS)/(townId)/(guildLevel)/v1000;
+
+!?FU(OnCustomDialogEvent)&x1=(SRM_DLG_AVAILABLE_SPELLS)/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_item^>=30721/i^mouse_item^<=30722;
+!!DL:C1;
+
+!?FU(OnCustomDialogEvent)&x1=(SRM_DLG_AVAILABLE_SPELLS)/i^mouse_item^>=(SPELL_FIRST)/i^mouse_item^<=i^srm_MAX_SPELL_ID^/i^mouse_action^<>(MOUSE_LMB_RELEASED);
+
+  !!FU(srm_GetSpellName):Pi^mouse_item^/(SPELL_TEXT_DESCR)/?(text:z);
+  !!IF:Q1/(PIC_TYPE_SPELL)/i^mouse_item^/(MSG_TYPE_POPUP)^%(text)^;
 
 
-!?FU(srm_show_spells_to_research_list);
-!#VA(townId:x) (guildLevel:x);
-  !!SN:T^%s(srm_lang)_spell_research_help.levelSpellsHead^/?(head:z);
-  !!SN:T^%s(srm_lang)_spell_research_help.endl^/?(endl:z);
 
-  !!VRs^srm_availableSpellsToResearchList^:S^{~text valign=top}%(head)}%(endl)^;
-  !!re i/0/(guildLevel);
-    !!SN:Mi^srm_town%(townId)_gm%i_store^/?(arraySize:y);
-    !!if&(arraySize);
-      !!VR(realGm:y):Si +1;
-      !!SN:T^%s(srm_lang)_spell_research_help.levelSpells^/?(lineStart:z)/^guild^/(realGm);
-      !!VRs^srm_availableSpellsToResearchList^:+^{~text align=left}%(lineStart)}^ +(endl);
-      !!FU(NewIntArray):P?(tempSpellListarray:y);
-      !!FU(Array_Copy):Pi^srm_town%(townId)_gm%i_store^/(tempSpellListarray);
-      !!FU(Array_Sort):P(tempSpellListarray);
-      !!re (itemId:y)/0/(arraySize)/1/-1;
-        !!SN:M(tempSpellListarray)/(itemId)/?(spellId:y);
-        !!VR(spellId):+1;               [for SpellInt.def only. Disable this line if Spells.def is used]
-        !!VRs^srm_availableSpellsToResearchList^:+^{~text align=right}{~>SpellInt.def:%(spellId) valign=center}}^;
-        !!VR(difCheck:y):S(arraySize) -(itemId) -1;
-        !!VR(newLine:y):S(itemId) +1 %6;
-        !!VRs^srm_availableSpellsToResearchList^&(newLine)=0/(difCheck):+(endl) +(endl) +(endl);
-      !!en;
-      !!VRs^srm_availableSpellsToResearchList^&i<(guildLevel):+(endl) +(endl);
+!?FU(srm_Dlg_spells_to_research_Create);
+!#VA(dlgId:x) (townId:x) (guildLevel:x) (clickSubtype:x);
+  !!UN:C7505216/1/18;                                               [enable shadow]
+
+  !!DL(dlgId):N^gAvSpDlg.txt^;
+
+  !!if&(TRUE);
+    !!FU(DL_FindById):P(dlgId)/?(dlgPtr:y);
+    !!UN:C(dlgPtr)/4/?(dlg:y);
+    !!OW:Cd/?(clickedPlayer:y);
+
+    !!FU(gem_DlgSetColor):P(dlgId)/(clickedPlayer);
+    !!re i/0/116;
+      !!FU(gem_DlgShowItem):Pi/0/0/0/(dlg);
     !!en;
+    !!SN:T^%s(srm_lang)_spell_research_help.levelSpellsHead^/?(head:z);
+
+    !#VA(dlgItemId:y);
+    !!DL(dlgId):A210/(DLG_CMD_SET_TEXT)/(head)/0;
+    !!VR(yPos:y):S42;
+
+    !!re i/0/(guildLevel);
+      !!SN:Mi^srm_town%(townId)_gm%i_store^/?(arraySize:y);
+
+      !!if&(arraySize);
+        !!VR(realGm:y):Si +1;
+        !!SN:T^%s(srm_lang)_spell_research_help.levelSpells^/?(onLvlTxt:z)/^guild^/(realGm);
+        !!VR(dlgItemId):S200 +i;
+        !!DL(dlgId):A(dlgItemId)/53/(yPos)/0 A(dlgItemId)/(DLG_CMD_SET_TEXT)/(onLvlTxt)/0;
+        !!VR(yPos:y):+18;
+
+        !!FU(NewIntArray):P?(tempSpellListarray:y);
+        !!FU(Array_Copy):Pi^srm_town%(townId)_gm%i_store^/(tempSpellListarray);
+        !!FU(Array_Sort):P(tempSpellListarray);
+        !!VR(xPos:y):S16;
+
+        !!re (itemId:y)/0/(arraySize)/1/-1;
+          !!SN:M(tempSpellListarray)/(itemId)/?(spellId:y);
+
+          !!VR(dlgItemId):S(spellId);
+          !!FU(gem_DlgShowItem):P(dlgItemId)/(TRUE)/0/0/(dlg);
+
+          !!VR(spellId):+1;               [for SpellInt.def only. Disable this line if Spells.def is used]
+          !!if&(xPos)>552;
+            !!VR(yPos:y):+40;
+            !!VR(xPos):S16;
+          !!en;
+
+          !!DL(dlgId):A(dlgItemId)/52/(xPos)/0 A(dlgItemId)/53/(yPos)/0 A(dlgItemId)/(DLG_CMD_SET_DEF_FRAME)/(spellId)/0;
+
+          !!VR(xPos):+52;
+
+        !!en;
+        !!VR(yPos:y):+40;
+      !!en;
+    !!en;
+
+    !!if&(clickSubtype)=(MOUSE_LMB_RELEASED);
+      !!DL(dlgId):S;
+    !!el;
+      !!re i/30720/37222;
+        !!FU(gem_DlgShowItem):Pi/(FALSE)/0/0/(dlg);
+      !!en;
+
+      !!FU(DL_ShowPopup):P(dlgId);
+    !!en;
+    
   !!en;
+
+
+
 !?FU(srm_remove_library_spells_from_arrays_when_built);
   !#VA(townId:x) (guildLevel:y);
   !!VR(hasLibrary:y):S(TRUE);                                            [of course it is :demonr:]
@@ -902,6 +1001,23 @@ ZVSE2
     !!FU(SaveIni):P(filePath);
   !!en;
 
+*!re i/0/4;
+
+
+  !!SN:F^PluginExists^/^NewSpells^;
+  !!if&v1;
+    !!VR(spellsNum:y):V^%T(gem_spell_research.NewSpells.SPELLS_NUM)^;
+    !!VRi^srm_MAX_SPELL_ID^:S(spellsNum) -1;
+    *!IF:M^%i(srm_MAX_SPELL_ID)^;
+    !!UN:C7551021/3/1/(spellsNum); // un:j0 Patch
+    *!VRy44:S(SIZEOF_SPELL_STRUCT) *126;
+    *!SN:L^era.dll^/?y1 Ay1/^RedirectMemoryBlock^/?y2;
+    *!UN:C(SPELL_TABLE_POINTER)/4/?y22;
+    *!SN:Ey2/(CALLCONV_STDCALL)/(ADDR_WOG_SPELLS_TABLE)/y22/y44;
+  !!el;
+    !!VRi^srm_MAX_SPELL_ID^:S(SPELL_LAST_WOG);
+  !!en;
+
 
 !?FU(OnAfterErmInited)&i^gem_option_5_ini^;
 
@@ -909,6 +1025,10 @@ ZVSE2
     !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?i^srm_townsAmount^;
     !!UN:U(OBJ_RANDOM_TOWN)/(ANY_OBJ)/?(randomTownsAmount:y);
     !!VRi^srm_townsAmount^&(randomTownsAmount):+(randomTownsAmount);
+
+    !!UN:C(SPELL_TABLE_POINTER)/4/?(spellsTable:y);
+    *!IF:M^%(spellsTable)^;
+
 
     !!re (townId:y)/(MAP_TOWN_FIRST)/i^srm_townsAmount^/1/-1;
       !!CA0/(townId):T?(townType:y);
@@ -937,21 +1057,59 @@ ZVSE2
         !!VRi^srm_town%(townId)_has_no_library_from_start^&-1:S(TRUE);
       !!en;
 
-      !!re (spellForCheck:y)/(SPELL_FIRST)/(SPELL_LAST_WOG);                                            [loop all spells]
+      !!re (spellForCheck:y)/(SPELL_FIRST)/i^srm_MAX_SPELL_ID^;(GEM_SPELLS_NUM)/1/-1;(SPELL_LAST_WOG);                                            [loop all spells]
 
-        !!UN:J0/(spellForCheck)/?(isSpellRestricted:y);
-        !!co&(isSpellRestricted);                                                                       [if spell is banned  then skip round;]
-        !!SS(spellForCheck):H(townType)/?(appearChance:y);
-        !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
 
-        !!SS(spellForCheck):L?(spellLevel:y);
+
+        !!if&(spellForCheck)<=(SPELL_LAST_WOG);
+          !!UN:J0/(spellForCheck)/?(isSpellRestricted:y);
+            !!co&(isSpellRestricted);                                                                       [if spell is banned  then skip round;]
+
+          !!SS(spellForCheck):H(townType)/?(appearChance:y);
+            !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
+
+        !!el;
+
+          !!VR(spellPtr:y):S(spellForCheck) *(SIZEOF_SPELL_STRUCT) +(spellsTable);
+          !!UN:C(spellPtr)/12/(UNC_INT8)/?(flags:y);
+          !!VR(flags):&8;                                                                        [check if creature spell]
+          !!co&(flags);                                                                          [if spell is creature spell then skip round;]
+
+          !!VR(offset:y):S(townType) *(UNC_INT) +68;
+          !!UN:C(spellPtr)/(offset)/(UNC_INT)/?(appearChance:y);
+
+            !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
+        !!en;
+
+        !!FU(srm_GetSpellLevel):P(spellForCheck)/?(spellLevel:y);
         !!VR(guildLevel):S(spellLevel) -1;
-        !!co&(guildLevel)>(maxGm);                                                                          [if spell can't appear then skip round;]
-        !!FU(srm_CheckSpellInTown):P(townId)/(spellForCheck)/(guildLevel)/(hasLibrary)/?(isSpellFree:y);   [check if spell is now in any position in town]
+          !!co|(guildLevel)>(maxGm)/(guildLevel)<0;                                                                          [if spell can't appear then skip round;]
+
+        !!if&(spellForCheck)<=(SPELL_LAST_WOG);
+          
+          !!FU(Town_IsSpellBanned):P(townId)/(spellForCheck)/?(isBanned:y);
+          !!co&(isBanned);                                                                          [if spell can't appear then skip round;]
+
+        !!en;
+
+
+        !!FU(srm_CheckIfSpellIsAlreadyInTown):P(townId)/(spellForCheck)/(guildLevel)/(hasLibrary)/?(isSpellFree:y);   [check if spell is now at any position in town]
+          *!IF&(spellForCheck)>=85/(spellForCheck)<=87:M^%(spellForCheck) %(isSpellFree)^;
 
         !!FU(Array_Push)&(isSpellFree)=(TRUE):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellForCheck); [if spell is free, then add in array]
 
       !!en;
+      !!if&(townId)=0;
+        !!SN:Mi^srm_town%(townId)_gm4_store^/?(arraySize:y);
+        !!re i/0/(arraySize)/1/-1;
+          !!SN:Mi^srm_town%(townId)_gm4_store^/i/?j;
+          !!if&j>70;
+
+          !!en;
+          
+        !!en;
+      !!en;
+
 
 ************  AFTER ADDING ALL SPELLS TO RESEARH IN THE ARRAYS DO THIS:  ************************* 
 
@@ -1004,19 +1162,11 @@ ZVSE2
 
     !!en;
 
-
-
-!?FU(srm_CheckSpellInTown);
+!?FU(srm_CheckIfSpellIsAlreadyInTown);
   !#VA(townId:x) (spellForCheck:x) (guildLevel:x) (hasLibrary:x) (isSpellFree:x);
   !!VR(maxScrollsOnLevel:y):S5 -(guildLevel) +(hasLibrary);
   !!VR(isSpellFree):S(TRUE);
-
-  !!FU(Town_IsSpellBanned):P(townId)/(spellForCheck)/?(isBanned:y);
-  !!if&(isBanned);
-      !!VR(isSpellFree):S(FALSE);
-      !!FU:E;
-  !!en;
-
+  *!IF&(guildLevel)<0:M^%(guildLevel) %(spellForCheck))^;
   !!re (scrollPosition:y)/0/(maxScrollsOnLevel)/1/-1;
     !!CA0/(townId):G(guildLevel)/(scrollPosition)/?(spellOnPosition:y);
 
@@ -1098,46 +1248,19 @@ ZVSE2
   !!en;
 
 !?FU(srm_researched_scrolls_def_replacement);
-  !#VA(townId:x) (arraySize:x) (coverId:y) (x:y) (y:y);
+  !#VA(townId:x) (arraySize:x);
+  !#VA(coverId:y) (x:y) (y:y);
+
+  !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlgPtr:y);
+  !!UN:C(dlgPtr)/(UNC_INT)/?(dlg:y);
 
   !!re i/0/(arraySize)/1/-1;                                            [such times how array is size]
     !!SN:Mi^srm_town%(townId)_researched_slots^/i/?(itemId:y);             [read exh element]
     !!VR(coverId):S200 +(itemId);
 
-    !!if&(itemId)>=0/(itemId)<=5;                                             [1st MG level]
-      !!VR(x)&(itemId)<3:S90*(itemId) +220;
-      !!VR(x)&(itemId)>2:S90*(itemId) +248;
-      !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/(x)/0 A(coverId)/53/436/0;
-      !!co;
-    !!en;
-
-    !!if&(itemId)>=10/(itemId)<=14;                                           [2nd MG Level]
-      !!VR(y):S(itemId) %10 *94  +44;
-      !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/46/0 A(coverId)/53/(y)/0;
-      !!co;
-    !!en;
-    
-    !!if&(itemId)>=20/(itemId)<=23;                                           [3rd MG Level]
-      !!VR(x):S(itemId) %2 *102 +568;
-      !!VR(y)&(itemId)<22:S73;
-      !!VR(y)&(itemId)>21:S148;
-      !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/(x)/0 A(coverId)/53/(y)/0;
-      !!co;
-    !!en;
-
-    !!if&(itemId)>=30/(itemId)<=32;                                           [4th MG Level]
-      !!VR(y)&(itemId)=30:S33;
-      !!VR(y)&(itemId)=31:S141;
-      !!VR(y)&(itemId)=32:S246;
-      !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/181/0 A(coverId)/53/(y)/0;
-      !!co;
-    !!en;
-
-    !!if&(itemId)>=40/(itemId)<=41;                                           [5th MG Level]
-      !!VR(x):S(itemId) %2 *100 +489;
-      !!DL(SRM_DLG_MAGE_GUILD):A(coverId)/52/(x)/0 A(coverId)/53/318/0;
-    !!en;
-
+    !!FU(gem_DlgItemPosition):P(itemId)/?(x)/?(y)/d/(dlg);
+    !!VR(y):-5;
+    !!FU(gem_DlgItemPosition):P(coverId)/(x)/(y)/d/(dlg);
   !!en;
 
 !?FU(srm_set_text_lang);
@@ -1197,50 +1320,7 @@ ZVSE2
 
 
 
-!?FU(gem_Town_GetStruct);
-; x1 - town number on map (0...47)
-;?x2 - return: itemId structure town
-!#VA(townId:x) (buildId:x); 
-  !!IF&(townId)<(MAP_TOWN_FIRST)|(townId)>(MAP_TOWN_LAST):M^{FU(Town_GetStruct)}: Wrong town id.^;
-  !!UN:C(GAME_MANAGER)/(UNC_UINT32)/?(game:y); 
-  !!UN:C(game)/136724/(UNC_UINT32)/?(itemId:y); 
-  !!VR(buildId):S(townId) *360 +(itemId);
-  !!IF&(buildId)<43200000:M^{FU(Town_GetStruct): Attention!}
-  Error in getting town structure address. 
-  The game may fall at any time.^; 
 
-!?FU(Town_IsSpellBanned); @igrik - so much thanks
-!#VA(townId:x) (spellID:x) (result:x);
-  !!VR(result):S(FALSE);
-
-  ; получаем структуру города
-  !!FU(gem_Town_GetStruct):P(townId)/?(town:y);
-
-  ; работаем с битами запрета заклинаний в городе
-  ; bit = (1 << (id & 31) & *(spellsBits + (id >> 5)) )
-  !!VR(bitsOffset:y):S(spellID) :32 *4 +212;  212=смещение до забаненых спеллов (town->0xD4: int[4])
-  !!UN:C(town)/(bitsOffset)/4/?(spellsBits:y);
-  !!VR(leftPart:y):S(spellID) &31;
-
-  !!VR(isSpellBannedInTown:y):S1 Sd<<(leftPart) &(spellsBits);
-  *!IF&(SPELL_PROTECTION_FROM_FIRE)=(spellID):M^%(leftPart)  %(spellsBits)^;
-
-  ; проверяем на запрет искомое заклинание в городе
-  !!if&(isSpellBannedInTown)<>0:;
-    !!VR(result):S(TRUE);
-    !!FU:E;
-  !!en;
-
-  ; работаем с битами запрета заклинаний в игре
-  !!UN:C6919480/4/?(gameMgr:y); 
-  !!VR(spellBannedOfsset:y):S74 +(spellID);
-  !!UN:C(gameMgr)/(spellBannedOfsset)/1/?(isSpellBannedInGame:y);
-
-  ; проверяем на запрет искомое заклинание в игре
-  !!if&(isSpellBannedInGame)>0:;
-    !!VR(result):S(TRUE);
-    !!FU:E;
-  !!en;
 
 ; Function for setting the filename of the DL template of the main dialogue
 !?FU(srm_SetMageGuildDLGTemplate);

@@ -4,7 +4,7 @@ ZVSE2
 ; Requires: ERA 3.3+, Era Erm Framework
 
 ; Differentiate sprites of heroes in the battle with genders.
-
+*#MA:B259/0;
 
 !?FU(OnAfterErmInstructions);
 !!FU(NewStrArray):P18/?i^hota_defsList_0^/(M_TEMP); [array for male heroes]
@@ -119,7 +119,7 @@ ZVSE2
         !!en;
 
         !!FU(gem_BattleBtn_GetNextAbility):Pi^gem_BattleBtn_CurrentAbility^/?(nextAbility:y);
-        *!IF:L^%(nextAbility)^;
+        *!IF:L^%i(gem_BattleBtn_CurrentAbility) %(nextAbility)^;
         !!if&(obtainedTurn)=(FALSE);
           !!VRi^gem_BattleBtn_CurrentAbility^:S(nextAbility);
           !!FU(gem_BattleBtn_GetNextAbility):Pi^gem_BattleBtn_CurrentAbility^/?(nextAbility);
@@ -264,7 +264,7 @@ ZVSE2
 !?FU(gem_BattleBtn_CollectStackFlags);
 !#VA(stackId:x);
 
-  !!BM(stackId):F?f E?i^gem_stack_spells^ U3/?i^gem_stack_shoots^ T?t O?(heroStack:y);
+  !!BM(stackId):F?f E?i^gem_stack_spells^ U3/?i^gem_stack_shoots^ T?t O?(heroStack:y) Z?(stack:y) U4/?(spell:y);
   !!VRi^gem_BattleBtn_StackBits^:S0;
   !!VRi^gem_BattleBtn_NextAbility^:S(GEM_MON_ATTACK_DEFAULT);
   !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_DEFAULT);
@@ -275,15 +275,28 @@ ZVSE2
   !!en;
 
   !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);
-    !!COi^battle_hero_0^:B1/4/?(shooting:y);
-    !!if&(shooting);
-      !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
+    !!VR(side:y):S(BATTLE_RIGHT);
+    !!BM(stackId):I?(side:y);
+
+    !!if&i^battle_hero_%(side)^>=0;
+      !!COi^battle_hero_%(side)^:B1/4/?(shooting:y) T?(cType:y);
+      !!if&(shooting);
+        !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
+      !!en;
+      //ACM + TUM commaptibility
+      !!if&i^Advanced_Classes_Mod_Active^;
+        !!FU(gem_GetCorrectCommanderSpells):P(cType)/?(spell);
+      !!en;
+
     !!en;
+
+
+
   !!en;
 
   !!VRf:&(MON_FLAG_SHOOTER);
   !!if|f/i^gem_stack_shoots^;
-    !!BM(stackId):Z?(stack:y);
+    *!BM(stackId):Z?(stack:y);
     !!SN:E4466192/(CALLCONV_THISCALL)/(stack)/0;
     !!if&v1=(TRUE);
       !!VRi^gem_BattleBtn_StackBits^:|(BIT_1) |(BIT_2);
@@ -297,13 +310,15 @@ ZVSE2
       !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
       !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
     !!el;
-      !!BM(stackId):Z?(stack:y) U4/?(spell:y);
+      !!BM(stackId):;
+      !!UN:C(stack)/1248/1/?(spellA:y); 
       !!SS(spell):O?(target:y);
-
+      *!IF:L^%(spell) %(spellA)^;
       !!if&(target)=-1;                     [if spell target = hostile troop]
         !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
         !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
-      !!el;                                                        [if spell target = any(empty) hex]
+
+      !!el&(target)=0;                                                        [if spell target = any(empty) hex]
         !!VRi^gem_stack_do_not_affect_spells^:S(TRUE);
 
         !!re i/0/(BATTLE_HEX_LAST);
@@ -315,14 +330,15 @@ ZVSE2
             !!br;
           !!en;
         !!en;
-
+      !!el;
+        !!VRi^gem_stack_do_not_affect_spells^:S(TRUE);
       !!en;
     !!en;
 
   !!en;
-
+  *!IF:L^%i(gem_BattleBtn_StackBits)^;
   !!if&i^battle_isNetwork^=(FALSE);
-    !!BM(stackId):Z?(stack:y);
+    *!BM(stackId):Z?(stack:y);
     !!VR(result:y):S(FALSE);
 
     !!if&i^gem_amethyst_isHarpyFunc^;
@@ -408,4 +424,45 @@ ZVSE2
     !!VRi^gem_BattleBtn_StackChoice_%i^:S(NULL);
     !!VRi^gem_BattleBtn_StackBits_old_%i^:S(NULL);
   !!en;
+
+*!VRi^myFoo^:S234324;
+
+*?FU(OnKeyPressed_Battle);
+*!FUi^myFoo^:P;
+
+*?FU234324;
+...
+
+!?FU(gem_GetCorrectCommanderSpells);
+!#VA(cType:x) (spell:x);
+
+
+!!if&(cType)=(TOWN_CASTLE);
+  !!UN:C7783293/1/?(spell);                     [Paladin Cure]
+
+!!el&(cType)=(TOWN_RAMPART);
+  !!UN:C7783311/1/?(spell);                     [Hierophant Shield]
+
+!!el&(cType)=(TOWN_TOWER);
+  !!UN:C7783329/1/?(spell);                     [Temple Guardian Lightning Strike]
+
+!!el&(cType)=(TOWN_INFERNO);
+  *!UN:C7783347/1/29;                     [Succubus Fire Shield]
+  !!UN:C7783347/1/?(spell);                     [Succubus Fire Ball]
+
+!!el&(cType)=(TOWN_NECROPOLIS);
+  !!UN:C7783365/1/?(spell);                     [Soul Eater Animate Dead]
+
+!!el&(cType)=(TOWN_DUNGEON);
+  !!UN:C7783383/1/?(spell);                     [Brute Magic Arrow]
+
+!!el&(cType)=(TOWN_STRONGHOLD);
+  !!UN:C7783401/1/?(spell);                     [Ogre Leader Bloodlust]
+
+!!el&(cType)=(TOWN_FORTRESS);
+  !!UN:C7783539/1/?(spell);                     [Shaman Haste]
+
+!!el&(cType)=(TOWN_CONFLUX);
+  !!UN:C7783554/1/?(spell);               [Astral Spirit Summon Air Elements]
+!!en;
 

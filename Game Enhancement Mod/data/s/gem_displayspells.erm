@@ -13,100 +13,78 @@ ZVSE2
 !#DC(NULL) = 0;
 ; ======= END GAME RESOLUTION ========
 
-!?CM4;
-!!CM:F?y1;
-!!FU&y1<>512:E;  Ctrl + [right-click]
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^key_leftCtrl^/i^mouse_battleHex^=>0/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
 
 
-!!FU(GetKeyModsState):P;
+!!BU:Ei^mouse_battleHex^/?(stackId:y); check if stack alive at position
 
-!!if&i^key_leftAlt^=1;/i^key_down^=(TRUE):;
-  !!FU(gem_advanced_battle_hints_dlg_call):P;
+!!if&(stackId)>=0;
+  !!DL27:N^gem_abh.txt^;
+  !!if&(TRUE);
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+    *!VRy11:Sy10 +81380;
+    !!UN:C(cmbMgr)/81380/1/?(isWaitPhase:y); роверка на фазу ожидани
+    !!FU(gem_CheckGameLang):P;
+
+    !!if&(isWaitPhase)<>1:;
+      !!BM(stackId):F?i;
+      !!SN:T^%s(gem_b).active^/?(actionC:z);
+      !!VRi:&(MON_FLAG_WAITING);
+      !!SN&i>0:T^%s(gem_b).wait^/?(actionC:z);
+      !!BM(stackId):F?i;
+      !!VRi:&(MON_FLAG_ACTED);
+      !!SN&i>0:T^%s(gem_b).done^/?(actionC:z);
+      !!BM(stackId):F?i;
+      !!VRi:&(MON_FLAG_DEFENDING); [just look at waiting bit]
+      !!SN&i>0:T^%s(gem_b).def^/?(actionC:z);
+    !!el:;
+      !!SN:T^%s(gem_b).wait^/?(actionC:z);
+      !!BM(stackId):F?i;
+      !!VRi:&(MON_FLAG_ACTED);
+      !!SN&i>0:T^%s(gem_b).done^/?(actionC:z);
+      !!BM(stackId):F?i;
+      !!VRi:&(MON_FLAG_DEFENDING); [just look at waiting bit]
+      !!SN&i>0:T^%s(gem_b).def^/?(actionC:z);
+    !!en;
+
+    !!BM(stackId):R?y4; [check retaliations left]
+    !!SN&y4<1:T^%s(gem_b).no^/?(retailC:z);
+    !!SN&y4>0/y4<101:T^%s(gem_b).some^/?(retailC:z)/^quantity^/y4;
+    !!SN&y4>100:T^%s(gem_b).endl^/?(retailC:z);
+
+    !!BM(stackId):E?y5; [check spells number remaining]
+    !!SN&y5<1:T^%s(gem_b).no^/?(spellQ:z);
+    !!SN&y5>0:T^%s(gem_b).some^/?(spellQ:z)/^quantity^/y5;;
+    !!SN:T^%s(gem_b).1^/?(line1:z);
+    !!SN:T^%s(gem_b).2^/?(line2:z);
+    !!SN:T^%s(gem_b).3^/?(line3:z);
+
+    !!DL27:A32/3/(line1)/0 A33/3/(line2)/0 A34/3/(line3)/0;
+    !!DL27:A35/3/(retailC)/0;
+    !!DL27:A36/3/(spellQ)/0;
+    !!DL27:A37/3/(actionC)/0;
+    *!DO321456986/1/10/1:P; reset spells frames
+    !!re i/1/10:;
+      !!DL27:Ai/4/76/0;
+    !!en:;
+
+    !!if&i^srm_MAX_SPELL_ID^>(SPELL_LAST_WOG);
+      !!VR(maxSpell:y):Si^srm_MAX_SPELL_ID^;
+    !!el;
+      !!VR(maxSpell:y):S75;
+    !!en;
+
+    !!DO321456987/0/(maxSpell:y)/1:P(stackId)/1;
+    !!FU(gem_BattleScreenClickHDShift):Pi^mouse_x^/i^mouse_y^/(FALSE)/?(hdX:y)/?(hdY:y);
+
+    !!FU(DL_Coords):P27/(hdX)/(hdY);
+
+    !!FU(DL_ShowPopup):P27;
+
+    !!CM:R0;
+  !!en;
 !!en;
-!!SN:L^user32.dll^/?y1 Ay1/^GetKeyState^/?y2 Ey2/1/4;
-!!VRy1:Sv1&65535;
-!!FU&y1<32768:E; exit if not Ctrl hold
-*!FU(gem_advanced_battle_hints_dlg_call):P;
 
-
-*?FU(OnBattleMouseHint);
-*!FU(gem_advanced_battle_hints_dlg_call):P;
-*!VRi^gem_dl_was_opened^:S(TRUE);
-*?FU(gem_DlgMouseMove)&i^gem_dl_was_opened^=(TRUE);
-*!CM:I2000;
-*!UN:C6918864/4/?y1;  *!VRy1:+84;  *!UN:Cy1/4/?y2;
-*!SN:E6287904/2/y2/1/1/1;
-*!SN:E6288864/2/y2/1/-65535/65535;
-
-*!VRi^gem_dl_was_opened^:S(FALSE);
-!?FU(gem_advanced_battle_hints_dlg_call);
- !!CM:D?y1;
-!!FU|y1<1/y1>186:E;  exit if outside BF
-
-!!BU:Ey1/?y2; check if stack alive at position
-!!UN:J8/1/^gem_interface.pac^;
-!!FU|-1/y2<0:E;
-!!UN:C6919200/4/?y10;
-!!VRy11:Sy10 +81380;
-!!UN:Cy11/1/?y8; роверка на фазу ожидани
-!!FU(gem_CheckGameLang):P;
-
-!!if&y8<>1:;
-  !!BMy2:F?i;
-  !!SN:T^%s(gem_b).active^/?(actionC:z);
-  !!VRi:&33554432;
-  !!SN&i>0:T^%s(gem_b).wait^/?(actionC:z);
-  !!BMy2:F?i;
-  !!VRi:&67108864;
-  !!SN&i>0:T^%s(gem_b).done^/?(actionC:z);
-  !!BMy2:F?i;
-  !!VRi:&134217728; [just look at waiting bit]
-  !!SN&i>0:T^%s(gem_b).def^/?(actionC:z);
-!!el:;
-  !!SN:T^%s(gem_b).wait^/?(actionC:z);
-  !!BMy2:F?i;
-  !!VRi:&67108864;
-  !!SN&i>0:T^%s(gem_b).done^/?(actionC:z);
-  !!BMy2:F?i;
-  !!VRi:&134217728; [just look at waiting bit]
-  !!SN&i>0:T^%s(gem_b).def^/?(actionC:z);
-!!en;
-
-!!BMy2:R?y4; [check retaliations left]
-!!SN&y4<1:T^%s(gem_b).no^/?(retailC:z);
-!!SN&y4>0/y4<101:T^%s(gem_b).some^/?(retailC:z)/^quantity^/y4;
-!!SN&y4>100:T^%s(gem_b).endl^/?(retailC:z);
-
-!!BMy2:E?y5; [check spells number remaining]
-!!SN&y5<1:T^%s(gem_b).no^/?(spellQ:z);
-!!SN&y5>0:T^%s(gem_b).some^/?(spellQ:z)/^quantity^/y5;;
-!!SN:T^%s(gem_b).1^/?(line1:z);
-!!SN:T^%s(gem_b).2^/?(line2:z);
-!!SN:T^%s(gem_b).3^/?(line3:z);
-!!DL27:N^gem_abh.txt^;
-
-!!if&(TRUE);
-  !!DL27:A32/3/(line1)/0 A33/3/(line2)/0 A34/3/(line3)/0;
-  !!DL27:A35/3/(retailC)/0;
-  !!DL27:A36/3/(spellQ)/0;
-  !!DL27:A37/3/(actionC)/0;
-  !!DO321456986/1/10/1:P; reset spells frames
-  !!re i/1/10:;
-    !!DL27:Ai/4/76/0;
-  !!en:;
-  !!DO321456987/0/75/1:Py2/1;
-  !!CM:A?y15/?y16;                        [y15, y16, записываем координаты клика мышкой]
-  !!FU(gem_BattleScreenClickHDShift):Py15/y16/(FALSE)/?(hdX:y)/?(hdY:y);
-
-  !!FU(DL_Coords):P27/(hdX)/(hdY);
-
-
-  *!DL27:S1;
-  *!DL:C1;
-  !!FU(DL_ShowPopup):P27;
-
-  !!CM:R0;
-!!en;
 
 
 
@@ -118,10 +96,6 @@ ZVSE2
 !!VRzx2:S^x%Y1^;
 !!DL27:Ay3/3/zx2/0;
 !!VRx2:+1;
-*?FU(OnKeyPressed_Battle)&x1=(KEY_G);
-*!re i/0/20:;
-  *!IF:L^%^;
-*!en:;
 
 
 !?FU(gem_DL_ChangeCoords);
