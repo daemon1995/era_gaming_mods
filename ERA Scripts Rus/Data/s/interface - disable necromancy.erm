@@ -1,25 +1,21 @@
-ZVSE
-_WARNING_#1=IMPORTANT! This file is not in a plain text format. NEVER use any editor except ERM_S for making any kind of changes!
-ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
-
+ZVSE2
 ** Author        : Gamecreator
 ** Name          : Disable Necromancy
-** Name rus.     : Отключение Некромантии
+** Name rus.     : СњС‚РєР»СЋС‡РµРЅРёРµ РЊРµРєСЂРѕРјР°РЅС‚РёРё
 
-!?FU(OnAfterErmInstructions);
+
+!?FU(OnStartOrLoad);
 !!SN:L^EraPlugins\erm_hooker.era^/?y1 Ay1/^SetHook^/?y2;
-!!SN&y2<>0:Ey2/1/5128006/(ES.DisableNecromancy); 0x4E3F40 + 0x6 - necromancy power (after esp/ebp and locals)
+!!SN&y2<>0:Ey2/1/5128006/(ES_DisableNecromancy); 0x4E3F40 + 0x6 - necromancy power (after esp/ebp and locals)
 
-!?FU(OnAfterLoadGame);
-!!SN:L^EraPlugins\erm_hooker.era^/?y1 Ay1/^SetHook^/?y2;
-!!SN&y2<>0:Ey2/1/5128006/(ES.DisableNecromancy); 0x4E3F40 + 0x6 - necromancy power (after esp/ebp and locals)
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^key_ctrl^; click in hero screen
+!!CM:I?y2;
+!!FU|y2<79/y2>86:E; exit if not Ctrl+LMB on skill
 
-!?CM2; click in hero screen
-!!CM:F?y1 I?y2 S?y3;
-!!FU|y1<>4/y2<79/y2>86/y3<>12:E; exit if not Ctrl+LMB on skill
 !!VRy2:-78; get skill slot from dialog element
 !!HE-1:Sy2/?y1/1 N?y3;
 !!FU&y1<>12:E; exit if not Necromancy was clicked
+
 !!CM:R0; disable default action
 !!SN:W^es.interface.dn.%Y3^/?y4; check state for this hero
 !!UN:C6919480/4/?y2;
@@ -32,16 +28,18 @@ ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
 !!SN:W^es.interface.dn.%Y3^/y4; save
 !!SN:W^NecromancyDisabled%Y3^/y4;
 
-!?CM3;                        [клик в окне встречи героев]
-!!CM:F?y1 I?y2 S?y3;
-!!FU|y1<>4/y2<200/y2>215/y3<>12:E; exit if not Ctrl+LMB on skill
-!!CM&y2<208:H?y3/?i;          [y3 - номер героя]
+!?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^key_ctrl^; [РєР»РёРє РІ РѕРєРЅРµ РІСЃС‚СЂРµС‡Рё РіРµСЂРѕРµРІ]
+!!CM:I?y2;
+!!FU|y2<200/y2>215:E; exit if not Ctrl+LMB on skill
+
+!!CM&y2<208:H?y3/?i;          [y3 - РЅРѕРјРµСЂ РіРµСЂРѕв‚¬]
 !!CM&y2>207:H?i/?y3;          [...]
-!!VRy2:-199;                  [y2 - номер слота втор. навыка]
+!!VRy2:-199;                  [y2 - РЅРѕРјРµСЂ СЃР»РѕС‚Р° РІС‚РѕСЂ. РЅР°РІС‹РєР°]
 !!VRy2&y2>8:-8;               [...]
-!!OW:C?y6;                    [y6 - текущий игрок]
-!!HEy3:Sy2/?y1/1 O?y7;        [y7 - хозяин героя]
-!!FU|y1<>12/y6<>y7:E; exit if not Necromancy was clicked или клик на навыке союзного героя
+!!OW:C?y6;                    [y6 - С‚РµРєСѓС‰РёР№ РёРіСЂРѕРє]
+!!HEy3:Sy2/?y1/1 O?y7;        [y7 - С…РѕР·в‚¬РёРЅ РіРµСЂРѕв‚¬]
+!!FU|y1<>12/y6<>y7:E; exit if not Necromancy was clicked РёР»Рё РєР»РёРє РЅР° РЅР°РІС‹РєРµ СЃРѕСЋР·РЅРѕРіРѕ РіРµСЂРѕв‚¬
+
 !!CM:R0; disable default action
 !!SN:W^es.interface.dn.%Y3^/?y4; check state for this hero
 !!UN:C6919480/4/?y2;
@@ -54,7 +52,7 @@ ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
 !!SN:W^es.interface.dn.%Y3^/y4; save
 !!SN:W^NecromancyDisabled%Y3^/y4;
 
-!?FU(ES.DisableNecromancy);
+!?FU(ES_DisableNecromancy);
 ; this = hero struct
 ; arg1 = capAt1 (not used)
 !!SN:X?y1/?y2; context, execOrigCode
@@ -63,13 +61,15 @@ ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
 !!VRy3:+26; this->number
 !!UN:Cy3/4/?y4; get hero number
 !!SN:W^NecromancyDisabled%Y4^/?y3; check state for this hero
-!!if&y3=0:; necromancy enabled
-    !!SN:X?y1/1; make sure it executes original code
-    !!UN:C5128603/4/1065353216; immed = 1.0 (restore default)
-!!el:; necromancy disabled
-    !!SN:X?y1/0; do not execute
-    !!VRy2:Sy1 +32; return addr
-    !!UN:Cy2/4/5128600; return to 0x4E4198 (alternate path: immediate returned to FPU stack)
-    !!UN:C5128603/4/0; immed = 0.0
-!!en:;
+
+!!if&y3=0;  necromancy enabled
+  !!SN:X?y1/1; make sure it executes original code
+  !!UN:C5128603/4/1065353216; immed = 1.0 (restore default)
+!!el;  necromancy disabled
+  !!SN:X?y1/0; do not execute
+  !!VRy2:Sy1 +32; return addr
+  !!UN:Cy2/4/5128600; return to 0x4E4198 (alternate path: immediate returned to FPU stack)
+  !!UN:C5128603/4/0; immed = 0.0
+!!en;
+
 **end

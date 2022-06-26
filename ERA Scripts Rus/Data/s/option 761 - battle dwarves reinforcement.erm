@@ -1,51 +1,58 @@
-ZVSE
-ERMS_ScriptDate=12.4(April).2013
-_WARNING_#1=IMPORTANT! This file is not in a plain text format. NEVER use any editor except ERM_S for making any kind of changes!
-ERMS_PoweredBy=ERM Scripter v. 2005.9.7.814
+ZVSE2
 ** Author orig.  : Algor
+** Rewritten by  : Archer30
 ** Name          : battle dwarves reinforcement
-** Name rus.     : укрепление боевых гномов
+** Name rus.     : СѓРєСЂРµРїР»РµРЅРёРµ Р±РѕРµРІС‹С… РіРЅРѕРјРѕРІ
 ** Options       : 761
-** Dialogs       : -
-** Variables     : v7923,z880
-** Tmp variables : -
-** Timers        : -
-** Functions     : -
-** PO-values     : -
 
-!?PI;                         [пост-инструкция: установка описаний]
-!!UN:P761/?y1;                [проверяем включена ли опция 761 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
-!!VRz880:Sz179184;            [получаем из ert новую подсказку по существу]
-!!UN:G1/17/2/880;             [установка новой подсказки]
-!!MA:F17/?y1;                 [y1 - FV боевых гномов]
-!!VRy1:*105 :100;             [увеличиваем FV на 5%]
-!!MA:F17/y1;                  [обновляем FV боевых гномов]
-!!VRv7923:S-1;                [инициализация v7923]
 
-!?MF1&v7923=-1;               [при нанесении урона]
-!!UN:P761/?y1;                [проверяем включена ли опция 761 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
-!!MF:N?y1;                    [y1 - номер отряда, получающего урон]
-!!BMy1:T?y2;                  [y2 - тип отряда, получающего урон (17 - боевые гномы)]
-!!VRv7923&y2=17:Sy1;          [v7923 - номер отряда боевых гномов, получающих физ. урон]
+!?FU(OnAfterErmInstructions);           [РїРѕСЃС‚-РёРЅСЃС‚СЂСѓРєС†РёСЏ: СѓСЃС‚Р°РЅРѕРІРєР° РѕРїРёСЃР°РЅРёР№]
+!!UN:P761/?(wogOption:y);               [РїСЂРѕРІРµСЂСЏРµРј РІРєР»СЋС‡РµРЅР° Р»Рё РѕРїС†РёСЏ 761]
+!!FU&(wogOption)<>(TRUE):E;             [РІС‹С…РѕРґ РµСЃР»Рё РѕРїС†РёСЏ РЅРµ РІРєР»СЋС‡РµРЅР°]
 
-!?BG1&v7923>-1;               [после действия]
-!!UN:P761/?y1;                [проверяем включена ли опция 761 в y1]
-!!BU:C?y2;                    [y2=1, если бой закончен]
-!!VRv7923|y1=0/y2=1:S-1;      [сброс v7923, если опция не включена или бой закончен]
-!!FU|y1=0/y2=1:E;             [выход если опция не включена или бой закончен]
-!!BMv7923:N?y1;               [y1 - текущее количество гномов в отряде]
-!!VRv7923&y1<1:S-1;           [сброс v7923 если отряд уничтожен]
-!!FU&y1<1:E;                  [выход, если отряд уничтожен]
-!!BA:Q?f;                     [f-статус быстрой битвы]
-!!VRz1&f=0:Sz179185;          [получаем текст для вывода в лог битвы из ert]
-!!MM&f=0:Sz1;                 [вывод текста в лог битвы]
-!!VRz1&f=0:S^SHIELD^;         [z1 - звуковой файл щита]
-!!SN&f=0:P1;                  [вывод звука щита]
-!!BMv7923&f=0:V27;            [анимация]
-!!BMv7923:Dd2;                [укрепление отряда]
-!!VRv7923:S-1;                [сброс v7923]
+; Set up new description
+!!SN:H^monname^/(MON_BATTLE_DWARF)/2/?(desc:z);
+!!SN:H^monname^/(MON_BATTLE_DWARF)/2/^%(desc)%T(es.761.desc)^;
+
+!!MA:F(MON_BATTLE_DWARF)/?(fv:y);       [FV Р±РѕРµРІС‹С… РіРЅРѕРјРѕРІ]
+!!VR(fv):*105 :100;                     [СѓРІРµР»РёС‡РёРІР°РµРј FV РЅР° 5%]
+!!MA:F(MON_BATTLE_DWARF)/(fv);          [РѕР±РЅРѕРІР»СЏРµРј FV Р±РѕРµРІС‹С… РіРЅРѕРјРѕРІ]
+
+!?FU(OnBattleActionEnd);
+!!BG:E?(stack:y) A?(action:y);
+
+; Increase the defense of Battle Dwarves if they are hit by melee attack
+!!if&(stack)>(NO_STACK)/(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
+  !!BM(stack):T?(type:y) N?(num:y);
+  !!FU(ES_761_CheckIfMonIsEligible):P(type)/?(result:y);
+
+  !!if&(result);
+
+    ; Show battle log and play animation/sound
+    !!if&i^battle_isVisible^;
+      !!if&(num)=1;
+        !!SN:H^monname^/(type)/0/?(battleDwarfName:z);
+      !!el;
+        !!SN:H^monname^/(type)/1/?(battleDwarfName);
+      !!en;
+
+      !!SN:T^es.761.battleLog^?(battleLog:z)/^battleDwarf^/(battleDwarfName);
+      !!MM:S(battleLog);
+
+      !!SN:P^SHIELD^;                   [РІС‹РІРѕРґ Р·РІСѓРєР° С‰РёС‚Р°]
+      !!BM(stack):V27;                  [Р°РЅРёРјР°С†РёСЏ]
+    !!en;
+
+    ; Increase defence by 2
+    !!BM(stack):Dd2;                    [СѓРєСЂРµРїР»РµРЅРёРµ РѕС‚СЂСЏРґР°]
+  !!en;
+!!en;
+
+// Funciton to check if the targeted monster is eligible for reinforcement
+!?FU(ES_761_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_BATTLE_DWARF):S(TRUE);
 
 ** end
-

@@ -1,59 +1,104 @@
-ZVSE
-ERMS_ScriptDate=10.10(October).2012
-_WARNING_#1=IMPORTANT! This file is not in a plain text format. NEVER use any editor except ERM_S for making any kind of changes!
-ERMS_PoweredBy=ERM Scripter v. 2004.10.5.945
+ZVSE2
 ** Author orig.  : Algor
+** Rewritten by  : daemon_n and Archer30
 ** Name          : Mana arrow
-** Name rus.     : Волшебная стрела маны
+** Name rus.     : Р’РѕР»С€РµР±РЅР°СЏ СЃС‚СЂРµР»Р° РјР°РЅС‹
 ** Options       : 790
-** Dialogs       : -
-** Variables     : v943
-** Tmp variables : z1
-** Timers        : -
-** Functions     : -
-** PO-values     : -
 
-!?BG0;                        [при действии в бою]
-!!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
-!!FU&y1=0:E;                  [выход, если опция не включена]
-!!BG:A?y1;                    [y1 - тип действия (1 - герой колдует заклинание)]
-!!BG&y1=1:S?y2;               [y2 - номер заклинания (если герой колдует)]
-!!FU|y2<>15/y1<>1:E;          [Выход если герой не колдует волшебную стрелу]
-!!BG:H?y1;                    [y1 - номер героя]
-!!HEy1:I?y2 Fd/d/?y3/d;       [y2 - количество маны, y3 - сила магии героя]
-!!HEy1:S14/?y4 S15/?y5 S16/?y6 S17/?y7; [y4-y7 - Уровень навыка Огня/Воздуха/Воды/Земли героя (0..3)]
-!!VRy4&y4<y5:Sy5;             [---------------------------------------------]
-!!VRy4&y4<y6:Sy6;             [     y4 - макс. уровень Школ магии (0..3)    ]
-!!VRy4&y4<y7:Sy7;             [---------------------------------------------]
-!!VRy7:Sy3 +y4 *10;           [y7 - расчетный урон обычной Волшебной стрелы SP*10 (+10) (+20) (+30)]
-!!VRy4:*y2;                   [y4 - бонус урона от Школ магии (уровень*Мана)]
-!!VRy6:Sy3 *y2 :2 +y4;        [y6 - расчетный урон Волшебной стрелы маны SP*Mana:2 (+Mana) (+Mana*2) (+Mana*3)]
-!!FU&y6<=y7:E;                [Выход, если урон Волшебной стрелы маны меньше обычного]
-!!HEy1:X?y10/?y11/d/d/d/d/d;  [y10=3,y11=15 для героя-спеца по Волшебной стреле]
-!!HEy1&y10=3/y11=15:Ed/?y5;   [y5 - Уровень героя-спеца]
-!!VRy7&y10=3/y11=15:Sy6 *y5 :20; [Расчет бонуса урона для героя-спеца (+5% за уровень)]
-!!VRy6&y10=3/y11=15:+y7;      [y6 - скорректированный урон для героя-спеца]
-!!HEy1:O?y8;                  [y8 - номер игрока]
-!!OW:Iy8/?y9;                 [y9=1 для ИИ, 0 для человека]
-!!VRv943:S0;                  [обнуление v943]
-!!BA:Q?f; !!FU&y9=0/f=1:E;    [герой-человек не использует усиление в быстрой битве]
-!!VRz1&y9=0:Sz179011;         [для игрока-человека получаем текст вопроса в z1]
-!!IF&y9=0:Q1/9/15/2/z1;       [для игрока-человека вопрос: вложить ли всю ману в заклинание]
-!!VRv943|1/y9=1:Sy6;          [v943 - новый урон Волшебной стрелы]
+; To-do: Fix MP support
 
-!?MR0;                        [перед расчетом сопротивления]
-!!UN:P790/?y1;                [проверяем включена ли опция 790 в y1]
-!!FU&y1=0:E;                  [выход, если опция не включена]
-!!BG:A?y1;                    [y1 - тип действия (1 - герой колдует заклинание)]
-!!BG&y1=1:S?y2;               [y2 - номер заклинания (если герой колдует)]
-!!FU|y2<>15/v943=0:E;         [Выход если герой не колдует волшебную стрелу или если новый урон Волшебной стрелы = 0]
-!!MR:D?y1;                    [y1 - базовый урон заклинания]
-!!BG:H?y2 E?y3;               [y2 - номер героя, y3 - номер целевого стека]
-!!MR&y1<v943:Dv943;           [Установка нового базового урона заклинания, если он не меньше стандартного]
-!!HEy2&y1<v943:I0;            [Обнуление маны героя]
-!!BA:Q?f;                     [f-статус быстрой битвы]
-!!BMy3&y1<v943/f=0:V64 V64;   [Дополнительная анимация на целевом стеке]
-!!VRv943:S0;                  [обнуление v943]
+
+!?FU(ES_OnPlayerChooseSpell)&i^battle_isNetwork^<>(TRUE); [РїСЂРё РґРµР№СЃС‚РІРёРё РІ Р±РѕСЋ]
+!#VA(address:x);
+
+!!UN:P790/?(wogOption:y);               [РїСЂРѕРІРµСЂСЏРµРј РІРєР»СЋС‡РµРЅР° Р»Рё РѕРїС†РёСЏ 790]
+!!FU&(wogOption)<>(TRUE):E;             [РІС‹С…РѕРґ, РµСЃР»Рё РѕРїС†РёСЏ РЅРµ РІРєР»СЋС‡РµРЅР°]
+
+; Chcck if the hero's casting Magic Arrow
+!!UN:C(address)/40/(UNC_INT)/?(spell:y);
+
+!!if&(spell)=(SPELL_MAGIC_ARROW);
+  !!BG:H?(heroId:y); [РЅРѕРјРµСЂ Р·Р°РєР»РёРЅР°РЅРёСЏ (РµСЃР»Рё РіРµСЂРѕР№ РєРѕР»РґСѓРµС‚)]
+
+  !!HE(heroId):I?(heroMana:y)/1 Fd/d/?(power:y)/d;
+  !!VR(skillLvl:y):S(SKILL_NOT_LEARNED);
+
+  ; Get the magic arrow level
+  !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+    !!HE(heroId):Si/?l;
+    !!VR(skillLvl):Fl/(SKILL_EXPERT);
+  !!en;
+
+  ; Compare the damage difference between the old damage and new damage
+  !!SS(SPELL_MAGIC_ARROW):E(skillLvl)/?(spellEffect:y) P?(spellPower:y);
+
+  !!VR(oldDamage:y):S(power) *(spellPower) +(spellEffect);
+
+  !!VR(skillLvl):F(SKILL_BASIC)/(SKILL_EXPERT);
+  !!VR(bonus:y):S(skillLvl) *(heroMana);
+  !!VR(newDamage:y):S(power) *(heroMana) :2 +(bonus);
+
+  !!HE(heroId):X?(spec:y)/?(spell)/d/d/d/d/d; [РґР»СЏ РіРµСЂРѕСЏ-СЃРїРµС†Р° РїРѕ Р’РѕР»С€РµР±РЅРѕР№ СЃС‚СЂРµР»Рµ]
+
+  ; Calculate specialty bonus
+  !!if&(spec)=3/(spell)=(SPELL_MAGIC_ARROW);
+    !!VR(oldDamage):*3 :2;
+
+    !!HE(heroId):Ed/?(heroLvL:y);
+    !!VR(bonus):S(newDamage) *(heroLvL) :20;
+    !!VR(newDamage):+(bonus);
+  !!en;
+
+  ; Ask to use Mana Arrow if the new damage is greater, or choose it for AI
+  !!if&(newDamage)>(oldDamage);
+    !!HE(heroId):O?(owner:y);
+    !!OW:I(owner)/?(isAi:y) Cd/?(clicked:y); [РґР»СЏ РР, 0 РґР»СЏ С‡РµР»РѕРІРµРєР°]
+
+    !!IF:V1/(FALSE);
+
+    !!if&i^battle_isVisible^/(isAi)=(FALSE)/(clicked)=(owner);
+      !!SN:T^es.790.dlg^/?(dlg:z)/^dmg^/(newDamage); [РґР»СЏ РёРіСЂРѕРєР°-С‡РµР»РѕРІРµРєР° РїРѕР»СѓС‡Р°РµРј С‚РµРєСЃС‚ РІРѕРїСЂРѕСЃР°]
+      !!IF:Q1/(PIC_TYPE_SPELL)/(SPELL_MAGIC_ARROW)/(MSG_TYPE_QUESTION)/(dlg); [РґР»СЏ РёРіСЂРѕРєР°-С‡РµР»РѕРІРµРєР° РІРѕРїСЂРѕСЃ: РІР»РѕР¶РёС‚СЊ Р»Рё РІСЃСЋ РјР°РЅСѓ РІ Р·Р°РєР»РёРЅР°РЅРёРµ]
+    !!en;
+
+    !!if|1/(isAi);
+      !!VRi^es_790_manaArrowDmg^:S(newDamage); [i^es_790_manaArrowDmg^ - РЅРѕРІС‹Р№ СѓСЂРѕРЅ Р’РѕР»С€РµР±РЅРѕР№ СЃС‚СЂРµР»С‹]
+
+      ; The following code doesn't work for now for some reason
+      !!if&i^battle_humanOnly^;
+        !!VR(enemySide:y):Si^battle_current_side^ X1;
+        !!IP:D-1;
+
+        !!VR(player:y):Si^battle_owner_%(enemySide)^;
+
+        !!FU(ES_PassManaArrowDmg):Di^es_790_manaArrowDmg^;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+!?FU(ES_PassManaArrowDmg);
+!#VA(manaArrowDmg:x);
+
+!!VRi^es_790_manaArrowDmg^:S(manaArrowDmg);
+
+!?FU(OnMagicBasicResistance)&i^es_790_manaArrowDmg^>0; [РїРµСЂРµРґ СЂР°СЃС‡РµС‚РѕРј СЃРѕРїСЂРѕС‚РёРІР»РµРЅРёСЏ]
+!!UN:P790/?(wogOption:y);               [РїСЂРѕРІРµСЂСЏРµРј РІРєР»СЋС‡РµРЅР° Р»Рё РѕРїС†РёСЏ 790]
+!!FU&(wogOption)<>(TRUE):E;             [РІС‹С…РѕРґ, РµСЃР»Рё РѕРїС†РёСЏ РЅРµ РІРєР»СЋС‡РµРЅР°]
+
+!!MR:D?(damage:y);                      [Р±Р°Р·РѕРІС‹Р№ СѓСЂРѕРЅ Р·Р°РєР»РёРЅР°РЅРёСЏ]
+
+!!if&(damage)<i^es_790_manaArrowDmg^;
+  !!MR:Di^es_790_manaArrowDmg^;         [РЈСЃС‚Р°РЅРѕРІРєР° РЅРѕРІРѕРіРѕ Р±Р°Р·РѕРІРѕРіРѕ СѓСЂРѕРЅР° Р·Р°РєР»РёРЅР°РЅРёСЏ, РµСЃР»Рё РѕРЅ РЅРµ РјРµРЅСЊС€Рµ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ]
+  !!BG:H?(hero:y);                      [РЅРѕРјРµСЂ РіРµСЂРѕСЏ]
+  !!HE(hero):I0;                        [РћР±РЅСѓР»РµРЅРёРµ РјР°РЅС‹ РіРµСЂРѕСЏ]
+
+  !!if&i^battle_isQuick^<>(TRUE);
+    !!BG:E?(stack:y);
+    !!BM(stack):V64 V64;                [Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ Р°РЅРёРјР°С†РёСЏ РЅР° С†РµР»РµРІРѕРј СЃС‚РµРєРµ]
+  !!en;
+!!en;
+
+!!VRi^es_790_manaArrowDmg^:S0;          [РѕР±РЅСѓР»РµРЅРёРµ i^es_790_manaArrowDmg^]
 
 ** end
-
