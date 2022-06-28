@@ -18,7 +18,7 @@ ZVSE2
 ;w28-w32
 ;z405-406
 ;FU803-808, 850-852
-;Flags 428, 429, 430
+;Flags 429, 430
 ;Timer 77 [TOBYN: this timer isn't used here. Check if unused by other scripts and update usage358.txt]
 
 ;-------------------------------Description-------------------------------------
@@ -386,102 +386,84 @@ ZVSE2
 !!SN:H^spec^/(hero)/2/z405;
 
 -------------------------------After battle-------------------------------------
-!?FU(OnAfterBattleUniversal)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
+!?FU(OnAfterBattleUniversal)&i^wog_39_enabled^/i^battle_isNetwork^=(FALSE);
+!!IF:Wi^battle_hero_0^;
 
-!!BA:H0/?v3926;                          //set v3926 is number of left hero - used in BG section
-!!BA:H1/?v3927;                          //set v3927 is number of right hero - used in BG section
-
-!!if&v3926>=0;
-  !!IF:Wv3926;
-
-  !!if&w28=2013;
-    !!HEv3926:I?v3933/1; //mysticism
-    !!VRv3933&v3933>w30:Sw30;
-    !!HEv3926:Iv3933/1;
-  !!en;
+!!if&w28=2013;
+  !!HEi^battle_hero_0^:I?v3933/1; //mysticism
+  !!VRv3933&v3933>w30:Sw30;
+  !!HEi^battle_hero_0^:Iv3933/1;
 !!en;
 
-!!if&v3927>=0;
-  !!IF:Wv3927;
+!!if&i^battle_hero_1^>=0;
+  !!IF:Wi^battle_hero_1^;
 
   !!if&w28=2013;
-    !!HEv3927:I?v3933/1;
+    !!HEi^battle_hero_1^:I?v3933/1;
     !!VRv3933&v3933>w30:Sw30;
-    !!HEv3927:Iv3933/1;
+    !!HEi^battle_hero_1^:Iv3933/1;
   !!en;
 !!en;
 
 ----------------------------------Before battle---------------------------------
-!?FU(OnSetupBattlefield)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
-!!VRv3937:S0R8;                           //v3937 = random value generator
-!!BH0:N?v3926;                          //set v3926 is number of left hero - used in BG section
-!!HEv3926&v3926>=0:F?v3938/?v3939/?v3934/?v3931;     ;set variables of attack and defense (v3938-441)
-!!BH1:N?v3927;                          //set v3927 is number of right hero - used in BG section
-!!HEv3927&v3927>=0:F?v3940/?v3941/?v3934/?v3931;
+; The timing is a bit late to be able to boost the stats of henchmen
+!?FU(OnBattlefieldVisible)&i^wog_39_enabled^/i^battle_isNetwork^=(FALSE);
+!!VRv3937:R0/0/8;                           //v3937 = random value generator
+!!HEi^battle_hero_0^&i^battle_hero_0^>=0:F?v3938/?v3939/?v3934/?v3931;     ;set variables of attack and defense (v3938-441)
+!!HEi^battle_hero_1^&i^battle_hero_1^>=0:F?v3940/?v3941/?v3934/?v3931;
 
-!!IF&v3926>=0:Wv3926;
-!!DO851/0/19/1&w28=2011/v3926>=0:P0/v3926; //eagle eye
+!!IF:Wi^battle_hero_0^;
+!!DO851/0/19/1&w28=2011:P(BATTLE_LEFT)/i^battle_hero_0^; // Eagle Eye flying
+!!DO(WOG_39_SetUpMonsterBonuses)/0/19/1&w28>=1000/w28<2000:P0/i^battle_hero_0^/0/404; //monster specs add bonuses
+!!COi^battle_hero_0^&w28=2012:B1/12/1;     //commanders of Intelligence heroes have DeathStare
+!!COi^battle_hero_0^&w28=2008:B1/4/1;      //commanders of Ballista heroes can shoot
+!!COi^battle_hero_0^&w28=2002:B1/14/1;     //commanders of Navigation heroes can fly
 
-!!if&v3926>=0;
-  !!DO(WOG_39_SetUpMonsterBonuses)/0/19/1&w28>=1000/w28<2000:P0/v3926/0/404; //monster specs add bonuses
-  !!COv3926&w28=2012:B1/12/1;     //commanders of Intelligence heroes have DeathStare
-  !!COv3926&w28=2008:B1/4/1;      //commanders of Ballista heroes can shoot
-  !!COv3926&w28=2002:B1/14/1;     //commanders of Navigation heroes can fly
+!!if&i^battle_hero_1^>=0;
+  !!IF:Wi^battle_hero_1^;
+  !!DO851/20/40/1&w28=2011:P(BATTLE_RIGHT)/i^battle_hero_1^; // Eagle Eye flying
+  !!DO(WOG_39_SetUpMonsterBonuses)/20/40/1&w28>=1000/w28<2000:P1/i^battle_hero_1^/0/411;
+  !!COi^battle_hero_1^&w28=2012:B1/12/1;
+  !!COi^battle_hero_1^&w28=2008:B1/4/1;
+  !!COi^battle_hero_1^&w28=2002:B1/14/1;
 !!en;
 
-!!if&v3927>=0;
-  !!IF:Wv3927;
-  !!DO851/20/40/1&w28=2011:P1/v3927;
-  !!DO(WOG_39_SetUpMonsterBonuses)/20/40/1&w28>=1000/w28<2000:P1/v3927/0/411;
-  !!COv3927&w28=2012:B1/12/1;
-  !!COv3927&w28=2008:B1/4/1;
-  !!COv3927&w28=2002:B1/14/1;
-!!en;
+; Code below - Mysticism and Resistance
+!!IF:Wi^battle_hero_0^;
+!!HEi^battle_hero_0^&w28=2013:I?v3933/1;    //mysticism
+!!VRw30&w28=2013:Sv3933;        //w30 contains initial mana's amount
+!!VRv3933:+w29;
+!!HEi^battle_hero_0^&w28=2013:Iv3933/1;
 
-;Code below - Mysticism and Resistance
-!!if&v3926>=0;
-  !!IF:Wv3926;
-  !!HEv3926&w28=2013:I?v3933/1;    //mysticism
-  !!VRw30&w28=2013:Sv3933;        //w30 contains initial mana's amount
-  !!VRv3933:+w29;
-  !!HEv3926&w28=2013:Iv3933/1;
-!!en;
-
-!!if&v3927>=0;
-  !!IF:Wv3927;
-  !!HEv3926&w28=2014/v3926>=0:I?v3933/1; //resistance
+!!if&i^battle_hero_1^>=0;
+  !!IF:Wi^battle_hero_1^;
+  !!HEi^battle_hero_0^&w28=2014/i^battle_hero_0^>=0:I?v3933/1; //resistance
   !!VRv3933:-w29;
   !!VRv3933&v3933<0:S0;
-  !!HEv3926&w28=2014/v3926>=0:Iv3933/1;
+  !!HEi^battle_hero_0^&w28=2014/i^battle_hero_0^>=0:Iv3933/1;
 
-  !!IF:Wv3927;
-  !!HEv3927&w28=2013:I?v3933/1;
+  ; Mysticism
+  !!HEi^battle_hero_1^&w28=2013:I?v3933/1;
   !!VRw30&w28=2013:Sv3933;
   !!VRv3933:+w29;
-  !!HEv3927&w28=2013:Iv3933/1;
-!!en;
+  !!HEi^battle_hero_1^&w28=2013:Iv3933/1;
 
-!!IF&v3926>=0:Wv3926;
-
-!!if&v3927>=0;
-  !!HEv3927&w28=2014/v3926>=0:I?v3933/1;
+  ; Resistance
+  !!IF:Wi^battle_hero_0^;
+  !!HEi^battle_hero_1^&w28=2014/i^battle_hero_0^>=0:I?v3933/1;
   !!VRv3933:-w29;
   !!VRv3933&v3933<0:S0;
-  !!HEv3927&w28=2014/v3926>=0:Iv3933/1;
+  !!HEi^battle_hero_1^&w28=2014/i^battle_hero_0^>=0:Iv3933/1;
 !!en;
 
-!!IF&v3926>=0:Wv3926;
+!!IF:Wi^battle_hero_0^;
+!!DO850/0/20/1&w28=2006:P44/5;
+!!DO850/0/20/1&w28=2009:P46/5;
+!!DO850/21/41/1&w28=2010:P52/5;
+!!DO850/21/41/1&w28=2015:P42/5;
 
-!!if&v3926>=0;
-  !!DO850/0/20/1&w28=2006:P44/5;
-  !!DO850/0/20/1&w28=2009:P46/5;
-  !!DO850/21/41/1&w28=2010:P52/5;
-  !!DO850/21/41/1&w28=2015:P42/5;
-!!en;
-
-!!IF&v3927>=0:Wv3927;
-
-!!if&v3927>=0;
+!!if&i^battle_hero_1^>=0;
+  !!IF:Wi^battle_hero_1^;
   !!DO850/21/41/1&w28=2006:P44/5;
   !!DO850/21/41/1&w28=2009:P46/5;
   !!DO850/0/20/1&w28=2010:P52/5;
@@ -490,40 +472,43 @@ ZVSE2
 
 !?FU850;
 !!VRx3&x3=0:Sx2; // set x3 (duration) to x2 (Power) if not set
-!!BMx16:Mx1/x3/x2;
-
-------------------------When next turn of battle started------------------------
-!?FU(OnBattleRound)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
-!!IF:V428/0;
-
-!!BH0:N?v3926;                          //set v3926 is number of left hero - used in BG section
-!!BH1:N?v3927;                          //set v3927 is number of right hero - used in BG section
-
-!!IF&v997>=0:V428/1;                   //if tactics phase finished and script is enabled set flag428=1
+!!BMx16:Mx1/x3/x2;、
 
 -----------------------When next monster gain control---------------------------
-;v3926 is number of left hero - initialized in BR section above
-;v3927 is number of right hero - initialized in BR section above
-;v3926 and v3928 do not change in code for CM trigger
-;All v3929-... can be modified outside later
-;flag428 must be set in BR section above if script enabled and tactics turn finished
-;flag429 must be set in BF section to set up first spells procedures
-;v3932 do not change in BG sections.
-!?FU(OnBeforeBattleAction)&i^wog_39_enabled^/i^wog_39_isRemote^=0/-998;
+; i^battle_hero_0^ and v3928 do not change in code for CM trigger
+; All i^wog_39_curedStack^-... can be modified outside later
+; flag429 must be set in BF section to set up first spells procedures
+; v3932 do not change in BG sections.
+!?FU(OnBeforeBattleAction)&i^wog_39_enabled^/i^battle_isNetwork^=(FALSE);
 
 !!VRv3937: +1;                          //random value randomizing
-!!BG&428:Q?v3925;                       //v3925 is attacking side
-!!VRv3933&v3925=0:Sv3926;                 //v3933 is number of casting hero
-!!VRv3933&v3925=1:Sv3927;
-!!IF&428/v3933>=0:Wv3933;
-!!FU805&428/v3933>=0/w28>0/w28<1000:P;  //call spellcaster procedure if hero is spellcaster
 
-!!BG:A?v3929;
-!!VRv3925:S0;
-!!BG&v3929=(BATTLE_ACTION_HERO_CAST):S?v3925;
-!!VRv3925&v3929=(BATTLE_ACTION_MONSTER_CAST)/v3933>=0/v3933<=15:S(SPELL_CURE);
-!!BG&v3925=(SPELL_CURE):E?v3929;
-!!BG:Q?v3936;
+!!if&i^battle_round^>=0;
+  !!BG:Q?v3925;                       //v3925 is attacking side
+  !!VRv3933&v3925=0:Si^battle_hero_0^;                 //v3933 is number of casting hero
+  !!VRv3933&v3925=1:Si^battle_hero_1^;
+
+  !!if&v3933>(NO_HERO);
+    !!IF:Wv3933;
+    !!FU805&w28>0/w28<1000:P;  //call spellcaster procedure if hero is spellcaster
+  !!en;
+!!en;
+
+; Set up monster bonus again if Cure is cast
+; Note: the method does not work for Monster cast except for Castle commanders, it assumes that Castle commander casts Cure
+; Doesn't seem to be necessary anymoere
+*!VR(spell:y):S(NO_SPELL);
+*!BG:A?(action:y);
+*!VRi^wog_39_curedStack^:S-2;
+
+*!if&(action)=(BATTLE_ACTION_HERO_CAST);
+  *!BG:S?(spell);
+*!el&(action)=(BATTLE_ACTION_MONSTER_CAST);
+  *!BMi^battle_acting_stack^:T?(type:y);
+  *!VR(spell):S(SPELL_CURE);
+*!en;
+
+*!BG&(spell)=(SPELL_CURE):E?i^wog_39_curedStack^;
 
 -------------------------------Spell Casters------------------------------------
 !?FU805;
@@ -584,7 +569,7 @@ ZVSE2
 
 
 ------------------------------Eagle eye flying----------------------------------
-;do not change v3932
+; do not change v3932
 !?FU851;
 !!VRv3934:S-1;
 !!BMx16:T?v3934;
@@ -595,22 +580,33 @@ ZVSE2
 !!BMx16&v3935>=0/x1=v3931/v3935<=1/v3934>=0:Fv3933;
 
 ----------------------------When Cure spell was cast----------------------------
-;After action
-!?FU(OnAfterBattleAction)&i^wog_39_enabled^/v3925=(SPELL_CURE)/i^wog_39_isRemote^=0/-998;
-!!IF:Wv3926;
-!!FU&w28<1000|w28>2000:E; igrik: this function only to monster specs
+; After action
+; Set monster bonus again after casting cure on a stack (i^wog_39_curedStack^>=0) or all the stacks of a side (i^wog_39_curedStack^=-1)
+; Doesn't seem to be necessary anymoere
+*?FU(OnAfterBattleAction)&i^wog_39_enabled^/i^wog_39_curedStack^>-2/i^battle_isNetwork^=(FALSE);
+*!IF:Wi^battle_hero_%i(battle_acting_side)^;
+*!FU&w28<1000|w28>2000:E; igrik: this function only to monster specs
 
-!!DO(WOG_39_SetUpMonsterBonuses)/v3929/v3929/1&v3936=(BATTLE_LEFT)/v3929>=0:P0/v3926/1/559; igrik: line 559 to DEBUG
-!!DO(WOG_39_SetUpMonsterBonuses)/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1&v3936=(BATTLE_LEFT)/v3929=-1:P0/v3926/1/560;
-!!DO(WOG_39_SetUpMonsterBonuses)/v3929/v3929/1&v3936=(BATTLE_RIGHT)/v3929>=0:P1/v3927/1/561;
-!!DO(WOG_39_SetUpMonsterBonuses)/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1&v3936=(BATTLE_RIGHT)/v3929=-1:P1/v3927/1/562;
+*!if&i^battle_acting_side^=(BATTLE_LEFT);
+  *!if&i^wog_39_curedStack^>=0;                        [single stack]
+    *!DO(WOG_39_SetUpMonsterBonuses)/i^wog_39_curedStack^/i^wog_39_curedStack^/1:P0/i^battle_hero_0^/1/559; igrik: line 559 to DEBUG
+  *!el&i^wog_39_curedStack^=-1;                        [all the stacks]
+    *!DO(WOG_39_SetUpMonsterBonuses)/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1:P0/i^battle_hero_0^/1/560;
+  *!en;
+*!el;
+  *!if&i^wog_39_curedStack^>=0;                        [singel stack]
+    *!DO(WOG_39_SetUpMonsterBonuses)/i^wog_39_curedStack^/i^wog_39_curedStack^/1:P1/i^battle_hero_1^/1/561;
+  *!el&i^wog_39_curedStack^=-1;                        [all the stacks]
+    *!DO(WOG_39_SetUpMonsterBonuses)/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1:P1/i^battle_hero_1^/1/562;
+  *!en;
+*!en;
 
 -------------------------Monster specs add bonuses------------------------------
-;do not change v3932
-;x1=side
-;x2=number of hero (or v3926)
-;x3=1 if non first call of the function
-;x4=line calling in script for debug (by igrik)
+; do not change v3932
+; x1=side
+; x2=number of hero (or i^battle_hero_0^)
+; x3=1 if non first call of the function
+; x4=line calling in script for debug (by igrik)
 !?FU(WOG_39_SetUpMonsterBonuses)&i^wog_39_MonSpecEnabled^;
 !!VRv3930&x1=0:Sv3938;                   //restore hero parameters      TOBYN: new local 430
 !!VRv3931&x1=0:Sv3939;                                                     |
@@ -631,14 +627,13 @@ ZVSE2
 
 
 !?FU852;
-;x1=monster stack ID
-;x2=monster type
-;x3=hero attack skill (or v3930)
-;x4=hero defense skill  (or v3931)
-;x5=1 if non first call of the function
-;x6=line in script for debug (by igrik)
-;v3935=side 
-;v3926=hero id
+; x1=monster stack ID
+; x2=monster type
+; x3=hero attack skill (or v3930)
+; x4=hero defense skill  (or v3931)
+; x5=1 if non first call of the function
+; x6=line in script for debug (by igrik)
+; v3935=side 
 !!BMx1&x5<>1:Sd1;                      //speed +1
 !!MA:Px2/?v3933;                       //hitpoints bonus percentage = 12 + 3 * herolevel
 !!VRv3933:*w30:100;
@@ -655,7 +650,7 @@ ZVSE2
 
 -----------------------Right mouse click in battle info-------------------------
 ; VRv425-v428 cannot touch   [SECTION EDITED by Tobyn]
-!?FU(OnBattleScreenMouseClick)&i^wog_39_enabled^/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_battleHex^>=252/i^mouse_battleHex^<=253/i^wog_39_isRemote^=0/-998;
+!?FU(OnBattleScreenMouseClick)&i^wog_39_enabled^/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_battleHex^>=252/i^mouse_battleHex^<=253/i^battle_isNetwork^=(FALSE);
 !!VR(side:y):Si^mouse_battleHex^ -252;
 !!FU&i^battle_hero_%(side)^=(NO_HERO):E;
 
@@ -666,7 +661,7 @@ ZVSE2
 !!ifw28>=1000/w28<2000/i^wog_39_MonSpecEnabled^<>(TRUE);
   !!SN:H^spec^/(hero)/2/?z405;
 !!el;
-  !!FU(WOG_39_SetUpSpecDesc):Pv3926/1;
+  !!FU(WOG_39_SetUpSpecDesc):P(hero)/1;
 !!en;
 
 !!IF:M0/(MSG_TYPE_POPUP)/z405;
