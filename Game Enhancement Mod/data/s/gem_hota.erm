@@ -6,7 +6,7 @@ ZVSE2
 ; Differentiate sprites of heroes in the battle with genders.
 005547F0 RecieveNetworkData_5547F0 proc near
 
-00474B4B call    NetworkSendData
+!#DC(GEM_PVP_V_VARIABLE) = 505;
 !?FU(OnAfterErmInstructions);
 !!FU(NewStrArray):P18/?i^hota_defsList_0^/(M_TEMP); [array for male heroes]
 !!FU(NewStrArray):P18/?i^hota_defsList_1^/(M_TEMP); [array for female heroes]
@@ -129,6 +129,10 @@ ZVSE2
         !!VRi^gem_BattleBtn_NextAbility^:S(nextAbility);
 
         !!FU(gem_BattleBtn_AffectCreature):P(stackId)/i^gem_BattleBtn_CurrentAbility^;
+        !!if&i^battle_isNetwork^;/i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY);
+          !!VRv(GEM_PVP_V_VARIABLE):Si^gem_BattleBtn_CurrentAbility^;
+          !!IP:D-1 V(GEM_PVP_V_VARIABLE)/(GEM_PVP_V_VARIABLE);
+        !!en;
 
         !!VR(frame:y):S(nextAbility) *3;
         !!SN:E4684800/(CALLCONV_THISCALL)/(cmbMgr); [(recalc all stack properies ) -makes all the game needs]
@@ -190,10 +194,10 @@ ZVSE2
     !!SN:E6288864/2/i^gem_battle_dlg^/1/(itemId)/(itemId); [refresh btn]
   !!en;
 
-!?FU(gem_OnBeforeHarpyTryMoveBack)&i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY);
+!?FU(gem_OnBeforeHarpyTryMoveBack)|i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY)/v(GEM_PVP_V_VARIABLE)=(GEM_MON_ATTACK_STAY);
   !!UN:C4478599/2/4/0;                  [break move back ability]
 
-!?FU(gem_OnAfterHarpyTryMoveBack)&i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY);
+!?FU(gem_OnAfterHarpyTryMoveBack)|i^gem_BattleBtn_CurrentAbility^=(GEM_MON_ATTACK_STAY)/v(GEM_PVP_V_VARIABLE)=(GEM_MON_ATTACK_STAY);
   !!UN:C4478599/2/4/187;                [restore move back ability]
 
 !?FU(gem_BattleBtn_AffectCreature);
@@ -311,7 +315,7 @@ ZVSE2
       !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
       !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
     !!el;
-      !!BM(stackId):;
+      *!BM(stackId):;
       !!UN:C(stack)/1248/1/?(spellA:y); 
       !!SS(spell):O?(target:y);
       *!IF:L^%(spell) %(target)^;
@@ -357,28 +361,23 @@ ZVSE2
     !!en;
 
   !!en;
-  *!IF:L^%i(gem_BattleBtn_StackBits)^;
-  !!if&i^battle_isNetwork^=(FALSE);
-    *!BM(stackId):Z?(stack:y);
-    !!VR(result:y):S(FALSE);
+  !!VR(result:y):S(FALSE);
 
-    !!if&i^gem_amethyst_isHarpyFunc^;
-      !!SN:Ei^gem_amethyst_isHarpyFunc^/(CALLCONV_CDECL)/(stack);
-      !!VR(result):+v1;
-    !!en;
+  !!if&i^gem_amethyst_isHarpyFunc^;
+    !!SN:Ei^gem_amethyst_isHarpyFunc^/(CALLCONV_CDECL)/(stack);
+    !!VR(result):+v1;
+  !!en;
 
-    !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
-      !!VR(result):+(TRUE);
-    !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
-      !!SN:E7463987/(CALLCONV_CDECL)/(stack);                        [does this stack have strike and return stack ability]
-      !!VR(result):+v1;
-    !!en;
+  !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
+    !!VR(result):+(TRUE);
+  !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
+    !!SN:E7463987/(CALLCONV_CDECL)/(stack);                        [does this stack have strike and return stack ability]
+    !!VR(result):+v1;
+  !!en;
 
-    !!if&(result);
-      !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
-      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
-    !!en;
-
+  !!if&(result);
+    !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
+    !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
   !!en;
 
 !?FU(OnBattleStackObtainsTurn);&i^battle_isVisible^/i^battle_isQuick^=(FALSE);
@@ -410,7 +409,7 @@ ZVSE2
     !!BM(stackId):Ei^gem_stack_spells^;
     !!VRi^gem_need_to_restore_spells^:S0;
   !!en;
-
+  !!VRv(GEM_PVP_V_VARIABLE):S0;
   !!VRi^gem_BattleBtn_StackChoice_%(stackId)^:Si^gem_BattleBtn_CurrentAbility^;
   !!VRi^gem_BattleBtn_StackBits_old_%(stackId)^:Si^gem_BattleBtn_StackBits^;
 
@@ -439,6 +438,7 @@ ZVSE2
 
   !!VRi^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^:S0;
   !!VRi^gem_amethyst_isHarpyFunc^:S0;
+  !!VRv(GEM_PVP_V_VARIABLE):S0;
 
 
   !!re i/0/(BATTLE_STACK_LAST);
@@ -446,13 +446,6 @@ ZVSE2
     !!VRi^gem_BattleBtn_StackBits_old_%i^:S(NULL);
   !!en;
 
-*!VRi^myFoo^:S234324;
-
-*?FU(OnKeyPressed_Battle);
-*!FUi^myFoo^:P;
-
-*?FU234324;
-...
 
 !?FU(gem_GetCorrectCommanderSpells);
 !#VA(cType:x) (spell:x);
