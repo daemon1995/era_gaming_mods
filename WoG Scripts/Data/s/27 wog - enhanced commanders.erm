@@ -5,7 +5,7 @@ ZVSE2
 ** By Arstahd
 ** Version: 1.11        updated October 2 2004
 ** Updated September 15, 2004 to change local y variables in instructions to v variables
-** Version 1.2 updated June 2022 by Archer30
+** Version 1.2 updated July 2022 by Archer30
 ** Special Thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 ** Note: Commander Enhancements are disabled for network human-to-human battles.
@@ -295,17 +295,17 @@ ZVSE2
 
 **  object trigger - opal
 !?OB101/7&i^wog_51_enabled^;
-!!VRy4:R0/0/14;                                   [random roll 0-14]
+!!VRy4:R0/0/14;                                  [random roll 0-14]
 !!VRy2:S151000 +y4;                              [apply string]
 !!VRz2:Szy2;                                     [set string]
 
-!!CO(CURRENT_HERO):B1/y4/?y5 D?y6 E?y7 N?z1;                 [check if commander has skill, is alive, is enabled, get name]
+!!CO(CURRENT_HERO):B1/y4/?y5 D?y6 E?y7 N?z1;     [check if commander has skill, is alive, is enabled, get name]
 
 !!if&y6=0/y7=1;
-  !!OB998:T101 U6;                       [set to chest 6 if commander is alive, enabled]
+  !!OB998:T101 U6;                               [set to chest 6 if commander is alive, enabled]
 
   !!if&y5=0;
-    !!CO(CURRENT_HERO):B1/y4/1;                   [give skill if commander doesn't have it and is alive, enabled]
+    !!CO(CURRENT_HERO):B1/y4/1;                  [give skill if commander doesn't have it and is alive, enabled]
 
     !!IF&1000:M1/z151015;
   !!en;
@@ -317,42 +317,91 @@ ZVSE2
 
 **  object trigger - ruby
 !?OB101/8&i^wog_51_enabled^;
-!!FU(WOG_51_NPC_AddSSkill):P0/3/151017/151018/151019/151020/151021;
+!!FU(WOG_51_NPC_AddSSkill):P0/3/151017/151018;
 
 **  object trigger - sapphire
 !?OB101/9&i^wog_51_enabled^;
-!!FU(WOG_51_NPC_AddSSkill):P1/2/151022/151023/151024/151025/151026;
+!!FU(WOG_51_NPC_AddSSkill):P1/2/151022/151023;
 
 **  object trigger - emerald
 !?OB101/10&i^wog_51_enabled^;
-!!FU(WOG_51_NPC_AddSSkill):P4/5/151027/151028/151029/151030/151031;
+!!FU(WOG_51_NPC_AddSSkill):P4/5/151027/151028;
 
 !?FU(WOG_51_NPC_AddSSkill)&i^wog_51_enabled^;
-* refactoring by [igrik] 15/05/2020
+* refactoring by [igrik and Archer30]
 * x1 - first  sskill
 * x2 - second sskill
 * x3 - ert string id
-!!HE(CURRENT_HERO):N?y1;
-!!COy1:Sx1/?y2 Sx2/?y3 D?y6 E?y7 N?z1;
+!#VA(skill1:x) (skill2:x) (string1:x) (string2:x);
 
-!!if&y6=0;
-  !!if&y7=1;
-    !!OB998:T101 U6;
-    !!COy1&y2>y3:Sx2/d1;
-    !!COy1&y2<y3:Sx1/d1;
-    !!VRy4&y2=y3/y2<5:R0/0/99;
-    !!COy1&y2=y3/y2<5/y4<50:Sx2/d1;
-    !!COy1&y2=y3/y2<5/y4>49:Sx1/d1;
-  !!en;
+!!HE(CURRENT_HERO):N?(commander:y);
+; Exit if commander is killed or dismissed
+!!CO(commander):D?(isDead:y) E?(hasRecruited:y);
+!!FU|(isDead)/(hasRecruited)<>(TRUE):E;
 
-  !!if&1000;
-    !!IF&y2>y3:M1/zx3;
-    !!IF&y2<y3:M1/zx4;
-    !!IF&y2=y3/y2<5/y4<50:M1/zx5;
-    !!IF&y2=y3/y2<5/y4>49:M1/zx6;
-    !!IF&y2=y3/y2>4:M1/zx7;
+; Get the skill about to learn
+!!VR(skillIndex:y):S-1;
+!!CO(commander):S(skill1)/?(skill1Lv:y) S(skill2)/?(skill2Lv:y) N?z1;
+
+!!if&(skill1Lv)>(skill2Lv);
+  !!VR(skillIndex):S1;
+!!el&(skill1Lv)<(skill2Lv);
+  !!VR(skillIndex):S0;
+!!el&(skill1Lv)=(skill2Lv)/(skill2Lv)<5;
+  !!VR(random:y):R0/0/99;
+
+  !!if&(random)<=49;
+    !!VR(skillIndex):S1;
+  !!el;
+    !!VR(skillIndex):S0;
   !!en;
 !!en;
+
+!!if&(skillIndex)>-1;
+  ; Disable standard power stone feature
+  !!VR(skillToLearn:y)&(skillIndex)=0:S(skill1);
+  !!VR(skillToLearn)&(skillIndex)=1:S(skill2);
+
+  !!CO(commander):S(skillToLearn)/?(skillToLearnLv:y); [get current skill level]
+
+  !!if&(skillToLearnLv)>=5;
+    !!FU:E;
+  ; Check if learning the new basic skill could result in exceeding skills limit
+  !!el&(skillToLearnLv)=0;
+    ; Get the skills limit
+    !!UN:C7770979/(UNC_INT8)/?(skillsLimit:y);
+
+    ; Get the quanity of existing skills learned
+    !!VR(learnedSkills:y):S0;
+
+    !!re i/0/5;
+      !!CO(CURRENT_HERO):Si/?(skillLv:y);
+
+      !!VR(learnedSkills)&(skillLv)>0:+1;
+    !!en;
+
+    ; Exit if skills limit has been reached
+    !!FU&(learnedSkills)=(skillsLimit):E;
+  !!en;
+
+  ; give one extra skill level
+  !!CO(commander):S(skillToLearn)/d1;
+
+  ; Increase Magic Resistance along with Magic Power, doesn't work automatically
+  !!if&(skillToLearn)=4;
+    !!CO(commander):S6/?(resistance:y);
+    !!CO(commander)&(resistance)<5:S6/d1;
+  !!en;
+
+  ; Disable standard action
+  !!OB998:T101 U6;
+
+  !!if&1000;
+    !!IF&(skillIndex)=0:M1/z(string2);
+    !!IF&(skillIndex)=1:M1/z(string1);
+  !!en;
+!!en;
+
 ** end of object trigger
 
 
@@ -405,21 +454,17 @@ ZVSE2
 ** end of update Magic Mirror and Poison skill icons and descriptions**
 
 
-** raise commander skill limit with particular options enabled **
-; Allow commander to learn 6 skills if Commander Witch Huts is enabled, or Enhanced Commander + Power Stones are enabed
+** Maximum Commander Skills **
+; Allow commanders to learn all the skills if Maximum Commander Skills is enabled
+; Script by Archer30
 !?FU(OnStartOrLoad);
-!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y);
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y) P253/?(maxCommSkills:y);
 
-!!if&(commanderDisabled)<>(TRUE);
-  !!VR(enable6Skills:y):S(FALSE);
-  !!UN:P66/?(commWitchHuts:y) P196/?(powerStones:y);
-  !!VR(enable6Skills)&i^wog_51_enabled^/(powerStones):S(TRUE);
-  !!VR(enable6Skills)&(commWitchHuts):S(TRUE);
-
-  !!UN:C7770979/(UNC_INT8)/?i^wog_comm_patch^;
+!!if&(commanderDisabled)<>(TRUE)/(maxCommSkills);
+  !!UN:C7770979/(UNC_INT8)/?i^wog_253_patch^;
   !!UN:C7770979/(UNC_INT8)/6;
 !!en;
 
 !?FU(OnGameLeave);
-!!UN&i^wog_comm_patch^>0:C7770979/(UNC_INT8)/i^wog_comm_patch^;
+!!UN&i^wog_comm_patch^>0:C7770979/(UNC_INT8)/i^wog_253_patch^;
 ** end of commander skill limit **

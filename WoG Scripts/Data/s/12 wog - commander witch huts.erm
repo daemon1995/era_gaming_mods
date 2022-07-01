@@ -81,10 +81,10 @@ ZVSE2
 !!WH998:S?y1; [get skill for this hut]
 !!VRy2:S600 +y1; [get variable address]
 !!VRy3:Svy2; [now y3 is code for what to do]
-!!VRy4:S0;
-!!VRy4&y3>=100/y3<=105:S1; [flag for if it's a +stat bonus]
-!!FU6301&y4=0/y3>0:Py1/y3; [handle special ability bonus]
-!!FU6302&y4=1:Py1/y3; [handle +stat bonus]
+!!VRy4:S(FALSE);
+!!VRy4&y3>=100/y3<=105:S(TRUE); [flag for if it's a +stat bonus]
+!!FU6301&y4=(FALSE)/y3>0:Py1/y3; [handle special ability bonus]
+!!FU6302&y4=(TRUE):Py1/y3; [handle +stat bonus]
 
 ** end of function
 
@@ -149,7 +149,29 @@ ZVSE2
 !?FU6302;
 
 !!VRx2:-100; [get stat number]
-!!CO(CURRENT_HERO):Sx2/?y1 S6/?y5; [get current skill level]
+!!CO(CURRENT_HERO):Sx2/?y1; [get current skill level]
+
+; Exit if the current skill has already reached Grand Master level
+!!if&y1>=5;
+  !!FU:E;
+; Check if learning the new basic skill could result in exceeding skills limit
+!!el&y1=0;
+  ; Get the skills limit
+  !!UN:C7770979/(UNC_INT8)/?y30;
+
+  ; Get the quanity of existing skills learned
+  !!VRy31:S0;
+
+  !!re i/0/5;
+    !!CO(CURRENT_HERO):Si/?y32;
+
+    !!VRy31&y32>0:+1;
+  !!en;
+
+  ; Exit if skills limit has been reached
+  !!FU&y31=y30:E;
+!!en;
+
 !!IF:W(CURRENT_HERO); [refer to current hero's w variables]
 
 !!VRv600:C1/2/4/8/16/32/64/128/256/512; [bit table for skills]
@@ -160,9 +182,16 @@ ZVSE2
 !!VRy3:Svy2; [get bit value]
 !!VRy4:Sw40 &y3; [look at just our bit of w40]
 
-!!if&y4=0/y1<5;
-  !!CO(CURRENT_HERO):Sx2/d1; [give skill level if haven't yet and below grandmaster]
-  !!CO(CURRENT_HERO)&y5<5/x2=4:S6/d1; [increase Magic Resistance along with Magic Power, doesn't work automatically]
+!!if&y4=0;
+  ; give one extra skill level
+  !!CO(CURRENT_HERO):Sx2/d1;
+
+  ; Increase Magic Resistance along with Magic Power, doesn't work automatically
+  !!if&x2=4;
+    !!CO(CURRENT_HERO):S6/?y5;
+    !!CO(CURRENT_HERO)&y5<5:S6/d1;
+  !!en;
+
   !!VRw40:|y3; [remember so we don't give it again later]
 !!en;
 
@@ -181,7 +210,7 @@ ZVSE2
 !!VRz2&x2=4:S^../data/zvs/lib1.res/_MP4.bmp^;
 !!VRz2&x2=5:S^../data/zvs/lib1.res/_SP4.bmp^;
 
-!!if&1000/y4=0/y1<5;
+!!if&1000/y4=0;
   !!IF:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
   !!IF:F10/0/0/0/0/0;     [Disable cancel button]
   !!IF:E1/10;     [Display message box]
