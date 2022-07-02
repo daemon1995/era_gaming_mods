@@ -5,6 +5,7 @@ ZVSE2
 
 ** Option 045 by Alexis Koz
 ** Rewritten by igrik (28.02.2021)
+** Rebalanced costs by Archer30
 
 * City Halls and Capitols  may be upgraded to increase daily income. 
 * Upgraded  town dwellings may be upgraded to increase troop growth.
@@ -158,7 +159,16 @@ ZVSE2
 !!VR(growth)&(growth)>10:S10;
 
 ; получаем стоимость существа
-!!FU(WOG_Creature_GetCost):P(monID)/?(wood:y)/?(mercury:y)/?(ore:y)/?(sulfur:y)/?(crystal:y)/?(gems:y)/?(gold:y);
+!!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/0/?(nonUpgMonID:y);
+!!FU(WOG_Creature_GetCost):P(nonUpgMonID)/?(wood:y)/?(mercury:y)/?(ore:y)/?(sulfur:y)/?(crystal:y)/?(gems:y)/?(gold:y);
+
+; Fix level 7 special res - Archer
+; Creature like Phoneix costs no special resouce on non-upgraded form, here we check the upgrade for the real special resouce costs
+!!if&(monLvl)=6;
+  !!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/1/?(monID);
+  !!FU(WOG_Creature_GetCost):P(monID)/(NULL)/?(mercury)/(NULL)/?(sulfur)/?(crystal)/?(gems)/(NULL);
+!!en;
+
 ; обязательны простые ресурсы для постройки (5 дерева, 5 руды)
 !!VR(wood)&(wood)<(WOG_45_MINCOST):S(WOG_45_MINCOST);
 !!VR(ore)&(ore)<(WOG_45_MINCOST):S(WOG_45_MINCOST);
@@ -166,7 +176,8 @@ ZVSE2
 !!VR(gold):*(growth) *(WOG_45_MINCOST);
 
 ; проверяем опцию Половинная Cтоимость Существ
-!!UN:P(WOG_OPT_CREATURES_HALF_PRICE_ON_7TH_DAY)/?(wogOptionHalfPrice:y);  
+!!UN:P(WOG_OPT_CREATURES_HALF_PRICE_ON_7TH_DAY)/?(wogOptionHalfPrice:y);
+
 !!if&(wogOptionHalfPrice)=(TRUE);
   !!VR(day:y):Sc %(DAYS_IN_WEEK);
   !!VR(gold)&(day)=0:*2; if Sunday
@@ -180,21 +191,24 @@ ZVSE2
 ; если спец.ресурс существует
 !!if&(mercury)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_MERCURY);
-  !!VR(typeSpecResPicCount):S(mercury) * (growth) * (WOG_45_MINCOST);
+  *!VR(typeSpecResPicCount):S(mercury) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_MERCURY);
 !!el&(sulfur)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_SULFUR);
-  !!VR(typeSpecResPicCount):S(sulfur) * (growth) * (WOG_45_MINCOST);
+  *!VR(typeSpecResPicCount):S(sulfur) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_SULFUR);
 !!el&(crystal)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_CRYSTAL);
-  !!VR(typeSpecResPicCount):S(crystal) * (growth) * (WOG_45_MINCOST);
+  *!VR(typeSpecResPicCount):S(crystal) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_CRYSTAL);
 !!el&(gems)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_GEMS);
-  !!VR(typeSpecResPicCount):S(gems) * (growth) * (WOG_45_MINCOST);
+  *!VR(typeSpecResPicCount):S(gems) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_GEMS);
 !!en;
+
+; Set special resouces cost to min costs no matter what the original value is - Archer
+!!VR(typeSpecResPicCount):S(WOG_45_MINCOST);
 
 ; конфигурируем сообщение 2 
 !!IF:N(PIC_TYPE_MONSTER)/(monID)/
@@ -221,6 +235,7 @@ ZVSE2
 
 ; проверка: если что-то сегодня уже строилось - выходим
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/?(isAlreadyBuilt:y);
+
 !!if&(isAlreadyBuilt)=(TRUE);
   !!IF:M^%T(wog.45.alreadyBuild)^;
   !!FU:E;
@@ -228,6 +243,7 @@ ZVSE2
 
 ; хватает ли у игрока простых ресурсов и золота
 !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold);
+
 ; хватает ли у игрока спец.ресурса
 !!if&(specResId)>(NULL);  
   !!OW:R(ownerId)/(specResId)/?(temp:y); 
@@ -291,8 +307,9 @@ ZVSE2
 !!SN:T^wog.45.mainGoldReserveMsg^/?(message:z)/^gold^/(goldBonus);
 !!VR(message):+^%T(wog.45.upgrGoldReserveMsg)^;
 
-; configure message 
-!!IF:N(PIC_TYPE_RES_WOOD)/(needRes)/
+; configure message
+; Disable the requirement of special resouces but add in one special resource (use Mithril when applicable) - Archer
+*!IF:N(PIC_TYPE_RES_WOOD)/(needRes)/
       (PIC_TYPE_RES_MERCURY)/(needRes)/
       (PIC_TYPE_RES_ORE)/(needRes)/
       (PIC_TYPE_RES_SULFUR)/(needRes)/
@@ -300,6 +317,46 @@ ZVSE2
       (PIC_TYPE_RES_GEMS)/(needRes)/
       (PIC_TYPE_RES_GOLD)/(needGold)/
       (NO_PIC_TYPE)/(NULL);
+!!VR(specResId:y):S(NULL);
+!!UN:P36/?(mithrilEnhancement:y);
+
+!!if&(mithrilEnhancement);
+  !!VR(specResId):S(RES_MITHRIL);
+!!el;
+  !!CA(CURRENT_TOWN):T?(townType:y);
+  !!FU(WOG_Town_GetCreatureID):P(townType)/6/1/?(monID:y);
+  !!FU(WOG_Creature_GetCost):P(monID)/(NULL)/?(mercury:y)/(NULL)/?(sulfur:y)/?(crystal:y)/?(gems:y)/(NULL);
+
+  !!if&(mercury)>(NULL);
+    !!VR(specResId):S(RES_MERCURY);
+  !!el&(sulfur)>(NULL);
+    !!VR(specResId):S(RES_SULFUR);
+  !!el&(crystal)>(NULL);
+    !!VR(specResId):S(RES_CRYSTAL);
+  !!el&(gems)>(NULL);
+    !!VR(specResId):S(RES_GEMS);
+  !!en;
+
+  ; failed safe when the level 7 creature does not cost any rare resource
+  !!if&(specResId)=(NULL);
+    !!VR(specResId)|(townType)=(TOWN_INFERNO)/(townType)=(TOWN_NECROPOLIS)/(townType)=(TOWN_CONFLUX):S(RES_MERCURY);
+    !!VR(specResId)|(townType)=(TOWN_DUNGEON)/(townType)=(TOWN_FORTRESS):S(RES_SULFUR);
+    !!VR(specResId)|(townType)=(TOWN_RAMPART)/(townType)=(TOWN_STRONGHOLD):S(RES_CRYSTAL);
+    !!VR(specResId)|(townType)=(TOWN_CASTLE)/(townType)=(TOWN_TOWER):S(RES_GEMS);
+  !!en;
+!!en;
+
+!!VR(typeSpecResPicId:y):S(specResId);
+
+!!IF:N(PIC_TYPE_RES_WOOD)/(needRes)/
+      (PIC_TYPE_RES_ORE)/(needRes)/
+      (PIC_TYPE_RES_GOLD)/(needGold)/
+      (typeSpecResPicId)/(needRes)/
+      (NO_PIC_TYPE)/(NULL)/
+      (NO_PIC_TYPE)/(NULL)/
+      (NO_PIC_TYPE)/(NULL)/
+      (NO_PIC_TYPE)/(NULL);
+
 ; memory patch (Resour82.def -> Resource.def)
 !!UN:C5199571/(UNC_UINT32)/?(saveMemory1:y) C5199571/(UNC_UINT32)/(PTR_RESOURCE_DEF);
 !!UN:C5199620/(UNC_UINT32)/?(saveMemory2:y) C5199620/(UNC_UINT32)/(PTR_RESOURCE_DEF);
@@ -317,7 +374,14 @@ ZVSE2
   !!FU:E;
 !!en;
 
-!!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
+; Change the requirement of resouces - Archer
+*!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
+!!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(NULL)/(needRes)/(NULL)/(NULL)/(NULL)/(needGold);
+
+!!if&(boolHasResources);
+    !!OW:R(ownerId)/(specResId)/?(ownedSpecRes:y);
+    !!VR(boolHasResources)&(ownedSpecRes)<(needRes):S(FALSE);
+!!en;
 
 !!if&(boolHasResources)<>(TRUE);  
   ; not enough resources and gold 
@@ -360,7 +424,7 @@ ZVSE2
 ;   1-50     : золото
 ;  51-150    : существа
 ; 151 и выше : выход
-!!VR(chance:y):T0/1/1000; 
+!!VR(chance:y):R0/1/1000; 
 !!FU&(chance)>150:E;
 
 ; получаем ссылку на массив города
@@ -384,7 +448,7 @@ ZVSE2
 !!en;
 
 ; генерируем уровень монстра
-!!VR(monLvl:y):T0/(MON_MIN_LEVEL)/(MON_MAX_LEVEL);
+!!VR(monLvl:y):R0/(MON_MIN_LEVEL)/(MON_MAX_LEVEL);
 
 ; проверяем построено ли улучшенное жилище этого монстра
 !!VR(buildID:y):S37 +(monLvl);
@@ -427,6 +491,7 @@ ZVSE2
 ; начисление бонуса прироста в городах
 !!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
 !!FU&(wogOption)<>(TRUE):E;
+
 ; проход по всем городам
 !!re i/0/(WOG_45_TOWNSCOUNT)/1/-1; 
   !!VR(ptrMonstersBonus:y):Si *(WOG_45_ITEMCOUNT) +1;  
@@ -445,8 +510,10 @@ ZVSE2
 !?FU(WOG_OnNewDay); 
 !!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
 !!FU&(wogOption)<>(TRUE):E;
+
 ; проход по всем городам
 !!VR(stop:y):S(WOG_45_TOWNSCOUNT) *(WOG_45_ITEMCOUNT) - (WOG_45_ITEMCOUNT);
+
 ; reset already built var for all towns
 !!re (ptrAlreadyBuilt:y)/0/(stop)/(WOG_45_ITEMCOUNT); 
   !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/(FALSE);
@@ -455,6 +522,7 @@ ZVSE2
 ; AI building function
 !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsCount:y);
 !!FU&(townsCount)<1:E;
+
 !!VR(townsCount)&(townsCount)>47:S47;
 
 !!re i/0/(townsCount)/1/-1; 
