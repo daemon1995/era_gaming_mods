@@ -4,7 +4,7 @@ ZVSE2
 **   Requires WoG version 3.57 or later using ERM version 2.6 or later.
 **   WoGify Name: script23.erm
 **   Updated: September 15, 2004
-**   Updated: Oct 2021 by Archer30
+**   Updated: Jul 2022 by Archer30
 
 ** This script enhances the Sorcery secondary skill. With Basic Sorcery,
 ** a hero with this skill can learn additional information when right-clicking
@@ -35,68 +35,42 @@ Flags Used in this Script: 1-3,410,872
 Variables Used in this Script: v1-v4,v310-v312,z1-z5
 Functions Used in this Script: 849,5000-5037
 Function Variables Used in this Script: x1-x5,x16,y1-y17
-Timer: 18
------------------------------------------------------------------------------------------
 
- [Check if Sorcery script is enabled: v1=1]
-!#UN:P23/?v1;
+; Note: This script has compatiblity lines with Era Scripts options
+
+
+-----------------------------------------------------------------------------------------
+; Initialisation
+!?FU(WOG_23_Initialisation);
+!!UN:P23/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
  [Set Flags 410 to False]
-!#IF&v1=1:V410/0;
-
------------------------------------------------------------------------------------------
- [Set up Timer 18 for giving AI with Sorcery a bonus to movement as compensation]
-
-!#UN:P23/?v1; [Check if Sorcery script is enabled]
-
-*#TM18&v1=1:S1/999/1/255;
-
+!!IF:V410/0;
  [Set up table of bit values]
-!#VRv550&v1=1:C1/2/4/8/16/32/64/128/256/512;
+!!VRv550:C1/2/4/8/16/32/64/128/256/512;
+!!VRi^wog_23_millsAndGardensEnabled^:S(TRUE);
+
+!#FU(WOG_23_Initialisation):P;
 -----------------------------------------------------------------------------------------
- [Timer 18 - give AI with Basic and Advanced Sorcery +100 movement, Expert +300 movement]
-*?TM18;
+ [Timer - give AI additional movement points accoridng to Sorcery level]
+!?FU(OnEveryDay)&i^timerIsAi^;
+!!UN:P23/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
- [Check if Sorcery script is enabled]
-!?FU(OnEveryDay)&-(ERM_FLAG_IS_HUMAN);
-*!IF:L^%x3 %x4 %x5^;
-!!UN:P23/?v1;
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:O?(owner:y) S(SKILL_SORCERY)/?(sorceryLevel:y);
 
-*?TM18&v1=1; [Continue trigger if Sorcery script is enabled]
-
- [Call Function 5032 - check heroes owned by AI for Sorcery skill]
-!!FU5032&v1:P;
-----------------------------------------------------------------------------------------
- [Start of Function 5032 - check number of heroes owned by AI and call]
- [Function 5033 to loop through them, checking Sorcery skill]
-!?FU5032;
-
- [See if current player is human or AI (y1) - value equals 1 if AI]
-*!OW:I-1/?y1;
-
- [If player is AI, calculate number of heroes - store in v600-v699 (as necessary)]
-!!OW:H-1/600;
- [If player is AI and v312 >0, loop through Function 5033 to check all heroes]
- [for Sorcery and give them a bonus to movement]
-!!DO5033/1/v600/1&v312>0:P;
------------------------------------------------------------------------------------------
- [Start of Function 5033 - add movement bonus to AI heroes with Sorcery skill]
-!?FU5033;
-
- [Store index number for hero number to be checked in y1]
-!!VRy1:S600 +x16;
-
- [Store number of current hero number to be checked in y2]
-!!VRy2:Svy1;
-
- [Check hero's Sorcery skill - store in y3]
-!!HEy2:S25/?y3;
-
- [If hero has Basic or Advanced Sorcery, add 100 movement points]
-!!HEy2|y3=1/y3=2:Wd100;
-
- [If hero has Expert Sorcery, add 300 movement points]
-!!HEy2&y3=3:Wd300;
+  !!if&(owner)=i^timerOwner^/(sorceryLevel)>(SKILL_NOT_LEARNED);
+    !!if&(sorceryLevel)=(SKILL_BASIC);
+      !!HEi:Wd100;
+    !!el&(sorceryLevel)=(SKILL_ADVANCED);
+      !!HEi:Wd200;
+    !!el&(sorceryLevel)>=(SKILL_EXPERT);
+      !!HEi:Wd300;
+    !!en;
+  !!en;
+!!en;
 -----------------------------------------------------------------------------------------
  [Start of CM trigger]
 !?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=37;
@@ -120,6 +94,11 @@ Timer: 18
 
  [Get object type (y4), subtype (y5) and control word (y6)]
 !!OBy1/y2/y3:T?y4 U?y5 C?y6;
+
+; Exit if the object is Windmill/Water Wheel/Mystical Garden and is disabled
+!!if&i^wog_23_millsAndGardensEnabled^<>(TRUE);
+  !!FU|y4=(OBJ_WINDMILL)/y4=(OBJ_WATER_WHEEL)/y4=(OBJ_MYSTICAL_GARDEN):E;
+!!en;
 
  [Set Flag 3 to false]
 !!IF:V3/0;
@@ -194,10 +173,8 @@ Timer: 18
 !!FU5006&y4=39:Py1/y2/y3; [Lean To]
 !!FU5007&y4=105:Py1/y2/y3; [Wagon]
 !!FU5008&y4=22:Py1/y2/y3; [Skeleton]
-!!FU5009&y4=112:Py1/y2/y3/y9; [View/Visit Windmill]
 !!FU5010|y4=91/y4=59:Py1/y2/y3; [Sign or Bottle]
 !!FU5011&y4=102:Py1/y2/y3/y6; [Tree of Knowledge]
-!!FU5012&y4=55:Py1/y2/y3/y6/y9; [View/Visit Mystical Garden]
 !!FU5013&y4=108:Py1/y2/y3; [Warrior's Tomb]
 !!FU5014|y4=113/y4=88/y4=89/y4=90:Py1/y2/y3/y6; [Witch Hut or Shrine]
 !!FU5015&y4=100/y9=3/999:Py1/y2/y3/y8; [Visit Learning Stone]
@@ -207,9 +184,12 @@ Timer: 18
 !!FU5021&y4=29:Py1/y2/y3/y6; [Flotsam]
 !!FU5022&y4=82:Py1/y2/y3/y6; [Sea Chest]
 !!FU5023&y4=104:Py1/y2/y3; [University]
-!!FU5029&y4=109:Py1/y2/y3/y9; [View/Visit Water Wheel]
 !!FU5034&y4=61/y9=3/999:Py1/y2/y3/y6/y8; [Visit Star Axis]
 !!FU5035&y4=32/y9=3/999:Py1/y2/y3/y6/y8; [Visit Garden of Revelation]
+
+!!FU5009&y4=112:Py1/y2/y3/y9; [View/Visit Windmill]
+!!FU5029&y4=109:Py1/y2/y3/y9; [View/Visit Water Wheel]
+!!FU5012&y4=55:Py1/y2/y3/y6/y9; [View/Visit Mystical Garden]
 -----------------------------------------------------------------------------------------
  [Start of Function 5001 - Display Resource Pile Amounts]
 !?FU5001;
@@ -419,8 +399,6 @@ Timer: 18
 -----------------------------------------------------------------------------------------
  [Start of Function 5009 - Display Windmill Contents]
 !?FU5009;
-!!UN:P879/?y1;
-!!FU&y1=1:E;
  [Check type of resource (y1) and amount (y2)]
 !!MLx1/x2/x3:B?y1/?y2;
 
@@ -428,9 +406,11 @@ Timer: 18
 !!FU5020:Py1/y2;
 
  [If resources gone for the week, set z2 to (Visited)]
-!!VRz2&y2<1:Sz123023;
-!!VRy1&y2<1:S-1;
-!!VRy2&y2<1:S-1;
+!!if&y2<1;
+  !!VRz2:Sz123023;
+  !!VRy1:S-1;
+  !!VRy2:S-1;
+!!en;
 
  [Check if Windmill is upgraded by Mithril and if it is (y3=2 or 3), set z3]
 !!POx1/x2/x3:N?y3;
@@ -450,8 +430,6 @@ Timer: 18
 -----------------------------------------------------------------------------------------
  [Start of Function 5027 - Remotely visit Windmill]
 !?FU5027;
-!!UN:P879/?y1;
-!!FU&y1=1:E;
  [Check if Windmill is upgraded by Mithril and if it is (y3=2 or 3), set z3]
 !!POx1/x2/x3:N?y3;
 !!VRz3:S^^;
@@ -460,14 +438,20 @@ Timer: 18
  [Ask if player wishes to visit windmill remotely - answer in Flag 2]
 !!IF:Q2/x4/x5/2/z123027;
 
- [If player clicks OK, display message]
-!!IF&2:Q2/x4/x5/1/z123028;
+!!if&2;
+   [If player clicks OK, display message]
+  !!IF:Q2/x4/x5/1/z123028;
 
- [Give player mill resources if player visited remotely]
-!!OW&2:R-1/x4/dx5;
+   [Give player mill resources if player visited remotely]
+  !!OW:R-1/x4/dx5;
 
- [Set mill resources to 0 and "visited"]
-!!MLx1/x2/x3&2:Bd0/0;
+   [Set mill resources to 0 and "visited"]
+  !!MLx1/x2/x3:Bd/0;
+
+  ; Set PO number to be compatible with Capture Mills and Gardens
+  !!UN:P879/?y30;
+  !!POx1/x2/x3&y30:Oi^timerOwner^ V0/x4 V1/x5;
+!!en;
 
 ----------------------------------------------------------------------------------------
  [Start of Function 5010 - Display Sign Message]
@@ -518,9 +502,6 @@ Timer: 18
 -----------------------------------------------------------------------------------------
  [Start of Function 5012 - Display Mystical Garden Contents]
 !?FU5012;
-!!UN:P879/?y1;
-!!FU&y1=1:E;
-
  [Check yellow square values for square clicked - store in y5]
 !!TRx1/x2/x3:E?y5;
 
@@ -557,20 +538,23 @@ Timer: 18
 -----------------------------------------------------------------------------------------
  [Start of Function 5028 - Remotely visit Mystical Garden]
 !?FU5028;
-!!UN:P879/?y1;
-!!FU&y1=1:E;
-
  [Ask if player wishes to visit mystical garden remotely - answer in Flag 2]
 !!IF:Q2/x4/x5/2/z123038;
 
- [If player clicks OK, display message]
-!!IF&2:Q2/x4/x5/1/z123039;
+!!if&2;
+   [If player clicks OK, display message]
+  !!IF:Q2/x4/x5/1/z123039;
 
- [Give player mystical garden resources if player visited remotely]
-!!OW&2:R-1/x4/dx5;
+   [Give player mystical garden resources if player visited remotely]
+  !!OW:R-1/x4/dx5;
 
- [Set mystical garden resources to 0 and "visited"]
-!!OBx1/x2/x3&2:C-1650;
+   [Set mystical garden resources to 0 and "visited"]
+  !!OBx1/x2/x3:C-1650;
+
+  ; Set PO number to be compatible with Capture Mills and Gardens
+  !!UN:P879/?y30;
+  !!POx1/x2/x3&y30:Oi^timerOwner^ V0/x4 V1/x5;
+!!en;
 -----------------------------------------------------------------------------------------
  [Start of Function 5013 - Display contents of Warrior's Tomb]
 !?FU5013;
@@ -1048,19 +1032,19 @@ Timer: 18
 
 !!VRz1:Sz123085;
 
- [If hero has Expert Sorcery, call Function 5030 and player]
- [is offered the chance to visit the Water Wheel from a distance]
- [y1=0 (yellow square), x4=3 (Expert Sorcery), y2>0 (not visited)]
-!!FU5030&y1=0/x4=3/y2>0/999:Px1/x2/x3/y3;
+!!if&y1=0/y2>0;
+   [If hero has Expert Sorcery, call Function 5030 and player]
+   [is offered the chance to visit the Water Wheel from a distance]
+   [y1=0 (yellow square), x4=3 (Expert Sorcery), y2>0 (not visited)]
+  !!FU5030&x4=3/999:Px1/x2/x3/y3;
 
- [Display hint text if yellow square, not visited and flag 3 is true]
- [y1=0 (yellow square), x4<>3 (not Expert Sorcery) y2>0 (not visited)]
-!!IF&y1=0/x4<>3/y2>0:Q1/6/y3/4^%Z1^;
+   [Display hint text if yellow square, not visited and flag 3 is true]
+   [y1=0 (yellow square), x4<>3 (not Expert Sorcery) y2>0 (not visited)]
+  !!IF&x4<>3:Q1/6/y3/4^%Z1^;
+!!en;
 -----------------------------------------------------------------------------------------
  [Start of Function 5030 - Remotely visit Water Wheel]
 !?FU5030;
-!!UN:P879/?y1;
-!!FU&y1=1:E;
  [Check if Water Wheel is upgraded by Mithril and if it is (y4=2 or 3), set z3]
 !!POx1/x2/x3:N?y4;
 !!VRz3:S^^;
@@ -1069,26 +1053,32 @@ Timer: 18
  [Ask if player wishes to visit water wheel remotely - answer in Flag 2]
 !!IF:Q2/6/x4/2/z123087;
 
- [If player clicks OK, display message]
-!!IF&2:Q2/6/x4/1/z123088;
+!!if&2;
+   [If player clicks OK, display message]
+  !!IF:Q2/6/x4/1/z123088;
 
- [Give player water wheel resources if player visited remotely]
-!!OW&2:R-1/6/dx4;
+   [Give player water wheel resources if player visited remotely]
+  !!OW:R-1/6/dx4;
 
- [Set water wheel resources to 0 and "visited" for current colour]
-!!WMx1/x2/x3&2:B0;
-!!OW&2:C?y1;
-!!VRy2&2/y1=0:S-8160;
-!!VRy2&2/y1=1:S-8128;
-!!VRy2&2/y1=2:S-8000;
-!!VRy2&2/y1=3:S-7872;
-!!VRy2&2/y1=4:S-7680;
-!!VRy2&2/y1=5:S-7168;
-!!VRy2&2/y1=6:S-6144;
-!!VRy2&2/y1=7:S-4096;
-!!OBx1/x2/x3&2:C?y3;
-!!VRy3&2:|y2;
-!!OBx1/x2/x3&2:Cy3;
+   [Set water wheel resources to 0 and "visited" for current colour]
+  !!WMx1/x2/x3:B0;
+  !!OW:C?y1;
+  !!VRy2&y1=0:S-8160;
+  !!VRy2&y1=1:S-8128;
+  !!VRy2&y1=2:S-8000;
+  !!VRy2&y1=3:S-7872;
+  !!VRy2&y1=4:S-7680;
+  !!VRy2&y1=5:S-7168;
+  !!VRy2&y1=6:S-6144;
+  !!VRy2&y1=7:S-4096;
+  !!OBx1/x2/x3:C?y3;
+  !!VRy3:|y2;
+  !!OBx1/x2/x3:Cy3;
+
+  ; Set PO number to be compatible with Capture Mills and Gardens
+  !!UN:P879/?y30;
+  !!POx1/x2/x3&y30:Oi^timerOwner^ V0/(RES_GOLD) V1/x4;
+!!en;
 -----------------------------------------------------------------------------------------
  [Start of Function 5034 - Remotely visit Star Axis]
 !?FU5034;
