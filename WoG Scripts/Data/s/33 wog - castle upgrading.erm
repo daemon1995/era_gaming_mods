@@ -39,6 +39,17 @@ ZVSE2
 
 ; ==================================================================================================
 
+; Store the upgraded monsters in the global variables for calculating the costs of upgrading dwellings later
+; This is necessary for compatiblity with mods modifying UN:T values
+; Must be executed earlier than any temparory UN:T modification
+!?FU(OnPreTownScreen)&999;
+!!re (monLvl:y)/0/6;
+  !!CA(CURRENT_TOWN):T?(townType:y);
+  !!UN:T(townType)/(monLvl)/1/?i^wog_45_upgLvl%(monLvl)^;
+!!en;
+
+; ==================================================================================================
+
 !?FU(OnTownMouseClick); 
 !!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
 !!FU&(wogOption)<>(TRUE):E;
@@ -59,7 +70,6 @@ ZVSE2
 !!SN&(itemId)=(ITEMID_TOWN_TOWNPIC):T^wog.45.hintTownPic^/?(hint:z);
 !!SN&(itemId)=(ITEMID_TOWN_HALLPIC):T^wog.45.hintHallPic^/?(hint);
 !!CM|(itemId)=(ITEMID_TOWN_TOWNPIC)/(itemId)=(ITEMID_TOWN_HALLPIC):M(hint);
-
 
 ; =========== CREATURE BONUS =======================================================================
 
@@ -159,15 +169,10 @@ ZVSE2
 !!VR(growth)&(growth)>10:S10;
 
 ; получаем стоимость существа
-!!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/0/?(nonUpgMonID:y);
-!!FU(WOG_Creature_GetCost):P(nonUpgMonID)/?(wood:y)/?(mercury:y)/?(ore:y)/?(sulfur:y)/?(crystal:y)/?(gems:y)/?(gold:y);
-
-; Fix level 7 special res - Archer
-; Creature like Phoneix costs no special resouce on non-upgraded form, here we check the upgrade for the real special resouce costs
-!!if&(monLvl)=6;
-  !!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/1/?(monID);
-  !!FU(WOG_Creature_GetCost):P(monID)/(NULL)/?(mercury)/(NULL)/?(sulfur)/?(crystal)/?(gems)/(NULL);
-!!en;
+; Fix mods with UN:T hacks compatibility by using global variables - Archer
+*!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/0/?(trueMonID:y);
+!!VR(trueMonID:y):Si^wog_45_upgLvl%(monLvl)^;
+!!FU(WOG_Creature_GetCost):P(trueMonID)/?(wood:y)/?(mercury:y)/?(ore:y)/?(sulfur:y)/?(crystal:y)/?(gems:y)/?(gold:y);
 
 ; обязательны простые ресурсы для постройки (5 дерева, 5 руды)
 !!VR(wood)&(wood)<(WOG_45_MINCOST):S(WOG_45_MINCOST);
@@ -191,24 +196,21 @@ ZVSE2
 ; если спец.ресурс существует
 !!if&(mercury)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_MERCURY);
-  *!VR(typeSpecResPicCount):S(mercury) * (growth) * (WOG_45_MINCOST);
+  !!VR(typeSpecResPicCount):S(mercury) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_MERCURY);
 !!el&(sulfur)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_SULFUR);
-  *!VR(typeSpecResPicCount):S(sulfur) * (growth) * (WOG_45_MINCOST);
+  !!VR(typeSpecResPicCount):S(sulfur) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_SULFUR);
 !!el&(crystal)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_CRYSTAL);
-  *!VR(typeSpecResPicCount):S(crystal) * (growth) * (WOG_45_MINCOST);
+  !!VR(typeSpecResPicCount):S(crystal) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_CRYSTAL);
 !!el&(gems)>(NULL);
   !!VR(typeSpecResPicId):S(PIC_TYPE_RES_GEMS);
-  *!VR(typeSpecResPicCount):S(gems) * (growth) * (WOG_45_MINCOST);
+  !!VR(typeSpecResPicCount):S(gems) * (growth) * (WOG_45_MINCOST);
   !!VR(specResId):S(RES_GEMS);
 !!en;
-
-; Set special resouces cost to min costs no matter what the original value is - Archer
-!!VR(typeSpecResPicCount):S(WOG_45_MINCOST);
 
 ; конфигурируем сообщение 2 
 !!IF:N(PIC_TYPE_MONSTER)/(monID)/
