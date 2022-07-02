@@ -14,6 +14,7 @@ ZVSE2
 !!SN:Vi^hota_defsList_0^/0/^CH00.def^/^CH01b.DEF^/^CH02.def^/^CH03b.DEF^/^CH04b.DEF^/^CH05.def^/^CH06.def^/^CH07b.def^/^CH08.def^/^CH09b.DEF^/^CH010.def^/^CH011b.DEF^/^CH013.DEF^/^CH013b.def^/^CH014.def^/^CH015.def^/^ch16.def^/^CH17.def^;
 !!SN:Vi^hota_defsList_1^/0/^CH00b.DEF^/^CH01.def^/^CH02b.DEF^/^CH03.def^/^CH04.def^/^CH05b.DEF^/^CH06b.DEF^/^CH07.def^/^CH08b.def^/^CH09.def^/^CH010b.def^/^CH11.def^/^CH012.def^/^CH012b.DEF^/^CH014.def^/^CH015.def^/^CH16b.def^/^CH17b.DEF^;
 
+
 !?FU(OnBattlefieldVisible)&i^battle_hasHuman^/i^battle_humanOnly^=(FALSE)/i^battle_isVisible^;
 !!SN:L^Hawaiing_hero_def.era^/?(hotaHero:y);
 !!FU&(hotaHero)=0:E;
@@ -116,14 +117,20 @@ ZVSE2
         !!FU(gem_DlgDisableBtn):Pi^gem_battle_altbttn_id^/(TRUE);           [enable bttn]
         !!VRi^gem_battleBttn_isDisabled^:S(FALSE);
 
-        !!if&(obtainedTurn)/i^gem_BattleBtn_StackChoice_%(stackId)^/i^gem_BattleBtn_StackBits_old_%(stackId)^=i^gem_BattleBtn_StackBits^;
-          !!VRi^gem_BattleBtn_CurrentAbility^:Si^gem_BattleBtn_StackChoice_%(stackId)^;  if obtained turn + was choice before + possible to repeat]
+        !!if&(obtainedTurn)/i^gem_BattleBtn_StackChoice_%(stackId)^;/i^gem_BattleBtn_StackBits_old_%(stackId)^=i^gem_BattleBtn_StackBits^;
+          !!FU(gem_CheckBits):Pi^gem_BattleBtn_StackBits^/i^gem_BattleBtn_StackChoice_%(stackId)^/?(bitCheck:y);
+
+          !!if&(bitCheck);
+            !!VRi^gem_BattleBtn_CurrentAbility^:Si^gem_BattleBtn_StackChoice_%(stackId)^;  if obtained turn + was choice before + possible to repeat]
+          !!en;
+
         !!en;
 
         !!FU(gem_BattleBtn_GetNextAbility):Pi^gem_BattleBtn_CurrentAbility^/?(nextAbility:y);
-        *!IF:L^%i(gem_BattleBtn_CurrentAbility) %(nextAbility)^;
+
         !!if&(obtainedTurn)=(FALSE);
           !!VRi^gem_BattleBtn_CurrentAbility^:S(nextAbility);
+          !!VRi^gem_BattleBtn_StackChoice_%(stackId)^:Si^gem_BattleBtn_CurrentAbility^;
           !!FU(gem_BattleBtn_GetNextAbility):Pi^gem_BattleBtn_CurrentAbility^/?(nextAbility);
         !!en;
 
@@ -224,7 +231,28 @@ ZVSE2
     !!BM(stackId):Ei^gem_stack_spells^;
     !!VRi^gem_need_to_restore_spells^:S(FALSE);
   !!en;
+  !!BM(stackId):T?t;
 
+  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);
+    !!VR(side:y):S(stackId) :(BATTLE_STACKS_PER_SIDE);
+    !!VR(npcId:y):Si^battle_hero_%(side)^;
+    !!if&(npcId)>=0;
+      !!CO(npcId):B1/4/?(shooting:y);
+
+      !!if&(shooting)/(ability)<>(GEM_MON_ATTACK_SHOOT);
+        !!BM(stackId):Fd|(MON_FLAG_SHOOTER) Fd-(MON_FLAG_SHOOTER);
+        !!VRi^gem_need_to_restore_shooting_flag^:S1;
+      !!el&(ability)=(GEM_MON_ATTACK_SHOOT);
+        !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
+        !!VRi^gem_need_to_restore_shooting_flag^:S0;
+      !!en;
+      !!VRi^gem_commanderAction_%(npcId)^:Si^gem_BattleBtn_StackChoice_%(stackId)^;
+    !!en;
+  !!en;
+!?FU(gem_CheckBits);
+!#VA(value:x) (bit:x) (result:x);
+!!VRi:S1 Sd<<(bit);
+!!VR(result):S(value) &i;
 
 !?FU(gem_BattleBtn_GetNextAbility);
 !#VA(currentAbility:x) (nextAbility:x);
@@ -234,8 +262,9 @@ ZVSE2
   !!VR(nextAbility):S0;
   *!IF:L^%(currentAbility)^;
   !!re j/1/6;
-    !!VRi:S1 Sd<<j;
-    !!VR(bitCheck:y):Si^gem_BattleBtn_StackBits^ &i; [check bits]
+    *!VRi:S1 Sd<<j;
+    *!VR(bitCheck:y):Si^gem_BattleBtn_StackBits^ &i; [check bits]
+    !!FU(gem_CheckBits):Pi^gem_BattleBtn_StackBits^/j/?(bitCheck:y);
     *!IF:M^%j %(currentAbility) %(firstAbility) %(nextAbility) %(thisAbilityReached)^;
     !!if&j=(currentAbility);
        !!VR(thisAbilityReached):S(TRUE);
@@ -251,7 +280,6 @@ ZVSE2
   !!en;
 
   !!VR(nextAbility):S(firstAbility); // only of didn't EXIT
-
 
 // 0 nothing 0
 // 2 melee 1
@@ -270,7 +298,8 @@ ZVSE2
 !?FU(gem_BattleBtn_CollectStackFlags);
 !#VA(stackId:x);
 
-  !!BM(stackId):F?f E?i^gem_stack_spells^ U3/?i^gem_stack_shoots^ T?t O?(heroStack:y) Z?(stack:y) U4/?(spell:y);
+  !!BM(stackId):F?f E?i^gem_stack_spells^ U3/?i^gem_stack_shoots^ T?t O?(heroStack:y) Z?(stack:y) U4/?(spell:y) I?(side:y);
+
   !!VRi^gem_BattleBtn_StackBits^:S0;
   !!VRi^gem_BattleBtn_NextAbility^:S(GEM_MON_ATTACK_DEFAULT);
   !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_DEFAULT);
@@ -279,25 +308,18 @@ ZVSE2
   !!if&t>=(MON_CATAPULT)/t<=(MON_ARROW_TOWERS);
     !!FU:E;
   !!en;
+  !!VR(npcId:y):Si^battle_hero_%(side)^;
 
   !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);
-    !!VR(side:y):S(BATTLE_RIGHT);
-    !!BM(stackId):I?(side:y);
-
-    !!if&i^battle_hero_%(side)^>=0;
-      !!COi^battle_hero_%(side)^:B1/4/?(shooting:y) T?(cType:y);
-      !!if&(shooting);
-        !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
-      !!en;
+    !!if&(npcId)>=0;
       //ACM + TUM commaptibility
+      !!CO(npcId):T?(cType:y);
+
       !!if&i^Advanced_Classes_Mod_Active^;
         !!FU(gem_GetCorrectCommanderSpells):P(cType)/?(spell);
       !!en;
 
     !!en;
-
-
-
   !!en;
 
   !!VRf:&(MON_FLAG_SHOOTER);
@@ -341,7 +363,6 @@ ZVSE2
             !!BU:Ei/?(targetStackId:y);
             !!if&(targetStackId)>=0;
               !!BM(targetStackId):I?(targetStackSide:y);
-          *!IF:M^%(targetStackId)^;
 
               !!if&(side)<>(targetStackSide);
                 !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
@@ -364,21 +385,28 @@ ZVSE2
   !!en;
   !!VR(result:y):S(FALSE);
 
-  !!if&i^gem_amethyst_isHarpyFunc^;
-    !!SN:Ei^gem_amethyst_isHarpyFunc^/(CALLCONV_CDECL)/(stack);
-    !!VR(result):+v1;
-  !!en;
+    !!if&i^gem_amethyst_isHarpyFunc^;
+      !!SN:Ei^gem_amethyst_isHarpyFunc^/(CALLCONV_CDECL)/(stack);
+      !!VR(result):+v1;
+    !!en;
 
-  !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
-    !!VR(result):+(TRUE);
-  !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
-    !!SN:E7463987/(CALLCONV_CDECL)/(stack);                        [does this stack have strike and return stack ability]
-    !!VR(result):+v1;
-  !!en;
+    !!if|t=(MON_HARPY)/t=(MON_HARPY_HAG)/t=(MON_DARKNESS_DRAGON);
+      !!VR(result):+(TRUE);
+    !!el&i^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^;
+      !!SN:E7463987/(CALLCONV_CDECL)/(stack);                        [does this stack have strike and return stack ability]
+      !!VR(result):+v1;
+    !!en;
 
-  !!if&(result);
-    !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
-    !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
+    !!if&(result);
+      !!VRi^gem_BattleBtn_StackBits^:|(BIT_5)  |(BIT_6);
+      !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_RETURN);
+    !!en;
+
+  !!if&i^gem_commanderAction_%(npcId)^>(NO_HERO);
+    !!FU(gem_CheckBits):Pi^gem_BattleBtn_StackBits^/i^gem_commanderAction_%(npcId)^/?(bitCheck:y);
+    !!if&(bitCheck);
+      !!VRi^gem_BattleBtn_CurrentAbility^:Si^gem_commanderAction_%(npcId)^;
+    !!en;
   !!en;
 
 !?FU(OnBattleStackObtainsTurn);&i^battle_isVisible^/i^battle_isQuick^=(FALSE);
@@ -410,8 +438,12 @@ ZVSE2
     !!BM(stackId):Ei^gem_stack_spells^;
     !!VRi^gem_need_to_restore_spells^:S0;
   !!en;
+  !!if&i^gem_need_to_restore_shooting_flag^;
+    !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
+    !!VRi^gem_need_to_restore_shooting_flag^:S0;
+  !!en;
   !!VRv(GEM_PVP_V_VARIABLE):S0;
-  !!VRi^gem_BattleBtn_StackChoice_%(stackId)^:Si^gem_BattleBtn_CurrentAbility^;
+  *!VRi^gem_BattleBtn_StackChoice_%(stackId)^:Si^gem_BattleBtn_CurrentAbility^;
   !!VRi^gem_BattleBtn_StackBits_old_%(stackId)^:Si^gem_BattleBtn_StackBits^;
 
 !?FU(OnAfterBattleUniversal)&i^gem_battle_dlg^;
@@ -435,6 +467,7 @@ ZVSE2
   !!VRi^gem_stack_shoots^:S0;
   !!VRi^gem_need_to_restore_spells^:S0;
   !!VRi^gem_need_to_restore_shoots^:S0;
+  !!VRi^gem_need_to_restore_shooting_flag^:S0;
   !!VRi^gem_stack_do_not_affect_spells^:S(FALSE);
   !!VRv(GEM_PVP_V_VARIABLE):Si^gem_v%(GEM_PVP_V_VARIABLE)_stored^;
   !!VRi^gem_v%(GEM_PVP_V_VARIABLE)_stored^:S0;
