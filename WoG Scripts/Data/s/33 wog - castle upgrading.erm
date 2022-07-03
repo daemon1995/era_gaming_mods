@@ -5,7 +5,7 @@ ZVSE2
 
 ** Option 045 by Alexis Koz
 ** Rewritten by igrik (28.02.2021)
-** Rebalanced costs by Archer30
+** Rebalanced costs and improved interaction by Archer30
 
 * City Halls and Capitols  may be upgraded to increase daily income. 
 * Upgraded  town dwellings may be upgraded to increase troop growth.
@@ -45,7 +45,45 @@ ZVSE2
 !?FU(OnPreTownScreen)&999;
 !!re (monLvl:y)/0/6;
   !!CA(CURRENT_TOWN):T?(townType:y);
-  !!UN:T(townType)/(monLvl)/1/?i^wog_45_upgLvl%(monLvl)^;
+  !!UN:T(townType)/(monLvl)/1/?i^wog_45_upgMonLvl%(monLvl)^;
+!!en;
+
+; Release variables
+!?FU(OnCloseTownScreen)&999;
+!!re (monLvl:y)/0/6;
+  !!VRi^wog_45_upgMonLvl%(monLvl)^:S0;
+!!en;
+
+; Function to get the special resource requirement of a town
+!?FU(WOG_45_GetTownSpecialResource);
+!#VA(townType:x) (specResId:x);
+
+!!VR(specResId):S(NULL);
+!!UN:P36/?(mithrilEnhancement:y);
+
+!!if&(mithrilEnhancement);
+  !!VR(specResId):S(RES_MITHRIL);
+!!el;
+  !!FU(WOG_Town_GetCreatureID):P(townType)/6/1/?(monID:y);
+  !!FU(WOG_Creature_GetCost):P(monID)/(NULL)/?(mercury:y)/(NULL)/?(sulfur:y)/?(crystal:y)/?(gems:y)/(NULL);
+
+  !!if&(mercury)>(NULL);
+    !!VR(specResId):S(RES_MERCURY);
+  !!el&(sulfur)>(NULL);
+    !!VR(specResId):S(RES_SULFUR);
+  !!el&(crystal)>(NULL);
+    !!VR(specResId):S(RES_CRYSTAL);
+  !!el&(gems)>(NULL);
+    !!VR(specResId):S(RES_GEMS);
+  !!en;
+
+  ; Use fail safe when the level 7 creature does not cost any rare resource
+  !!if&(specResId)=(NULL);
+    !!VR(specResId)|(townType)=(TOWN_INFERNO)/(townType)=(TOWN_NECROPOLIS)/(townType)=(TOWN_CONFLUX):S(RES_MERCURY);
+    !!VR(specResId)|(townType)=(TOWN_DUNGEON)/(townType)=(TOWN_FORTRESS):S(RES_SULFUR);
+    !!VR(specResId)|(townType)=(TOWN_RAMPART)/(townType)=(TOWN_STRONGHOLD):S(RES_CRYSTAL);
+    !!VR(specResId)|(townType)=(TOWN_CASTLE)/(townType)=(TOWN_TOWER):S(RES_GEMS);
+  !!en;
 !!en;
 
 ; ==================================================================================================
@@ -145,8 +183,25 @@ ZVSE2
       (msgType[5])/(msgMonType[5])/
       (msgType[6])/(msgMonType[6])/
       (NO_PIC_TYPE)/(NULL);
+
+; Configure message
+!!VR(requirementMsg:z):S^^;
+!!VR(msgDlgType:y):S(MSG_TYPE_QUESTION);
+
+; проверка: если что-то сегодня уже строилось - выходим
+!!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/?(isAlreadyBuilt:y);
+
+!!if&(isAlreadyBuilt)=(TRUE);
+  !!VR(requirementMsg):S^
+
+{~r}%T(wog.45.alreadyBuild){~}^;
+  !!VR(msgDlgType):S(MSG_TYPE_MES);
+!!en;
+
+!!SN:T^wog.45.mainCreaturesMsg^/?(message:z)/^requirementMsg^/(requirementMsg);
+
 ; показать сообщение 
-!!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(wog.45.mainCreaturesMsg)^/?(chosenPicture:y);
+!!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%(message)^/?(chosenPicture:y);
 ; выходим, если нажата ОТМЕНА
 !!FU&(chosenPicture)=-1:E;
 
@@ -171,7 +226,7 @@ ZVSE2
 ; получаем стоимость существа
 ; Fix mods with UN:T hacks compatibility by using global variables - Archer
 *!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/0/?(trueMonID:y);
-!!VR(trueMonID:y):Si^wog_45_upgLvl%(monLvl)^;
+!!VR(trueMonID:y):Si^wog_45_upgMonLvl%(monLvl)^;
 !!FU(WOG_Creature_GetCost):P(trueMonID)/?(wood:y)/?(mercury:y)/?(ore:y)/?(sulfur:y)/?(crystal:y)/?(gems:y)/?(gold:y);
 
 ; обязательны простые ресурсы для постройки (5 дерева, 5 руды)
@@ -226,40 +281,37 @@ ZVSE2
 !!UN:C5199571/(UNC_UINT32)/?(saveMemory1:y) C5199571/(UNC_UINT32)/(PTR_RESOURCE_DEF);
 !!UN:C5199620/(UNC_UINT32)/?(saveMemory2:y) C5199620/(UNC_UINT32)/(PTR_RESOURCE_DEF);
 
+; Check if meeting the costs requirement for specific dwelling  if did not build this turn
+!!if&(requirementMsg)<>^^;
+  ; хватает ли у игрока простых ресурсов и золота
+  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold)/(NULL);
+
+  ; хватает ли у игрока спец.ресурса
+  !!if&(specResId)>(NULL);  
+    !!OW:R(ownerId)/(specResId)/?(temp:y); 
+    !!VR(boolHasResources)&(temp)<(typeSpecResPicCount):S(FALSE);
+  !!en;
+  ; если не хватает - сообщаем и выходим
+  !!if&(boolHasResources)<>(TRUE); 
+    ; not enough resources and gold 
+    !!VR(requirementMsg):S^
+
+{~r}%T(wog.45.noResToUpgradeUpgDwelling){~}^;
+    !!VR(msgDlgType):S(MSG_TYPE_MES);
+  !!en;
+!!en;
+
 ; создаём полный текст сообщения 2
-!!SN:T^wog.45.upgradeDwellingMsg^/?(message:z)/^count^/(monNum)/^growth^/(growth);
+!!SN:T^wog.45.upgradeDwellingMsg^/?(message)/^requirementMsg^/(requirementMsg)/^count^/(monNum)/^growth^/(growth);
 
 ; показать сообщение 2
-!!IF:N(MSG_TYPE_QUESTION)/(message)/?(result:y);
+!!IF:N(msgDlgType)/(message)/?(result:y);
 ; патч памяти (восстановить оригинальный код)
 !!UN:C5199571/(UNC_UINT32)/(saveMemory1) C5199620/(UNC_UINT32)/(saveMemory2);
 !!FU&(result)<>(TRUE):E;
 
-; проверка: если что-то сегодня уже строилось - выходим
-!!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/?(isAlreadyBuilt:y);
-
-!!if&(isAlreadyBuilt)=(TRUE);
-  !!IF:M^%T(wog.45.alreadyBuild)^;
-  !!FU:E;
-!!en;
-
-; хватает ли у игрока простых ресурсов и золота
-!!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold);
-
-; хватает ли у игрока спец.ресурса
-!!if&(specResId)>(NULL);  
-  !!OW:R(ownerId)/(specResId)/?(temp:y); 
-  !!VR(boolHasResources)&(temp)<(typeSpecResPicCount):S(FALSE);
-!!en;
-; если не хватает - сообщаем и выходим
-!!if&(boolHasResources)<>(TRUE); 
-  ; not enough resources and gold 
-  !!IF:M^%T(wog.45.noResToUpgradeUpgDwelling)^;
-  !!FU:E;
-!!en;
-
 ; забрать базовые ресурсы у игрока
-!!FU(WOG_Player_RemoveResources):P(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold);
+!!FU(WOG_Player_RemoveResources):P(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold)/(NULL);
 ; забрать спец.ресурс у игрока
 !!OW&(specResId)>(NULL):R(ownerId)/(specResId)/d-(typeSpecResPicCount);
 
@@ -275,9 +327,6 @@ ZVSE2
 ; обновить экран города (ресурсы)
 !!UN:R(REDRAW_TOWN_SCREEN);
 
-
-
-
 ; ============= GOLD BONUS =========================================================================
 
 !?FU(WOG_45_IncreaseTownGoldIncome);
@@ -288,7 +337,7 @@ ZVSE2
 !!FU(WOG_GameMgr_GetPlayer_Me):P?(meId:y);
 !!FU&(ownerId)<>(meId):E;
 
-; if Citi Hall is built
+; if City Hall is built
 !!CA0/(townId):B3/12; 
 
 !!if&-1;
@@ -306,11 +355,9 @@ ZVSE2
 !!VR(needRes)&(needRes)<(WOG_45_MINCOST):S(WOG_45_MINCOST);
 !!VR(needGold:y):S(needRes) *(WOG_45_GOLDBONUS);
 
-!!SN:T^wog.45.mainGoldReserveMsg^/?(message:z)/^gold^/(goldBonus);
-!!VR(message):+^%T(wog.45.upgrGoldReserveMsg)^;
-
 ; configure message
-; Disable the requirement of special resouces but add in one special resource (use Mithril when applicable) - Archer
+; Disable the requirement of special resouces but add in special resource requirements - Archer
+; The special resources would be Mithril when applicable. If negative, it would be the rare resource required for the level 7 creature plus Wood and Ore
 *!IF:N(PIC_TYPE_RES_WOOD)/(needRes)/
       (PIC_TYPE_RES_MERCURY)/(needRes)/
       (PIC_TYPE_RES_ORE)/(needRes)/
@@ -319,41 +366,25 @@ ZVSE2
       (PIC_TYPE_RES_GEMS)/(needRes)/
       (PIC_TYPE_RES_GOLD)/(needGold)/
       (NO_PIC_TYPE)/(NULL);
-!!VR(specResId:y):S(NULL);
-!!UN:P36/?(mithrilEnhancement:y);
-
-!!if&(mithrilEnhancement);
-  !!VR(specResId):S(RES_MITHRIL);
-!!el;
-  !!CA(CURRENT_TOWN):T?(townType:y);
-  !!FU(WOG_Town_GetCreatureID):P(townType)/6/1/?(monID:y);
-  !!FU(WOG_Creature_GetCost):P(monID)/(NULL)/?(mercury:y)/(NULL)/?(sulfur:y)/?(crystal:y)/?(gems:y)/(NULL);
-
-  !!if&(mercury)>(NULL);
-    !!VR(specResId):S(RES_MERCURY);
-  !!el&(sulfur)>(NULL);
-    !!VR(specResId):S(RES_SULFUR);
-  !!el&(crystal)>(NULL);
-    !!VR(specResId):S(RES_CRYSTAL);
-  !!el&(gems)>(NULL);
-    !!VR(specResId):S(RES_GEMS);
-  !!en;
-
-  ; failed safe when the level 7 creature does not cost any rare resource
-  !!if&(specResId)=(NULL);
-    !!VR(specResId)|(townType)=(TOWN_INFERNO)/(townType)=(TOWN_NECROPOLIS)/(townType)=(TOWN_CONFLUX):S(RES_MERCURY);
-    !!VR(specResId)|(townType)=(TOWN_DUNGEON)/(townType)=(TOWN_FORTRESS):S(RES_SULFUR);
-    !!VR(specResId)|(townType)=(TOWN_RAMPART)/(townType)=(TOWN_STRONGHOLD):S(RES_CRYSTAL);
-    !!VR(specResId)|(townType)=(TOWN_CASTLE)/(townType)=(TOWN_TOWER):S(RES_GEMS);
-  !!en;
-!!en;
-
+!!CA(CURRENT_TOWN):T?(townType:y);
+!!FU(WOG_45_GetTownSpecialResource):P(townType)/?(specResId:y);
 !!VR(typeSpecResPicId:y):S(specResId);
 
-!!IF:N(PIC_TYPE_RES_WOOD)/(needRes)/
-      (PIC_TYPE_RES_ORE)/(needRes)/
-      (PIC_TYPE_RES_GOLD)/(needGold)/
+; Requires Wood and Ore if Mithril is not enabled
+!!if&(specResId)=(RES_MITHRIL);
+  !!VR(extRes1PicId:y):S(NO_PIC_TYPE);
+  !!VR(extRes2PicId:y):S(NO_PIC_TYPE);
+  !!VR(extNeedRes:y):S(needRes);
+!!el;
+  !!VR(extRes1PicId):S(RES_WOOD);
+  !!VR(extRes2PicId):S(RES_ORE);
+  !!VR(extNeedRes:y):S(NULL);
+!!en;
+
+!!IF:N(PIC_TYPE_RES_GOLD)/(needGold)/
       (typeSpecResPicId)/(needRes)/
+      (extRes1PicId)/(extNeedRes)/
+      (extRes2PicId)/(extNeedRes)/
       (NO_PIC_TYPE)/(NULL)/
       (NO_PIC_TYPE)/(NULL)/
       (NO_PIC_TYPE)/(NULL)/
@@ -362,37 +393,49 @@ ZVSE2
 ; memory patch (Resour82.def -> Resource.def)
 !!UN:C5199571/(UNC_UINT32)/?(saveMemory1:y) C5199571/(UNC_UINT32)/(PTR_RESOURCE_DEF);
 !!UN:C5199620/(UNC_UINT32)/?(saveMemory2:y) C5199620/(UNC_UINT32)/(PTR_RESOURCE_DEF);
-; show message 
-!!IF:N(MSG_TYPE_QUESTION)/(message)/?(result:y);
-; memory patch (restore original code)
-!!UN:C5199571/(UNC_UINT32)/(saveMemory1) C5199620/(UNC_UINT32)/(saveMemory2);
-!!FU&(result)<>(TRUE):E;
+
+!!VR(requirementMsg:z):S^^;
+!!VR(msgDlgType:y):S(MSG_TYPE_QUESTION);
 
 ; if something has already been built today
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/?(isAlreadyBuilt:y);
 
 !!if&(isAlreadyBuilt)=(TRUE);
-  !!IF:M^%T(wog.45.alreadyBuild)^;
-  !!FU:E;
+  !!VR(requirementMsg):S^
+
+{~r}%T(wog.45.alreadyBuild){~}^;
+  !!VR(msgDlgType):S(MSG_TYPE_MES);
+!!el;
+  ; Change the requirement of resouces - Archer
+  *!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
+  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needRes);
+
+  ; Additional check for town special resource if not mithril (put it here since it is easier to write than FU:P)
+  !!if&(boolHasResources)/(specResId)<>(RES_MITHRIL);
+    !!OW:R(ownerId)/(specResId)/?(temp:y); 
+    !!VR(boolHasResources)&(temp)<(needRes):S(FALSE);
+  !!en;
+
+  !!if&(boolHasResources)<>(TRUE);  
+    ; not enough resources and gold 
+    !!VR(requirementMsg):S^
+
+{~r}%T(wog.45.noResToUpgradeGoldReserve){~}^;
+    !!VR(msgDlgType):S(MSG_TYPE_MES);
+  !!en;
 !!en;
 
-; Change the requirement of resouces - Archer
-*!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
-!!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(NULL)/(needRes)/(NULL)/(NULL)/(NULL)/(needGold);
+!!SN:T^wog.45.mainGoldReserveMsg^/?(message:z)/^requirementMsg^/(requirementMsg)/^gold^/(goldBonus);
+!!VR(message):+^%T(wog.45.upgrGoldReserveMsg)^;
 
-!!if&(boolHasResources);
-    !!OW:R(ownerId)/(specResId)/?(ownedSpecRes:y);
-    !!VR(boolHasResources)&(ownedSpecRes)<(needRes):S(FALSE);
-!!en;
-
-!!if&(boolHasResources)<>(TRUE);  
-  ; not enough resources and gold 
-  !!IF:M^%T(wog.45.noResToUpgradeGoldReserve)^;
-  !!FU:E;
-!!en;
+; show message 
+!!IF:N(msgDlgType)/(message)/?(result:y);
+; memory patch (restore original code)
+!!UN:C5199571/(UNC_UINT32)/(saveMemory1) C5199620/(UNC_UINT32)/(saveMemory2);
+!!FU&(result)<>(TRUE):E;
 
 ; remove player resources
-!!FU(WOG_Player_RemoveResources):P(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
+!!FU(WOG_Player_RemoveResources):P(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needRes);
 
 ; add gold bonus to this town
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(prtGoldBonusItem)/d+(WOG_45_GOLDBONUS);
@@ -403,8 +446,6 @@ ZVSE2
 ; disable standart action
 !!CM:R0;
 !!UN:R(REDRAW_TOWN_SCREEN);
-
-
 
 ; =========== AI BUILD =============================================================================
 
@@ -472,9 +513,6 @@ ZVSE2
 ; добавить бонус существ
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(townArray)/d(growth); 
 
-
-
-
 ; ============= ADD BONUSES ========================================================================
 
 !?FU(OnCalculateTownIncome); 
@@ -505,8 +543,6 @@ ZVSE2
   !!en;
 !!en;
 
-
-
 ; ============= RESET VARS =========================================================================
 
 !?FU(WOG_OnNewDay); 
@@ -530,8 +566,6 @@ ZVSE2
 !!re i/0/(townsCount)/1/-1; 
   !!FU(WOG_45_AI_UpgradeTown):Pi;
 !!en;
-
-
 
 !?FU(OnAfterErmInstructions); 
 !!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
