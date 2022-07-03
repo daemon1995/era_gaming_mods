@@ -284,16 +284,17 @@ ZVSE2
 ; Check if meeting the costs requirement for specific dwelling  if did not build this turn
 !!if&(requirementMsg)=^^;
   ; хватает ли у игрока простых ресурсов и золота
-  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold)/(NULL);
+  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold);
 
   ; хватает ли у игрока спец.ресурса
   !!if&(specResId)>(NULL);  
     !!OW:R(ownerId)/(specResId)/?(temp:y); 
     !!VR(boolHasResources)&(temp)<(typeSpecResPicCount):S(FALSE);
   !!en;
+
   ; если не хватает - сообщаем и выходим
   !!if&(boolHasResources)<>(TRUE); 
-    ; not enough resources and gold 
+    ; not enough resources
     !!VR(requirementMsg):S^
 
 {~r}%T(wog.45.noResToUpgradeUpgDwelling){~}^;
@@ -311,7 +312,7 @@ ZVSE2
 !!FU&(result)<>(TRUE):E;
 
 ; забрать базовые ресурсы у игрока
-!!FU(WOG_Player_RemoveResources):P(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold)/(NULL);
+!!FU(WOG_Player_RemoveResources):P(ownerId)/(wood)/(NULL)/(ore)/(NULL)/(NULL)/(NULL)/(gold);
 ; забрать спец.ресурс у игрока
 !!OW&(specResId)>(NULL):R(ownerId)/(specResId)/d-(typeSpecResPicCount);
 
@@ -326,6 +327,9 @@ ZVSE2
 
 ; обновить экран города (ресурсы)
 !!UN:R(REDRAW_TOWN_SCREEN);
+
+; Play sound
+!!SN:P^buildtwn^;
 
 ; ============= GOLD BONUS =========================================================================
 
@@ -374,11 +378,13 @@ ZVSE2
 !!if&(specResId)=(RES_MITHRIL);
   !!VR(extRes1PicId:y):S(NO_PIC_TYPE);
   !!VR(extRes2PicId:y):S(NO_PIC_TYPE);
-  !!VR(extNeedRes:y):S(needRes);
+  !!VR(extNeedRes:y):S(NULL);
+  !!VR(needMithril:y):S(needRes);
 !!el;
   !!VR(extRes1PicId):S(RES_WOOD);
   !!VR(extRes2PicId):S(RES_ORE);
-  !!VR(extNeedRes:y):S(NULL);
+  !!VR(extNeedRes:y):S(needRes);
+  !!VR(needMithril:y):S(NULL);
 !!en;
 
 !!IF:N(PIC_TYPE_RES_GOLD)/(needGold)/
@@ -408,7 +414,7 @@ ZVSE2
 !!el;
   ; Change the requirement of resouces - Archer
   *!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
-  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needRes);
+  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needMithril);
 
   ; Additional check for town special resource if not mithril (put it here since it is easier to write than FU:P)
   !!if&(boolHasResources)/(specResId)<>(RES_MITHRIL);
@@ -435,7 +441,7 @@ ZVSE2
 !!FU&(result)<>(TRUE):E;
 
 ; remove player resources
-!!FU(WOG_Player_RemoveResources):P(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needRes);
+!!FU(WOG_Player_RemoveResources):P(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needMithril);
 
 ; add gold bonus to this town
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(prtGoldBonusItem)/d+(WOG_45_GOLDBONUS);
@@ -443,9 +449,12 @@ ZVSE2
 ; set what was already built today
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/(TRUE);
 
-; disable standart action
+; disable standard action
 !!CM:R0;
 !!UN:R(REDRAW_TOWN_SCREEN);
+
+; Play sound
+!!SN:P^buildtwn^;
 
 ; =========== AI BUILD =============================================================================
 
