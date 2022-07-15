@@ -16,7 +16,7 @@ ZVSE2
 **  --------------------------
 
 
-!?BA53&-(ERM_FLAG_IS_HUMAN);    //Battle-end for AI.
+!?FU(OnAfterBattleUniversal)&-(ERM_FLAG_IS_HUMAN);    //Battle-end for AI.
     !!BA:H0/?(attackingHero:y);                 //Get attacking hero.
     !!FU(huAI_BattleEnd):P(attackingHero)/0;    //Perform features for attacking hero.
     !!BA:H1/?(defendingHero:y);                 //Get defending hero.
@@ -59,12 +59,17 @@ ZVSE2
 
 
 **  Store AI hero army when combat starts, to use later when combat ends.
-!?BF;   //Combat trigger.
+//?BF;
+!?FU(OnBeforeBattleUniversal)&-(ERM_FLAG_IS_HUMAN);        //Combat trigger.
     !!re j/0/1:;        //Loop 0-1 to store data for both attacker and defender.
+        //!BA:Hj/?(hero:y);               TEST - get hero.
+        //!HE(hero)&(hero)>-1:B0/?(heroName:z);              TEST - Hero name
         !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
             !!BA:Mj/i/?(mon:y)/?(monCount:y);
             !!SN:W^huAI_Behavior_PreBattleMon_%j_%i^/(mon);
             !!SN:W^huAI_Behavior_PreBattleMonCount_%j_%i^/(monCount);
+            //!SN&(hero)>-1:H^monname^/(mon)/0/?(monStr:z);                    TEST - Name of troop
+            //!IF&(hero)>-1:L^%(heroName): Combat Start with %(monCount) %(monStr).^;      TEST
         !!en:;
     !!en:;
 **--------------------------------------------------
@@ -88,7 +93,9 @@ ZVSE2
         !!SN:W^huAI_Behavior_PreBattleMon_%(attackerOrDefender)_%i^/?(monOld:y);
         
         !!BA:M(attackerOrDefender)/i/?(mon:y)/?(monCount:y);    //Get mon and monCount in slot i.
-        //!IF&(monOld)<>(mon)/(mon)<>(NO_MON)/(mon)<>(MON_WEREWOLF):L^oldMon%(monOld) is not same as newMon%(mon)in slot%i!^;       TEST
+        //!BA:H(attackerOrDefender)/?(hero:y);               TEST - get hero.
+        //!HE(hero):B0/?(heroName:z);              TEST - Hero name
+        //!IF&(monOld)<>(mon)/(mon)<>(NO_MON)/(mon)<>(MON_WEREWOLF):L^%(heroName): oldMon%(monOld) is not same as newMon %(mon) in slot%i!^;       TEST
         //co if old mon and mon are *not* the same--this means something happened to change
         //the mon in the slot during combat--excluding NO_MON, that means the stack died,
         //and excluding Werewolf because Werewolf transformation is something a player would
@@ -107,9 +114,8 @@ ZVSE2
         !!VR(newAmount:y):S(monCount)+(amountToRes);
         !!BA:M(attackerOrDefender)/i/(monOld)/(newAmount);  //Do res.
         
-        //!VR(amountToResStr:z):M3/(amountToRes);    TEST
         //!SN:H^monname^/(monOld)/0/?(monOldStr:z);  TEST
-        //!IF:L^* %(amountToResStr) %(monOldStr)^;   TEST
+        //!IF:L^* %(amountToRes) %(monOldStr)^;   TEST
         //!IF&(monOld)<>(mon)/(mon)=(MON_WEREWOLF):L^Avoiding werewolf transformation of %(newAmount) %(monOldStr)!^;       TEST
     !!en:;
 **--------------------------------------------------

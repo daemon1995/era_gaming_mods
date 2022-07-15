@@ -42,9 +42,9 @@ This results in much more interesting games against AI, especially in random map
     Experimental and off by default beacuse this feature causes AI turns to take longer.
 	
 
-**===================================================================**
-**   !!    AI Cheats, also configurable in AMER_HumanAI.ini     !!   **
-**===================================================================**
+**===================================================================================**
+**   !!    AI Cheats, off by default, also configurable in AMER_HumanAI.ini     !!   **
+**===================================================================================**
 - AI gets additional gold each day.
 
 - AI gets additional resources each day.
