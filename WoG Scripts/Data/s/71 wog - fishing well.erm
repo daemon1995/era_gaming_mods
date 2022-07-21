@@ -24,7 +24,7 @@ ZVSE2
 ** obscure result chance raised to 3 in 10, easy option for mapmaker to
 ** disable tunnels if desired (see below), "dead end" option added,
 ** loose coin value raised to 50-200, chest of gold value raised to
-** 200-900, maximum monsters lowered to 5, tunnel check routine (counts #
+** 200-900, maximum monsters lowered to 5, tunnel check routine (counts !
 ** of wells on map) moved to occur only after a tunnel has been
 ** investigated. Flags 4 and 5 added, also function 1109 and
 ** v310-v313.
@@ -61,7 +61,7 @@ ZVSE2
 ** found.
 
 ** Version 1.8 removes Armageddon from the "Living Scroll" category and switches
-** to using the new $spell$ library function.
+** to using the new (WOG_GENERATE_SPELL) library function.
 
 ** JHV version allows one fish per well, disables loose change, &
 ** pre-sets random (human) choices so re-loading game won't change results
@@ -71,48 +71,44 @@ Variables Used in this Script: v300-v305,v308,v998-v1000,z1-z2,z300-z303
 (& z356-z357 by JHV, 10/1/2007)
 Functions Used in this Script: FU1100-FU1110, (no longer uses FU14000)
 Dialogues Used in this script: 7-9
-
+!#DC(WOG_OPT_FISHING_WELL) = 107;
 -------------------------------------------------------------------------------
  (setup hint texts for JHV version)
 ; igrik's fix (не было проверки на включенность скрипта для описаний)
-!#UN:P107/?v1;
-!#VRz356&v1=1:Sz107085;
-!#VRz357&v1=1:Sz107086;
-!#HT49/-1&v1=1:P0/356;  (use z356 for hint text before well fished)
-!#HT49/-1&v1=1:P1/356;
-!#HT49/-1&v1=1:P2/356;
-!#HT49/-1&v1=1:P3/356;
-!#HT49/-1&v1=1:P4/356;
-!#HT49/-1&v1=1:P5/356;
-!#HT49/-1&v1=1:P6/356;
-!#HT49/-1&v1=1:P7/356;
-!#HT49/-1&v1=1:P8/356;
-!#HT49/-1&v1=1:P9/356;
-!#HT49/-1&v1=1:P10/356;
-!#HT49/-1&v1=1:P11/356;
-!#HT49/-1&v1=1:P12/356;
-!#HT49/-1&v1=1:P13/356;
-!#HT49/-1&v1=1:P14/356;
-!#HT49/-1&v1=1:P15/357;  (use z357 for hint text after well fished)
-!#VRv1:S0;
+!?FU(WOG_107_Initialization);
+!#VA(optionId:x);
+!!UN:P(optionId)/?(wogOption:y);
+
+!!if&(wogOption)=(TRUE);
+  !!VRz356:Sz107085;
+  !!VRz357:Sz107086;
+  !!re i/0/14;
+    !!HT(OBJ_MAGIC_WELL)/(ANY_OBJ):Pi/z356;
+  !!en;
+
+  !!HT(OBJ_MAGIC_WELL)/(ANY_OBJ):P15/357;  (use z357 for hint text after well fished)
+
+!!en;
+
+!#FU(WOG_107_Initialization):P(WOG_OPT_FISHING_WELL);
 
 ** function to process well choices, called by script00 during wogification
 !?FU5211; x1=subtype, -1 for wells
 !!FU&x1<>-1:E; exit if not well
 !!UN:U49/x1/-2/952; [get x/y/l of yellow square of object into v952-v954]
-!!FU$spell$:P0/0/0/0/1/0; [Generate random spell, excluding banned/disabled: y-99]
+!!FU(WOG_GENERATE_SPELL):P0/0/0/0/1/0; [Generate random spell, excluding banned/disabled: y-99]
 
 !!if&y-99=-1;
-  !!VRy-99:S15;
+  !!VRy-99:S(SPELL_MAGIC_ARROW);
 !!en;
 
-!!PO952:Sy-99; save spell #
+!!PO952:Sy-99; save spell !
 
 !!VRy2:S0 R6; [Set y2 to random number from 0 to 6 -- army slot number]
-!!PO952:Oy2; save slot #
+!!PO952:Oy2; save slot !
 !!VRy1:S1 R5;  [Set y1 to random number from 1-6 for chest type]
 !!VRy7:S0 R7; [Set y7-1 to random number from 0-7, +2*100-->200 to 900]
-!!VRy2:Sy1*8+y7; will combine several rand #'s into PO:B0
+!!VRy2:Sy1*8+y7; will combine several rand !'s into PO:B0
 !!VRy7:S0 R6; [Set y7-2 to random number from 0 to 6 -- resource type]
 !!VRy7&y7=6:S7; [If result is 6, set it to 7 (Mithril)]
 !!VRy8:S0 R5; [Set y8 to random number from 0 to 5, +3 --> resource amount]
@@ -124,26 +120,26 @@ Dialogues Used in this script: 7-9
 !!PO952:B0/y4;
 !!DO1106/1/2/0:P; [Set v308 to random artifact number: 7 to 158 excluding disabled artifacts.]
 !!PO952:V0/v308;
-!!FU$spell$:P0/0/0/0/1/0; [Generate random spell, excluding banned/disabled: y-99]
+!!FU(WOG_GENERATE_SPELL):P0/0/0/0/1/0; [Generate random spell, excluding banned/disabled: y-99]
 
 !!if&y-99=-1;
   !!VRy-99:S15;
 !!en;
 
-!!PO952:V1/y-99; save spell #
+!!PO952:V1/y-99; save spell !
   [Generate random number from 0-144 for monster]
 !!VRv300:S0 R140; [Random number 0..140: v300]
 !!VRv300&v300>=122:+1; [Add 1 if 122 or higher]
 !!VRv300&v300>=124:+1; [Add 1 if 124 or higher]
 !!VRv300&v300>=126:+1; [Add 1 if 126 or higher]
 !!VRv300&v300>=128:+1; [Add 1 if 128 or higher]
-!!PO952:Tv300; save monster #
+!!PO952:Tv300; save monster !
 --------------------------------------------------------------------------------
-!$OB49;          [Magic Well is trigger]  (post-trigger)
+!$OB(OBJ_MAGIC_WELL);          [Magic Well is trigger]  (post-trigger)
 *!IF:L^%y2^;
  [Check if Fishing Well script is enabled in WoGify Options]
  (Don't check for stand-alone script--JHV)
-!!UN:P107/?v1;
+!!UN:P(WOG_OPT_FISHING_WELL)/?v1;
 
 !!FU&v1<>1:E; [Exit trigger if script isn't enabled]
 
@@ -166,20 +162,25 @@ Dialogues Used in this script: 7-9
 
  [If player is AI, generate random response]
 **VRy-2&-1000:S0 R1;
+
 (No, don't let AI's fish in my version--JHV)
 !!VRy-2&-1000:S0;
 
-!!HE-1:W>0; [Check if hero has any movement points left]
+!!if&y-2=1/(ERM_FLAG_IS_HUMAN);
+  !!HE-1:W?y-1; [Get hero's current movement points: y-1]
 
- [If hero doesn't have enough movement but does want to fish, display this message]
-!!IF&y-2=1/-1/1000:M1/z107002;
+  !!if&y1>0;
 
-!!FU1100&y-2=1/1:P;  [If hero has enough movement and wishes to fish, call function 1100]
+    !!VRy-1:-5000 F0/d; [Subtract 5000 from y-1: y-1][If less than 0, set y-1 to 0: y-1]
+    !!HE-1:Wy-1;  [Reduce non-AI hero's movement points by 5000 if he/she stopped to fish]
+    //replaced after MP reducing to battle save compatibility
+    !!FU1100:P;  [If hero has enough movement and wishes to fish, call function 1100]
 
-!!HE-1:W?y-1; [Get hero's current movement points: y-1]
-!!VRy-1:-5000; [Subtract 5000 from y-1: y-1]
-!!VRy-1&y-1<0:S0; [If less than 0, set y-1 to 0: y-1]
-!!HE-1&y-2=1/1000:Wy-1;  [Reduce non-AI hero's movement points by 5000 if he/she stopped to fish]
+  !!el;
+    !!IF:M1/z107002; [If hero doesn't have enough movement but does want to fish, display this message]
+  !!en;
+
+!!en;
 
 ------------------------------------------------------------------------------------------
 
@@ -188,7 +189,7 @@ Dialogues Used in this script: 7-9
 !!FU(WOG_GetRandomSeedByCoord):Pv998/v999/v1000/?y-1;
 !!PO998:V3/?y1 V3/d1;
 !!VRy-1:+y1 Rd/y-1;
-!!VRy5:S0 R3; random # 0-3 (obscure, monster, chest, tunnel)
+!!VRy5:S0 R3; random ! 0-3 (obscure, monster, chest, tunnel)
 !!PO998:N?y6; bit flags
 !!VRy7:Sy6%2; bit flags mod 2, =1 if bit 0 set
 !!VRy8:Sy7*-1+y6%4; bit flags - bit 0 mod 4, =2 if bit 1 set
@@ -211,6 +212,7 @@ Dialogues Used in this script: 7-9
 
 !?FU1101;  [Start of obscure fishing result Function]
 (JHV version:  set well to fished status)
+!#VA(usedY[4]:y);
 !!PO998:N?y1;  get "position N number" of current position
 !!VRy1:+1; set "obscure fishing" done
 !!PO998:Ny1;
@@ -218,74 +220,86 @@ Dialogues Used in this script: 7-9
 !!VRz301:Sz107003;
 !!VRz302:Sz107004;
 *!VRx1:+
-!!VRy1:S0 R30; [y1 = random # from 0-30]
+!!VRy1:S0 R30; [y1 = random ! from 0-30]
 
-!!VRz-1&y1=0:Sz107005; [Sandwich]
-!!VRz-5&y1=0:Sz107062; [Cheese sandwich]
-!!VRz-2&y1=0:S^..\data\s\pic\sandwich.jpg^;
-!!VRz-1&y1=1:Sz107006; [Boot]
-!!VRz-5&y1=1:Sz107063; [Old boot]
-!!VRz-2&y1=1:S^..\data\s\pic\boot.jpg^;
-!!VRz-1&y1=2:Sz107007; [Sword]
-!!VRz-5&y1=2:Sz107064; [Rusty sword]
-!!VRz-2&y1=2:S^..\data\s\pic\sword.jpg^;
-!!VRz-1&y1=3:Sz107008; [Lambchop]
-!!VRz-5&y1=3:Sz107065; [Lambchop]
-!!VRz-2&y1=3:S^..\data\s\pic\lambchop.jpg^;
-!!VRz-1&y1=4:Sz107009; [Mud]
-!!VRz-5&y1=4:Sz107066; [Slimy mud]
-!!VRz-2&y1=4:S^..\data\s\pic\mud.jpg^;
-!!VRz-1&y1=5:Sz107010; [Mossy Rocks]
-!!VRz-5&y1=5:Sz107067; [Mossy Rocks]
-!!VRz-2&y1=5:S^..\data\s\pic\mossy.jpg^;
-!!VRz-1&y1=6:Sz107011; [Trout]
-!!VRz-5&y1=6:Sz107068; [Trout]
-!!VRz-2&y1=6:S^..\data\s\pic\trout.jpg^;
-!!VRz-1&y1=7:Sz107012; [Hole]
-!!VRz-5&y1=7:Sz107069; [Dark hole]
-!!VRz-2&y1=7:S^..\data\s\pic\hole.jpg^;
-!!VRz-1&y1=8:Sz107013; [Mermaid]
-!!VRz-5&y1=8:Sz107070; [Mermaid]
-!!VRz-2&y1=8:S^..\data\s\pic\mermaid.jpg^;
-!!VRz-1&y1=9:Sz107014; [Fishing]
-!!VRz-5&y1=9:Sz107071; [Fishing]
-!!VRz-2&y1=9:S^..\data\s\pic\fishing.jpg^;
-!!VRz-1&y1=10:Sz107015; [Worms]
-!!VRz-5&y1=10:Sz107072; [Worms]
-!!VRz-2&y1=10:S^..\data\s\pic\worms.jpg^;
-!!VRz-1&y1=11:Sz107016; [Echoes]
-!!VRz-5&y1=11:Sz107073; [Spookies]
-!!VRz-2&y1=11:S^..\data\s\pic\echoes.jpg^;
-!!VRz-1&y1=12:Sz107017; [*Tales*]
-!!VRz-5&y1=12:Sz107074; [Scaly hero]
-!!VRz-6&y1=12:Sz107075; [Brave dragon]
-!!VRz-7&y1=12:Sz107076; [Silly warlock]
-!!VRz-2&y1=12:S^..\data\s\pic\tales1.jpg^;
-!!VRz-3&y1=12:S^..\data\s\pic\tales2.jpg^;
-!!VRz-4&y1=12:S^..\data\s\pic\tales3.jpg^;
-!!VRz-1&y1=13:Sz107018; [Hot Day]
-!!VRz-5&y1=13:Sz107077; [Hot sun]
-!!VRz-2&y1=13:S^..\data\s\pic\hotday.jpg^;
-!!VRz-1&y1=14:Sz107019; [Anchor]
-!!VRz-5&y1=14:Sz107078; [Anchor]
-!!VRz-2&y1=14:S^..\data\s\pic\anchor.jpg^;
-!!VRz-1&y1=15:Sz107020; [Dunking]
-!!VRz-5&y1=15:Sz107079; [Well dunking!]
-!!VRz-2&y1=15:S^..\data\s\pic\dunking.jpg^;
-!!VRz-1&y1=16:Sz107021; [Bobbing]
-!!VRz-5&y1=16:Sz107080; [Bob with an apple]
-!!VRz-2&y1=16:S^..\data\s\pic\bobbing.jpg^;
-!!VRz-1&y1=17:Sz107022; [Eel]
-!!VRz-5&y1=17:Sz107081; [Electric eel]
-!!VRz-2&y1=17:S^..\data\s\pic\eel.jpg^;
+!!if&y1>=0/y1<=17;
+  
 
-!!VRz-1&y1=19:Sz107024; [Rainbow fish]
-!!VRz-5&y1=19:Sz107082; [Rainbow fish]
-!!VRz-2&y1=19:S^..\data\s\pic\fish.jpg^;
 
-!!VRz-1&y1=22:Sz107028; [Storm]
-!!VRz-5&y1=22:Sz107083; [Storm]
-!!VRz-2&y1=22:S^..\data\s\pic\storm.jpg^;
+  !!VRz-2&y1=0:S^..\data\s\pic\sandwich.jpg^;
+  *!VRz-1&y1=1:Sz107006; [Boot]
+  *!VRz-5&y1=1:Sz107063; [Old boot]
+  !!VRz-2&y1=1:S^..\data\s\pic\boot.jpg^;
+  *!VRz-1&y1=2:Sz107007; [Sword]
+  *!VRz-5&y1=2:Sz107064; [Rusty sword]
+  !!VRz-2&y1=2:S^..\data\s\pic\sword.jpg^;
+  *!VRz-1&y1=3:Sz107008; [Lambchop]
+  *!VRz-5&y1=3:Sz107065; [Lambchop]
+  !!VRz-2&y1=3:S^..\data\s\pic\lambchop.jpg^;
+  *!VRz-1&y1=4:Sz107009; [Mud]
+  *!VRz-5&y1=4:Sz107066; [Slimy mud]
+  !!VRz-2&y1=4:S^..\data\s\pic\mud.jpg^;
+  *!VRz-1&y1=5:Sz107010; [Mossy Rocks]
+  *!VRz-5&y1=5:Sz107067; [Mossy Rocks]
+  !!VRz-2&y1=5:S^..\data\s\pic\mossy.jpg^;
+  *!VRz-1&y1=6:Sz107011; [Trout]
+  *!VRz-5&y1=6:Sz107068; [Trout]
+  !!VRz-2&y1=6:S^..\data\s\pic\trout.jpg^;
+  *!VRz-1&y1=7:Sz107012; [Hole]
+  *!VRz-5&y1=7:Sz107069; [Dark hole]
+  !!VRz-2&y1=7:S^..\data\s\pic\hole.jpg^;
+  *!VRz-1&y1=8:Sz107013; [Mermaid]
+  *!VRz-5&y1=8:Sz107070; [Mermaid]
+  !!VRz-2&y1=8:S^..\data\s\pic\mermaid.jpg^;
+  *!VRz-1&y1=9:Sz107014; [Fishing]
+  *!VRz-5&y1=9:Sz107071; [Fishing]
+  !!VRz-2&y1=9:S^..\data\s\pic\fishing.jpg^;
+  *!VRz-1&y1=10:Sz107015; [Worms]
+  *!VRz-5&y1=10:Sz107072; [Worms]
+  !!VRz-2&y1=10:S^..\data\s\pic\worms.jpg^;
+  *!VRz-1&y1=11:Sz107016; [Echoes]
+  *!VRz-5&y1=11:Sz107073; [Spookies]
+  !!VRz-2&y1=11:S^..\data\s\pic\echoes.jpg^;
+
+  *!VRz-1&y1=13:Sz107018; [Hot Day]
+  *!VRz-5&y1=13:Sz107077; [Hot sun]
+  !!VRz-2&y1=13:S^..\data\s\pic\hotday.jpg^;
+  *!VRz-1&y1=14:Sz107019; [Anchor]
+  *!VRz-5&y1=14:Sz107078; [Anchor]
+  !!VRz-2&y1=14:S^..\data\s\pic\anchor.jpg^;
+  *!VRz-1&y1=15:Sz107020; [Dunking]
+  *!VRz-5&y1=15:Sz107079; [Well dunking!]
+  !!VRz-2&y1=15:S^..\data\s\pic\dunking.jpg^;
+  *!VRz-1&y1=16:Sz107021; [Bobbing]
+  *!VRz-5&y1=16:Sz107080; [Bob with an apple]
+  !!VRz-2&y1=16:S^..\data\s\pic\bobbing.jpg^;
+  *!VRz-1&y1=17:Sz107022; [Eel]
+  *!VRz-5&y1=17:Sz107081; [Electric eel]
+  !!VRz-2&y1=17:S^..\data\s\pic\eel.jpg^;
+
+
+  !!VR(zInd:y):Sy1 +107005;
+  !!VR(zIndSec:y):Sy1 +107062;
+  !!VRz-1:Sz(zInd); 
+  !!VRz-5:Sz(zIndSec);
+  !!if&y1=12;
+
+    !!VRz-6:Sz107075; [Brave dragon]
+    !!VRz-7:Sz107076; [Silly warlock]
+    !!VRz-2:S^..\data\s\pic\tales1.jpg^;
+    !!VRz-3:S^..\data\s\pic\tales2.jpg^;
+    !!VRz-4:S^..\data\s\pic\tales3.jpg^;
+  !!en;
+!!en;
+
+
+!!VRz-1& y1=19:Sz107024; [Rainbow fish]
+!!VRz-5& y1=19:Sz107082; [Rainbow fish]
+!!VRz-2& y1=19:S^..\data\s\pic\fish.jpg^;
+
+!!VRz-1& y1=22:Sz107028; [Storm]
+!!VRz-5& y1=22:Sz107083; [Storm]
+!!VRz-2& y1=22:S^..\data\s\pic\storm.jpg^;
 
 !!VRz-1&y1>=25/y1<=27:Sz107032; [Gnome trader]
 !!VRz-5&y1>=25/y1<=27:Sz107084; [Gnome trader]
@@ -313,7 +327,7 @@ Dialogues Used in this script: 7-9
 !!IF&y1=20/1000:Q1/8/2/1/z107025; [Fake Grail]
 !!IF&y1=20/1000:M1/z107026;
 
-!!VRy2&y1=21:S2 T8; [Set y2 to random # between 2 and 10]
+!!VRy2&y1=21:S2 T8; [Set y2 to random ! between 2 and 10]
 !!VRy3&y1=21:S0 -y2 -100000; [Create a negative number for message display purposes]
 !!IF&y1=21/1000:Q1/36/y3/1/z107027;
 !!VRy2&y1=21:*-1;     [Change number to a negative number]
@@ -325,14 +339,14 @@ Dialogues Used in this script: 7-9
 
 !!IF&y1=23/1000:Q500/21/16/1/z107029; [Friendly dwarves]
 
-!!PO998:S?y-99; get pre-et spell #
+!!PO998:S?y-99; get pre-et spell !
 
 !!UN&y1=24:N1/z301/y-99; [Assign spell name to z301]
 !!IF&y1=24/1000:Q1/9/y-99/1/z107030;
 !!HE-1&y1=24:My-99/1; [Give spell to hero]
 
-!!PO998&y1>=25/y1<=27:O?y2; get pre-et sarmy lot # 0-6
-!!HE-1&y1>=25/y1<=27:C0/y2/d0/?y4; [Store # of monsters found in hero's army slot y2 in y4]
+!!PO998&y1>=25/y1<=27:O?y2; get pre-et sarmy lot ! 0-6
+!!HE-1&y1>=25/y1<=27:C0/y2/d0/?y4; [Store ! of monsters found in hero's army slot y2 in y4]
 !!HE-1&y1>=25/y1<=27:C0/y2/?y5/d0; [Store TYPE of monsters found in hero's army slot y2 in y5]
 !!VRy4&y1>=25/y1<=27/y5<0:S0; [Set number of monsters to 0 if type is less than 0]
 !!VRy6&y1>=25/y1<=27:Sy4 *65536 +y5; [Store type/number of monsters for message display purposes]
@@ -368,7 +382,7 @@ Dialogues Used in this script: 7-9
 
 !?FU1102;  [Start of loose coins result Function]
 
-!!VRy1:S50 T150;    [Set y1 to random # from 50-200]
+!!VRy1:S50 T150;    [Set y1 to random ! from 50-200]
 !!IF&1000:Q1/36/y1/1/z107036;
 !!OW:R-1/6/dy1;  [Give player 50 to 200 gold]
 
@@ -410,8 +424,8 @@ Dialogues Used in this script: 7-9
 
  [Set up for Pink Gas, Purple Gas and Poison Dart Trap]
 !!HE-1:B0/?z303;  [Store hero's name in z303]
-!!PO998:O?y2; get pre-set army slot # 0-6
-!!HE-1:C0/y2/d/?y4; [Store # of monsters found in hero's army slot y2 in y4]
+!!PO998:O?y2; get pre-set army slot ! 0-6
+!!HE-1:C0/y2/d/?y4; [Store ! of monsters found in hero's army slot y2 in y4]
 !!HE-1:C0/y2/?y5/d0; [Store TYPE of monsters found in hero's army slot y2 in y5]
 !!VRy4&y5<0:S0; [Set number of monsters to 0 if type is less than 0]
 !!UN&y4>0:N3/z2/y5/1; [Store monster name (plural) in z2]
@@ -439,7 +453,7 @@ Dialogues Used in this script: 7-9
 !!VRy11&y1=4:Sy23; [y11=random number from 1-3]
 !!VRy1&y1=4/y11=3:S7; [33% chance that an artifact will be a scroll]
 !!PO998&y1=4:V0/?v308; get pre-set random artifact number: 7 to 158 excluding disabled artifacts
-!!HE-1&y1=4:A4/v308; [Equip on hero artifact # stored in v308]
+!!HE-1&y1=4:A4/v308; [Equip on hero artifact ! stored in v308]
 !!IF&y1=4/1000:Q2/8/v308/1/z107042;
 
  [Purple Gas: Downgrades one type of Hero's creatures: y1=5]
@@ -481,7 +495,7 @@ Dialogues Used in this script: 7-9
 !!VRy7&y1=6/y4>0:Sy22; [Darts kill 10-30% of monsters - store number from 1 to 3 in y7]
 !!VRy3&y1=6/y4>0/y3<1:S1;  [If y3 is less than 1, make it 1]
 !!VRy3&y1=6/y4>0:*y7; [Multiply y3 by y7]
-!!VRy3&y1=6/y4>0/y3>y4:Sy4; [If # killed is greater than # of monsters, make it # of monsters]
+!!VRy3&y1=6/y4>0/y3>y4:Sy4; [If ! killed is greater than ! of monsters, make it ! of monsters]
 !!VRy6:Sy3 *65536 +y5; [Store type/number of monsters for message display purposes in y6]
 !!IF&y1=6/y4<1/1000:M1/z107045;
 !!IF&y1=6/y4>0/1000:Q1/21/y6/1/z107046;
@@ -507,7 +521,7 @@ Dialogues Used in this script: 7-9
 !!VRy1:+2; set "monster fishing" done
 !!PO998:Ny1;
 
-!!PO998:T?v300; get pre-set monster #
+!!PO998:T?v300; get pre-set monster !
 !!VRy1:S1 R4;  [Set y1 to random number from 1 to 5 - number of monsters that appear]
 !!VRy2:Sy1 *65536 +v300; [Set y2 to monster type/number for message display purposes]
 !!IF&1000:Q1/21/y2/1/z107050;
@@ -515,7 +529,7 @@ Dialogues Used in this script: 7-9
 
 ------------------------------------------------------------------------------------------
 
-!?FU1105;  [Start of get monster # Function]
+!?FU1105;  [Start of get monster ! Function]
 
   [Generate random number from 0-144 for monster]
 !!VRv300:S0 R140; [Random number 0..140: v300]
@@ -533,7 +547,6 @@ Dialogues Used in this script: 7-9
 !!VRv308&v308>=144:+2; [Skip "artifact lock" and "highlight"]
 !!UN:Av308/?y2;   [Test enabled/disabled value of artifact: y2]
 !!VRx16&y2=0:S99; [Exit loop when enabled artifact is found]
-
 ------------------------------------------------------------------------------------------
 
 !?FU1107;  [Start of tunnel result Function]
@@ -557,8 +570,8 @@ Dialogues Used in this script: 7-9
 
 ------------------------------------------------------------------------------------------
 
-!?FU1108;  [Start of tunnel # Function]
-!!PO998:O?y2; random # 0-6 (slot # for upgrades--reused)
+!?FU1108;  [Start of tunnel ! Function]
+!!PO998:O?y2; random ! 0-6 (slot ! for upgrades--reused)
 !!FU1110&y2>1:P; only try to tunnel 2/7 of the time (too much of an advantage)
 !!FU&y2>1:E;
 !!UN:U49/-1/?v304;  [Calculate number of Magic Wells on map - store in v304]
@@ -598,7 +611,7 @@ Dialogues Used in this script: 7-9
 !?FU1110;  [Start of "dead end" Function]
 
 !!VRv304:S0; [Set v304 to 0 to indicate dead end function reached]
-!!VRy1:S1 T9;  [Random # from 1 to 10]
+!!VRy1:S1 T9;  [Random ! from 1 to 10]
 
 !!VRy2&y1<10:Sy1 +149;
 !!VRy2&y1=10:S168;
