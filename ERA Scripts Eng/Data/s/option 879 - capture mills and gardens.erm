@@ -16,183 +16,219 @@ ZVSE2
 
 ** дублирование стандартных триггеров
 
+28.07.2022 Fully rewritten by daemon_n
 
-// Disable Mills and Mystic Gardens features from Sorcery
-!#VRi^wog_23_millsAndGardensEnabled^:S(FALSE);
+!?FU(ES_OnPlayerVisit_MystGarden)&i^ES_879_isAuto^=(FALSE);
+  !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
+  !!if&999;
+    !!GD2:B?(resType:y);
+    !!VR(value:y):S5;
+    !!VR(value)&(resType)=(RES_GOLD):S500;
+    !!FU(ES_879_ShowMessage):P(owner)/(OBJ_MYSTICAL_GARDEN)/(resType)/(value);
+  !!en;
 
-!?OB(OBJ_WATER_WHEEL);        [посещение ¬од€ной мельницы игроком-человеком]
-!!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
-!!FU&y1=0:E;                  [выход, если опци€ не включена]
+!?FU(ES_OnPlayerVisit_WaterWheel)&i^ES_879_isAuto^=(FALSE);
+  !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
+  !!if&999;
+    !!WM2:B?(value:y);
+    !!VR(value):*500;
+    !!FU(ES_879_ShowMessage):P(owner)/(OBJ_WATER_WHEEL)/(RES_GOLD)/(value);
+  !!en;  
 
-!!PO998:O?y1;                 [y1 - хоз€ин объекта]
-!!OW:C?y2;                    [y2 - текущий игрок]
-!!OB998:R;                    [разрешаем посещение объекта всем игрокам]
-!!PO998:Oy2;                  [мен€ем владельца мельницы]
-!!WM998&y1=-1:B?y3 B0;        [y3 - количество золота на мельнице, если мельница ничейна€]
-!!VRy3&y1=-1:*500;            [...]
-!!OW&y1=-1:R-1/6/dy3;         [увеличиваем игроку золото, если мельница была ничейной]
-!!PO998&y1=-1:V0/6 V1/y3;     [устанавливаем тип/количество текущих ресурсов в V0/V1 значени€ клетки]
-!!FU&-1000:E;                 [выход, если игрок »»]
+!?FU(ES_OnPlayerVisit_WindMill)&i^ES_879_isAuto^=(FALSE);
+  !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
 
-!!OB998:S;                    [запрещаем посещение объекта всем игрокам]
-!!IF&y1=y2:M^%T(es.879.wheelSent)^;     [сообщение, если игрок уже получал золото]
-!!IF&y1=-1:Q2/6/y3/1^%T(es.879.wheelGives)^; [сообщение о захвате и получении ресурсов]
-!!IF&y1<>y2/y1>-1:M^%T(es.879.wheelOwned)^; [сообщение о захвате мельницы]
+  !!if&999;
+    !!ML2:B?(resType:y)/?(value:y);
+    !!FU(ES_879_ShowMessage):P(owner)/(OBJ_WINDMILL)/(resType)/(value);
+  !!en;
 
-!?OB(OBJ_WINDMILL);           [посещение ¬етр€ной мельницы]
-!!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
-!!FU&y1=0:E;                  [выход, если опци€ не включена]
 
-!!PO998:O?y1;                 [y1 - хоз€ин объекта]
-!!OW:C?y2;                    [y2 - текущий игрок]
-!!OB998:R;                    [разрешаем посещение объекта всем игрокам]
-!!PO998:Oy2;                  [мен€ем владельца мельницы]
-!!ML998&y1=-1:B?y3/?y4 Bd/0;  [y3/y4 - тип/количество ресурса на мельнице, если мельница ничейна€]
-!!OW&y1=-1:R-1/y3/dy4;        [увеличиваем игроку ресурсы, если мельница была ничейной]
-!!PO998&y1=-1:V0/y3 V1/y4;    [устанавливаем тип/количество текущих ресурсов в V0/V1 значени€ клетки]
-!!FU&-1000:E;                 [выход, если игрок »»]
 
-!!OB998:S;                    [запрещаем посещение объекта всем игрокам]
-!!IF&y1=y2:M^%T(es.879.millSent)^;      [сообщение, если игрок уже получал ресурсы]
-!!IF&y1=-1:Q2/y3/y4/1^%T(es.879.millGives)^; [сообщение о захвате и получении ресурсов]
-!!IF&y1<>y2/y1>-1:M^%T(es.879.millOwned)^; [сообщение о захвате мельницы]
+!?FU(ES_879_ShowMessage)&999;
+!#VA(owner:x) (objType:x) (res:x) (value:x);
+  !!if&(owner)<>i^timerOwner^;
+    !!if&(owner)=(NO_OWNER);
+      !!SN:T^es.879.%x2_Gives^/?(msg:z);
+      !!IF:Q2/x3/x4/1/(msg);
+    !!el;
+      !!SN:T^es.879.%x2_Owned^/?(msg:z);
+      !!IF:M(msg);
+    !!en;
+  !!el;
+    !!SN:T^es.879.%x2_Sent^/?(msg:z);
+    !!IF:M(msg);
+  !!en;
 
-!?OB(OBJ_MYSTICAL_GARDEN);    [посещение —ада лепрекона]
-!!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
-!!FU&y1=0:E;                  [выход, если опци€ не включена]
+!?FU(ES_879_OnVisitResourceObject);
+!#VA(addr:x) (owner:x);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(coords:y);
+  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);/8/?(sth:y)/8;
+  !!VRv2:C(x)/(y)/(z);
+  !!PO(x)/(y)/(z):O?(owner) Oi^timerOwner^;
+  !!if&(owner)<>(NO_OWNER)/(owner)<>i^timerOwner^;
+    !!PO(x)/(y)/(z):V0/0 V1/0;
+  !!en;
+  !!HE-1:P?(xH:y)/?(yH:y)/?(zH:y);
+  !!if|(xH)<>(x)/(yH)<>(y)/(zH)<>(z);
+    !!VRi^ES_879_isRMC^:S(TRUE);
+  !!en;
 
-!!PO998:O?y1;                 [y1 - хоз€ин объекта]
-!!OW:C?y2;                    [y2 - текущий игрок]
-!!OB998:R;                    [разрешаем посещение объекта всем игрокам]
-!!PO998:Oy2;                  [мен€ем владельца мельницы]
-!!GD998:B?y3; B0;              [y3/y4 - тип/количество ресурса в саду, если сад ничейный]
-!!VRy4&y3<>6:S5;              [...]
-!!VRy4&y3=6:S500;             [...]
-!!OW&y1=-1:R-1/y3/dy4;        [увеличиваем игроку ресурсы, если сад был ничейным]
-!!PO998&y1=-1:V0/y3 V1/y4;    [устанавливаем тип/количество текущих ресурсов в V0/V1 значени€ клетки]
-!!FU&-1000:E;                 [выход, если игрок »»]
-
-!!OB998:S;                    [запрещаем посещение объекта всем игрокам]
-!!IF&y1=y2:M^%T(es.879.gardenSent)^;    [сообщение, если игрок уже получал ресурсы]
-!!IF&y1=-1:Q2/y3/y4/1^%T(es.879.gardenGives)^; [сообщение о захвате и получении ресурсов]
-!!IF&y1<>y2/y1>-1:M^%T(es.879.gardenOwned)^; [сообщение о захвате сада]
+!?FU(OnAdventureMapRightMouseClick_Quit)&i^ES_879_isRMC^;
+  !!VRi^ES_879_isRMC^:S(FALSE);
 
 !?FU(OnAdventureMapRightMouseClick);
-!!UN:P879/?(wogOption:y);               [провер€ем включена ли опци€]
-!!FU&(wogOption)<>(TRUE):E;
+  !!UN:P879/?(wogOption:y);               [провер€ем включена ли опци€]
+  !!FU|(wogOption)<>(TRUE)/i^ES_879_isRMC^:E;
 
-!!CM:P?(x:y)/?(y:y)/?(z:y);             [координаты клика]
-!!SN:O?(x)/?(y)/?(z);                   [корректировка координат]         
-!!OB(x)/(y)/(z):T?(objType:y);          [тип объекта]
-!!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;[выход если клик не на мельнице/садке]
-
-!!PO(x)/(y)/(z):O?(owner:y);            [владелец объекта]
-
-!!if&(owner)>(NO_OWNER);
-  ; Disable standard action
-  !!CM:R0;
-
-  ; Set up strings
-  !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(rmbStr:z);
-  !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
-  !!VR(rmbStr):+^
-%(ownerStr)^;
-
-  ; Check who's clicking
-  !!OW:C?(player:y)/?(interactPlayer:y);  [текущий игрок]
-
-  ; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
-  !!if&(owner)=(interactPlayer);
-    !!if&(objType)=(OBJ_WINDMILL);
-      !!VR(rmbStr):+^%T(es.879.millBrought)^;   [сообщение "сво€ ветр€на€ мельница"]
-    !!el&(objType)=(OBJ_WATER_WHEEL);
-      !!VR(rmbStr):+^%T(es.879.wheelBrought)^;  [сообщение "сво€ водн. мельница"]
-    !!el&(objType)=(OBJ_MYSTICAL_GARDEN);
-      !!VR(rmbStr):+^%T(es.879.gardenBrought)^; [сообщение "свой сад"]
-    !!en;
-
-    !!PO(x)/(y)/(z):V0/?(res:y) V1/?(num:y); [тип и количество принесенных ресурсов, если объект свой]
-    !!IF:Q2/(res)/(num)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "свой"]
-  !!el;
-    !!IF:Q2/(PIC_TYPE_FLAG)/(owner)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "чужой"]
+  !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer)/?(activeHero:y);
+  !!if&(activeHero)<>(NO_HERO);
+    !!HE(activeHero):P?(x:y)/?(y:y)/?(z:y);
+    !!FU&i^mouse_mapX^=(x)/i^mouse_mapY^=(y)/i^mouse_mapZ^=(z):E; // exit if click on hero
   !!en;
-!!en;
+  !!CM:P?(x:y)/?(y:y)/?(z:y);             [координаты клика]
 
-!?FU(ES_879_GetObjectName);
-!#VA(x:x) (y:x) (z:x) (objType:x) (objNamePtr:x);
+  !!OB(x)/(y)/(z):T?(objType:y);          [тип объекта]
+  !!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;[выход если клик не на мельнице/садке]
 
-; Set up object names
-!!if&(objType)=(OBJ_WINDMILL);
-  !!FU(ES_GetStringByFilename):P^objnames^/(OBJ_WINDMILL)/?(objName:z); [windmill]
-!!el&(objType)=(OBJ_WATER_WHEEL);
-  !!FU(ES_GetStringByFilename):P^objnames^/(OBJ_WATER_WHEEL)/?(objName); [water wheel]
-!!el&(objType)=(OBJ_MYSTICAL_GARDEN);
-  !!FU(ES_GetStringByFilename):P^objnames^/(OBJ_MYSTICAL_GARDEN)/?(objName); [mystical garden]
-!!en;
+  !!SN:O?(x)/?(y)/?(z);                   [корректировка координат]         
+  !!PO(x)/(y)/(z):O?(owner:y);            [владелец объекта]
 
-; Set up "Improved" object text if Mithril Enhancedment is enabled
-!!VR(isUpg:y):S(FALSE);
-!!UN:P36/?(enhMithril:y);
-!!PO(x)/(y)/(z)&(enhMithril):N?(isUpg);
-!!VR(objName)&(isUpg):S^%T(es.879.improved)%(objName)^;
-!!VR(objNamePtr):Z(objName);
+  !!if&(owner)>(NO_OWNER);
+    ; Disable standard action
+    !!CM:R0;
+    ; Set up strings
+    !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(rmbStr:z);
+    !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
+    !!VR(rmbStr):+^%T(es.endl)%(ownerStr)^;
+
+    ; Check who's clicking
+    !!OW:C?(player:y)/?(interactPlayer:y);  [текущий игрок]
+    !!VR(res:y):S(NO_PIC_TYPE);
+    !!VR(num:y):S(NO_PIC_TYPE);
+
+    ; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
+    !!if&(owner)=(interactPlayer);
+      !!PO(x)/(y)/(z):V0/?(res:y) V1/?(num:y); [тип и количество принесенных ресурсов, если объект свой]
+      !!if&(num)=0;
+        !!VR(res:y):S(NO_PIC_TYPE);
+        !!VR(num:y):S(NO_PIC_TYPE);
+      !!el;
+        !!SN:T^es.879.%(objType)_Brought^/?(txt:z);
+        !!VR(rmbStr):+(txt);
+      !!en;
+    !!en;
+    !!IF:Q2/(PIC_TYPE_FLAG)/(owner)/(res)/(num)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "чужой"]
+  !!en;
+
 
 !?FU(OnAdvMapTileHint);
 !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
 !#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
 
-!!UN:P879/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;
+  !!UN:P879/?(wogOption:y);
+  !!FU&(wogOption)<>(TRUE):E;
 
-!!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;
 
-!!PO(x)/(y)/(z):O?(owner:y);
-!!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(newHint:z);
+  !!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;
 
-!!if&(owner)>(NO_OWNER);
-  !!VR(ownerStrIndex:y):S(owner) +23;
-  !!FU(ES_GetStringByFilename):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
-  !!VR(newHint):+^ - %(ownerStr)^;
+  !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer:y)/?(activeHero:y);
+  !!if&(activeHero)<>(NO_HERO);/(objType)=(OBJ_FIRST);
+    !!HE(activeHero):P?(xH:y)/?(yH:y)/?(zH:y);
+    !!FU&(xH)=(tileX)/(yH)=(tileY)/(zH)=(tileZ):E;
+  !!en;
+
+  !!PO(x)/(y)/(z):O?(owner:y);
+  !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(newHint:z);
+  !!if&(owner)>(NO_OWNER);
+    !!VR(ownerStrIndex:y):S(owner) +23;
+    !!FU(ES_GetStringByFilename):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
+    !!VR(newHint):+^ - %(ownerStr)^;
+  !!en;
+
+  !!MM:M^%(newHint)^;
+
+!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1/i^timerOnce^; [поставка ресурсов владельцам мельниц/садов каждый первый день недели, начина€ с 8го дн€]
+  !!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
+  !!FU&y1=0:E;                  [выход, если опци€ не включена]
+
+  !!FU(NewIntArray):P8/?(liveArr:y); 
+  !!re (playerID:y)/0/(PLAYER_LAST);
+    !!OW:I(playerID)/d/?(isDead:y);
+    !!SN&(isDead)=(FALSE):V(liveArr)/(playerID)/(TRUE);
+  !!en;
+
+  !!re i/0/(HERO_LAST_WOG);
+    !!HEi:O?(owner:y);
+    !!if&(owner)=(NO_OWNER);
+      !!HEi:Z?(hero:y);
+      !!br;
+    !!en;
+  !!en;
+  !!VRi^ES_879_isAuto^:S(TRUE);
+  !!FU(ES_879_CollectResources):P4864048/(OBJ_MYSTICAL_GARDEN)/(hero)/(liveArr);
+  !!FU(ES_879_CollectResources):P4880976/(OBJ_WATER_WHEEL)/(hero)/(liveArr);
+  !!FU(ES_879_CollectResources):P4881456/(OBJ_WINDMILL)/(hero)/(liveArr);
+  !!UN:C(hero)/34/1/(NO_OWNER);
+  !!VRi^ES_879_isAuto^:S(FALSE);
+
+
+!?FU(ES_879_CollectResources); 
+!#VA(funcAddr:x) (objType:x) (hero:x) (liveArr:x);
+!#VA(x:y) (y:y) (z:y); 
+
+!!VR(x):S-1;                                                  [init as start]
+!!re i;                                                       [endless loop]
+  !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y)/(z); 
+  !!br&(x)<0;                                                 [exit loop if nothing found]
+
+  !!PO(x)/(y)/(z):O?(owner:y);                                [get obj owner]
+  !!if&(owner)<>(NO_OWNER);                                   [if there is one]
+    !!SN:V(liveArr)/(owner)/?(isAlive:y);                     [check if lives]
+    !!if&(isAlive);
+      !!UN:C(hero)/34/1/(owner);                              [set hero as obj owner color]
+      !!OB(x)/(y)/(z):T?(heroCheck:y);
+
+      !!if&(heroCheck)=(OBJ_HERO);
+        !!HE(x)/(y)/(z):Z?(badHero:y);
+        !!SN:E5077328/(CALLCONV_THISCALL)/(badHero);         [hide hero if it is there]
+      !!en;
+
+      !!FU(ES_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);  [get mapItem]
+      !!FU(ES_879_AdjustStoredRes):P(x)/(y)/(z)/(objType);
+      !!SN:E(funcAddr)/(CALLCONV_STDCALL)/(hero)/(mapItem)/0; [visit mapItem as AI]
+
+    !!el;
+      !!PO(x)/(y)/(z):O(NO_OWNER) V0/0 V1/0;                            [set no owner if is dead]
+    !!en;
+  !!en;
 !!en;
 
-!!MM:M^%(newHint)^;
-
-!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1; [поставка ресурсов владельцам мельниц/садов каждый первый день недели, начина€ с 8го дн€]
-!!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
-!!FU&y1=0:E;                  [выход, если опци€ не включена]
-
-!!OW:C?y1;                    [y1 - текущий игрок]
-!!UN:U(OBJ_WINDMILL)/-1/?y2;             [y2 - количество ¬етр€ных мельниц]
-!!VRv1:S-1;                   [инициализаци€ v1 дл€ быстрого поиска]
-!!DO(ES_879_CollectResources)/1/y2/1:Py1/112; [дл€ каждого объекта передаем ресурсы владельцу]
-!!UN:U(OBJ_WATER_WHEEL)/-1/?y2;             [y2 - количество ¬одных мельниц]
-!!VRv1:S-1;                   [инициализаци€ v1 дл€ быстрого поиска]
-!!DO(ES_879_CollectResources)/1/y2/1:Py1/109; [дл€ каждого объекта передаем ресурсы владельцу]
-!!UN:U(OBJ_MYSTICAL_GARDEN)/-1/?y2;              [y2 - количество —адов лепрекона]
-!!VRv1:S-1;                   [инициализаци€ v1 дл€ быстрого поиска]
-!!DO(ES_879_CollectResources)/1/y2/1:Py1/55; [дл€ каждого объекта передаем ресурсы владельцу]
-
-!?FU(ES_879_CollectResources); [x1 - текущий игрок, x2 - тип объекта]
-!!UN:Ux2/-1/-1/1;             [получаем координаты объекта в v1-v3]
-!!PO1:O?y1;                   [y1 - владелец объекта]
-!!FU&y1<>x1:E;                [выход, если текущий игрок не владелец]
-
-!!UN:P36/?y9;                 [y9 - проверка скрипта Mithril Enhancements]
-!!PO1&y9>0:N?y10;             [y10 - пользовательское число, если Mithril Enhancements активен (см. скрипт 42wog)]
-
-!!if&x2=(OBJ_WINDMILL);
-  !!ML1:B?y2/?y3 By2/0;  [y2/y3 - тип/количество текущих ресурсов объекта. обнул€ем количество]
-!!el&x2=(OBJ_WATER_WHEEL);
-  !!WM1:B?y3 B0;         [...]
-  !!VRy3:*500;           [...]
-  !!VRy2:S6;             [...]
-!!el&x2=(OBJ_MYSTICAL_GARDEN);
-  !!GD1:B?y2;             [...]
-  !!VRy3&y2<>6:S5;        [...]
-  !!VRy3&y2=6:S500;       [...]
+!?FU(ES_879_AdjustStoredRes);
+!#VA(x:x) (y:x) (z:x) (objType:x); 
+!!if&(objType)=(OBJ_MYSTICAL_GARDEN);
+  !!GD(x)/(y)/(z):B?(resType:y);
+  !!VR(value:y):S5;
+  !!VR(value)&(resType)=(RES_GOLD):S500;
+!!el&(objType)=(OBJ_WATER_WHEEL);
+  !!WM(x)/(y)/(z):B?(resType:y);
+  !!VR(value:y):S(resType)*500;
+!!el;
+  !!ML(x)/(y)/(z):B?(resType:y)/?(value:y);
 !!en;
+!!PO(x)/(y)/(z):V0/(resType) V1/(value);
 
-!!PO1:V0/y2 V1/y3;            [устанавливаем тип/количество текущих ресурсов в V0/V1 значени€ клетки]
-!!OW:Rx1/y2/dy3;              [увеличиваем ресурсы игрока]
+
 
 ** end
+!?FU(ES_879_GetObjectName);
+!#VA(x:x) (y:x) (z:x) (objType:x) (objNamePtr:x);
+  ; Set up object names
+  !!FU(ES_GetStringByFilename):P^objnames^/(objType)/?(objName:z); [windmill]
+  ; Set up "Improved" object text if Mithril Enhancedment is enabled
+  !!VR(isUpg:y):S(FALSE);
+  !!UN:P36/?(enhMithril:y);
+  !!PO(x)/(y)/(z)&(enhMithril):N?(isUpg);
+  !!VR(objName)&(isUpg):S^%T(es.879.improved)%(objName)^;
+  !!VR(objNamePtr):Z(objName);
