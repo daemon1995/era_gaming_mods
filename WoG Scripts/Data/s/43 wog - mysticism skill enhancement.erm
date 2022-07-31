@@ -309,186 +309,250 @@ TM30;
 *** Expert ***
 **************
 
-!?CM;
+
+
+
+// cut hero dlg
+!?FU(OnPreHeroScreen)&i^WOG_35_DisableHeroClick^=1;
+
+  !!UN:C6916808/4/?(dlg:y);
+  !!re i/122/137;(end_value);
+    !!SN:E6288816/2/(dlg)/i;
+    !!if&v1>0;
+      !!SN:E6286720/2/v1/6/6;/0/0/0/(dlg);
+      !!VRi^WOG_35_DisableHeroClick^:S2;
+    !!en;
+  !!en;
+
+!?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP);
 !!UN:P35/?y1;
-!!FU(WOG43_MistExp)&y1=1:P;
+!!FU(WOG_35_MistExp)&y1=1:P;
 
-!?FU(WOG43_MistExp);
-!!UN:P35/?y1;
-!!FU&y1<>1:E;
-!!IF:V10/0;
+!?FU(WOG_35_MistExp);
 
-!!IF&-1000:V10/1;      (check if it's AI)
-!!CM:I?y1;
-!!IF&y1<>37:V10/1;     (Check if clicked on Adventure Map)
-!!CM&-10:P?v4/?v5/?v6; (Get location)
-!!VRy52&-10:S-1;       (assume no hero)
-!!OW&-10:A-1/?y52;     (get current Hero)
-!!IF&-10/y52<0:V10/1;  (abort if no current hero)
+!!OW:A(CURRENT_PLAYER)/?(activeHero:y);
 
-!!HEy52&-10:S8/?y1;
-!!IF&-10/y1<3:V10/1;   (Check if Hero has Expert Mysticism)
+!!if&(activeHero)<>(NO_HERO);
+  !!HE(activeHero):S(SKILL_MYSTICISM)/?(mist:y) I?(sPoints:y)/1;
 
-!!OBv4/v5/v6&-10:T?y55;
-!!IF&-10/y55<>34:V10/1;(abort if not hero)
+  !!if&(mist)>2/(sPoints)>=5;
+    !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?t;
+    !!if&t=(OBJ_HERO);
+      !!HEi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:N?(heroId:y) O?(owner:y);
+      !!if&(owner)<>i^timerOwner^;
 
-!!HEv4/v5/v6&-10:N?v1; (Get Hero nr)
-!!HEv1&-10:O?y5;
-!!HEy52&-10:O?y6;
-!!IF&-10/y5=-1:V10/1;
-!!IF&-10/y5=y6:V10/1;  (check color of hero, abort if unowned or woned by current player)
+        !!FU(WOG_Hero_GetObjectRange):P(activeHero)/i^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/?(range:y);
+        !!FU(WOG_Hero_GetScoutingRadius):P(activeHero)/?(scouting:y);
+        !!VR(scouting):+1 Sd*(scouting);
+        !!if&(scouting)>(range);
+          
 
-!!HEy52&-10:P?y5/?y6/?y7; (get player Hero Location)
-!!IF&-10/y7<>v6:V10/1;    (check if on same level)
-!!VRy9&-10:Sv4;
-!!VRy9&-10:-y5;
-!!VRy9&-10:*y9;
-!!VRy10&-10:Sv5;
-!!VRy10&-10:-y6;
-!!VRy10&-10:*y10;
-!!VRy9&-10:+y10;
+          !!FU(WOG_35_ShowOfferMessage):P(activeHero)/(heroId)/?(result:y);
 
-!!VRy20&-10:S5;              (base scouting radius)
-!!HEy52&-10:S3/?y21;
-!!VRy20&-10:+y21;            (add extra from scouting)
-!!HEy52&-10:A1/?y22/9;
-!!HEy52&-10:A1/?y23/10;
-!!HEy52&-10:A1/?y24/11;
-!!HEy52&-10:A1/?y25/12;
-!!HEy52&-10:A1/?y26/18;       (check misc slots for artifacts)
-!!VRy20|y22=52/y23=52/y22=52/y25=52/y26=52:+1; (add 1 if speculum is equipped)
-!!VRy20|y22=53/y23=53/y22=53/y25=53/y26=53:+1; (add 1 if spyglass is equipped)
-!!VRy21&-10:Sy20;
-!!VRy21&-10:+1;
-!!VRy20&-10:*y21;            (If within base radius*(base radius+1), it is normally visible)
-!!IF&-10/y9>=y20:V10/1;      (Check if close enough)
-!!HEy52&-10:I?y2/1;
-!!IF&-10/y2<5:V10/1;         (Check if enough spell points)
-!!HEy52&-10:B0/?z1;          (Get Hero name)
-!!HEy52&-10:R2/?y1;
-!!VRz3&-10/y1=0:Sz135014;
-!!VRz3&-10/y1=1:Sz135015;
-!!VRz4&-10/y1=0:Sz135000;
-!!VRz4&-10/y1=1:Sz135001;
-!!HEv1&-10:B0/?z2;           (Get Hero name)
-!!HEv1&-10:R2/?y1;
-!!VRz6&-10/y1=0:Sz135002;
-!!VRz6&-10/y1=1:Sz135003;      (Get Hero Sex)
-!!IF&-10:V1/1;               (assume player agrees, for message if he doesn't)
-!!VRz-1&-10:Sz2;
-!!VRz-1&-10:+z135012;
-!!IF&-10:Q1/z135159;
-!!IF&-1/-10:V10/1;
-!!HEy52&-10:Id-5;            (take spell points)
-!!VRv2&-10:S0;
-!!CM&-10:R0;                 (disable standard popup)
+          !!if&(result); // show hero dlg
+            !!HE(activeHero):Id-5;
+            !!CM:R0;
+            !!VRi^WOG_35_DisableHeroClick^:S(TRUE); // tell to disable actions
+            !!UN:R5/1/0; // set std cursor
+            //show cut hero dlg
+            !!SN:E5118576/(CALLCONV_FASTCALL)/(heroId)/1/1/0;i(int hero_id, int is_DelButtn, int a3, char is_RightClickDlg)
+            !!VRi^WOG_35_DisableHeroClick^:S(FALSE);
+          !!en;
+        !!en;
 
-!!HEv1&-10:F?y1/?y2/?y3/?y4; (Get primary skills)
-!!HEv1&-10:E?y5;             (Get XP points)
-!!HEv1&-10:I?y6/1;             (get spell points)
-!!HEv1&-10:R0/?y7;           (get morale)
-!!HEv1&-10:R1/?y8;           (get luck)
+      !!en;
+      
+    !!en;
+  !!en;
+!!en;
 
-!!VRz1&-10:+z135012;
-!!IF&-10:M1/z135160;
-!!HEy52&-10:B0/?z1;          (Get Hero name)
+!?FU(WOG_35_ShowOfferMessage);
+!#VA(heroId:x) (targetHero:x) (result:x);
+!!IF:V10/0;   (Check if Hero has Expert Mysticism)
 
-!!VRv2&-10:S0;
-!!DO(WOG43_GetCountSkills)/0/27/1&-10:P;       (Count number of Sec Skills)
-!!IF&-10/v2=0:M1/z135161;
-!!FU(WOG43_CheckSkills)&-10/v2>0:P;         (Display skills)
-!!VRv2&-10:S0;
+!!HE(heroId:x)&-10:B0/?z1 R2/?y1;          (Get Hero name)
 
-!!DO(WOG43_GetCountArts)/0/18/1&-10:P;       (Count number of Artifacts equipped)
-!!IF&-10/v2=0:M1/z135162;
-!!FU(WOG43_DisplayArts)&-10/v2>0:P;         (Display Artifacts)
-!!VRv2&-10:S0;
+!!VRz3&y1=0:Sz135014;
+!!VRz3&y1=1:Sz135015;
+!!VRz4&y1=0:Sz135000;
+!!VRz4&y1=1:Sz135001;
+!!HEx2:B0/?z2 R2/?y1;           (Get Hero name)
+!!VRz6&y1=0:Sz135002;
+!!VRz6&y1=1:Sz135003;      (Get Hero Sex)
+!!VRz-1:Sz2;
+!!VRz-1:+z135012;
+!!IF:Q1/(PIC_TYPE_SEC_SKILL)/29/(PIC_TYPE_SPELL_POINTS)/-5/(MSG_TYPE_QUESTION)/z135159;
+!!VR(result)&1:S(TRUE);
+!!FU:E;
 
-!!DO(WOG43_GetCountSpells)/0/69/1&-10:P;       (Count number of Spells)
-!!IF&-10/v2=0:M1/z135163;
-!!FU(WOG43_DisplaySpells)&-10/v2>0:P;         (Display spells)
-!!VRv2&-10:S0;
+*!HEy52&-10:S8/?y1;
+*!IF&-10/y1<3:V10/1;   (Check if Hero has Expert Mysticism)
 
-!!DO(WOG43_GetCountStacks)/0/6/1&-10:P;        (count number of creatures slots occupied)
-!!IF&-10/v2=0:M1/z135164;
-!!FU(WOG43_DisplayCreatures)&-10/v2>0:P;         (Display Creatures)
+*!OBv4/v5/v6&-10:T?y55;
+*!IF&-10/y55<>34:V10/1;(abort if not hero)
 
-!?FU(WOG43_CheckSkills);                    (check skills)
-!!VRz5&-10:S^ ^;             (Initialise empty variable)
-!!DO(WOG43_ThroughSkills)/0/27/1:P;           (Cycle through skills)
-!!IF:M1/z135165;
-!!IF:V10/0;
+*!HEv4/v5/v6&-10:N?v1; (Get Hero nr)
+*!HEv1&-10:O?y5;
+*!HEy52&-10:O?y6;
+*!IF&-10/y5=-1:V10/1;
+*!IF&-10/y5=y6:V10/1;  (check color of hero, abort if unowned or woned by current player)
 
-!?FU(WOG43_GetCountSkills);                    (count number of skills)
-!!HEv1:Sx16/?y1;
-!!VRv2&y1<>0:+1;
+*!HEy52&-10:P?y5/?y6/?y7; (get player Hero Location)
+*!IF&-10/y7<>v6:V10/1;    (check if on same level)
+*!VRy9&-10:Sv4;
+*!VRy9&-10:-y5;
+*!VRy9&-10:*y9;
+*!VRy10&-10:Sv5;
+*!VRy10&-10:-y6;
+*!VRy10&-10:*y10;
+*!VRy9&-10:+y10;
+*!IF:L^%y20 %y9^;
 
-!?FU(WOG43_ThroughSkills);                    (cycle through skills)
-!!HEv1:Sx16/?v3;
-!!UN&v3<>0:N4/z3/x16;
-!!VRz5&v3=3:+z135166+^ %Z3^;
-!!VRz5&v3=2:+z135167+^ %Z3^;
-!!VRz5&v3=1:+z135168+^ %Z3^;   (add skillname and level)
-!!FU(WOG43_TextAddAnd)&-10/v3<>0:P;
+*!VRy20&-10:S5;              (base scouting radius)
+*!HEy52&-10:S3/?y21;
+*!VRy20&-10:+y21;            (add extra from scouting)
+*!HEy52&-10:A1/?y22/9;
+*!HEy52&-10:A1/?y23/10;
+*!HEy52&-10:A1/?y24/11;
+*!HEy52&-10:A1/?y25/12;
+*!HEy52&-10:A1/?y26/18;       (check misc slots for artifacts)
+*!IF:L^%y22 %y23 %y24 %y25 %y26^;
+*!VRy20|y22=52/y23=52/y24=52/y25=52/y26=52:+1; (add 1 if speculum is equipped)
+*!VRy20|y22=53/y23=53/y24=53/y25=53/y26=53:+1; (add 1 if spyglass is equipped)
+*!IF:L^%y20^;
 
-!?FU(WOG43_GetCountArts);                    (count number of artifacts equipped)
-!!VRx16&x16=13:S18;          (Don't count spell books and War Machine slots)
-!!HEv1:A1/?y1/x16;
-!!VRv2&y1>6/y1<144:+1;
+*!VRy21&-10:Sy20;
+*!VRy21&-10:+1;
+*!VRy20&-10:*y21;            (If within base radius*(base radius+1), it is normally visible)
+*!IF:L^%y21 %y9^;
+*!IF&-10/y9>=y20:V10/1;      (Check if close enough)
+*!HEy52&-10:I?y2/1;
+*!IF&-10/y2<5:V10/1;         (Check if enough spell points)
+*!HEy52&-10:B0/?z1;          (Get Hero name)
+*!HEy52&-10:R2/?y1;
+*!VRz3&-10/y1=0:Sz135014;
+*!VRz3&-10/y1=1:Sz135015;
+*!VRz4&-10/y1=0:Sz135000;
+*!VRz4&-10/y1=1:Sz135001;
+*!HEv1&-10:B0/?z2;           (Get Hero name)
+*!HEv1&-10:R2/?y1;
+*!VRz6&-10/y1=0:Sz135002;
+*!VRz6&-10/y1=1:Sz135003;      (Get Hero Sex)
+*!IF&-10:V1/1;               (assume player agrees, for message if he doesn't)
+*!VRz-1&-10:Sz2;
+*!VRz-1&-10:+z135012;
+*!IF&-10:Q1/z135159;
+*!IF&-1/-10:V10/1;
+*!HEy52&-10:Id-5;            (take spell points)
+*!VRv2&-10:S0;
+*!CM&-10:R0;                 (disable standard popup)
 
-!?FU(WOG43_DisplayArts);                    (Display Artifacts)
-!!VRz5&-10:S^ ^;             (Initialise empty variable)
-!!DO(WOG43_CheckHeroSlots)/0/18/1&-10:P;
-!!IF:M1/z135169;
-!!IF:V10/0;
+*!HEv1&-10:F?y1/?y2/?y3/?y4; (Get primary skills)
+*!HEv1&-10:E?y5;             (Get XP points)
+*!HEv1&-10:I?y6/1;             (get spell points)
+*!HEv1&-10:R0/?y7;           (get morale)
+*!HEv1&-10:R1/?y8;           (get luck)
 
-!?FU(WOG43_CheckHeroSlots);                     (Function for checking slots)
-!!VRv3:S-1;                   (reinitisalize variable)
-!!VRx16&x16=13/-10:S18;       (No spell book or War Machine)
-!!HEv1&-10:A1/?v3/x16;        (check slot x16)
-!!UN&v3>6/v3<144/-10:N0/z3/v3;  (get artifact name)
-!!VRz5&-10/v3>6/v3<144:+^ %Z3^; (add Artifact name)
-!!FU(WOG43_TextAddAnd)&-10/v3>6/v3<144:P;
+*!VRz1&-10:+z135012;
+*!IF&-10:M1/z135160;
+*!HEy52&-10:B0/?z1;          (Get Hero name)
 
-!?FU(WOG43_GetCountStacks);                    (check number of creatures stacks)
-!!HEv1:C0/x16/d0/?y1;
-!!VRv2&y1>0:+1;              (add 1 if stack is occupied)
+*!VRv2&-10:S0;
+*!DO(WOG43_GetCountSkills)/0/27/1&-10:P;       (Count number of Sec Skills)
+*!IF&-10/v2=0:M1/z135161;
+*!FU(WOG43_CheckSkills)&-10/v2>0:P;         (Display skills)
+*!VRv2&-10:S0;
 
-!?FU(WOG43_DisplayCreatures);                    (Check creature slots)
-!!VRz5:Sz135170;                 (initialize empty variable)
-!!DO(WOG43_CheckWhithCreatures)/0/6/1:P;
-!!IF:M1/z135171;
-!!IF:V10/0;
+*!DO(WOG43_GetCountArts)/0/18/1&-10:P;       (Count number of Artifacts equipped)
+*!IF&-10/v2=0:M1/z135162;
+*!FU(WOG43_DisplayArts)&-10/v2>0:P;         (Display Artifacts)
+*!VRv2&-10:S0;
 
-!?FU(WOG43_CheckWhithCreatures);                    (Check which creatures)
-!!HEv1&-10:C0/x16/?y1/?y10;  (check slot x16 for creatures)
-!!UN&-10/y10>1:N3/z3/y1/1;   (If more than one creature, get name in plural)
-!!UN&-10/y10=1:N3/z3/y1/0;   (if one creature, get name in singular)
-!!VRz5&-10/y10<>0:+^
+*!DO(WOG43_GetCountSpells)/0/69/1&-10:P;       (Count number of Spells)
+*!IF&-10/v2=0:M1/z135163;
+*!FU(WOG43_DisplaySpells)&-10/v2>0:P;         (Display spells)
+*!VRv2&-10:S0;
+
+*!DO(WOG43_GetCountStacks)/0/6/1&-10:P;        (count number of creatures slots occupied)
+*!IF&-10/v2=0:M1/z135164;
+*!FU(WOG43_DisplayCreatures)&-10/v2>0:P;         (Display Creatures)
+
+*?FU(WOG43_CheckSkills);                    (check skills)
+*!VRz5&-10:S^ ^;             (Initialise empty variable)
+*!DO(WOG43_ThroughSkills)/0/27/1:P;           (Cycle through skills)
+*!IF:M1/z135165;
+*!IF:V10/0;
+
+*?FU(WOG43_GetCountSkills);                    (count number of skills)
+*!HEv1:Sx16/?y1;
+*!VRv2&y1<>0:+1;
+
+*?FU(WOG43_ThroughSkills);                    (cycle through skills)
+*!HEv1:Sx16/?v3;
+*!UN&v3<>0:N4/z3/x16;
+*!VRz5&v3=3:+z135166+^ %Z3^;
+*!VRz5&v3=2:+z135167+^ %Z3^;
+*!VRz5&v3=1:+z135168+^ %Z3^;   (add skillname and level)
+*!FU(WOG43_TextAddAnd)&-10/v3<>0:P;
+
+*?FU(WOG43_GetCountArts);                    (count number of artifacts equipped)
+*!VRx16&x16=13:S18;          (Don't count spell books and War Machine slots)
+*!HEv1:A1/?y1/x16;
+*!VRv2&y1>6/y1<144:+1;
+
+*?FU(WOG43_DisplayArts);                    (Display Artifacts)
+*!VRz5&-10:S^ ^;             (Initialise empty variable)
+*!DO(WOG43_CheckHeroSlots)/0/18/1&-10:P;
+*!IF:M1/z135169;
+*!IF:V10/0;
+
+*?FU(WOG43_CheckHeroSlots);                     (Function for checking slots)
+*!VRv3:S-1;                   (reinitisalize variable)
+*!VRx16&x16=13/-10:S18;       (No spell book or War Machine)
+*!HEv1&-10:A1/?v3/x16;        (check slot x16)
+*!UN&v3>6/v3<144/-10:N0/z3/v3;  (get artifact name)
+*!VRz5&-10/v3>6/v3<144:+^ %Z3^; (add Artifact name)
+*!FU(WOG43_TextAddAnd)&-10/v3>6/v3<144:P;
+
+*?FU(WOG43_GetCountStacks);                    (check number of creatures stacks)
+*!HEv1:C0/x16/d0/?y1;
+*!VRv2&y1>0:+1;              (add 1 if stack is occupied)
+
+*?FU(WOG43_DisplayCreatures);                    (Check creature slots)
+*!VRz5:Sz135170;                 (initialize empty variable)
+*!DO(WOG43_CheckWhithCreatures)/0/6/1:P;
+*!IF:M1/z135171;
+*!IF:V10/0;
+
+*?FU(WOG43_CheckWhithCreatures);                    (Check which creatures)
+*!HEv1&-10:C0/x16/?y1/?y10;  (check slot x16 for creatures)
+*!UN&-10/y10>1:N3/z3/y1/1;   (If more than one creature, get name in plural)
+*!UN&-10/y10=1:N3/z3/y1/0;   (if one creature, get name in singular)
+*!VRz5&-10/y10<>0:+^
  %Y10 %Z3^;                  (add number and name to dialogue)
-!!VRv3&-10:S0;
-!!VRv3&-10/y10<>0:S1;
-!!FU(WOG43_TextAddAnd)&-10/v3<>0/y1<>-1:P; (add "," or "and", depending on number of stacks left)
+*!VRv3&-10:S0;
+*!VRv3&-10/y10<>0:S1;
+*!FU(WOG43_TextAddAnd)&-10/v3<>0/y1<>-1:P; (add "," or "and", depending on number of stacks left)
 
-!?FU(WOG43_GetCountSpells);                    (count number of spells)
-!!HEv1:Mx16/?y1;
-!!VRv2&y1=1:+1;              (If spell is present, add 1 to total number)
+*?FU(WOG43_GetCountSpells);                    (count number of spells)
+*!HEv1:Mx16/?y1;
+*!VRv2&y1=1:+1;              (If spell is present, add 1 to total number)
 
-!?FU(WOG43_DisplaySpells);                    (Display spells)
-!!VRz5:S^ ^;                 (Initialise empty variable)
-!!DO(WOG43_ThroughSpells)/0/69/1:P;
-!!IF:M1/z135172;
-!!IF:V10/0;
+*?FU(WOG43_DisplaySpells);                    (Display spells)
+*!VRz5:S^ ^;                 (Initialise empty variable)
+*!DO(WOG43_ThroughSpells)/0/69/1:P;
+*!IF:M1/z135172;
+*!IF:V10/0;
 
-!?FU(WOG43_ThroughSpells);                    (Cycle through spells)
-!!HEv1:Mx16/?v3;
-!!UN&v3=1:N1/z3/x16;         (Get spell Name)
-!!VRz5&v3=1:+^ %Z3^;         (add spell name)
-!!FU(WOG43_TextAddAnd)&-10/v3=1:P;
+*?FU(WOG43_ThroughSpells);                    (Cycle through spells)
+*!HEv1:Mx16/?v3;
+*!UN&v3=1:N1/z3/x16;         (Get spell Name)
+*!VRz5&v3=1:+^ %Z3^;         (add spell name)
+*!FU(WOG43_TextAddAnd)&-10/v3=1:P;
 
-!?FU(WOG43_TextAddAnd);                    (adds a comma, an "and" or a period depending on how many of that kind is left)
-!!VRv2&v3>0:-1;
-!!VRz5&v2>1:+^,^;
-!!VRz5&v2=1:+z135173;
-!!VRz5&v2=0:+^.^;
-!!IF&v2=0:V10/1;             (abort other checks if everything is accounted for)
+*?FU(WOG43_TextAddAnd);                    (adds a comma, an "and" or a period depending on how many of that kind is left)
+*!VRv2&v3>0:-1;
+*!VRz5&v2>1:+^,^;
+*!VRz5&v2=1:+z135173;
+*!VRz5&v2=0:+^.^;
+*!IF&v2=0:V10/1;             (abort other checks if everything is accounted for)

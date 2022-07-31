@@ -211,16 +211,16 @@ ZVSE2
 
 
 ** Timer routine
-!?FU(OnEveryDay)&i^timerDay^>=8/i^wog_71_enabled^; [Continue trigger if script is enabled, starting from the second week]
-
-!!OW:C?y-1;                              [get current player]
+!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerDay^>1/i^wog_71_enabled^; [Continue trigger if script is enabled, starting from the second week]
 
 ** check hero for creature artifacts
 
-!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!HEi:O?y30;
+!!OW:Hi^timerOwner^/2;
+!!if&v2;
+  !!re j/1/v2;
+    !!VRy1:Sj +2;
+    !!VRi:Svy1;
 
-  !!if&y30=y-1;
     !!HEi:A2/56/?y10/?y1;                   [check for Dead Man's Boots]
     !!HEi:A2/55/?y10/?y2;                   [check for Vampire's Cowl]
     !!HEi:A2/54/?y10/?y3;                   [check for Amulet of the Undertaker]
@@ -243,20 +243,38 @@ ZVSE2
     !!FU7032&y8>0:Pi/19/24;                       [handle Helm of the Alabaster Unicorn if found]
 
     !!if&y5>0/y6>0/y7>0/y8>0;
-      !!if&1000;
-        !!IF:M1/z171020;
+      !!if&999;
+        !!FU(NewIntArray):P?(pics:y);
+        !!FU(Array_Push):P(pics)/(PIC_TYPE_MONSTER)/(MON_WAR_UNICORN)/(PIC_TYPE_MONSTER)/(MON_DENDROID_SOLDIER)/(PIC_TYPE_MONSTER)/(MON_BATTLE_DWARF)/(PIC_TYPE_MONSTER)/(MON_CENTAUR_CAPTAIN);
+        !#VA(names[8]:z);
+        !!VR(bit:y):S1;
+        !!re k/1/7/2;
+          !!SN:M(pics)/k/?(monType:y) H^monname^/(monType)/1/?(names[k]) H^monname^/(monType)/1/^%(bit)^;
+          !!VR(bit):Sd<<1;
+        !!en;
+
+        !!FU(WOG_SetupMultiPicDlg):P(pics);
+        !!IF:N1/z171020;
+
+        !!re k/1/7/2;
+          !!SN:M(pics)/k/?(monType) H^monname^/(monType)/1/(names[k]);
+        !!en;
+
         !!HEi:C25/1/23/2/17/4/15/8/-1/0/-1/0/-1/0; [give 1 war unicorn, 2 dendroid soldiers, 4 battle dwarves, 8 centaur captains]
-      !!el;
+      !!el&i^timerIsAi^;
         !!HEi:C2/25/1/0; [offer AI war unicorn]
         !!HEi:C2/23/2/0; [offer AI dendroid soldiers]
         !!HEi:C2/17/4/0; [offer AI battle dwarves]
         !!HEi:C2/15/8/0; [offer AI centaur captains]
       !!en;
     !!en;
+
   !!en;
+
+  !!SN&1000:D;                            [redraw screen to show upgraded creatures]
 !!en;
 
-!!SN&1000:D;                            [redraw screen to show upgraded creatures]
+
 
 ** end of function
 
@@ -265,20 +283,20 @@ ZVSE2
 !#VA(hero:x) (artifact:x) (monster:x);
 
 !!VRv7058:S0 -1;                             [reset v7058]
-!!DO7033/0/6/1:Px2;                          [check for slot with same creature type]
+!!DO7033/0/6/1:P(hero)/(monster);                          [check for slot with same creature type]
 
 !!if&1000;
   !!HE(hero)&v7058>-1:B0/?z1;              [get hero name]
   !!HE(hero)&v7058>-1:R2/?y1;              [get hero sex]
   !!VRz2&y1=0/v7058>-1:Sz171021;
   !!VRz2&y1=1/v7058>-1:Sz171022;
-  !!UN&v7058>-1:N0/3/x1;                  [get artifact name]
-  !!UN&v7058>-1:N3/4/x2/1;                [get creature name - plural]
-  !!IF&v7058>-1:Q1/8/x1/1/z171023;
+  !!UN&v7058>-1:N0/3/(artifact);                  [get artifact name]
+  !!UN&v7058>-1:N3/4/(monster)/1;                [get creature name - plural]
+  !!IF&v7058>-1:Q1/8/(artifact)/1/z171023;
 !!en;
 
-!!VRy2&v7058>-1:Sx2 +1;                      [set for upgrade]
-!!HE(hero)&v7058>-1:C1/x2/y2/d/0/3;           [upgrade creatures without changing stack exp.]
+!!VRy2&v7058>-1:S(monster) +1;                      [set for upgrade]
+!!HE(hero)&v7058>-1:C1/(monster)/y2/d/0/3;           [upgrade creatures without changing stack exp.]
 ** end of function
 
 ** function to check a slot for a creature type
@@ -286,7 +304,7 @@ ZVSE2
 !#VA(hero:x) (monster:x);
 
 !!HE(hero):C0/x16/?y1/?y2;                     [get creature type in slot]
-!!VRv7058&v7058=-1/y1=x1:Sx16;                [it's our type]
+!!VRv7058&v7058=-1/y1=(monster):Sx16;                [it's our type]
 
 ** end of function
 
@@ -506,6 +524,20 @@ ZVSE2
 !!HE-1&y3<3/y3>0:Sy2/d-1;                            [reset skill]
 ** end of function
 
+
+*?FU(WOG_CreateERMHook);
+*!SN:Ex1/1/4289036/(WOG_OnMonClick_GetLoyaly);
+*!SN:Ex1/1/4879483/(WOG_OnMonAttack_GetAggresion);
+
+*?FU(WOG_OnMonAttack_GetAggresion);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(loyaly:y) C(loyaly)/12/4/?(loyal:e) ;
+*!IF:L^%(loyal)^;
+
+*?FU(WOG_OnMonClick_GetLoyaly);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(loyaly:e);
+*!IF:L^%(loyaly)^;
+
+!?FU(OnAdventureMapRightMouseClick);
 
 ** start of object trigger - monsters
 
