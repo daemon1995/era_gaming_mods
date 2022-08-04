@@ -82,6 +82,15 @@ ZVSE2
       !!SN:A(amethyst)/^check_harpy^/?i^gem_amethyst_isHarpyFunc^;
     !!en;
 
+    !!re i/0/1;
+      *!VRi^gem_BattleBtn_NpcId_%i_CanShoot^:Si^battle_hero_%i^;
+      !!if&i^battle_hero_%i^<>(NO_HERO);
+        !!COi^battle_hero_%i^:B0/?i^gem_BattleBtn_NpcId_%i_CanShoot^;
+        !!VRi^gem_BattleBtn_NpcId_%i_CanShoot^:&16; F0/1;
+        *!IF:L^%(npcSS)^;
+      !!en;
+    !!en;
+
     !!FU(gem_DlgItemPosition):P2/194/d-1/d/(dlg);                           [set input chat position and size]
     !!FU(gem_DlgItemSize):P2/391/d/d/(dlg);
 
@@ -94,7 +103,7 @@ ZVSE2
 
   !!en;
   !!VRv1:S(savedV1);
-!?FU(OnKeyPressed_Battle)&x1=(KEY_ALT)/i^gem_IsHdModLoaded^=(FALSE)/i^key_down^=1;
+!?FU(OnKeyPressed_Battle)&x1=(KEY_ALT)/i^gem_IsHdModLoaded^=(FALSE)/i^key_down^=1/i^gem_battle_dlg^;
 !!BG:Q?(actSide:y);
 !!FU(gem_BattleBtn_Proc):Pi^battle_current_stack^/(actSide)/(FALSE);
 
@@ -175,7 +184,7 @@ ZVSE2
   !!en;
 *?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
 *!IF:L^%i(mouse_item)^;
-!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_item^=i^gem_battle_altbttn_id^;
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_item^=i^gem_battle_altbttn_id^/i^gem_battle_dlg^;
   !!CM:R(FALSE);
   !!FU(gem_CheckGameLang):P;
   !!SN:T^%s(gem_b).altBttn.%i(gem_BattleBtn_NextAbility)^/?(text:z);
@@ -239,18 +248,21 @@ ZVSE2
     !!VR(side:y):S(stackId) :(BATTLE_STACKS_PER_SIDE);
     !!VR(npcId:y):Si^battle_hero_%(side)^;
     !!if&(npcId)>=0;
-      !!CO(npcId):B1/4/?(shooting:y);
 
-      !!if&(shooting)/(ability)<>(GEM_MON_ATTACK_SHOOT);
+      !!if&i^gem_BattleBtn_NpcId_%(side)_CanShoot^/(ability)<>(GEM_MON_ATTACK_SHOOT);
         !!BM(stackId):Fd|(MON_FLAG_SHOOTER) Fd-(MON_FLAG_SHOOTER);
         !!VRi^gem_need_to_restore_shooting_flag^:S1;
       !!el&(ability)=(GEM_MON_ATTACK_SHOOT);
         !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
         !!VRi^gem_need_to_restore_shooting_flag^:S0;
       !!en;
+
+      !!CO(npcId):B0/d|i^gem_BattleBtn_NpcId_%(side)_CanShoot^;
+
       !!VRi^gem_commanderAction_%(npcId)^:Si^gem_BattleBtn_StackChoice_%(stackId)^;
     !!en;
   !!en;
+  
 !?FU(gem_CheckBits);
 !#VA(value:x) (bit:x) (result:x);
 !!VRi:S1 Sd<<(bit);
@@ -291,7 +303,7 @@ ZVSE2
 // 32 attack and back 5
 // 64 attack and stay 6
 
-!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_item^=2010;
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_item^=2010/i^gem_battle_dlg^;
   !!CM:R(FALSE); [disable defend bttn stnadard reaction]
   !!FU(gem_GetTxtTableString):P6976896/387/1/?(text:z);
   !!IF:M0/4^%(text)^;
@@ -426,7 +438,7 @@ ZVSE2
     !!en;
   !!en;
 
-!?FU(OnBattleStackObtainsTurn);&i^battle_isVisible^/i^battle_isQuick^=(FALSE);
+!?FU(OnBattleStackObtainsTurn)&i^gem_battle_dlg^;&i^battle_isVisible^/i^battle_isQuick^=(FALSE);
   !!FU(gem_BattleBtn_CollectStackFlags):Pi^battle_current_stack^;
   !!FU(gem_BattleBtn_Proc):Pi^battle_current_stack^/x1/(TRUE);
 
@@ -491,7 +503,8 @@ ZVSE2
 
   !!VRi^gem_opt%(WOG_OPT_STACK_EXPERIENCE)^:S0;
   !!VRi^gem_amethyst_isHarpyFunc^:S0;
-
+  !!VRi^gem_BattleBtn_NpcId_0_CanShoot^:S0;
+  !!VRi^gem_BattleBtn_NpcId_1_CanShoot^:S0;
 
   !!re i/0/(BATTLE_STACK_LAST);
     !!VRi^gem_BattleBtn_StackChoice_%i^:S(NULL);
