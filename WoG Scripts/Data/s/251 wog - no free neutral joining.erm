@@ -2,20 +2,35 @@ ZVSE2
 ; Author:   igrik
 ; Engine:   ERM 2.0+
 ; Requires: ERA 3.3+
-
+; rewriten to adapt with left creatures
 ; Disable neutrals joining for free. Wheneever a neutral stack is "with a desire for greater glory", they only offer to join with a fee.
 
+!?FU(WOG_CreateERMHook);
+!!SN:Ex1/1/7696437/(WOG_OnMonsterPlaceAtMap);
+
+!?FU(WOG_OnMonsterPlaceAtMap);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!#VA(tile[3]:y);
+  !!UN:C(ebp)/12/4/?(tile[0]) C(ebp)/16/4/?(tile[1]) C(ebp)/20/4/?(tile[2]);
+  !!VRi^WOG_251_at_%(tile[0])_%(tile[1])_%(tile[2])^:Si^timerOwner^ +1;
+  !!UN:R1;
 
 !?FU(OnGameEnter);
-!!UN:P251/?(isEnabled:y);
+  !!UN:P251/?(isEnabled:y);
+  !!if&(isEnabled);
+    !!VRi^WOG_251_enabled^:S(TRUE);
+    !!UN:C4289079/4/3 C4879709/1/235;
+  !!en;
 
-!!if&(isEnabled);
-  !!UN:C4289079/4/3 C4879709/1/235;
-!!en;
-
-!?FU(OnGameLeave);
-!!UN:P251/?(isEnabled:y);
-
-!!if&(isEnabled);
+!?FU(OnGameLeave)&i^WOG_251_enabled^;
   !!UN:C4289079/4/2 C4879709/1/127;
-!!en;
+
+!?OB(OBJ_MONSTER)&i^WOG_251_enabled^/i^WOG_251_at_%v998_%v999_%v1000^;
+  !!VR(owner:y):Si^WOG_251_at_%v998_%v999_%v1000^ -1;
+  !!if&(owner)=i^timerOwner^;
+    !!UN:C4289079/4/2 C4879709/1/127;
+  !!en;
+
+!$OB(OBJ_MONSTER)&i^WOG_251_enabled^/i^WOG_251_at_%v998_%v999_%v1000^;
+  !!UN:C4289079/4/3 C4879709/1/235;
+  !!SN:Wi^WOG_251_at_%v998_%v999_%v1000^;

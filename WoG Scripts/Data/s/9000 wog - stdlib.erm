@@ -118,6 +118,14 @@ ZVSE2
 !!SN:E5039840/2/(gm);
 !!VR(playerID):Sv1;
 
+!?FU(WOG_GameMgr_GetPlayer_Name);
+; x1 - player id
+; x2 - return player name
+!#VA(playerID:x) (name:x);
+!!UN:C(WOG_MNG_GAME)/(UNC_UINT32)/?(gm:y); 
+!!SN:E5040160/(CALLCONV_THISCALL)/(gm)/(playerID);
+!!SN:Bv1/d/?z-1;
+!!VR(name):Zz-1;
 ; get text by ptr string
 !?FU(WOG_GetTextByPtr);
 ; x1 - ptr string
@@ -184,7 +192,15 @@ ZVSE2
 ; in the delete objects function
 !!UN:C4893167/2/(patch); 
 
-
+!?FU(WOG_AdvMgr_HideHero);
+!#VA(hero[3]:x);
+!!FU:A?(numArgs:y);
+!!if&(numArgs)>1;
+  !!HE(hero[0])/(hero[1])/(hero[2]):Z?(badHero:y);
+!!el;
+  !!HE(hero[0]):Z?(badHero:y);
+!!en;
+!!SN:E5077328/(CALLCONV_THISCALL)/(badHero);         [hide hero if it is there]
 
 !?FU(WOG_AdvMgr_HeroEnterObject);
 ; x1, x2, x3 - coords (x/y/z)
@@ -754,7 +770,7 @@ The game may fall at any time.^;
 *?FU(OnHeroScreenMouseClick)&i^WOG_35_DisableHeroClick^;
 !?FU(OnHeroScreenMouseClick)&i^WOG_35_DisableHeroClick^;
   !!if&i^mouse_action^>=(MOUSE_LMB_PRESSED)/i^mouse_action^<=(MOUSE_LMB_RELEASED);
-    !!if&i^mouse_item^>=0/i^mouse_item^<=138/i^mouse_item^<>19/i^mouse_item^<>107;
+    !!if&i^mouse_item^>=0/i^mouse_item^<=138/i^mouse_item^<>77/i^mouse_item^<>78/i^mouse_item^<>19/i^mouse_item^<>107;
       !!CM:R0;
     !!en;
   !!en;
@@ -966,6 +982,92 @@ The game may fall at any time.^;
 !!VR(string):Z(text);
 
 ; **************************************************************************************************
+!?FU(WOG_SetupMultiResDlg);
+!#VA(text:x) (playerId:x) (chosenPicture:x) (chosenRes:x);
+; инициализируем главные переменные
+
+  !!FU(NewIntArray):P16/(NO_PIC_TYPE)/?(resurces:y);; инициализируем массивы дефолнтными значениями    ; заносим в массив тип картинки
+  !!VRf:S0;
+  !!re i/(RES_FIRST)/(RES_LAST_WOG);
+    ; проверяем жив или мертв игрок
+    !!OW:R(playerId)/i/?(value:y); 
+
+    ; если игрок жив, и это не Я 
+    !!if&(value);
+      !!SN:M(resurces)/f/i;
+      !!VRf:+1;
+      !!SN:M(resurces)/f/(value);
+      !!VRf:+1;
+    !!en;
+  !!en;
+  ; конфигурируем сообщение 
+  !!SN:M(resurces)/f;
+  !!FU(WOG_SetupMultiPicDlg):P(resurces);
+  ; показать сообщение 
+  !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z(text)/?(chosenPicture);
+  !!if&(chosenPicture)=-1;; выходим, если нажата ОТМЕНА
+    !!VR(chosenRes):S(NO_RES); 
+  !!el;
+    !!VRf:S(chosenPicture)*2;
+    !!SN:M(resurces)/f/?(chosenRes);
+  !!en;
+
+
+!?FU(WOG_SetupMultiPlayerDlg);
+!#VA(text:x) (neutral:x) (chosenPicture:x) (chosenPlayer:x);
+; инициализируем главные переменные
+
+!!FU(NewIntArray):P16/(NO_PIC_TYPE)/?(flags:y);; инициализируем массивы дефолнтными значениями    ; заносим в массив тип картинки
+
+!!FU(WOG_GameMgr_GetPlayer_Me):P?(mePlayerId:y);
+
+!!VRf:S0;
+!!if&(neutral);
+  !!SN:M(flags)/0/(PIC_TYPE_FLAG);
+  !!SN:M(flags)/1/8;
+  !!VRf:S2;
+!!en;
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  ; проверяем жив или мертв игрок
+  !!OW:Ii/?(isAI:y)/?(isDie:y); 
+
+  ; если игрок жив, и это не Я 
+  !!if&(isDie)<>(TRUE)/i<>(mePlayerId);
+
+    !!SN:M(flags)/f/(PIC_TYPE_FLAG);
+    !!VRf:+1;
+    !!SN:M(flags)/f/i;
+    !!VRf:+1;
+  !!en;
+!!en;
+
+; получаем название нейтрального игрока
+!!SN:T^wog.192.neutralName^/?z1;
+!!VR(ptrErmZ1Var:y):S9597928;
+!!VR(ptrNeutralPlayerNamePtr:y):S6979200;
+
+; патч памяти (подменяем название нейтрального игрока)
+!!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/?(saveMemory:y);
+!!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/(ptrErmZ1Var);
+
+; конфигурируем сообщение 
+!!SN:M(flags)/f;
+!!FU(WOG_SetupMultiPicDlg):P(flags);
+; показать сообщение 
+!!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z(text)/?(chosenPicture);
+!!if&(chosenPicture)=-1;; выходим, если нажата ОТМЕНА
+  !!VR(chosenPlayer):S(mePlayerId);
+!!el;
+  !!VRf:S(chosenPicture)*2 +1;
+  !!SN:M(flags)/f/?(chosenPlayer);
+  !!if&(chosenPlayer)=8;
+    !!VR(chosenPlayer):S(NO_PLAYER);
+  !!en;
+!!en;
+; патч памяти (возвращаем оригинальное название)
+!!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/(saveMemory:y);
+
 ; Set up IF:N dialogue with array
 !?FU(WOG_SetupMultiPicDlg);              [by Berserker]
 !#VA(argsArr:x); SN:M array ID with picture type and subtype pairs.

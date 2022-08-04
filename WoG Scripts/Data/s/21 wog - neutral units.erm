@@ -232,7 +232,8 @@ Recommendations for Neutral Units Bonuses:
 
  [Battlefield Setup Trigger]
 !?BF&v100>=1;
-
+!!FU(WOG_231_SetBonuses):P;
+!?FU(WOG_231_SetBonuses);
 !!BA:O?y2/?y3;
 !!FU&y3>-1:E;        Exit if Enemy Hero at Neutrals and its not from Random Hero
 
@@ -243,11 +244,14 @@ Recommendations for Neutral Units Bonuses:
 
 !!VRv100:S0; [Reset v100 to 0]
 
-!!UN:P57/?v2; [Check if Neutral Units script is enabled in WoGify Options: v2]
-!!DO1000/21/41/1&v2=1/1000:P; [Add Att, Def, HP, Bless, and Precision to stacks]
-!!DO1001/21/41/1&v2=1/1000:P; [Give Magic Mirror and Air Shield to some neutral creatures]
-!!DO1002/21/41/1&v2=1/1000:P; [Give Immunity to Mind Spells to some neutral units]
-!!DO1003/21/41/1&v2=1/1000:P; [Give Immunity to Fire Spells to some neutral units]
+!!UN:P57/?v2; [Check if Neutral Units script is enabled in WoGify Options: v2]v
+!!if&v2/1000;
+  !!DO1000/21/41/1:P; [Add Att, Def, HP, Bless, and Precision to stacks]
+  !!DO1001/21/41/1:P; [Give Magic Mirror and Air Shield to some neutral creatures]
+  !!DO1002/21/41/1:P; [Give Immunity to Mind Spells to some neutral units]
+  !!DO1003/21/41/1:P; [Give Immunity to Fire Spells to some neutral units]
+!!en;
+
 
 
 !?FU(OnBattleReplay);
@@ -608,6 +612,38 @@ Recommendations for Neutral Units Bonuses:
 !!VRv1:S-1; [Initialize v1 to -1 to work with new faster UN:U syntax]
 !!DO5412/1/y-10/1&y-8>0/$weekday$=$monday$:P6/-1; [Loop through all pandora's boxes]
 
+!!FU(WOG_231_RefillDeathChamber):P;
+
+!?FU(WOG_OnIterateAllMapObjects)&x4=63/x5=15/x6;
+!#VA(x:x) (y:x) (z:x);
+!#VA(objType:x);
+!#VA(objSubtype:x);
+!#VA(isYellowSquare:x); boolean.
+!#VA(isPassable:x);     boolean.
+!!UN:P235/?y-12; [Check if script is enabled: y-12]
+!!UN:P70/?(dc:y); ** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled
+!!if&y-12/(dc);
+  !!PO(x)/(y)/(z):N0 S100;
+!!en;
+*!en;
+
+!?FU(WOG_231_RefillDeathChamber);
+!#VA(x:y) (y:y) (z:y);
+!!VR(x):S-1; 
+!!re i;                                 [endless loop]
+  !!UN:U63/15/-1/(x)/(y)/(z); [find next (x) = -1 on failure]
+  !!br&(x)<0;                          [exit loop if nothing found]
+  !!PO(x)/(y)/(z):N?(visited:y) S?(counter:y);
+
+  !!if&(visited);
+    !!PO(x)/(y)/(z):Sd-1;
+    !!if&(counter)=1;
+      !!PO(x)/(y)/(z):N0 S100;
+    !!en;
+  !!el&i^timerWeekDay^=1;/(counter)>=100;
+    !!PO(x)/(y)/(z):Sd1;(coef);
+  !!en;
+!!en;
 
  [Loop through all towns]
 !?FU5403;
