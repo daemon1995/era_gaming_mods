@@ -5,6 +5,8 @@ ZVSE2
 
 ** Option 024 by Timothy Pulver
 ** Rewritten by igrik (16.10.2020)
+** updated by daemon_n (04.08.2022)
+
 ** Special thanks to Berserker!
 
 ** This script enhances the information you see when you right-click on a
@@ -64,17 +66,28 @@ ZVSE2
 !#VA(msgType[4]:y) (msgMonType[4]:y);
 !!VR(msgType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
 !!VR(msgMonType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
-
+!!FU(NewIntArray):P8/(NO_PIC_TYPE)/?(monsters:y);
+!!VRf:S0;
+!!VRj:S-1;
 !!re i/0/3/1;
   !!DW(x)/(y)/(z):Mi/?(monType:y)/?(monCount:y);
 
-  !!if&(monType)<>(NO_MON);  
-    !!VR(msgType[i]):S(PIC_TYPE_MONSTER) |(PIC_TYPE_FLAG_DISPLAY_ZEROS);
-    !!VR(msgMonType[i]):S(monCount) Sd<<16 |(monType);
+  !!if&(monType)<>(NO_MON);
+    !!if&f=0;
+      !!VR(singleMonType:y):S(monType);
+      !!VR(singleMonCount:y):S(monCount);
+    !!en;
+    !!SN:M(monsters)/f/(PIC_TYPE_MONSTER);
+    !!VRf:+1;
+    !!VR(monCount):Sd<<16 |(monType);
+    !!SN:M(monsters)/f/(monCount);
+    !!VRf:+1;
   !!en;
 !!en;
 
-!!IF:N(msgType[0])/(msgMonType[0])/(msgType[1])/(msgMonType[1])/(msgType[2])/(msgMonType[2])/(msgType[3])/(msgMonType[3]);
-!!IF:N(MSG_TYPE_POPUP)/^{%(dwellingName)}
-
-%(ownerText)^;
+!!if&f=2;
+  !!SN:E5577600/(CALLCONV_FASTCALL)/(singleMonType)/?(singleMonCount);
+!!el;
+  !!FU(WOG_SetupMultiPicDlg):P(monsters);
+  !!IF:N(MSG_TYPE_POPUP)/^{%(dwellingName)}%T(wog.endl)%T(wog.endl)%(ownerText)^;
+!!en;
