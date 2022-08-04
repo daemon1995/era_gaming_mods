@@ -7,15 +7,6 @@ ZVSE2
 
 
 
-!?FU(OnHeroesMeetScreenMouseClick)|i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_action^=(MOUSE_RMB_PRESSED);
-  !!FU(H3Dlg_GetCurrentDlg):P?(currentDlg:y);
-
-  !!UN:C(currentDlg)/(STRUCT_H3DLG_WIDTH)/(UNC_INT)/?(dlgWidth:y);
-  !!UN:C(currentDlg)/(STRUCT_H3DLG_HEIGHT)/(UNC_INT)/?(dlgHeight:y);
-
-  !!if|i^mouse_x^<0/i^mouse_y^<0/i^mouse_x^>(dlgWidth)/i^mouse_y^>(dlgHeight);
-    !!CM:R0;
-  !!en;
 
 
 **************************************************
@@ -112,16 +103,28 @@ ________________________________________________________________________________
 
 **  Disable autobattle vs human players (by daemon_n)
 ** Spell Points Delete in the autobattle, supports battle replay
+!?FU(OnBeforeBattleForThisPcDefender);
 
+  !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
 
-!?FU(OnBeforeBattle)&(ERM_FLAG_IS_HUMAN)/i^battle_humanOnly^=(FALSE);     [before Human battle]
+  !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
+    !!VRi^gem_replay_counter^:S1;
 
-  !!OW:C?(currPlayer:y) I(currPlayer)/?(isAi:y); [check current player color]
-  !!if&(isAi)=(TRUE):;                  [if ai attacks]
-    !!BA:Od/?(currPlayer);              [set choice of human from right side]
+    !!BA:Q0;
+    !!FU:E;                             [and exit func]
   !!en;
-
+!?FU(OnBeforeBattle)&i^battle_humanOnly^=(FALSE)/1000/i^battle_isNetwork^=(FALSE);     [before Human battle]
+  !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
+  *!if&(isAi)=(TRUE):;                  [if ai attacks]
+    *!BA:Od/?(currPlayer);              [set choice of human from right side]
+  *!en;
+  *!IF:M^1^;
+  !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
+    !!BA:Q0;
+    !!FU:E;                             [and exit func]
+  !!en;
   !!UN:C6916044/4/?(isAutoBattleState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
+
   !!if&(isAutoBattleState)=(FALSE)/i^Current_Battle_Type%(currPlayer)^>(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^<(GEM_BATTLE_TYPE_ASK_BEFORE_START):;
     !!VRi^Current_Battle_Type%(currPlayer)^:S(GEM_BATTLE_TYPE_NO_AUTO); [to know his choice]
     
@@ -169,9 +172,6 @@ ________________________________________________________________________________
 
 
 //remove extra replay bttns
-*?FU(Dlg_BattleResults_Proc);&i^gem_BeforeBattleResultClose^=(FALSE);
-  *!IF:M^%^;
-*!IF:L^%^;
 !?FU(Dlg_BattleResults_Proc)&i^gem_BeforeBattleResultClose^=(FALSE)/i^gem_OnlyOneBattleReplayIsAllowed^/i^gem_replay_counter^/i^battle_humanOnly^=(FALSE)/1000;
   !!VRi^gem_BeforeBattleResultClose^:S(TRUE);
   !!FU(gem_DlgShowItem):P0/0/0/0;/1;
