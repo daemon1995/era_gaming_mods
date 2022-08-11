@@ -1,6 +1,7 @@
 ZVSE2
 ** Author orig.  : Algor
 ** Rewritten by  : Archer30
+** Rewritten by  : daemon_n
 ** Name          : Self-education
 ** Name rus.     : Самообучение
 ** Options       : 747
@@ -18,99 +19,88 @@ ZVSE2
 
 ** Прим: самообучение отключается, если в игре всего один игрок
 
-
 // Initialization
 !?FU(OnAfterErmInstructions);
-!!UN:P747/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;
+  !!UN:P747/?(wogOption:y);
+  !!FU&(wogOption)<>(TRUE):E;
 
-; Initialise variable of the previous player
-!!VRi^es_747_prevPlayer^:S(NO_PLAYER);
-
-; Change the description of Learning
-!!re i/(SKILL_BASIC)/(SKILL_EXPERT);
-  !!SN:H^secskill^/(SKILL_LEARNING)/i/?(desc:z);
-  !!VR(percent:y):Si *10;
-  !!SN:T^es.747.desc^/?(newDesc:z)/^percent^/(percent);
-  !!SN:H^secskill^/(SKILL_LEARNING)/i/^%(desc)%(newDesc)^;
-!!en;
-
-// Calculate and give exp to heroes on every turn of every player
-!?FU(OnEveryDay);
-; Exit if the option self-learning is not enabled
-!!UN:P747/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;
-
-!!VR(player:y):Si^es_747_prevPlayer^;
-!!VRi^es_747_prevPlayer^:Si^timerOwner^;
-!!FU|(player)=i^timerOwner^/(player)=(NO_PLAYER):E;
-
-; Loop through all towns and calculate the bonuses from educational totalBuildEfficiencys
-!!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townNum:y);
-
-!!re (townId:y)/0/(townNum)/1/-1;
-  !!CA0/(townId):O?(townOwner:y) H0/?(hero:y) T?(townType:y);
-  !!co&(townOwner)<>(player);
-
-  !!if&(hero)<=(NO_HERO);
-    !!CA0/(townId):H1/?(hero);
-
-    !!co&(hero)<=(NO_HERO);
+  ; Change the description of Learning
+  !!re i/(SKILL_BASIC)/(SKILL_EXPERT);
+    !!SN:H^secskill^/(SKILL_LEARNING)/i/?(desc:z);
+    !!VR(percent:y):Si *10;
+    !!SN:T^es.747.desc^/?(newDesc:z)/^percent^/(percent);
+    !!SN:H^secskill^/(SKILL_LEARNING)/i/^%(desc)%(newDesc)^;
   !!en;
 
-  !!HE(hero):S(SKILL_LEARNING)/?(skill:y);
-  !!VR(buildEfficiency:y):S(skill) +5;  [5% to *%8 per building depending on learning level]
-  !!VR(totalBuildEffect:y):S0;
-  ; Check whether Mage Guild is built
-  !!CA0/(townId):B3/0;
+// Calculate and give exp to heroes on every turn of every player
+!?FU(ES_EndOfTurn);
+  ; Exit if the option self-learning is not enabled
+  !!UN:P747/?(wogOption:y);
+  !!FU&(wogOption)<>(TRUE):E;
 
-  !!if&1;
-    !!VR(totalBuildEffect):+(buildEfficiency);
-    !!CA0/(townId):B3/1;
+  !!VRf:S0;
+  !!re i/0/(PLAYER_LAST);
+    !!OW:Ii/d/?(isDead:y);
+    !!VRf&(isDead)=0:+1;
+  !!en;
 
-    !!if&1;
-      !!VR(totalBuildEffect):+(buildEfficiency);
-      !!CA0/(townId):B3/2;
+  !!if&f>1;
 
-      !!if&1;
-        !!VR(totalBuildEffect):+(buildEfficiency);
-        !!CA0/(townId):B3/3;
-        
-        !!if&1;
-          !!VR(totalBuildEffect):+(buildEfficiency);
-          !!CA0/(townId):B3/4;
-          !!VR(totalBuildEffect)&1:+(buildEfficiency);
+    !!OW:Wi^timerOwner^/?(townsNum:y);
+
+    !!if&(townsNum);
+
+      !!re i/0/(townsNum)/1/-1;
+        !!OW:Wi^timerOwner^/i/?(townId:y);
+        !!CA0/(townId):H0/?(hero:y) T?(townType:y);
+
+        !!if&(hero)<>(NO_HERO);
+          !!HE(hero):S(SKILL_LEARNING)/?(skill:y) W?(movement:y)/1;
+
+          !!if&(movement);
+            !!VR(buildEfficiency:y):S(skill) +5;  [5% to *%8 per building depending on learning level]
+            !!VR(totalBuildEffect:y):S0;
+
+            !!re j/0/4;
+              !!CA0/(townId):B3/j;
+              !!if&1;
+                !!VR(totalBuildEffect):+(buildEfficiency);
+              !!el;
+                !!br;
+              !!en;
+            !!en;
+            ; Check Library for Tower
+            !!if&(townType)=(TOWN_TOWER);
+              !!CA0/(townId):B3/22;
+              !!VR(totalBuildEffect)&1:+(buildEfficiency);
+            ; Check Battle Scholar Academy for Dungeon
+            !!el&(townType)=(TOWN_DUNGEON);
+              !!CA0/(townId):B3/23;
+              !!VR(totalBuildEffect)&1:+(buildEfficiency);
+            ; Check Magic University for Conflux
+            !!el&(townType)=(TOWN_CONFLUX);
+              !!CA0/(townId):B3/21;
+              !!VR(totalBuildEffect)&1:+(buildEfficiency);
+            !!en;
+
+            !!VR(skill):*10 +(buildEfficiency);
+            !!VR(bonusExp:y):S(movement) :100 *(skill);
+            !!HE(hero):Ed(bonusExp) W0/1;
+          !!en;
+        !!en;
+      !!en;
+    !!en;
+
+    !!OW:Hi^timerOwner^/1;
+    !!if&v1;
+      !!re i/2/v1/1/1;
+        !!VR(hero):Svi;
+        !!HE(hero):S(SKILL_LEARNING)/?(skill:y) W?(movement:y)/1;
+        !!if&(skill)/(movement);
+          !!VR(skill):*10;
+          !!VR(bonusExp:y):S(movement) :100 *(skill);
+          !!HE(hero):Ed(bonusExp) W0;
         !!en;
       !!en;
     !!en;
   !!en;
-
-  ; Check Library for Tower
-  !!if&(townType)=(TOWN_TOWER);
-    !!CA0/(townId):B3/22;
-    !!VR(totalBuildEffect)&1:+(buildEfficiency);
-  ; Check Battle Scholar Academy for Dungeon
-  !!el&(townType)=(TOWN_DUNGEON);
-    !!CA0/(townId):B3/23;
-    !!VR(totalBuildEffect)&1:+(buildEfficiency);
-  ; Check Magic University for Conflux
-  !!el&(townType)=(TOWN_CONFLUX);
-    !!CA0/(townId):B3/21;
-    !!VR(totalBuildEffect)&1:+(buildEfficiency);
-  !!en;
-
-  !!VRi^opt747.Hero%(hero)Exp^:S(totalBuildEffect);
-!!en;
-
-; Loop through all the heroes to calculate bonus from skill level and give exp
-!!re (hero)/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!HE(hero):O?(owner:y) S(SKILL_LEARNING)/?(skill) W?(movement:y)/1;
-
-  !!if&(owner)=(player);
-    !!VR(bonusExp:y):S(skill) *10 + i^opt747.Hero%(hero)Exp^ +100 *(movement) :100 -(movement);
-    !!HE(hero):Ed(bonusExp);
-    !!VRi^opt747.Hero%(hero)Exp^:S0;
-  !!en;
-!!en;
-
-**end
