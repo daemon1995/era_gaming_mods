@@ -28,7 +28,7 @@ ZVSE2
     !!FU&(heroCount)<2:E;       //Exit if player doesn't own at least 2 heroes.
     
     !!FU(huAI_CanPlayerSee):P(bestHero)/(secondBestHero)/?(bestVisible:y)/?(secondVisible:y);       //Get if any human player can see best/second-best heroes.
-    !!FU&(bestVisible)=1/(secondVisible)=1:E;       //Exit if both best/second-best hero are visible, since we have nothing to do.
+    !!FU&(bestVisible)=(TRUE)/(secondVisible)=(TRUE):E;       //Exit if both best/second-best hero are visible, since we have nothing to do.
     
     !!re i/1/(heroCount):;                  // 1=first hero index for HE:H
         !!OW:H(owner)/2/i;          //Get id of iterated hero in v2.
@@ -39,7 +39,7 @@ ZVSE2
             !!if&(loopHeroVisible)=(FALSE):;        //Only send troops if donor hero is not visible.
                 !!VR(donorHasArmy:y):S(FALSE);      //Default false, this may be set to true during huAI_SendTroops.
                 !!FU(huAI_SendTroops)&(bestVisible)=(FALSE):P(loopHero)/(bestHero)/?(donorHasArmy);
-                !!FU(huAI_SendTroops)&(secondVisible)=(FALSE)/(loopHero)<>(secondBestHero)/(donorHasArmy)=(TRUE):P(loopHero)/(secondBestHero)/?(donorHasArmy);    //If also not second best and still have an army, try sending troops there as well.
+                !!FU(huAI_SendTroops)&(secondBestHero)>(NO_HERO)/(secondVisible)=(FALSE)/(loopHero)<>(secondBestHero)/(donorHasArmy)=(TRUE):P(loopHero)/(secondBestHero)/?(donorHasArmy);    //If also not second best and still have an army, try sending troops there as well.
                 !!FU(huAI_PreventNoArmy)&(donorHasArmy)=(FALSE):P(loopHero);        //If hero has no army, provide them with 1 troop from their starting army.
             !!en:;
         !!en:;
@@ -136,15 +136,21 @@ ZVSE2
         !!en:;
         !!co&(monCount)<=0:;            //co if the new count is none.
         
+        //!re (receivingSlotTEST:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;     TEST
+            //!HE(receivingHero):C0/(receivingSlotTEST)/?(existingMonTEST:y)/?(existingMonCountTEST:y);        TEST
+            //!SN:W^huAI_Troops_HeroMon_TEST_%(receivingSlotTEST)^/?(existingMonTEST:y);          TEST
+        //!en:;                                                          TEST
+        
         !!FU(huAI_SendTroops_Internal):P(donorHero)/(receivingHero)/(monType)/(monCount)/(donorSlot)/?(donorSuccess:y);      //Send troops from donorHero's donorSlot to receivingHero.
         !!co&(donorSuccess)=1:;         //co if we successfully added this stack to an existing stack.
         
+        //If we did *not* send troops to a similar stack in receivingHero's army, try to offer the troops to the AI instead, using HE:C2:
+        
         //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
-        //!HE(receivingHero):B0/?(receivingHeroName:z);      TEST - Receiving hero name
+        //!HE(donorHero):O?(donorHeroOwner:y);               TEST
+        //!HE(receivingHero):O?(receivingHeroOwner:y);       TEST
         //!SN:H^monname^/(monType)/0/?(monTypeStr:z);        TEST - Name of troop to send.
         //!IF:L^%(donorHeroName) asking if %(receivingHeroName) wants (%(monCount)) %(monTypeStr)...^;      TEST
-        
-        //If we did *not* send troops to a similar stack in receivingHero's army, try to offer the troops to the AI instead, using HE:C2:
         
         !!HE(receivingHero):C2/(monType)/(monCount)/0;      //Offer AI the troop stack. (monType) of count (monCount).
         !!FU(huAI_HasTroop):P(receivingHero)/(monType)/?(hasTroop:y)/?(receivingSlot:y);        //(donorSuccess)=1 if hero accepted the troops. (receivingSlot)=slot the troop was placed in.
@@ -153,19 +159,24 @@ ZVSE2
             !!co:;                              //co if the troop was not found (not accepted)
         !!en:;
         
+        //!SN:W^huAI_Troops_HeroMon_TEST_%(receivingSlot)^/?(oldMonTEST:y);          TEST
         !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/?(oldMon:y);               //
         !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/?(oldMonCount:y);     //Get old mon type and count, so we can give it to donorHero to facilitate a "trade."
+        //!IF&(oldMonTEST)<>(oldMon):L^-------------oldMonTEST%(oldMonTEST) not equal oldMon%(oldMon)---------------^;      TEST
         !!VR(monCountNegation:y):S(monCount)*-1;                        //Negation of troop count, to remove army from donor.
-        !!if&(oldMon)>(NO_MON):;
+        !!if&(oldMon)>(NO_MON)/(oldMonCount)>0:;
             !!HE(donorHero):C0/(donorSlot)/(oldMon)/(oldMonCount);      //If receiving hero replaced an old troop to accept, set donor hero's sent troop slot to be the receiving hero's old troop.
             //!SN:H^monname^/(oldMon)/0/?(oldMonTypeStr:z);   TEST
-            //!IF:L^%(donorHeroName) TRADED: (%(monCount)) %(monTypeStr) for (%(oldMonCount)) %(oldMonTypeStr) to %(receivingHeroName).^;       TEST
+            //!IF:L^%(donorHeroName)[%(donorHeroOwner)] TRADED: (%(monCount)) %(monTypeStr) for (%(oldMonCount)) %(oldMonTypeStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;       TEST
         !!el:;
             !!HE(donorHero):C0/(donorSlot)/(monType)/d(monCountNegation);    //Else, just remove donor hero's sent troop count.
-            //!IF:L^%(donorHeroName) sent NEW stack (%(monCount)) %(monTypeStr) to %(receivingHeroName).^;    TEST
+            //!IF:L^%(donorHeroName)[%(donorHeroOwner)] sent NEW stack (%(monCount)) %(monTypeStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;    TEST
         !!en:;
-        !!VR(oldMon):S(monType);        //Update receiving hero's army vars to the new creature type/count.
-        !!VR(oldMonCount):S(monCount);
+        !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/(monType);     //Update receiving hero's army vars to the new creature type/count.
+        !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/(monCount);
+        //!VR(oldMon):S(monType);        //Update receiving hero's army vars to the new creature type/count.
+        //!VR(oldMonCount):S(monCount);
+        //!SN:W^huAI_Troops_HeroMon_TEST_%(receivingSlotTEST)^/(monType);          TEST
     !!en:;
     
     
@@ -184,6 +195,7 @@ ZVSE2
     !!re (receivingSlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
     
         !!HE(receivingHero):C0/(receivingSlot)/?(existingMon:y)/?(existingMonCount:y);        //Get Receving Hero's troop in this slot. (existingMon)=receiving hero's troop. (existingMonCount=receiving hero's troop's count.
+        //!SN:W^huAI_Troops_HeroMon_TEST_%(receivingSlot)^/(existingMon);          TEST
         !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/(existingMon);
         !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/(existingMonCount);
         
@@ -206,13 +218,15 @@ ZVSE2
             //!SN:H^monname^/(donorMonType)/0/?(donorMonTypeStr:z);      TEST - Name of troop to send.
             //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
             //!HE(receivingHero):B0/?(receivingHeroName:z);      TEST - Receiving hero name
+            //!HE(donorHero):O?(donorHeroOwner:y);               TEST
+            //!HE(receivingHero):O?(receivingHeroOwner:y);       TEST
             !!if&(existingMon)=(degradedMon):;
                 !!HE(receivingHero):C0/(receivingSlot)/(donorMonType)/d(donorMonCount);        //Donor has upgraded troops, and ours are degrade, so pass troops and upgrade the stack.
-                //!IF:L^%(donorHeroName) sent UPG (%(donorMonCount)) %(donorMonTypeStr) to %(receivingHeroName).^;      TEST
+                //!IF:L^%(donorHeroName)[%(donorHeroOwner)] sent UPG (%(donorMonCount)) %(donorMonTypeStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;      TEST
             !!el:;
                 !!HE(receivingHero):C0/(receivingSlot)/(existingMon)/d(donorMonCount);        //Grant receiving hero the troops.
                 //!SN:H^monname^/(existingMon)/0/?(existingMonStr:z);        TEST - Name of troop to send.
-                //!IF:L^%(donorHeroName) sent (%(donorMonCount)) %(existingMonStr) to %(receivingHeroName).^;      TEST
+                //!IF:L^%(donorHeroName)[%(donorHeroOwner)] sent (%(donorMonCount)) %(existingMonStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;      TEST
             !!en:;
             !!VR(donorMonCount):*-1;                    //Negation to remove from donor.
             !!HE(donorHero):C0/(donorMonArmySlot)/(donorMonType)/d(donorMonCount);        //Remove donor hero's troop.

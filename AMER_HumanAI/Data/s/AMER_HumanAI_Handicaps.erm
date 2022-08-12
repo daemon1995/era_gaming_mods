@@ -18,17 +18,18 @@ ZVSE2
     !!VR(weekDay:y):Si^timerWeekDay^;
     
     !!OW:C?(currentPlayer:y);            //Get current player.
+    !!FU(huAI_IsBlacklistedPlayer):P(currentPlayer)/?(isPlayerBlacklisted:y);       //Get if player is blacklisted from huAI.
     
-    !!FU(huAI_Gold)&i^huAI_handicap_goldPerTurn^>0:P(currentPlayer);
-    !!FU(huAI_Resources)&i^huAI_handicap_resources^>0:P(currentPlayer);
+    !!FU(huAI_Gold)&i^huAI_handicap_goldPerTurn^>0/(isPlayerBlacklisted)=(FALSE):P(currentPlayer);
+    !!FU(huAI_Resources)&i^huAI_handicap_resources^>0/(isPlayerBlacklisted)=(FALSE):P(currentPlayer);
     
-    !!FU(huAI_XP)&i^huAI_handicap_XP^>0:P(currentPlayer);
+    !!FU(huAI_XP)&i^huAI_handicap_XP^>0/(isPlayerBlacklisted)=(FALSE):P(currentPlayer);
     
     !!FU&(weekDay)<>1:E;            //Exit if not a new week- only weekly events below here.
 
     !!if&i^huAI_handicap_neutralGrowth^>0:;    //Only run if neutral growth setting is >0.
         !!VR(humanPlayer:y):S-1;
-        !!FU(AMER_GetFirstHumanIndex):P?(humanPlayer);
+        !!FU(huAI_GetFirstHumanIndex):P?(humanPlayer);
         !!FU(huAI_NeutralGrowth)&(currentPlayer)=(humanPlayer):P;       //Only run neutral growth once each week- on the turn of the first human player.
     !!en:;
 **  --------------------------
@@ -87,7 +88,7 @@ ZVSE2
 
 
 **  --------------------------
-**    Refill mana for AI heroes at end of  turn.
+**    Refill mana for AI heroes at end of turn.
 !?FU(huAI_OnEndOfTurn)&i^huAI_handicap_manaRefill^=(TRUE);
     
     !!OW:C?(player:y);                  //Get current player.
@@ -163,7 +164,11 @@ ZVSE2
 **  --------------------------
 **    Level up for AI, grant spells.
 !?HL-1&-1000;
-    !!HE-1:Ed/?(level:y);        //Get Level.
+    !!HE-1:O?(owner:y);          //get hero's owner
+    !!FU(huAI_IsBlacklistedPlayer):P(owner)/?(isPlayerBlacklisted:y);       //Get if player is blacklisted from huAI.
+    !!FU&(isPlayerBlacklisted)=(TRUE):E;                                    //Exit if so.
+    
+    !!HE-1:Ed/?(level:y);       //Get Level.
     !!HE-1&i^huAI_handicap_townPortal^>-1/(level)>=i^huAI_handicap_townPortal^:M(SPELL_TOWN_PORTAL)/1;        //Give Town Portal if at least the defined level.
     !!HE-1&i^huAI_handicap_fly^>-1/(level)>=i^huAI_handicap_fly^:M(SPELL_FLY)/1;        //Give Fly if at least the defined level.
 **  --------------------------

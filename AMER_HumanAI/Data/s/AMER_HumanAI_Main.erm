@@ -146,6 +146,9 @@ ZVSE2
     !!VRi^huAI_secondBestHero^:S(NO_HERO);      //Clear First/Second best hero vars so they can be used for the new player.
     
     !!OW:C?(currentPlayer:y);
+    !!FU(huAI_IsBlacklistedPlayer):P(currentPlayer)/?(isPlayerBlacklisted:y);       //Get if player is blacklisted from huAI.
+    !!FU&(isPlayerBlacklisted)=(TRUE):E;                                            //Exit if so.
+    
     !!OW:H(currentPlayer)/2/0;             //Get count of heroes owned by current player in v2.
     !!VR(heroCount:y):Sv2;
     
@@ -153,7 +156,7 @@ ZVSE2
     //!IF:L^heroCount: %(heroCountStr).^;        TEST
     
     !!FU(NewIntArray):P0/?(ownedTownTypes:y);
-    !!FU(huAI_GetOwnedTownTypes):P(currentPlayer)/?(ownedTownTypes);     //Get owned towwn types, this will be used to prevent choosing a "best hero" that has a creature spec we don't have a town for.
+    !!FU(huAI_GetOwnedTownTypes):P(currentPlayer)/?(ownedTownTypes);     //Get owned town types, this will be used to prevent choosing a "best hero" that has a creature spec we don't have a town for.
     
     //======
     //Determine AI player's best and second-best hero:
@@ -163,6 +166,7 @@ ZVSE2
     !!re i/1/(heroCount):;                  //iterate all heroes of current player. i=iterated hero. 1=first hero index for HE:H
         !!OW:H(currentPlayer)/2/i;          //Get id of iterated hero in v2.
         !!VR(loopHero:y):Sv2;
+        !!co&(loopHero)<=(NO_HERO):;        //co if loopHero is invalid, for some reason.
         //!HE(loopHero):B0/?(loopHeroName:z);                    TEST
         //!IF:L^loopHero for bestHero Test: %(loopHeroName).^;   TEST
         !!HE(loopHero):E?(loopHeroXP:y)/?(loopHeroLevel:y);     //Get loopHero XP.
@@ -206,10 +210,12 @@ ZVSE2
         !!en:;
     !!en:;
     
+    //!HE(bestHero):O?(bestOwner:y);                     TEST
+    //!HE(secondBestHero):O?(secondBestOwner:y);         TEST
     //!HE(bestHero):B0/?(bestHeroName:z);                TEST
     //!HE(secondBestHero):B0/?(secondBestHeroName:z);    TEST
-    //!IF:L^bestHero: %(bestHero), %(bestHeroName).^;                 TEST
-    //!IF:L^secondBestHero: %(secondBestHero), %(secondBestHeroName).^;     TEST
+    //!IF:L^bestHero: %(bestHero), %(bestHeroName). Owned by %(bestOwner)^;                 TEST
+    //!IF:L^secondBestHero: %(secondBestHero), %(secondBestHeroName). Owned by %(secondBestOwner)^;     TEST
     !!FU&(bestHero)=(NO_HERO):E;        //Exit if no best hero was found.
     
     !!VRi^huAI_bestHero^:S(bestHero);           //
@@ -241,13 +247,30 @@ ZVSE2
     
     
 **  --------------------------------------------------
+**  Returns if the passed player should not receive Human AI benefit.
+**  At the moment of writing this is to prevent player7 (Pink) with Tyrant option on.
+!?FU(huAI_IsBlacklistedPlayer);
+    !#VA(player:x);
+    !#VA(returnBool:x);
+    
+    !!VR(returnBool):S(FALSE);          //Default return false.
+    
+    !!UN:P770/?(tyrantScriptEnabled:y);     //Is Tyrant enabled.
+    !!if&(tyrantScriptEnabled)=(TRUE)/(player)=(PLAYER_PINK):;
+        !!VR(returnBool):S(TRUE);          //If Tyrant enabled and this is Pink player, return true.
+    !!en:;
+**  --------------------------------------------------
+    
+    
+    
+**  --------------------------------------------------
 **  Returns the index of the first human player.
-!?FU(AMER_GetFirstHumanIndex);
+!?FU(huAI_GetFirstHumanIndex);
     !#VA(returnPlayer:x);
     
     !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
         !!OW:Ii/?(isAI:y)/?(isKilled:y);    //Get if looped player is AI/killed.
-        !!if&(isAI)=0/(isKilled)=0:;        //continue if yes.
+        !!if&(isAI)=0/(isKilled)=0:;
             !!VR(returnPlayer):Si;          //Set return value to loop index.
             !!br:;                          //Break since we're done.
         !!en:;
@@ -258,7 +281,7 @@ ZVSE2
     
 **  --------------------------------------------------
 **  Returns the index of the previous player.
-!?FU(AMER_GetPrevPlayer);
+!?FU(huAI_GetPrevPlayer);
     !#VA(returnPlayer:x);
     
     !!OW:C?(currentPlayer:y);                           //current player index.
@@ -421,9 +444,12 @@ ZVSE2
         !!br&(x)<0:;                                    //break if nothing found
         
         !!CA(x)/(y)/(z):O?(objOwner:y);
+        //!IF:L^Found town owned by %(objOwner) at [%(x),%(y),%(z)].^;        TEST
         !!co&(objOwner)<>(player):;                     //Exit if not owned by current player.
+        //!IF:L^Town is owned by loopPlayer at [%(x),%(y),%(z)].^;        TEST
         
         !!OB(x)/(y)/(z):U?(townType:y);                 //Get town subType.
+        //!IF:L^Found townType:%(townType).^;        TEST
         !!FU(Array_Push):P(returnArray)/(townType);
     !!en:;
     !!FU(Array_SortedUnique):P(returnArray);            //Remove duplicates.
