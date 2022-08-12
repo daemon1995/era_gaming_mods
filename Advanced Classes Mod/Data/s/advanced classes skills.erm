@@ -24999,9 +24999,6 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
 !?CM1;                                  [Town Screen Trigger]
 !?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^dlg_action^=(DLG_CMD_TYPE_DEFAULT)/i^mouse_flags^=(MOUSE_FLAG_RMB);
 
-*!CM:T?y1 F?y2 I?y3 S?y4;               [where we click and click subtype]
-*!FU&y4<>14:E; *!FU&y2<>512:E;
-*!if&y1=512/y2=512/y4=14;               [if left click]
   !!CA-1:H1/?y5;                        [town Visitor]
   !!FU|y5<0/y5>155:E;
   !!if&i^mouse_item^>=0/i^mouse_item^<=4|i^mouse_item^=16;
@@ -25014,10 +25011,6 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
       !!CM:R0;
     !!en;
   !!en;
-
-
-*!en;
-
 
 !?FU(gem_OnOpenButtonDlg);              [Function from GEM Mod that is called when clicking the new buttons]
   !!CA-1:H1/?y5;                        [town Visitor]
@@ -25046,6 +25039,9 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
       !!FU(acm_WM_Try_Upgrade):Pi^acm_Dlg_WM_Type^/i^acm_Dlg_WM_Page^/i^acm_WM_Current_Chosen_Skill^/i^acm_Hero_WM_skill_names_temp_array_ID^/i^acm_WM_Requires_temp_array_ID^;
 
     !!el|i^mouse_item^=30720/i^mouse_item^=30721;
+      !!DL:C1;
+    !!el&i^mouse_item^=14;
+      !!VRi^acm_Dlg_WM_CallAgain^:S(TRUE);
       !!DL:C1;
     !!en;
 
@@ -25085,54 +25081,51 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
 
 !?FU(acm_WM_Try_Upgrade);
 !#VA(dlgType:x) (page:x) (chosenSkill:x) (skillsArrayID:x) (resourcesArrayId:x);
-*!UN:C(GAME_SETTING_SOUND_VOLUME)/4/?(snd:y) C(GAME_SETTING_SOUND_VOLUME)/4/0 C(GAME_SETTING_SOUND_VOLUME)/4/(snd:y);C(snd)/(STRUCT_SNDMAN_UNLOCKED)/4/1;
+  !!if&(chosenSkill)<>(NO_SKILL);
+    !!if&i^acm_WM_%(page)^;
+      !!SN:M(skillsArrayID)/(chosenSkill)/?(variableName:z);
+      !!if&i^%(variableName)^=0;
+        !!if&i^acm_WM_Upg_req_skill^<>(NO_SKILL);
+          !!HEi^WM_Upgrade_Hero^:Si^acm_WM_Upg_req_skill^/?(skillLvl:y);
 
+          !!if&(skillLvl)=(NULL);
+            !!IF:M^%T(AC_Warmachine.cant_afford)^;
+            !!FU:E;
+          !!en;
 
-!!if&(chosenSkill)<>(NO_SKILL);
-  !!if&i^acm_WM_%(page)^;
-    !!SN:M(skillsArrayID)/(chosenSkill)/?(variableName:z);
-    !!if&i^%(variableName)^=0;
-      !!if&i^acm_WM_Upg_req_skill^<>(NO_SKILL);
-        !!HEi^WM_Upgrade_Hero^:Si^acm_WM_Upg_req_skill^/?(skillLvl:y);
-
-        !!if&(skillLvl)=(NULL);
-          !!IF:M^%T(AC_Warmachine.cant_afford)^;
-          !!FU:E;
         !!en;
+        !!if&i^WM_Upgrade_No_Resources^=0;
 
-      !!en;
-      !!if&i^WM_Upgrade_No_Resources^=0;
+          !!re i/0/(RES_LAST_WOG);
+            !!SN:M(resourcesArrayId)/i/?(value:y);
+            !!OW:R(CURRENT_PLAYER)/i/d-(value);
+          !!en;
+          !!if&(dlgType);
+            !!SN:P^Enchant Item.wav^;
+          !!el;
+            !!SN:P^fixit.wav^;
+          !!en;
 
-        !!re i/0/(RES_LAST_WOG);
-          !!SN:M(resourcesArrayId)/i/?(value:y);
-          !!OW:R(CURRENT_PLAYER)/i/d-(value);
-        !!en;
-        !!if&(dlgType);
-          !!SN:P^Enchant Item.wav^;
+          !!VRi^acm_wm_buyed_upg^:S(TRUE);
+          !!VRi^%(variableName)^:S(TRUE);
+          !!DLi^dlg_id^:A45/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Purchased)^/0;
+          !!DLi^dlg_id^:A43/(DLG_CMD_SET_DEF_FRAME)/i^%(variableName)^/1;
+          !!FU(acm_Dlg_WarMachines_AdjustEnchNames):Pi^dlg_id^/(skillsArrayID)/(dlgType)/(page);
         !!el;
-          !!SN:P^fixit.wav^;
 
+          !!FU(Play_Upgrade_Sound):P(dlgType)/2;
+
+          !!IF:M^%T(AC_Warmachine.cant_afford)^;
         !!en;
-        !!VRi^acm_wm_buyed_upg^:S(TRUE);
-        !!VRi^%(variableName)^:S(TRUE);
-        !!DLi^dlg_id^:A45/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Purchased)^/0;
-        !!DLi^dlg_id^:A43/(DLG_CMD_SET_DEF_FRAME)/i^%(variableName)^/1;
-        !!FU(acm_Dlg_WarMachines_AdjustEnchNames):Pi^dlg_id^/(skillsArrayID)/(dlgType)/(page);
       !!el;
-
-        !!FU(Play_Upgrade_Sound):P(dlgType)/2;
-
-        !!IF:M^%T(AC_Warmachine.cant_afford)^;
+        !!IF:M^%T(AC_Warmachine.Already_Bought)^;
       !!en;
     !!el;
-      !!IF:M^%T(AC_Warmachine.Already_Bought)^;
+      !!FU(acm_WM_No_WM_Error):P(page);
     !!en;
   !!el;
-    !!FU(acm_WM_No_WM_Error):P(page);
+    !!IF:M^%T(AC_Warmachine.Buying_3)^;
   !!en;
-!!el;
-  !!IF:M^%T(AC_Warmachine.Buying_3)^;
-!!en;
 
 !?FU(acm_WM_No_WM_Error);
 !#VA(page:x);
@@ -25187,14 +25180,21 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
   !!if&(skillId)<>(NO_SKILL);
     !!SN:H^secskill^/(skillId)/0/?(skillName:z); H^secskill^/(skillId)/0/^{~white}%z-4}^ H^secskill^/(skillId)/0/?z-2;
     !!HEi^WM_Upgrade_Hero^:S(skillId)/?(skillLvl:y);
-    !!VR(clearName:z):S^^;
-    !!SN:K(skillName)/?(length:y);
+    !!SN:K(skillName)/0/?(char:z);
 
-    !!re i/0/(length)/1/-1;
-      !!SN:K(skillName)/i/?(char:z);
-      !!if&(char)<>^{^/(char)<>^}^;
-        !!VR(clearName:z):+(char);
+    !!if&(char)=^{^;
+      !!VR(clearName:z):S^^;
+      !!SN:K(skillName)/?(length:y);
+      !!re j/1/(length)/1/-1;
+        !!SN:K(skillName)/j/?(char:z);
+        !!if|(char)=^{^/(char)=^}^;
+          !!br;
+        !!en;
+        !!VR(clearName):+(char);
       !!en;
+    !!el;
+      !!VR(clearName:z):S(skillName);
+
     !!en;
 
     !!if&(skillLvl);
@@ -25319,33 +25319,48 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
 ****************************************************************************************************
 !?FU(Warmachine_Upgrade_Town);
 x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
-!!FU(Play_Upgrade_Sound):Px2/1;
-!!FU(acm_Dlg_WarMachines_Prepare):Px1/x2/(ACM_WM_DLG_ID);
+  !!VRi^acm_Dlg_WM_CallAgain^:S(TRUE);
+  !!FU(Play_Upgrade_Sound):Px2/1;
 
-!!if&i^acm_wm_buyed_upg^;
-  !!FU(Play_Upgrade_Sound):Px2/4;
-!!el;
-  !!FU(Play_Upgrade_Sound):Px2/3;
-!!en;
-!!FU(acm_Dlg_WarMachines_Destruct):P;
+  !!VR(revertDlgType:y):Sx2 X1;
+  !!re i;
+    !!if&i^acm_Dlg_WM_CallAgain^;
+      !!VR(revertDlgType):X1;
+      !!SN:P^Enter.wav^;
+      !!FU(acm_Dlg_WarMachines_Prepare):Px1/(revertDlgType)/(ACM_WM_DLG_ID);
+      !!if&i^acm_wm_buyed_upg^;
+        !!FU(Play_Upgrade_Sound):P(revertDlgType)/4;
+      !!el;
+        !!FU(Play_Upgrade_Sound):P(revertDlgType)/3;
+      !!en;
+    !!el;
+      !!br;
+    !!en;
+  !!en;
+
+  !!FU(acm_Dlg_WarMachines_Destruct):P;
+  !!UN:R4;
+
+!?FU(OnKeyPressed_Town);
+!!FU(gem_DlgReload):P^WM_Upg_d.txt^;
 
 !?FU(Play_Upgrade_Sound);
 !#VA(upgType:x) (upgCase:x);
   !!CA-1:T?y1;
   !!if&y1>=(TOWN_FIRST)/y1<=(TOWN_LAST_WOG);
-    !!VRz2&y1=0:S^Human^;
-    !!VRz2&y1=1:S^Dwarf^;
-    !!VRz2&y1=2:S^Wizard^;
-    !!VRz2&y1=3:S^Evil^;
-    !!VRz2&y1=4:S^Evil^;
-    !!VRz2&y1=5:S^Warlock^;
-    !!VRz2&y1=6:S^Warlock^;
-    !!VRz2&y1=7:S^Human^;
-    !!VRz2&y1=8:S^Elf^;
+    !!VRz2&y1=0:S^Hu^;
+    !!VRz2&y1=1:S^Dw^;
+    !!VRz2&y1=2:S^Wi^;
+    !!VRz2&y1=3:S^Ev^;
+    !!VRz2&y1=4:S^Ev^;
+    !!VRz2&y1=5:S^Wa^;
+    !!VRz2&y1=6:S^Wa^;
+    !!VRz2&y1=7:S^Hu^;
+    !!VRz2&y1=8:S^El^;
     !!if&(upgType);
-      !!VRz3:S^%Z2 Magic shop 0%X2.wav^;
+      !!VRz3:S^%Z2_MS_0%X2.wav^;
     !!el;
-      !!VRz3:S^%Z2 Weapon shop 0%X2.wav^;                               [play quest sound before showing dialogue]
+      !!VRz3:S^%Z2_WS_0%X2.wav^;                               [play quest sound before showing dialogue]
     !!en;
     !!SN:Pz3;                               [play quest sound before showing dialogue]
   !!en;
@@ -25370,34 +25385,32 @@ x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
     !!SN:W^acm_WM_%i^;
   !!en;
 
-!?FU(acm_Dlg_WarMachines_Prepare);
-!#VA(heroId:x) (dlgType:x) (dlgId:x);
-
-  !!DL(dlgId):N^WM_Upg_d.txt^;                 [parse dialogue]
-  !!FU(DL_FindById):P(dlgId)/?(dlg:y);
-  !!UN:C(dlg)/(UNC_INT)/?(dlg);
+!?FU(acm_Dlg_WarMachines_SetCorrectType);
+!#VA(dlgType:x) (dlgId:x) (dlg:x);
 
   !!if&(dlgType)=1;
-
     !!DL(dlgId):A17/(DLG_CMD_SET_TEXT)/^{~GoldenRod}%T(AC_Warmachine.Enchantment)}^/1;
     !!DL(dlgId):A18/(DLG_CMD_SET_TEXT)/^{~GoldenRod}%T(AC_Warmachine.Enchantment)}^/1;
+
+    !!DL(dlgId):A13/(DLG_CMD_SET_DEF)/^enchant.def^/1;
+    !!DL(dlgId):A14/(DLG_CMD_SET_DEF)/^upgrsmth.def^/1;
 
     !!DL(dlgId):A29/(DLG_CMD_SET_DEF)/^titlmage.def^/1;
     !!DL(dlgId):A30722/(DLG_CMD_SET_DEF)/^enchmage.def^/1;
     !!DL(dlgId):A30723/(DLG_CMD_SET_DEF)/^enchmage.def^/1;
-    !!FU(acm_DlgShowItem):P22/(FALSE)/(FALSE)/(FALSE)/(dlg);
 
+
+    !!FU(acm_DlgShowItem):P22/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!DL(dlgId):A1/52/320/1 A1/53/187/1;
     !!DL(dlgId):A2/52/446/1 A2/53/282/1;
     !!DL(dlgId):A3/52/270/1 A3/53/372/1;
+
     !!DL(dlgId):A41/52/619/1 A41/53/104/1;
     !!DL(dlgId):A30721/52/438/1 A30721/53/420/1;
 
     !!DL(dlgId):A30723/52/400/1 A30723/53/390/1;
-
     !!DL(dlgId):A41/(DLG_CMD_SET_DEF)/^wm_ench.def^/1;
     !!FU(acm_DlgItemSize):P41/82/76/(dlg);
-
 
     !!re i/1/3;
       !!FU(acm_DlgItemSize):Pi/82/76/(dlg);
@@ -25411,7 +25424,6 @@ x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
       !!VR(y):+4;
       !!DL(dlgId):A(textId)/52/(x)/1 A(textId)/53/(y)/1;
     !!en;
-
     !!VRs^acm_temp^:S^Ench^;
   !!el;
     !!DL(dlgId):A17/(DLG_CMD_SET_TEXT)/^{~GoldenRod}%T(AC_Warmachine.Upgrade)}^/1;
@@ -25419,16 +25431,37 @@ x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
     !!VRs^acm_temp^:S^Upg^;
   !!en;
 
+
+
+!?FU(acm_Dlg_WarMachines_Prepare);
+!#VA(heroId:x) (dlgType:x) (dlgId:x);
+  !!VRi^acm_Dlg_WM_CallAgain^:S(FALSE);        [prevent calling dlg again]
+
+  !!DL(dlgId):N^WM_Upg_d.txt^;                 [parse dialogue]
+  !!FU(DL_FindById):P(dlgId)/?(dlg:y);
+  !!UN:C(dlg)/(UNC_INT)/?(dlg);
+
+  !!FU(acm_Dlg_WarMachines_SetCorrectType):P(dlgType)/(dlgId)/(dlg);
+
   //set correct background pic
   !!DL(dlgId):A100/(DLG_CMD_SET_PCX)/^dl_wm_%(dlgType).pcx^/1;
 
   //set correct header pic
   !!DL(dlgId):A51/(DLG_CMD_SET_DEF_FRAME)/(dlgType)/1;
+
+  !!DL(dlgId):A23/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Ballista_0)^/1;
+  !!DL(dlgId):A24/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Cart_0)^/1;
+  !!DL(dlgId):A25/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Tent_0)^/1;
+  !!DL(dlgId):A26/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Warmachines_0)^/1;
+  !!SN:T^AC_Warmachine.Say_Hello_%s(acm_temp)^/?(visit:z);
+  !!DL(dlgId):A27/(DLG_CMD_SET_TEXT)/(visit)/1;
+  !!DL(dlgId):A28/(DLG_CMD_SET_TEXT)/^%T(AC_Warmachine.Exit)^/1;
+
   !!re i/41/44;
     !!FU(acm_DlgShowItem):Pi/(FALSE)/(FALSE)/(FALSE)/(dlg);
   !!en;
 
-
+  !!VRi^acm_wm_buyed_upg^:S(FALSE);
   !!VRi^acm_WM_Current_Chosen_Skill^:S(NO_SKILL);
   !!VRi^acm_Dlg_WM_Type^:S(dlgType);
   !!VRs^acm_wm^:S^Bal^;
@@ -25442,1078 +25475,13 @@ x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
 
   !!FU(Array_Push):Pi^acm_Hero_WM_skill_names_temp_array_ID^/^Ballista_Morale_%X1^/^Ballista_Add_Shots_%X1^/^Ballista_Crippling_%X1^/^Ammo_Supply_%X1^/^Ammo_Goblin_%X1^/
   ^Ammo_Enhanced_Arrow_%X1^/^Tent_Improved_%X1^/^Tent_Capacity_Upgrade_%X1^/^Tent_Gold_Gain_%X1^/^WM_Fortification_%X1^/^WM_Maintainability_%X1^/^WM_Versatility_%X1^;
-
   !!FU(Array_Push):Pi^acm_Hero_WM_skill_names_temp_array_ID^/^Ballista_Fireball_Attack_%X1^/^Ballista_Magic_Arrow_%X1^/^Ballista_Spell_Trigger_%X1^/^Ammo_Booby_Trap_%X1^/^Ammo_Replensih_SP_%X1^/
   ^Ammo_Burning_Arrow_%X1^/^Tent_Herbalism_%X1^/^Tent_Overheal_%X1^/^Tent_Life_Aura_%X1^/^WM_Shield_Ench_%X1^/^WM_MR_Ench_%X1^/^WM_MR_Aura_%X1^;
-
 
   !!FU(acm_Dlg_WarMachines_AdjustView):P(dlgId)/i^acm_Dlg_WM_Page^;
   !!FU(acm_Dlg_WarMachines_AdjustEnchNames):P(dlgId)/i^acm_Hero_WM_skill_names_temp_array_ID^/(dlgType)/i^acm_Dlg_WM_Page^;/i^WM_Upgrade_Hero^;
 
   !!DL(dlgId):S;                 [parse dialogue]
-
-!!FU:E;
-
-*!if&y99=1;
-  *!FU(Play_Blacksmith_Sound)|v3=0/v3>8:P3;
-  *!FU|v3=0/v3>8:E;                     [Exit if no choice or leave]
-
-
-  *!if&v3=1;
-    *!SN:T^AC_Warmachine.Ballista_0^/?z-2;
-    *!VRz-3:S^S_Bal.pcx^;
-    *!VRz-7:S^Bal_Upg_1.pcx^;
-    *!VRz-8:S^Bal_Upg_2.pcx^;
-    *!VRz-9:S^Bal_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.Bal_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.Bal_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.Bal_Upg_3^/?z-6;
-    *!SN:W^Ballista_Morale_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^Ballista_Add_Shots_%X1^/?y11;
-    *!SN:W^Ballista_Crippling_%X1^/?y12;
-  *!en;
-
-
-  *!if&v3=2;
-    *!SN:T^AC_Warmachine.Cart_0^/?z-2;
-    *!VRz-3:S^S_Cart.pcx^;
-    *!VRz-7:S^Cart_Upg_1.pcx^;
-    *!VRz-8:S^Cart_Upg_2.pcx^;
-    *!VRz-9:S^Cart_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.Cart_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.Cart_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.Cart_Upg_3^/?z-6;
-    *!SN:W^Ammo_Supply_%X1^/?y10;   [Check if options have already been activated]
-    *!SN:W^Ammo_Goblin_%X1^/?y11;
-    *!SN:W^Ammo_Enhanced_Arrow_%X1^/?y12;
-  *!en;
-
-
-  *!if&v3=4;
-    *!SN:T^AC_Warmachine.Tent_0^/?z-2;
-    *!VRz-3:S^S_Tent.pcx^;
-    *!VRz-7:S^Tent_Upg_1.pcx^;
-    *!VRz-8:S^Tent_Upg_2.pcx^;
-    *!VRz-9:S^Tent_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.Tent_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.Tent_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.Tent_Upg_3^/?z-6;
-    *!SN:W^Tent_Improved_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^Tent_Capacity_Upgrade_%X1^/?y11;
-    *!SN:W^Tent_Gold_Gain_%X1^/?y12;
-  *!en;
-
-
-  *!if&v3=8;
-    *!SN:T^AC_Warmachine.Warmachines_0^/?z-2;
-    *!VRz-3:S^S_Upg.pcx^;
-    *!VRz-7:S^All_Upg_1.pcx^;
-    *!VRz-8:S^All_Upg_2.pcx^;
-    *!VRz-9:S^All_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.All_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.All_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.All_Upg_3^/?z-6;
-    *!SN:W^WM_Fortification_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^WM_Maintainability_%X1^/?y11;
-    *!SN:W^WM_Versatility_%X1^/?y12;
-  *!en;
-
-  *!DL51:A5/11/z-3/1;                      [show correct skill text what can be leveled]
-  *!DL51:A1/11/z-7/1;
-  *!DL51:A2/11/z-8/1;
-  *!DL51:A3/11/z-9/1;
-  *!DL51:A6/3/z-4/1;                      [show correct skill text what can be leveled]
-  *!DL51:A9/3/z-5/1;                      [show correct skill text what can be leveled]
-  *!DL51:A10/3/z-6/1;                     [show correct skill text what can be leveled]
-  *!DL51:A13/4/y10/1;
-  *!DL51:A14/4/y11/1;
-  *!DL51:A15/4/y12/1;
-  *!DL51:S;
-*!en;
-
-
-*!SN&x2=1:W^WM_Window_Selection^/x2;
-*!SN&x2=2:W^WM_Window_Selection^/x2;
-
-*!DL81:N^WM_Sel.txt^;                   [parse dialogue]
-*!SN&x2=1:T^AC_Warmachine.Upgrade^/?z1;
-*!SN&x2=2:T^AC_Warmachine.Enchantment^/?z1;
-*!SN:T^AC_Warmachine.Ballista_0^/?z2;
-*!SN:T^AC_Warmachine.Cart_0^/?z3;
-*!SN:T^AC_Warmachine.Tent_0^/?z4;
-*!SN:T^AC_Warmachine.All_Machines^/?z5;
-*!SN&x2=1:T^AC_Warmachine.Say_Hello_Upg^/?z6;
-*!SN&x2=2:T^AC_Warmachine.Say_Hello_Ench^/?z6;
-
-*!DL81:A10/3/z1/1;                      [show correct skill text what can be leveled]
-*!DL81:A11/3/z2/1;                      [show correct skill text what can be leveled]
-*!DL81:A12/3/z3/1;                      [show correct skill text what can be leveled]
-*!DL81:A13/3/z4/1;                      [show correct skill text what can be leveled]
-*!DL81:A14/3/z5/1;                      [show correct skill text what can be leveled]
-*!DL81:A14/3/z5/1;                      [show correct skill text what can be leveled]
-*!DL81:A15/3/z6/1;                      [show correct skill text what can be leveled]
-*!DL81&x2=1:A3/4/0/1;                   [show correct skill text what can be leveled]
-*!DL81&x2=2:A3/4/1/1;                   [show correct skill text what can be leveled]
-*!DL81&x2=1:A4/4/0/1;                   [show correct skill text what can be leveled]
-*!DL81&x2=2:A4/4/1/1;                   [show correct skill text what can be leveled]
-*!DL81:S;
-
-
-
-*?DL&v998=81/v999>=5/v999<=8/v1000=13;  [left click on the three pictures asks if you want to buy the upgrade]
-
-*!VRv3:S0;
-*!VRy99:S0;
-*!VRv3&v999=5:S1;
-*!VRv3&v999=6:S2;
-*!VRv3&v999=7:S4;
-*!VRv3&v999=8:S8;
-
-*!SN:W^WM_Upgrade_Selection^/v3;
-*!CA-1:H1/?x1; *!FU|x1<0/x1>155:E;      [Exit if no valid hero]
-*!SN:W^WM_Window_Selection^/?y99;
-
-*!if&y99=1;
-  *!FU(Play_Blacksmith_Sound)|v3=0/v3>8:P3;
-  *!FU|v3=0/v3>8:E;                     [Exit if no choice or leave]
-
-  *!DL51:N^WM_Upg.txt^;                 [parse dialogue]
-
-  *!if&v3=1;
-    *!SN:T^AC_Warmachine.Ballista_0^/?z-2;
-    *!VRz-3:S^S_Bal.pcx^;
-    *!VRz-7:S^Bal_Upg_1.pcx^;
-    *!VRz-8:S^Bal_Upg_2.pcx^;
-    *!VRz-9:S^Bal_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.Bal_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.Bal_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.Bal_Upg_3^/?z-6;
-    *!SN:W^Ballista_Morale_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^Ballista_Add_Shots_%X1^/?y11;
-    *!SN:W^Ballista_Crippling_%X1^/?y12;
-  *!en;
-
-
-  *!if&v3=2;
-    *!SN:T^AC_Warmachine.Cart_0^/?z-2;
-    *!VRz-3:S^S_Cart.pcx^;
-    *!VRz-7:S^Cart_Upg_1.pcx^;
-    *!VRz-8:S^Cart_Upg_2.pcx^;
-    *!VRz-9:S^Cart_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.Cart_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.Cart_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.Cart_Upg_3^/?z-6;
-    *!SN:W^Ammo_Supply_%X1^/?y10;   [Check if options have already been activated]
-    *!SN:W^Ammo_Goblin_%X1^/?y11;
-    *!SN:W^Ammo_Enhanced_Arrow_%X1^/?y12;
-  *!en;
-
-
-  *!if&v3=4;
-    *!SN:T^AC_Warmachine.Tent_0^/?z-2;
-    *!VRz-3:S^S_Tent.pcx^;
-    *!VRz-7:S^Tent_Upg_1.pcx^;
-    *!VRz-8:S^Tent_Upg_2.pcx^;
-    *!VRz-9:S^Tent_Upg_3.pcx^;
-    *!SN:T^AC_Warmachine.Tent_Upg_1^/?z-4;
-    *!SN:T^AC_Warmachine.Tent_Upg_2^/?z-5;
-    *!SN:T^AC_Warmachine.Tent_Upg_3^/?z-6;
-    *!SN:W^Tent_Improved_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^Tent_Capacity_Upgrade_%X1^/?y11;
-    *!SN:W^Tent_Gold_Gain_%X1^/?y12;
-  *!en;
-
-
-  *!if&v3=8;
-  *!SN:T^AC_Warmachine.Warmachines_0^/?z-2;
-  *!VRz-3:S^S_Upg.pcx^;
-  *!VRz-7:S^All_Upg_1.pcx^;
-  *!VRz-8:S^All_Upg_2.pcx^;
-  *!VRz-9:S^All_Upg_3.pcx^;
-  *!SN:T^AC_Warmachine.All_Upg_1^/?z-4;
-  *!SN:T^AC_Warmachine.All_Upg_2^/?z-5;
-  *!SN:T^AC_Warmachine.All_Upg_3^/?z-6;
-  *!SN:W^WM_Fortification_%X1^/?y10;    [Check if options have already been activated]
-  *!SN:W^WM_Maintainability_%X1^/?y11;
-  *!SN:W^WM_Versatility_%X1^/?y12;
-  *!en;
-
-  *!DL51:A5/11/z-3/1;                      [show correct skill text what can be leveled]
-  *!DL51:A1/11/z-7/1;
-  *!DL51:A2/11/z-8/1;
-  *!DL51:A3/11/z-9/1;
-  *!DL51:A6/3/z-4/1;                      [show correct skill text what can be leveled]
-  *!DL51:A9/3/z-5/1;                      [show correct skill text what can be leveled]
-  *!DL51:A10/3/z-6/1;                     [show correct skill text what can be leveled]
-  *!DL51:A13/4/y10/1;
-  *!DL51:A14/4/y11/1;
-  *!DL51:A15/4/y12/1;
-  *!DL51:S;
-*!en;
-
-
-*!if&y99=2;
-  *!FU(Play_Mage_Guild_Sound)|v3=0/v3>8:P3;
-  *!FU|v3=0/v3>8:E;                       [Exit if no choice or leave]
-
-  *!DL52:N^WM_Ench.txt^;         [parse dialogue]
-
-  *!if&v3=1;
-    *!SN:T^AC_Warmachine.Ballista_0^/?z-2;
-    *!VRz-3:S^S_Bal.pcx^;
-    *!VRz-7:S^Bal_Ench_1.pcx^;
-    *!VRz-8:S^Bal_Ench_2.pcx^;
-    *!VRz-9:S^Bal_Ench_3.pcx^;
-    *!SN:T^AC_Warmachine.Bal_Ench_1^/?z-4;
-    *!SN:T^AC_Warmachine.Bal_Ench_2^/?z-5;
-    *!SN:T^AC_Warmachine.Bal_Ench_3^/?z-6;
-    *!SN:W^Ballista_Fireball_Attack_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^Ballista_Magic_Arrow_%X1^/?y11;
-    *!SN:W^Ballista_Spell_Trigger_%X1^/?y12;
-  *!en;
-
-  *!if&v3=2;
-    *!SN:T^AC_Warmachine.Cart_0^/?z-2;
-    *!VRz-3:S^S_Cart.pcx^;
-    *!VRz-7:S^Cart_Ench_1.pcx^;
-    *!VRz-8:S^Cart_Ench_2.pcx^;
-    *!VRz-9:S^Cart_Ench_3.pcx^;
-    *!SN:T^AC_Warmachine.Cart_Ench_1^/?z-4;
-    *!SN:T^AC_Warmachine.Cart_Ench_2^/?z-5;
-    *!SN:T^AC_Warmachine.Cart_Ench_3^/?z-6;
-    *!SN:W^Ammo_Booby_Trap_%X1^/?y10;
-    *!SN:W^Ammo_Replensih_SP_%X1^/?y11;
-    *!SN:W^Ammo_Burning_Arrow_%X1^/?y12;
-  *!en;
-
-  *!if&v3=4;
-    *!SN:T^AC_Warmachine.Tent_0^/?z-2;
-    *!VRz-3:S^S_Tent.pcx^;
-    *!VRz-7:S^Tent_Ench_1.pcx^;
-    *!VRz-8:S^Tent_Ench_2.pcx^;
-    *!VRz-9:S^Tent_Ench_3.pcx^;
-    *!SN:T^AC_Warmachine.Tent_Ench_1^/?z-4;
-    *!SN:T^AC_Warmachine.Tent_Ench_2^/?z-5;
-    *!SN:T^AC_Warmachine.Tent_Ench_3^/?z-6;
-    *!SN:W^Tent_Herbalism_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^Tent_Overheal_%X1^/?y11;
-    *!SN:W^Tent_Life_Aura_%X1^/?y12;
-  *!en;
-
-  *!if&v3=8;
-    *!SN:T^AC_Warmachine.Warmachines_0^/?z-2;
-    *!VRz-3:S^S_Ench.pcx^;
-    *!VRz-7:S^All_Ench_1.pcx^;
-    *!VRz-8:S^All_Ench_2.pcx^;
-    *!VRz-9:S^All_Ench_3.pcx^;
-    *!SN:T^AC_Warmachine.All_Ench_1^/?z-4;
-    *!SN:T^AC_Warmachine.All_Ench_2^/?z-5;
-    *!SN:T^AC_Warmachine.All_Ench_3^/?z-6;
-    *!SN:W^WM_Shield_Ench_%X1^/?y10;    [Check if options have already been activated]
-    *!SN:W^WM_MR_Ench_%X1^/?y11;
-    *!SN:W^WM_MR_Aura_%X1^/?y12;
-  *!en;
-
-  *!DL52:A5/11/z-3/1;                   [show correct skill text what can be leveled]
-  *!DL52:A1/11/z-7/1;
-  *!DL52:A2/11/z-8/1;
-  *!DL52:A3/11/z-9/1;
-  *!DL52:A6/3/z-4/1;                    [show correct skill text what can be leveled]
-  *!DL52:A9/3/z-5/1;                    [show correct skill text what can be leveled]
-  *!DL52:A10/3/z-6/1;                   [show correct skill text what can be leveled]
-  *!DL52:A13/4/y10/1;
-  *!DL52:A14/4/y11/1;
-  *!DL52:A15/4/y12/1;
-  *!DL52:S;
-*!en;
-
-
-*?DL&v998=51/v999>=1/v999<=3/v1000=13;  [left click on the three pictures asks if you want to buy the upgrade]
-*!VRz1:S^Button.wav^;
-*!SN:Pz1;
-
-*!CA-1:H1/?x1; *!FU|x1<0/x1>155:E;      [Exit if no valid hero]
-*!SN:W^WM_Upgrade_Selection^/?y10;
-
-*!if&y10=1;
-  *!HEx1:A2/4/?y1/?y2;                  [4  Ballista]
-  *!SN&y2=0:T^AC_Warmachine.No_Ballista^/?s^Warmachine^;
-  *!IF&y2=0:M^%S(Warmachine)^;
-  *!FU(Upgrade_Buy_Blacksmith)&y2=1:Px1/v999/y10;
-*!en;
-
-*!if&y10=2;
-  *!HEx1:A2/5/?y1/?y2;                  [5  Ammo Cart]
-  *!SN&y2=0:T^AC_Warmachine.No_Ammo^/?s^Warmachine^;
-  *!IF&y2=0:M^%S(Warmachine)^;
-  *!FU(Upgrade_Buy_Blacksmith)&y2=1:Px1/v999/y10;
-*!en;
-
-*!if&y10=4;
-  *!HEx1:A2/6/?y1/?y2;                  [6  First Aid Tent]
-  *!SN&y2=0:T^AC_Warmachine.No_Tent^/?s^Warmachine^;
-  *!IF&y2=0:M^%S(Warmachine)^;
-  *!FU(Upgrade_Buy_Blacksmith)&y2=1:Px1/v999/y10;
-*!en;
-
-*!if&y10=8;
-  *!HEx1:A2/4/?y1/?y2;                  [All WM]
-  *!HEx1:A2/5/?y1/?y3;
-  *!HEx1:A2/6/?y1/?y4;
-  *!SN|y2=0/y3=0/y4=0:T^AC_Warmachine.No_Machines^/?s^Warmachine^;
-  *!IF|y2=0/y3=0/y4=0:M^%S(Warmachine)^;
-  *!FU(Upgrade_Buy_Blacksmith)&y2=1/y3=1/y4=1:Px1/v999/y10;
-*!en;
-
-
-*?FU(Upgrade_Buy_Blacksmith);
-x1=Hero Number, x2=dialogue ID, x3=selection
-
-*!VRz1&x2=1/x3=1:S^Ballista_Morale^;
-*!VRz1&x2=2/x3=1:S^Ballista_Add_Shots^;
-*!VRz1&x2=3/x3=1:S^Ballista_Crippling^;
-
-*!VRz1&x2=1/x3=2:S^Ammo_Supply^;
-*!VRz1&x2=2/x3=2:S^Ammo_Goblin^;
-*!VRz1&x2=3/x3=2:S^Ammo_Enhanced_Arrow^;
-
-*!VRz1&x2=1/x3=4:S^Tent_Improved^;
-*!VRz1&x2=2/x3=4:S^Tent_Capacity_Upgrade^;
-*!VRz1&x2=3/x3=4:S^Tent_Gold_Gain^;
-
-*!VRz1&x2=1/x3=8:S^WM_Fortification^;
-*!VRz1&x2=2/x3=8:S^WM_Maintainability^;
-*!VRz1&x2=3/x3=8:S^WM_Versatility^;
-
-*!SN:W^%Z1_%X1^/?y1;
-*!SN:T^AC_Warmachine.Already_Bought^/?s^Warmachine^;
-*!IF&y1=1:M^%S(Warmachine)^;            [Show text if already bought]
-*!FU&y1=1:E;                            [Exit if already bought]
-
-*!if&x2=1/x3=1;                        [Ballista_Morale]
-*!VRy20:S15;                            [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S15;                            [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S6000;                          [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S6;                             [6  Leadership]
-*!SN:T^AC_Warmachine.Bal_Upg_1^/?z-1;   [Get Upgrade Name]
-*!en;
-
-*!if&x2=2/x3=1;                        [Ballista_Add_Shots]
-*!VRy20:S5;                             [Wood]
-*!VRy21:S5;                             [Mercury]
-*!VRy22:S5;                             [Ore]
-*!VRy23:S5;                             [Sulfur]
-*!VRy24:S5;                             [Crystal]
-*!VRy25:S5;                             [Gems]
-*!VRy26:S10000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S11;                            [11 Eagle Eye]
-*!SN:T^AC_Warmachine.Bal_Upg_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=1;                        [Ballista_Crippling]
-*!VRy20:S5;                             [Wood]
-*!VRy21:S5;                             [Mercury]
-*!VRy22:S5;                             [Ore]
-*!VRy23:S5;                             [Sulfur]
-*!VRy24:S5;                             [Crystal]
-*!VRy25:S5;                             [Gems]
-*!VRy26:S15000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S10;                            [10 Ballistics]
-*!SN:T^AC_Warmachine.Bal_Upg_3^/?z-1;
-*!en;
-
-*!if&x2=1/x3=2;                        [Ammo_Supply]
-*!VRy20:S0;                             [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S0;                             [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S10000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S26;                            [26 Resistance]
-*!SN:T^AC_Warmachine.Cart_Upg_1^/?z-1;
-*!en;
-
-*!if&x2=2/x3=2;                        [Ammo_Goblin]
-*!VRy20:S5;                             [Wood]
-*!VRy21:S5;                             [Mercury]
-*!VRy22:S5;                             [Ore]
-*!VRy23:S5;                             [Sulfur]
-*!VRy24:S5;                             [Crystal]
-*!VRy25:S5;                             [Gems]
-*!VRy26:S10000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S9;                             [9  Luck]
-*!SN:T^AC_Warmachine.Cart_Upg_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=2;                        [Ammo_Enhanced_Arrow]
-*!VRy20:S20;                            [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S0;                             [Ore]
-*!VRy23:S20;                            [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S15000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S8;                             [8  Mysticism]
-*!SN:T^AC_Warmachine.Cart_Upg_3^/?z-1;
-*!en;
-
-*!if&x2=1/x3=4;                        [Tent_Improved]
-*!VRy20:S0;                             [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S0;                             [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S10;                            [Gems]
-*!VRy26:S8000;                          [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S23;                            [23 Armorer]
-*!SN:T^AC_Warmachine.Tent_Upg_1^/?z-1;
-*!en;
-
-*!if&x2=2/x3=4;                        [Tent_Capacity_Upgrade]
-*!VRy20:S0;                             [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S0;                             [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S10;                            [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S6000;                          [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S18;                            [18 Scholar]
-*!SN:T^AC_Warmachine.Tent_Upg_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=4;                        [Tent_Gold_Gain]
-*!VRy20:S0;                             [Wood]
-*!VRy21:S5;                             [Mercury]
-*!VRy22:S0;                             [Ore]
-*!VRy23:S5;                             [Sulfur]
-*!VRy24:S5;                             [Crystal]
-*!VRy25:S5;                             [Gems]
-*!VRy26:S10000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S13;                            [13 Estates]
-*!SN:T^AC_Warmachine.Tent_Upg_3^/?z-1;
-*!en;
-
-*!if&x2=1/x3=8;                        [WM_Fortification]
-*!VRy20:S10;                            [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S20;                            [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S5000;                          [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S-1;                            [None]
-*!SN:T^AC_Warmachine.All_Upg_1^/?z-1;
-*!en;
-
-*!if&x2=2/x3=8;                        [WM_Maintainability]
-*!VRy20:S10;                            [Wood]
-*!VRy21:S0;                             [Mercury]
-*!VRy22:S0;                             [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S10000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S7;                             [7 Wisdom]
-*!SN:T^AC_Warmachine.All_Upg_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=8;                        [WM_Versatility]
-*!VRy20:S10;                            [Wood]
-*!VRy21:S10;                            [Mercury]
-*!VRy22:S10;                            [Ore]
-*!VRy23:S0;                             [Sulfur]
-*!VRy24:S0;                             [Crystal]
-*!VRy25:S0;                             [Gems]
-*!VRy26:S10000;                         [Gold]
-*!VRy27:S0;                             [Mithril]
-*!VRy28:S0;                             [0  Pathfinding]
-*!SN:T^AC_Warmachine.All_Upg_3^/?z-1;
-*!en;
-
-*!VRz-6:S^^;
-
-*!re i/20/26;
-  *!if&yi>0;
-    *!VRf:Si -20;
-    *!VRz-6:+^{%yi} {~>smalres.def:%f}^;
-    *!if&i<26;
-      *!VRz-6:+^,  ^;
-    *!el;
-      *!VRz-6:+^.^;
-    *!en;
-  *!en;
-
-*!en;
-
-*!VRy50:S0R2;
-*!SN&y50=0:T^AC_Warmachine.Solid_Choice_1^/?z-2; [Generate Random quote 1]
-*!SN&y50=1:T^AC_Warmachine.Solid_Choice_2^/?z-2; [Generate Random quote 2]
-*!SN&y50=2:T^AC_Warmachine.Solid_Choice_3^/?z-2; [Generate Random quote 3]
-*!SN&y28>=0:H^secskill^/y28/0/?z-3;     [Get Name of Secondary Skill]
-*!SN&y28=-1:T^AC_Warmachine.Requirement_1^/?z-4; [Dont Show text with skill requirement]
-*!SN&y28>=0:T^AC_Warmachine.Requirement_2^/?z-4; *!SN:Iz-4/?z-4; [Show text with skill requirement]
-*!VRy50:S0R2;
-*!SN&y50=0:T^AC_Warmachine.Buying_1^/?z-5; [Generate Random quote 1]
-*!SN&y50=1:T^AC_Warmachine.Buying_2^/?z-5; [Generate Random quote 2]
-*!SN&y50=2:T^AC_Warmachine.Buying_3^/?z-5; [Generate Random quote 3]
-
-*!SN:T^AC_Warmachine.Upgrade_Costs^/?z10; *!SN:Iz10/?z10;
-*!IF:Q1^%Z10^;                          [Show text with costs]
-
-*!SN&-1:T^AC_Warmachine.Next_Time^/?s^Warmachine^;
-*!VRy1&-1:S0R1;
-*!FU(Play_Blacksmith_Sound)&-1/y1=1:P3; [If you dont want to buy play angry sound]
-
-*!if&1;                                [If you want to buy]
-  *!HEx1:O?y1;                            [Get Hero Owner]
-  *!VRy29&y28=-1:S1;
-  *!HEx1&y28>=0/y28<=27:Sy28/?y29;        [Get Secondary Skill check in y29]
-  *!OW:Ry1/0/?y30 Ry1/1/?y31 Ry1/2/?y32 Ry1/3/?y33 Ry1/4/?y34 Ry1/5/?y35 Ry1/6/?y36 Ry1/7/?y37; [Get value of Resources]
-
-  *!if&y30>=y20/y31>=y21/y32>=y22/y33>=y23/y34>=y24/y35>=y25/y36>=y26/y37>=y27/y29>0; [When enough resources and skill learned]
-    *!VRy20:*-1; *!VRy21:*-1; *!VRy22:*-1; *!VRy23:*-1; *!VRy24:*-1; *!VRy25:*-1; *!VRy26:*-1; *!VRy27:*-1;
-    *!OW:Ry1/0/dy20 Ry1/1/dy21 Ry1/2/dy22 Ry1/3/dy23 Ry1/4/dy24 Ry1/5/dy25 Ry1/6/dy26 Ry1/7/dy27; [Substract Res from player]
-
-    *!SN:T^AC_Warmachine.Purchased^/?s^Warmachine^;
-    *!IF:M^%S(Warmachine)^;                 [Purchased text]
-    *!SN:W^%Z1_%X1^/1;                      [Set flag for upgrade]
-    *!SN:W^WM_Visit_Purchased^/1;
-    *!VRz9:S^fixit^;
-    *!SN:Pz9;
-    *!FU(Play_Blacksmith_Sound):P4;
-    *!FU(Set_WM_Checkboxes):Px1;            [call func for switch on the user's choice]
-    *!SN:D;                                 [Redraw status bar]
-  *!el;                                  [else]
-    *!SN:T^AC_Warmachine.cant_afford^/?s^Warmachine^;
-    *!IF:M^%S(Warmachine)^;                 [cant afford text]
-    *!FU(Play_Blacksmith_Sound):P2;
-  *!en;
-*!en;
-
-*?FU(Set_WM_Checkboxes);
-
-*!SN:W^WM_Upgrade_Selection^/?y1;
-
-*!if&y1=1;
-  *!SN:W^Ballista_Morale_%X1^/?y10;
-  *!SN:W^Ballista_Add_Shots_%X1^/?y11;
-  *!SN:W^Ballista_Crippling_%X1^/?y12;
-  *!DL51:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-*!if&y1=2;
-  *!SN:W^Ammo_Supply_%X1^/?y10;
-  *!SN:W^Ammo_Goblin_%X1^/?y11;
-  *!SN:W^Ammo_Enhanced_Arrow_%X1^/?y12;
-  *!DL51:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-*!if&y1=4;
-  *!SN:W^Tent_Improved_%X1^/?y10;
-  *!SN:W^Tent_Capacity_Upgrade_%X1^/?y11;
-  *!SN:W^Tent_Gold_Gain_%X1^/?y12;
-  *!DL51:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-*!if&y1=8;
-  *!SN:W^WM_Fortification_%X1^/?y10;
-  *!SN:W^WM_Maintainability_%X1^/?y11;
-  *!SN:W^WM_Versatility_%X1^/?y12;
-  *!DL51:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-
-*?DL&v998=51/v999>=1/v999<=3/v1000=14;  [right click on the three pictures to show text for upgrade and description]
-
-*!SN:W^WM_Upgrade_Selection^/?y1;
-
-*!if&y1=1;
-  *!SN&v999=1:T^AC_Warmachine.Bal_Upg_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.Bal_Upg_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.Bal_Upg_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.Bal_Upg_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.Bal_Upg_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.Bal_Upg_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-*!if&y1=2;
-  *!SN&v999=1:T^AC_Warmachine.Cart_Upg_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.Cart_Upg_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.Cart_Upg_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.Cart_Upg_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.Cart_Upg_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.Cart_Upg_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-*!if&y1=4;
-  *!SN&v999=1:T^AC_Warmachine.Tent_Upg_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.Tent_Upg_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.Tent_Upg_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.Tent_Upg_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.Tent_Upg_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.Tent_Upg_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-*!if&y1=8;
-  *!SN&v999=1:T^AC_Warmachine.All_Upg_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.All_WM_Upg_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.All_Upg_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.All_WM_Upg_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.All_Upg_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.All_WM_Upg_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-
-
-
-
-*?FU(Play_Blacksmith_Sound);
-x1=attidude 1-4
-
-*!CA-1:T?y1;
-*!FU|y1<0/y1>8:E;                       [Exit if no valid Town number]
-*!VRz2&y1=0:S^Human^;
-*!VRz2&y1=1:S^Dwarf^;
-*!VRz2&y1=2:S^Wizard^;
-*!VRz2&y1=3:S^Evil^;
-*!VRz2&y1=4:S^Evil^;
-*!VRz2&y1=5:S^Warlock^;
-*!VRz2&y1=6:S^Warlock^;
-*!VRz2&y1=7:S^Human^;
-*!VRz2&y1=8:S^Elf^;
-*!VRz1:S^%Z2 Weapon shop 0%X1^;
-*!SN:Pz1;                               [play quest sound before showing dialogue]
-*?FU(Play_Mage_Guild_Sound);
-x1=attidude 1-4
-
-*!CA-1:T?y1;
-*!FU|y1<0/y1>8:E;                       [Exit if no valid Town number]
-*!VRz2&y1=0:S^Human^;
-*!VRz2&y1=1:S^Dwarf^;
-*!VRz2&y1=2:S^Wizard^;
-*!VRz2&y1=3:S^Evil^;
-*!VRz2&y1=4:S^Evil^;
-*!VRz2&y1=5:S^Warlock^;
-*!VRz2&y1=6:S^Warlock^;
-*!VRz2&y1=7:S^Human^;
-*!VRz2&y1=8:S^Elf^;
-*!VRz1:S^%Z2 Magic shop 0%X1^;
-*!SN:Pz1;                               [play quest sound before showing dialogue]
-
-
-
-*?DL&v998=51/v999=30722/v1000=13;       [Save Confirm]
-*!DL:C1;
-
-
-****************************************************************************************************
-*?DL&v998=52/v999>=1/v999<=3/v1000=13;  [left click on the three pictures asks if you want to buy the upgrade]
-
-*!VRz1:S^Button.wav^;
-*!SN:Pz1;
-
-*!CA-1:H1/?x1; *!FU|x1<0/x1>155:E;      [Exit if no valid hero]
-*!SN:W^WM_Upgrade_Selection^/?y10;
-
-*!if&y10=1;
-*!HEx1:A2/4/?y1/?y2;                    [4  Ballista]
-*!SN&y2=0:T^AC_Warmachine.No_Ballista^/?s^Warmachine^;
-*!IF&y2=0:M^%S(Warmachine)^;
-*!FU(Upgrade_Buy_Mage_Guild)&y2=1:Px1/v999/y10;
-*!en;
-
-*!if&y10=2;
-*!HEx1:A2/5/?y1/?y2;                    [5  Ammo Cart]
-*!SN&y2=0:T^AC_Warmachine.No_Ammo^/?s^Warmachine^;
-*!IF&y2=0:M^%S(Warmachine)^;
-*!FU(Upgrade_Buy_Mage_Guild)&y2=1:Px1/v999/y10;
-*!en;
-
-*!if&y10=4;
-*!HEx1:A2/6/?y1/?y2;                    [6  First Aid Tent]
-*!SN&y2=0:T^AC_Warmachine.No_Tent^/?s^Warmachine^;
-*!IF&y2=0:M^%S(Warmachine)^;
-*!FU(Upgrade_Buy_Mage_Guild)&y2=1:Px1/v999/y10;
-*!en;
-
-*!if&y10=8;
-*!HEx1:A2/4/?y1/?y2;                    [All WM]
-*!HEx1:A2/5/?y1/?y3;
-*!HEx1:A2/6/?y1/?y4;
-*!SN|y2=0/y3=0/y4=0:T^AC_Warmachine.No_Machines^/?s^Warmachine^;
-*!IF|y2=0/y3=0/y4=0:M^%S(Warmachine)^;
-*!FU(Upgrade_Buy_Mage_Guild)&y2=1/y3=1/y4=1:Px1/v999/y10;
-*!en;
-
-
-*?FU(Upgrade_Buy_Mage_Guild);
-x1=Hero Number, x2=dialogue ID, x3=selection
-
-*!VRz1&x2=1/x3=1:S^Ballista_Fireball_Attack^;
-*!VRz1&x2=2/x3=1:S^Ballista_Magic_Arrow^;
-*!VRz1&x2=3/x3=1:S^Ballista_Spell_Trigger^;
-
-*!VRz1&x2=1/x3=2:S^Ammo_Booby_Trap^;
-*!VRz1&x2=2/x3=2:S^Ammo_Replensih_SP^;
-*!VRz1&x2=3/x3=2:S^Ammo_Burning_Arrow^;
-
-*!VRz1&x2=1/x3=4:S^Tent_Herbalism^;
-*!VRz1&x2=2/x3=4:S^Tent_Overheal^;
-*!VRz1&x2=3/x3=4:S^Tent_Life_Aura^;
-
-*!VRz1&x2=1/x3=8:S^WM_Shield_Ench^;
-*!VRz1&x2=2/x3=8:S^WM_MR_Ench^;
-*!VRz1&x2=3/x3=8:S^WM_MR_Aura^;
-
-*!SN:W^%Z1_%X1^/?y1;
-*!SN:T^AC_Warmachine.Already_Bought^/?s^Warmachine^;
-*!IF&y1=1:M^%S(Warmachine)^;            [Show text if already bought]
-*!FU&y1=1:E;                            [Exit if already bought]
-
-
-
-
-*!if&x2=1/x3=1;                        [Ballista_Fireball_Attack]
-  *!VRy20:S0;                             [Wood]
-  *!VRy21:S0;                             [Mercury]
-  *!VRy22:S0;                             [Ore]
-  *!VRy23:S15;                            [Sulfur]
-  *!VRy24:S10;                            [Crystal]
-  *!VRy25:S0;                             [Gems]
-  *!VRy26:S10000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S15;                            [15 Air Magic]
-  *!SN:T^AC_Warmachine.Bal_Ench_1^/?z-1;  [Get Upgrade Name]
-*!en;
-
-*!if&x2=2/x3=1;                        [Ballista_Magic_Arrow]
-  *!VRy20:S0;                             [Wood]
-  *!VRy21:S0;                             [Mercury]
-  *!VRy22:S0;                             [Ore]
-  *!VRy23:S0;                             [Sulfur]
-  *!VRy24:S0;                             [Crystal]
-  *!VRy25:S0;                             [Gems]
-  *!VRy26:S20000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S25;                            [25 Sorcery]
-  *!SN:T^AC_Warmachine.Bal_Ench_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=1;                        [Ballista_Spell_Trigger]
-  *!VRy20:S0;                             [Wood]
-  *!VRy21:S15;                            [Mercury]
-  *!VRy22:S0;                             [Ore]
-  *!VRy23:S15;                            [Sulfur]
-  *!VRy24:S15;                            [Crystal]
-  *!VRy25:S15;                            [Gems]
-  *!VRy26:S5000;                          [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S4;                             [4  Diplomacy]
-  *!SN:T^AC_Warmachine.Bal_Ench_3^/?z-1;
-*!en;
-
-*!if&x2=1/x3=2;                        [Ammo_Booby_Trap]
-  *!VRy20:S15;                            [Wood]
-  *!VRy21:S0;                             [Mercury]
-  *!VRy22:S10;                            [Ore]
-  *!VRy23:S5;                             [Sulfur]
-  *!VRy24:S0;                             [Crystal]
-  *!VRy25:S0;                             [Gems]
-  *!VRy26:S5000;                          [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S22;                            [22 Offence]
-  *!SN:T^AC_Warmachine.Cart_Ench_1^/?z-1;
-*!en;
-
-*!if&x2=2/x3=2;                        [Ammo_Replensih_SP]
-  *!VRy20:S5;                             [Wood]
-  *!VRy21:S5;                             [Mercury]
-  *!VRy22:S5;                             [Ore]
-  *!VRy23:S5;                             [Sulfur]
-  *!VRy24:S5;                             [Crystal]
-  *!VRy25:S5;                             [Gems]
-  *!VRy26:S5000;                          [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S21;                            [21 Learning]
-  *!SN:T^AC_Warmachine.Cart_Ench_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=2;                        [Ammo_Burning_Arrow]
-  *!VRy20:S20;                            [Wood]
-  *!VRy21:S5;                             [Mercury]
-  *!VRy22:S5;                             [Ore]
-  *!VRy23:S20;                            [Sulfur]
-  *!VRy24:S5;                             [Crystal]
-  *!VRy25:S5;                             [Gems]
-  *!VRy26:S15000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S14;                            [14 Fire Magic]
-  *!SN:T^AC_Warmachine.Cart_Ench_3^/?z-1;
-*!en;
-
-*!if&x2=1/x3=4;                        [Tent_Herbalism]
-  *!VRy20:S5;                             [Wood]
-  *!VRy21:S5;                             [Mercury]
-  *!VRy22:S5;                             [Ore]
-  *!VRy23:S5;                             [Sulfur]
-  *!VRy24:S5;                             [Crystal]
-  *!VRy25:S5;                             [Gems]
-  *!VRy26:S10000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S27;                            [27 First Aid]
-  *!SN:T^AC_Warmachine.Tent_Ench_1^/?z-1;
-*!en;
-
-*!if&x2=2/x3=4;                        [Tent_Overheal]
-  *!VRy20:S2;                             [Wood]
-  *!VRy21:S2;                             [Mercury]
-  *!VRy22:S2;                             [Ore]
-  *!VRy23:S2;                             [Sulfur]
-  *!VRy24:S2;                             [Crystal]
-  *!VRy25:S2;                             [Gems]
-  *!VRy26:S15000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S19;                            [19 Tactics]
-  *!SN:T^AC_Warmachine.Tent_Ench_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=4;                        [Tent_Life_Aura]
-  *!VRy20:S0;                             [Wood]
-  *!VRy21:S5;                             [Mercury]
-  *!VRy22:S10;                            [Ore]
-  *!VRy23:S5;                             [Sulfur]
-  *!VRy24:S5;                             [Crystal]
-  *!VRy25:S5;                             [Gems]
-  *!VRy26:S20000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S16;                            [16 Water Magic]
-  *!SN:T^AC_Warmachine.Tent_Ench_3^/?z-1;
-*!en;
-
-*!if&x2=1/x3=8;                        [WM_Shield_Ench]
-  *!VRy20:S0;                             [Wood]
-  *!VRy21:S5;                             [Mercury]
-  *!VRy22:S0;                             [Ore]
-  *!VRy23:S2;                             [Sulfur]
-  *!VRy24:S2;                             [Crystal]
-  *!VRy25:S5;                             [Gems]
-  *!VRy26:S8000;                          [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S17;                            [17 Earth Magic]
-  *!SN:T^AC_Warmachine.All_Ench_1^/?z-1;
-*!en;
-
-*!if&x2=2/x3=8;                        [WM_MR_Ench]
-  *!VRy20:S5;                             [Wood]
-  *!VRy21:S5;                             [Mercury]
-  *!VRy22:S5;                             [Ore]
-  *!VRy23:S5;                             [Sulfur]
-  *!VRy24:S5;                             [Crystal]
-  *!VRy25:S5;                             [Gems]
-  *!VRy26:S6000;                          [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S-1;                            [None]
-  *!SN:T^AC_Warmachine.All_Ench_2^/?z-1;
-*!en;
-
-*!if&x2=3/x3=8;                        [WM_MR_Aura]
-  *!VRy20:S10;                            [Wood]
-  *!VRy21:S10;                            [Mercury]
-  *!VRy22:S10;                            [Ore]
-  *!VRy23:S10;                            [Sulfur]
-  *!VRy24:S10;                            [Crystal]
-  *!VRy25:S10;                            [Gems]
-  *!VRy26:S10000;                         [Gold]
-  *!VRy27:S0;                             [Mithril]
-  *!VRy28:S-1;                            [None]
-  *!SN:T^AC_Warmachine.All_Ench_3^/?z-1;
-*!en;
-
-*!VRz-6:S^^;
-
-*!re i/20/26;
-  *!if&yi>0;
-    *!VRf:Si -20;
-    *!VRz-6:+^{%yi} {~>smalres.def:%f}^;
-    *!if&i<26;
-      *!VRz-6:+^,  ^;
-    *!el;
-      *!VRz-6:+^.^;
-    *!en;
-  *!en;
-
-*!en;
-
-*!VRy50:S0R2;
-*!SN&y50=0:T^AC_Warmachine.Solid_Choice_1^/?z-2; [Generate Random quote 1]
-*!SN&y50=1:T^AC_Warmachine.Solid_Choice_2^/?z-2; [Generate Random quote 2]
-*!SN&y50=2:T^AC_Warmachine.Solid_Choice_3^/?z-2; [Generate Random quote 3]
-*!SN&y28>=0:H^secskill^/y28/0/?z-3;     [Get Name of Secondary Skill]
-*!SN&y28=-1:T^AC_Warmachine.Requirement_1^/?z-4; [Dont Show text with skill requirement]
-*!SN&y28>=0:T^AC_Warmachine.Requirement_2^/?z-4; *!SN:Iz-4/?z-4; [Show text with skill requirement]
-*!VRy50:S0R2;
-*!SN&y50=0:T^AC_Warmachine.Buying_1^/?z-5; [Generate Random quote 1]
-*!SN&y50=1:T^AC_Warmachine.Buying_2^/?z-5; [Generate Random quote 2]
-*!SN&y50=2:T^AC_Warmachine.Buying_3^/?z-5; [Generate Random quote 3]
-
-*!SN:T^AC_Warmachine.Upgrade_Costs^/?z10; *!SN:Iz10/?z10;
-*!IF:Q1^%Z10^;                [Show text with costs]
-
-
-*!SN&-1:T^AC_Warmachine.Next_Time^/?s^Warmachine^;
-*!VRy1&-1:S0R1;
-*!FU(Play_Mage_Guild_Sound)&-1/y1=1:P3; [Angry Sound If you dont want to buy]
-
-*!if&1;                                [If you want to buy]
-*!HEx1:O?y1;                            [Get Hero Owner]
-*!VRy29&y28=-1:S1;
-*!HEx1&y28>=0/y28<=27:Sy28/?y29;        [Get Secondary Skill check in y29]
-*!OW:Ry1/0/?y30 Ry1/1/?y31 Ry1/2/?y32 Ry1/3/?y33 Ry1/4/?y34 Ry1/5/?y35 Ry1/6/?y36 Ry1/7/?y37; [Get value of Resources]
-
-*!if&y30>=y20/y31>=y21/y32>=y22/y33>=y23/y34>=y24/y35>=y25/y36>=y26/y37>=y27/y29>0; [When enough resources and skill learned]
-*!VRy20:*-1; *!VRy21:*-1; *!VRy22:*-1; *!VRy23:*-1; *!VRy24:*-1; *!VRy25:*-1; *!VRy26:*-1; *!VRy27:*-1;
-*!OW:Ry1/0/dy20 Ry1/1/dy21 Ry1/2/dy22 Ry1/3/dy23 Ry1/4/dy24 Ry1/5/dy25 Ry1/6/dy26 Ry1/7/dy27; [Substract Res from player]
-
-*!SN:T^AC_Warmachine.Purchased^/?s^Warmachine^;
-*!IF:M^%S(Warmachine)^;                 [Purchased text]
-*!SN:W^%Z1_%X1^/1;                      [Set flag for upgrade]
-*!SN:W^WM_Visit_Purchased^/1;
-*!VRy1:S0R1;
-*!VRz9:S^Enchant Item^;
-*!SN:Pz9;
-*!FU(Play_Mage_Guild_Sound):P4;         [play quest sound before showing dialogue approve sounds]
-
-*!FU(Set_WM_Checkboxes_1):Px1;          [call func for switch on the user's choice]
-*!SN:D;                                 [Redraw status bar]
-*!el;                                  [else]
-*!SN:T^AC_Warmachine.cant_afford^/?s^Warmachine^;
-*!IF:M^%S(Warmachine)^;                 [cant afford text]
-*!FU(Play_Mage_Guild_Sound):P2;         [Not enough Money]
-*!en;
-*!en;
-
-
-*?FU(Set_WM_Checkboxes_1);
-
-*!SN:W^WM_Upgrade_Selection^/?y1;
-
-*!if&y1=1;
-  *!SN:W^Ballista_Fireball_Attack_%X1^/?y10; [Check if options have already been activated]
-  *!SN:W^Ballista_Magic_Arrow_%X1^/?y11;
-  *!SN:W^Ballista_Spell_Trigger_%X1^/?y12;
-  *!DL52:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-*!if&y1=2;
-  *!SN:W^Ammo_Booby_Trap_%X1^/?y10;     [Check if options have already been activated]
-  *!SN:W^Ammo_Replensih_SP_%X1^/?y11;
-  *!SN:W^Ammo_Burning_Arrow_%X1^/?y12;
-  *!DL52:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-*!if&y1=4;
-  *!SN:W^Tent_Herbalism_%X1^/?y10;      [Check if options have already been activated]
-  *!SN:W^Tent_Overheal_%X1^/?y11;
-  *!SN:W^Tent_Life_Aura_%X1^/?y12;
-  *!DL52:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-*!if&y1=8;
-  *!SN:W^WM_Shield_Ench_%X1^/?y10;      [Check if options have already been activated]
-  *!SN:W^WM_MR_Ench_%X1^/?y11;
-  *!SN:W^WM_MR_Aura_%X1^/?y12;
-  *!DL52:A13/4/y10/1 A14/4/y11/1 A15/4/y12/1;
-*!en;
-
-
-*?DL&v998=52/v999>=1/v999<=3/v1000=14;  [right click on the three pictures to show text for upgrade and description]
-
-*!SN:W^WM_Upgrade_Selection^/?y1;
-
-*!if&y1=1;
-  *!SN&v999=1:T^AC_Warmachine.Bal_Ench_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.Bal_Ench_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.Bal_Ench_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.Bal_Ench_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.Bal_Ench_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.Bal_Ench_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-*!if&y1=2;
-  *!SN&v999=1:T^AC_Warmachine.Cart_Ench_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.Cart_Ench_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.Cart_Ench_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.Cart_Ench_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.Cart_Ench_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.Cart_Ench_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-*!if&y1=4;
-  *!SN&v999=1:T^AC_Warmachine.Tent_Ench_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.Tent_Ench_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.Tent_Ench_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.Tent_Ench_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.Tent_Ench_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.Tent_Ench_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-*!if&y1=8;
-  *!SN&v999=1:T^AC_Warmachine.All_Ench_1^/?z-1; [Get Upgrade Name of 1st]
-  *!SN&v999=1:T^AC_Warmachine.All_WM_Ench_1_Description^/?z1; [set text for 1st]
-  *!SN&v999=2:T^AC_Warmachine.All_Ench_2^/?z-1;
-  *!SN&v999=2:T^AC_Warmachine.All_WM_Ench_2_Description^/?z1; [2nd]
-  *!SN&v999=3:T^AC_Warmachine.All_Ench_3^/?z-1;
-  *!SN&v999=3:T^AC_Warmachine.All_WM_Ench_3_Description^/?z1; [...]
-  *!SN:Iz1/?z1;
-  *!IF:M0/4/^%Z1^;
-*!en;
-
-
-
-
-Close Dialouges*
-*?DL&v998=52/v999=30721/v1000=13;       [Reset Close]
-*!DL:C1;
-
-*?DL&v998=52/v999=30722/v1000=13;       [Save Confirm]
-*!DL:C1;
-
-*?DL&v998=81/v999=30722/v1000=13;
-*!SN:W^WM_Window_Selection^/?y1;
-*!SN:W^WM_Visit_Purchased^/?y2;
-*!FU(Play_Blacksmith_Sound)&y1=1/y2=0:P3;
-*!FU(Play_Mage_Guild_Sound)&y1=2/y2=0:P3;[Play angry sound if no upgrade was purchased this visit]
-*!DL:C1;
 
 ****************************************************************************************************
 
@@ -30729,7 +29697,7 @@ The Market can be accessed by right cklicking the market in the citiy or the GEM
   !!en;
 !?DL&v998=233/v999=30721/v1000=13;       [Save Confirm]
   !!SN:W^ACM_Hit_Counter^/0;
-  !!VRz1:S^Wizard weapon Shop 04.wav^;
+  !!VRz1:S^Wi_WS_04.wav^;
   !!SN:Pz1;  
   !!VRz1:S^WoodDRClose.wav^;
   !!SN:Pz1;
