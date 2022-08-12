@@ -120,6 +120,22 @@ ZVSE2
   !!SN:Pz-1;
 !!en;
 
+
+!?FU(nig_CheckStackIsControled);
+!#VA(stackId:x) (heroId:x) (controlled:x);
+  !!VR(controlled):S(FALSE);
+  !!BM(stackId):T?t;
+
+  !!if&t=(MON_BALLISTA);
+    !!HE(heroId):S(SKILL_ARTILLERY)/?(controlled);
+  !!el&t=(MON_FIRST_AID_TENT);
+    !!HE(heroId):S(SKILL_FIRST_AID)/?(controlled);
+  !!el&t=(MON_CATAPULT);
+    !!HE(heroId):S(SKILL_BALLISTICS)/?(controlled);
+  !!el;
+    !!VR(controlled):S(TRUE);
+  !!en;
+  
 !?FU(OnAfterBattleAction)&i^nig_isAllDefendAction^=(TRUE)/(ERM_FLAG_IS_HUMAN);/i^battle_humanOnly^=(FALSE);
 !!BG:N?(stackId:y) Q?(stackSide:y);                                      Получили ID текущего стека. В событии "OnAfterBattleAction" текущий стек уже не тот,
 
@@ -128,8 +144,11 @@ ZVSE2
   *!FU&(length):E;
   *!BM(stackId):G(SPELL_HYPNOTIZE)/?(power:y)/?(length:y);
   *!FU&(length):E;
+  !!FU(nig_CheckStackIsControled):P(stackId)/i^battle_hero_%(stackSide)^/?(controlled:y);
+  !!if&(controlled);
+    !!BG:A(BATTLE_ACTION_DEFEND);                          Выбираем действие «Защита»
 
-  !!BG:A(BATTLE_ACTION_DEFEND);                          Выбираем действие «Защита»
+  !!en;
 !!el:;
 
   !!BA:O?(atkPlayer:y)/?(defPlayer:y) E?(isNetwork:y);
@@ -163,7 +182,10 @@ ZVSE2
   !!FU&y12=1:E;
 
   !!if&(stackSide)=i^nig_allWaitSide^;/y12<>1:;                  Если текущая сторона — та, что активировала «Защита всем»
-    !!BG:A(BATTLE_ACTION_WAIT);                          Выбираем действие «Защита»
+    !!FU(nig_CheckStackIsControled):P(stackId)/i^battle_hero_%(stackSide)^/?(controlled:y);
+    !!if&(controlled);
+      !!BG:A(BATTLE_ACTION_WAIT);                          Выбираем действие «Защита»
+    !!en;
   !!el:;
     !!BA:O?(atkPlayer:y)/?(defPlayer:y) E?(isNetwork:y);
     !!OW:I(atkPlayer)/?(isAiAttacker:y) I(defPlayer)/?(isAiDeffender:y);
