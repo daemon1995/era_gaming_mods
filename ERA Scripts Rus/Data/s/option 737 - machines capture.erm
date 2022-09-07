@@ -1,6 +1,9 @@
 ZVSE2
 ** Author orig.  : Algor
 ** Rewritten by  : Archer30
+** Fully Rewritten by  : daemon_n
+now it is simple as life
+
 ** Name          : Machines capture
 ** Name rus.     : «ахват боевых машин
 ** Options       : 737
@@ -10,122 +13,57 @@ ZVSE2
 ** ѕри капитул€ции машины остаютс€ у побежденного.
 ** Ќенужна€ машина может быть разрушена.
 
-
-!?FU(OnBeforeBattleUniversal);
-!!VRi^es_737_hasSurrendered^:S(FALSE);
-
-!?FU(OnBeforeBattleAction);
-!!UN:P737/?(wogOption:y);               [провер€ем включена ли опци€ 737]
-!!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
-
-!!BG:A?(action:y);                      [тип действи€ в бою]
-!!VRi^es_737_hasSurrendered^&(action)=(BATTLE_ACTION_SURRENDER):S(TRUE);
-
-!?FU(OnAfterBattleUniversal)&i^battle_hero_0^>(NO_HERO)/i^battle_hero_1^>(NO_HERO)/i^es_737_hasSurrendered^<>(TRUE); [после бо€]
-!!UN:P737/?(wogOption:y);               [провер€ем включена ли опци€ 737]
-!!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
-
-; Get the hero who won the battle, exit if no one won
-!!VR(wonHero:y):S(NO_HERO);
-
-!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
-  !!HEi^battle_hero_%i^:O?(owner:y);
-
-  !!if&(owner)>(NO_OWNER);
-    !!VR(wonHero):Si^battle_hero_%i^;
-    !!VR(lostSide:y):Si X1;
-    !!VR(lostHero:y):Si^battle_hero_%(lostSide)^;
-
-    !!br;
+!?FU(OnStartOrLoad);
+  !!UN:P737/?i^ES_737_enabled^;
+  !!if&i^ES_737_enabled^;
+    !!FU(ES_737_Run):P1;
   !!en;
-!!en;
 
-!!FU&(wonHero)=(NO_HERO):E;
+!?FU(OnGameLeave)&i^ES_737_enabled^;
+  !!FU(ES_737_Run):P0;
 
-; Destroy the war machine from the lost hero and give them to the won hero if available
-!!HE(wonHero):A2/(ART_BALLISTA)/?(wonBallista:y) A2/(ART_AMMO_CART)/?(wonCart:y) A2/(ART_FIRST_AID_TENT)/?(wonTent:y);
-!!HE(lostHero):A2/(ART_BALLISTA)/?(lostBallista:y) A2/(ART_AMMO_CART)/?(lostCart:y) A2/(ART_FIRST_AID_TENT)/?(lostTent:y);
-
-; Set up compatibility with Enhanced War Machines III
-!!UN:P73/?(enhWMIII:y);
-
-!!if&(enhWMIII);
-  !!VR(lostBallista):Si^es_737_capturedWM1^;
-  !!VR(lostCart):Si^es_737_capturedWM2^;
-  !!VR(lostTent):Si^es_737_capturedWM3^;
-  !!IF:W(wonHero);
-!!en;
-
-!!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
-  !!HE(lostHero):A3/i/1/1;
-!!en;
-
-; Set up variables for the dialogue while giving warmachines
-; For Enhanced War Machines only, capture all the remaining War Machines from the lost hero
-!!VR(capturedNum:y):S0;
-!!FU(NewIntArray):P?(captureWarMachines:y);
-
-!!if&(wonBallista)=0/(lostBallista)>0;
-  !!HE(wonHero):A4/(ART_BALLISTA);
-  !!FU(Array_Push):P(captureWarMachines)/(PIC_TYPE_ART)/(ART_BALLISTA);
-  !!VR(capturedNum):+1;
-
-  !!VRw81&(enhWMIII):+(lostBallista);
-!!en;
-
-!!if&(wonCart)=0/(lostCart)>0;
-  !!HE(wonHero):A4/(ART_AMMO_CART);
-  !!FU(Array_Push):P(captureWarMachines)/(PIC_TYPE_ART)/(ART_AMMO_CART);
-  !!VR(capturedNum):+1;
-
-  !!VRw82&(enhWMIII):+(lostCart);
-!!en;
-
-!!if&(wonTent)=0/(lostTent)>0;
-  !!HE(wonHero):A4/(ART_FIRST_AID_TENT);
-  !!FU(Array_Push):P(captureWarMachines)/(PIC_TYPE_ART)/(ART_FIRST_AID_TENT);
-  !!VR(capturedNum):+1;
-
-  !!VRw83&(enhWMIII):+(lostTent);
-!!en;
-
-; Show the msg of capturing
-!!if&(capturedNum)>0/1000;
-  !!HE(wonHero):O?(wonPlayer:y);
-  !!OW:C?(player:y)/?(interactPlayer:y);
-
-  !!if&(wonPlayer)=(interactPlayer);
-    !!FU(ES_SetupMultiPicDlg):P(captureWarMachines);
-
-    !!if&(capturedNum)>1;
-      !!IF:N(MSG_TYPE_MES)/^%T(es.737.plurDlg)^;
+!?FU(ES_737_Run);
+  !#VA(start:x);
+  !!re i/0/2;
+    !!if&(start);
+      !!VR(artId:y):S(ART_CATAPULT);
     !!el;
-      !!IF:N(MSG_TYPE_MES)/^%T(es.737.singDlg)^;
+      !!VR(artId:y):Si +(ART_BALLISTA);
+    !!en;
+
+    !!VR(offs:y):Si*9;
+    !!UN:C4627788/(offs:y)/1/(artId);?y4;
+
+    !!VR(offs:y):Si*5;
+    !!UN:C4627648/(offs:y)/1/(artId);
+  !!en;
+
+
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^>=15/i^mouse_item^<=17/i^key_ctrl^/999/i^ES_737_enabled^; [клик в окне геро€]
+  ; Set up variables
+  !!VR(warMachine:y):Si^mouse_item^ -11;
+
+  ; Check if the hero has a war machine at the clicked slot
+  !!HEi^mouse_hero_0^:A2/(warMachine)/d/?(hasWarMachine:y);
+
+  ; Ask to destroy the war machine if positive
+  !!if&(hasWarMachine);
+    !!IF:Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_QUESTION)^%T(es.737.heroScr)^;
+    !!CM:R0;
+
+    ; Remove the war machine
+    !!if&1;
+
+      !!HEi^mouse_hero_0^:A3/(warMachine)/1/1;
+
+      !!if&i^WOG_73_enabled^;                 [WM III comatibility]
+        !!IF:Wi^mouse_hero_0^; 
+        !!VR(wVar:y):S(warMachine) +77;       [remove all WM]
+        !!VRw(wVar):S0;
+      !!en;
+
+      !!SN:D;
     !!en;
   !!en;
-!!en;
-
-!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^>=15/i^mouse_item^<=17/i^key_ctrl^/999; [клик в окне геро€]
-!!UN:P737/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;
-
-; Set up variables
-!!VR(warMachine:y):Si^mouse_item^ -11;
-!!CM:H?(hero:y)/?(rightHero:y);
-
-; Check if the hero has a war machine at the clicked slot
-!!HE(hero):A2/(warMachine)/d/?(hasWarMachine:y);
-
-; Ask to destroy the war machine if positive
-!!if&(hasWarMachine);
-  !!IF:Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_QUESTION)^%T(es.737.heroScr)^;
-
-  ; Remove the war machine
-  !!if&1;
-    !!HE(hero):A3/(warMachine)/1/1;
-    !!CM:R0;
-    !!SN:D;
-  !!en;
-!!en;
 
 ** end
