@@ -6,6 +6,14 @@ ZVSE2
 ****************************************************************************************************
 UNIVERSAL START TRIGGER by igrik
 
+*?EX;
+*!IF:M^%^;
+!?FU(OnKeyPressed)&x1=(KEY_1);
+
+!!re i/500/502;
+  *!FU(gem_DlgItemPosition):Pi/d1/d1;
+
+!!en;
 
 !?FU(gem_OnPlaceRandMons);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(monAmount:y); edx mon amount
@@ -191,6 +199,7 @@ UNIVERSAL START TRIGGER by igrik
 
 
 
+
 !?FU(gem_CreateERMHook);                [функция хуков (x1 - адрес установки хука)\]
   *!SN:Ex1/1/6116626/(gem_OnProcessEndInTownScreen);                                [нажатие клавиши в бою]
 
@@ -255,6 +264,59 @@ UNIVERSAL START TRIGGER by igrik
   *!SN:Ex1/1/5599248/(NetworkProcessReceivedData4);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   ** end igrik script-79.wog
   *!SN:Ex1/1/7778010/(CalcExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+!?FU(gem_CreateERMHook);
+  *!SN:Ex1/1/4649733/(HD_BattleOptionDlgProc);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+5F3CB1
+0x6241952
+  *!SN:Ex1/1/6241841/(acm_NpcChangeName);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+*!SN:Ex1/1/4479545/(gem_OnStackMove);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+!?FU(gem_OnStackMove)&i^battle_round^<0/i^temp^=0;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(stack:y) C(stack)/244/4/?(side:y)  C(stack)/248/4/?(index:y)
+   Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(targetPos:y) Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4479552;
+  !!VR(stackId:y):S(side) *21 +(index);
+  !!VRi^temp^:S1;
+  !!BM(stackId:y):P(targetPos:y);
+  !!VRi^temp^:S0;
+
+
+!?FU(WOG_AddExp);
+!#VA(exp[3]:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(exp[0]) C(ebp)/12/4/?(exp[1]); C(ebp)/16/4/?(exp[2]);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(exp);
+!!re i/0/(exp[SIZE])/1/-2;
+  *!UN:C(exp[i])/4/?(exp[i]);
+  *!IF:L^%(exp[i])^;
+!!en;
+
+!?FU(gem_CreateERMHook);
+  *!SN:Ex1/1/7438308/(WOG_SetNewExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/7441388/(WOG_SetExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/7442976/(WOG_AddExp_AfterBattle);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/7439971/(WOG_FindExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+!?FU(WOG_FindExp);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(expPerCreature:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(creature:y); C(creature)/4/?(currExp:y);
+*!IF:L^% (WOG_FindExp) %(expPerCreature) %(creature)^;
+
+!!if&(expPerCreature)>100000;
+  !!UN:C(expPerCreature)/4/?y1;
+  *!IF:L^%y1^;
+!!en;
+
+!?FU(WOG_SetNewExp);
+  *!IF:L^% (WOG_SetNewExp[i])^;
+
+5906498
+!?FU(WOG_SetExp);
+  *!IF:L^% (WOG_SetExp[i])^;
+
+!?FU(WOG_AddExp_AfterBattle);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/?(creature:y) C(creature:y)/4/?(currExp:y)
+       C(ebp)/-12/4/?(expToAdd:y);
+
 !?FU(ArtGiveSpell_Switch);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/?(artId:y);
 
@@ -269,11 +331,25 @@ UNIVERSAL START TRIGGER by igrik
 
     !!FU:E;
   !!en;
-!?FU(OnKeyPressed_AdvMap)&x1=(KEY_Q);
-*!VRz1:S^data\pcx\MainMenu\MuMap.pcx^;
-*!IF:B1/1/0 P1;
-*!FU1101:P;
+!?FU(OnRecruitDlgAction); 
+
+  *!RD:C0/?y1/0; C1/d/d2;;
+
+  *!RD:C1/?y1/2; C1/d/d2;;
+
+!?FU(gem_CreateERMHook);
+  *!SN:Ex1/1/5574655/(gen_OnArtCheck);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/4499964/(gen_OnArtTest);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+*?FU(gen_OnArtTest)&i^temp^;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?y1 Cy1/12/4/0;
+  *!IF:M^%^;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4499992;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/8;?y1 Cy1/152/4/0;
+
+
 !?FU(OnKeyPressed_Battle)&x1=(KEY_Q);
+
 
 !?FU(NetworkSendData);
 *!IF:L^%x1 NetworkSendData^;

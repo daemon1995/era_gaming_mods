@@ -86,8 +86,13 @@ ZVSE2
     !!re i/0/1;
       *!VRi^gem_BattleBtn_NpcId_%i_CanShoot^:Si^battle_hero_%i^;
       !!if&i^battle_hero_%i^<>(NO_HERO);
+        !!re j/0/(BATTLE_STACKS_PER_SIDE)/1/-1;
+          !!VR(stackId:y):Si*(BATTLE_STACKS_PER_SIDE) +j;
+          !!BM(stackId):T?t;
+
+        !!en;
         !!COi^battle_hero_%i^:B0/?i^gem_BattleBtn_NpcId_%i_CanShoot^;
-        !!VRi^gem_BattleBtn_NpcId_%i_CanShoot^:&16; F0/1;
+        !!VRi^gem_BattleBtn_NpcId_%i_CanShoot^:&(MON_FLAG_SHOOTER); F0/1;
         *!IF:L^%(npcSS)^;
       !!en;
     !!en;
@@ -245,20 +250,23 @@ ZVSE2
   !!en;
   !!BM(stackId):T?t;
 
-  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);
+
+  !!FU(gem_IsMonCommander):Pt/?(isNpc:y);
+  !!if&(isNpc);
     !!VR(side:y):S(stackId) :(BATTLE_STACKS_PER_SIDE);
     !!VR(npcId:y):Si^battle_hero_%(side)^;
     !!if&(npcId)>=0;
 
-      !!if&i^gem_BattleBtn_NpcId_%(side)_CanShoot^/(ability)<>(GEM_MON_ATTACK_SHOOT);
-        !!BM(stackId):Fd|(MON_FLAG_SHOOTER) Fd-(MON_FLAG_SHOOTER);
+      *!if&i^gem_BattleBtn_NpcId_%(side)_CanShoot^/(ability)<>(GEM_MON_ATTACK_SHOOT);
+      !!if&(ability)<>(GEM_MON_ATTACK_SHOOT);
+        !!BM(stackId):Fd~(MON_FLAG_SHOOTER); Fd-(MON_FLAG_SHOOTER);
         !!VRi^gem_need_to_restore_shooting_flag^:S1;
       !!el&(ability)=(GEM_MON_ATTACK_SHOOT);
         !!BM(stackId):Fd|(MON_FLAG_SHOOTER);
         !!VRi^gem_need_to_restore_shooting_flag^:S0;
       !!en;
 
-      !!CO(npcId):B0/d|i^gem_BattleBtn_NpcId_%(side)_CanShoot^;
+      *!CO(npcId):B0/d|i^gem_BattleBtn_NpcId_%(side)_CanShoot^;
 
       !!VRi^gem_commanderAction_%(npcId)^:Si^gem_BattleBtn_StackChoice_%(stackId)^;
     !!en;
@@ -309,12 +317,25 @@ ZVSE2
   !!FU(gem_GetTxtTableString):P6976896/387/1/?(text:z);
   !!IF:M0/4^%(text)^;
 
+!?FU(gem_IsMonCommander);
+!#VA(monType:x) (npc:x) (cType:x);
+  !!if&(monType)>=(MON_COMMANDER_FIRST_A)/(monType)<=(MON_COMMANDER_LAST_D);
+    !!VR(npc):S(TRUE);
+    !!if&(monType)>(MON_COMMANDER_LAST_A);
+      !!VR(cType):S(monType) -(MON_COMMANDER_FIRST_A);
+    !!el;
+      !!VR(cType):S(monType) -(MON_COMMANDER_FIRST_D);
+    !!en;
+  !!el;
+    !!VR(npc):S(FALSE);
+    !!VR(cType):S(NO_MON);
+  !!en;
 
 !?FU(gem_BattleBtn_CollectStackFlags);
 !#VA(stackId:x);
 
   !!BM(stackId):F?f E?i^gem_stack_spells^ U3/?i^gem_stack_shoots^ T?t O?(heroStack:y) Z?(stack:y) U4/?(spell:y) I?(side:y);
-
+*!IF:L^%(spell)^;
   !!VRi^gem_BattleBtn_StackBits^:S0;
   !!VRi^gem_BattleBtn_NextAbility^:S(GEM_MON_ATTACK_DEFAULT);
   !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_DEFAULT);
@@ -347,8 +368,8 @@ ZVSE2
     !!en;
   !!en;
 
-  !!if&i^gem_stack_spells^;
-
+  !!if&i^gem_stack_spells^>0;/(spell)>0;
+  *!IF:L^%(spell)^;
     !!if&t=(MON_FAERIE_DRAGON);
       !!VRi^gem_BattleBtn_StackBits^:|(BIT_1)  |(BIT_3);
       !!VRi^gem_BattleBtn_CurrentAbility^:S(GEM_MON_ATTACK_CAST);
