@@ -8,16 +8,16 @@ ZVSE2
 ** Updated: Dec 2021 by daemon_n
 
 !BY @daemon_n:
-*Since 05.12.2021 ballista is w81, ammo_cart is w82, first aid tent is w83!
+*SINCE 05.12.2021 BALLISTA IS W81, AMMO_CART IS W82, FIRST AID TENT IS W83!
 
 
 ** variables used:        i^WOG_73_enabled^, v850-v859, v864-v880 for long term
-**                        v1-v3,v7800-v7956 temporarily
+**                        v1-v3,v7800-v7956 WOG_73_temporarily
 
-** string variables used: z1-z4, z78-z90 temporarily
+** string variables used: z1-z4, z78-z90 WOG_73_temporarily
 
-** flags used:            782-785, 787-790 for long term
-**                        2,3,4 temporarily
+** flags used:            782-, 787-790 for long term
+**                        2,3,4 WOG_73_temporarily
 
 ** functions used:        7795-7819
 
@@ -32,12 +32,24 @@ ZVSE2
 
 
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_III)/?i^WOG_73_enabled^;                       [check if option is enabled]
+
+!?FU(WOG_CreateERMHook)&i^WOG_73_enabled^;
+  !!SN:Ex1/1/5574655/(WOG_OnAddingCreatureToArmy);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  
+  !!SN:Ex1/1/4494492/(WOG_DlgCreatureSplit_OnCreate);
+  !!SN:Ex1/1/4496378/(WOG_DlgCreatureSplit_BeforeSettingNumber);
+  !!SN:Ex1/1/4496839/(WOG_DlgCreatureSplit_AfterSplit);
+
+  !!SN:Ex1/1/4677773/(WOG_BattleTent_SetupCursor);
+  !!SN:Ex1/1/4667500/(WOG_BattleTent_BeforeIterateLoses);
+  !!SN:Ex1/1/4687183/(WOG_BattleTent_PrepareHealing);
+
 !?FU(OnAfterErmInstructions)&i^WOG_73_enabled^;
-!!FU(WOG_73_Initialization):P;
+  !!FU(WOG_73_Initialization):P;
 
 !?FU(WOG_73_Initialization);
-  !!IF:V784/0;                            [flg#784, 784 set false for the first battle]
-  !!IF:V785/0;                            [flg#785, hero doesn't fights for war machine artifact by default]
+  *!IF:V784/0;                            [flg#784, 784 set false for the first battle]
+  !!VRi^WOG_73_visited_art_id^:S0;                            [flg#785, hero doesn't fights for war machine artifact by default]
   !!IF:V787/0;                            [flg#787, 787 set false for the fist battle]
 
   !!MA:C(MON_BALLISTA)/(RES_GOLD)/2500;
@@ -46,11 +58,6 @@ ZVSE2
 
   !!re i/0/(HERO_LAST_WOG);                                         [reset all w-vars]
     !!IF:Wi;
-
-    !!re j/81/83;
-      !!VRwj:S0;
-    !!en;
-
     !!FU(WOG_73_Func_CorrectHeroVariablesW):Pi;       [correct w-vars if there are some wm equipped]
   !!en;
 
@@ -72,13 +79,11 @@ ZVSE2
   !!if&i^timerWeekday^=1;
 
     !!UN:U(OBJ_TOWN)/-1/?(towns:y);                         [get the number of towns]
-
-    !!re i/1/(towns)/1;/1/-1;
+    !!re i/1/(towns);/1/-1;
       !!FU(WOG_73_Func_TownsAndFactoriesFilling):Pi/(OBJ_TOWN);[iterate through towns and fill them up]
     !!en;
 
     !!UN:U(OBJ_WAR_MACHINE_FACTORY)/-1/?(factories:y);                        [get the number of war machines factories]
-
     !!re i/1/(factories);
       !!FU(WOG_73_Func_TownsAndFactoriesFilling):Pi/(OBJ_WAR_MACHINE_FACTORY); [iterate through war machine factories and fill them up]
     !!en;
@@ -86,7 +91,7 @@ ZVSE2
   !!en;
 
 
-!?OB(OBJ_ARTIFACT)&i^WOG_73_enabled^=1;                                                                  [hero finds first aid tent on adventure map]
+!?OB(OBJ_ARTIFACT)&i^WOG_73_enabled^=1;                                                     [hero finds first aid tent on adventure map]
   !!OB998:U?(artifact:y);
 
   !!if|(artifact)=(ART_BALLISTA)|(artifact)=(ART_AMMO_CART)|(artifact)=(ART_FIRST_AID_TENT);
@@ -94,28 +99,21 @@ ZVSE2
     !!FU(WOG_73_Func_DismissOriginalBoughtMachines):P(heroId);                              [dismiss original war machines]
     !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);                                      [to show correct w vars]
     !!FU(WOG_73_Func_RemoveEquippedMachines):P(heroId);                                     [remove equipment so later we can detect the picked up artifact]
-    !!IF:V785/1;                                                                            [we fight for a war machine artifact]
+    !!VRi^WOG_73_visited_art_id^:S(artifact);[we fight for a war machine artifact]
   !!en;
 
-!$OB(OBJ_ARTIFACT)&i^WOG_73_enabled^=1;
-  !!OB998:U?(artifact:y);
+!$OB(OBJ_ARTIFACT)&i^WOG_73_enabled^=1/i^WOG_73_visited_art_id^;
+  !!HE-1:N?(heroId:y);                                                                      [store hero number in (heroId)]
 
-  !!if|(artifact)=(ART_BALLISTA)|(artifact)=(ART_AMMO_CART)|(artifact)=(ART_FIRST_AID_TENT);
-    !!HE-1:N?(heroId:y);                                                                    [store hero number in (heroId)]
-
-    *!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
-      !!IF:W(heroId);
-      !!HE-1:A2/(artifact)/d/?(equipped:y);                                                          [vg nr of equipped first aid tents]
-      !!if&(equipped);
-        !!VR(wVar:y):S(artifact) +77;
-        !!VRw(wVar):+1;
-      !!en;
-
-    *!en;
-
-    !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId);                                    [correct equipment]
-    !!IF:V785/0;                                                                            [we don't fight for a war machine artifact]
+  !!IF:W(heroId);
+  !!HE-1:A2/i^WOG_73_visited_art_id^/d/?(equipped:y);                                       [vg nr of equipped first aid tents]
+  !!if&(equipped);
+    !!VR(wVar:y):Si^WOG_73_visited_art_id^ +77;
+    !!VRw(wVar):+1;
   !!en;
+
+  !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId);                                      [correct equipment]
+  !!VRi^WOG_73_visited_art_id^:S0;                                                       [we don't fight for a war machine artifact]
 
 !?FU(OnAdventureMapRightMouseClick)&i^WOG_73_enabled^=1/i^mouse_item^=(ITEM_ADVMAP_QUEST_LOG_BTN)/999;                                              [continue trigger only for the right player]
   !!OW:A-1/?(heroId:y);                                                                                                                [selected hero in vg]
@@ -133,17 +131,17 @@ ZVSE2
     !!re i/0/2;
       !!VR(art:y):Si +(ART_BALLISTA);
       !!VR(wVar:y):Si +81;
-      !!SN:H^art^/(art)/0/?(artName[i]) H^art^/(art)/0/^%W(wVar)^;^%W81^
+      !!SN:H^art^/(art)/0/?(artName[i]) H^art^/(art)/0/^%W(wVar)^;
     !!en;
-
-    !!IF:Q1/(PIC_TYPE_ART)/(ART_BALLISTA)/(PIC_TYPE_ART)/(ART_AMMO_CART)/(PIC_TYPE_ART)/(ART_FIRST_AID_TENT)/(MSG_TYPE_POPUP)/z173000; [show number]
+    !!SN:T^wog.%(WOG_OPT_ENHANCED_WAR_MACHINES_III).map_info^/?(msg:z)/^hero^/(heroName);
+    !!IF:Q1/(PIC_TYPE_ART)/(ART_BALLISTA)/(PIC_TYPE_ART)/(ART_AMMO_CART)/(PIC_TYPE_ART)/(ART_FIRST_AID_TENT)/(MSG_TYPE_POPUP)/(msg); [show number]
     
     //restore original Names for The Artifacts
-
     !!re i/0/2;
       !!VR(art:y):Si +(ART_BALLISTA);
       !!SN:H^art^/(art)/0/(artName[i]);
     !!en;
+  !!en;
 
 !?FU(OnAdventureMapRightMouseClick)&i^WOG_73_enabled^=1/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/999;           [when we right-click on war machine factory]
   !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?j;                                                [get type of clicked object]
@@ -161,19 +159,18 @@ ZVSE2
   !!if&2;
     !!CM:R0;
     !!FU(WOG_73_Func_GetMachinesAmountInFactory):Pv2/v3/v4/?(ballistas:y)/?(ammos:y)/?(tents:y);
+    !!FU(WOG_GetObjectName):P(OBJ_WAR_MACHINE_FACTORY)/?(objName:z);
 
     //set New  Names for The Artifacts
     !#VA(artName[3]:z);
     !!re i/0/2;
       !!VR(art:y):Si +(ART_BALLISTA);
       !!VR(yVar:y):Si +(@ballistas);
-      !!SN:H^art^/(art)/0/?(artName[i]);^%W81^
-      !!SN:H^art^/(art)/0/^%y(yVar)^;
+      !!SN:H^art^/(art)/0/?(artName[i]) H^art^/(art)/0/^%y(yVar)^;^%W81^
+      !!SN:;
     !!en;
-    *!SN:H^art^/(ART_BALLISTA)/0/^%(ballistas)^ H^art^/(ART_AMMO_CART)/0/^%(ammos)^ H^art^/(ART_FIRST_AID_TENT)/0/^%(tents)^;
-    
-    !!IF:Q1/(PIC_TYPE_ART)/(ART_BALLISTA)/(PIC_TYPE_ART)/(ART_AMMO_CART)/(PIC_TYPE_ART)/(ART_FIRST_AID_TENT)/(MSG_TYPE_POPUP)/z173001; [show number]
-    
+
+    !!IF:Q1/(PIC_TYPE_ART)/(ART_BALLISTA)/(PIC_TYPE_ART)/(ART_AMMO_CART)/(PIC_TYPE_ART)/(ART_FIRST_AID_TENT)/(MSG_TYPE_POPUP)/(objName); [show number]
     //restore original Names for The Artifacts
     !!re i/0/2;
       !!VR(art:y):Si +(ART_BALLISTA);
@@ -184,30 +181,29 @@ ZVSE2
 !?FU(OnHeroScreenMouseClick)&i^WOG_73_enabled^=1/i^mouse_action^=(MOUSE_RMB_PRESSED); //see number of hero's war machines - hero screen
   !!if|i^mouse_item^=15/i^mouse_item^=16/i^mouse_item^=17;
     !!CM:R0;
-    !!IF:W-1;                                                      [use hero's w# variables]
-    !!HE-1:B0/?z1;
-
-    !!if&i^mouse_item^=15;                                         [if ballista slot]
-
-      !!VRz2:S^%W81^;
-      !!VRz3&w81<=1:Sz173002;
-      !!VRz3&w81>1:Sz173003;    
-    !!el&i^mouse_item^=16;                                         [if ammo slot]
-
-      !!VRz2:S^%W82^;
-      !!VRz3&w82<=1:Sz173004;
-      !!VRz3&w82>1:Sz173005;
-    !!el;                                                          [if tent slot]
-
-      !!VRz2:S^%W83^;
-      !!VRz3&w83<=1:Sz173006;
-      !!VRz3&w83>1:Sz173007;
-    !!en;
-    !!VR(artifact:y):Si^mouse_item^ -11;                           [correction artifact picture by clicking slot]
-
-    !!IF:Q1/(PIC_TYPE_ART)/(artifact)/(MSG_TYPE_POPUP)/z173008;
-
+    !!VR(art:y):Si^mouse_item^ -11;
+    !!FU(WOG_73_Msg_HeroWM_PopUp):Pi^mouse_hero_0^/(art);
   !!en;
+!?FU(WOG_73_Msg_HeroWM_PopUp);
+!#VA(heroId:x) (art:x);
+
+  !!IF:W(heroId);                                                      [use hero's w# variables]
+  !!HE(heroId):B0/?(heroName:z);
+
+  !!VR(wVar:y):S(art) +81 -(ART_BALLISTA);
+  !!FU(WOG_73_Func_MonArt):P?(art);
+
+  !!VR(num:y):S0;
+  !!if&w(wVar)>1;
+    !!VR(num:y):S1;
+  !!en;
+
+  !!SN:H^monname^/(art)/(num)/?(monName:z);
+
+  !!VR(value:y):Sw(wVar) Sd<<16 |(art);[correction artifact picture by clicking slot]
+  !!SN:T^wog.%(WOG_OPT_ENHANCED_WAR_MACHINES_III).hero_info^/?(msg:z)/^hero^/(heroName)/^wm_num^/w(wVar);
+  !!VR(msg):+^ %(monName)^;
+  !!IF:Q1/(PIC_TYPE_MONSTER)/(value)/(MSG_TYPE_POPUP)/(msg:z);
 
 !?OB(OBJ_WAR_MACHINE_FACTORY)&i^WOG_73_enabled^=1;                              [hero is at war machine factory]
   flag 790 - check if gold is enough
@@ -219,7 +215,27 @@ ZVSE2
     !!PO(CURRENT_OBJ):O(owner);                                            [update owner]
     *!FU(WOG_73_Func_DismissOriginalBoughtMachines):P(heroId);     [dismiss original war machines]
     !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);             [correct w vars if needed]
-    !!FU(WOG_73_Msg_BuyMachinesInFactory):P(x)/(y)/(z)/(heroId); [call buy machines DLG]
+    !#VA(machinesBought[3]:y);
+    !#VA(wmAmount[3]:y);
+
+    !!FU(WOG_73_Func_GetMachinesAmountInFactory):P(x)/(y)/(z)/?(wmAmount[0])/?(wmAmount[1])/?(wmAmount[2]); [get available machines]
+    !!re i/0/2;
+      !!VR(machinesBought[i]):S(wmAmount[i]);
+    !!en;
+    !!FU(WOG_73_Dlg_BuyMachines_Prepare):P(heroId)/(MON_BALLISTA)/?(machinesBought[0])/(MON_AMMO_CART)/?(machinesBought[1])/(MON_FIRST_AID_TENT)/?(machinesBought[2]);
+    !!IF:W(heroId);
+    !!VR(total:y):S0;
+    !!re i/0/2;
+      !!if&(machinesBought[i]);
+
+        !!VR(wVar:y):Si +81;
+        !!VRw(wVar):+(machinesBought[i]);
+        !!VR(wmAmount[i]):-(machinesBought[i]);
+      !!en;
+      !!VR(total):+(wmAmount[i]);
+    !!en;
+    !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId);                                                        [correct equipment]
+    !!FU(WOG_73_Func_SetMachinesAmountInFactory):P(x)/(y)/(z)/(wmAmount[0])/(wmAmount[1])/(wmAmount[2])/(total);/?y5; [get available machines]
 
   !!en;
 
@@ -258,98 +274,6 @@ ZVSE2
   !!HE-1:N?(heroId:y) O?(owner:y);           [hero number in vi]
   !!PO(CURRENT_OBJ):O(owner);                                            [update owner]
   !!FU(WOG_73_Func_DismissOriginalBoughtMachines):P(heroId);       [dismiss original war machines]
-
-
-!?FU(WOG_73_Msg_BuyMachinesInFactory);
-!#VA(x:x) (y:x) (z:x) (heroId:x); (townType:x);
-!#VA(usedY[5]:y);
-
-  !!FU(WOG_73_Func_GetMachinesAmountInFactory):P(x)/(y)/(z)/?(ballistas:y)/?(ammos:y)/?(tents:y)/?y5; [get available machines]
-
-  !!VR(total:y):Sy5;
-  !!if&(total)=0;
-    !!IF:Mz173015;
-    !!FU:E;
-  !!en;
-
-  !!VRy1:S(ammos) *750;
-  !!VRy2:S(ballistas) *2500;
-
-  !!VRy3:S(tents) *750;
-  !!VRy4:Sy1 +y2 +y3;
-
-
-  !!VR(title:z):Sz173102;
-  !!FU(RadioDlg_Reset):P;
-  !!FU(RadioDlg_SetTitle):P(title);
-  !!FU(RadioDlg_AddItem)&(ballistas):P^%z173104 {%(ballistas)}^/(ART_BALLISTA);
-  !!FU(RadioDlg_AddItem)&(ammos):P^%z173105 {%(ammos)}^/(ART_AMMO_CART);
-  !!FU(RadioDlg_AddItem)&(tents):P^%z173103 {%(tents)}^/(ART_FIRST_AID_TENT);
-
-  !!FU(RadioDlg_AddItem):P^%z173137^/1000;                       [buy all War Machines]
-
-  !!FU(RadioDlg_AddCancelButton):P;
-  !!FU(RadioDlg_SelectItemByValue):P1000;
-
-  !!FU(RadioDlg_Show):Pd/?(machine:y);
-
-  !!if&(machine)<>1000/(machine)<>(DLG_RESULT_CANCEL);
-    !!VR(firstLine:z):S^^;
-    !!VR(secondLine:z):S^^;
-
-    !!if&(machine)=(ART_BALLISTA);
-      !!VR(title):Sz173111;
-      !!VR(firstLine):Sz173112;
-      !!VR(secondLine)&(ballistas)>1:Sz173113;
-
-    !!el&(machine)=(ART_AMMO_CART);
-      !!VR(title):Sz173115;
-      !!VR(firstLine):Sz173116;
-      !!VR(secondLine)&(ammos)>1:Sz173117;
-    !!el;
-      !!VR(title):Sz173107;
-      !!VR(firstLine):Sz173108;
-      !!VR(secondLine)&(tents)>1:Sz173109;
-    !!en;
-
-    !!FU(RadioDlg_Reset):P;
-    !!FU(RadioDlg_SetTitle):P(title);
-    !!FU(RadioDlg_AddItem):P(firstLine)/1;
-    !!FU(RadioDlg_AddItem)&(secondLine)<>^^:P(secondLine)/2;
-    !!FU(RadioDlg_AddCancelButton):P;
-    !!FU(RadioDlg_Show):Pd/?(amount:y);
-
-    !!if&(amount)<>(DLG_RESULT_CANCEL);
-      !!IF:V790/1; //init 790
-
-      !!if&(machine)=(ART_BALLISTA);
-        !!FU(WOG_73_Func_BuyMachinesInFactory):P(x)/(y)/(z)/(amount)/0/0/(heroId);
-      !!el&(machine)=(ART_AMMO_CART);
-        !!FU(WOG_73_Func_BuyMachinesInFactory):P(x)/(y)/(z)/0/(amount)/0/(heroId);
-      !!el;
-        !!FU(WOG_73_Func_BuyMachinesInFactory):P(x)/(y)/(z)/0/0/(amount)/(heroId);
-      !!en;
-
-      !!IF&-790:Mz173026;                                                         [if no money]
-
-    !!en;
-
-    !!FU(WOG_73_Func_GetMachinesAmountInFactory):P(x)/(y)/(z)/d/d/d/?(total:y); [get available machines]
-
-    !!if&(total);
-      !!FU(WOG_73_Msg_BuyMachinesInFactory):P(x)/(y)/(z)/(heroId); [call buy machines DLG again]
-    !!en;
-
-  !!el&(machine)=1000;
-    !!IF:V790/1; //init 790
-    !!FU(WOG_73_Func_BuyMachinesInFactory):P(x)/(y)/(z)/(ballistas)/(ammos)/(tents)/(heroId);
-
-    !!if&-790;
-      !!IF:Mz173026;                                                         [if no money]
-      !!FU(WOG_73_Msg_BuyMachinesInFactory):P(x)/(y)/(z)/(heroId); [call buy machines DLG again]
-    !!en;
-
-  !!en;
 
 !$OB(OBJ_TOWN)&-(ERM_FLAG_IS_HUMAN)/i^WOG_73_enabled^=1;                                            [AI buys war machine at town]
 
@@ -426,15 +350,17 @@ ZVSE2
         !!OW:W(player)/(playerTown)/?(townId:y);                                           [get town ID]
 
         !!CA0/(townId):H0/?(garrisonHero:y) H1/?(visitingHero:y);                          [check for Heroes]
-
-        !!if|(visitingHero)>(NO_HERO)/(garrisonHero)>(NO_HERO);                            [if there is someone]
-
-          !!if&(visitingHero)>(NO_HERO);                                                   [priority for the visitor]
+        !!VR(heroId:y):S(NO_HERO);
+        !!if&(visitingHero)>(NO_HERO);[priority for the visitor]
+          !!HE(visitingHero):O?(owner:y);
+          !!if&(owner)=(player);
             !!VR(heroId:y):S(visitingHero);
-          !!el;
+          !!el&(garrisonHero:y)>(NO_HERO);[if there is someone]
             !!VR(heroId:y):S(garrisonHero);
           !!en;
+        !!en;
 
+        !!if&(heroId)>(NO_HERO);                            
           !!CA0/(townId):B3/22 T?(townType:y) P?(x:y)/?(y:y)/?(z:y);
 
           !!if&1/(townType)=(TOWN_STRONGHOLD);
@@ -454,20 +380,6 @@ ZVSE2
     !!en;
   !!en;
 
-!?FU(WOG_73_Func_CheckIfHeroInTown);
-!#VA(x:x) (y:x) (z:x) (townId:x);
-  !!UN:U(OBJ_TOWN)/-1/?(towns:y);                                          [v1 v2 v3 coordinates of town]
-  !!VR(townId):S-1;                     [assume we have no such town]
-
-  !!re i/0/(towns)/1/-1;
-    !!CA0/i:P?(townX:y)/?(townY:y)/?(townZ:y);
-    
-    !!if&(townX)=(x)/(townY)=(y)/(townZ)=(z);
-      !!VR(townId):Si;
-      !!FU:E;
-    !!en;
-  !!en;
-
 !?FU(WOG_73_Func_DismissOriginalBoughtMachines);
 !#VA(heroId:x);
   //dismisses war machines that could be bought originally in heroes3 and gives back gold spent on them
@@ -483,7 +395,7 @@ ZVSE2
       !!VR(artMonster:y):S(art) +142;
       !!MA:C(artMonster)/(RES_GOLD)/?(artCost:y);            [cause tent and ammo have same cost - change that line, if need to fix]
       !!HE(heroId):O?(owner:y);                              [remove machine if necessary]
-      !!OW&(owner)>(NO_OWNER):R?(owner)/(RES_GOLD)/d(artCost);                  [give back gold spent on first aid tent]
+      !!OW&(owner)>(NO_OWNER):R(owner)/(RES_GOLD)/d(artCost);                  [give back gold spent on first aid tent]
     !!en;
 
   !!en;
@@ -496,10 +408,8 @@ ZVSE2
   !!re i/0/2;                                                [(ART_BALLISTA)/(ART_FIRST_AID_TENT); iterate war machines]
     !!VR(wVar:y):Si +81;
     !!VR(art:y):Si +(ART_BALLISTA);
-    *!VR(slot:y):Si +(ART_SLOT_BALLISTA);
     !!HE(heroId):A2/(art)/?(equipped:y)/?(equipped:y);                   [y2: nr of equipped ballistas]
-    !!VRw(wVar)&w(wVar)=(FALSE)/(equipped):S1;
-    !!VRw(wVar)&w(wVar)/(equipped)=(FALSE):S0;
+    !!VRw(wVar):F(equipped)/(INT_MAX) Sd*(equipped);    
   !!en;
 
 !?FU(WOG_73_Func_CorrectMachineEquipment);
@@ -521,6 +431,27 @@ ZVSE2
     !!en;
   !!en;
 
+!?FU(WOG_73_Func_MonArt);
+!#VA(type:x);
+!!if&(type)<(MON_BALLISTA);
+  
+  !!if&(type)=(ART_BALLISTA);                                         [if ballista slot]
+    !!VR(type):S(MON_BALLISTA);  
+  !!el&(type)=(ART_AMMO_CART);                                         [if ammo slot]
+    !!VR(type):S(MON_AMMO_CART);  
+  !!el&(type)=(ART_FIRST_AID_TENT);                                         [if ammo slot]
+    !!VR(type):S(MON_FIRST_AID_TENT);  
+  !!en;
+!!el;
+  !!if&(type)=(MON_BALLISTA);                                         [if ballista slot]
+    !!VR(type):S(ART_BALLISTA);  
+  !!el&(type)=(MON_AMMO_CART);                                         [if ammo slot]
+    !!VR(type):S(ART_AMMO_CART);  
+  !!el&(type)=(MON_FIRST_AID_TENT);                                         [if ammo slot]
+    !!VR(type):S(ART_FIRST_AID_TENT);  
+  !!en;
+!!en;
+
 !?FU(WOG_73_Func_BuyMachinesInTown);
 !#VA(heroId:x) (x:x) (y:x) (z:x) (isBallistaYard:x) (townType:x);
 
@@ -540,45 +471,52 @@ ZVSE2
   !!OW:C?(currentPlayer:y);
   !!CA(x)/(y)/(z):O?(townOwner:y);
 
-  !!VR(displayMessage:y)&(ERM_FLAG_IS_HUMAN)/(currentPlayer)=(townOwner):S(TRUE);
-
   !!if&(wmAmount)=0;
-    !!IF&(displayMessage):M1/z173015;
     !!IF:V2/0;                                                 [won't ask longer]
-    !!FU:E;
   !!en;
 
   !!IF:W(heroId);                                              [use hero's w variables]
 
+  !!VR(offset:y):S(townType) *4;
+  !!UN:C6565536/(offset)/4/?(monId:y);
+
   !!if|(townType)=1/(townType)=4/(townType)=7;
     !!VR(art:y):S(ART_FIRST_AID_TENT);
+    !!VR(mon:y):S(MON_FIRST_AID_TENT);
   !!el|(townType)=0/(townType)=5/(townType)=8/(isBallistaYard);
     !!VR(art:y):S(ART_BALLISTA);
+    !!VR(mon:y):S(MON_BALLISTA);
+
   !!el|(townType)=2/(townType)=3/(townType)=6;
     !!VR(art:y):S(ART_AMMO_CART);
+    !!VR(mon:y):S(MON_AMMO_CART);
   !!en;
 
   !!VR(artMonster:y):S(art) +142;
-  !!MA:C(artMonster)/(RES_GOLD)/?(artCost:y);
+  !!MA:C(monId)/(RES_GOLD)/?(artCost:y);
 
-  !!if&(displayMessage);
-
-    !!if&(isBallistaYard);
-      !!VRz1:Sz173025;
-    !!el;
-      !!VRz1:Sz173016;
+  !!if&(ERM_FLAG_IS_HUMAN);
+    !!if&(currentPlayer)<>(townOwner);
+      !!VR(wmAmount):S0;
     !!en;
+    !!VR(machinesBought:y):S(wmAmount);
+    
 
 
-    !!VRz-1:S^%(artCost)^;
-    !!VRz-1:Sz173014;  //  
+    !!FU(WOG_73_Dlg_BuyMachines_Prepare):P(heroId)/(monId)/?(machinesBought)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON);
+    !!if&(machinesBought)<>0;
+      !!VR(wVar:y):S81 +(art) -(ART_BALLISTA);
+      !!VRw(wVar):+(machinesBought);
 
-    !!SN:H^art^/(art)/0/?z-2 H^art^/(art)/0/z-1;
-    !!IF:Q2/(PIC_TYPE_ART)/(art)/(MSG_TYPE_QUESTION)/z1;
-    !!SN:H^art^/(art)/0/z-2;
-  !!en;
+      !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId); //correct equipment
 
-  !!if&2;
+      !!if&(isBallistaYard);
+        !!PO(x)/(y)/(z):Td-(machinesBought); //set object H and T attribute to store updated value
+      !!el;
+        !!PO(x)/(y)/(z):Hd-(machinesBought); //set object H and T attribute to store updated value
+      !!en;
+    !!en;
+  !!el&2;
     !!HE(heroId):O?(player:y);
     !!OW:R(player)/(RES_GOLD)/?(gold:y); //get gold in y4
 
@@ -599,21 +537,63 @@ ZVSE2
       !!VR(wmAmount):-1;
 
       !!if&(wmAmount)=0;
-        !!IF&(displayMessage):M1/z173027;
         !!FU:E;
       !!en;
 
       !!FU(WOG_73_Func_BuyMachinesInTown):P(heroId)/(x)/(y)/(z)/(isBallistaYard)/(townType); //ask longer if clicked yes, had enough gold and there is something to buy or continue buying if AI could buy this machine
-    
-    !!el&(displayMessage);
-
-      !!IF:M1/z173026;
     !!en;
   !!en;
 
+
+!?FU(OnOpenRecruitDlg)&i^WOG_73_temp^;
+  !!re i/0/2;
+    !!if&i^WOG_73_Buy_WM_id_%i^<>(NO_MON);
+      !!VR(monSource:y):S10000+i;
+      !!RD:Ci/i^WOG_73_Buy_WM_id_%i^/i^WOG_73_Buy_WM_num_%i^/(monSource) I?s/?s/?s/?s; Ci/(monId)/2/(monSource);
+    !!en;
+  !!en;
+
+!?FU(WOG_73_Dlg_BuyMachines_Prepare);
+!#VA(heroId:x) (army:x);
+  !!re i/(MON_BALLISTA)/(MON_AMMO_CART);
+    !!MA:Xi/d~(MON_FLAG_SIEGE_WEAPON);
+  !!en;
+
+
+  !!re i/0/2;
+    !!VR(argInd:y):Si *2 +(@army);
+    !!VRi^WOG_73_Buy_WM_id_%i^:Sx(argInd);
+    !!VR(argInd):+1;
+    !!VRi^WOG_73_Buy_WM_num_%i^:Sx(argInd);
+  !!en;
+  !!VRi^WOG_73_temp^:S1;
+  !!RD:O-1/-1/2/-1;(heroId);
+  !!VRi^WOG_73_temp^:S0;
+
+  !!re i/0/2;
+    !!VR(argInd:y):Si *2 +(@army) +1;
+    !!VRi^WOG_73_Buy_WM_id_%i^:S0;
+    !!VRx(argInd):-i^WOG_73_Buy_WM_num_%i^;
+    !!VRi^WOG_73_Buy_WM_num_%i^:S0;
+  !!en;
+
+  !!re i/(MON_BALLISTA)/(MON_AMMO_CART);
+    !!MA:Xi/d|(MON_FLAG_SIEGE_WEAPON);  [return WM flags]
+  !!en;
+!?FU(WOG_OnAddingCreatureToArmy)&i^WOG_73_temp^;
+  !!SN:X?y1/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5574699; [return to removing money]
+!?FU(OnCloseRecruitDlg)&i^WOG_73_temp^;
+  !!re i/0/2;
+    !!RD:Ci/?y99/?i^WOG_73_Buy_WM_num_%i^;
+  !!en;
+
+
+
+
 !?FU(WOG_73_Func_RemoveEquippedMachines);
 !#VA(heroId:x);
-//removes equipped war machines
+  //removes equipped war machines
   !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
     !!HE(heroId):A2/i/d/?(equipped:y); //y2: nr of equipped first aid tents
 
@@ -704,8 +684,8 @@ ZVSE2
   !!en;
 
   !!PO(x)/(y)/(z):H(machines); //y1 is the machine number available
-  !!VR(x):+1;
-  !!PO(x)/(y)/(z):H(machines); //y1 is the machine number available
+  *!VR(x):+1;
+  *!PO(x)/(y)/(z):H(machines); //y1 is the machine number available
 
 !?FU(WOG_73_Func_BuyMachinesInFactory);
 !#VA(x:x) (y:x) (z:x) (ballistas:x) (ammos:x) (tents:x) (heroId:x);
@@ -756,175 +736,218 @@ ZVSE2
   !!en;
 
 
------------------------------------------------------------------------------
------------------------------------------------------------------------------
----------------------  B A T T L E   P R O C E D U R E  ---------------------
------------------------------------------------------------------------------
------------------------------------------------------------------------------
-
-
-
 
 ---------------------     B E F O R E     B A T T L E   ---------------------
 
 !?FU(OnBeforeBattleUniversal)&i^WOG_73_enabled^=1; //before battle begins
   ** variables used:        i^WOG_73_enabled^, v850-v859, v864-v880 for long term
-  ** flags used:            784-785, 787-790 for long term
+  ** flags used:            784, 787-790 for long term
   ** hero variables used:   w81-w83
-  !!IP:i^WOG_73_enabled^/883 F781/790 Wi^battle_hero_0^/81/83 Wi^battle_hero_1^/81/83;
+  !!IP:F781/790 Wi^battle_hero_0^/81/83 Wi^battle_hero_1^/81/83;
 
 
 !?FU(OnBeforeBattleUniversal)&i^WOG_73_enabled^=1; //before battle begins
-F784 = battle is in town//
-  !!IF:V784/0; //assume battle takes place not in town
 
-  *!IF:V789/0; //assume the battle is not on a place of a castle
 
-  !!if&i^battle_hero_1^>=(HERO_FIRST);
 
-    !!OBi^battle_x^/i^battle_y^/i^battle_z^:T?(objType:y);
+  !!if&i^WOG_73_visited_art_id^;
+    !!FU(WOG_73_Func_CorrectMachineEquipment):Pi^battle_hero_0^; [correct equipment for attacker - we got away that at war machine's object trigger]
 
-    !!if&(objType)=(OBJ_HERO);
-      !!HEi^battle_hero_1^:Z?(heroStruct:y);
-      !!UN:C(heroStruct)/12/4/?(objType);        [check where the hero stands]
-    !!en;
+  !!el;
+    !!FU(WOG_73_Func_DismissOriginalBoughtMachines):Pi^battle_hero_0^; //dismiss original war machines if hero doesn't fight for a war machine artifact
+    !!FU(WOG_73_Func_CorrectHeroVariablesW):Pi^battle_hero_0^; //correct w vars if hero doesn't fight for a war machine artifact
 
-    !!if&(objType)=(OBJ_TOWN);
-      !!CAi^battle_x^/i^battle_y^/i^battle_z^:U?(townId:y);
+    !!if&i^battle_hero_1^>=(HERO_FIRST);
+      !!FU(WOG_73_Func_DismissOriginalBoughtMachines):Pi^battle_hero_1^;
+      !!FU(WOG_73_Func_CorrectHeroVariablesW):Pi^battle_hero_1^;
 
-      !!CA0/(townId):H0/?(garrisonHero:y) H1/?(visitingHero:y);
 
-      !!if&i^battle_hero_1^=(visitingHero)/(garrisonHero)=(NO_HERO)|i^battle_hero_1^=(garrisonHero);
-        !!CA0/(townId):B3/7;                                                                            [check if there is fort ]
-        !!IF&1:V784/1;                                                                                  [battle in town - ballista cannot be used]
+      !!if&i^wog_72_randHeroActive^;
+        !!IF:Wi^battle_hero_1^;
+        !!re i/0/2;
+          !!VR(art:y):S(ART_BALLISTA) +i;
+          !!VR(slot:y):S(ART_SLOT_BALLISTA) +i;
+          !!HEi^battle_hero_1^:A1/(art)/(slot); [A1/4/13 A1/5/14; //equip war machines]
+          !!VR(wVar:y):Si +81;
+          !!VRw(wVar):S1;
+        !!en;
       !!en;
-        
+
     !!en;
 
-    !!FU(WOG_73_Func_DismissOriginalBoughtMachines):Pi^battle_hero_1^;
-    !!FU(WOG_73_Func_CorrectHeroVariablesW):Pi^battle_hero_1^;
-
-    !!HEi^battle_hero_1^:I?i^WOG_73_battle_hero_1_SpellPoints^/1; //get spell points of defender hero (if exists)
   !!en;
 
-
-  !!FU(WOG_73_Func_DismissOriginalBoughtMachines)&-785:Pi^battle_hero_0^; //dismiss original war machines if hero doesn't fight for a war machine artifact
-
-  !!FU(WOG_73_Func_CorrectHeroVariablesW)&-785:Pi^battle_hero_0^; //correct w vars if hero doesn't fight for a war machine artifact
-  !!FU(WOG_73_Func_CorrectMachineEquipment)&785:Pi^battle_hero_0^; [correct equipment for attacker - we got away that at war machine's object trigger]
-
-  !!IF:V790/1;                          [assume hero uses war machines on normal battlefield (i.e. cyclop stockpile, grotto etc. excluded) or on not normal but the hero doesn't have any equipped war machine]
-
-!?FU(OnBeforeBattleUniversal)&i^Random_Hero_Active^/i^WOG_73_enabled^=1/i^battle_hero_1^>(NO_HERO); //army camp fight
-  !!re i/0/2;
-    !!VR(art:y):S(ART_BALLISTA) +i;
-    !!VR(slot:y):S(ART_SLOT_BALLISTA) +i;
-    !!HEi^battle_hero_1^:A1/(art)/(slot); [A1/4/13 A1/5/14; //equip war machines]
-  !!en;
-
-
-!?FU(OnBeforeBattleUniversal)&i^WOG_73_enabled^=1; //continue trigger unconditioned
-  !!HEi^battle_hero_0^:I?i^WOG_73_battle_hero_0_SpellPoints^/1;                     [get spell points of attacker hero]
-  !!HEi^battle_hero_1^&i^battle_hero_1^>=0:I?i^WOG_73_battle_hero_1_SpellPoints^/1; [get spell points of attacker hero]
-
-*?FU(OnBattleReplay)&i^WOG_73_enabled^=1;
-  *!HEi^battle_hero_0^:I?i^WOG_73_battle_hero_0_SpellPoints^/1;                      [get spell points of attacker hero]
-  *!HEi^battle_hero_1^&i^battle_hero_1^>=0:I?i^WOG_73_battle_hero_1_SpellPoints^/1;  [get spell points of attacker hero]
-*!IF:L^%i(WOG_73_battle_hero_0_SpellPoints)^;
 -------------------------- B A T T L E F I E L D   S E T U P   --------------------------
 
-*?BF&i^WOG_73_enabled^=1; //battle round trigger for placing war machines when battle begins
 !?FU(OnSetupBattlefield)&i^WOG_73_enabled^=1;
+  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21445/1/?(isBank:y);
 
-  !!FU(WOG_73_BattleFieldSetup):P(BATTLE_LEFT);
-  !!FU(WOG_73_BattleFieldSetup)&i^battle_hero_1^>(NO_HERO):P(BATTLE_RIGHT);
+  !!if&(isBank)=0;
+    !!FU(WOG_73_BattleFieldSetup):P(BATTLE_LEFT);
+
+    !!BA:S?(isSiege:y);
+    !!HEi^battle_hero_0^:I?i^WOG_73_battle_hero_0_SpellPoints^/1;                     [get spell points of attacker hero]
+    !!HEi^battle_hero_1^&i^battle_hero_1^>=0:I?i^WOG_73_battle_hero_1_SpellPoints^/1; [get spell points of attacker hero]
+
+    !!if&i^battle_hero_1^>(NO_HERO)/(isSiege)=0;
+      !!FU(WOG_73_BattleFieldSetup):P(BATTLE_RIGHT);
+    !!en;
+
+  !!en;
 
 
 !?FU(WOG_73_BattleFieldSetup);
+!#VA(side:x) (wmPos[3]:x);
+  !!VR(wmPos[0]):S16 *(side) +51;
+  !!VR(wmPos[1]):S14 *(side) +18;
+  !!VR(wmPos[2]):S16 *(side) +153;
 
-!#VA(side:x); (siege:x);
-  !!VR(balPos:y):S16 *(side) +51;
-  !!VR(ammoPos:y):S14 *(side) +18;
-  !!VR(tentPos:y):S16 *(side) +153;
+  !!IF:Wi^battle_hero_%(side)^; //use attacker hero's w# variable
 
+  !!if&(side)=(BATTLE_RIGHT)/i^wog_72_randHeroActive^;
+    !!VR(totalHp:y):S0;
 
-  !!VRv852:S0; //init v852
-  !!VRv853:S0; //init v853
-  !!VRv854:S0; //init v854
-  !!VRv855:S0; //init v855
+    !!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST);
+      !!BMi:H?h N?n F?f;
+      !!VRf:&(MON_FLAG_SIEGE_WEAPON);
+      !!if&f=0/n>0;
+        !!VRh:*n;
+        !!VR(totalHp):+h;
+      !!en;
+    !!en;
 
-  *!VRs:S0; //init vs
-  !!VR(hasNPC:y):S0;
-  !!COi^battle_hero_%(side)^:E?(hasNPC);                     [look if commander is enabled]
-  !!COi^battle_hero_%(side)^&(hasNPC):D?(isDead:y);          [look if commander is enabled]
+    !!VR(randHeroWmNum:y):S(totalHp) :10 :25 :3 F1/d;
+    !!re i/0/2;
+      !!IF:Wi^battle_hero_%(side)^;
+      !!VR(wVar:y):Si +81;
+      !!VRw(wVar):S1+(randHeroWmNum);
+    !!en;
+  !!en;
 
-  !!VR(npcBals:y):S0;
-  !!VR(npcTents:y):S0;
+  !!re i/0/(wmPos[SIZE])/1/-1;
 
-  !!if&(isDead)=(FALSE);
-    !!COi^battle_hero_%(side)^:X2/?(npcLvl:y) T?(npcType:y); [if enabled and alive get commander's level and its type]
-    !!VR(npcTents)&(npcType)=1:S(npcLvl);                    [v852 number of added war machines (hierophant)]
-    !!VR(npcBals)&(npcType)=6:S(npcLvl);                    [v853 number of added war machines (ogre leader)]
-    !!VR(npcBals)&(npcType)=6::4 +1;                        [v853 number of added war machines (ogre leader - reduced)]
-    *!VR(npcTents)&(npcType)=1::4 +1;                        [v852 number of added war machines (hierophant - reduced)]
+    !!BU:E(wmPos[i])/?(wmStack:y);
 
+    !!if&(wmStack)<>(NO_STACK);
+      !!BM(wmStack):F?f;
+      !!VRf:&(MON_FLAG_SIEGE_WEAPON);
+      !!VRi^WOG_73_WM_%(side)_%i_stack_id^:S(NO_STACK);
+
+      !!if&f;
+        !!VR(wVar:y):Si +81;
+        !!VRi^WOG_73_WM_%(side)_%i_stack_id^:S(wmStack);
+        !!if&w(wVar);
+          !!VR(art:y):Si +3;                                                        [4/5/6]
+          !!VR(num:y):Sw(wVar) -1;
+          !!BM(wmStack):Bd(num:y) Nd(num:y);
+          !!VRi^WOG_73_Battle_MachinePlaced^:S(TRUE);
+        !!en;
+      !!en;
+    !!en;
   !!en;
 
 
-    !!IF:Wi^battle_hero_%(side)^; //use attacker hero's w# variable
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+---------------------  B A T T L E   P R O C E D U R E  ---------------------
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+!?FU(WOG_BattleTent_SetupCursor)&i^WOG_73_Battle_HealPower^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(currStack:y) C(currStack)/52/4/?t;
 
-    !!if&(side)=(BATTLE_RIGHT)/i^Random_Hero_Active^;
-      !!VR(totalHp:y):S0;
+  !!if&t=(MON_FIRST_AID_TENT);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(stack:y);
 
-      !!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST);
-        !!BMi:H?h N?n T?t;
-        !!if&t<>(MON_BALLISTA)/t<>(MON_FIRST_AID_TENT)/t<>(MON_AMMO_CART)/t<>(MON_CATAPULT)/n>0;
-          !!VRh:*n;
-          !!VR(totalHp):+h;
-        !!en;
-      !!en;
-
-      !!VR(totalHp): :10 :25 :3;
-      !!VR(totalHp)&(totalHp)<1:S1;
+    !!UN:C(stack)/96/4/?(startNum:y) C(stack)/76/4/?(currentNum:y) C(stack)/88/4/?l;
+    !!if&(currentNum)>0/(startNum)>(currentNum)|l;
+      !!SN:X?y99/0;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4677801;
     !!en;
+  !!en;
 
-    !!re i/(@balPos)/(@tentPos);
+!?FU(OnBattleMouseHint)&i^WOG_73_enabled^=1/i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
+  !!BMi^battle_current_stack^:T?(monType:y);                                     [get type of monster]
+  !!FU&(monType)<>(MON_FIRST_AID_TENT):E;
 
-      !!VR(wVar:y):Si +80;
+  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78560/4/?(cursor:y);
 
-      !!BU:Eyi/?(wmStack:y);
+  !!if&(cursor)=17;
+    !!BU:Ei^mouse_battleHex^/?(stackId:y);
+    !!BM(stackId):N?n;
+    !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(stackId)/i^WOG_73_Battle_Heal_MinPower^/d/?(minToRes:y);
+    !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(stackId)/i^WOG_73_Battle_Heal_MaxPower^/d/?(maxToRes:y);
+    !!VR(maxToRes):-n;
+    !!VR(minToRes):-n;
 
-      !!if&(wmStack)<>(NO_STACK);
-
-        !!if&(side)=(BATTLE_RIGHT)/i^Random_Hero_Active^;
-          !!BM(wmStack):Bd(totalHp) Nd(totalHp);
-        !!el&w(wVar);
-          !!VR(art:y):Si +3;                                                        [4/5/6]
-          !!HEi^battle_hero_%(side)^:A2/(art)/d/?(nonScriptArt:y);                  [vp vq vr mchines in hero's equipment slot (0 or 1)]
-
-          !!if&(art)=(ART_BALLISTA);
-            !!VR(nonScriptArt):+(npcBals);
-          !!en;
-
-          !!if&(art)=(ART_FIRST_AID_TENT);
-            !!VR(nonScriptArt):+(npcTents);
-          !!en;
-
-
-          !!BM(wmStack):N?(wmAmount:y);           [get number of monsters in stack]
-          !!IF:V790/1;
-          !!IF&(wmAmount)<>(nonScriptArt):V790/0; [not a normal battlefield and hero has equipped war machines]
-          *!BM(wmStack):B?i N?f;
-
-          !!if&790;
-            !!BM(wmStack):Bdw(wVar) Bd-1  Ndw(wVar) Nd-1;
-
-            !!VRi^WOG_73_Battle_MachinePlaced^:S(TRUE);
-          !!en;
-
-        !!en;
+    !!if&i^WOG_73_Battle_Heal_MinPower^=i^WOG_73_Battle_Heal_MaxPower^;
+      !!VR(healMsg:z):S^%i(WOG_73_Battle_Heal_MaxPower)^;
+      !!VR(resMsg:z):S^%(minToRes)^;
+    !!el;
+      !!VR(healMsg:z):S^%i(WOG_73_Battle_Heal_MinPower)-%i(WOG_73_Battle_Heal_MaxPower)^;
+      !!if&(minToRes)=(maxToRes);
+        !!VR(resMsg:z):S^%(minToRes)^;
+      !!el;
+        !!VR(resMsg:z):S^%(minToRes)-%(maxToRes)^;
       !!en;
     !!en;
+
+    !!SN:T^wog.%(WOG_OPT_ENHANCED_WAR_MACHINES_III).healed^/?(msg:z)/^healing^/(healMsg:z)/^resurrection^/(resMsg:z);
+    !!MM:M?(hint:z) M^%(hint) %(msg)^;
+  !!en;
+!?FU(WOG_BattleTent_BeforeIterateLoses)&i^WOG_73_Battle_HealPower^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(side:y);
+  !!VR(min:y):S(side) *21;
+  !!VR(max:y):S(min) +20;
+  !!VR(minLoses:y):S0;
+
+  !!VR(maxLoses:y):S0;
+  !!VR(stackToHeal:y):S(NO_STACK);
+  !!re i/(min)/(max);
+    !!BMi:F?f N?n;
+    !!VRf:&(MON_FLAG_DIED);
+    !!if&f=0/n>0;
+      !!BMi:B?s H?h L?l;
+      !!VR(minLoses:y):Ss -n*h +l Fd/(INT_MAX);
+
+      !!if&(minLoses)>(maxLoses);
+        !!VR(maxLoses):S(minLoses);
+        !!VR(stackToHeal):Si -(min);
+      !!en;
+    !!en;
+  !!en;
+
+  !!if&(stackToHeal)>(NO_STACK);
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/(stackToHeal);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4667564;
+  !!en;
+
+!?FU(WOG_73_BattleFunc_GetStackId);
+!#VA(stack:x) (stackId:x);
+  !!UN:C(stack)/244/4/?(side:y) C(stack)/248/4/?(index:y);;
+  !!VR(stackId):S(side)*21 +(index);
+
+!?FU(WOG_BattleTent_PrepareHealing)&i^WOG_73_Battle_HealPower^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stack:y);
+  !!FU(WOG_73_BattleFunc_GetStackId):P(stack)/?(stackId:y);
+  !!BM(stackId):L?l;
+
+  !!if&i^WOG_73_Battle_HealPower^>l;
+    !!VRi:Si^WOG_73_Battle_HealPower^;
+    !!BM(stackId):N?(currentNum:y) B?(startNum:y) H?(health:y);
+    !!VR(maxHeal:y):S(startNum) -(currentNum) *(health) +l;
+    !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(stackId)/i^WOG_73_Battle_HealPower^/?(hpLost:y)/?(num:y);
+    !!BM(stackId):N(num);
+    !!VRi^WOG_73_Battle_HealPower^:Fd/(maxHeal);
+
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^WOG_73_Battle_HealPower^;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(hpLost);
+  !!en;
+
+  !!VRi^WOG_73_Battle_HealPower^:S0;
+  !!VRi^WOG_73_Battle_Heal_MinPower^:S0;
+  !!VRi^WOG_73_Battle_Heal_MaxPower^:S0;
+
 
 --------------------- B A T T L E      R O U N D   ---------------------
 !?FU(OnBattleRound)&i^WOG_73_enabled^=1/i^battle_round^>0;
@@ -932,361 +955,136 @@ F784 = battle is in town//
   //spell points cannot be greater than the hero's maximum spell points (intelligence and artifacts are taken into count)
   //perhaps this part could be moved to a function
 
-  !!HEi^battle_hero_0^:I?n/1;                                                           [get current spell points]
-  !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_LEFT)/(MON_AMMO_CART)/?(number:y);
-  !!VRn:+(number);                                                                      [add number of ammo carts to spell points]
-  !!VRn&n>i^WOG_73_battle_hero_0_SpellPoints^:Si^WOG_73_battle_hero_0_SpellPoints^;     [if increased spell points would be greater than the maximum then set spell points to maximum]
-  !!HEi^battle_hero_0^&(number)>0:In/1;                                                 [give hero spell points]
+  !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+    !!if&i^battle_hero_%i^>=0/i^WOG_73_WM_%i_1_stack_id^<>(NO_STACK);
 
-  !!if&i^battle_hero_1^>=0;
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_RIGHT)/(MON_AMMO_CART)/?(number:y);
-    !!HEi^battle_hero_1^:I?n/1;                                                         [get current spell points]
-    !!VRn:+(number);                                                                    [add number of ammo carts to spell points]
-    !!VRn&n>i^WOG_73_battle_hero_1_SpellPoints^:Si^WOG_73_battle_hero_1_SpellPoints^;   [if increased spell points would be greater than the maximum than set spell points to maximum]
-    !!HEi^battle_hero_1^&(number)>0:In/1;                                               [give hero spell points]
-  !!en;
+      !!BMi^WOG_73_WM_%i_1_stack_id^:N?(number:y);
+      !!if&(number:y);
 
-!?FU(WOG_73_BattleFunc_CountWarMachines);
-!#VA(side:x) (machine:x) (number:x);
-  !!VR(number):S0;
-  !!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
-  !!VR(lastStack:y):S(firstStack) +(BATTLE_STACKS_PER_SIDE) -1;
-
-  !!re i/(firstStack)/(lastStack);
-    !!BMi:T?(type:y);                   [F?f; H130; //y1 hp y2 lost y3 original number y4 actual number y5 monster side]
-    !!if&(type)=(machine);
-      !!BMi:N?(number);                 [F?f; H130; //y1 hp y2 lost y3 original number y4 actual number y5 monster side]
-      !!FU:E;
+        !!HEi^battle_hero_%i^:I?n/1;                                                         [get current spell points]
+        !!VRn:+(number) Fd/i^WOG_73_battle_hero_%i_SpellPoints^;                                                                    [add number of ammo carts to spell points]
+        
+        *!IF:L^%n^;
+        !!HEi^battle_hero_%i^:In/1;                                               [give hero spell points]
+      !!en;
     !!en;
   !!en;
-
 
 -------------------------- B E F O R E   S T A C K    T U R N --------------------------
 !?FU(OnBattleStackObtainsTurn)&i^WOG_73_enabled^=1;
 !#VA(stackSide:x) (stackInd:x);
 
   !!BMi^battle_current_stack^:T?(monType:y);
-
   !!if&(monType)=(MON_FIRST_AID_TENT);
-    !!if&i^battle_hero_%(stackSide)^>=0;
-      !!HEi^battle_hero_%(stackSide)^:S(SKILL_FIRST_AID)/?(skillLvL:y) X?(heroSpec:y)/?(skillSpec:y); [store hero's first aid skill in v874]
-      !!if&(heroSpec)=0/(skillSpec)=(SKILL_FIRST_AID);
-        !!HEi^battle_hero_%(stackSide)^:Ed/?(heroLvl:y); //get hero level if he/she is specialist of first aid skill
-        !!VR(specBonus:y):S(heroLvl) *2; //calculate increased heal value
-      !!en;
-    !!el;
-      !!VR(specBonus:y):S(NULL);
-      !!VR(skillLvL:y):S0;
-    !!en;
-
-    *!if&i^battle_human_%i(battle_current_side)^=(FALSE)|(skillLvL)>=(FALSE);
-      !!FU(WOG_73_BattleFunc_CheckForDamagedStacks):P(stackSide)/?(damagedStacks:y)/?(damagedMachines:y);
-      !!VRi^WOG_73_Battle_HealPower^:S0;
-      !!FU&(damagedStacks)=(FALSE):E;
-
-      !!BMi^battle_current_stack^:N?(tentsAmount:y); 
-
-      !!re i/1/(tentsAmount);
-        !!FU(WOG_73_BattleFunc_CalculateHealPower):P(skillLvL)/?(result:y);
-        !!VRi^WOG_73_Battle_HealPower^:+(result) +(specBonus);
-      !!en;
-
-      !!if&(damagedStacks)=(damagedMachines);
-        !!FU(WOG_73_BattleFunc_SetMonsterAttributeFromMachine):P(stackSide)/(TRUE);
-      !!en;
-
-      !!FU(WOG_73_BattleFunc_RemoveOneHP):P(stackSide)/(TRUE);
-
-    *!en;
+    !!FU(WOG_73_BattleFunc_CalculateHealingPower):P(stackSide:x);
   !!en;
-!?FU(OnBeforeBattleAction)&i^WOG_73_enabled^=1;
 
-  !!BG:A?(actionType:y) N?y4;                [D?(healDest:y);]
-*!IF:L^%y4^;
-  !!BMy4:T?(monType:y);               [D?(healDest:y);]
+
+!?FU(WOG_73_BattleFunc_CalculateHealingPower);
+!#VA(stackSide:x) (skillLvL:y) (specBonus:y);
+
+  !!if&i^battle_hero_%(stackSide)^>=0;
+    !!HEi^battle_hero_%(stackSide)^:S(SKILL_FIRST_AID)/?(skillLvL:y) X?(heroSpec:y)/?(skillSpec:y) Ed/?(heroLvl:y); [store hero's first aid skill in v874]
+    !!if&(heroSpec)=0/(skillSpec)=(SKILL_FIRST_AID);
+      !!VR(specBonus:y):S(heroLvl) *2;                                                                              [calculate increased heal value//get hero level if he/she is specialist of first aid skill]
+    !!en;
+  !!en;
+
+  !!BMi^battle_current_stack^:N?(tentsAmount:y); 
+
+  !!VRi^WOG_73_Battle_Heal_MinPower^:S(skillLvL) +1 +(specBonus) *(tentsAmount) F1/(INT_MAX);
+  !!VRi^WOG_73_Battle_Heal_MaxPower^:S(skillLvL) +1 *25 +(specBonus) *(tentsAmount) Fi^WOG_73_Battle_Heal_MinPower^/(INT_MAX);
+  !!VRi^WOG_73_Battle_HealPower^:R0/i^WOG_73_Battle_Heal_MinPower^/i^WOG_73_Battle_Heal_MaxPower^;
+
+!?FU(OnBeforeBattleAction)&i^WOG_73_enabled^=1;
+  !!BG:A?(actionType:y) N?y4;                                                      [D?(healDest:y);]
+  !!BMy4:T?(monType:y);                                                            [D?(healDest:y);]
   !!if&(actionType)=(BATTLE_ACTION_WALK_AND_ATTACK)/(monType)=(MON_FIRST_AID_TENT);
     !!BG:A(BATTLE_ACTION_CANCEL);
   !!en;
+
 ------------------------- A F T E R         A C T I O N --------------------- 
-!?FU(OnBattleActionEnd)&i^WOG_73_enabled^=1/i^WOG_73_Battle_HealPower^;_%i(battle_acting_side)^;
-  !!BG:A?(actionType:y); D?(healDest:y); N?i^WOG_73_Battle_ActingTentStack^; //get stack number attack type and destination
-
-  !!if|(actionType)=(BATTLE_ACTION_TENT_HEAL)/(actionType)=(BATTLE_ACTION_DEFEND)/(actionType)=(BATTLE_ACTION_SURRENDER)/(actionType)=(BATTLE_ACTION_RETREAT)/(actionType)=(BATTLE_ACTION_WAIT);
-
-    !!if&(actionType)=(BATTLE_ACTION_TENT_HEAL);
-      !!BG:E?(healTarget:y); N?i^WOG_73_Battle_ActingTentStack^; //get stack number attack type and destination
-      *!BU:E(healDest)/?(healTarget:y);                          [; //v875 is the stack that is healed]
-      !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(healTarget)/i^WOG_73_Battle_HealPower^/?(hpLost:y)/?(num:y);
-
-      !!BM(healTarget):L(hpLost) N(num); //set stack to new - before anim, lost hp is 0, action will be: 0 hp removed
-    !!en;
-
-    !!FU(WOG_73_BattleFunc_RemoveOneHP):Pi^battle_acting_side^/(FALSE);
-    !!FU(WOG_73_BattleFunc_SetMonsterAttributeFromMachine):Pi^battle_acting_side^/(FALSE);
-    *!IF:M^%^;
-    !!VRi^WOG_73_Battle_HealPower^:S0;    
-  !!en;
-
-  !!if&(actionType)=(BATTLE_ACTION_WALK_AND_ATTACK);
-    !!BG:A(BATTLE_ACTION_CANCEL);
+!?FU(OnBattleActionEnd)&i^WOG_73_enabled^=1/i^WOG_73_Battle_HealPower^;
+  !!BG:A?(actionType:y);
+  !!if&(actionType)=(BATTLE_ACTION_HERO_CAST);
+    !!FU(WOG_73_BattleFunc_CalculateHealingPower):Pi^battle_current_side^;
   !!en;
 
 !?BG;
   !!BG:A?i^WOG_73_BattleLastAction^ Q?i^WOG_73_BattleLastSide^;
 
-!?FU(OnAfterBattleAction);
-  !!BU:C?(isBattleEnd:y);
-
-  !!if&(isBattleEnd);
-*!IF:M^%^;
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_LEFT)/(MON_BALLISTA)/?(number:y);
-    !!VRi^WOG_73_battle_hero_0_0_machine^:S(number);
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_LEFT)/(MON_AMMO_CART)/?(number:y);
-    !!VRi^WOG_73_battle_hero_0_1_machine^:S(number);
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_LEFT)/(MON_FIRST_AID_TENT)/?(number:y);
-    !!VRi^WOG_73_battle_hero_0_2_machine^:S(number);
-
-    !!FU|i^battle_hero_1^<0/i^Random_Hero_Active^:E;
-
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_RIGHT)/(MON_BALLISTA)/?(number:y);
-    !!VRi^WOG_73_battle_hero_1_0_machine^:S(number);
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_RIGHT)/(MON_AMMO_CART)/?(number:y);
-    !!VRi^WOG_73_battle_hero_1_1_machine^:S(number);
-    !!FU(WOG_73_BattleFunc_CountWarMachines):P(BATTLE_RIGHT)/(MON_FIRST_AID_TENT)/?(number:y);
-    !!VRi^WOG_73_battle_hero_1_2_machine^:S(number);
-
-  !!en;
 
 ------------------------ A F T E R           B A T T L E --------------------
 
 !?FU(OnAfterBattleUniversal)&i^WOG_73_enabled^=1/i^WOG_73_Battle_MachinePlaced^=(TRUE);
-  !!FU(WOG_73_BattleFunc_CorrectMachines):Pi^battle_hero_0^/(BATTLE_LEFT);
-  !!FU(WOG_73_BattleFunc_CorrectMachines)&i^battle_hero_1^>=1:Pi^battle_hero_1^/(BATTLE_RIGHT);
+  !!FU(WOG_73_BattleFunc_CorrectMachines):Pi^battle_hero_0^/(BATTLE_LEFT) Pi^battle_hero_1^/(BATTLE_RIGHT);
+
   !!VRi^WOG_73_Battle_MachinePlaced^:S(FALSE);
+  !!VRi^WOG_73_Battle_HealPower^:S(FALSE);
+  !!VRi^WOG_73_Battle_Heal_MinPower^:S(FALSE);
+  !!VRi^WOG_73_Battle_Heal_MaxPower^:S(FALSE);
+  !!VRi^WOG_73_BattleLastAction^:S(FALSE);
+  !!VRi^WOG_73_BattleLastSide^:S(FALSE);
 
 !?FU(WOG_73_BattleFunc_CorrectMachines);
-!#VA(heroId:x) (side:x);
+!#VA(heroId:x) (side:x) (wVar:y);
+  !!FU&(heroId)<0:E;
   !!IF:W(heroId);
-
   !!HE(heroId):O?(heroOwner:y);
-  *!IF:M^WOG_73_BattleLastAction %i(WOG_73_BattleLastAction)^;
+  
+  !!VRi^WOG_73_battle_hero_%(side)_SpellPoints^:S(FALSE);
 
-  !!if&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_SURRENDER)/i^WOG_73_BattleLastSide^=(side)|(heroOwner)<>(NO_OWNER);
+  !!re i/0/2;
+    !!if&i^WOG_73_WM_%(side)_%i_stack_id^<>(NO_STACK);
+      !!VR(wVar):Si +81;
 
-    !!re i/0/2;
-      !!VR(wVar:y):Si +81;
-      !!VRw(wVar)&w(wVar)>i^WOG_73_battle_hero_%(side)_%i_machine^:Si^WOG_73_battle_hero_%(side)_%i_machine^;
+      !!BMi^WOG_73_WM_%(side)_%i_stack_id^:N?(wmAmount:y);
+      !!VR(wmAmount):F0/w(wVar);
+
+      !!if&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_SURRENDER)/i^WOG_73_BattleLastSide^=(side)|(heroOwner)<>(NO_OWNER);
+        !!VRw(wVar):S(wmAmount);
+        !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);                                                      [correct eqipment]
+      !!el&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_RETREAT);
+        !!VRw(wVar):*(wmAmount) F0/1;
+      !!el;
+        !!VRw(wVar):S0;
+      !!en;
     !!en;
     
-  !!el;
-    !!if&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_RETREAT);
-
-      !!re i/0/2;
-        !!VR(wVar:y):Si +81;
-
-        !!if&i^WOG_73_battle_hero_%(side)_%i_machine^/w(wVar);
-          !!VRw(wVar):S1;
-        !!el;
-          !!VRw(wVar):S0;        
-        !!en;
-
-      !!en;  
-
-    !!el;
-
-      !!re i/0/2;
-        !!VR(wVar:y):Si +81;
-        !!VRw(wVar):S0;        
-      !!en;
-      
-    !!en;
-
+    !!VRi^WOG_73_WM_%(side)_%i_stack_id^:S(FALSE);
   !!en;
-
   !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId);                                                      [correct eqipment]
 
-!?FU(OnBattleMouseHint)&i^WOG_73_enabled^=1/i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
-  !!BMi^battle_current_stack^:T?(monType:y);                                     [get type of monster]
-  !!FU&(monType)<>(MON_FIRST_AID_TENT):E;
-  *!BMi^battle_current_stack^:I?(side:y);                                        [get type of monster]
-  !!OW:Cd/?(clickOwner:y);
-  !!if&(clickOwner)=i^battle_owner_%i(battle_current_side)^;
-    !!BU:Ei^mouse_battleHex^/?(stack:y);                                         [check if any stak here]
-    !!FU&(stack)<0:E;
-
-    !!FU(WOG_73_BattleFunc_HealWarMachines):P(stack)/i^battle_current_side^/?(allowAction:y)/?(stackPos:y);
-    !!if&(allowAction);                                                          [if does fit]
-      !!BU:Ei^mouse_battleHex^/?(stack:y);                                       [check mouse targer]
-      !!BM(stack):F?f;
-      !!VRf:&(MON_FLAG_WIDE);                                                    [check 2 hexes]
-      !!VR(offset:y):S(stackPos);
-
-        !!if&f;
-          !!VR(offset)&i^battle_current_side^=(BATTLE_LEFT):S(stackPos) +1;                      [fix 2 hexes]
-          !!VR(offset)&i^battle_current_side^=(BATTLE_RIGHT):S(stackPos) -1;
-        !!en;
-      !!UN|i^mouse_battleHex^=(stackPos)/i^mouse_battleHex^=(offset):R5/2/17;    [change cursor]
-    !!en;
-  !!el;
-    !!UN:R5/2/0;
-  !!en;
-
-!?FU(OnBattleScreenMouseClick)&i^WOG_73_enabled^=1/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);       [trigger for click on first aid tent, player can heal theFunc tent this way]
-  !!BMi^battle_current_stack^:T?(monType:y);                                     [get type of monster]
-  !!FU&(monType)<>(MON_FIRST_AID_TENT):E;
-
-  !!BMi^battle_current_stack^:I?(side:y);                                        [get type of monster]
-  !!BHi^battle_current_side^:N?(heroId:y);                                       [get hero number]
-  !!HE(heroId)&(heroId)>=0:S(SKILL_FIRST_AID)/?(skillLvL:y);                     [store first aid skill in v874 of hero]
-  !!OW:Cd/?(clickOwner:y);
-
-  !!if&(skillLvL)/(clickOwner)=i^battle_owner_%i(battle_current_side)^;
-
-    !!BU:Ei^mouse_battleHex^/?(stack:y);
-    !!FU&(stack)<0:E;
-
-    !!FU(WOG_73_BattleFunc_HealWarMachines):P(stack)/i^battle_current_side^/?(allowAction:y)/?(stackPos:y); [/?(offset:y);]
-
-    !!if&(allowAction);
-      !!CM:R0;
-      !!BG:A(BATTLE_ACTION_TENT_HEAL) D(stackPos);                               [perform healing any War machine]
-    !!en;
-  !!en;
 
 ------------------------------------------------------------------------
 ------------------------    F U N C T I O N S   ------------------------
 ------------------------------------------------------------------------
 
-!?FU(WOG_73_BattleFunc_SetMonsterAttributeFromMachine);
-!#VA(side:x) (delete:x);
-  //deletes monsters' machine attribute
-
-  !!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
-  !!VR(lastStack:y):S(firstStack) +(BATTLE_STACKS_PER_SIDE) -1;
-
-  !!re i/(firstStack)/(lastStack);
-
-    !!BMi:T?(monType:y);
-
-    !!if&(monType)>=(MON_CATAPULT)/(monType)<=(MON_AMMO_CART);
-      !!BMi:F?f F?(newFlags:y);
-      !!VRf:&(MON_FLAG_SIEGE_WEAPON);
-
-      !!if&(delete)=(FALSE)/f=(FALSE);
-        !!VR(newFlags):+(MON_FLAG_SIEGE_WEAPON);
-      !!en;
-
-      !!if&(delete)/f;
-        !!VR(newFlags):-(MON_FLAG_SIEGE_WEAPON);
-      !!en;
-
-      !!BMi:F(newFlags);
-    !!en;
-  !!en;
-
-!?FU(WOG_73_BattleFunc_CheckForDamagedStacks);
-!#VA(side:x) (damagedStack:x) (isMachine:x) (rndStack:x);
-
-  !!VR(damagedStack):S0;                             [assume we have no damage stacks]
-  !!VR(isMachine):S0;                             [assume we have no damage stacks]
-  !!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
-  !!VR(lastStack:y):S(firstStack) +(BATTLE_STACKS_PER_SIDE) -1;
-
-  *!FU(NewIntArray):P?(damagedStacksArray:y);
-
-  !!re i/(firstStack)/(lastStack);
-
-    !!BMi:L?(hpLost:y) B?(startNum:y) N?(num:y) F?f; H130; //y1 hp y2 lost y3 original number y4 actual number y5 monster side
-    !!if&(num);
-      !!if&(startNum)>(num)|(hpLost);
-        !!VR(damagedStack):+1;
-        !!VRf:&(MON_FLAG_SIEGE_WEAPON);
-        !!VR(isMachine)&f:+1;
-        *!FU(Array_Push):P(damagedStacksArray)/i;
-      !!en;
-    !!en;
-  !!en;
-
-  !!FU:E;                              [@daemon_n will continue later]
-
-  *!FU:A?(args:y);
-  *!FU&(args)<(@rndStack):E;
-
-  *!SN:M(damagedStacksArray)/?(size:y);
-  *!if&(size);
-    *!VR(size):-1;
-    *!VR(randIndex:y):S0 R(size);
-    *!SN:M(damagedStacksArray)/(randIndex)/?(rndStack);
-  *!en;
-
-!?FU(WOG_73_BattleFunc_RemoveOneHP);
-!#VA(side:x) (remove:x);
-
-  !!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
-  !!VR(lastStack:y):S(firstStack) +(BATTLE_STACKS_PER_SIDE) -1;
-
-  !!if&(remove);
-    !!re i/(firstStack)/(lastStack);
-      !!BMi:B?s N?n L?l P?p; F?f;
-      !!BMi&s>n/l=0:Ld1;?l B?s N?n F?f;
-    !!en;
-
-  !!el;
-    !!re i/(firstStack)/(lastStack);
-      !!BMi:B?s N?n L?l P?p; F?f;
-      !!BMi&s>n:Ld-1;?l B?s N?n F?f;
-    !!en;
-  !!en;
-
-!?FU(WOG_73_BattleFunc_AI_ChangeStackHP);
-!#VA(stack:x);
-  !!BM(stack):Ld1;
-
-**fixed bugs, balanced specialization[upd rennyo 26.05.2020]
-!?FU(WOG_73_BattleFunc_CalculateHealPower);
-!#VA(skillLvL:x) (heal:x); 
-  //calculates random heal value 
-  !!VR(maxHeal:y):S25 *(skillLvL) +25; [y1+1 max limit for random heal]
-  !!VR(heal):S1 R(maxHeal);          [y2 1-25/1-50/1-75/1-100 random]
-
-
 !?FU(WOG_73_BattleFunc_CalculateStackHealing);
-!#VA(stack:x) (healPower:x) (hpLost:x) (num:x);
-  !!BM(stack):H?(maxHp:y) L?(hpLost) B?(startNum:y) N?(num);
+!#VA(stackId:x) (healPower:x) (hpLost:x) (num:x);
+  !!BM(stackId):H?(maxHp:y) B?(startNum:y) L?(hpLost) N?(num);
 
-  !!if&(startNum)>(num);
+  !!if&(healPower)>(hpLost);
 
-    !!if&(healPower)>(hpLost);
+    !!BM(stackId):Z?(stack:y);
+    !!SN:E4468128/(CALLCONV_THISCALL)/(stack)/0;       [get  current hp]
 
-      !!VR(qtyToResurrect:y):S(healPower) +(maxHp) -(hpLost) :(maxHp); -1;
-      !!VR(hpLost):S(healPower) +(maxHp) %(maxHp);
-      !!if&(qtyToResurrect);
-        !!VR(num):+(qtyToResurrect);
-        !!VR(num)&(num)>(startNum):S(startNum);
-      !!en;
+    !!VR(totalMaxHp:y):S(startNum) *(maxHp);
+    !!VR(assumedHp:y):Sv1 +(healPower) Fd/(totalMaxHp);
+    !!VR(remainder:y):S(assumedHp) %(maxHp);
+
+    !!VR(num):S(assumedHp) :(maxHp); +1;
+
+    !!if&(remainder:y)>0;
+      !!VR(hpLost):S(maxHp) -(remainder);
+      !!VR(num):+1;
+
     !!el;
-      !!VR(hpLost):-(healPower);
+      !!VR(hpLost):S0;
     !!en;
-
   !!el;
-  
     !!VR(hpLost):-(healPower);
-    !!VR(hpLost)&(hpLost)<0:S0;
   !!en;
-
-!?FU(WOG_73_BattleFunc_HealWarMachines);
-!#VA(stack:x) (tentSide:x) (allowAction:x) (stackPos:x);
-  
-  !!VR(allowAction):S(FALSE);                                                    [default is retrict]
-  !!BM(stack):I?(side:y);
-  !!FU&(side)<>(tentSide):E;                                                   [exit if wrong side]
-
-  !!BM(stack):L?l B?(startNum:y) N?(num:y) P?(stackPos);                            
-
-  !!if&l|(startNum)>(num);
-    !!VR(allowAction):S(TRUE);
-  !!en;
-  
 
 
 --------------- T R I G G E R S  F O R  H E R O  M E E T I N G --------------
@@ -1297,106 +1095,105 @@ F784 = battle is in town//
     
     !!CM:R0;                                                                                                                     [dismiss mouse action]
     !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
-      !!HEi^mouse_hero_1^:O?(rightOwner:y);                                                                                      [get the owner]
       !!HEi^mouse_hero_0^:O?(leftOwner:y);                                                                                       [get the owner]
-      !!OW:C(currentPlayer:y)/?(clickOwner:y)  I(rightOwner)/?(rightIsAi:y)  I(leftOwner)/?(leftIsAi:y);
+      !!HEi^mouse_hero_1^:O?(rightOwner:y);                                                                                      [get the owner]
+
+      !!OW:C?(currentPlayer:y)/?(clickOwner:y)  I(rightOwner)/?(rightIsAi:y)  I(leftOwner)/?(leftIsAi:y);
 
       !!FU&(leftOwner)<>(rightOwner)/(rightIsAi)=(leftIsAi):E;                                                                   [disable in MP]
 
-      !!if&i^mouse_item^>=40/i^mouse_item^<=42;
-        !!OW:Cd/?(clickOwner:y);
-        !!HEi^mouse_hero_0^:O?(leftOwner:y);                                                                                     [get the owner]
-        !!VR(warMachine:y):Si^mouse_item^ - 39;
-        !!FU(WOG_73_Msg_TransferMachinesInMeetingScreen)&(clickOwner)=(leftOwner):Pi^mouse_hero_0^/i^mouse_hero_1^/(warMachine)/i^mouse_flags^; [war machine transfer between heroes]
-        !!IP:D(rightOwner) Wi^mouse_hero_0^/81/83 Wi^mouse_hero_1^/81/83;
+      !!if&i^mouse_item^<=42;
+        !!VR(warMachine:y):Si^mouse_item^ - 40;
+        !!VR(heroOwner:y):S(leftOwner);
+        !!VR(sender:y):Si^mouse_hero_0^;
+        !!VR(receiver:y):Si^mouse_hero_1^;
       !!el;
-        !!OW:Cd/?(clickOwner:y);
-        !!HEi^mouse_hero_1^:O?(rightOwner:y);                                                                                    [get the owner]
-        !!VR(warMachine:y):Si^mouse_item^ - 58;
-        !!FU(WOG_73_Msg_TransferMachinesInMeetingScreen)&(clickOwner)=(rightOwner):Pi^mouse_hero_1^/i^mouse_hero_0^/(warMachine)/i^mouse_flags^;
-        !!IP:D(leftOwner) Wi^mouse_hero_0^/81/83 Wi^mouse_hero_1^/81/83;
+        !!VR(warMachine:y):Si^mouse_item^ - 59;
+        !!VR(heroOwner:y):S(rightOwner);
+        !!VR(sender:y):Si^mouse_hero_1^;
+        !!VR(receiver:y):Si^mouse_hero_0^;
       !!en;
+        !!VR(warMachine):+(ART_BALLISTA);
+        !!FU(WOG_73_Dlg_WM_Split)&(clickOwner)=(heroOwner):P(sender)/(receiver)/(warMachine)/i^mouse_flags^;
+        !!IP:D(ANY_PLAYER) Wi^mouse_hero_0^/81/83 Wi^mouse_hero_1^/81/83;
     !!en;
 
     !!if&i^mouse_action^=(MOUSE_RMB_PRESSED);                                                                                    [right clicking popup msg]
 
       !!if&i^mouse_item^>=40/i^mouse_item^<=42;
-        !!IF:Wi^mouse_hero_0^;                                                                                                   [use hero's w# variables]
-        !!HEi^mouse_hero_0^:B0/?z1;                                                                     [get hero name]
-        !!VR(art:y):Si^mouse_item^ - 36;
+        !!VR(heroId:y):Si^mouse_hero_0^;
+        !!VR(art:y):Si^mouse_item^ - 40 +(ART_BALLISTA);
       !!el;
-        !!VR(art:y):Si^mouse_item^ - 55;
-        !!IF:Wi^mouse_hero_1^;                                                                          [use hero's w# variables]
-        !!HEi^mouse_hero_1^:B0/?z1;                                                                     [get hero name]
+        !!VR(art:y):Si^mouse_item^ - 59 +(ART_BALLISTA);
+        !!VR(heroId:y):Si^mouse_hero_1^;
       !!en;
 
-      !!VRz2&(art)=(ART_BALLISTA):S^{%W81}^;
-      !!VRz3&(art)=(ART_BALLISTA)/w81<=1:Sz173124;
-      !!VRz3&(art)=(ART_BALLISTA)/w81>1:Sz173125;
-
-      !!VRz2&(art)=(ART_AMMO_CART):S^{%W82}^;
-      !!VRz3&(art)=(ART_AMMO_CART)/w82<=1:Sz173126;
-      !!VRz3&(art)=(ART_AMMO_CART)/w82>1:Sz173127;
-
-      !!VRz2&(art)=(ART_FIRST_AID_TENT):S^{%W83}^;
-      !!VRz3&(art)=(ART_FIRST_AID_TENT)/w83<=1:Sz173128;
-      !!VRz3&(art)=(ART_FIRST_AID_TENT)/w83>1:Sz173129;
-
-      !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_POPUP)/z173130;
+      !!FU(WOG_73_Msg_HeroWM_PopUp):P(heroId)/(art);
     !!en;   
 
   !!en;
 
-!?FU(WOG_73_Msg_TransferMachinesInMeetingScreen);
+
+!?FU(WOG_73_Dlg_WM_Split);
 !#VA(sender:x) (receiver:x) (warMachine:x) (flags:x);
 !#VA(usedY[2]:y);
   //called when two hero of the same color meets - only for player
-  //set dlg title
-
-
 
   //get hero's w var
   !!IF:W(sender);
-  !!VR(wVar:y):S(warMachine) +80;
+  !!VR(wVar:y):S(warMachine) +81 -(ART_BALLISTA);
 
   !!VR(wmAmount:y):Sw(wVar);
+  !!if&(wmAmount)>0;
+    !!if&(flags)=(NO_MOUSE_FLAGS);
+      !!FU(WOG_73_Func_MonArt):P?(warMachine);
 
-  !!FU&(wmAmount)=0:E;
+      !!VRi^WOG_73_Swap_WM_ID^:S(warMachine);
+      !!VRi^WOG_73_Swap_WM_sender^:Sw(wVar);
+      !!IF:W(receiver);
 
-  !!if&(flags)=(NO_MOUSE_FLAGS);
-    !!VRz1&(warMachine)=1:Sz173029;
-    !!VRz1&(warMachine)=2:Sz173030;
-    !!VRz1&(warMachine)=3:Sz173028;
-    //set machine name
+      !!VRi^WOG_73_Swap_WM_receiver^:Sw(wVar);
 
-    !!VRz-1&(warMachine)=1:Sz173035;
-    !!VRz-1&(warMachine)=2:Sz173036;
-    !!VRz-1&(warMachine)=3:Sz173034;
+      !!HE(sender):Z?(heroStruct:y) O?(sendOwner:y);
+      !!VR(heroStruct):+145;
+      !!VR(startSLot:y):S0;
+      !!VR(lasSLot:y):S0;
+      !!VR(total:y):Si^WOG_73_Swap_WM_sender^ +i^WOG_73_Swap_WM_receiver^;
 
-    !!FU(RadioDlg_Reset):P;
-    !!FU(RadioDlg_SetTitle):Pz1;
+      !!VR(store:y):Si^WOG_73_Swap_WM_receiver^;
+      !!SN:E4496224/(CALLCONV_THISCALL)/(heroStruct)/(startSLot)/(heroStruct)/(lasSLot)/0/0;
 
-    !!re i/1/(wmAmount);
-      !!br&i=11;
-      !!VRy2:Si;                                             [original y2 variable from ert file]
-      !!FU(RadioDlg_AddItem):P^%z173037^/i;
+      !!VR(wmAmount:y):Si^WOG_73_Swap_WM_receiver^ -(store);
+
+      !!VRi^WOG_73_Swap_WM_ID^:S(NULL);
+      !!VRi^WOG_73_Swap_WM_sender^:S(NULL);
+      !!VRi^WOG_73_Swap_WM_receiver^:S(NULL);
+      !!HE(receiver):O?(recOwner:y);
+      !!if&(recOwner)<>(sendOwner)/(wmAmount)<0;>i^WOG_73_Swap_WM_receiver^;
+        !!FU:E;
+      !!en;
+      !!FU(WOG_73_Func_TransferMachinesInMeetingScreen):P(sender)/(receiver)/(wVar)/(wmAmount);
+
+    !!el&(flags)=(MOUSE_FLAG_SHIFT);
+      !!FU(WOG_73_Func_TransferMachinesInMeetingScreen):P(sender)/(receiver)/(wVar)/1;
+    !!el&(flags)=(MOUSE_FLAG_ALT);
+      !!FU(WOG_73_Func_TransferMachinesInMeetingScreen):P(sender)/(receiver)/(wVar)/(wmAmount);
     !!en;
-
-    !!FU(RadioDlg_AddItem)&(wmAmount)>1:Pz173038/(wmAmount);
-    !!FU(RadioDlg_AddCancelButton):P;
-
-    !!FU(RadioDlg_SelectItemByValue):P(DLG_RESULT_CANCEL);
-    !!FU(RadioDlg_Show):Pd/?(value:y);
-
-    !!if&(value)<>(DLG_RESULT_CANCEL);
-      !!FU(WOG_73_Func_TransferMachinesInMeetingScreen):P(sender)/(receiver)/(wVar)/(value);
-    !!en;
-
-  !!el&(flags)=(MOUSE_FLAG_SHIFT);
-    !!FU(WOG_73_Func_TransferMachinesInMeetingScreen):P(sender)/(receiver)/(wVar)/1;
-  !!el&(flags)=(MOUSE_FLAG_ALT);
-    !!FU(WOG_73_Func_TransferMachinesInMeetingScreen):P(sender)/(receiver)/(wVar)/(wmAmount);
   !!en;
+!?FU(WOG_DlgCreatureSplit_OnCreate)&i^WOG_73_Swap_WM_ID^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/16/4/i^WOG_73_Swap_WM_ID^;
+
+
+!?FU(WOG_DlgCreatureSplit_BeforeSettingNumber)&i^WOG_73_Swap_WM_ID^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(dlgSplit:y)
+  C(dlgSplit)/112/4/i^WOG_73_Swap_WM_sender^ C(dlgSplit)/116/4/i^WOG_73_Swap_WM_receiver^;i^WOG_73_Swap_WM_sender^;
+  !!VR(summ:y):Si^WOG_73_Swap_WM_sender^ +i^WOG_73_Swap_WM_receiver^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(summ); C(dlgSplit)/70/4/?y2;i^WOG_73_Swap_WM_sender^;
+
+!?FU(WOG_DlgCreatureSplit_AfterSplit)&i^WOG_73_Swap_WM_ID^;
+  !!SN:X?y1/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?i^WOG_73_Swap_WM_receiver^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4496940;
 
 !?FU(WOG_73_Func_TransferMachinesInMeetingScreen);
 !#VA(sender:x) (receiver:x) (wVar:x) (value:x);

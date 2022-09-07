@@ -1775,23 +1775,21 @@ ZVSE2
 !!UN:C(h3Dlg)/(STRUCT_H3DLG_HEIGHT)/(UNC_INT)/?(height);
 
 !?FU(DL_SetSize);
-; Returns DL-dialog width and height.
+; Changes DL-dialog width and height.
 !#VA(dlgId:x);  DL dialog ID
-!#VA(width:x);  OUT. Dialog width
-!#VA(height:x); OUT. Dialog height
+!#VA(width:x);  Optional. Dialog width. 0 means "preserve as is".
+!#VA(height:x); Optional. Dialog height. 0 means "preserve as is".
 
 !!FU(DL_FindById):P(dlgId)/?(dlgObj:y);
 
 !!if&(dlgObj)=(NULL);
-  !!SN:F^ShowErmError^/^DL_GetSize: DL-dialog %(dlgId) is not loaded^;
+  !!SN:F^ShowErmError^/^DL_SetSize: DL-dialog %(dlgId) is not loaded^;
   !!FU:E;
 !!en;
 
 !!UN:C(dlgObj)/(UNC_INT)/?(h3Dlg:y);
-!!UN:C(h3Dlg)/(STRUCT_H3DLG_WIDTH)/(UNC_INT)/(width);
-!!UN:C(h3Dlg)/(STRUCT_H3DLG_HEIGHT)/(UNC_INT)/(height);
-
-
+!!UN&(width)<>0:C(h3Dlg)/(STRUCT_H3DLG_WIDTH)/(UNC_INT)/(width);
+!!UN&(height)<>0:C(h3Dlg)/(STRUCT_H3DLG_HEIGHT)/(UNC_INT)/(height);
 
 !?FU(DL_AlignDlg);
 ; Aligns dialog display position. Call DL:N before trying to use this function.
@@ -2092,6 +2090,83 @@ ZVSE2
 
 !!VRs^temp^:S^^;
 
+!?FU(PrepareMultiPicDialog);
+; Initializes IF:N dialog pictures. Call IF:N to show it afterwards.
+; Automatically skips pairs with NO_PIC_TYPE type and pairs with PIC_TYPE_MONSTER type and negative subtype.
+; Ignores more than 8 non-empty pairs. Always safe to call.
+;
+; Supports three call syntaxes:
+;   P; dialog without pictures
+;   P(first picture type)/(first picture subtype)/(second picture type)...
+;   P(ID of dynamical array, containing picture pairs)
+!#VA(firstArg:x);
+
+!!FU:A?(numArgs:y);
+
+!!if&(numArgs)<=0;
+  ; SYNTAX: P; dialog without pictures
+  !!IF:N(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE)/(NO_PIC_TYPE);
+  !!FU:E;
+!!en;
+
+; Define and reset dialog parameters array
+!#VA(params[16]:y);
+
+!!re i/0/(params[SIZE])/1/-1;
+  !!VR(params[i]):S(NO_PIC_TYPE);
+!!en;
+
+!!VR(paramPtr:y):S(@params);
+
+!!if&(numArgs)>1;
+  ; SYNTAX: P(first picture type)/(first picture subtype)/(second picture type)...
+  !!VR(numPicPairs:y):S(numArgs) :2;
+  !!VR(argPtr:y):S(@firstArg);
+
+  !!re i/0/(numPicPairs)/1/-1;
+    !!VR(picType:y):Sx(argPtr);
+    !!VR(argPtr):+1;
+    !!VR(picValue:y):Sx(argPtr);
+    !!VR(argPtr):+1;
+
+    !!if&(picType)<>(NO_PIC_TYPE);
+      !!if|(picType)<>(PIC_TYPE_MONSTER)/(picValue)>=(MON_FIRST);
+        !!VRy(paramPtr):S(picType);
+        !!VR(paramPtr):+1;
+        !!VRy(paramPtr):S(picValue);
+        !!VR(paramPtr):+1;
+      !!en;
+    !!en;
+  !!en;
+!!el;
+  ; SYNTAX: P(ID of dynamical array, containing picture pairs)
+  !!VR(dlgPicList:y):S(firstArg);
+  !!SN:M(dlgPicList)/?(picListSize:y);
+  !!VR(numPicPairs:y):S(picListSize) :2;
+
+  !!VR(argInd:y):S0;
+
+  !!re i/0/(numPicPairs)/1/-1;
+    !!SN:V(dlgPicList)/(argInd)/?(picType:y)/?(picValue:y);
+
+    !!if&(picType)<>(NO_PIC_TYPE);
+      !!if|(picType)<>(PIC_TYPE_MONSTER)/(picValue)>=(MON_FIRST);
+        !!VRy(paramPtr):S(picType);
+        !!VR(paramPtr):+1;
+        !!VRy(paramPtr):S(picValue);
+        !!VR(paramPtr):+1;
+
+        !!br&(paramPtr)>(@params[-1]);
+      !!en;
+    !!en;
+
+    !!VR(argInd):+2;
+  !!en;
+!!en;
+
+!!IF:N(params[0])/(params[1])/(params[2])/(params[3])/(params[4])/(params[5])/(params[6])/(params[7])/
+      (params[8])/(params[9])/(params[10])/(params[11])/(params[12])/(params[13])/(params[14])/(params[15]);
+
 !?FU(ShowAnimatedDefDlg);
 ; Displays message dialog with OK button, text and leading animated def.
 !#VA(textPtr:x);    Text to show
@@ -2114,6 +2189,20 @@ ZVSE2
 !!BM(defenderStackId):Z?(defenderStackStruct:y);
 !!SN:E4453920/(CALLCONV_THISCALL)/(attackerStackStruct)/(defenderStackStruct);
 
+!?FU(BattleStack_MakeActive);
+; Makes specified stack active/acting.
+!#VA(stackId:x); Stack ID to pass control to.
+
+!!if|(stackId)<0/(stackId)>=(BATTLE_MAX_STACKS);
+  !!SN:F^ShowErmError^/^Invalid stack ID. Got: %(stackId). Expected 0..41^;
+  !!FU:E;
+!!en;
+
+!!VR(stackSide:y):S(stackId) :(BATTLE_STACKS_PER_SIDE);
+!!VR(stackInd:y):S(stackId) %(BATTLE_STACKS_PER_SIDE);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatMan:y);
+!!SN:E4607760/(CALLCONV_THISCALL)/(combatMan)/(stackSide)/(stackInd);
+
 !?FU(UpdateBattleVars);
 ; Updates global variables with most of "OnBeforeBattle/Universal" event parameters.
 ; Call this function if you change anything, except monsters, via BA command.
@@ -2124,10 +2213,9 @@ ZVSE2
 ; Replace invalid defender hero values like (NO_DEFENDING_HERO) with normalized (NO_HERO)
 !!if&i^battle_hero_1^<(HERO_FIRST);
   !!VRi^battle_hero_1^:S(NO_HERO);
-  !!VRi^battle_hero_vs_hero^:S(FALSE);
-!!el;
-  !!VRi^battle_hero_vs_hero^:S(TRUE);
 !!en;
+
+!!VRi^battle_hero_vs_hero^:Si^battle_hero_1^ F(FALSE)/(TRUE);
 
 !!VRi^battle_ai_0^:S(TRUE);
 !!VRi^battle_ai_1^:S(TRUE);
