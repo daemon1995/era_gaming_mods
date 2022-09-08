@@ -68,13 +68,16 @@ ZVSE2
 -----------------------------------------------------------------------------
 -----------------------------------------------------------------------------
 
+!?FU(WOG_EndOfTurn)&i^WOG_73_enabled^/i^timerIsAi^; [continue trigger only if it is an other days and the beginning of a new week]
+  !!VR(perThreeDays:y):Si^timerDay^ %3;
+
+  !!if&(perThreeDays)=0;
+    !!FU(WOG_73_Func_ForceBuyMachinesInTownsForAI):Pi^timerOwner^;
+  !!en;
 
 !?FU(OnEveryDay)&i^timerOnce^/i^WOG_73_enabled^; [continue trigger only if it is an other days and the beginning of a new week]
 
-  !!VR(perThreeDays:y):Si^timerDay^ %3;
-  !!if&(perThreeDays)=0;
-    !!FU(WOG_73_Func_ForceBuyMachinesInTownsForAI):P;
-  !!en;
+
 
   !!if&i^timerWeekday^=1;
 
@@ -341,10 +344,11 @@ ZVSE2
 
 ; Calls buying funtion for AI at every town if the town has a hero at the town (garrison or visitor)
 !?FU(WOG_73_Func_ForceBuyMachinesInTownsForAI);
-  !!re (player:y)/(PLAYER_FIRST)/(PLAYER_LAST);
-    !!OW:I(player)/?(isAi:y) W(player)/?(towns:y);
+!#VA(player:x);
+  *!re (player:y)/(PLAYER_FIRST)/(PLAYER_LAST);
+    !!OW:W(player)/?(towns:y);
 
-    !!if&(isAi)/(towns);                                                                   [if AI]
+    !!if&(towns);                                                                   [if AI]
 
       !!re (playerTown:y)/0/(towns)/1/-1;                                                  [loop all towns]
         !!OW:W(player)/(playerTown)/?(townId:y);                                           [get town ID]
@@ -378,7 +382,7 @@ ZVSE2
         !!en;
       !!en;
     !!en;
-  !!en;
+  *!en;
 
 !?FU(WOG_73_Func_DismissOriginalBoughtMachines);
 !#VA(heroId:x);
@@ -454,7 +458,9 @@ ZVSE2
 
 !?FU(WOG_73_Func_BuyMachinesInTown);
 !#VA(heroId:x) (x:x) (y:x) (z:x) (isBallistaYard:x) (townType:x);
-
+  !!HE(heroId):O?(heroOwner:y);
+  
+  !!FU&(heroOwner)<>i^timerOwner^;|(heroOwner)<
   //asks for buying until player cancels
   //uses flag 2 for question
   //x1 hero number x2 x3 x4 position of object that stores number of available machines
@@ -466,84 +472,62 @@ ZVSE2
     !!PO(x)/(y)/(z):H?(wmAmount:y);                            [get number of H attribute in (wmAmount)  - if common Blacksmith]
   !!en;
 
-  !!IF:V2/1;                                                   [init flag 2]
 
-  !!OW:C?(currentPlayer:y);
   !!CA(x)/(y)/(z):O?(townOwner:y);
-
-  !!if&(wmAmount)=0;
-    !!IF:V2/0;                                                 [won't ask longer]
-  !!en;
-
-  !!IF:W(heroId);                                              [use hero's w variables]
-
   !!VR(offset:y):S(townType) *4;
-  !!UN:C6565536/(offset)/4/?(monId:y);
-
-  !!if|(townType)=1/(townType)=4/(townType)=7;
-    !!VR(art:y):S(ART_FIRST_AID_TENT);
-    !!VR(mon:y):S(MON_FIRST_AID_TENT);
-  !!el|(townType)=0/(townType)=5/(townType)=8/(isBallistaYard);
-    !!VR(art:y):S(ART_BALLISTA);
-    !!VR(mon:y):S(MON_BALLISTA);
-
-  !!el|(townType)=2/(townType)=3/(townType)=6;
-    !!VR(art:y):S(ART_AMMO_CART);
-    !!VR(mon:y):S(MON_AMMO_CART);
+  !!if&(isBallistaYard);
+    !!VR(offset:y):S(TOWN_CASTLE) *4;
   !!en;
 
-  !!VR(artMonster:y):S(art) +142;
+  !!UN:C6565536/(offset)/4/?(monId:y);
   !!MA:C(monId)/(RES_GOLD)/?(artCost:y);
 
-  !!if&(ERM_FLAG_IS_HUMAN);
-    !!if&(currentPlayer)<>(townOwner);
+  !!IF:W(heroId);                                              [use hero's w variables]
+  
+  !!if&999;
+
+    !!if&(heroOwner)<>(townOwner);
       !!VR(wmAmount):S0;
     !!en;
+
     !!VR(machinesBought:y):S(wmAmount);
     
-
-
     !!FU(WOG_73_Dlg_BuyMachines_Prepare):P(heroId)/(monId)/?(machinesBought)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON);
+
     !!if&(machinesBought)<>0;
-      !!VR(wVar:y):S81 +(art) -(ART_BALLISTA);
+      !!FU(WOG_73_Func_MonArt):P?(monId);
+
+      !!VR(wVar:y):S81 +(monId) -(ART_BALLISTA);
       !!VRw(wVar):+(machinesBought);
 
       !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId); //correct equipment
-
-      !!if&(isBallistaYard);
-        !!PO(x)/(y)/(z):Td-(machinesBought); //set object H and T attribute to store updated value
-      !!el;
-        !!PO(x)/(y)/(z):Hd-(machinesBought); //set object H and T attribute to store updated value
-      !!en;
+      !!FU(WOG_73_DecreaseMachinesInTown):P(x)/(y)/(z)/(isBallistaYard)/(machinesBought);
     !!en;
-  !!el&2;
+
+  !!el&i^timerIsAi^;
+    !!FU(WOG_73_Func_MonArt):P?(monId);
+
     !!HE(heroId):O?(player:y);
-    !!OW:R(player)/(RES_GOLD)/?(gold:y); //get gold in y4
+    !!VR(wVar:y):S81 +(monId) -(ART_BALLISTA);
 
-    !!if&(artCost)<=(gold);
-      !!OW:R(player)/(RES_GOLD)/d-(artCost); //remove cost from gold pool
-
-      !!VR(wVar:y):S81 +(art) -(ART_BALLISTA);
-      !!VRw(wVar):+1;
-
-      !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId); //correct equipment
-
-      !!if&(isBallistaYard);
-        !!PO(x)/(y)/(z):Td-1; //set object H and T attribute to store updated value
-      !!el;
-        !!PO(x)/(y)/(z):Hd-1; //set object H and T attribute to store updated value
+    !!re i/0/(wmAmount)/1/-1;
+      !!OW:R(player)/(RES_GOLD)/?(gold:y); //get gold in y4
+      !!if&(artCost)<=(gold);
+        !!OW:R(player)/(RES_GOLD)/d-(artCost); //remove cost from gold pool
+        !!VRw(wVar):+1;
+        !!FU(WOG_73_Func_CorrectMachineEquipment):P(heroId); //correct equipment
+        !!FU(WOG_73_DecreaseMachinesInTown):P(x)/(y)/(z)/(isBallistaYard)/1;
       !!en;
-
-      !!VR(wmAmount):-1;
-
-      !!if&(wmAmount)=0;
-        !!FU:E;
-      !!en;
-
-      !!FU(WOG_73_Func_BuyMachinesInTown):P(heroId)/(x)/(y)/(z)/(isBallistaYard)/(townType); //ask longer if clicked yes, had enough gold and there is something to buy or continue buying if AI could buy this machine
     !!en;
   !!en;
 
+!?FU(WOG_73_DecreaseMachinesInTown);
+!#VA(x:x) (y:x) (z:x) (isBallistaYard:x) (num:x);
+!!if&(isBallistaYard);
+  !!PO(x)/(y)/(z):Td-(num); //set object H and T attribute to store updated value
+!!el;
+  !!PO(x)/(y)/(z):Hd-(num); //set object H and T attribute to store updated value
+!!en;
 
 !?FU(OnOpenRecruitDlg)&i^WOG_73_temp^;
   !!re i/0/2;
@@ -559,6 +543,7 @@ ZVSE2
     !!MA:Xi/d~(MON_FLAG_SIEGE_WEAPON);
   !!en;
 
+    *!IF:M^Make screenshot 2^;
 
   !!re i/0/2;
     !!VR(argInd:y):Si *2 +(@army);
