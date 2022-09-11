@@ -10,22 +10,22 @@ ZVSE2
 ; Gnolls-marauders strike first: option 996
 
 
-!?FU(OnBeforeBattleUniversal); [check option is enabled]
-!!UN:P996/?i^ES_996_Enabled^;
-
-!?FU(OnAfterBattleUniversal); [clear vars]
-!!SN:W^ES_996_Enabled^;
 !?FU(ES_CreateERMHook);
 !#VA(address:x);
 !!SN:E(address)/1/4463326/(ES_HOOK_BeforeStackAttackMelee); [Trigger right before melee attack, obviously before retaliation]
 
 
 !?FU(ES_HOOK_BeforeStackAttackMelee);
+!!UN:P996/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/(UNC_INT)/?(actingStack:y) C(actingStack)/52/(UNC_INT)/?(attMonType:y) Cx1/(STRUCT_HOOK_CONTEXT_EBX)/(UNC_INT)/?(actingStackdir:y);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(targetStack:y) C(targetStack)/52/(UNC_INT)/?(defMonType:y);
 
-!!if&(attMonType)=(MON_GNOLL_MARAUDER)/(defMonType)<>(MON_GNOLL_MARAUDER);
+!!FU(ES_996_CheckIfMonIsEligible):P(attMonType)/?(attResult:y);                                       [Check if the defender is eligible for triggering strike first while the attacker doesn't]
+!!FU(ES_996_CheckIfMonIsEligible):P(defMonType)/?(defResult:y);
 
+!!if&(attResult)<>(TRUE)/(defResult);
   !!UN:C(actingStack)/132/(UNC_INT)/?f;                                                               [get attacker flags]
   !!VR(noRetaliation:y):Sf &(MON_FLAG_NO_RETALIATION);
   !!VR(warMachine:y):Sf &(MON_FLAG_SIEGE_WEAPON);
@@ -67,3 +67,10 @@ ZVSE2
   !!if&(paralyzDur)=(NULL)/(blindDur)=(NULL)/(stoneDur)=(NULL)/(monNum)>0;
     !!VR(result):S(TRUE);
   !!en;
+
+// Funciton to check if the targeted monster is eligible for strike first
+!?FU(ES_996_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_GNOLL_MARAUDER):S(TRUE);
