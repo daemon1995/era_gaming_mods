@@ -1,9 +1,9 @@
-ZVSE
+ZVSE2
 
 **   Living Skull Script Version 1.5 created by Timothy E. Pulver
 **   Requires WoG version 3.58 or later using ERM version 2.7 or later.
 **   Updated: June 23, 2004
-**   Updated Aug 2022 by Archer30
+**   Updated: Sep 2022 by Archer30
 
 ** This script makes all "Living Skulls" on a map function as artifact locating
 ** devices. When a hero visits the skull, he or she may request a search for
@@ -39,7 +39,6 @@ ZVSE
 
 Flags used in this script: 1, 21, 27
 Variables used: v1-v4, v24-v34, v76, v94, v95, z1, z22-z44,z454
-Function numbers used: FU20-FU24, FU14900-FU14901
 PO Numbers used: N, O, V0
 Function variables used: x16, x1-x3, y1-y8
 Trigger variables used: y-1..y-12
@@ -57,12 +56,12 @@ Variables that MUST be preserved outside this script: z454
 
  [Set up hint text for Living Skulls]
 !#VRz454&v1=1:Sz112001;
-!#HT63/50&v1=1:T454;
+!#HT(OBJ_NEW_WOG_OBJECTS)/50&v1=1:T454;
 
 ----------------------------------------------------------------------------------------
 
  [Living Skull is trigger]
-!?OB63/50;
+!?OB(OBJ_NEW_WOG_OBJECTS)/50;
 
 !!UN:P12/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1=0:E; [Exit if script isn't enabled]
@@ -81,7 +80,7 @@ Variables that MUST be preserved outside this script: z454
 !!OB998:H454;
 
  [Initialize v30 to -1 (no artifact) and Flag 21 to 0]
-!!VRv30:S-1;
+!!VRv30:S(NO_ART);
 !!IF:V21/0;
 
  [Store hero's name in z26]
@@ -113,7 +112,7 @@ Variables that MUST be preserved outside this script: z454
 !!VRy-5|y-11>y-12/y-3=0:S1;
 
 !!PO998&y-5=1:V0/$day$; [Set new last day visited]
-!!FU14900&y-5=1:P; [Call Function 14900 to show a random artifact on the map]
+!!FU(WOG_12_ShowRandomArtifact)&y-5=1:P; [Call Function to show a random artifact on the map]
 
 !!FU&y-5=1:E; [Exit after "free search"]
 
@@ -127,6 +126,12 @@ Variables that MUST be preserved outside this script: z454
 %Z112072^;
 !!FU&y-4>=3:E;
 
+; Get max artifact ID of the game
+; Note: executing this function changes z1, that's why it has to done here
+!!FU(GetMaxArtifactId):P?y30;
+; max art ID plus 1 for Pandora's Box
+!!VRy33:Sy30 +1;
+
  [Set up extended dialogue box number 20]
 !!VRz29:Sz112002;
 !!VRz40:Sz112003;
@@ -137,95 +142,161 @@ Variables that MUST be preserved outside this script: z454
 
  [Check if z1 has an empty string (no input) - check result stored in Flag 27]
 !!VRz1:H27;
+!!FU|-27/v1<0:E;                        [End function if nothing input or cancel]
 
- [Set alternate names for several artifact types]
-!!VRz30:Sz112004; !!VRz31:Sz112005;
-!!VRz32:Sz112006; !!VRz33:Sz112007;  !!VRz39:Sz112008;
-!!VRz34:Sz112009; !!VRz35:Sz112010;
-!!VRz36:Sz112011; !!VRz37:Sz112012;  !!VRz38:Sz112013;
-!!VRz1&z1=z30:Sz31;  !!VRz1&z1=z32:Sz33;  !!VRz1&z1=z34:Sz35;
+; Check if the first chracter of the input is a number
+!!VRy31:Vz1;
+!!FU(WOG_CheckIfZ1FirstCharIsNum):P?y32;
 
  [Artifact type is stored in v27 - default is standard artifact (type 5)]
-!!VRv27:S5;
+!!VRv27:S(OBJ_ARTIFACT);
 
- [Check for Pandora's Box entry and if true, set artifact type (v27) to 6]
- [Also set z23 to "Pandora's Box" and v30 to -2]
-!!VRv27|z1=z36/z1=z37/z1=z38:S6;
-!!IF:V1/0; [Initialize Flag 1 to False]
-!!VRz36&v27<>6:Uz1; [Check for substring match 1]
-!!VRz37&v27<>6/-1:Uz1; [Check for substring match 2]
-!!VRz38&v27<>6/-1:Uz1; [Check for substring match 3]
-!!VRv27&1:S6; [Set v27 to 6 if it's a substring match]
-!!VRz23&v27=6:Sz112014;
-!!VRv30&v27=6:S-2;
+; If input was a nunber
+!!if&y32/y31>=(ART_FIRST)/y31<=y33;
+  !!if&y31=y33;
+    !!VRv27:S(OBJ_PANDORAS_BOX);
+  !!el&y31=(ART_SPELL_SCROLL);
+    !!VRv27:S(OBJ_SPELL_SCROLL);
+  !!el;
+    !!VRv30:Sy31;
+    !!SN:H^art^/v30/0/?z23;
+  !!en;
+; If input was a name
+!!el;
+   [Set alternate names for several artifact types]
+  !!VRz30:Sz112004; !!VRz31:Sz112005;
+  !!VRz32:Sz112006; !!VRz33:Sz112007;  !!VRz39:Sz112008;
+  !!VRz34:Sz112009; !!VRz35:Sz112010;
+  !!VRz36:Sz112011; !!VRz37:Sz112012;  !!VRz38:Sz112013;
+  !!VRz1&z1=z30:Sz31;  !!VRz1&z1=z32:Sz33;  !!VRz1&z1=z34:Sz35;
 
- [Check for Spell Scroll entry and if true, set artifact type (v27) to 93]
- [Also set z23 to "Spell Scroll"]
-!!VRv27|z1=z32/z1=z33/z1=z39:S93;
-!!VRz23&v27=93:Sz112015;
+   [Check for Pandora's Box entry and if true, set artifact type (v27) to 6]
+  !!VRv27|z1=z36/z1=z37/z1=z38:S(OBJ_PANDORAS_BOX);
+  !!IF:V1/0; [Initialize Flag 1 to False]
 
- [Function 20 finds artifact name entered, if valid - artifact number is stored in v30]
-!!FU(GetMaxArtifactId):P?y30;
-!!DO20/0/y30/1:P;
+  !!if&v27<>(OBJ_PANDORAS_BOX);
+    !!VRz36:Uz1; [Check for substring match 1]
 
- [If artifact is The Grail, change name to "Grail" for text display purposes]
-!!VRz23&z23=z31:Sz30;
+    !!if&-1;
+      !!VRz37:Uz1; [Check for substring match 2]
+      !!VRz38:Uz1; [Check for substring match 3]
+    !!en;
+  !!en;
 
- [If artifact is a scroll, call function 22 - get spell desired by player]
-!!FU22&v27=93:P;
+  !!VRv27&1:S(OBJ_PANDORAS_BOX); [Set v27 to 6 if it's a substring match]
 
- [If artifact wasn't found but could be a scroll name, call Function 23]
-!!DO23/0/69/1&v27=5/v30=-1:P;
+   [Check for Spell Scroll entry and if true, set artifact type (v27) to 93]
+  !!VRv27|z1=z32/z1=z33/z1=z39:S(OBJ_SPELL_SCROLL);
+
+   [Function finds artifact name entered, if valid - artifact number is stored in v30]
+  !!DO(WOG_12_FindArtifactByName)/(ART_FIRST)/y30/1:P;
+
+   [If artifact is The Grail, change name to "Grail" for text display purposes]
+  !!VRz23&z23=z31:Sz30;
+!!en;
+
+  [Set z23 to "Pandora's Box" and v30 to -2]
+!!if&v27=(OBJ_PANDORAS_BOX);
+  !!VRz23:Sz112014;
+  !!VRv30:S-2;
+  [Set z23 to "Spell Scroll"]
+!!el&v27=(OBJ_SPELL_SCROLL);
+  !!VRz23:Sz112015;
+!!en;
+
+ [If artifact is a scroll, get spell desired by player]
+!!if&v27=(OBJ_SPELL_SCROLL);
+   [Set up extended dialogue box number 21]
+  !!VRz29:Sz112068;
+  !!VRz40:Sz112069;
+  !!IF:D21/29/40/0/0/0/0/0/0/0/0/0/0/0/0/0;
+
+   [Call dialogue box number 21]
+  !!IF:E1/21;
+
+   [Check if z1 has an empty string (no input) - check result stored in Flag 27]
+  !!VRz1:H27;
+  !!FU|-27/v1<0:E;                        [End function if nothing input or cancel]
+
+   [Set v30 to -1]
+  !!VRv30:S(NO_ART);
+
+  ; Check if the first chracter of the input is a number
+  !!VRy34:Vz1;
+  !!FU(WOG_CheckIfZ1FirstCharIsNum):P?y35;
+
+  ; If input was a nunber
+  !!if&y35/y34>=(SPELL_FIRST)/y34<=(SPELL_LAST_WOG);
+    !!VRv30:Sy34;
+    !!VRv34:Sy34;
+    ; Set z23 to Scroll of "spell name"
+    !!SN:H^spell^/v30/(SPELL_TEXT_NAME)/?z23;
+    !!VRz23:Sz112071;
+  ; If input was a name
+   [Function finds spell name entered, if valid - spell number is stored in v30 and v34]
+   [and Scroll of "spell name" is stored in z23]
+  !!el;
+    !!DO(WOG_12_FindSpellByName)/(SPELL_FIRST)/(SPELL_LAST_WOG)/1:P;
+  !!en;
+ [If artifact wasn't found but could be a scroll name, call Function]
+; Execute only when input was not a number
+!!el&v27=(OBJ_ARTIFACT)/v30=(NO_ART)/y32<>(TRUE);
+  !!DO(WOG_12_FindSpellByName)/(SPELL_FIRST)/(SPELL_LAST_WOG)/1:P;
+!!en;
 
  [If artifact is a valid artifact, display dialogue asking if player will pay for a search]
-!!IF&v30>=0/v27=5:Q1/8/v30/2/z112016;
+!!if&v30>=(ART_FIRST);
+  !!IF&v27=(OBJ_ARTIFACT):Q1/(PIC_TYPE_ART)/v30/(MSG_TYPE_QUESTION)/z112016;
 
- [If artifact is a scroll, display slightly different dialogue (with spell picture),]
- [but otherwise similar to the above]
-!!IF&v30>=0/v27=93:Q1/9/v34/2/z112017;
+   [If artifact is a scroll, display slightly different dialogue (with spell picture),]
+   [but otherwise similar to the above]
+  !!IF&v27=(OBJ_SPELL_SCROLL):Q1/(PIC_TYPE_SPELL)/v34/(MSG_TYPE_QUESTION)/z112017;
+!!en;
 
  [If artifact is a Pandora's Box, display slightly different dialogue (no picture),]
  [but otherwise similar to the above]
-!!IF&v27=6:Q1/z112018;
+!!IF&v27=(OBJ_PANDORAS_BOX):Q(MSG_TYPE_MES)/z112018;
 
  [If player declines to pay for the search, display this message and set Flag 21 to true]
-!!IF&-1/v30<>-1:M1/z112019;
-!!IF&-1:V21/1;
+!!if&-1;
+  !!IF&v30<>(NO_ART):M1/z112019;
+  !!IF:V21/1;
+!!en;
 
  [Check if player has enough gold]
-!!OW:R-1/6/>=100;
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/>=100;
 
  [If player doesn't have enough gold but wished to search, display this message]
-!!IF&-21/-1/v30>=0:M1/z112020;
+!!IF&-21/-1/v30>=(ART_FIRST):M1/z112020;
 
  [If artifact requested wasn't a valid artifact, display this message]
-!!IF&v30=-1/27/v27<>6:M1/z112021;
+!!IF&v30=(NO_ART)/v27<>(OBJ_PANDORAS_BOX):M1/z112021;
 
 --------------------------------------------
 
  [Exit script if artifact isn't valid or search isn't paid for]
-!!FU|21/-1/v30=-1:E;
+!!FU|21/-1/v30=(NO_ART):E;
 
  [Subtract 100 gold from player and display thank you message]
-!!OW:R-1/6/d-100;
-!!IF:Q1/6/-100100/1/z112022;
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-100;
+!!IF:Q1/(RES_GOLD)/-100100/(MSG_TYPE_MES)/z112022;
 
- [Calls function 21 to search for the requested artifact]
-!!FU21:P;
+ [Calls function to search for the requested artifact]
+!!FU(WOG_12_FindRequestedArtifact):P;
 
  [Increase daily search count by 1, set player's colour and current date]
 !!VRy-4:+1; [Search count]
-!!HE-1:P?y-6/?y-7/?y-8; [Hero's location]
+!!HE(CURRENT_HERO):P?y-6/?y-7/?y-8; [Hero's location]
 !!POy-6/y-7/y-8:O$color$ Ny-4 V0/$day$;
 
 ----------------------------------------------------------------------------------------
 
- [Start of Function 20 - find artifact name entered]
+ [Start of Function - find artifact name entered]
  [If valid, stores artifact number in v30]
-!?FU20;
+!?FU(WOG_12_FindArtifactByName);
 
  [Looks up name of artifact number x16 (loop) and stores it in variable z22]
-!!UN:N0/22/x16;
+!!SN:H^art^/x16/0/?z22;
 
  [Sets v30 to x16 if artifact name entered by player (z1) is the same as artifact name
   for artifact number x16 (loop)]
@@ -248,8 +319,8 @@ Variables that MUST be preserved outside this script: z454
 
 ----------------------------------------------------------------------------------------
 
- [Start of Function 21 - search for requested artifact]
-!?FU21;
+ [Start of Function - search for requested artifact]
+!?FU(WOG_12_FindRequestedArtifact);
 
  [Set v29 (number of artifacts found) to 0]
 !!VRv29:S0;
@@ -263,9 +334,9 @@ Variables that MUST be preserved outside this script: z454
  [Store location of first artifact (if any) in v31/v32/v33]
 !!UN&v29>0:Uv27/v30/1/31;
 
- [If scroll is searched for and any are on map, Function 24 checks for requested spell]
+ [If scroll is searched for and any are on map, Function checks for requested spell]
 !!VRv24:S0;
-!!DO24/1/v29/1&v27=93/v29>0:P;
+!!DO(WOG_12_FindRequestedSpell)/1/v29/1&v27=93/v29>0:P;
 
  [If scroll searched for but requested spell not found, set v29 to 0]
 !!VRv29&v27=93/v24=0:S0;
@@ -302,7 +373,7 @@ Variables that MUST be preserved outside this script: z454
 
 --------------------------------------------
 
- [Exit Function 21 if artifact wasn't located (v29<=0)]
+ [Exit Function if artifact wasn't located (v29<=0)]
 !!FU&v29<=0:E;
 
  [Generate random precious resource (v76) as fee for exact location]
@@ -323,7 +394,7 @@ Variables that MUST be preserved outside this script: z454
 
 --------------------------------------------
 
- [Exit Function 21 if player doesn't agree to pay resource fee]
+ [Exit Function if player doesn't agree to pay resource fee]
 !!FU&-1:E;
 
  [Check player's current amount of resource (v76) - store amount in v77]
@@ -334,7 +405,7 @@ Variables that MUST be preserved outside this script: z454
 
 --------------------------------------------
 
- [Exit Function 21 if player doesn't have enough of the required resource (v77)]
+ [Exit Function if player doesn't have enough of the required resource (v77)]
 !!FU&v77<2:E;
 
  [Reduce player's resource number v76 by 2 and display thank you message]
@@ -398,7 +469,7 @@ Variables that MUST be preserved outside this script: z454
 
 --------------------------------------------
 
- [Exit Function 21 if player doesn't agree to pay fee of 1000 gold]
+ [Exit Function if player doesn't agree to pay fee of 1000 gold]
 !!FU&-1:E;
 
  [Check player's current amount of gold - store amount in v77]
@@ -409,7 +480,7 @@ Variables that MUST be preserved outside this script: z454
 
 --------------------------------------------
 
- [Exit Function 21 if player doesn't have enough gold]
+ [Exit Function if player doesn't have enough gold]
 !!FU&v77<1000:E;
 
  [Reduce player's gold by 1000 and display thank you message]
@@ -428,36 +499,13 @@ Variables that MUST be preserved outside this script: z454
 !!UN:R5/0/0; [Restore default cursor]
 
  [Ask if the hero wishes the Artifact (v27=5) brought to him/her for Mithril]
-!!FU14902:Pv31/v32/v33;
+!!FU(WOG_12_AskIfBroughtArtifact):Pv31/v32/v33;
 
 ----------------------------------------------------------------------------------------
 
- [Start of Function 22 - ask player for type of spell scroll]
-!?FU22;
-
- [Set up extended dialogue box number 21]
-!!VRz29:Sz112068;
-!!VRz40:Sz112069;
-!!IF:D21/29/40/0/0/0/0/0/0/0/0/0/0/0/0/0;
-
- [Call dialogue box number 21]
-!!IF:E1/21;
-
- [Check if z1 has an empty string (no input) - check result stored in Flag 27]
-!!VRz1:H27;
-
- [Set v30 to -1]
-!!VRv30:S-1;
-
- [Function 23 finds spell name entered, if valid - spell number is stored in v30 and v34]
- [and spell name is stored in z23]
-!!DO23/0/69/1:P;
-
-----------------------------------------------------------------------------------------
-
- [Start of Function 23 - find spell name entered]
+ [Start of Function - find spell name entered]
  [If valid, stores spell number in v30]
-!?FU23;
+!?FU(WOG_12_FindSpellByName);
 
  [Looks up name of spell scroll number x16 (loop) and stores it in variable z22]
 !!UN:N1/22/x16;
@@ -470,17 +518,19 @@ Variables that MUST be preserved outside this script: z454
 !!IF|z1=z22/z1=z25:V1/1;
 
  [Assign spelled out name for "protection from" spells (instead of "prot.")]
-!!VRz-1&-1:M2/z22/0; [Store 1st token (word) from z22 in z-1]
-!!VRz-2&-1:M2/z22/1; [Store 2nd token (word) from z22 in z-2]
-!!VRz-3&-1:M2/z22/2; [Store 3rd token (word) from z22 in z-3]
-!!VRz22&-1/z-1=z112078:S^%Z112079 %Z-2 %Z-3^; [Check for "prot"]
-!!VRz25&-1:Sz112070; [Add "scroll of" to spell name: z25]
+!!if&-1;
+  !!VRz-1:M2/z22/0; [Store 1st token (word) from z22 in z-1]
+  !!VRz-2:M2/z22/1; [Store 2nd token (word) from z22 in z-2]
+  !!VRz-3:M2/z22/2; [Store 3rd token (word) from z22 in z-3]
+  !!VRz22&z-1=z112078:S^%Z112079 %Z-2 %Z-3^; [Check for "prot"]
+  !!VRz25:Sz112070; [Add "scroll of" to spell name: z25]
 
- [Check for substring match]
-!!VRz22&-1:Uz1; [See if user's input is a substring of spell name: Flag 1=True if yes]
-!!VRz25&-1:Uz1; [See if user's input is a substring of spell name: Flag 1=True if yes]
+   [Check for substring match]
+  !!VRz22:Uz1; [See if user's input is a substring of spell name: Flag 1=True if yes]
+  !!VRz25:Uz1; [See if user's input is a substring of spell name: Flag 1=True if yes]
 
-!!FU&-1:E; [Exit if no match found]
+  !!FU:E; [Exit if no match found]
+!!en;
 
  [Sets v30 and v34 to x16 if spell name entered by player (z1) is the same as spell name]
  [for spell number x16 (loop)]
@@ -500,8 +550,8 @@ Variables that MUST be preserved outside this script: z454
 
 ----------------------------------------------------------------------------------------
 
- [Start of Function 24 - searches for requested Spell Scroll among any scrolls found]
-!?FU24;
+ [Start of Function - searches for requested Spell Scroll among any scrolls found]
+!?FU(WOG_12_FindRequestedSpell);
 
  [Get coordinates of current Spell Scroll at x16 loop]
 !!UN:U93/-1/x16/31;
@@ -517,9 +567,9 @@ Variables that MUST be preserved outside this script: z454
 
 ----------------------------------------------------------------------------------------
 
- [Start of Function 14900 - show a random artifact on the map to first visitor each week]
+ [Start of Function - show a random artifact on the map to first visitor each week]
 
-!?FU14900;
+!?FU(WOG_12_ShowRandomArtifact);
 !!UN:U5/-1/?y1; [Number of artifacts on map: y1]
 !!VRy-5&y1<1:S0; [Set y-5 to 0 if no artifacts: y-5]
 !!FU&y1<1:E; [Exit if no artifacts on the map]
@@ -542,28 +592,33 @@ Variables that MUST be preserved outside this script: z454
 !!UN:R5/0/0; [Restore default cursor]
 
  [Ask if the hero wishes the Artifact (v27=5) brought to him/her for Mithril]
-!!FU14902:Pv2/v3/v4;
+!!FU(WOG_12_AskIfBroughtArtifact):Pv2/v3/v4;
 
 ----------------------------------------------------------------------------------------
 
  [Ask if the hero wishes the Artifact (v27=5) brought to him/her for Mithril]
  [x1/x2/x3 = artifact's location]
 
-!?FU14902;
+!?FU(WOG_12_AskIfBroughtArtifact);
 
  [Artifact # is v30]
  [Doesn't apply to Pandora's Box (v27=6), War Machines, Spell Books or The Grail]
  [Spell Scrolls are (v27=93) and cost 6 Mithril]
 
  [Check Artifact Class: y1]
-!!UN&v27=5/v30>=0:Av30/3/?y1;
-!!FU&v27<>5/v27<>93:E; [Exit if not a regular Artifact or Scroll]
-!!FU&v27=5/v30<7:E; [Exit if War Machine, Spell Book or Grail]
 
  [Set Mithril cost: y2]
-!!VRy2&v27=93:S6; [Spell scroll: 6 Mithril: y2]
-!!VRy2&v27=5/v30>=7/y1>=2:Sy1; [Mithril cost = class cost: y2]
-* [Treasure (2), Minor (4), Major (8), Relic (16)]
+!!VRy2:S0;
+
+!!if&v27=(OBJ_ARTIFACT)/v30>=(ART_CENTAUR_AXE);
+  !!UN:Av30/3/?y1;
+  !!VRy2&y1>=(ART_LEVEL_TREASURE):Sy1; [Mithril cost = class cost: y2]
+  * [Treasure (2), Minor (4), Major (8), Relic (16)]
+!!el&v27=(OBJ_SPELL_SCROLL);
+  !!VRy2:S6;[Spell scroll: 6 Mithril: y2]
+!!en;
+
+!!FU&y2=0:E;                            [Exit if not a regular Artifact or Scroll]
 
  [Display dialogue asking if player will pay the Mithril for the Artifact]
 !!IF:Q1/7/y2/2/z112073;
