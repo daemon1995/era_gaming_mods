@@ -4,7 +4,7 @@ ZVSE2
 
 ** By Arstahd
 ** Version: 1.11   updated 22.2(Febrary).2012 by rennyo
-** Updated May 2022 by Archer30
+** Updated: Sep 2022 by Archer30
 ** Special thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 *  Variables used: s, r, j
@@ -268,6 +268,7 @@ ZVSE2
 ** eagle eye
 !!VRv7018&i^wog_202_enabled^:S0;                               [reset v7018]
 !!VRv7019&i^wog_202_enabled^:S0;                               [reset v7019]
+!!VRi^wog_202_spellCountered^:S(FALSE);                        [reset global flag of whether a spell has been countered]
 
 !!VRy-9&i^wog_202_enabled^:S-1;                                [reset y-9]
 !!BA&i^wog_202_enabled^:H0/?y-9;                               [get attacking hero's #]
@@ -318,31 +319,72 @@ Perry changed from BR to OnCombatRound and removed round counter variable that p
 
 !!VRy-6:R0/0/99;                                    [random roll]
 
-!!BG:E?y-1 A?y-2 Q?y-3 S?y-4 N?y-11;                [get destination stack, action type, side, spell, acting stack]
+!!BG:E?y-1 A?y-2 Q?y-3 S?y-4;                       [get destination stack, action type, side, spell]
 !!FU&y-4=40:E;                                      [no effect on sacrifce]
 !!FU&y-4=63:E;                                      [no affect on teleportation]
-!!BMy-1&y-1>-1/y-2=1:I?y-5 P?y-8;                   [if hero casting, get side, position of target stack]
-!!BMy-1&y-1>-1/y-2=10:I?y-5 P?y-8;                  [if monster casting, get side, position of target stack]
+!!FU&y-2<>(BATTLE_ACTION_HERO_CAST)/y-2<>(BATTLE_ACTION_MONSTER_CAST):E;
+
+!!BMy-1&y-1>(NO_STACK):I?y-5 P?y-8;                 [get side, position of target stack]
 
 !!VRy-10&y-4>=27/y-4<=33:S1;
 !!VRy-10|y-4=37/y-4=41/y-4=43/y-4=44/y-4=46/y-4=48/y-4=49/y-4=51/y-4=53/y-4=58:S1;  [check for beneficial (mass) spells]
 
-!!VRy-9&y-1=-1/y-10=1:S1;                           [if hero cast spell with no target (mass) set to 1]
-!!VRy-9&y-1>-1/y-3=y-5:S1;                          [if caster is targeting own side set to 1]
+!!VRy-9&y-1=(NO_STACK)/y-10=1:S1;                   [if hero cast spell with no target (mass) set to 1]
+!!VRy-9&y-1>(NO_STACK)/y-3=y-5:S1;                  [if caster is targeting own side set to 1]
 
 !!VRy-7&y-9=1/y-3=0/v7019>0/y-6<v7019:S1;           [if attacker cast, check against defender Eagle Eye rating]
 !!VRy-7&y-9=1/y-3=1/v7018>0/y-6<v7018:S1;           [if defender cast, check against attacker Eagle Eye rating]
 
-!!BMy-11&y-1>-1/y-7=1/y-2=10:C0/y-8/0/0/1 E?y-12;   [have current stack cast summon boat (for sound effect), get # of spells remaining]
-!!VRy-12&y-1>-1/y-7=1/y-2=10:-1;                    [reduce spell count by 1]
-!!BMy-11&y-1>-1/y-7=1/y-2=10:V32 V32 V32 Ey-12;     [show animation (caster), reset spell count]
-!!BG&y-1>-1/y-2=10/y-7=1:A2;                        [make unit move (cancel action)]
+!!if&y-7=1;
+  ; Play sound
+  !!SN:P^telptin^;
 
-!!BG&y-7=1/y-2=1:S0;                                [reset spell to summon boat]
-!!BMy-11&y-7=1/y-2=1:V60 V60 V60;                   [show animation (hero)]
+  ; Reduce mana (spell count)
+  ; For monster cast
+  !!if&y-1>(NO_STACK)/y-2=(BATTLE_ACTION_MONSTER_CAST);
+    ; Skip the current turn
+    !!BMi^battle_acting_stack^:Ed-1;                                  [reduce spell count by 1]
+    !!BG:A(BATTLE_ACTION_WALK);                     [make unit move (cancel action), possible to get morale]
+  ; For hero cast
+  !!el&y-2=(BATTLE_ACTION_HERO_CAST);
+    ; Reduce mana
+    !!VRy30:Si^battle_hero_%i(battle_current_side)^;
+    !!HEy30:I?y31/1 S(SKILL_WATER_MAGIC)/?y32;
 
-!!VRz2&y-7=1:Sz148004;                              [set combat message]
-!!MM&y-7=1:Sz2;                                     [display combat message]
+    !!if&y32=(SKILL_NOT_LEARNED);
+      !!VRy33:S8;
+    !!el;
+      !!VRy33:S7;
+    !!en;
+
+    !!VRy34:Sy31 -y33 F0/(INT_MAX);
+    !!HEy30:Iy34/1;
+
+    ; Set to no cast and pass the turn
+    ; Note: BG:A would result in grid hiding. Here we pass the stack turn and get back to redraw grids and spell book button
+    !!BG:A(BATTLE_ACTION_SKIP);
+    !!BHi^battle_current_side^:M1;
+    !!VRi^wog_202_spellCountered^:S(TRUE);
+  !!en;
+
+  ; Show animation
+  !!if&y-1>(NO_STACK);
+    !!BMy-1:V76;
+  !!el;
+    !!BMi^battle_acting_stack^:V76;
+  !!en;
+
+  ; Show combat msg
+  !!VRz2:Sz148004;                              [set combat message]
+  !!MM:Sz2;                                     [display combat message]
+!!en;
+
+; Get back the stack turn
+!?FU(OnBeforeBattleStackTurn)&i^wog_202_enabled^/i^wog_202_spellCountered^;
+!#VA(stack:x);
+
+!!VR(stack):Si^battle_acting_stack^;
+!!VRi^wog_202_spellCountered^:S(FALSE);
 
 ** end of pre-action trigger
 
@@ -556,7 +598,7 @@ Perry changed from BR to OnCombatRound and removed round counter variable that p
 !!VRy1:Sx5 %7;                                [get an actual slot number]
 !!BA&x2=1:M0/y1/?y2/?y3;                      [creatures - attacker]
 !!BA&x2=2:M1/y1/?y2/?y3;                      [creatures - defender]
-!!VRy6&y3>0:S0 R99;                           [random roll for luck]
+!!VRy6&y3>0:R0/0/99;                          [random roll for luck]
 !!VRx4&x3>y6/y3>0:+1;                         [increment slot counter]
 !!VRv7034&x2=1/x3>y6/y3>0/x4=1:Sy1;           [store slot # - attacker]
 !!VRv7035&x2=1/x3>y6/y3>0/x4=2/x1>1:Sy1;      [store slot # - attacker]
@@ -642,14 +684,14 @@ Perry changed from BR to OnCombatRound and removed round counter variable that p
 
 !!HE(hero):B0/?z700;                           [get hero's name]
 !!HE(hero):S7/?y2;                             [get hero's wisdom skill level]
-!!VRy3&(scholarLv)=1:S57;                              [set basic scholar picture]
-!!VRy3&(scholarLv)=2:S58;                              [set advanced scholar picture]
-!!VRy3&(scholarLv)=3:S59;                              [set expert scholar picture]
+!!VRy3&(scholarLv)=1:S57;                      [set basic scholar picture]
+!!VRy3&(scholarLv)=2:S58;                      [set advanced scholar picture]
+!!VRy3&(scholarLv)=3:S59;                      [set expert scholar picture]
 !!HE(hero):A2/0/?y7/?y8;                       [see if hero has a spell book]
-!!VRy6:S0 R99;                                [random roll for chance to learn spell]
-!!VRy6&(scholarLv)=2:+10;                              [advanced bonus]
-!!VRy6&(scholarLv)=3:+20;                              [expert bonus]
-!!VRv7027:S0;                                 [loop counter]
+!!VRy6:R0/0/99;                                [random roll for chance to learn spell]
+!!VRy6&(scholarLv)=2:+10;                      [advanced bonus]
+!!VRy6&(scholarLv)=3:+20;                      [expert bonus]
+!!VRv7027:S0;                                  [loop counter]
 
 ** Algor: begin
 !!if&y8>0/y6>59;
