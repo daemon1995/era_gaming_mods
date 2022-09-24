@@ -44,53 +44,41 @@ ZVSE2
 ------------------------------------------------------------------------
 
 Variables Used: v1-v6, z1-z2, v1220, v1222-v1235, v1257, v9300
-Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
+Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5261
 
 ------------------------------------------------------------------------
 
  [Start of Battle Trigger]
-!?BA0&-997/i^battle_hero_1^=(NO_HERO);
+!?FU(OnBeforeBattle)&-997/i^battle_hero_1^=(NO_HERO);
 
 !!UN:P33/?y-1; [Check if Living Scroll script is enabled in WoGify Options: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
 
 !!VRv1257:S0;
+!!VRv1218:S0; [Set v1218 to 0 - modifier for choosing random scroll]
+
+; Check if living scroll can be used
+; Archer30's note: This is only a rough check. It has to be replaced by BattleMgr_CanCast (0041FA10) soon, same with hero spec boost
 !!OB998:T?v2 U?v3; [Check object type and subtype where battle is occurring]
 !!VRv1257&v2=33/v3=1:S1; [If normal horizontal anti-magic garrison, set v1257 to 1]
 !!VRv1257&v2=33/v3=3:S1; [If special vertical anti-magic garrison, set v1257 to 1]
 !!VRv1257&v2=219/v3=1:S1; [If normal vertical anti-magic garrison, set v1257 to 1]
 
-!!FU&v1257=1:E; [Exit if v1257=1]
-!!BA:H0/?y1;
-!!HEy1:A2/126/?y2/?y3; Check 126    Orb of Inhibition
-!!VRv1257&y3=1:S1;
-!!FU&y3=1:E;           Exit if Equipped
+!!HEi^battle_hero_0^:A2/(ART_ORB_OF_INHIBITION)/?y2/?y3; Check 126    Orb of Inhibition
+!!VRv1257&y3>0:S1;
 
-!!BA:H1/?y2;
-!!HEy2&y2>=0:A2/126/?y4/?y3; 126    Orb of Inhibition
-!!VRv1257&y3=1/y2>=0:S1;
-!!FU&y3=1/y2>=0:E;     Exit if Equipped
-
-
-*!BA:H1/?v1;
-*!FU5262:P; [Check for network human vs. human siege]
-!!VRv1218:S0; [Set v1218 to 0 - modifier for choosing random scroll]
-*!FU5253&v1<0/-270:P; [Set up at start of battle]
-!!FU5253&v1<0:P; [Set up at start of battle]
+!!FU5253&v1257=0:P; [Set up at start of battle]
 
 ------------------------------------------------------------------------
 
  [Combat turn trigger: every turn after the first one]
-!?BR&v997>0/v1257=0/-997;
-*!BU:T?y1;
-*!IF:L^%v997 %y1^;
+!?FU(OnBattleRound)&i^battle_round^>0/v1257=0/-997/i^battle_hero_1^=(NO_HERO);
+
 !!UN:P33/?y-1; [Check if Living Scroll script is enabled in WoGify Options: y-1]
-!!FU|y-1<>1:E; [Exit if script isn't enabled]
+!!FU&y-1<>1:E; [Exit if script isn't enabled]
 
 !!BH1:N?v1; [Hero number of defender]
 !!VRv1229:S0; [Counter for number of casting attempts this round]
-*!FU5262:P; [Check for network human vs. human siege]
-*!FU5244&v1=-1/-270:P; [Check for casting a Living Scroll spell--only if no defending hero]
 !!FU5244&v1=-1:P; [Check for casting a Living Scroll spell--only if no defending hero]
 
 ------------------------------------------------------------------------
@@ -122,6 +110,7 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 
 !!VRy6:S1230 +y5;
 !!VRy7:Svy6;
+
 !!FU5245&y3=1:Py7; [Call casting function, passing spell number as x1 parameter]
 
 ------------------------------------------------------------------------
@@ -131,7 +120,6 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 !?FU5245;
 !!VRv1220:S1; [Initialize casting position]
 !!VRv1225:S1; [Initialize casting skill to Basic]
-*!IF:M^%^;
 
 !!VRy1:Sx1; [Set y1 to x1 (spell scroll spell chosen in function 5244)]
 
@@ -145,7 +133,6 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 !!VRy5&y1>=27/y1<=34:S0; [Friendly target]
 !!VRy5|y1=20/y1=36/y1=37/y1=41/y1=43/y1=44/y1=46/y1=48:S0; [Friendly target]
 !!VRy5|y1=49/y1=51/y1=53/y1=55/y1=56/y1=58/y1=63:S0; [Friendly target]
-
 
 !!VRy5|y1=10/y1=11/y1=12/y1=13/y1=14/y1=64:S99; [No specific target]
 
@@ -163,19 +150,14 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 !!BU&y7=1:G-1; [Set Battlefield to -1 (no modifier) if it's Magic Plains]
 
 !!VRy8:S20; [Set stack number to 20: y8]
-*!IF:M^%^;
 
 !!BMy8:T?y9 N?y10; [Store stack's type (y9) and number (y10)]
 !!BMy8:T(MON_NOT_USED_1) N1; [Set stack #20 to "Not Used (1)" and number of 1]
-*!IF:M^%^;
-*!VRz1:Sz133000;
-*!UN:G1/122/0/1; [Change "Not Used (1)" name to "Living Scroll"]
-*!IF:M^%^;
-!!SN:H^monname^/(MON_NOT_USED_1)/0/z133000;
+!!SN:H^monname^/(MON_NOT_USED_1)/0/z133000; [Change "Not Used (1)" name to "Living Scroll"]
+
  [Stack #20 casts spell y1 on target at position v1220]
  [v1225 is spell skill level, y6=spell power, v1223 is loop-check counter]
 !!BMy8&v1223<100/y1<>63:Cy1/v1220/v1225/y6/0;
-*!IF:M^%^;
 
  [Teleport spell (y1=63): v1228 is teleport destination, v1227 is target stack number]
 !!FU5252&y1=63:P; [Find a valid Teleport destination: v1228]
@@ -185,13 +167,11 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 
 !!BMy8:Ty9 Ny10; [Restore stack y8's type and number after spell is cast]
 !!BU&y7=1:G1; [Restore Battlefield if it was Magic Plains]
-*!IF:M^%^;
 
  [Try again if no target found for 1st spell and Hero has multiple Living Scrolls]
  [Maximum 20 tries]
 !!VRv1229&v1223>99:+1;
 !!FU5244&v1223>99/v1229<20/v1230>1:P;
-*!IF:M^%^;
 
 ------------------------------------------------------------------------
 
@@ -527,6 +507,7 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 !!IF&v2=0/1000:Q2/9/v1/1/z133003;
 
 ------------------------------------------------------------------------
+
  [Hero screen click trigger]
 !?CM2;
 
@@ -585,13 +566,5 @@ Functions Used: FU5244-FU5426, FU5248-FU5255, FU5260-FU5262
 
 !!CM:R0; [Disable standard right-click info. for Living Scroll]
 
----------------------------------------------------------------------------------------
-
-[Start of function 5262 - check for 2-human battle in network game]
-!?FU5262;
-
-!!IF:V270/0; [assume not a network hero battle]
-!!BA:E?y1; [Check state of battle: y1>0 means network battle]
-!!IF&y1>0:V270/1; [Set flag 270 to true if network battle]
-
 ** End of Script **
+
