@@ -4,7 +4,7 @@ ZVSE2
 
 ** By Arstahd
 ** Version: 1.11   updated 22.2(Febrary).2012 by rennyo
-** Updated: Sep 2022 by Archer30
+** Updated: Sep 2022 by Archer30 and daemon_n
 ** Special thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 *  Variables used: s, r, j
@@ -307,80 +307,85 @@ ZVSE2
 
 ** start of pre-action trigger
 !?FU(OnBeforeBattleAction)&i^wog_202_enabled^;                                      [Continue trigger if eagle eye is enabled]
+!!FU&v7018=0/v7019=0:E;                 [exit if no one has eagle eye]
 
-!!FU&v7018=0/v7019=0:E;                             [exit if no one has eagle eye]
+; Exit if not casting
+!!BG:A?(action:y) E?(target:y);         [get action type and target]
+!!FU&(action)<>(BATTLE_ACTION_HERO_CAST)/(action)<>(BATTLE_ACTION_MONSTER_CAST):E; [no effect if not casting]
 
-!!VRy-1:S-1;                                        [initailize variables]
-!!VRy-3:S-1;
-!!VRy-5:S-1;
-!!VRy-7:S0;
-!!VRy-9:S0;
+; Check if the spell is beneficial, here we check the type of target
+; Note: BG:S returns -1 on monster casting, that's why we have to check target side
+!!VR(isBenificial:y):S(FALSE);
 
-!!VRy-6:R0/0/99;                                    [random roll]
+!!if&(action)=(BATTLE_ACTION_HERO_CAST);
+  !!BG:S?(spell:y);                     
+  !!FU&(spell)>(SPELL_LAST_WOG):E;      [no effect if the spell is an extended spell, could have compatibility impact with erm]
 
-!!BG:E?y-1 A?y-2 Q?y-3 S?y-4;                       [get destination stack, action type, side, spell]
-!!FU&y-2<>(BATTLE_ACTION_HERO_CAST)/y-2<>(BATTLE_ACTION_MONSTER_CAST):E; [no effect if not casting]
-!!FU|y-4=(SPELL_SACRIFICE)/y-4=(SPELL_TELEPORT):E;  [no effect on sacrifce and teleportation]
-!!FU&y-4>(SPELL_LAST_WOG):E;                        [no effect if the spell is an extended spell, could have compatibility impact with erm]
-
-!!BMy-1&y-1>(NO_STACK):I?y-5 P?y-8;                 [get side, position of target stack]
-
-!!VRy-10&y-4>=27/y-4<=33:S1;
-!!VRy-10|y-4=37/y-4=41/y-4=43/y-4=44/y-4=46/y-4=48/y-4=49/y-4=51/y-4=53/y-4=58:S1;  [check for beneficial (mass) spells]
-
-!!VRy-9&y-1=(NO_STACK)/y-10=1:S1;                   [if hero cast spell with no target (mass) set to 1]
-!!VRy-9&y-1>(NO_STACK)/y-3=y-5:S1;                  [if caster is targeting own side set to 1]
-
-!!VRy-7&y-9=1/y-3=0/v7019>0/y-6<v7019:S1;           [if attacker cast, check against defender Eagle Eye rating]
-!!VRy-7&y-9=1/y-3=1/v7018>0/y-6<v7018:S1;           [if defender cast, check against attacker Eagle Eye rating]
-
-!!if&y-7=1;
-  ; Play sound
-  !!SN:P^telptin^;
-
-  ; Show animation on the target
-  !!if&y-1>(NO_STACK);
-    !!BMy-1:V33;
-  !!el;
-    !!BMi^battle_acting_stack^:V32;
-  !!en;
-
-  ; Reduce mana (spell count) and show animation on the caster
-  ; For monster cast
-  !!if&y-1>(NO_STACK)/y-2=(BATTLE_ACTION_MONSTER_CAST);
-    ; Skip the current turn
-    !!BMi^battle_acting_stack^:Ed-1;                                  [reduce spell count by 1]
-    !!BG:A(BATTLE_ACTION_WALK);                     [make unit move (cancel action), possible to get morale]
-    ; Show animation
-    !!BMi^battle_acting_stack^:V76;
-  ; For hero cast
-  !!el&y-2=(BATTLE_ACTION_HERO_CAST);
-    ; Reduce 10 mana
-    !!VRy30:Si^battle_hero_%i(battle_current_side)^;
-    !!HEy30:I?y31/1;
-    !!VRy32:Sy31 -10 F0/(INT_MAX);
-    !!HEy30:Iy32/1;
-
-    ; Set to no cast and pass the turn
-    ; Note: BG:A would result in grid hiding. Here we pass the stack turn and get back to redraw grids and spell book button
-    !!BG:A(BATTLE_ACTION_SKIP);
-    !!BHi^battle_current_side^:M1;
-    !!VRi^wog_202_spellCountered^:S(TRUE);
-
-    ; Show animation
-    !!if&i^battle_current_side^=(BATTLE_LEFT);
-      !!VRy33:S0;                       [attakcing hero]
-    !!el;
-      !!VRy33:S16;                      [defending hero]
-    !!en;
-
-    !!FU(WOG_PlayAnimationOnHex):P76/y33/100;
-  !!en;
-
-  ; Show combat msg
-  !!VRz2:Sz148004;                              [set combat message]
-  !!MM:Sz2;                                     [display combat message]
+  !!SS(spell):O?(spellTargetType:y);
+  !!VR(isBenificial)&(spellTargetType)=1:S(TRUE);
+!!el&(action)=(BATTLE_ACTION_MONSTER_CAST);
+  !!BM(target):I?(targetSide:y);
+  !!VR(isBenificial)&(targetSide)=i^battle_acting_side^:S(TRUE);
 !!en;
+
+; Check if it is lucky enough to counter
+!!VR(result:y):S(FALSE);
+!!VR(random:y):R0/0/99;                 [random roll]
+!!VR(result)&(isBenificial)/i^battle_acting_side^=(BATTLE_LEFT)/v7019>0/(random)<v7019:S(TRUE); [if attacker cast, check against defender Eagle Eye rating]
+!!VR(result)&(isBenificial)/i^battle_acting_side^=(BATTLE_RIGHT)/v7018>0/(random)<v7018:S(TRUE); [if defender cast, check against attacker Eagle Eye rating]
+!!FU&(result)<>(TRUE):E;
+
+; Play sound
+!!SN:P^telptin^;
+
+; Show shield animation on the target or acting stack if massive
+!!if&(target)>(NO_STACK);
+  !!BM(target):V32;
+!!el;
+  !!BMi^battle_acting_stack^:V32;
+!!en;
+
+; Reduce mana (spell count) and show animation on the caster
+; For monster cast
+!!if&(action)=(BATTLE_ACTION_MONSTER_CAST);
+  ; Skip the current turn
+  !!BMi^battle_acting_stack^:Ed-1;      [reduce spell count by 1]
+  !!BG:A(BATTLE_ACTION_WALK);           [make unit move (cancel action), possible to get morale]
+  ; Show mana drained animation on the casting monster
+  !!BMi^battle_acting_stack^:V76;
+; For hero cast
+!!el&(action)=(BATTLE_ACTION_HERO_CAST);
+  ; Reduce mana by the cost of the spell supposed to cast (by daemon_n)
+  !!BG:H?(hero:y);
+
+  !!if&(hero)<>(NO_HERO);
+    !!VR(oppSide:y):Si^battle_acting_side^ X1;
+    !!HE(hero):Z?(hero);
+    !!VR(oppArmyOffs:y):S(oppSide) *(UNC_INT) +21700;
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y)  C(cmbMgr)/(oppArmyOffs)/4/?(oppArmyPtr:y) C(cmbMgr)/21440/4/?(groundType:y);
+    !!SN:E5133488/(CALLCONV_THISCALL)/(hero)/(spell)/(oppArmyPtr)/(groundType);
+    !!SN:E5084480/(CALLCONV_THISCALL)/(hero)/v1;
+  !!en;
+
+  ; Set to no cast and pass the turn
+  ; Note: BG:A would result in grid hiding. Here we pass the stack turn and get back to redraw grids and spell book button
+  !!BG:A(BATTLE_ACTION_SKIP);
+  !!BHi^battle_acting_side^:M1;
+  !!VRi^wog_202_spellCountered^:S(TRUE);
+
+  ; Show mana drained animation on the hero
+  !!if&i^battle_current_side^=(BATTLE_LEFT);
+    !!VR(pos:y):S0;                     [attakcing hero]
+  !!el;
+    !!VR(pos):S16;                      [defending hero]
+  !!en;
+
+  !!FU(WOG_PlayAnimationOnHex):P76/(pos)/100;
+!!en;
+
+; Show combat msg
+!!VRz2:Sz148004;                        [set combat message]
+!!MM:Sz2;                               [display combat message]
 
 ; Return to the stack turn
 !?FU(OnBeforeBattleStackTurn)&i^wog_202_enabled^/i^wog_202_spellCountered^;
