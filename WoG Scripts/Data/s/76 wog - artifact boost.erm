@@ -2,7 +2,7 @@ ZVSE2
 
 ** Artifact Boost ERM script v1.4 - Donald X. Vaccarino
 ** Updated Jul. 18. 2004 by Hermann the Weird
-** Updated Feb 2022 by Archer30
+** Updated Sep 2022 by Archer30
 ** Requires WOG version 3.58 or later
 ** Make formerly weak artifacts do something special, usually once/week
 ** WoGify Name: script02.erm
@@ -44,6 +44,33 @@ ZVSE2
 
 ** Functions Used: 599-609, 612, 613
 
+
+!?FU(OnAfterErmInstructions);
+!!UN:P102/?(wogOption:y);                 [Check for Enhanced Artifacts I]
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VR(unitLimit:y):S(INT_MAX);
+!!VR(goldLimit:y):S(INT_MAX);
+!!UN:J2/?(diff:y); // get difficulty (unlimited for easy, text won't be set)
+
+!!if&(diff)>0;
+  ; Diplomat's Ring
+  !!VR(unitLimit):S1000;
+  !!VR(unitLimit)&(diff)=1:S1000; // max 1000 for normal
+  !!VR(unitLimit)&(diff)=2:S500; // max 500 for hard
+  !!VR(unitLimit)&(diff)=3:S250; // max 250 for expert
+  !!VR(unitLimit)&(diff)=4:S100; // max 100 for impossible
+
+  ; Emblem of Cognizance
+  !!VR(goldLimit)&(diff)=1:S100000; // max 100000 gold for normal
+  !!VR(goldLimit)&(diff)=2:S50000; // max 50000 for hard
+  !!VR(goldLimit)&(diff)=3:S25000; // max 25000 for expert
+  !!VR(goldLimit)&(diff)=4:S10000; // max 10000 for impossible
+
+  ; Set global var to be used each week
+  !!VRi^wog_102_diplomatsRingLimit^:S(unitLimit);
+  !!VRi^wog_102_emblemOfCognizanceLimit^:S(goldLimit);
+!!en;
 
 ** Timer routine
 
@@ -242,13 +269,7 @@ ZVSE2
 
   !!if&v616>0;
     !!VRv24:*v27; [15 gold per creature]
-
-    !!UN:J2/?y4; // get difficulty (unlimited for easy)
-    !!VRy5&y4<=1:S100000; // max 100000 gold for normal
-    !!VRy5&y4=2:S50000; // max 50000 for hard
-    !!VRy5&y4=3:S25000; // max 25000 for expert
-    !!VRy5&y4=4:S10000; // max 10000 for impossible
-    !!VRv24:F0/y5; // limit the gold (depending on the difficulty)
+    !!VRv24:F0/i^wog_102_emblemOfCognizanceLimit^; // limit the gold (depending on the difficulty)
 
     !!VRv24:*v616; [gold per emblem]
     
@@ -367,7 +388,11 @@ ZVSE2
         !!if&(mon)>(NO_MON)/(qty)>0;
           !!MA:L(mon)/?(lv:y);
 
-          !!HEv600&(mon)>(NO_MON)/(qty)>0:C0/(slot)/?(mon)/d*2;
+          !!if&(mon)>(NO_MON)/(qty)>0;
+            !!VR(additionalUnits:y):S(qty) F0/i^wog_102_diplomatsRingLimit^;
+            !!VR(additionalUnits)&v625>0:*2; // double bonus for Surcoat
+            !!HEv600:C0/(slot)/?(mon)/d(additionalUnits); // add bonus creatures to the original creatures
+          !!en;
         !!en;
       !!en;
 

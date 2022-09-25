@@ -3,7 +3,7 @@ ZVSE2
 ** Secondary Skill texts v1.0 by Hermann the Weird
 ** Additions by Tobyn from June 29. 2004
 ** Updated July 18. 2004 by Hermann the Weird
-** Updated Apr 2022 by Archer30
+** Updated Sep 2022 by Archer30
 
 ** This contains the names and descriptions for all modified secondary skills
 ** and short descriptions for all skills
@@ -21,13 +21,13 @@ ZVSE2
 ; z2 - temp var: text adv.
 ; z3 - temp var: text expert
 ; z4 - temp var: yellow name second skill
-!#VA(ss:x);                             [second skill id]
+!#VA(secSkill:x);                       [second skill id]
 !#VA(isGold:x);                         [need set yellow name second skill]
 
-!!SN:H^secskill^/(ss)/(SKILL_BASIC)/^%Z1^;
-!!SN:H^secskill^/(ss)/(SKILL_ADVANCED)/^%Z2^;
-!!SN:H^secskill^/(ss)/(SKILL_EXPERT)/^%Z3^;
-!!SN&(isGold):H^secskill^/(ss)/0/^%Z4^;
+!!SN:H^secskill^/(secSkill)/(SKILL_BASIC)/^%Z1^;
+!!SN:H^secskill^/(secSkill)/(SKILL_ADVANCED)/^%Z2^;
+!!SN:H^secskill^/(secSkill)/(SKILL_EXPERT)/^%Z3^;
+!!SN&(isGold):H^secskill^/(secSkill)/(SKILL_NOT_LEARNED)/^%Z4^;
 
 !?FU(WOG3_SetArtsDescription);
 !#VA(art:x);                            [artifact id (0...170)]
@@ -904,15 +904,32 @@ ZVSE2
 --------------------------------------------------------------------------------
 
 !?FU(OnAfterErmInstructions);
-!!UN:P102/?v2;     [Check for Artifact Boost]
-!!UN:P71/?v3;      [Check for Enhanced Artifacts]
+!!UN:P102/?(enhArt1:y);                 [Check for Enhanced Artifacts I]
+!!UN:P71/?(enhArt2:y);                  [Check for Enhanced Artifacts II]
 
-!!FU(WOG3_SetTextArts1)&v2=1/v3=0:P;     [Launch artifact text function for script02 enabled]
-!!FU(WOG3_SetTextArts2)&v2=0/v3=1:P;     [Launch artifact text function for script71 enabled]
-!!FU(WOG3_SetTextArts3)&v2=1/v3=1:P;     [Launch artifact text function for script02 and script71 enabled]
+!!FU(WOG3_SetTextArts1)&(enhArt1)/(enhArt2)<>(TRUE):P; [Launch artifact text function for Enhanced Artifacts I enabled]
+!!FU(WOG3_SetTextArts2)&(enhArt1)<>(TRUE)/(enhArt2):P; [Launch artifact text function for Enhanced Artifacts II enabled]
+!!FU(WOG3_SetTextArts3)&(enhArt1)/(enhArt2):P; [Launch artifact text function for both enabled]
 
+; Set gold limit text for Emblem of Cognizance if Enhanced Artifacts I is enabled
+!!if&(enhArt1);
+  !!UN:J2/?(diff:y); // get difficulty (unlimited for easy, text won't be set)
+  
+  !!if&(diff)>0;
+    !!SN:H^art^/(ART_DIPLOMATS_RING)/1/?(desc:z);
+    !!SN:T^wog.102.diplomatsRing^/?(additionalText:z)/^unitLimit^/i^wog_102_diplomatsRingLimit^;
+    !!SN:H^art^/(ART_DIPLOMATS_RING)/1/^%(desc)%(additionalText)^;
 
-!#UN:P75/?v1;      [Check for short skill text option]
+    !!SN:H^art^/(ART_EMBLEM_OF_COGNIZANCE)/1/?(desc);
+    !!SN:T^wog.102.emblemOfCognizance^/?(additionalText)/^goldLimit^/i^wog_102_emblemOfCognizanceLimit^;
+    !!SN:H^art^/(ART_EMBLEM_OF_COGNIZANCE)/1/^%(desc)%(additionalText)^;
+  !!en;
+!!en;
 
-!#FU(WOG3_SetSkillsTexts_Normal)&v1=0:P;     [Launch normal skill text function]
-!#FU(WOG3_SetSkillsTexts_Short)&v1=1:P;      [Launch short skill text function]
+!!UN:P75/?(shortSkillText:y);           [Check for short skill text option]
+
+!!if(shortSkillText);
+  !!FU(WOG3_SetSkillsTexts_Short):P;    [Launch short skill text function]
+!!el;
+  !!FU(WOG3_SetSkillsTexts_Normal):P;   [Launch normal skill text function]
+!!en;
