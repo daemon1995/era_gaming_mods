@@ -335,37 +335,51 @@ ZVSE2
   !!en;
 !!en;
 
+; Diplomat's Ring (works only for human players)
+!!if&v624>0/5;
+  ; Check if the hero has any level 1 monster
+  !!VR(hasLvOneMon:y):S(FALSE);
 
-!!IF:V2/0;
-  !!VRy3:S1;
-  !!VRy4:S1;
+  !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+    !!HEv600:C0/i/?(mon:y)/?(qty:y);
 
-  !!if&5/v624>0;
+    !!if&(mon)>(NO_MON)/(qty)>0;
+      !!MA:L(mon)/?(lv:y);
 
-    !!re i/0/(ARMY_SLOT_LAST);
-      !!HEv600:C0/i/?y1/?y2; [get y1 creature type y2 qty]
-      !!if&y2>0/y4>0;
-        !!MA:Ly1/?l;
-
-        !!if&l=(MON_MIN_LEVEL);
-          !!IF:Q2/z102049;
-
-          !!if&2;
-            !!IF:M1/z102050;
-            !!VRy3:+v631 *2;
-            !!VRy4:S0;
-            !!HEv600:A3/(ART_DIPLOMATS_RING)/1/1; [remove a Diplomat's Ring]
-          !!el;
-            !!IF:M1/z102051;
-            !!br;
-          !!en;
-        !!en;
-      !!en;
-      !!HEv600:C0/i/?y1/d*y3; [get y1 creature type y2 qty]
+      !!br&(lv)=(MON_MIN_LEVEL);
     !!en;
+
+    !!VR(hasLvOneMon)&i<=(ARMY_SLOT_LAST):S(TRUE);
   !!en;
 
-  !!UN&2:R1; [redraw screen]
+  ; Ask if the hero would like to double level 1 monsters if he/she has any
+  !!if&(hasLvOneMon);
+    !!IF:Q2/z102049;
+
+    ; Double level 1 if agreed
+    !!if&2;
+      !!IF:M1/z102050;
+
+      ; Loop through all the stacks and double level 1
+      !!re (slot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+        !!HEv600:C0/(slot)/?(mon:y)/?(qty:y);
+
+        !!if&(mon)>(NO_MON)/(qty)>0;
+          !!MA:L(mon)/?(lv:y);
+
+          !!HEv600&(mon)>(NO_MON)/(qty)>0:C0/(slot)/?(mon)/d*2;
+        !!en;
+      !!en;
+
+      !!HEv600:A3/(ART_DIPLOMATS_RING)/1/1; [remove a Diplomat's Ring]
+
+      !!SN&2:D; [redraw screen]
+    ; Show msg if the hero disagreed
+    !!el;
+      !!IF:M1/z102051;
+    !!en;
+  !!en;
+!!en;
 
 ; Orb Of Inhibition (works only for human players)
 !!if&v628>0/5;
@@ -373,8 +387,8 @@ ZVSE2
   !!FU(WOG_102_GetRandMonFromHeroArmy):P?(mon:y);
 
   ; Get the ability to learn if target is found
-  !!if&(mon)>(NO_MON);                     [if the hero does have a creature]
-    !!SN:H^monname^/(mon)/1/?z330;    [get plural name of creature into z330]
+  !!if&(mon)>(NO_MON);                  [if the hero does have a creature]
+    !!SN:H^monname^/(mon)/1/?z330;      [get plural name of creature into z330]
     !!MA:X(mon)/?(monFlags:y);
     !!VR(hasAtkTwice:y):S(monFlags) &(MON_FLAG_ATTACKS_TWICE);
     !!VR(hasNoRetail:y):S(monFlags) &(MON_FLAG_NO_RETALIATION);
@@ -460,20 +474,6 @@ ZVSE2
 !!VRv24:+v26; [add them up]
 
 ** end of function
-
-
-** function to check a slot for first-level-troops
-** slot number is x16; result accumulates in k
-
-!?FU607;
-
-!!HEv600:C0/x16/?y1/?y2; [get y1 creature type y2 qty]
-!!FU609&y2>0:Py1; [check creature type for being first level]
-!!VRv24&y2>0/v27=1:+1; [count it]
-
-** end of function
-
-
 
 
 ** function to get a creature form the hero's army which didn't learn either Attack Twice or No Retaliation
