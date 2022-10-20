@@ -13,17 +13,42 @@ ZVSE2
 !#UN:C4599194/4/2425393296;
 
 
-// reduce the AI values of all creatures by 15 times
+// Divide the AI values of all creatures by 15
+// This is to prevent hero's AI value overflowed when the hero has thousands of Azure Dragons
+// The value will need to be restored when visiting Altars of Sacrifice (for getting corrected exp from sacrificing creatures)
 !?FU(OnAfterErmInstructions); by @Archer30
-  ; Check if the AI value of peasant is original - exit if noton
-  !!MA:I(MON_PEASANT)/?(aiValuePeasant:y);
+; Execute the function only when Peasant's AI value is original (15)
+!!MA:I(MON_PEASANT)/?(aiValuePeasant:y);
+!!FU(gem_ManageAIValues)&(aiValuePeasant)=15:P1;
 
-  !!FU&(aiValuePeasant)<>15:E;
+!?OB(OBJ_ALTAR_OF_SACRIFICE);
+!!FU(gem_ManageAIValues):P0;
+
+!$OB(OBJ_ALTAR_OF_SACRIFICE);
+!!FU(gem_ManageAIValues):P1;
+
+!?FU(gem_ManageAIValues);
+!#VA(mode:x);                           [0 - restoration, 1 - division]
+
+; Restore all the AI values if they have been divided
+!!if&(mode)=0/i^gem_aiValueDivided^;
   !!FU(GetMaxMonsterId):P?(lastMon:y);
-  ; Divide by 15 for all AI values
+
+  !!re i/(MON_FIRST)/(lastMon);
+    !!MA:Ii/d*15;
+  !!en;
+
+  !!VRi^gem_aiValueDivided^:S(FALSE);
+; Divide all the AI values for all
+!!el&(mode)=1/i^gem_aiValueDivided^=(FALSE);
+  !!FU(GetMaxMonsterId):P?(lastMon:y);
+
   !!re i/(MON_FIRST)/(lastMon);
     !!MA:Ii/d:15;
   !!en;
+
+  !!VRi^gem_aiValueDivided^:S(TRUE);
+!!en;
 
 
 !?FU(OnGameEnter);
@@ -267,22 +292,23 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 ; Archer30's hacks
 
 
-; Disable right-click on Kingdom Overview for mithril
-; The definition of FU(WOG42_DisplayMithril) is in WoG Scripts - 42 wog - mithril enhancements.erm
-; The function must be executed sooner than the funciton with the same name in 42 wog - mithril enhancements.erm
-!?FU(WOG42_DisplayMithril);
-!!SN:Q;
-
+; Disable right-click on Kingdom Overview for mithril amount
+; The definition of i^wog_149_mithrilAmountRMBEnabled^ is in WoG Scripts - 42 wog - mithril enhancements.erm
+; This script must be executed later than erm instructions
+!?FU(OnAfterErmInstructions);
+!!VRi^wog_149_mithrilAmountRMBEnabled^:S(FALSE);
 
 ; Remove buggy neutral stacks by mouse hovering. Occasionally a stack with the size 4095 is generated on the map with UN:I command.
 ; This script is better executed before anything else.
 ; It removes a buggy stack silently
 !?FU(OnAdvMapTileHint);
 !#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
+
 !!if&(objType)=(OBJ_MONSTER);
   !!UN:P904/1 P905/0;                   [Option 904 - Disable Error msg. Option 905 - error found]
   !!MO(x)/(y)/(z):G?(qty:y);
   !!UN:P905/?(hasError:y);
+
   !!if&(hasError);
     !!UN:O(x)/(y)/(z)/1;                [Debug msg can be added here to help collect debug info from players]
     !!UN:P904/0;
