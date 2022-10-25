@@ -439,7 +439,12 @@ The game may fall at any time.^;
 !!BM(target)&(spBits)=(bits):G(protecId)/?(duration:y)/?(power:y);
 !!VR(result)&(duration)>0:S(power);
 
-
+!?FU(WOG_Battle_CanStackReceiveSpell);
+!#VA(stackId:x) (spellID:x) (castingSide:x) (result:x);
+  !!BM(stackId):Z?(stack:y); I?(side:y);
+  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+  !!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; [can stackk apply buff/debuff]
+  !!VR(result):Sv1;
 ; ******************************************************************************
 ; ***************************** Another functions ******************************
 
@@ -670,7 +675,7 @@ The game may fall at any time.^;
 ; **************************************************************************************************
 ; Set up global variables
 ; Random seed
-!#VRi^WOG_RandomSeedValue^:R0/11/99;
+!#VRi^WOG_RandomSeedValue^:R0/11/55;
 
 ; HD mod
 !?FU(WOG_StartGame);
@@ -685,27 +690,27 @@ The game may fall at any time.^;
 ; Creature bank battle - currently used in Enhanced War Machines
 !?OB(OBJ_CREATURE_BANK);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
-!!VRi^wog_isCBattle^:S(TRUE);
+!!VRi^wog_isCBBattle^:S(TRUE);
 
 !?OB(OBJ_DERELICT_SHIP);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
-!!VRi^wog_isCBattle^:S(TRUE);
+!!VRi^wog_isCBBattle^:S(TRUE);
 
 !?OB(OBJ_DRAGON_UTOPIA);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
-!!VRi^wog_isCBattle^:S(TRUE);
+!!VRi^wog_isCBBattle^:S(TRUE);
 
 !?OB(OBJ_NEW_WOG_OBJECTS);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
-!!VRi^wog_isCBattle^:S(TRUE);
+!!VRi^wog_isCBBattle^:S(TRUE);
 
 !?OB(OBJ_CRYPT);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
-!!VRi^wog_isCBattle^:S(TRUE);
+!!VRi^wog_isCBBattle^:S(TRUE);
 
 !?OB(OBJ_SHIPWRECK);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
-!!VRi^wog_isCBattle^:S(TRUE);
+!!VRi^wog_isCBBattle^:S(TRUE);
 
 !?OB(OBJ_CREATURE_GENERATOR_1);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
@@ -715,11 +720,11 @@ The game may fall at any time.^;
 
 !?FU(OnAfterBattleUniversal);
 !!VRi^wog_isDwellOrCBBattle^:S(FALSE);
-!!VRi^wog_isCBattle^:S(FALSE);
+!!VRi^wog_isCBBattle^:S(FALSE);
 
 !?FU(OnAfterLoadGame);
 !!VRi^wog_isDwellOrCBBattle^:S(FALSE);
-!!VRi^wog_isCBattle^:S(FALSE);
+!!VRi^wog_isCBBattle^:S(FALSE);
 
 ; Battle variables
 !?FU(OnBeforeBattleUniversal);
@@ -773,6 +778,17 @@ The game may fall at any time.^;
 !!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
 !!VR(result)&(value2)=114:S(TRUE);
 
+
+; Get current game random seed for VR:R and ingame rands;
+!?FU(WOG_GetRandomSeed);
+!#VA(seed:x);
+!!UN:C6814692/4/?(seed);
+
+!?FU(WOG_SetRandomSeed);
+!#VA(newSeed:x) (oldSeed:x);
+!!UN:C6814692/4/?(oldSeed); C6814692/4/(newSeed);
+!!SN:E5294000/(CALLCONV_THISCALL)/(newSeed);
+
 ; Get random seed by coordinates
 !?FU(WOG_GetRandomSeedByCoord);
 !#VA(x:x) (y:x) (z:x) (seed:x);
@@ -780,9 +796,13 @@ The game may fall at any time.^;
 !!VR(x)|(x)<1/(x)>255:S255;
 !!VR(y)|(y)<1/(y)>255:S255;
 !!VR(z)&(z)<1:Si^WOG_RandomSeedValue^;
-
 !!VR(seed):Si^WOG_RandomSeedValue^ *255 *(x) *255 *(y) +(z); +v99
 
+;Safely generate value without changing original seed
+!?FU(WOG_SafeRand);
+!#VA(min:x) (max:x) (seed:x) (result:x);
+!!FU(WOG_GetRandomSeed):P?(oldSeed:y);
+!!VR(result):Rd/(seed) R0/(min)/(max) Rd/(oldSeed);
 ; **************************************************************************************************
 // Preventclicks for the alien hero
 *?FU(OnHeroScreenMouseClick)&i^WOG_35_DisableHeroClick^;
@@ -1206,6 +1226,7 @@ The game may fall at any time.^;
 !!el;
   !!VR(hex):S-1;
 !!en;
+
 
 !?FU(WOG_IfPosIsValid);
 !#VA(pos:x) (isDoubleWide:x) (side:x) (isAvailPos:x);

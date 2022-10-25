@@ -44,7 +44,9 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 ; Note: This script has compatiblity lines with Era Scripts options
 !?FU(WOG_CreateERMHook);
 !#VA(address:x);
-!!SN:E(address)/1/4383191/(WOG_AI_OnSelectTartgetToMove);
+!!UN:P23/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+!!SN:E(address)/1/4383575/(WOG_AI_OnSelectTartgetToMove);
 
 -----------------------------------------------------------------------------------------
 ; Initialization
@@ -76,31 +78,37 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 
 
 !?FU(WOG_AI_OnSelectTartgetToMove);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y); C(ebp)/-32/4/?(hero:y);
+*!FU:E;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y); C(ebp)/-32/4/?(hero:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-116/4/?(xyz:y) C(ebp)/-32/4/?(hero:y);
 
   !!if&(hero);
     !!UN:C(hero)/26/4/?(heroId:y);
     !!if&(heroId)>(NO_HERO)/(heroId)<=(HERO_LAST_WOG);
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); C(ebp)/-32/4/?(hero:y);
 
       !!HE(heroId):S(SKILL_SORCERY)/?(sorceryLevel:y);
 
       !!if&(sorceryLevel);
+
         !!UN:C(ebp)/-116/4/?(xyz:y);
         !!FU(WOG_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(xyz);
-        !!OB(x)/(y)/(z):T?t;
+        *!OB(x)/(y)/(z):T?t;
+        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y) C(ebp)/-12/4/?t;
 
         !!if&t=>88/t<=90|t=(OBJ_WITCH_HUT)/t=(OBJ_TREE_OF_KNOWLEDGE); [Shrine/ Witch Hut/Tree of kn]
           !!HE(heroId):P?(hX:y)/?(hY:y)/?(hZ:y) O?(heroOwner:y);
           !!FU&(hZ)<>(z);
-          !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(CURRENT_HERO)/(sorceryLevel)/?(result:y);
+          *!IF:M^%(x) %(hX) %(y) %(hY) %t^;
+        *!IF:L^%(heroId:y) %(ebx) %t %(x) %(y) %(z)^;
+
+          !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(heroId)/(sorceryLevel)/?(result:y);
           !!FU(WOG_AdvMgr_SetObjectAsVisited)&(result):P(x)/(y)/(z)/(heroOwner);
 
         !!el|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_LEARNING_STONE)/t=(OBJ_STAR_AXIS)/t=(OBJ_WINDMILL)/t=(OBJ_WATER_WHEEL)/t=(OBJ_GARDEN_OF_REVELATION);
           !!HE(heroId):P?(hX:y)/?(hY:y)/?(hZ:y);
           !!FU&(hZ)<>(z);
 
-          !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(CURRENT_HERO)/(sorceryLevel)/?(result:y);
+          !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(heroId)/(sorceryLevel)/?(result:y);
           !!if&(result)/(sorceryLevel)>2;
             !!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
             !!HE(heroId):Z?(hero:y) Wd1/1;
@@ -217,8 +225,9 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
       !!FU5016:P(x)/(y)/(z)/(heroId);     [Pyramid]
 
     !!el&(objType)=(OBJ_UNIVERSITY);
-      !!FU(WOG_23_ShowUniversityDlg):P(x)/(y)/(z)/(heroId); [University]
-
+      *!FU(WOG_23_ShowUniversityDlg):P(x)/(y)/(z)/(heroId); [University]
+      !!FU(WOG_AdvMgr_HeroEnterObject):P(x)/(y)/(z)/(heroId)/d/1;
+      !!CM:R0;
     !!el&(objType)=(OBJ_SHIPWRECK_SURVIVOR);
       !!FU5036:P(cWord);                  [Lookup artifact class - z2]
       !!IF:Q1/(PIC_TYPE_ART)/(cWord)/4/z123048; [Display hint text]
@@ -540,7 +549,9 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 !?FU(WOG_23_ShowUniversityDlg);         [Start of Function 5023 - Display skills offered by University]
 !#VA(x:x) (y:x) (z:x) (heroId:x);
 !#VA(skills[4]:y);
+*!FU(WOG_AdvMgr_HeroEnterObject):P;
 
+!!FU:E;
   !!URx1/x2/x3:S?(skills[0])/?(skills[1])/?(skills[2])/?(skills[3]);
   !!UN:P36/?(isEnabled:y);
   !!VRz-1:S^^;

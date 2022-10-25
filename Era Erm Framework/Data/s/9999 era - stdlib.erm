@@ -874,6 +874,114 @@ ZVSE2
 !!FU|(numItems)<0/(numItems)>=(minSize):E;
 
 !!FU(Array_Resize):P(list)/(minSize)/(fillValue);
+
+!?FU(Array_CountValue);
+; Returns number of array items, equal to specified value.
+!#VA(list:x);            Array ID.
+!#VA(value:x);           Value to count. Strings are supported.
+!#VA(result:x);          Result.
+!#VA(caseInsensitive:x); Optional. If true, strings will be compared case insensitively. Default: false.
+
+!!VR(result):S0;
+!!SN:M(list)/?(numItems:y)/?(itemsType:y)/?t/?(firstItemAddr:y);
+!!FU&(numItems)<=0:E;
+
+!!if&(itemsType)=(M_INT);
+  !!re i/0/(numItems)/1/-1;
+    !!SN:M(list)/i/?(item:y);
+    !!VR(result)&(item)=(value):+1;
+  !!en;
+!!el;
+  !!VR(savedV1:y):Sv1;
+  !!VR(comparisonFuncName:z):S^lstrcmpA^;
+  !!VR(comparisonFuncName)&(caseInsensitive):S^lstrcmpiA^;
+
+  !!re i/0/(numItems)/1/-1;
+    !!VR(itemAddr:y):Si *(SIZEOF_PTR) +(firstItemAddr);
+    !!UN:C(itemAddr)/(UNC_INT)/?(itemStrAddr:y);
+    !!SN:F(comparisonFuncName)/(itemStrAddr)/z(value);
+    !!VR(result)&v1=0:+1;
+  !!en;
+
+  !!VRv1:S(savedV1);
+!!en;
+
+!?FU(Array_IndexOf);
+; Returns index of the first array item with specified value or -1 in case of failure.
+!#VA(list:x);            Array ID.
+!#VA(value:x);           Value to search for.
+!#VA(result:x);          Result index or -1 in case of failure.
+!#VA(caseInsensitive:x); Optional. If true, strings will be compared case insensitively. Default: false.
+
+!!VR(result):S-1;
+!!SN:M(list)/?(numItems:y)/?(itemsType:y)/?t/?(firstItemAddr:y);
+!!FU&(numItems)<=0:E;
+
+!!if&(itemsType)=(M_INT);
+  !!re i/0/(numItems)/1/-1;
+    !!SN:M(list)/i/?(item:y);
+
+    !!if&(item)=(value);
+      !!VR(result):Si;
+      !!br;
+    !!en;
+  !!en;
+!!el;
+  !!VR(savedV1:y):Sv1;
+  !!VR(comparisonFuncName:z):S^lstrcmpA^;
+  !!VR(comparisonFuncName)&(caseInsensitive):S^lstrcmpiA^;
+
+  !!re i/0/(numItems)/1/-1;
+    !!VR(itemAddr:y):Si *(SIZEOF_PTR) +(firstItemAddr);
+    !!UN:C(itemAddr)/(UNC_INT)/?(itemStrAddr:y);
+    !!SN:F(comparisonFuncName)/(itemStrAddr)/z(value);
+
+    !!if&v1=0;
+      !!VR(result):Si;
+      !!br;
+    !!en;
+  !!en;
+
+  !!VRv1:S(savedV1);
+!!en;
+
+!?FU(Array_Find);
+; Returns index of the first array item, for which custom callback function returns (TRUE) or -1 in case of failure.
+!#VA(list:x);      Array ID.
+!#VA(callback:x);  Callback function F(itemValue, ?result, [listId], [customArg]), where result is (TRUE) or (FALSE). (FALSE) is passed by default.
+                ;  listID is array ID and customArg is anything, specified as custom argument to Array_Find. Zero by default.
+!#VA(result:x);    Result index or -1 in case of failure.
+!#VA(customArg:x); Custom argument to pass to callback as the 4-th parameter.
+
+!!VR(result):S-1;
+!!SN:M(list)/?(numItems:y)/?(itemsType:y)/?t;
+!!FU&(numItems)<=0:E;
+
+!!if&(itemsType)=(M_INT);
+  !!re i/0/(numItems)/1/-1;
+    !!SN:M(list)/i/?(item:y);
+    !!VR(found:y):S(FALSE);
+    !!FU(callback):P(item)/?(found)/(list)/(customArg);
+
+    !!if&(found);
+      !!VR(result):Si;
+      !!br;
+    !!en;
+  !!en;
+!!el;
+  !!re i/0/(numItems)/1/-1;
+    !!SN:M(list)/i/?(itemStr:z);
+
+    !!VR(found:y):S(FALSE);
+    !!FU(callback):P(itemStr)/?(found)/(list)/(customArg);
+
+    !!if&(found);
+      !!VR(result):Si;
+      !!br;
+    !!en;
+  !!en;
+!!en;
+
 ; ======== END ARRAYS ========
 
 
@@ -2211,11 +2319,12 @@ ZVSE2
 !!BA:H0/?i^battle_hero_0^ H1/?i^battle_hero_1^;
 
 ; Replace invalid defender hero values like (NO_DEFENDING_HERO) with normalized (NO_HERO)
+!!VRi^battle_hero_vs_hero^:S(TRUE);
+
 !!if&i^battle_hero_1^<(HERO_FIRST);
   !!VRi^battle_hero_1^:S(NO_HERO);
+  !!VRi^battle_hero_vs_hero^:S(FALSE);
 !!en;
-
-!!VRi^battle_hero_vs_hero^:Si^battle_hero_1^ F(FALSE)/(TRUE);
 
 !!VRi^battle_ai_0^:S(TRUE);
 !!VRi^battle_ai_1^:S(TRUE);

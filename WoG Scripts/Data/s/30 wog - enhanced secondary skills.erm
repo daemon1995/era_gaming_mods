@@ -88,11 +88,11 @@ ZVSE2
 
 ; Set up new names and descriptions for War Machines
 !!SN&i^wog_204_enabled^:H^art^/(ART_FIRST_AID_TENT)/1/z148000;
-!!SN&i^wog_201_enabled^:H^art^/(ART_BALLISTA)/1/z148001;
+!!SN&i^wog_201_enabled^:H^art^/(ART_BALLISTA)/1/^%T(wog.201.ballista_description)^;
 
 !!if|i^wog_204_enabled^/i^wog_201_enabled^;
-  !!SN:H^art^/(ART_AMMO_CART)/0/z148003;
-  !!SN:H^art^/(ART_AMMO_CART)/1/z148002;
+  !!SN:H^art^/(ART_AMMO_CART)/0/^%T(wog.201.ammo_name)^;
+  !!SN:H^art^/(ART_AMMO_CART)/1/^%T(wog.201.ammo_description)^;
 !!en;
 
 ; Disable the feature to remove Eagle Eye II skill when the hero has learned all the spells if Eagle Eye I is enabled
@@ -194,16 +194,24 @@ ZVSE2
 !!FU7023&i^wog_212_enabled^/y-5<>8/y-1>0:Py-1;            [do scouting function - if enabled]
 ** end of movement trigger
 
-** start of battle-start trigger
-!?FU(OnBeforeBattle)|i^wog_201_enabled^/i^wog_204_enabled^/i^wog_207_enabled^;
-
+!?FU(OnAfterTacticsPhase)&i^wog_201_enabled^;
 ** artillery
-!!BA&i^wog_201_enabled^:H0/?v7020;                             [get attacking hero #]
-!!HEv7020&i^wog_201_enabled^/v7020>-1:A2/4/?y-7/?y-8;          [see if attacking hero has a Ballista]
-!!FU(WOG_201_KillWithArtillery)&i^wog_201_enabled^/y-8>0/v7020>-1:P(BATTLE_LEFT);     [shoot something - attacker]
-!!BA&i^wog_201_enabled^:H1/?v7020;                             [get defending hero #]
-!!HEv7020&i^wog_201_enabled^/v7020>-1:A2/4/?y-7/?y-8;          [see if defending hero has a Ballista]
-!!FU(WOG_201_KillWithArtillery)&i^wog_201_enabled^/y-8>0/v7020>-1:P(BATTLE_RIGHT);    [shoot something - defender]
+!!BU:T?t;
+!!if&t;
+  !!FU(WOG_201_KillWithArtillery):P;
+!!el;
+  !!VRi^wog_201_Shoot^:S(TRUE);
+!!en;
+
+!?FU(OnCombatRound)&i^wog_201_Shoot^/v997>-1;
+!!FU(WOG_201_KillWithArtillery):P;
+!!VRi^wog_201_Shoot^:S(FALSE);
+
+
+** start of battle-start trigger
+!?FU(OnBeforeBattle)|i^wog_204_enabled^/i^wog_207_enabled^;
+
+
 
 ** first aid
 !!if&i^wog_204_enabled^;
@@ -434,18 +442,101 @@ ZVSE2
 !!en;
 
 ** end of battle end trigger
+!?FU(WOG_201_SelectBestTarget);
+!#VA(side:x) (dmg:x) (result:x);
 
+!!VR(min:y):S(side) *21;
+!!VR(max:y):S(min) +20;
+!!VR(result):S(NO_STACK);
+!!VR(killFv:y):S0;
+!!VR(killCount:y):S0;
+
+!!re i/(min)/(max);
+  *!BA:M(enemySide)/i/?(mon:y)/?(qty:y);
+  !!BMi:N?(qty:y) H?(hp:y) T?(mon:y);
+  !!if&(mon)>(NO_MON)/(qty)>1/(hp)>0;
+    !!MA:F(mon)/?(fv:y);
+    !!VR(maxKillCount:y):S(qty) -1;
+    !!VR(currKillCount:y):S(dmg) :(hp) F0/(maxKillCount);
+    !!VR(currKillFv:y):S(currKillCount) *(fv);
+
+    ; Store the values if killing at least one
+    !!if&(currKillCount)>0/(currKillFv)>(killFv);
+      !!VR(result):Si;
+      !!VR(killFv):S(currKillFv);
+      !!VR(killCount):S(currKillCount);
+    !!en;
+  !!en;
+!!en;
+
+!?FU(OnStackToStackDamage)&i^wog_201_Shoot^;
+!!VRx4:Si^wog_201_Shoot^;
+!!VRi^wog_201_Shoot^:S(FALSE);
 
 ** function to handle artillery, hero, skill level
 !?FU(WOG_201_KillWithArtillery);
-!#VA(side:x);
+  !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?(seed:y);
+  !!re (side:y)/0/i^battle_hero_vs_hero^;
+    !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y);
+    !!if&(ballista);
+
+      !!VR(min:y):S(side) *21;
+      !!VR(max:y):S(min) +20;
+
+      !!re i/(min)/(max);
+        !!BMi:T?t N?n;
+        !!if&n>0/t=(MON_BALLISTA);
+          !!BMi:Z?(stack:y);
+
+          !!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLv:y)/1 S(SKILL_ARTILLERY)/?(artilleryLv:y); [check for Ammo Cart, get hero's level, artillery level]
+          !!VR(equipped):F0/1 +1;                        [ammo cart bonus]
+          !!VR(mult:y):S1 +(artilleryLv) *(equipped); [set multiplier to 1]
+          !!VR(seed):+i^timerDay^ +(side) +i^battle_hero_%(side)^;
+          !!FU(WOG_SafeRand):P1/50/(seed)/?(dmg:y);
+          !!VR(dmg:y):+(heroLv) *(mult);      [ballista damage: (1-50 + hero level) x bonus multiplier x ammo]
+          !!VR(oppSide:y):S(side) X1;
+          !!FU(WOG_201_SelectBestTarget):P(oppSide)/(dmg)/?(targetStackId:y);
+
+          !!if&(targetStackId)<>(NO_STACK);
+            !!VRi^wog_201_Shoot^:S(dmg);
+            !!BM(targetStackId:y):Z?p N?n;
+            !!UN:C(stack)/16/4/p;
+            !!HEi^battle_hero_%(side)^:S(SKILL_ARTILLERY)/0;
+
+            !!BMi:U3/?(shots:y) U3/1 G213/?(luck:y)/d  G213/0/d;
+            !!VR(msg:z):S^%T(wog.201.ballista_log)^;
+            !!MM:S(msg:z);
+            !!UN:C6919200/4/?(cmbMgr:y);
+            *!SN:E4456064/(CALLCONV_THISCALL)/(stack);/p;
+            !!SN:E4453920/(CALLCONV_THISCALL)/(stack)/p;                  [shoot stack to stack]
+            !!SN:E4607072/(CALLCONV_THISCALL)/(cmbMgr)/0;                 [find next stack to act (start battle)]
+            !!BMi:U3/(shots:y) G213/(luck:y)/d;
+
+            !!HEi^battle_hero_%(side)^:S(SKILL_ARTILLERY)/(artilleryLv:y);
+            !!BM(targetStackId:y):N?(new:y);
+            !!VR(lost:y):Sn -(new);
+
+            !!BM(targetStackId:y):Bd-(lost);
+            !!VRi^wog_201_Shoot^:S(FALSE);
+          !!en;
+
+          !!br;
+
+        !!en;
+      !!en;
+
+    !!en;
+  !!en;
+
+!!FU:E;
+
+*#VA(side:x);
+
+
+
 !#VA(usedY[2]:y);
 
-!!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLv:y)/1 S(SKILL_ARTILLERY)/?(artilleryLv:y); [check for Ammo Cart, get hero's level, artillery level]
-!!VR(mult:y):S1;                        [set multiplier to 1]
-!!VR(mult)&(equipped)>0:+1;             [ammo cart bonus]
-!!VR(mult)&(artilleryLv)>(SKILL_NOT_LEARNED):+(artilleryLv); [artillery bonus]
-!!VR(dmg:y):R0/1/50 +(heroLv) *(mult);  [ballista damage: (1-50 + hero level) x bonus multiplier]
+
 
 !!VR(enemySide:y):S(side) X1;
 !!VR(stack:y):S(NO_STACK);
