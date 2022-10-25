@@ -13,13 +13,25 @@ ZVSE2
 !#UN:C4599194/4/2425393296;
 
 
-// Divide the AI values of all creatures by 15
-// This is to prevent hero's AI value overflowed when the hero has thousands of Azure Dragons
-// The value will need to be restored when visiting Altars of Sacrifice (for getting corrected exp from sacrificing creatures)
-!?FU(OnAfterErmInstructions); by @Archer30
-; Execute the function only when Peasant's AI value is original (15)
+// Divide all the AI values by 15 in order to prevent negative values after gathering massive amount of troops.
+!?FU(OnAfterErmInstructions);
+; Divide AI values only when Peasant's AI value is original (15)
 !!MA:I(MON_PEASANT)/?(aiValuePeasant:y);
-!!FU(gem_ManageAIValues)&(aiValuePeasant)=15:P1;
+
+!!if&(aiValuePeasant)=15;
+  !!FU(GetMaxMonsterId):P?(lastMon:y);
+  !!VR(arraySize:y):S(lastMon) +1;
+  !!FU(NewIntArray):P(arraySize)/?i^gem_origAiValues^/(M_STORED);
+
+  !!re i/(MON_FIRST)/(lastMon);
+    !!MA:Ii/?(aiValue:y);
+    !!SN:Vi^gem_origAiValues^/i/(aiValue);
+  !!en;
+
+  !!VRi^gem_aiValuesDivided^:S(TRUE);
+!!en;
+
+!!FU(gem_ManageAIValues):P1;
 
 !?OB(OBJ_ALTAR_OF_SACRIFICE);
 !!FU(gem_ManageAIValues):P0;
@@ -27,30 +39,28 @@ ZVSE2
 !$OB(OBJ_ALTAR_OF_SACRIFICE);
 !!FU(gem_ManageAIValues):P1;
 
-!?FU(gem_ManageAIValues);
+!?FU(gem_ManageAIValues)&i^gem_aiValuesDivided^;
 !#VA(mode:x);                           [0 - restoration, 1 - division]
 
-; Restore all the AI values if they have been divided
-!!if&(mode)=0/i^gem_aiValueDivided^;
-  !!FU(GetMaxMonsterId):P?(lastMon:y);
+!!FU(GetMaxMonsterId):P?(lastMon:y);
 
+; Restoration
+!!if&(mode)=0;
   !!re i/(MON_FIRST)/(lastMon);
-    !!MA:Ii/d*15;
+    !!SN:Vi^gem_origAiValues^/i/?(aiValue:y);
+    !!MA:Ii/(aiValue);
   !!en;
-
-  !!VRi^gem_aiValueDivided^:S(FALSE);
-; Divide all the AI values for all
-!!el&(mode)=1/i^gem_aiValueDivided^=(FALSE);
-  !!FU(GetMaxMonsterId):P?(lastMon:y);
-
+; Division
+!!el;
   !!re i/(MON_FIRST)/(lastMon);
     !!MA:Ii/d:15;
   !!en;
 
-  !!VRi^gem_aiValueDivided^:S(TRUE);
+  !!VRi^gem_aiValuesDivided^:S(TRUE);
 !!en;
 
 
+//
 !?FU(OnGameEnter);
   !!UN:C6052891/1/4;                    [центрируем текст названия города в окне города (id 149)]
   ; радус открытия всей карты

@@ -6,7 +6,7 @@ ZVSE2
 ** Add WOG objects to a map on day one
 ** WoGify Name: script00.erm
 ** Updated: October 31, 2004
-** Updated: Apr 2022 by Archer30
+** Updated: Oct 2022 by daemon_n and Archer30
 
 ** In addition to normal WOG objects, the following scripted objects as well as
 ** non-object scripts may be used, though none are essential and all can be
@@ -107,12 +107,12 @@ ZVSE2
 
 ** Bit Conversion uses:
 ** Functions: FU3333
-** Macros: $bit$
+** Macros: $bit$ - replaced with (WOG_CALCULATE_BIT_VALUE)
 ** Variables: v3333, y-100
 
 ** Generate Random Spell uses:
 ** Functions: FU7777-FU7779
-** Macros: $spell$ - replaced with (WOG_GENERATE_SPELL) = 7777, by daemon_n;
+** Macros: $ban$ - replaced with (WOG_CHECK_SPELL_BAN), $spell$ - replaced with (WOG_GENERATE_SPELL)
 ** Variables: v3500, y-96..y-99
 
 ** Set AI/Human Experience uses:
@@ -146,7 +146,7 @@ ZVSE2
  [Set up macro for bit-conversion]
 
 !#MCv3333:S@bit@;
-!#VRv3333:S3333;
+!#VRv3333:S(WOG_CALCULATE_BIT_VALUE);
 
  [Calculate bit value: input in x1 parameter, result in y-100]
 
@@ -213,11 +213,52 @@ ZVSE2
 ********************************************************************************
 
 *** Generate Random Spell Number by Fnord ***
+; Swt up macros - Legacy
 !#MCv3341:S@ban@;
-!#VRv3341:S10932;
+!#VRv3341:S(WOG_CHECK_SPELL_BAN);
 
-!#MCv3500:S@spell@; // kept for other mods till
-!#VR$spell$:S7777; // use 7777 or (WOG_GENERATE_SPELL) instead
+!#MCv3500:S@spell@;
+!#VRv3500:S(WOG_GENERATE_SPELL);
+
+ [Check for Banned and Disabled Spells - y-94 returns banned state]
+ [x1=spell to check for banning/disabling]
+
+* SYNTAX: FU(WOG_CHECK_SPELL_BAN):P#;
+* #=spell to check (x1)
+* y-94=0 if not banned/disabled
+* y-94=1 if banned
+* y-94=2 if disabled
+* y-94=3 if banned and disabled
+
+!?FU(WOG_CHECK_SPELL_BAN);
+!#VA(spell:x) (result:x);
+
+!!if|(spell)<(SPELL_FIRST)/(spell)>(SPELL_LAST_WOG); [Exit if not a valid spell number]
+  !!VR(result):S99;
+  !!VRy-94:S(result);
+  !!IF:M^{ERM Error:} FU%(WOG_CHECK_SPELL_BAN) function was called with invalid arguments^;
+  !!FU:E;
+!!en;
+
+!!UN:J0/(spell)/?(disabled:y); [Check if spell is enabled (0) or disabled (1)]
+!!VR(banned:y):S0;
+!!UN&(spell)=0:P152/?(banned); [Check for banned Summon Boat    - =1 if banned]
+!!UN&(spell)=7:P153/?(banned); [Check for banned Water Walk     - =1 if banned]
+!!UN&(spell)=9:P154/?(banned); [Check for banned Town Portal    - =1 if banned]
+!!UN&(spell)=8:P155/?(banned); [Check for banned Dimension Door - =1 if banned]
+!!UN&(spell)=6:P156/?(banned); [Check for banned Fly            - =1 if banned]
+!!UN&(spell)=1:P221/?(banned); [Check for banned Scuttle Boat   - =1 if banned]
+!!UN&(spell)=2:P222/?(banned); [Check for banned Visions        - =1 if banned]
+!!UN&(spell)=26:P223/?(banned); [Check for banned Armageddon    - =1 if banned]
+!!UN&(spell)=5:P246/?(banned); [Check for banned View Air       - =1 if banned]
+!!UN&(spell)=3:P247/?(banned); [Check for banned View Earth     - =1 if banned]
+!!UN&(spell)=4:P249/?(banned); [Check for banned Disguise       - =1 if banned]
+
+!!VR(result):S0; [Set to 0 if spell is available]
+!!VR(result)&(banned):S1; [Set to 1 if spell is banned]
+!!VR(result)&(disabled):S2; [Set to 2 if spell is disabled]
+!!VR(result)&(disabled)/(banned):S3; [Set y-94 to 3 if spell is banned and disabled]
+!!VRy-94:S(result);                     [legacy]
 
 Syntax:
 
@@ -255,12 +296,13 @@ Returned Values:
 !#VA(minLvl:x) (maxLvl:x) (spType:x) (schoolBit:x) (restrictBanned:x);
 !#VA(numExclSpells:x) (spell[9]:x);
 
-!!VRy-99:S-1; [Initialize y-99 to -1]
+!!VRy-99:S(NO_SPELL); [Initialize y-99 to -1]
 
 !!if|(minLvl)<0/(minLvl)>5/(maxLvl)<0/(maxLvl)>5/(spType)<0/(spType)>2/(schoolBit)<0/(schoolBit)>15/(restrictBanned)<0/(restrictBanned)>3/(numExclSpells)<0/(numExclSpells)>9;
   ; Set y-99 to 99 for an invalid parameter: mast skip loop
   !!VRy-99:S99;
   !!IF:M^{ERM Error:} FU%(WOG_GENERATE_SPELL) function was called with invalid arguments^;
+  !!FU:E;
 !!en;
 
 ; Do up to 500 loops to find a valid spell number: return in y-99 @daemon_n, what? 500 loops? Hold my beer; 
@@ -268,12 +310,13 @@ Returned Values:
 !!FU(Array_Fill):P(allSpells)/(SPELL_FIRST)/1;
 !!FU(Array_Shuffle):P(allSpells);
 
-!!re (randSpellLoop:y)/0/69;
-  !!if&y-99=-1;                                                          [if no chosen spell]
+!!re (randSpellLoop:y)/(SPELL_FIRST)/(SPELL_LAST_WOG);
+
+  !!if&y-99=(NO_SPELL);                                                  [if no chosen spell]
     !!SN:M(allSpells)/(randSpellLoop)/?i^WOG_main_rand_spell^;           [get rnd spell]
 
     !!if&i^WOG_main_rand_spell^<>(SPELL_TITANS_LIGHTNING_BOLT);          [skip titan]
-      !!if&(numExclSpells);
+      !!if&(numExclSpells)>0;
 
         !!re j/0/(numExclSpells)/1/-1;                                   [if avoid repeat]
           !!if&i^WOG_main_rand_spell^=(spell[j]);                        [check with args]
@@ -290,20 +333,20 @@ Returned Values:
   !!en;
 !!en;
 
-!!FU:E;
+*!FU:E;
 
-!!if&y-99=-1;
-  !!FU:E;
-!!en;
+*!if&y-99=(NO_SPELL);
+  *!FU:E;
+*!en;
 
-!!if&y-99<0|y-99>69;
+*!if&y-99<(SPELL_FIRST)|y-99>(SPELL_LAST_WOG);
   ; generate ERA debug information in folder Debag/Era if y-99 no valid spell id
   ; Attention: y-99 mast be 0...69
   ; igrik (fix - always return valid id spell)
-  !!VRy-99:S99;[check to invalid spell id]
-  !!VRy-99&x3<>1:S(SPELL_MAGIC_ARROW); [x3=0: to any spells: return 15 Magic Arrow]
-  !!VRy-99&x3=1:S(SPELL_VISIONS);   [x3=1: if adventure spells return 2 Visions]
-!!en;
+  *!VRy-99:S99;[check to invalid spell id]
+  *!VRy-99&x3<>1:S(SPELL_MAGIC_ARROW); [x3=0: to any spells: return 15 Magic Arrow]
+  *!VRy-99&x3=1:S(SPELL_VISIONS);   [x3=1: if adventure spells return 2 Visions]
+*!en;
 
 --------------------------------------------------------------------------------
  [Generate Valid Random Spell Number: y-99]
@@ -326,14 +369,13 @@ Returned Values:
   !!FU&y-97<>(spType):E;[If invalid type, set y2 to 1]
 !!en;
 
-!!FU10932:Pi^WOG_main_rand_spell^/?(result:y); * y-94=0 if not banned/disabled/* y-94=1 if banned * y-94=2 if disabled* y-94=3 if banned and disabled
+!!FU(WOG_CHECK_SPELL_BAN):Pi^WOG_main_rand_spell^/?(result:y); * y-94=0 if not banned/disabled/* y-94=1 if banned * y-94=2 if disabled* y-94=3 if banned and disabled
 
 !!if&(result)/(restrictBanned);
   !!FU:E;
 !!en;
 
 !!VRy-99:Si^WOG_main_rand_spell^;  [If spell is valid, set y-99 to spell number: y-99]
-
 
 --------------------------------------------------------------------------------
 
@@ -1247,19 +1289,19 @@ Returned Values:
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
 ** footprint values:  0 = Y, 1 = RY, 2 = YR, 3 = RYR, 4 = other
 
-!!VRy20:S0; [initialize object counter to 0]
-!!UN:P252/?y3; [check if Most Spell Scrolls are replaced option is enabled]
-!!VRy20&y3=1:+1; [add one to object counter]
-!!VRy11&y3=1:Sy20 *7; [number to add to index variable]
-!!VRy10&y3=1:S593 +y11; [new index number]
-!!VRvy10&y3=1:C79/6/0/-1/0/0/0; [gold pile] [table of scroll replacements]
+*!VRy20:S0; [initialize object counter to 0]
+*!UN:P252/?y3; [check if Most Spell Scrolls are replaced option is enabled]
+*!VRy20&y3=1:+1; [add one to object counter]
+*!VRy11&y3=1:Sy20 *7; [number to add to index variable]
+*!VRy10&y3=1:S593 +y11; [new index number]
+*!VRvy10&y3=1:C79/6/0/-1/0/0/0; [gold pile] [table of scroll replacements]
 
-!!VRy20&y3=1:+1; [add one to object counter]
-!!VRy11&y3=1:Sy20 *7; [number to add to index variable]
-!!VRy10&y3=1:S593 +y11; [new index number]
-!!VRvy10&y3=1:C101/0/0/-1/0/0/0; [standard treasure chest]
+*!VRy20&y3=1:+1; [add one to object counter]
+*!VRy11&y3=1:Sy20 *7; [number to add to index variable]
+*!VRy10&y3=1:S593 +y11; [new index number]
+*!VRvy10&y3=1:C101/0/0/-1/0/0/0; [standard treasure chest]
 
-!!FU671&y20>0:P93/-1/0/y20/70; [replace 70% of scrolls]
+*!FU671&y20>0:P93/-1/0/y20/70; [replace 70% of scrolls]
 
 
 
@@ -1296,14 +1338,18 @@ Returned Values:
 !!VRv620:C123/124/126;
 
 !!UN:P143/?y3; [check if New Artifacts options is enabled]
-!!UN&y3=1:A155/3/8; [Set Slava's Ring as "Major" class artifact]
-!!UN&y3=1:A157/3/8; [Set Crimson Shield of Retribution as "Major" class artifact]
-!!UN&y3=1:U5/-1/?v951; [get number of artifacts]
-!!VRy2&y3=1:S0 R5; [starting number for Commander artifact replacement: y2]
-!!VRy4&y3=1:S0 R5; [starting number for Relic artifact replacement: y4]
-!!VRy5&y3=1:S0 R7; [starting number for Major artifact replacement: y5]
-!!VRy6&y3=1:S0 R9; [starting number for Minor artifact replacement: y6]
-!!VRy7&y3=1:S0 R3; [starting number for Combo artifact replacement: y7
+
+!!if&y3=1;
+  !!UN:A(ART_SLAVAS_RING_OF_POWER)/3/(ART_LEVEL_MAJOR); [Set Slava's Ring as "Major" class artifact]
+  !!UN:A(ART_CRIMSON_SHIELD_OF_RETRIBUTION)/3/(ART_LEVEL_MAJOR); [Set Crimson Shield of Retribution as "Major" class artifact]
+  !!UN:U(OBJ_ARTIFACT)/(ANY_OBJ)/?v951; [get number of artifacts]
+  !!VRy2:S0 R5; [starting number for Commander artifact replacement: y2]
+  !!VRy4:S0 R5; [starting number for Relic artifact replacement: y4]
+  !!VRy5:S0 R7; [starting number for Major artifact replacement: y5]
+  !!VRy6:S0 R9; [starting number for Minor artifact replacement: y6]
+  !!VRy7:S0 R3; [starting number for Combo artifact replacement: y7
+!!en;
+
 !!VRv952:S-2; [Initialize v952 to last object for faster UN:U format]
 !!DO677/1/v951/1&y3=1:Py2/y4/y5/y6/y7; [loop through all artifacts on map]
 
@@ -1841,3 +1887,83 @@ Returned Values:
 !!CB1&x1=25:A3/156; [Add an extra Banner to all Dragon Utopias]
 
 ** end of function
+
+; Level 1 & 2 Spells Scrools are replaced by Archer30
+; This script must be executed later than all the classic WoG replacements. Otherwise you won't have spells scrolls replaced by other objects
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^;
+!!UN:P252/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VR(x:y):S-1;                          [setting x-coordinate to -1 will force to start search from scratch]
+
+!!re i;                                 [endless loop]
+  !!UN:U(OBJ_SPELL_SCROLL)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y); [find next spell scroll, (x) = -1 on failure]
+  !!br&(x)<0;                           [exit loop if nothing found]
+
+  !!OB(x)/(y)/(z):U?(objsubtype:y);
+  !!FU(WOG_252_ReplaceSpellScroll):P(x)/(y)/(z)/(objsubtype);
+!!en;
+
+!!SN:D;
+
+!?FU(WOG_252_ReplaceSpellScroll);
+!#VA(x:x) (y:x) (z:x) (spell:x);
+
+; Skip if the spell not supported by SS command
+!!FU|(spell)<(SPELL_FIRST)/(spell)>(SPELL_LAST_WOG):E;
+
+; Check spell level and see if it is a low level spell
+!!SS(spell):L?(level:y);
+
+; Replace with standard treasure chests or gold piles randomly
+!!if&(level)<=2;
+  !!VR(type:y):R0/0/1;
+  ; Remove the spell scroll
+  !!UN:O(x)/(y)/(z)/0;
+
+  !!if&(type)=0;
+    !!FU(WOG_252_GenerateRandomStandardChest):P(x)/(y)/(z);
+  !!el;
+    !!FU(WOG_252_GenerateRandomGoldPile):P(x)/(y)/(z);
+  !!en;
+!!en;
+
+!?FU(WOG_252_GenerateRandomStandardChest);
+!#VA(x:x) (y:x) (z:x);
+!#VA(hasArtifact:y);                    [Bool. 0 for gold or exp, 1 for artifact inside]
+!#VA(subtype:y);                        [If the chest has an artifact, subtype is the artifact ID. Otherwise it is the level of the chest (0~15)]
+
+; Generate default treasure chest at the given location
+!!UN:I(x)/(y)/(z)/(OBJ_TREASURE_CHEST)/0/(OBJ_TREASURE_CHEST)/0/-1/0;
+
+; Change its content according to chance
+!!VR(hasArtifact):S(FALSE);
+!!VR(random:y):R0/0/99;
+
+!!if&(random)<=31;
+  !!VR(subtype):S2;
+!!el&(random)>31/(random)<=63;
+  !!VR(subtype):S3;
+!!el&(random)>63/(random)<=94;
+  !!VR(subtype):S4;
+!!el;
+  !!VR(hasArtifact):S(TRUE);
+  !!UN:J6/(ART_LEVEL_TREASURE)/?(subtype);
+!!en;
+
+!!if&(hasArtifact)<>(TRUE);
+  !!CH(x)/(y)/(z):B(subtype);
+!!el;
+  !!CH(x)/(y)/(z):S1;
+  !!CH(x)/(y)/(z):A(subtype);
+!!en;
+
+!?FU(WOG_252_GenerateRandomGoldPile);
+!#VA(x:x) (y:x) (z:x);
+
+; Generate default gold pile at the given location
+!!UN:I(x)/(y)/(z)/(OBJ_RESOURCE)/(RES_GOLD)/(OBJ_RESOURCE)/(RES_GOLD)/-1/0;
+
+; Change its content according to chance
+!!VR(random:y):R0/0/5;
+!!AR(x)/(y)/(z):Vd(random);             [gold amount = 100 * AR:V value for ]

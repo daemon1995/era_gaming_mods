@@ -199,7 +199,7 @@ ZVSE2
 !!if&(hero)>(NO_HERO);
   !!HE(hero):O?(owner:y);
   !!OW:I(owner)/?(isAi:y);
-  !!FU(hench_ChooseAiHench)|(owner)=(NO_PLAYER)/(isAi):P(hero)/(side); [owner = no player with Random Hero optino]
+  !!FU(hench_ChooseAiHench)&(isAi):P(hero)/(side); [compatibility with Random Hero option - Checking OW:I is enough as we set a temp owner for the random hero]
   !!IF:W(hero);
 
   ; Place the henchman stack
@@ -578,16 +578,30 @@ ZVSE2
 !!VR(henchShots:y):S0;                   [shots]
 !!VR(henchFv:y):S0;                      [fight value]
 
-!!if&(side)=(BATTLE_LEFT);
-  !!VR(stackFirst:y):S(BATTLE_ATTACKER_STACK_FIRST);
-  !!VR(stackLast:y):S(BATTLE_ATTACKER_STACK_LAST);
+; Check if it is possible to pick a henchman from the hero's army
+!!FU(hench_CheckIfHenchIsEligible):P(hero)/?(result:y);
+
+!!if&(result);
+  !!VR(loopFirst:y):S(ARMY_SLOT_FIRST);
+  !!VR(loopLast:y):S(ARMY_SLOT_LAST);
+ ; if it is not possible to pick from the hero's army, pick from the battlefield instead
 !!el;
-  !!VR(stackFirst):S(BATTLE_DEFENDER_STACK_FIRST);
-  !!VR(stackLast):S(BATTLE_DEFENDER_STACK_LAST);
+  !!if&(side)=(BATTLE_LEFT);
+    !!VR(loopFirst):S(BATTLE_ATTACKER_STACK_FIRST);
+    !!VR(loopLast):S(BATTLE_ATTACKER_STACK_LAST);
+  !!el;
+    !!VR(loopFirst):S(BATTLE_DEFENDER_STACK_FIRST);
+    !!VR(loopLast):S(BATTLE_DEFENDER_STACK_LAST);
+  !!en;
 !!en;
 
-!!re i/(stackFirst)/(stackLast);
-  !!BMi:T?(mon:y) N?(qty:y);
+!!re i/(loopFirst)/(loopLast);
+  !!if&(result);
+    !!HE(hero):C0/i/?(mon:y)/?(qty:y);
+  !!el;
+    !!BMi:T?(mon) N?(qty);
+  !!en;
+
   !!VR(flag:y):S(TRUE);                 [Skip not used creatures]
   !!VR(flag)|(mon)<=(NO_MON)/(qty)<=0:S(FALSE);
   !!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE);
@@ -723,13 +737,13 @@ ZVSE2
 !!FU&i^hench_stack_0^<0/i^hench_stack_1^<0:E;
 
 !!MM:D?(mousePosition:y);
-!!BU:E(mousePosition)/?(isAlive:y); check if stack alive at position
+!!BU:E(mousePosition)/?(stack:y); check if stack alive at position
 
-!!if&(mousePosition)>0/(mousePosition)<187/(isAlive)>-1;
+!!if&(mousePosition)>0/(mousePosition)<187/(stack)>(NO_STACK);
+  !!if&i^hench_stack_0^>=0;
+    !!BMi^hench_stack_0^:P?(henchmanPosition:y) F?i;
+    !!VRi:&(MON_FLAG_WIDE);
 
-!!if&i^hench_stack_0^>=0;
-  !!BMi^hench_stack_0^:P?(henchmanPosition:y) F?i;
-  !!VRi:&(MON_FLAG_WIDE);
     !!if&i>0;
       !!VR(wideHenchmanPosition:y):S(henchmanPosition)+1;
 
@@ -737,7 +751,6 @@ ZVSE2
         !!FU(hench_ShowHenchHint):P(BATTLE_LEFT);
         !!FU:E;
       !!en;
-
     !!el&(mousePosition)=(henchmanPosition);
       !!FU(hench_ShowHenchHint):P(BATTLE_LEFT);
       !!FU:E;
@@ -772,6 +785,13 @@ ZVSE2
 !!VRz2:S^%(hint) %(newHint)^;
 !!MM:Mz2;
 
+// Revive the henchman when AI's commander is revived
+!?FU(OnAfterCommanderResurrect)&-(ERM_FLAG_IS_HUMAN);
+!!IF:W(CURRENT_HERO);
+!!VRw119&w118>(NO_MON):S(TRUE);
+
+
+// Enhanced scripts
 !?FU(hench_StackExpBF);
 !#VA(stack:x) (side:x) (hero:x);
 
