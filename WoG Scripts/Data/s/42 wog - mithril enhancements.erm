@@ -2,7 +2,7 @@ ZVSE2
 
 Mithril Enhancements Script v1.4 by Anders Jonsson
 Updated September 14, 2004
-Updated Feb 2022 by Archer30 and daemon_n
+Updated Oct 2022 by Archer30 and daemon_n
 
 Minor updates by Timothy Pulver and QQD
 Mithril Display Scripts by Timothy Pulver
@@ -85,9 +85,6 @@ Flags:
 (1,2,9,10)
 172, 410, 870-875
 
-Timers:
-TM99
-
 Functions:
 FU(WOG_CheckMapRule), FU(WOG_36_UpgradeDwelling)-FU8189
 
@@ -100,7 +97,8 @@ entrance squares. Do not use this with another script that might do the same
 !?FU(WOG_36_Initialization);
 !!UN:P36/?v1;  [Check if Mithril script is enabled: v1]
 !!UN:P149/?v2; [Check if Mithril Display is enabled: v2]
-!!VRi^wog_149_kingdomRMBEnabled^&v2:S(TRUE);
+!!VRi^wog_149_enabled^&v2:S(TRUE);
+
 !!UN:P170/?v3; [Check if Mithril Replacment is enabled: v3]
 !!UN:P171/?v4; [Check if Mithril in Windmills and Gardens is enabled: v4]
 !!UN|v1=1/v2=1/v3=1/v4=1:B0/1;   (Enable Mithril)
@@ -133,52 +131,38 @@ entrance squares. Do not use this with another script that might do the same
 !#FU(WOG_36_Initialization):P;
 
 *** Display Mithril on Rightclick on Kingdom Overview ***
-!?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=(ITEM_ADVMAP_KINGDOM_OVERVIEW_BTN);
-  !!UN:P36/?y1; [Check if Mithril script is enabled: y1]
-  !!UN:P149/?y2; [Check if Mithril Display is enabled: y2]
-  !!FU&y2<>(TRUE):E; [Exit if Mithril Display disabled]
+!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=(ITEM_ADVMAP_KINGDOM_OVERVIEW_BTN)/i^wog_149_enabled^;
+!!CM:R0;
+!!FU(WOG_149_DisplayMithril):P;
 
-  ; Display mithril amount if not disblaed by scripts
-  !!if&i^wog_149_mithrilAmountRMBEnabled^;
-    !!CM:R0; [Disable standard right-click info. for Kingdom Overview button]
+!?FU(WOG_149_DisplayMithril);
+!!UN:P36/?(mithrilEnh:y); [Check if Mithril script is enabled: y1]
+!!OW:C?(player:y)/?(interactPlayer:y); [Store number of current player in y4]
+!!OW:R(interactPlayer)/(RES_MITHRIL)/?y-5; [Store current player's Mithril in y-5]
 
-    !!OW:C?y4; [Store number of current player in y4]
-    !!OW:Ry4/(RES_MITHRIL)/?y-5; [Store current player's Mithril in y-5]
+!!if&y-5=1;
+  !!VRz-1:Sz136005; [Set "bar" if Mithril total is 1: z-1]
+!!el;
+  !!VRz-1:Sz136004; [Set "bars" unless Mithril total is 1: z-1]
+!!en;
 
-    !!if&y-5=1;
-      !!VRz-1:Sz136005; [Set "bar" if Mithril total is 1: z-1]
+[Display current player's Mithril amount in a text box]
+!!if&(mithrilEnh);
+  !!IF:Q2/(PIC_TYPE_RES_MITHRIL)/y-5/(MSG_TYPE_QUESTION)/z136006; [Display Mithril and offer to display price list: Flag 2]
+
+  !!if&2;
+    !!VRz1:S^mithPric.pcx^;  [File and path name for Mithril Price List gif: z1]
+    !!SN:F^PcxPngExists^/z1; [Check if Mithril Price List image is there: v1=True if yes]
+
+    !!if&v1;
+      !!IF:B1/1/0 P1; [Display Mithril price list]
     !!el;
-      !!VRz-1:Sz136004; [Set "bars" unless Mithril total is 1: z-1]
-    !!en;
-
-     [Display current player's Mithril amount in a text box]
-    !!if&y1;
-      !!IF:Q(MSG_TYPE_QUESTION)/(PIC_TYPE_RES_MITHRIL)/y-5/2/z136006; [Display Mithril and offer to display price list: Flag 2]
-    !!el;
-      !!IF:Q(MSG_TYPE_MES)/(PIC_TYPE_RES_MITHRIL)/y-5/1/z136059; [Just display total Mithril if Mithril script is disabled]
-    !!en;
-  ; Set flag 2 to TRUE if displaying mithril amount is disabled, prepare to display mithril price then
-  !!el;
-    !!IF:V2/(TRUE);
-  !!en;
-
-  !!VRz-2:S^mithril_price_list.bmp^; [Store name of price list file in z-2]
-  !!VRz-3:S^..\data\s\pic\%Z-2^;  [File and path name for Mithril Price List gif: z-3]
-  !!UN:J8/2/-3; [Check if Mithril Price List image is there: Flag 1=True if yes]
-
-  !!if&y1/2;
-    !!CM:R0;
-
-    !!if&1;
-      !!IF:B1/-3/0; [Set up dialogue box for displaying Mithril price list]
-      !!IF:P1; [Display Mithril price list]
-    !!el;
-      !!VRz-4:Sz136087; [Set alternate dialogue text for standard dialogue if image file missing]
-      !!VRz-5:Sz136088; [Set 2nd part of alternate dialogue text: z-5]
-      !!VRz-6:Sz136089; [Set 3rd part of alternate dialogue text: z-5]
-      !!IF:Q(MSG_TYPE_MES)/(PIC_TYPE_RES_MITHRIL)/0/1^%Z-4%Z-5%Z-6^; [Display standard dialogue price list if image file missing]
+      !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/0/(MSG_TYPE_MES)^%z136087%z136088%z136089^; [Display standard dialogue price list if image file missing]
     !!en;
   !!en;
+!!el;
+  !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/y-5/(MSG_TYPE_MES)/z136059; [Just display total Mithril if Mithril script is disabled]
+!!en;
 
 *** Display when Mithril is picked up ***
 !?OB(OBJ_RESOURCE)/(RES_MITHRIL)&999;  [Mithril is trigger]
@@ -260,7 +244,7 @@ entrance squares. Do not use this with another script that might do the same
 
   !!if&-9;
     !!FU8185&v1=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/(CURRENT_HERO);
-    !!FU8185&v1=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO);                        [(Monolith (with instruction on which type and what hero))]
+    !!FU8185&v1=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO);                      [(Monolith (with instruction on which type and what hero))]
     !!FU8173&v1=(OBJ_SHRINE_OF_MAGIC_INCANTATION):P;                           [(Shrine level 1)]
     !!FU8174&v1=(OBJ_SHRINE_OF_MAGIC_GESTURE):P;                               [(Shrine level 2)]
     !!FU8175&v1=(OBJ_SHRINE_OF_MAGIC_THOUGHT):P;                               [(Shrine level 3)]
@@ -284,16 +268,20 @@ entrance squares. Do not use this with another script that might do the same
 !!OW:Ty2/?y22;       (Check team)
 !!FU&y21<>y22:E; (abort if not same)
 
-; Check for upgrade of the creature. Don't allow to upgrade if no upgrade or upgrading to a monster stronger than Level 8
+; Check for upgrade of the creature
 !!DW4:M0/?y2/d;
 !!FU(GetUpgradedMonster):Py2/?y8;
 !!FU&y8=(NO_MON):E;
 
-!!MA:F(MON_BLOOD_DRAGON)/?y34;
-!!MA:Fy8/?y30;
+; Exit if the upgraded monster has a different level with the original
+!!MA:Ly2/?y36 Ly8/?y37;
+!!FU&y37<>y36:E;
+
+; Exit if the upgraded monster is stronger than Blood Dragon (weakest Level 8)
+!!MA:Fy8/?y30 F(MON_BLOOD_DRAGON)/?y34;
 !!FU&y30>=y34:E;
 
-; Check if the upgrade is one of the monster of the other slots, exit if does
+; Check if the upgrade is one of the monster of the other slots, exit if positive
 !!re i/1/3;
   !!DW4:Mi/?y35/d;
   !!FU&y8=y35:E;
