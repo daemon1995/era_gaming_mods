@@ -4,7 +4,7 @@ ZVSE2
 ** «Ã»»-¡≈–—≈– ≈–€
 
 ** Option 046 by Timothy Pulver
-** Rewritten by igrik (29.09.2020)
+** Rewritten by Archer30 (Oct 2022)
 
 * Dragon Flies gain the ability to attack without retaliation,
 * cast Berserk on their target, and return after attacking.
@@ -12,29 +12,65 @@ ZVSE2
 ** Attention! The script works if the troops experience is enabled
 
 
-!#DC(WOG_OPT_BERSERKER_FLIES) = 46;
+!#DC(WOG_OPT_BERSERKER_FLIES) = 46;     
 
 
+// Initialization (set No Retaliation flag)
 !?FU(OnAfterErmInited);
-!!UN:P(WOG_OPT_BERSERKER_FLIES)/?(berserker:y) P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y);
+!!UN:P(WOG_OPT_BERSERKER_FLIES)/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!if&(berserker)/(stackExp);
-  !!SN:H^monname^/(MON_DRAGON_FLY)/0/^%T(wog.46.singular)^;  
-  !!SN:H^monname^/(MON_DRAGON_FLY)/1/^%T(wog.46.plural)^; 
-  !!SN:H^monname^/(MON_DRAGON_FLY)/2/?(description:z);
-  !!SN:H^monname^/(MON_DRAGON_FLY)/2/^%(description)%T(wog.46.description)^;
+!!SN:H^monname^/(MON_DRAGON_FLY)/0/^%T(wog.46.singular)^;  
+!!SN:H^monname^/(MON_DRAGON_FLY)/1/^%T(wog.46.plural)^; 
+!!SN:H^monname^/(MON_DRAGON_FLY)/2/?(description:z);
+!!SN:H^monname^/(MON_DRAGON_FLY)/2/^%(description)%T(wog.46.description)^;
 
-  !!MA:X(MON_DRAGON_FLY)/?(flags:y1);   
-  !!VR(flags):|(MON_FLAG_NO_RETALIATION); 
-  !!MA:X(MON_DRAGON_FLY)/(flags);   
+!!MA:X(MON_DRAGON_FLY)/?(flags:y);   
+!!VR(flags):|(MON_FLAG_NO_RETALIATION); 
+!!MA:X(MON_DRAGON_FLY)/(flags);
 
-  !!VR(line:y):S(NULL); initializate y var
-  !!EA(MON_DRAGON_FLY):F102/98/?(line); [Check for Strike & Return/next available bonus line]
-  !!EA(MON_DRAGON_FLY)&(line)>=0:B(line)/1/102/98/1/1/1/1/1/1/1/1/1/1/1; [Give Dragon Flies Strike & Return]
-  !!EA(MON_DRAGON_FLY):F99/59/?(line);  [Check for Berserk casting/next available bonus line]
-  !!EA(MON_DRAGON_FLY)&(line)>=0:B(line)/1/99/59/25/25/25/25/25/25/25/25/25/25/25; [Give Dragon Flies Berserk Casting]
-!!el;
-  !!UN:P(WOG_OPT_BERSERKER_FLIES)/(FALSE);
+// Give Strike and Return with the address of Darkness Dragon's ability
+!?FU(OnBattleStackObtainsTurn);
+!!UN:P(WOG_OPT_BERSERKER_FLIES)/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!BMi^battle_current_stack^:T?(mon:y);
+!!FU(WOG_46_CheckIfMonIsEligible):P(mon)/?(result:y);
+!!UN&(result):C7725156/(UNC_INT)/?i^wog_46_strikeAndReturnMon^ C7725156/(UNC_INT)/(mon);
+
+// Restore Strike and Return modification
+!?FU(OnBattleActionEnd)&i^wog_46_strikeAndReturnMon^>0;
+!!UN:C7725156/(UNC_INT)/i^wog_46_strikeAndReturnMon^;
+!!VRi^wog_46_strikeAndReturnMon^:S0;
+
+// Execute Berserk cast after attack (and retaliation)
+!?FU(WOG_OnAfterMelee);
+!#VA(atkStack:x) (defStack:x);
+
+!!UN:P(WOG_OPT_BERSERKER_FLIES)/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!BM(atkStack):T?(atkMon:y);
+; Check if the attacker has Berserk casting
+!!FU(WOG_46_CheckIfMonIsEligible):P(atkMon)/?(canCastBerserk:y);
+
+; Check the defender's immunity to Berserk
+!!if&(canCastBerserk);
+  !!BM(atkStack):I?(atkSide:y);
+  !!FU(WOG_CheckStackSpellImmunity):P(defStack)/(SPELL_BERSERK)/(atkSide)/?(acceptSpell:y);
+
+  ; Check if it is lucky enough to cast
+  !!if&(acceptSpell);
+    !!VR(random:y):R0/0/99;
+    !!BM(defStack)&(random)<20:P?(pos:y) C(SPELL_BERSERK)/(pos)/(SKILL_BASIC)/1/(FALSE); [20% to cast Berserk with Dragon Flies' melee attack]
+  !!en;
 !!en;
+
+// Funciton to check if the targeted monster is eligible for Strike and Return and Berserk cast (does not work for Pikemen)
+!?FU(WOG_46_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_DRAGON_FLY):S(TRUE);
 
 ** End of Script **

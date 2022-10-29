@@ -7,30 +7,88 @@ ZVSE2
 ** Options       : 822
 
 
-!?FU(OnAfterErmInstructions);
-!!UN:P822/?(block:y) P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y);
+!?FU(OnAfterErmInited);
+!!UN:P822/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!if&(block)/(stackExp);
-  !!EA(MON_ARCTIC_SHARPSHOOTER):F0/?(availSlot:y);
-  !!EA(MON_ARCTIC_SHARPSHOOTER)&(availSlot)>-1:B(availSlot)/1/76/29/50/55/60/65/70/75/80/85/90/95/100;
+; Set new monster descriptions
+!!SN:H^monname^/(MON_WIGHT)/2/?(desc:z);
+!!SN:H^monname^/(MON_WIGHT)/2/^%(desc)%T(es.822.wraithDesc)^;
 
-  !!EA(MON_LAVA_SHARPSHOOTER):F0/?(availSlot:y);
-  !!EA(MON_LAVA_SHARPSHOOTER)&(availSlot)>-1:B(availSlot)/1/76/39/50/55/60/65/70/75/80/85/90/95/100;
+!!SN:H^monname^/(MON_WRAITH)/2/?(desc:z);
+!!SN:H^monname^/(MON_WRAITH)/2/^%(desc)%T(es.822.wraithDesc)^;
 
-  !!EA(MON_WIGHT):F0/?(availSlot:y);
-  !!EA(MON_WIGHT)&(availSlot)>-1:B(availSlot)/1/76/99/0/5/10/15/20/25/30/35/40/45/50;
+!!SN:H^monname^/(MON_ARCTIC_SHARPSHOOTER)/2/?(desc);
+!!SN:T^es.822.shooterDesc^/?(newDesc:z)/^percent^/15;
+!!SN:H^monname^/(MON_ARCTIC_SHARPSHOOTER)/2/^%(desc)%(newDesc)^;
 
-  !!EA(MON_WRAITH):F0/?(availSlot:y);
-  !!EA(MON_WRAITH)&(availSlot)>-1:B(availSlot)/1/76/99/0/5/10/15/20/25/30/35/40/45/50/50;
+!!SN:H^monname^/(MON_LAVA_SHARPSHOOTER)/2/?(desc);
+!!SN:T^es.822.shooterDesc^/?(newDesc:z)/^percent^/20;
+!!SN:H^monname^/(MON_LAVA_SHARPSHOOTER)/2/^%(desc)%(newDesc)^;
 
-  ; Change the HP of Wights and Wraiths
-  !!MA:P(MON_WIGHT)/?(hp:y);
-  !!VR(newHp:y):S(hp) :3 *2;
-  !!MA:P(MON_WIGHT)/(newHp);
+; Reduce the HP of Wights and Wraiths (for balance purpose)
+!!MA:P(MON_WIGHT)/?(hp:y);
+!!VR(newHp:y):S(hp) :3 *2;
+!!MA:P(MON_WIGHT)/(newHp);
 
-  !!MA:P(MON_WRAITH)/?(hp:y);
-  !!VR(newHp:y):S(hp) :6 *5;
-  !!MA:P(MON_WRAITH)/(newHp);
-!!el;
-  !!UN:P822/(FALSE);
+!!MA:P(MON_WRAITH)/?(hp:y);
+!!VR(newHp:y):S(hp) :6 *5;
+!!MA:P(MON_WRAITH)/(newHp);
+
+!?FU(OnStackToStackDamage);
+!#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distancArg:x) (isThoretical:x);
+
+!!UN:P822/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!BM(defStack):T?(mon:y);
+
+; Artic Sharpshoooter and Lava Sharpshooter blocking (15% and 20% damage reduction)
+!!FU(ES_822_CheckMonDamageReduction):P(mon)/?(dmgReduction:y);
+
+!!if&(dmgReduction)>0;
+  !!VR(finalDmg):S100 -(dmgReduction) *(finalDmgConst) :100; [Calculate the Final Damage with Final Damage Constant only (since OnStackToStackDamage triggers multiple times)!]
+  !!FU:E;
 !!en;
+
+; Wight and Wraith blocking (30% chance to evade an attack)
+!!FU&(isThoretical)=(TRUE):E;
+
+!!FU(ES_822_CheckIfMonCanEvadeAttack):P(mon)/?(result:y);
+
+!!if&(result);
+  !!VR(random:y):R0/0/99;
+
+  !!if&(random)<30;
+    !!VR(finalDmg):S0;        [30% chance]
+
+    ; play animation and battle log
+    !!if&i^battle_isVisible^;
+      !!BM(defStack):V84 N?(num:y);
+
+      !!if&(num)<=1;
+        !!SN:H^monname^/(mon)/0/?z1;
+      !!el;
+        !!SN:H^monname^/(mon)/1/?z1;
+      !!en;
+
+      !!SN:T^es.822.battleLog^/?z2/^mon^/z1;
+      !!MM:Sz2;
+    !!en;
+  !!en;
+!!en;
+
+// Funciton to check if the targeted monster is eligible for damage reduction
+!?FU(ES_822_CheckMonDamageReduction);
+!!VR(mon:x) (dmgReduction:x);
+
+!!VR(dmgReduction):S0;
+!!VR(dmgReduction)&(mon)=(MON_ARCTIC_SHARPSHOOTER):S15; [15% damage reduction]
+!!VR(dmgReduction)&(mon)=(MON_LAVA_SHARPSHOOTER):S20; [20% damage reduction]
+
+// Funciton to check if the targeted monster is eligible for evading (not working for monster with sharpshooter's damage reduction)
+!?FU(ES_822_CheckIfMonCanEvadeAttack);
+!!VR(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)|(mon)=(MON_WIGHT)/(mon)=(MON_WRAITH):S(TRUE);

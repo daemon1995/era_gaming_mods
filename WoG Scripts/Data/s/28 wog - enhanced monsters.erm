@@ -4,7 +4,7 @@ ZVSE2
 
 ** By Arstahd
 ** Version: 1.20   updated  October 26, 2004 by Arstahd
-** Updated: Apr 2022 by daemon_n and Archer30
+** Updated: Oct 2022 by daemon_n and Archer30
 ** Special thanks to Fnord & Herman the Weird for help with bug fixing and script maintenance
 ** Local y to y- conversion by Fnord: March 26, 2004
 
@@ -46,7 +46,8 @@ ZVSE2
 
 
 !#UN:P50/?i^wog_50_enabled^;         [Check if Enhanced Monsters is enabled in WoGify Options]
-*#VRi^wog_50_messagerEnabled^&i^wog_50_enabled^:S(TRUE); [enable enable spell attack for Messengers]
+*#VRi^wog_50_messagerEnabled^:S(TRUE); [Enable spell attack ability for messengers - hidden feature by WoG Team]
+!#VRi^wog_50_ghostLossThreshold^:S100 F100/(INT_MAX);  [Minimun ghosts quantity for calculating daily losses, also uses for calculating the precentage of loss]
 
 !?FU(OnAfterErmInstructions)&i^wog_50_enabled^;
 !!FU(WOG_50_SetMonDescription):P;   [add specialty text]
@@ -391,12 +392,6 @@ ZVSE2
 
     !!EA142:F0/?(availSlot);                                         [nomad - get bonus line index]
     !!EA142&(availSlot)>-1:B(availSlot)/1/119/83/1/1/1/1/1/1/1/1/1/1/1;               [set immune to slow]
-
-    ; Boost the age chance for Ghost Dragons and Blood Dragons
-    !!EA154:F0/?(availSlot:y);  
-    !!EA154&(availSlot)>-1:B6/1/99/75/0/0/0/0/5/5/5/10/10/15/20;
-    !!EA69:F0/?(availSlot:y);  
-    !!EA69&(availSlot)>-1:B6/1/99/75/0/0/0/0/5/5/5/10/10/15/20;
   !!en;
 
 ****** special abilities ******
@@ -977,39 +972,39 @@ ZVSE2
 !?FU(OnEveryDay)&i^timerDay^>0/i^wog_50_enabled^;
 !#VA(day:x) (weekDay:x) (once:x) (owner:x) (isAi:x);
 
-!!OW:H(owner)/2/0 W(owner)/?(towns:y);  [store current player heroes amount into v2]
+; Executes the daily loss of Ghosts for every hero and town
+!!OW:H(owner)/2/0 W(owner)/?(townQty:y);  [store current player heroes amount into v2]
 
+; heroes
 !!if&v2;
-  
-  !!re i/1/v2;                          [heroes cycle]
-    !!VR(heroIndex:y):Si+1;             [start is from v2]
+  !!re i/1/v2;                          [hero cycle]
+    !!VR(heroIndex:y):Si+1;
     !!OW:H(owner)/(heroIndex)/i;        [get id into v(heroIndex:y)]
 
     !!re (slot:y)/0/(ARMY_SLOT_LAST);
       !!HEv(heroIndex):C0/(slot)/?(monId:y)/?(monQty:y); [chec for ghosts]
 
-      !!if&(monId)=(MON_GHOST)/(monQty)>10;
-        !!FU(WOG_50_Func_CalcGhostNewNum):P(monQty)/?(result:y);
-        !!HEv(heroIndex):C0/(slot)/d/(result); [chec for ghosts]
+      !!if&(monId)=(MON_GHOST)/(monQty)>i^wog_50_ghostLossThreshold^;
+        !!FU(WOG_50_Func_CalcGhostNewNum):P(monQty)/?(newQty:y);
+        !!HEv(heroIndex):C0/(slot)/d/(newQty); [chec for ghosts]
       !!en;
     !!en;
   !!en;
 !!en;
 
-!!if&(towns);
-  !!re i/0/(towns)/1/-1;                [heroes cycle]
-
-    !!OW:W(owner)/i/?(townId:y);        [get id into v(heroIndex:y)]
-
+; towns
+!!if&(townQty)>0;
+  !!re i/0/(townQty)/1/-1;              [town cycle]
+    !!OW:W(owner)/i/?(townId:y);
     !!CA0/(townId):H0/?(garisonHero:y); [get owner of iterated town, check for garrison hero]
 
-    !!if&(garisonHero)<(HERO_FIRST);
+    !!if&(garisonHero)=(NO_HERO);
       !!re (slot:y)/0/(ARMY_SLOT_LAST);
-
         !!CA0/(townId):M2/(slot)/?(monId:y)/?(monQty:y); [check for ghosts]
-        !!if&(monId)=(MON_GHOST)/(monQty)>10;
-          !!FU(WOG_50_Func_CalcGhostNewNum):P(monQty)/?(result:y);
-          !!CA0/(townId):M2/(slot)/d/(result);          
+
+        !!if&(monId)=(MON_GHOST)/(monQty)>i^wog_50_ghostLossThreshold^;
+          !!FU(WOG_50_Func_CalcGhostNewNum):P(monQty)/?(newQty:y);
+          !!CA0/(townId):M2/(slot)/d/(newQty);          
         !!en;
       !!en;
     !!en;
@@ -1017,19 +1012,11 @@ ZVSE2
 !!en;
 
 !?FU(WOG_50_Func_CalcGhostNewNum);
-!#VA(monQty:x) (result:x);
+!#VA(monQty:x) (newQty:x);
 
-!!VR(twoPerc:y):S(monQty) -1 :50 +1;
-!!VR(result):S(monQty) -(twoPerc); -1 :50 +1;[if more than 10, calculate 2% of stack]
+!!VR(lossCounter:y):S(monQty) :i^wog_50_ghostLossThreshold^ F0/10;
+!!VR(qtyLoss:y):S(monQty) :100 *(lossCounter);
 
-!!re i/100/800;
-
-  !!if&(monQty)>i;
-    !!VR(result): -(twoPerc);
-    !!VRi:*2 -1;
-  !!el;
-    !!br;
-  !!en;
-!!en;
+!!VR(newQty):S(monQty) -(qtyLoss);
 
 ** end of function
