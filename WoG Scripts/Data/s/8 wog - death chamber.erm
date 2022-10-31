@@ -44,7 +44,13 @@ ZVSE2
 
 !#FU(WOG_70_Initialization):P;
 **------------------------------------------------------------------------------
+!?FU(WOG_CreateERMHook)&i^WOG_70_enabled^;
+!!SN:Ex1/1/5936445/(WOG_70_BeforeSpellReport);
 
+!?FU(WOG_70_BeforeSpellReport)&i^WOG_70_casting_death_ripple^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(textPtr:y);
+!!SN:B(textPtr)/d/?(currentText:z);
+!!SN:B(textPtr)/d/^%T(wog.70.name)%(currentText:z)^;
 
 !?OB63/15&1000/i^WOG_70_enabled^=1;  *Triggers when any "Death Chamber" is visited
 !!PO998:N?(visited:y) S?(coeff:y); **Check PO:N value of Death Chamber square
@@ -153,15 +159,23 @@ ZVSE2
   **Code for attributes for the Lich King stacks
   !!VR(hp:y):Si^WOG_70_BattleDifficulty^ +*200 +400;
   !!VR(statsBon:y):Si^WOG_70_BattleDifficulty^ *2;
-  !!BM21:S50 H(hp) R5000 Fd|(MON_FLAG_ATTACKS_TWICE) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon);    **Lich King has 50 speed for duration of combat && endless retaliations each round
+
+  **Lich King has 50 speed for duration of combat && endless retaliations each round
+  
+  !!BM(BATTLE_DEFENDER_STACK_FIRST):S50 H(hp) R5000 Fd|(MON_FLAG_ATTACKS_TWICE) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon) Z?(struct:y);
+
+  !!UN:C(struct)/136/4/?(descPtr:y); 
+  !!SN:B(descPtr)/d/^%T(wog.70.name)^;set new stack creature name
 
   !!if&(statsBon)>4;
-    !!BM21:Fd|(MON_FLAG_FLYER) Fd(MON_FLAG_NO_MELEE_PENALTY) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):Fd|(MON_FLAG_FLYER) Fd(MON_FLAG_NO_MELEE_PENALTY) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
+    
+    !!if&(statsBon)>6;
+      !!BM(BATTLE_DEFENDER_STACK_FIRST):Fd|(MON_FLAG_NO_RETALIATION) Fd(MON_FLAG_ATTACKS_ALL_AROUND) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
+    !!en;
   !!en;
 
-  !!if&(statsBon)>6;
-    !!BM21:Fd|(MON_FLAG_NO_RETALIATION) Fd(MON_FLAG_ATTACKS_ALL_AROUND) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
-  !!en;
+
 
 *===================================================================================
 **Begin In-battle code for battle with Power Lich King
@@ -175,12 +189,12 @@ ZVSE2
   ***********************************************************************************
   *n Wraiths per stack summoned if x position
   !!VR(wraiths:y):S(dreads:y) *2-1;
-  !!BU:S61/(wraiths:y)/6/1/-1/0 S61/(wraiths:y)/8/1/-1/0 S61/(wraiths:y)/10/1/-1/0;
-  !!BU:S61/(wraiths:y)/176/1/-1/0 S61/(wraiths:y)/178/1/-1/0 S61/(wraiths:y)/180/1/-1/0;
+  !!BU:S(MON_WRAITH)/(wraiths:y)/6/1/-1/0 S(MON_WRAITH)/(wraiths:y)/8/1/-1/0 S(MON_WRAITH)/(wraiths:y)/10/1/-1/0;
+  !!BU:S(MON_WRAITH)/(wraiths:y)/176/1/-1/0 S(MON_WRAITH)/(wraiths:y)/178/1/-1/0 S(MON_WRAITH)/(wraiths:y)/180/1/-1/0;
   ************************************************************************************
   **Additional Lich stack summoned between the crypts depending upon x position
   !!VR(liches:y):S(dreads:y) -1 *10;
-  !!BU:S64/(liches:y)/94/1/-1/0;
+  !!BU:S(MON_LICH)/(liches:y)/94/1/-1/0;
   !!FU(WOG_231_SetBonuses):P;
 
 !?FU(OnAfterTacticsPhase);
@@ -190,30 +204,33 @@ ZVSE2
 !!VRi^WOG_70_BattleRound^:+1;
 
 !?FU(OnBeforeBattleAction)&i^WOG_70_BattleDifficulty^/i^WOG_70_BattleRound^>=0/i^battle_acting_stack^=21;/x1=21;
-  !!BM21:P?p; **Power Lich King casts "Death Ripple"
-
+  !!BM(BATTLE_DEFENDER_STACK_FIRST):P?p Z?s; **Power Lich King casts "Death Ripple"
   !!re i/0/i^WOG_70_BattleDifficulty^/1/-1;
     !!VR(power:y):Si %2 +1 +i^WOG_70_BattleDifficulty^-1;
-    !!VR(skill:y):S(power) F1/3;
-    !!BM21:C(SPELL_DEATH_RIPPLE)/p/(power)/(skill)/1; **Power Lich King casts "Death Ripple"
+    !!VR(schoolLvl:y):S(power) F1/3;
+
+    !!VRi^WOG_70_casting_death_ripple^:S1;
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_DEATH_RIPPLE)/p/(schoolLvl)/(power)/0; **Power Lich King casts "Death Ripple"
+    !!VRi^WOG_70_casting_death_ripple^:S0;
+
   !!en;
 
   **Code to summon additional Lich stacks onto battlefield during second round
   !!if&i^WOG_70_BattleRound^=1;
     !!VRk:R0/1/10 Sdi^WOG_70_BattleDifficulty^; T10;
 
-    !!BM21:C64/60/3/3/0;**Lich King removes the 4 huge Crypts closing up the battlefield
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_REMOVE_OBSTACLE)/60/3/3/0;**Lich King removes the 4 huge Crypts closing up the battlefield
 
-    !!BU:S64/k/60/1/-1/1;
+    !!BU:S(MON_LICH)/k/60/1/-1/1;
 
-    !!BM21:C64/128/3/3/0;
-    !!BU:S64/k/128/1/-1/1;
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_REMOVE_OBSTACLE)/128/3/3/0;
+    !!BU:S(MON_LICH)/k/128/1/-1/1;
 
-    !!BM21:C64/90/3/3/0;
-    !!BU:S64/k/90/1/-1/1;
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_REMOVE_OBSTACLE)/90/3/3/0;
+    !!BU:S(MON_LICH)/k/90/1/-1/1;
 
-    !!BM21:C64/98/3/3/0;
-    !!BU:S64/k/98/1/-1/1;
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_REMOVE_OBSTACLE)/98/3/3/0;
+    !!BU:S(MON_LICH)/k/98/1/-1/1;
   !!en;
 
   !!if&i^WOG_70_BattleRound^>1;
@@ -243,10 +260,10 @@ ZVSE2
 
 !!if&i^battle_acting_side^=(BATTLE_RIGHT);
   !!BMi^battle_acting_stack^:G(SPELL_FIRE_SHIELD)/?(dur:y)/?(power:y) P?(pos:y); [**Get FIRE SHIELD info from current stack]
-  !!BM21&(dur:y)=0/(power:y)=1:C(SPELL_FIRE_SHIELD)/(pos:y)/(addPow:y)/1/0;               [**Power Lich King casts BASIC FIRE SHIELD]
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(SPELL_FIRE_SHIELD)/(pos:y)/(addPow:y)/1/0;               [**Power Lich King casts BASIC FIRE SHIELD]
 
   !!BMi^battle_acting_stack^:G(SPELL_COUNTERSTRIKE)/?(dur:y)/?(power:y);         [**Get FIRE SHIELD info from current stack]
-  !!BM21&(dur:y)=0/(power:y)=1:C(SPELL_COUNTERSTRIKE)/(pos:y)/(addPow:y)/1/0;             [**Power Lich King casts BASIC FIRE SHIELD]
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(SPELL_COUNTERSTRIKE)/(pos:y)/(addPow:y)/1/0;             [**Power Lich King casts BASIC FIRE SHIELD]
 !!el;
   
   !!if&i^WOG_70_BattleDifficulty^=1;
@@ -265,6 +282,6 @@ ZVSE2
   !!en;
 
   !!BMi^battle_acting_stack^:G(spell)/?(dur:y)/?(power:y) P?(pos:y);             [**Get FIRE SHIELD info from current stack]
-  !!BM21&(dur:y)=0/(power:y)=1:C(spell)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
-  !!BM21:C(SPELL_FIREBALL)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(spell)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
+  !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_FIREBALL)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
 !!en;
