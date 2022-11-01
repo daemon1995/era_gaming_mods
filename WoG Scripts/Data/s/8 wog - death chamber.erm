@@ -1,10 +1,11 @@
 ZVSE2
 
-***DEATH CHAMBER 10.0**** (by Rich Reed a.k.a. "Space8999")
+***DEATH CHAMBER 20.0**** (by Rich Reed a.k.a. "Space8999")
 
 ***UPDATED:  August 18, 2004
 
 ***Rewritten with ERM 2.0:  August 2, 2022 by daemon_n
+***UPDATED November 1, 2022 by daemon_n
 
 **This script allows for heroes to visit the new WoG structure in the Castle
 **Objects in the Map Editor that resembles a pile of skulls (it is the 7th
@@ -25,24 +26,17 @@ ZVSE2
 *
 
 ; To-do:
-; Fix hint text displaying whether the CB has been visited even if the player has never visited it before
-; Fix the name of the Undead King not being "Undead King" %T(wog.70.name)
-
+; eat some carrots
 
 **------------------------------------------------------------------------------
 
 **Set up Death Chamber structure
 !?FU(WOG_70_Initialization);
-!!UN:P70/?i^WOG_70_enabled^; ** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled
-
-!!if&i^WOG_70_enabled^;
-  !!VRz890:S^%T(wog.70.objName) %T(wog.notVisited)^;z170000;
-  !!HT63/15:P0/890;
-  !!VRz891:S^%T(wog.70.objName) %T(wog.visited)^;Sz170001;
-  !!HT63/15:P1/891;
-!!en;
+!!UN:P(WOG_OPT_DEATH_CHAMBER)/?i^WOG_70_enabled^; ** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled
 
 !#FU(WOG_70_Initialization):P;
+
+
 **------------------------------------------------------------------------------
 !?FU(WOG_CreateERMHook)&i^WOG_70_enabled^;
 !!SN:Ex1/1/5936445/(WOG_70_BeforeSpellReport);
@@ -53,9 +47,12 @@ ZVSE2
 !!SN:B(textPtr)/d/^%T(wog.70.name)%(currentText:z)^;
 
 !?OB63/15&1000/i^WOG_70_enabled^=1;  *Triggers when any "Death Chamber" is visited
-!!PO998:N?(visited:y) S?(coeff:y); **Check PO:N value of Death Chamber square
+!!PO998:S?(coeff:y); **Check PO:N value of Death Chamber square
 
-!!if&(visited);
+!!FU(WOG_AdvMgr_SetObjectAsVisited):Pv998/v999/v1000/i^timerOwner^;
+!!PM998:V?(notVisited:y); Pi^timerOwner^/?(bb:y) Pi^timerOwner^/1 ;P1/0;
+
+!!if&(notVisited)=(FALSE);
   !!IF:M1/^%T(wog.70.visited)^;
 !!el;
   !!IF:Q3/21/65/2/^%T(wog.70.greeting)^;
@@ -116,7 +113,7 @@ ZVSE2
       !!IF:Q3/(RES_GOLD)/(gold)/(picType[0])/(value[0])/(picType[1])/(value[1])/1/(msg);
       !!HE-1:C2/(MON_GHOST)/(ghosts)/1;  **Give 60 Ghosts to current hero
 
-      !!PO998:N1;
+      !!PM998:V0;                                                                       [set obj is visited]
       !!UN:P235/?(cbGrowth:y);
 
       !!if&(cbGrowth);
@@ -285,3 +282,16 @@ ZVSE2
   !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(spell)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
   !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_FIREBALL)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
 !!en;
+
+
+// Right-clicking dialogue
+!?FU(OnAdventureMapRightMouseClick);
+!!UN:P(WOG_OPT_DEATH_CHAMBER)/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+!!FU(WOG_NewWogObjects_SetPopUp):Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/15/(WOG_OPT_DEATH_CHAMBER);
+
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
+!!UN:P(WOG_OPT_DEATH_CHAMBER)/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+!!FU(WOG_NewWogObjects_SetHint):P(x)/(y)/(z)/15/(WOG_OPT_DEATH_CHAMBER);
