@@ -1,7 +1,6 @@
 ZVSE2
 
 ** MONOLITH TOLL
-** окюрмше лнмнкхрш
 
 * Option 065 by Steven Lynch (script65)
 
@@ -12,27 +11,29 @@ ZVSE2
 
 * The cost to use a two-way lith is 100 gold per week for human players
 * and 50 gold per week for AI players, but if the AI has no gold, it will still be able to use the lith.
-
+** updated a bit by daemon_n
 
 !?OB(OBJ_MONOLITH_TWO_WAY); [Trigger for stepping on any Two-Way Monolith]
 !!UN:P65/?y1;             [check if script enabled]
 !!FU&y1<>1:E;             [exit, if script not enabled]
 
 !!OB998:S;                [Disable Two-Way Monoliths until conditions are proven]
-!!VRy2:Sc-1;              [Calculate the number of days minus 1]
-!!VRy2::7 +1;             [Calculate number of complete weeks by dividing by 7 and then adding 1]
-!!VRy3&1000:Sy2 *100;     [Calculate cost of lith transport for human players (100 gold per complete week per use)]
-!!VRy3&-1000:Sy2 *50;     [Calculate cost of lith transport for AI players (50 gold per complete week per use)]
-!!IF:V1/0;                [reset vlag 1]
-!!IF&1000:Q1/6/y3/2/z165000; [Question, which only applies to human players]
-!!OW:R-1/6/?y1;           [How much gold does the player have?]
-!!VRy4:Sy3;               [Use y4 separately to y3 so that y4 stays as a positive number, and greater, less than or equal to functions can be performed on y1]
-!!VRy3:*-1;               [Multiply by -1 so that y3 can be added in the next step]
-!!OW&1/y1>=y4:R-1/6/dy3;  [If player answered Yes in the IF question, and player's total gold is equal or greater to the amount requested, activate liths for one use]
-!!OW&-1000/y4>y1:R-1/6/0; [If the player is AI prevent its gold from becoming less than zero]
-!!OW&-1000/y1>=y4:R-1/6/dy3; [Take away AI gold as long as it has enough gold to take]
-!!OB998&1/y1>=y4:R;       [If the player answered Yes in the IF question, and has enough gold, activate liths for one use]
-!!IF&1/y1<y4:M1/z165001;  [Message if the player said yes but doesn't have enough gold]
-!!OB998&-1000:R;          [If the player is AI, let it use the liths regardless as it doesn't know what to do if it can't use a lith. The AI player will still have lost the remainder of any fee that it had in its treasury]
+
+!!VR(cost:y):Si^timerIsAi^ *-50 +100 *i^timerWeek^;
+!!IF:V1/1;                [reset vlag 1]
+!!OW:R-1/(RES_GOLD)/?(playerGold:y);           [How much gold does the player have?]
+
+!!if&(ERM_FLAG_IS_HUMAN)/(playerGold)>=(cost);
+  !!IF:Q1/(RES_GOLD)/(cost)/(MSG_TYPE_QUESTION)/^%T(wog.65.question)^; [Question, which only applies to human players]
+!!el&(ERM_FLAG_IS_HUMAN);
+  !!IF:Q1/(RES_GOLD)/(cost)/(MSG_TYPE_MES)/^%T(wog.65.no_gold)^ V1/0;  [Message if the player said yes but doesn't have enough gold]
+!!en;
+
+!!if&1;
+  !!VR(cost):F0/(playerGold);
+  !!OW:R-1/(RES_GOLD)/d-(cost);
+  !!OB998:R;                [Disable Two-Way Monoliths until conditions are proven]
+!!en;
+
 
 ** End of Script **
