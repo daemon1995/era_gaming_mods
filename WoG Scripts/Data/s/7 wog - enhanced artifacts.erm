@@ -8,13 +8,14 @@ ZVSE2
 ** September 16, 2004 to correct some y variables that should have been y- variables.
 ** Special thanks to Fnord for help with bug fixing and script maintenance
 ** Artifact descriptions transferred to script75 on Jul. 18. 2004 by Hermann the Weird
+** Updated Nov 2022 by Archer30 for new 
 
 ** Variables Used: i
 ** V variables:    v998, v7057-v7079,  v7130-v7134
 ** Z variables:    z1-z4
 ** Y Variables:    y1-y10
 ** Flags Used:     76
-** Functions Used: 7030-7039
+** Functions Used: 7030-7038
 ** Timers Used: 51
 
 
@@ -540,7 +541,7 @@ ZVSE2
 
 ** start of object trigger - monsters
 
-!?OB54&i^wog_71_enabled^;                                      [object trigger - monsters]
+!?OB(OBJ_MONSTER)&i^wog_71_enabled^;                 [object trigger - monsters]
 !!IF:V76/0;                                          [reset flag 76]
 !!VRv7130:Cv998/v999/v1000;                          [copy position to v7130/v7131/v7132]
 !!MO7130:R?v7059/1;                                  [get aggression level]
@@ -556,38 +557,59 @@ ZVSE2
 !!IF&v7059<>y-1:V76/1;                               [set flag 76 to true - aggression changed]
 ** end of object trigger - monsters
 
-**  object trigger - post visit - Centaur's Axe
-!$OB5/7&i^wog_71_enabled^;
-!!FU7039:P1/13/25/19;
-**  object trigger - post visit - Shield of the Dwarven Lords
-!$OB5/13&i^wog_71_enabled^;
-!!FU7039:P1/7/25/19;
-**  object trigger - post visit - Breastplate of Petrified Wood
-!$OB5/25&i^wog_71_enabled^;
-!!FU7039:P1/7/13/19;
-**  object trigger - post visit - Helm of the Alabaster Unicorn
-!$OB5/19&i^wog_71_enabled^;
-!!FU7039:P1/7/13/25;
-
-**  object trigger - post visit - Statesman's Medal
-!$OB5/66&i^wog_71_enabled^;
-!!FU7039:P2;
-**  object trigger - post visit - Diplomat's Ring
-!$OB5/67&i^wog_71_enabled^;
-!!FU7039:P2;
-**  object trigger - post visit - Ambassador's Sash
-!$OB5/68&i^wog_71_enabled^;
-!!FU7039:P2;
-
-
-** function to check for combo artifacts
-!?FU7039;   x1= switch
-
-!!HE-1&x1=1:A2/7/?y1/?y2 A2/13/?y1/?y3 A2/25/?y1/?y4 A2/19/?y1/?y5;  [see if hero has Centaur's Axe, Shield of the Dwarven Lords, Breastplate of Petrified Wood, Helm of the Alabaster Unicorn]
-!!HE-1&x1=2:A2/66/?y1/?y2 A2/67/?y1/?y3 A2/68/?y1/?y4;  [see if hero has Statesman's Medal, Diplomat's Ring, Ambassador's Sash]
-
-!!if&1000;
-  !!IF&x1=1/y2>0/y3>0/y4>0:N8/7/8/13/8/19/8/25;
-  !!IF&x1=1/y2>0/y3>0/y4>0:N1/z171024;
-  !!IF&x1=2/y2>0/y3>0/y4>0:Q2/8/66/8/67/8/68/1/z171025;
+; Trigger for equipping new combination artifact pieces
+; Note: When checking HE:A2 value OnEquipArt, the artifact being equipped is not counted
+!?FU(OnEquipArt)&i^wog_71_enabled^/1000;
+!!if|v998=(ART_CENTAUR_AXE)/v998=(ART_SHIELD_OF_THE_DWARVEN_LORDS)/v998=(ART_BREASTPLATE_OF_PETRIFIED_WOOD)/v998=(ART_HELM_OF_THE_ALABASTER_UNICORN);
+  !!FU(WOG_71_ShowCombiArtInfo):P0/v998;
+!!el|v998=(ART_STATESMANS_MEDAL)/v998=(ART_DIPLOMATS_RING)/v998=(ART_AMBASSADORS_SASH);
+  !!FU(WOG_71_ShowCombiArtInfo):P1/v998;
 !!en;
+
+; Note: It is not possible to declare two different array lengths in the same function, thus numCombiArtPieces has to be used instead of combiArtPieces[SIZE]
+** function to check for combo artifacts
+!?FU(WOG_71_ShowCombiArtInfo);
+!#VA(combiArt:x) (equippingArt:x);
+!#VA(combiArtPieces[4]:y);
+
+!!if&(combiArt)=0;
+  !!VR(combiArtPieces):C(ART_CENTAUR_AXE)/(ART_SHIELD_OF_THE_DWARVEN_LORDS)/(ART_BREASTPLATE_OF_PETRIFIED_WOOD)/(ART_HELM_OF_THE_ALABASTER_UNICORN);
+  !!VR(numCombiArtPieces:y):S4;
+!!el;
+  !!VR(combiArtPieces):C(ART_STATESMANS_MEDAL)/(ART_DIPLOMATS_RING)/(ART_AMBASSADORS_SASH);
+  !!VR(numCombiArtPieces):S3;
+!!en;
+
+!!re i/0/(numCombiArtPieces)/1/-1;
+  !!co&(combiArtPieces[i])=(equippingArt); [skip HE:A2 checking if the artifact is the one being equipped since HE:A2 would not count it in]
+
+  !!HE(CURRENT_HERO):A2/(combiArtPieces[i])/?(backpacked:y)/?(equipped:y);
+  !!br&(equipped)<=0;
+!!en;
+
+!!if&i=(numCombiArtPieces);             [if the loop wasn't broken, i equals to numCombiArtPieces eventually]
+  !!if&(combiArt)=0;
+    !!IF:N8/7/8/13/8/19/8/25 N1/z171024;[The Garb of the Forest Lord]
+  !!el;
+    !!IF:Q2/8/66/8/67/8/68/1/z171025;   [The Vestments of Authority]
+  !!en;
+!!en;
+
+; Add extra description to the set pieces of The Garb of the Forest Lord and The Vestments of Authority
+; This must be executed as late as possible
+!?FU(OnAfterErmInited)&i^wog_71_enabled^;
+!!FU(WOG_71_SetUpCombiArtDesc):P0/(ART_CENTAUR_AXE);
+!!FU(WOG_71_SetUpCombiArtDesc):P0/(ART_SHIELD_OF_THE_DWARVEN_LORDS);
+!!FU(WOG_71_SetUpCombiArtDesc):P0/(ART_BREASTPLATE_OF_PETRIFIED_WOOD);
+!!FU(WOG_71_SetUpCombiArtDesc):P0/(ART_HELM_OF_THE_ALABASTER_UNICORN);
+
+!!FU(WOG_71_SetUpCombiArtDesc):P1/(ART_STATESMANS_MEDAL);
+!!FU(WOG_71_SetUpCombiArtDesc):P1/(ART_DIPLOMATS_RING);
+!!FU(WOG_71_SetUpCombiArtDesc):P1/(ART_AMBASSADORS_SASH);
+
+!?FU(WOG_71_SetUpCombiArtDesc);
+!#VA(combiArt:x) (art:x);
+
+!!SN:H^art^/(art)/1/?(desc:z);
+!!SN:T^wog.71.combiDesc%(combiArt)^/?(combiDesc:z);
+!!SN:H^art^/(art)/1/^%(desc)%(combiDesc)^;
