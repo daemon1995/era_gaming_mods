@@ -48,15 +48,24 @@ ZVSE2
  
 -----------------------------------Init-----------------------------------------
 
+; Issues:
+; SN:H^-spec^ should be replaced by SN:H^spec^/i/2/?(origDesc:z) as -spec breaks all the changes from other scripts
+; Mysticism and Resistance spec description should be corrected each time the hero levels up 
+
+
+*#UN:P39/1;                             [TESTING ONLY!]
 
 !#UN:P39/?i^wog_39_enabled^;
+!#VRi^wog_39_monSpecEnabled^&i^wog_39_enabled^:S(TRUE); [variable for controlling whether monster specs are enabled]
 
 !?FU(OnAfterErmInited)&i^wog_39_enabled^; [initialize of heroes w28-w32]
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
   !!HEi:X?(specType:y)/?(specSubtype:y);
 
   !!if|(specType)=1/(specType)=4;
-    !!if&(specSubtype)<>(MON_BALLISTA);;
+    !!if&(specSubtype)<>(MON_BALLISTA);
+      !!co&i^wog_39_monSpecEnabled^<>(TRUE);
+
       !!HEi:X1/?(monId:y);
       !!FU(WOG_39_GetMonSpecText):Pi/(monId)/?(msg:z);
       !!SN:H^spec^/i/2/(msg);
@@ -94,7 +103,7 @@ ZVSE2
   !!HE(CURRENT_HERO):N?(heroId:y);
   !!HE(heroId):X?(specType:y)/?(specSubtype:y);
 
-  !!if&(specType)=1/(specSubtype)<>(MON_BALLISTA);
+  !!if&(specType)=1/(specSubtype)<>(MON_BALLISTA)/i^wog_39_monSpecEnabled^;
     !!HE(heroId):X?(specType:y)/?(monId:y);
     !!FU(WOG_39_GetMonSpecText):P(heroId)/(monId)/?(txt:z);
     !!SN:H^spec^/(heroId)/2/(txt:z);
@@ -109,6 +118,7 @@ ZVSE2
 
 !?FU(WOG_39_GetSpellBySkill);
 !#VA(skillId:x) (spellID:x) (isBuf:x);
+
   !!VR(spellID):S(NO_SPELL);
   !!VR(isBuf):S(NO_SPELL);
 
@@ -175,7 +185,7 @@ ZVSE2
 
 
 ----------------------------------Before battle---------------------------------
-; The timing is a bit late to be able to boost the stats of henchmen
+; The timing is later than OnSetupBattlefield in order to be compatible with henchmen
 !?FU(OnBattlefieldVisible)&i^wog_39_enabled^;/i^battle_isNetwork^=(FALSE);
 !#VA(add[2]:y) (remove[2]:y);
 
@@ -217,7 +227,7 @@ ZVSE2
     !!CO(heroId):B1/14/1;     //commanders of Navigation heroes can fly
     !!VR(result):S(TRUE);
   !!en;
-!!el&(specType)=1/(specSkill:y)=(MON_BALLISTA);
+!!el&(specType)=1/(specSkill)=(MON_BALLISTA);
   !!CO(heroId):B1/4/1; //commanders of Ballista heroes can shoot
 !!en;
 
@@ -230,10 +240,10 @@ ZVSE2
 
 !!if&(specType:y)=0;
   !!FU(WOG_39_GetSpellBySkill):P(specSkill)/?(spellID:y)/?(isBuf:y);
+
   !!if&(spellID)<>(NO_SPELL);
     !!VR(oppSide:y)&(isBuf):S(side);
     !!FU(WOG_39_SetCreatureBuffs):P(side)/(oppSide)/(spellID)/5;
-
   !!el&(specSkill)=(SKILL_EAGLE_EYE);
     !!FU(WOG_39_AddCreatureFlags):P(side)/1/(MON_FLAG_FLYER);
   !!el&(specSkill)=(SKILL_MYSTICISM);
@@ -258,6 +268,7 @@ ZVSE2
 
 !?FU(WOG_39_AddCreatureFlags);
 !#VA(side:x) (maxLevel:x) (flag:x);
+
   !!VR(start:y):S(side) *(BATTLE_STACKS_PER_SIDE);
   !!VR(end:y):S(start) +20;
 
@@ -395,11 +406,12 @@ ZVSE2
 
 
 
-!?FU(WOG_CreateERMHook)&i^wog_39_enabled^;
+!?FU(WOG_CreateERMHook)&i^wog_39_enabled^/i^wog_39_monSpecEnabled^;
 !!SN:Ex1/1/5137685/(WOG_GetHeroSpecMon);
 
 !?FU(WOG_39_GetHeroMonSpec);
 !#VA(heroId:x) (monLvl:x) (attack:x) (defense:x) (damage:x) (bonusHp:x);
+
   !!VR(damage):S(monLvl) +1;
   !!HE(heroId):E?s/?(level:y);
   !!VR(attack):S(level) :(damage) *5;*(coef);S(int);

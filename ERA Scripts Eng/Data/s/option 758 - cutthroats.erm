@@ -29,19 +29,23 @@ ZVSE2
 !?FU(OnBeforeBattleUniversal);
 ; Initialise variable - This must to be executed regardless of the option
 !!VRi^es_758_defStack^:S(NO_STACK);
+!!VRi^es_758_defStack^:S(NO_STACK);
 
 // Store defending stack ID if it is Rogue attacking another stack
+; Skipping Assassin stack (option 795) and stack that has granted morale once this turn
 !?FU(OnBeforeBattleAction)&i^battle_acting_stack^<>i^opt795.11.as^;
 !!UN:P758/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
 !!BG:A?(action:y);
-!!BMi^battle_acting_stack^:T?(type:y);
 
 !!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
-  !!if&(type)=(MON_ROGUE);
+  !!BMi^battle_acting_stack^:T?(type:y) F?(flags:y);
+  !!VR(moraled:y):S(flags) &(MON_FLAG_MORALE) B;
+
+  !!if&(type)=(MON_ROGUE)/(moraled)<>(TRUE);
     !!BG:E?(defStack:y);
-    !!VRi^es_758_defStack^&(defStack)>(NO_MON):S(defStack);
+    !!VRi^es_758_defStack^&(defStack)>(NO_STACK):S(defStack);
   !!en;
 !!en;
 
@@ -52,7 +56,7 @@ ZVSE2
 
 !!if&(defNum)<=0;
   ; Remove the acted flag so cutthroat can act again
-  !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ACTED);
+  !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ACTED) Fd(MON_FLAG_MORALE);
 
   ; Show battle log and play animation/sound
   !!if&i^battle_isVisible^;
