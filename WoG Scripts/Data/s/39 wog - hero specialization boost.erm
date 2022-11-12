@@ -48,12 +48,6 @@ ZVSE2
  
 -----------------------------------Init-----------------------------------------
 
-; Issues:
-; SN:H^-spec^ should be replaced by SN:H^spec^/i/2/?(origDesc:z) as -spec breaks all the changes from other scripts
-; Mysticism and Resistance spec description should be corrected each time the hero levels up 
-
-
-*#UN:P39/1;                             [TESTING ONLY!]
 
 !#UN:P39/?i^wog_39_enabled^;
 !#VRi^wog_39_monSpecEnabled^&i^wog_39_enabled^:S(TRUE); [variable for controlling whether monster specs are enabled]
@@ -73,28 +67,33 @@ ZVSE2
       !!FU(WOG_39_SetNPCBonuses):Pi/?(result:y);
 
       !!if&(result);
-        !!SN:H^-spec^/i/2/^^ H^spec^/i/2/?(msg) H^spec^/i/2/^%(msg)%T(wog.39.monster.146)^;
+        !!SN:H^spec^/i/2/?(msg) H^spec^/i/2/^%(msg)%T(wog.39.monster.146)^;
       !!en;
     !!en;
   !!el&(specType)=3;
     !!FU(WOG_39_GetSpellSpecText):Pi/?(result)/?(msg);
 
     !!if&(result);
-      !!SN:H^-spec^/i/2/^^ H^spec^/i/2/?z2 H^spec^/i/2/^%z2%(msg)^;
+      !!SN:H^spec^/i/2/?(origDesc:z) H^spec^/i/2/^%(origDesc)%(msg)^;
     !!en;
   !!el&(specType)=0;
     !!FU(WOG_39_SetNPCBonuses):Pi/?(result);
 
     !!if&(result);
       !!SN:T^wog.39.skill.%(specSubtype)^/?(msg);
-      !!SN:H^-spec^/i/2/^^ H^spec^/i/2/?z2 H^spec^/i/2/^%z2%(msg)^;
+      !!SN:H^spec^/i/2/?(origDesc) H^spec^/i/2/^%(origDesc)%(msg)^;
       !!co;
     !!en;
 
     !!FU(WOG_39_GetSkillSpecText):Pi/(specSubtype)/?(result)/?(msg);
 
     !!if&(result);
-      !!SN:H^-spec^/i/2/^^ H^spec^/i/2/?z2 H^spec^/i/2/^%z2%(msg)^;
+      !!SN:H^spec^/i/2/?(origDesc);
+
+      ; Set the original specialty length in globals vars if the hero specialise in Mysticism or Resistance, as we need to update spec text on leveling up later
+      !!SN|(specSubtype)=(SKILL_MYSTICISM)/(specSubtype)=(SKILL_RESISTANCE):K(origDesc)/?i^wog_39_origSpecLength_%i^;
+
+      !!SN:H^spec^/i/2/^%(origDesc)%(msg)^;
     !!en;
   !!en;
 !!en;
@@ -112,7 +111,11 @@ ZVSE2
       !!HE(heroId):E?y99/?l B0/?(heroName:z);
       !!VRl:*3 +9;
       !!SN:T^wog.39.skill.%(specSubtype)^/?(str:z)/^heroName^/(heroName)/^mana^/l;(spellName);
-      !!SN:H^-spec^/(heroId)/2/^^ H^spec^/(heroId)/2/?z1 H^spec^/(heroId)/2/^%z1%(str)^;
+
+      ; Get the original spec string by cutting the current one
+      !!SN:H^spec^/(heroId)/2/?(oudatedDesc:z); 
+      !!FU(Substr):P(oudatedDesc)/0/i^wog_39_origSpecLength_%(heroId)^/?(origDesc:z);
+      !!SN:H^spec^/(heroId)/2/^%(origDesc)%(str)^;
     !!en;
   !!en;
 
