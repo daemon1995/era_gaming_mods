@@ -1,8 +1,8 @@
 
-Advanced Classes Mod 1.081
+Advanced Classes Mod 1.085
 
 A Mod by Perry R, for Heroes of Might and Magic 3, ERA3 
-with the help of AlfWithCake, anti-victor, Daemon_n, Sandris and Berserker
+with the help of AlfWithCake, anti-victor, Daemon_n, Sandris, Berserker and Archer
 _________________________________________________
  
  CONTENTS
@@ -67,12 +67,6 @@ Commanders:
 - disabled most of the old WoG commander features and remade them. Commanders now require at least 1 point in Magic skill to be able to cast. Spells are made much more useful, read description. All Commanders now profit from carring out actual attacks in combat, some can even increase their damage or health permanently by killing whole squads.
 - When doing your first kill in combat you can choose a commander class. Each class has different attributes.
 
-Fire Shield:
-- Returned damage is now additionaly dependant on your Spell Power and can exceede the original damage amount, this gives much more tactical depth to this spell. Some creatures are now immune to Fire Shield, like Dragons and other fire affinite units.  
-
-Summoning Elementals:
-- HP of summons is now dependant on your MS, also summons can grant buffs to your army while alive on the battlefield. Summoing Air is available early but therefore very weak.
-
 Eagle Eye:
 - Spells are now learned directly in combat and you get permanent spell power. And some more goodies are on this skill.
 
@@ -81,6 +75,12 @@ Luck/Morale:
 
 Diplomacy:
 - Reworked complete skills. Now gives a chance to attract creatures from your actual army, you can directly hire them for an increased price. This makes Diplomacy more useful and predictable, also it cannot happen that a random free join of thousands neutrals give you an insta win.
+
+Fire Shield:
+- Returned damage is now additionaly dependant on your Spell Power and can exceede the original damage amount, this gives much more tactical depth to this spell. Some creatures are now immune to Fire Shield, like Dragons and other fire affinite units.  
+
+Summoning Elementals:
+- HP of summons is now dependant on your MS, also summons can grant buffs to your army while alive on the battlefield. Summoing Air is available early but therefore very weak.
 
 Navigation:
 - Skill deleted and replaced with Nobility skill. Nobility can increase creature growth in towns.
@@ -102,11 +102,11 @@ Please check the Readme about AI difficulty before game start. It is recommended
 - Which WoG settings can I use?
 Answer: Feel free to use any setting you like. There are no specific ACM settings you need to activate. Incompatible settings are mostly disabled. If some setting is not working please report, so it can be fixed. 
 
-- In Hero Screen why does is say "Skill Exp. Leadershi" and not Expert Leadership as it used to be? 
-Answer: To simulate the two new levels of every skill, for me, it was not possible to keep it the old way. Thats the price you pay, but you get used to it after one or two games :)
+- Why is this particular WoG or ERA scripts option blocked by the Advanced Classes Mod? And how can I restore it?
+Answer: Browse to Heroes3/Mods/Advanced Classes Mod/Data/s and check the 80 wog - disable options.erm file. Each option has a brief explanation as why it is disabled. If you want to enable it nevertheless you must delete both entries in the file. There are always two.
 
-- What damage does my Artillery do, how much will my Tent heal in combat? How much Magic Pierce has my hero? What is my total magical crit chance?
-Answer: Right-click on the Experience icon in your hero screen. Most numbers are displayed there.
+- What damage does my Artillery do, how much will my Tent heal in combat? How much Magic Pierce has my hero? What is my total magical crit chance? How can I check the new stats of my commander?
+Answer: Right-click on the Experience icon in your hero screen. Most numbers are displayed there. Some fields offer even more details when right-clicked, like commander class.
 
 - Why can't I level up some skills to Master?
 Answer: You dont have enough class points to get offered Master level for that skill. Check your current class points and level.
@@ -114,7 +114,7 @@ Answer: You dont have enough class points to get offered Master level for that s
 - What happens if I learn a secondary skill and later forget it? Will I keep all bonuses?
 Answer: No. When you unlearn secondary skills, you will lose M/GM level and maybe even drop out of your current class.
 
-- Click on the Kingdom Overview
+- Right-Click on the Kingdom Overview
 Answer: The poor Kingdom Overview will show your income including your spendings of the previous day. So keep that in mind, numbers might be negative if you spend more then you have income.
 
 - There are many new effects on artifacts, spells and skills, how the they scale? I want to do the math!
@@ -124,7 +124,7 @@ Answer: Nearly all new effects have a scaling of some sort. Check the informatio
 Answer: Carefully read your artifact description. Some artifacts or the Druid class have the ability to block a flat amount of damage. The amount of damage block is small and will be irrelevant at later stages of the game.
 
 - What happens if I play with more then 10 secondary skills?
-Answer: You can try, but ACM does not support it. With more than 10 skills it will be much easier to reach several classes at once, making very strong heroes. Overall should work, but I dont know what happens. 
+Answer: You can try, but ACM does not support it. With more than 10 skills it will be much easier to reach several classes at once, making very strong heroes. Overall should work, but I dont know what happens. If you want to try use the ERA scripts option to allow more secondary skills.
 
 - I want to learn all secondary skills to Master and Grandmaster regardles of my current class!
 Answer: Check out the new game mode made by Berserker. Activate it at map start.
