@@ -26,7 +26,9 @@ ZVSE2
 ** 1.7 changes: message deactivation code added.
 ** 1.7.1 changes: compatibility with quick combat added
 ** 1.7.2 changes: compatibility with Mysticism II added
+
 ** 2.0 changes: fix multiple compatibility issues with popular ERA mods by Archer30
+** 2.1 changes: disable extreme events as they are very confusing
 
 ; This script must be executed ealier than Mysticism II or any other script changes hero primary skills (as it should not interfere external PS)
 
@@ -53,38 +55,40 @@ ZVSE2
 ** function to generate card and apply its effect
 
 !?FU(WOG_34_SetCardBonuses);
-!!UN:J2/?y11; [get difficulty level of map]
+!#VA(hero:x);
 
-!!if&x1=i^battle_hero_0^;
-  !!VRv1307&y11=4:R0/0/34; [attacker's card, if impossible]
-  !!VRv1307&y11=3:R0/0/33; [attacker's card, if difficult]
-  !!VRv1307&y11=2:R0/0/29; [attacker's card, if hard]
-  !!VRv1307&y11<=1:R0/0/25; [attacker's card, if easy or normal]
-  !!HEx1:F?v1302/?v1303/?v1304/?v1305; [if attacker, get hero statistics]
-!!el&x1=i^battle_hero_1^;
-  !!VRv1317&y11=4:R0/0/34; [defender's card, if impossible]
-  !!VRv1317&y11=3:R0/0/33; [defender's card, if difficult]
-  !!VRv1317&y11=2:R0/0/29; [defender's card, if hard]
-  !!VRv1317&y11<=1:R0/0/25; [defender's card, if easy or normal]
-  !!HEx1:F?v1312/?v1313/?v1314/?v1315; [if defender, get hero statistics]
+!!UN:J2/?(diff:y); [get difficulty level of map]
+
+!!if&(hero)=i^battle_hero_0^;
+  !!VRv1307&(diff)<=1:T0/0/25; [attacker's card, if easy or normal]
+  !!VRv1307&(diff)>=2:T0/0/29; [attacker's card, if hard]
+  *!VRv1307&(diff)=3:T0/0/33; [attacker's card, if difficult]
+  *!VRv1307&(diff)=4:T0/0/34; [attacker's card, if impossible]
+  !!HE(hero):F?v1302/?v1303/?v1304/?v1305; [if attacker, get hero statistics]
+!!el&(hero)=i^battle_hero_1^;
+  !!VRv1317&(diff)<=1:T0/0/25; [defender's card, if easy or normal]
+  !!VRv1317&(diff)>=2:T0/0/29; [defender's card, if hard]
+  *!VRv1317&(diff)=3:T0/0/33; [defender's card, if difficult]
+  *!VRv1317&(diff)=4:T0/0/34; [defender's card, if impossible]
+  !!HE(hero):F?v1312/?v1313/?v1314/?v1315; [if defender, get hero statistics]
 !!en;
 
-!!HEx1:I?y10; [get hero's current spell points]
+!!HE(hero):I?y10; [get hero's current spell points]
 
-!!if&x1=i^battle_hero_0^;
-  !!FU(WOG_34_ManageCardBonuses):Px1/v1302/v1303/v1304/v1305/v1307/(BATTLE_LEFT); [if v1.3 card]
-!!el&x1=i^battle_hero_1^;
-  !!FU(WOG_34_ManageCardBonuses):Px1/v1312/v1313/v1314/v1315/v1317/(BATTLE_RIGHT); [if v1.3 card]
+!!if&(hero)=i^battle_hero_0^;
+  !!FU(WOG_34_ManageCardBonuses):P(hero)/v1302/v1303/v1304/v1305/v1307/(BATTLE_LEFT); [if v1.3 card]
+!!el&(hero)=i^battle_hero_1^;
+  !!FU(WOG_34_ManageCardBonuses):P(hero)/v1312/v1313/v1314/v1315/v1317/(BATTLE_RIGHT); [if v1.3 card]
 !!en;
 
-!!HEx1:F?y1/?y2/?y3/?y4; [get modified stats]
+!!HE(hero):F?y1/?y2/?y3/?y4; [get modified stats]
 
-!!if&x1=i^battle_hero_0^;
+!!if&(hero)=i^battle_hero_0^;
   !!VRv1308:Sv1302-y1; [get -attacker's attack change]
   !!VRv1309:Sv1303-y2; [get -attacker's defnese change]
   !!VRv1328:Sv1304-y3; [get -attacker's spell power change]
   !!VRv1326:Sv1305-y4; [get -attacker's knowledge change]
-!!el&x1=i^battle_hero_1^;
+!!el&(hero)=i^battle_hero_1^;
   !!VRv1318:Sv1312-y1; [get -defender's attack change]
   !!VRv1319:Sv1313-y2; [get -defender's defnese change]
   !!VRv1320:Sv1314-y3; [get -defender's spell power change]
@@ -153,9 +157,12 @@ ZVSE2
 !!HE(hero)&(cardType)=28:Fdy11/dy11/1/dy11; [If inv.Magician, shift power to other stats]
 !!HE(hero)&(cardType)=29:Fdy11/dy11/dy11/1; [If inv.Hermit, shift knowledge to other stats]
 !!HE(hero)&(cardType)=34:F0/0/1/1; [If Inverted Fool, remove all primary stats]
-!!VRy1&(cardType)=24:+5;
-!!VRy1&(cardType)=24::4; [Get average of primary stats, rounded up, if Hierophant]
-!!HE(hero)&(cardType)=24:Fy1/y1/y1/y1; [If Hierophant, balance statistics]
+
+!!if&(cardType)=24;
+  !!VRy1:+5;
+  !!VRy1::4; [Get average of primary stats, rounded up, if Hierophant]
+  !!HE(hero):Fy1/y1/y1/y1; [If Hierophant, balance statistics]
+!!en;
 
 !!FU(WOG_34_ShuffleFoolStats)&(cardType)=25:P(hero)/(atk)/(def)/(pwr)/(knl); [If Fool, call stat shuffle routine]
 !!FU(WOG_34_SetNewStats)&(cardType)<=23:P(hero)/(cardType)/(cardType); [if card is an original bonus/penalty]

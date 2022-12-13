@@ -300,6 +300,45 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
   !!en;
 !!en;
 
+
+; Fix a bug where the hero could fight himself/herself with spacebar pressing when flying over the entrance of an enemy's town.
+!?FU(OnKeyPressed)&i^key^=(KEY_SPACE);
+!#VA(key:x) (preventDefault:x);
+
+; Exit if not on adv map (can be replaced by OnKeyPressed_AdvMap in ERA 3.9.4)
+!!SN:F^GetGameState^/?(currentDlg:y);
+!!FU&(currentDlg)<>(DLG_ADVMAP):E;
+
+; Check if there is a hero active
+!!OW:Ai^timerOwner^/?(hero:y);
+
+!!if&(hero)>(NO_HERO);
+  ; Check if the hero's current location is the entrance of a town
+  !!HE(hero):P?(x:y)/?(y:y)/?(z:y);
+  !!UN:P904/(TRUE) P905/(FALSE);        [904 - option for disabling erm error report. 905 - option for checking whether there is an erm error]
+  !!CA(x)/(y)/(z):P?(townX:y)/?(townY:y)/?(townZ:y);
+  !!UN:P905/?(hasError:y);
+
+  !!if&(hasError)<>(TRUE)/(x)=(townX)/(y)=(townY)/(z)=(townZ);
+    ; Check if the hero and the town belongs to different team
+    !!CA(x)/(y)/(z):O?(townOwner:y);
+
+    !!if&i^timerOwner^<>(townOwner);
+      !!OW:Ti^timerOwner^/?(timerTeam:y) T(townOwner)/?(townTeam:y);
+
+      ; Prevent default action (battle initialization) if the hero and the town are in different teams
+      !!VR(preventDefault)&(timerTeam)<>(townTeam):S(TRUE);
+    !!en;
+  ; Reset option 905 if we got an error (a.k.a. the hero's current location is not a town)
+  !!el;
+    !!UN:P905/(FALSE);
+  !!en;
+
+  ; Reset option 904 in any case
+  !!UN:P904/(FALSE);
+!!en;
+
+
 ** Fix of the heroes and towns reordering
 !?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_PRESSED);/i^WOG_IsHdMod^=(TRUE);
   !!UN:J8/1/^wog scripts.pac^;  // if wog scripts mod is loaded

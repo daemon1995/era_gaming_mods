@@ -1,10 +1,11 @@
-ZVSE
+ZVSE2
 
 **   Palace of Dreams Version 1.4a created by Timothy E. Pulver
 **   with message box optimization by Tobyn (version 1.4a)
 **   Requires WoG version 3.57 or later using ERM version 2.6 or later.
 **   WoGify Name: script11.erm
 **   Updated: June 16, 2004
+**   Updated: Dec 2022 by Archer30
 
 ** This script lets any "Big Turreted Palace" on a map function as a casino
 ** named "The Palace of Dreams", which is filled with slot machines. The
@@ -19,7 +20,7 @@ ZVSE
 
 ** The other type of machine is artifacts - randomly chosen. The chances
 ** of getting three of the same type from over 100 artifacts is very small
-** so the game is rigged in the player's favour -- he or she can expect
+** so the game is rigged in the player's favour -- he or she can expectmi
 ** to win (on average) about 1 random artifact for every 4,000 gold spent.
 
 ** Each time the Palace of Dreams is visited (or revisited), 400 movement
@@ -67,37 +68,41 @@ ZVSE
 ** And of course, you'll also need to put one or more "Big Turreted Palaces"
 ** on your map for the heroes to visit. Get three and WIN! :-)
 
+** Since the script is now using ZVSE2, it would be a little bit tedious to be
+** installed in a map.
+
 Flags Used in this Script: 1-3
 Variables Used in this Script: v1-v2,v101-v111,z1,z3-z6,z450
-Functions Used in this Script: 777-779
 
  [Set object's hint text]
 !#UN:P11/?v1; [Check if script is enabled: v1]
 !#VRz450&v1=1:Sz111001;
-!#HT63/33&v1=1:T450;
+!#HT(OBJ_NEW_WOG_OBJECTS)/33&v1=1:T450;
 
-!?OB63/33;  [Triggers when any object type 63, subtype 33 is visited]
+!?OB(OBJ_NEW_WOG_OBJECTS)/33;  [Triggers when any object type 63, subtype 33 is visited]
 
 !!UN:P11/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1=0:E; [Exit if script isn't enabled]
 
-!!HE-1:B0/?z1;  [Store hero's name in z1]
+!!HE(CURRENT_HERO):B0/?z1;  [Store hero's name in z1]
 
  [Welcome hero]
 !!IF&1000:Q1/4/0/4/0/4/0/1/z111002;
 
  [Check if hero has enough movement left to play]
-!!HE-1:W>0;
+!!HE(CURRENT_HERO):W>300;
 !!IF&1:V3/0;
 !!IF&-1:V3/1;
 !!IF&3/1000:M1/z111003;
 
  [Remove 400 movement points from hero]
-!!HE-1&-3:Wd-400;
+!!HE(CURRENT_HERO)&-3:Wd-300;
 
  [Alter artifact names/descriptions of two artifacts for use in dialogue box]
-!!VRz3:Sz111004; !!VRz4:Sz111005;
-!!VRz5:Sz111006; !!VRz6:Sz111007;
+!!VRz3:Sz111004;
+!!VRz4:Sz111005;
+!!VRz5:Sz111006;
+!!VRz6:Sz111007;
 !!UN:A112/9/3 A112/10/4 A79/9/5 A79/10/6;
 
  [Ask if hero wants to play for artifacts or resources]
@@ -115,52 +120,84 @@ Functions Used in this Script: 777-779
 !!IF&1000/-3:Q1/36/100/2/z111009;
 
  [Generate AI Response - number from 0 to 1]
-!!VRv105&-1000:S0 R1;
-!!IF&v105=0/-1000:V1/0;
-!!IF&v105=1/-1000:V1/1;
+!!if&-1000;
+  !!VRv105:R0/0/1;
+  !!IF&v105=0:V1/0;
+  !!IF&v105=1:V1/1;
+!!en;
 
  [IF hero doesn't have enough movement, don't let him/her play]
 !!IF&3:V1/0;
 
  [Check if player has enough gold to play]
-!!OW:R-1/6/?v1;
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?v1;
 !!IF&1/v1<100/1000:M1/z111010;
 
  [If player plays slot machine, call function loops 777 or 778]
  [Maximum of 100 games each]
-!!DO777/1/100/1&1/v1>99/v106=1:P;
-!!DO778/1/100/1&1/v1>99/v106=2:P;
+!!if&1/v1>99;
+  !!if&v106=1;
+    !!DO(WOG_11_Resources)/1/100/1:P;
+  !!el;
+    ; Generate random artifacts and store in v101 - v103
+    !!FU(NewIntArray):P?(validArtsArray:y);
+    !!FU(GetMaxArtifactId):P?(lastArt:y);
 
- [Alter artifact names/descriptions of magic gold artifacts]
-!!VRz3:Sz111011; !!VRz4:Sz111012;
-!!UN:A115/9/3 A115/10/4 A116/9/3 A116/10/4 A117/9/3 A117/10/4;
+    !!re i/(ART_CENTAUR_AXE)/(lastArt);
+      !!co|i=(ART_HIGHLIGHTED_SLOT)/i=(ART_ARTIFACT_LOCK);
 
- [If player doesn't play, display this message]
-!!IF&1000:Q1/8/117/8/116/8/115/1/z111013;
+      ; Check if the artifact is disabled
+      !!UN:Ai/?(isDisabled:y);
 
- [Restore magic gold artifact text]
-!!UN:A115/9/0 A115/10/0 A116/9/0 A116/10/0 A117/9/0 A117/10/0;
+      !!if&(isDisabled)<>(TRUE);
+        ; Check if the artifact is an "usual" artifact
+        !!UN:Ai/3/?(artLevel:y);
+
+        !!FU(Array_Push)&(artLevel)>(ART_LEVEL_SPECIAL):P(validArtsArray)/i;
+      !!en;
+    !!en;
+
+    !!DO(WOG_11_Artifacts)/1/100/1:P(validArtsArray);
+  !!en;
+!!en;
+
+!!if&1000;
+   [Alter artifact names/descriptions of magic gold artifacts]
+  !!VRz3:Sz111011;
+  !!VRz4:Sz111012;
+  !!UN:A115/9/3 A115/10/4 A116/9/3 A116/10/4 A117/9/3 A117/10/4;
+
+   [If player doesn't play, display this message]
+  !!IF:Q1/8/117/8/116/8/115/1/z111013;
+
+   [Restore magic gold artifact text]
+  !!UN:A115/9/0 A115/10/0 A116/9/0 A116/10/0 A117/9/0 A117/10/0;
+!!en;
 
 ---------------------------------------------------------------------------------
 
-!?FU777;  [Start of main function - Resources]
-
-!!OW:R-1/6/d-100;  [Reduce player's gold by 100]
+!?FU(WOG_11_Resources);  [Start of main function - Resources]
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-100;  [Reduce player's gold by 100]
+!!UN&(ERM_FLAG_IS_HUMAN):R2;
 
  [Set flag 2 (win flag) to false and generate 3 random numbers 0 - 6]
 !!IF:V2/0;
-!!VRv101:S0 R6;
-!!VRv102:S0 R7;
-!!VRv102&v102=7:S6; [Increases chance of getting GOLD in middle slot]
-!!VRv103:S0 R6;
+
+!!VR(lastRes:y):S(RES_GOLD);
+!!UN:P36/?(wogOption:y);
+!!VR(lastRes)&(wogOption):S(RES_MITHRIL);
+
+!!re i/101/103;
+  !!VRvi:R0/0/(lastRes);
+!!en;
 
  [Chance of ever getting 3 resources the same is low so this increases it a bit]
-!!VRv107:S0 R30;
-!!VRv101&v107=30:Sv103;
-!!VRv107:S0 R30;
-!!VRv102&v107=30:Sv101;
-!!VRv107:S0 R30;
-!!VRv103&v107=30:Sv102;
+!!VRv107:R0/0/15;
+!!VRv101&v107=0:Sv103;
+!!VRv107:R0/0/15;
+!!VRv102&v107=0:Sv101;
+!!VRv107:T0/0/15;                       [Here we use both VR:R and VR:T to make the result "more random"]
+!!VRv103&v107=0:Sv102;
 
 
 * Tobyn mod: optimized to use same box where wheels are displayed for question to play again
@@ -169,27 +206,31 @@ Functions Used in this Script: 777-779
 !!IF&v101=v102/v101=v103:V2/1;
 
  [If hero won, determine prize -- prizes are higher later in the game]
-!!VRv104&2/v101<6:Sc0 :7 +4 R4;
-!!VRv104&2/v101=6:Sc0 *100 +4000 R100;
+!!VRv104&2/v101<>(RES_GOLD):Sc0 :7 +4 R4;
+!!VRv104&2/v101=(RES_GOLD):Sc0 *100 +4000 R100;
 
  [Give prize winning player his or her prize]
-!!OW&2:R-1/v101/dv104;
+!!OW&2:R(CURRENT_PLAYER)/v101/dv104;
 
- [Show what came up if won -- 3 resource pictures]
-!!IF&2/1000:Q1/v101/0/v102/v104/v103/0/2/z111014;
+!!if&1000;
+   [Show what came up if won -- 3 resource pictures]
+  !!if&2;
+    !!IF:Q1/v101/0/v102/v104/v103/0/2/z111014;
+    !!UN:R2;
 
-
- [Show what came up if not won -- 3 resource pictures]
-!!IF&-2/1000:Q1/v101/0/v102/0/v103/0/2/z111015;
-
-
- [Generate AI Response - number from 0 to 1]
-!!VRv105&-1000:S0 R1;
-!!IF&v105=0/-1000:V1/0;
-!!IF&v105=1/-1000:V1/1;
+   [Show what came up if not won -- 3 resource pictures]
+  !!el;
+    !!IF:Q1/v101/0/v102/0/v103/0/2/z111015;
+  !!en;
+   [Generate AI Response - number from 0 to 1]
+!!el;
+  !!VRv105:R0/0/1;
+  !!IF&v105=0:V1/0;
+  !!IF&v105=1:V1/1;
+!!en;
 
  [Check if player has enough gold to play again]
-!!OW:R-1/6/?v1;
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?v1;
 !!IF&1/v1<100/1000:M1/z111016;
 !!VRx16&1/v1<100:S101; [Exit DO loop]
 
@@ -201,30 +242,38 @@ Functions Used in this Script: 777-779
 
 ---------------------------------------------------------------------------------
 
-!?FU778;  [Start of main function - Artifacts]
+!?FU(WOG_11_Artifacts);  [Start of main function - Artifacts]
+!#VA(validArtsArray:x);
 
-!!OW:R-1/6/d-100;  [Reduce player's gold by 100]
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-100;  [Reduce player's gold by 100]
+!!UN&(ERM_FLAG_IS_HUMAN):R2;
 
  [Set flag 2 (win flag) to false and generate 3 random numbers 7 - 143
   disabled artifacts are skipped]
 !!IF:V2/0;
-!!VRv2:S0;
-!!FU779:P;
-!!VRv101:Sv108;
-!!VRv2:S0;
-!!FU779:P;
-!!VRv102:Sv108;
-!!VRv2:S0;
-!!FU779:P;
-!!VRv103:Sv108;
+
+!!SN:M(validArtsArray)/?(size:y);
+!!VR(lastIndex:y):S(size) -1;
+
+!!re i/101/103;
+  !!if&i=102;
+    !!VR(index:y):R0/0/(lastIndex);     [Here we use both VR:R and VR:T to make the result "more random"]
+  !!el;
+    !!VR(index):T0/0/(lastIndex);
+  !!en;
+
+  !!SN:M(validArtsArray)/(index)/?vi;
+!!en;
 
  [Chance of getting 3 artifacts the same is miniscule so this increases it a bit]
-!!VRv107:S0 R10;
-!!VRv101&v107=10:Sv103;
-!!VRv107:R0/0/10;
-!!VRv102&v107=10:Sv101;
-!!VRv107:S0 R10;
-!!VRv103&v107=10:Sv102;
+; Max random number is generated by the number of valid artifacts. By default it is 8, with every 100 artifacts in the pool it reduces 1, min at 4.
+!!VR(maxRandom:y):S(size) :100 *-1 +8 F4/8;
+!!VRv107:R0/0/(maxRandom);
+!!VRv101&v107=0:Sv103;
+!!VRv107:T0/0/(maxRandom);
+!!VRv102&v107=0:Sv101;
+!!VRv107:R0/0/(maxRandom);
+!!VRv103&v107=0:Sv102;
 
  [Temporarily remove names from artifact pictures]
 !!VRz3:Sz111018;
@@ -237,7 +286,7 @@ Functions Used in this Script: 777-779
 !!IF&v101=v102/v101=v103:V2/1;
 
  [Give prize winning player his or her prize]
-!!HE-1&2:Av101;
+!!HE(CURRENT_HERO)&2:Av101;
 
 
  [If player won, give this message]
@@ -267,26 +316,5 @@ Functions Used in this Script: 777-779
 
  [If player doesn't play again, exit function loop 778]
 !!VRx16&-1:S101; [Exit DO loop]
-
----------------------------------------------------------------------------------
-
-!?FU779; [Start of artifact-check function - skips disabled artifacts]
-
-!!VRv2:+1; [Increment counter: v2]
-!!VRv108:S7 R153; [Random number from 7 to 160]
-!!UN:Av108/=1;    [Test enabled/disabled value of artifact]
-!!VRv108|1/v108=144/v108=145:S7 R119;  [If disabled or invalid, try again]
-*                                      [with a smaller range of 7 to 126]
-
-!!UN:P900/?y2;       [Check if stack experience is enabled: y2=0 if not enabled]
-!!UN&1:Av108/=1;     [Test enabled/disabled value of artifact]
-!!VRv108&v2>25:S7;   [If too many loops, make it a Centaur's Axe]
-!!FU779&1/v2<=25:P;  [If artifact is disabled, call function again]
-*                    [unless it's already looped too many times]
-!!FU779&v108=157/y2=0/v2<=25:P; [reroll if banner and stack experience disabled]
-
-!!UN:Av108/3/=16;            [Test if artifact is a relic]
-!!VRv109&1:S0 R1;            [Random number from 0 to 1]
-!!FU779&1/v109=1/v2<=25:P;   [50% chance of relic being "rerolled"]
 
 ** End of Script **
