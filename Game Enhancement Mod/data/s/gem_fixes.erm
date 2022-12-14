@@ -282,26 +282,46 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 
 ; Archer30's hacks
 
-; Remove buggy neutral stacks by mouse hovering. Occasionally a stack with the size 4095 is generated on the map with UN:I command.
-; This script is better executed before anything else!
-; It removes a buggy stack silently
-!?FU(OnAdvMapTileHint);
-!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
+!?FU(OnEveryDay)&i^timerOnce^;
+; 904 - Disable Erm error report
+; 905 - Option for checking whethere there was an error report generated
+!!UN:P904/(TRUE) P905/(FALSE);
 
-!!if&(objType)=(OBJ_MONSTER);
-  !!UN:P904/1 P905/0;                   [Option 904 - Disable Error msg. Option 905 - error found]
+// Fix occasionally a town may be existing in the structure but not appearing on the map. The owners of these towns would be set to none here.
+!!re i/(MAP_TOWN_FIRST)/(MAP_TOWN_LAST);
+  !!CA0/i:O?(owner:y);
+  !!UN:P905/?(hasError:y);
+
+  !!if&(hasError);
+    !!UN:P905/(FALSE);
+  !!el&(owner)>(NO_OWNER);
+    !!CA0/i:P?(x:y)/?(y:y)/?(z:y);
+
+    !!VR(searchX:y):S(x) -1;
+    !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(searchX)/(y)/(z);
+
+    !!CA0/i&(searchX)<>(x):O(NO_OWNER);
+  !!en;
+!!en;
+
+// Fix occasionally a neutral stack with invalid quantity is put on the map. These stacks would be removed from the map here.
+!!re i;
+  !!UN:U(OBJ_MONSTER)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
   !!MO(x)/(y)/(z):G?(qty:y);
   !!UN:P905/?(hasError:y);
 
   !!if&(hasError);
+    !!UN:P905/(FALSE);
     !!UN:O(x)/(y)/(z)/1;                [Debug msg can be added here to help collect debug info from players]
-    !!UN:P904/0;
-    !!SN:Q;
   !!en;
 !!en;
 
+!!UN:P904/(FALSE) P905/(FALSE);
 
-; Fix a bug where the hero could fight himself/herself with spacebar pressing when flying over the entrance of an enemy's town.
+
+// Fix a bug where the hero could fight himself/herself with spacebar pressing when flying over the entrance of an enemy's town.
 !?FU(OnKeyPressed)&i^key^=(KEY_SPACE);
 !#VA(key:x) (preventDefault:x);
 
