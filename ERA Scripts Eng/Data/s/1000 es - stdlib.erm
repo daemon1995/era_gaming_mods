@@ -537,3 +537,90 @@ The game may fall at any time.^;
 !!UN:C(am)/92/(UNC_UINT32)/?(list:y);
 !!SN:E4228816/2/(list)/(x)/(y)/(z);
 !!VR(mapItem):Sv1;
+
+// Resouces check and reduce for a given player
+!?FU(ES_Player_CheckEnoughResources);   [by Archer30]
+; Check if a player has enough for all the given amount of resources.
+
+; Supports two call syntaxes:
+;   P(result)/(player Id)/(first resource type)/(second resouce type)...
+;   P(result)/(player Id)/(ID of dynamical array, containing resounce amount)
+
+; Resouces must be provided with this sequence: Wood, Mercury, Ore, Sulfur, Crystal, Gems, Gold and Mithril (optional)
+!#VA(result:x) (playerId:x) (thirdArg:x);
+
+!!VR(result):S(FALSE);
+
+!!FU:A?(numArgs:y);
+; Exit if invalid amount of parameters
+!!FU&(numArgs)<=2:E;
+
+!!UN:P36/?(mithrilEnabled:y);
+
+!!if&(numArgs)>3;
+  !!VR(lastResId:y):S(RES_LAST_SOD);
+  !!VR(lastResId)&(mithrilEnabled)/(numArgs)>=10:S(RES_LAST_WOG);
+
+  !!re i/(RES_FIRST)/(lastResId);
+    !!VR(argPtr:y):Si +3;               [The definition of resources amount starts from x3]
+    !!OW:R(playerId)/i/?(count:y);
+    !!VR(count):-x(argPtr); 
+    !!FU&(count)<0:E;
+  !!en;
+!!el;
+  !!SN:M(thirdArg)/?(size:y);
+
+  !!VR(lastItemInd:y):S(size) -1;
+  !!VR(lastItemInd)&(mithrilEnabled)/(size)>=8:S7;
+
+  !!re i/0/(lastItemInd);
+    !!SN:M(thirdArg)/i/?(cost:y);
+    !!OW:R(playerId)/i/?(count);
+    !!VR(count):-(cost);
+    !!FU&(count)<0:E;
+  !!en;
+!!en;
+
+!!VR(result):S(TRUE);
+
+; -----------------------------------
+
+!?FU(ES_Player_RemoveResources);        [by Archer30]
+; Remove resouces from a given player, prevent any value to be negative.
+
+; Supports two call syntaxes:
+;   P(player Id)/(first resource type)/(second resouce type)...
+;   P((player Id)/ID of dynamical array, containing resounce amount)
+
+; Resouces must be provided with this sequence: Wood, Mercury, Ore, Sulfur, Crystal, Gems, Gold and Mithril (optional)
+!#VA(playerId:x) (secondArg:x);
+
+!!FU:A?(numArgs:y);
+; Exit if invalid amount of parameters
+!!FU&(numArgs)<=1:E;
+
+!!UN:P36/?(mithrilEnabled:y);
+
+!!if&(numArgs)>2;
+  !!VR(lastResId:y):S(RES_LAST_SOD);
+  !!VR(lastResId)&(mithrilEnabled)/(numArgs)>=9:S(RES_LAST_WOG);
+
+  !!re i/(RES_FIRST)/(lastResId);
+    !!VR(argPtr:y):Si +2;               [The definition of resources amount starts from x2]
+    !!OW:R(playerId)/i/?(count:y);
+    !!VR(count):-x(argPtr) F0/(INT_MAX); 
+    !!OW:R(playerId)/i/(count);
+  !!en;
+!!el;
+  !!SN:M(secondArg)/?(size:y);
+
+  !!VR(lastItemInd:y):S(size) -1;
+  !!VR(lastItemInd)&(mithrilEnabled)/(size)>=8:S7;
+
+  !!re i/0/(lastItemInd);
+    !!SN:M(secondArg)/i/?(cost:y);
+    !!OW:R(playerId)/i/?(count);
+    !!VR(count):-(cost) F0/(INT_MAX);
+    !!OW:R(playerId)/i/(count);
+  !!en;
+!!en;

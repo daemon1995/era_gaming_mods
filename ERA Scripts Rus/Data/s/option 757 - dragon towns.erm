@@ -13,85 +13,131 @@ ZVSE2
 !!UN:P757/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-; Exit the function if there are more 48 or more towns on the map
-!!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townNum:y);
-!!FU&(townNum)>=48:E;
-
 ; Exit if the Utopia has not been cleared
 !!CB998:T?(isCleared:y);
 !!FU&(isCleared)<>(TRUE):E;
+
+; Check for the owner and type pf the hero to set the details of the new town
+!!HE(CURRENT_HERO):O?(owner:y) B2/?(class:y);
+!!VR(townType:y):S(class) :2;
+!!VR(picTypeTown:y)&(ERM_FLAG_IS_HUMAN):S(townType) +22;
+
+; Check the quantity of towns on the map
+!!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townNum:y);
+
+; Exit the function if there are more 48 or more towns on the map
+!!if&(townNum)>=48;
+  !!IF&(ERM_FLAG_IS_HUMAN):Q1/(picTypeTown)/9/(MSG_TYPE_MES)^%T(es.757.dlg1)%T(es.757.tooManyTowns)^;
+  !!FU:E;
+!!en;
 
 ; Check the tile at the right bottom of the new town
 ; Exit if the result =-1 (the tile is interactive or is part of an interactive object)
 !!VR(townX:y):Sv998 +1;
 !!FU(ES_757_CheckTileEligibility):P(townX)/v999/v1000/?(result1:y);
-!!FU&(result1)=-1:E;
 
-!!VR(objY:y):Sv999 -1;
-!!FU(ES_757_CheckTileEligibility):P(townX)/(objY)/v1000/?(result2:y);
-!!FU&(result2)=-1:E;
+!!if&(result1)>-1;
+  !!VR(objY:y):Sv999 -1;
+  !!FU(ES_757_CheckTileEligibility):P(townX)/(objY)/v1000/?(result2:y);
 
-; Also check the left bottom
-!!VR(objX:y):Sv998 -3;
-!!FU(ES_757_CheckTileEligibility):P(objX)/v999/v1000/?(result3:y);
-!!FU&(result3)=-1:E;
+  ; Also check the left bottom
+  !!if&(result2)>-1;
+    !!VR(objX:y):Sv998 -3;
+    !!FU(ES_757_CheckTileEligibility):P(objX)/v999/v1000/?(result3:y);
 
-; Check the entrance of the new town (y-coordinate +1) to ensure the path is clear
-!!VR(heroX:y):S-1;
-!!VR(heroResult:y):S0;
-!!VR(entranceX:y):Sv998 -1;
-!!VR(entranceY:y):Sv999 +1;
-!!FU(ES_757_CheckTileEligibility):P(entranceX)/(entranceY)/v1000/?(entranceResultMid:y);
+    ; Check the entrance of the new town (y-coordinate +1) to ensure the path is clear
+    !!if&(result3)>-1;
+      !!VR(heroX:y):S-1;
+      !!VR(heroResult:y):S0;
+      !!VR(entranceX:y):Sv998 -1;
+      !!VR(entranceY:y):Sv999 +1;
+      !!FU(ES_757_CheckTileEligibility):P(entranceX)/(entranceY)/v1000/?(entranceResultMid:y);
 
-; Check for one tile to the right of the entrance, set heroX to the target's x coordinate if found
-!!if&(entranceResultMid)<=0;
-  !!FU(ES_757_CheckTileEligibility):Pv998/(entranceY)/v1000/?(entranceResultRight:y);
+      ; Check for one tile to the right of the entrance, set heroX to the target's x coordinate if found
+      !!if&(entranceResultMid)<=0;
+        !!FU(ES_757_CheckTileEligibility):Pv998/(entranceY)/v1000/?(entranceResultRight:y);
 
-  ; Check for one tile to the left
-  !!if&(entranceResultRight)<=0;
-    !!VR(entranceLeftX:y):Sv998 -2;
-    !!FU(ES_757_CheckTileEligibility):P(entranceLeftX)/(entranceY)/v1000/?(entranceResultLeft:y);
+        ; Check for one tile to the left
+        !!if&(entranceResultRight)<=0;
+          !!VR(entranceLeftX:y):Sv998 -2;
+          !!FU(ES_757_CheckTileEligibility):P(entranceLeftX)/(entranceY)/v1000/?(entranceResultLeft:y);
 
-    !!if&(entranceResultLeft)>0;
-      !!VR(heroX):S(entranceLeftX);
-      !!VR(heroResult):S(entranceResultLeft);
+          !!if&(entranceResultLeft)>0;
+            !!VR(heroX):S(entranceLeftX);
+            !!VR(heroResult):S(entranceResultLeft);
+          !!en;
+        !!el;
+          !!VR(heroX):Sv998;
+          !!VR(heroResult):S(entranceResultRight);
+        !!en;
+      !!el;
+        !!VR(heroX):S(entranceX);
+        !!VR(heroResult):S(entranceResultMid);
+      !!en;
     !!en;
-  !!el;
-    !!VR(heroX):Sv998;
-    !!VR(heroResult):S(entranceResultRight);
-  !!en;
-!!el;
-  !!VR(heroX):S(entranceX);
-  !!VR(heroResult):S(entranceResultMid);
-!!en;
-
-!!FU&(heroX)=-1:E;
-
-; Check for the owner and type pf the hero to set the details of the new town
-!!HE(CURRENT_HERO):O?(owner:y) B2/?(class:y);
-!!VR(townType:y):S(class) :2;
-; Show up dialogue for building a new town depending on whether having enought resoursces or if is AI
-!!OW:R(owner)/(RES_WOOD)/?(wood:y) R(owner)/(RES_ORE)/?(ore:y);
-
-!!IF:V1/1;
-!!VR(flag:y):S(TRUE);
-!!VR(flag)|(wood)<20/(ore)<20:S(FALSE);
-
-!!if&1000;
-  !!if&(flag);
-    !!VR(townPicIndex:y):S(townType) +22;
-    ; -100020 for showing -20 of the resource below the picture
-    !!IF:Q1/(PIC_TYPE_RES_WOOD)/-100020/(townPicIndex)/7/(PIC_TYPE_RES_ORE)/-100020/(MSG_TYPE_QUESTION)/^%T(es.757.dlg1)%T(es.757.dlg2)^;
-  !!el;
-    !!IF:Q1/(PIC_TYPE_RES_WOOD)/-100020/(PIC_TYPE_RES_ORE)/-100020/(MSG_TYPE_MES)/^%T(es.757.dlg1)^;
   !!en;
 !!en;
 
-!!FU|(flag)=(FALSE)/-1:E;
+; Exit if the surrounding is not large enough for a town
+!!if|(result1)=-1/(result2)=-1/(result3)=-1/(heroX)=-1;
+  !!IF&(ERM_FLAG_IS_HUMAN):Q1/(picTypeTown)/9/(MSG_TYPE_MES)^%T(es.757.dlg1)%T(es.757.tooNarrow)^;
+  !!FU:E;
+!!en;
+
+; Check the resources of the visiting player - If AI does not reach the requirement, they can still build with a reduced price
+!!VR(hasEnoughRes:y):S(TRUE);
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!FU(NewIntArray):P7/?(requiredResources:y);
+
+  !!if|(townType)=(TOWN_INFERNO)/(townType)=(TOWN_NECROPOLIS)/(townType)=(TOWN_CONFLUX);
+    !!SN:V(requiredResources)/0/30/20/30/15/15/15/30000;
+  !!el|(townType)=(TOWN_DUNGEON)/(townType)=(TOWN_FORTRESS);
+    !!SN:V(requiredResources)/0/30/15/30/20/15/15/30000;
+  !!el|(townType)=(TOWN_RAMPART)/(townType)=(TOWN_STRONGHOLD);
+    !!SN:V(requiredResources)/0/30/15/30/15/20/15/30000;
+  !!el|(townType)=(TOWN_CASTLE)/(townType)=(TOWN_TOWER);
+    !!SN:V(requiredResources)/0/30/15/30/15/15/20/30000;
+  !!en;
+
+  !!FU(ES_Player_CheckEnoughResources):P?(hasEnoughRes:y)/(owner)/(requiredResources);
+
+  !!FU(NewIntArray):P16/?(mutliPicDialogItems:y);
+
+  !!SN:V(mutliPicDialogItems)/0/(picTypeTown)/9;
+
+  !!re i/(PIC_TYPE_RES_FIRST)/(PIC_TYPE_RES_GOLD); [Note: (PIC_TYPE_RES_LAST) = (PIC_TYPE_RES_MITHRIL)]
+    !!VR(arrayItemInd:y):Si *2 +2;
+    !!SN:M(mutliPicDialogItems)/(arrayItemInd)/i;
+
+    !!VR(arrayItemInd):+1;
+    !!SN:M(requiredResources)/i/?(resQty:y);
+    !!SN:M(mutliPicDialogItems)/(arrayItemInd)/(resQty);
+  !!en;
+
+  ; Memory patch (Resour82.def -> Resource.def)
+  !!UN:C5199571/(UNC_UINT32)/?(saveMemory1:y) C5199571/(UNC_UINT32)/6865956;
+  !!UN:C5199620/(UNC_UINT32)/?(saveMemory2:y) C5199620/(UNC_UINT32)/6865956;
+
+  !!FU(PrepareMultiPicDialog):P(mutliPicDialogItems);
+
+  ; Check if the player wants to build Dragon Town - AI will always build
+  !!if&(hasEnoughRes);
+    !!IF:N(MSG_TYPE_QUESTION)/^%T(es.757.dlg2)%T(es.757.ask)^/?(choice:y);
+    !!FU&(choice)=(FALSE):E;
+  ; If the player does not have enough resources, show up the info without a choice
+  !!el;
+    !!IF:N(MSG_TYPE_MES)/^%T(es.757.dlg2)%T(es.757.notEnoughRes)^;
+    !!FU:E;
+  !!en;
+
+  ; memory patch (restore original code)
+  !!UN:C5199571/(UNC_UINT32)/(saveMemory1) C5199620/(UNC_UINT32)/(saveMemory2);
+!!en;
 
 ; Reduce resources 
-!!OW:R(owner)/(RES_WOOD)/d-20 R(owner)/(RES_ORE)/d-20;
-!!UN:R2;
+!!FU(ES_Player_RemoveResources):P(owner)/(requiredResources);
+!!UN&(ERM_FLAG_IS_HUMAN):R2;
 
 ; Teleport the hero to the front of the entrance
 !!FU(ES_757_RemoveObject)&(heroResult)=2:P(heroX)/(entranceY)/v1000;
