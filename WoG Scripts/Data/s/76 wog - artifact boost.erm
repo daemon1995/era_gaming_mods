@@ -2,7 +2,7 @@ ZVSE2
 
 ** Artifact Boost ERM script v1.4 - Donald X. Vaccarino
 ** Updated Jul. 18. 2004 by Hermann the Weird
-** Updated Sep 2022 by Archer30
+** Updated Dec 2022 by Archer30
 ** Requires WOG version 3.58 or later
 ** Make formerly weak artifacts do something special, usually once/week
 ** WoGify Name: script02.erm
@@ -45,6 +45,7 @@ ZVSE2
 ** Functions Used: 599-609, 612, 613
 
 
+; Set up global vars for Diplomat's Ring and Emblem of Conizance
 !?FU(OnAfterErmInstructions);
 !!UN:P102/?(wogOption:y);                 [Check for Enhanced Artifacts I]
 !!FU&(wogOption)<>(TRUE):E;
@@ -55,22 +56,21 @@ ZVSE2
 
 !!if&(diff)>0;
   ; Diplomat's Ring
-  !!VR(unitLimit):S1000;
-  !!VR(unitLimit)&(diff)=1:S1000; // max 1000 for normal
+  !!VR(unitLimit)&(diff)=1:S1000; // max 1000 for normal and easy
   !!VR(unitLimit)&(diff)=2:S500; // max 500 for hard
   !!VR(unitLimit)&(diff)=3:S250; // max 250 for expert
-  !!VR(unitLimit)&(diff)=4:S100; // max 100 for impossible
+  !!VR(unitLimit)&(diff)>=4:S100; // max 100 for impossible
 
   ; Emblem of Cognizance
-  !!VR(goldLimit)&(diff)=1:S100000; // max 100000 gold for normal
+  !!VR(goldLimit)&(diff)=1:S100000; // max 100000 gold for normal and easy
   !!VR(goldLimit)&(diff)=2:S50000; // max 50000 for hard
   !!VR(goldLimit)&(diff)=3:S25000; // max 25000 for expert
-  !!VR(goldLimit)&(diff)=4:S10000; // max 10000 for impossible
-
-  ; Set global var to be used each week
-  !!VRi^wog_102_diplomatsRingLimit^:S(unitLimit);
-  !!VRi^wog_102_emblemOfCognizanceLimit^:S(goldLimit);
+  !!VR(goldLimit)&(diff)>=4:S10000; // max 10000 for impossible
 !!en;
+
+; Set global var to be used each week
+!!VRi^wog_102_diplomatsRingLimit^:S(unitLimit);
+!!VRi^wog_102_emblemOfCognizanceLimit^:S(goldLimit);
 
 ** Timer routine
 
@@ -79,8 +79,8 @@ ZVSE2
   !!UN:P102/?(wogOption:y);               [Check if Artifact Boost Script is enabled in WoGify Options]
   !!FU&(wogOption)<>(TRUE):E;             [Exit if it isn't]
 
-  !!re i/(HERO_FIRST)/(HERO_LAST_WOG);    [iterate through all heroes]
-    !!HEi:O?v602;                         [ get owner of iterated hero]
+  !!re i/(HERO_FIRST)/(HERO_LAST_WOG);    [Iterate through all heroes]
+    !!HEi:O?v602;                         [Get owner of the iterated hero]
 
     !!if&v602=i^timerOwner^;
       !!VRv600:Si;
@@ -98,8 +98,7 @@ ZVSE2
 
   !!if&(clickedSlot:y)>=(ART_SLOT_MISC_1)/(clickedSlot:y)<=(ART_SLOT_MISC_4)|(clickedSlot:y)=(ART_SLOT_MISC_5)/(clickedSlot:y)=(ART_SLOT_NECK);
 
-
-    !!HE-1:A1/?y-2/(clickedSlot:y);     [Check for weekly creature artifacts]
+    !!HE(CURRENT_HERO):A1/?y-2/(clickedSlot:y);     [Check for weekly creature artifacts]
 
     !!FU&y-2<>103/y-2<>104/y-2<>63/y-2<>92/y-2<>93:E;     [Exit if no weekly creature artifact]
     !!CM:R0;     [Disable standard r-click info]
@@ -107,7 +106,7 @@ ZVSE2
     !!FU(NewIntArray):P?(arr:y);
     !!FU(Array_Push):P(arr)/63/92/93/103/104;
     !!SN:M(arr)/?(size:y);
-    !!IF:W-1;     [w vars refer to current hero]
+    !!IF:W(CURRENT_HERO);     [w vars refer to current hero]
 
     !!re i/0/(size)/1/-1;
       !!SN:M(arr)/i/?(artId:y);
@@ -119,8 +118,8 @@ ZVSE2
           !!VR(stat:z):S^%T(wog.102.off)^;
           !!VR(rstat:z):S^%T(wog.102.on)^;
         !!el;
-          !!VR(stat:z):S^%T(wog.102.on)^;
-          !!VR(rstat:z):S^%T(wog.102.off)^;
+          !!VR(stat):S^%T(wog.102.on)^;
+          !!VR(rstat):S^%T(wog.102.off)^;
         !!en;
         !!br;
       !!en;
@@ -271,7 +270,7 @@ ZVSE2
     !!VRv24:*v27; [15 gold per creature]
     !!VRv24:F0/i^wog_102_emblemOfCognizanceLimit^; // limit the gold (depending on the difficulty)
 
-    !!VRv24:*v616; [gold per emblem]
+    !!VRv24:*v616; [gold per emblem - Archer30: a bit too imbalance? should count only 1 emblem?]
     
     !!IF&5:Q1/(PIC_TYPE_RES_GOLD)/v24/(MSG_TYPE_MES)/z102035;
     !!OW:Rv602/(RES_GOLD)/dv24; [give the gold]
@@ -398,7 +397,7 @@ ZVSE2
 
       !!HEv600:A3/(ART_DIPLOMATS_RING)/1/1; [remove a Diplomat's Ring]
 
-      !!SN&2:D; [redraw screen]
+      !!SN:D; [redraw screen]
     ; Show msg if the hero disagreed
     !!el;
       !!IF:M1/z102051;
