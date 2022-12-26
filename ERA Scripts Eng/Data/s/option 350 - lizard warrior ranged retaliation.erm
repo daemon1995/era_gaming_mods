@@ -1,0 +1,79 @@
+ZVSE2
+; Author:   Archer30
+; Engine:   ERM 2.0+
+; Requires: ERA 3.3+, Era Erm Framework
+
+; Lizard Warriors retaliate ranged attacks with shooting.
+
+
+!?FU(OnAfterErmInstructions);
+!!UN:P350/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Set up new description
+!!SN:H^monname^/(MON_LIZARD_WARRIOR)/2/?(desc:z);
+!!SN:H^monname^/(MON_LIZARD_WARRIOR)/2/^%(desc)%T(es.350.desc)^;
+
+; Raise fight value
+!!MA:F(MON_LIZARD_WARRIOR)/?(fv:y);
+!!VR(fv):*105 :100;
+!!MA:F(MON_LIZARD_WARRIOR)/(fv);
+
+!?FU(OnBattleActionEnd);
+!!UN:P350/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Check if it was a shooting event
+!!BG:A?(action:y) E?(stack:y);
+
+!!if&(action)=(BATTLE_ACTION_SHOOT)/(stack)>(NO_STACK);
+  ; Check if the attacking stack is possible to be attacked
+  !!BMi^battle_acting_stack^:T?(atkType:y) N?(atkNum:y);
+  ; Check if the defending monster is eligible to perform ranged retaliation
+  !!BM(stack):T?(defType:y) N?(defNum:y);
+  !!FU(ES_350_CheckIfMonIsEligible):P(defType)/?(result:y);
+
+  !!if&(atkType)<>(MON_ARROW_TOWERS)/(atkType)>(NO_MON)/(atkNum)>0/(result)/(defNum)>0;
+    ; Check if the defending stack is processed with spell that prevent moving
+    !!BM(stack):G(SPELL_BLIND)/?(blindTurns:y)/d G70/?(stoneTurns:y)/d G74/?(paralyzeTurns:y)/d;
+
+    !!if&(blindTurns)=0/(stoneTurns)=0/(paralyzeTurns)=0;
+      ; Check if the attacking monster has No Enemy Retaliation, check Shield of Retribution if positive
+      !!BMi^battle_acting_stack^:F?(atkStackFlags:y);
+      !!VR(noEnemyRetal:y):S(atkStackFlags) &(MON_FLAG_NO_RETALIATION);
+
+      !!if&(noEnemyRetal);
+        !!BM(stack):I?(defSide:y);
+
+        !!BA:H(defSide)/?(hero:y);
+
+        !!if&(hero)>(NO_HERO);
+          !!HE(hero):A2/(ART_CRIMSON_SHIELD_OF_RETRIBUTION)/?(backpacked:y)/?(equipped:y);
+
+          !!VR(noEnemyRetal):S(FALSE);
+        !!en;
+      !!en;
+
+      ; Check if the defending monster can perform retaliation
+      !!BM(stack):R?(numRetal:y);
+
+      !!if&(noEnemyRetal)=(FALSE)/(numRetal)>0;
+        ; Check if shooting is possible for the defending stack
+        !!BM(stack):Z?(stackPtr:y);
+        !!SN:E4466192/(CALLCONV_THISCALL)/(stackPtr)/0;
+
+        !!if&v1;
+          !!FU(BattleStack_Shoot):P(stack)/i^battle_acting_stack^;
+          !!BM(stack):Rd-1;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+// Funciton to check if the targeted monster is eligible for ranged retaliation
+!?FU(ES_350_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_LIZARD_WARRIOR):S(TRUE);
