@@ -5,20 +5,33 @@ ZVSE2
 ** Name rus.     : “иран
 ** Options       : 770
 
+; A tyrant would appear in the game and flag most of the map objects. The colour of the tyrant depends on the whatever colour is available in the game (Chosen from Pink to Red by order).
 ; Note: This script would disable Extension Heroes option (if enabled) on erm instructions to preveny other players having special heroes at the start. 
-; After Tyrant is set up, Extension Heroes would be re-enabled again.
+; After Tyrant is set up, Extension Heroes would be re-enabled if it was enabled.
 
 
 !?FU(OnAfterErmInstructions);           [событи€ в начале игры]
 !!UN:P770/?(wogOption:y);               [провер€ем включена ли опци€ 770]
 !!FU&(wogOption)<>(TRUE):E;             [Выход, если опци€ не включена]
 
-; Exit if pink is human
-!!OW:I(PLAYER_PINK)/?(isAi:y)/?(hasLost:y);
-!!FU&(isAi)<>(TRUE)/(hasLost)<>(TRUE):E;
+; Get the colour of the tyrant (Check every available colour from Pink to Red)
+!!re i/(PLAYER_LAST)/(PLAYER_FIRST)/-1;
+  !!OW:Ii/?(isAi:y)/?(hasLost:y);
 
-; Set Up variables
-!!OW:I(PLAYER_PINK)/1/0 T(PLAYER_PINK)/-1; [активируем розового »»-игрока без союзов]
+  !!if&(isAi)/(hasLost);
+    !!VRi^es_770_tyrantPlayer^:Si;
+    !!br;
+  !!en;
+!!en;
+
+; Exit if tyrant is not available in this game (all 8 players are occupied)
+!!if&i<(PLAYER_FIRST);
+  !!UN:P770/(FALSE);
+  !!FU:E;
+!!en;
+
+; Set up variables
+!!OW:Ii^es_770_tyrantPlayer^/1/0 Ti^es_770_tyrantPlayer^/-1; [активируем розового »»-игрока без союзов]
 
 !!UN:P106/?(hourglassOn:y);
 
@@ -39,24 +52,23 @@ ZVSE2
 
 !!FU(Array_Shuffle):P(availHeros);
 
-; Get how many heroes allowed for the tyrant
+; Get how many heroes allowed for the tyrant. For AI, there is a internal limit of difficulty + 2 (easy difficulty the Ai would have a max of 2 heroes active)
 !!UN:J2/?(diff:y);
 !!UN:C6129162/(UNC_INT8)/?(memoryLimit:y);
-!!VR(heroLimit:y):S(diff) +2 F2/(memoryLimit);
+!!VR(activeHeroLimit:y):S(diff) +2 F2/(memoryLimit);
 
 ; Search for neutral towns to be occupied by pink player
 !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(num:y);    [оличество городов в (num)]
 !!VR(lastId:y):S(num) -1;               [максимальный номер города на карте]
 !!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
-!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN)/(availHeros)/(heroLimit); [передача ничейных городов розовому игроку]
+!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN)/(availHeros)/(activeHeroLimit); [передача ничейных городов розовому игроку]
 
 ; Exit the script if there is no neutral town on the map
-!!OW:W(PLAYER_PINK)/?(townNum:y);
+!!OW:Wi^es_770_tyrantPlayer^/?(townNum:y);
 
 !!if&(townNum)=0/(hasLost);
-  !!OW:I(PLAYER_PINK)/1/1;              [деактивируем розового »»-игрока, если “иран не получил ни одного города и на старте не было розового игрока]
+  !!OW:Ii^es_770_tyrantPlayer^/1/1;           [деактивируем розового »»-игрока, если “иран не получил ни одного города и на старте не было розового игрока]
   !!SN:W^wog_100_enabled^;
-
   !!FU:E;                               [Выход, если “иран не получил ни одного города и на старте не было розового игрока]
 !!en;
 
@@ -80,8 +92,8 @@ ZVSE2
 !!VR(normRes:y):S(coef) *5;             [дерево/руда 5 за каждый стартовый город и уровень сложности]
 !!VR(rareRes:y):S(coef) *3;             [минералы 3 за каждый стартовый город и уровень сложности]
 !!VR(gold:y):S(coef) *10000;            [золото 10000 за каждый стартовый город и уровень сложности]
-!!OW:R(PLAYER_PINK)/(RES_WOOD)/(normRes) R(PLAYER_PINK)/(RES_ORE)/(normRes) R(PLAYER_PINK)/(RES_GOLD)/(gold);
-!!OW:R(PLAYER_PINK)/(RES_MERCURY)/(rareRes) R(PLAYER_PINK)/(RES_SULFUR)/(rareRes) R(PLAYER_PINK)/(RES_CRYSTAL)/(rareRes) R(PLAYER_PINK)/(RES_GEMS)/(rareRes); [даем “ирану ресурсы]
+!!OW:Ri^es_770_tyrantPlayer^/(RES_WOOD)/(normRes) Ri^es_770_tyrantPlayer^/(RES_ORE)/(normRes) Ri^es_770_tyrantPlayer^/(RES_GOLD)/(gold);
+!!OW:Ri^es_770_tyrantPlayer^/(RES_MERCURY)/(rareRes) Ri^es_770_tyrantPlayer^/(RES_SULFUR)/(rareRes) Ri^es_770_tyrantPlayer^/(RES_CRYSTAL)/(rareRes) Ri^es_770_tyrantPlayer^/(RES_GEMS)/(rareRes); [даем “ирану ресурсы]
 
 ; Manage hero availabilities
 ; Check if extension heroes option was enabled by the player, re-enable the option if it was
@@ -93,7 +105,7 @@ ZVSE2
   !!re i/(HERO_SIR_MULLICH)/(lastHero);
     !!HEi:O?(heroOwner:y);
 
-    !!if&(heroOwner)=(PLAYER_PINK);
+    !!if&(heroOwner)=i^es_770_tyrantPlayer^;
       !!HEi:R3/(TRUE)/128;            [128 - recruit by Pink only]
     !!el&(heroOwner)=(NO_OWNER);
       !!HEi:P?(x:y)/?(y:y)/?(z:y);
@@ -105,7 +117,7 @@ ZVSE2
 !!SN:W^wog_100_enabled^;
 
 !?FU(ES_770_SearchForObjects);          [передача ничейного объекта розовому игроку]
-!#VA(objType:x) (availHeros:x) (heroLimit:x);
+!#VA(objType:x) (availHeros:x) (activeHeroLimit:x);
 
 !!UN:U(objType)/(ANY_OBJ)/-1/2;         [получаем координаты объекта в v2-v4]
 
@@ -115,32 +127,32 @@ ZVSE2
 
   ; Build the tavern if eligible
   !!if&(owner)=(NO_OWNER);
-    !!CA2:O(PLAYER_PINK) U?(townId:y);
+    !!CA2:Oi^es_770_tyrantPlayer^ U?(townId:y);
     !!FU(ES_CheckBuildingEligibility):P(townId)/5/?(tavernIsEligible:y);
 
     !!if&(tavernIsEligible);
       !!CA2:B1/5;                       [5 - tavern]
 
       ; Check the number of the Tyrant's heroes, give more if fewer than the global hero limit
-      !!OW:H(PLAYER_PINK)/5/0;
+      !!OW:Oi^es_770_tyrantPlayer^/?(numActiveHeroes:y)/?(dummy:y)/?(dummy)/?(dummy)/?(dummy)/?(dummy)/?(dummy)/?(dummy)/?(dummy);
       !!SN:M(availHeros)/?(size:y);
 
-      !!if&v5<(heroLimit)/(size)>0;
+      !!if&(numActiveHeroes)<(activeHeroLimit)/(size)>0;
         !!FU(Array_Pop):P(availHeros)/?(hero:y);     [Get the hero of the end of the array and remove from the array]
-        !!HE(hero):Pv2/v3/v4 O(PLAYER_PINK);
+        !!HE(hero):Pv2/v3/v4 Oi^es_770_tyrantPlayer^;
       !!en;
     !!en;
   !!en;
 !!el&(objType)=(OBJ_MINE);
   !!MN2:O?(owner)/1;                                 [текущий хоз€ин шахты]
-  !!MN2&(owner)=(NO_OWNER):O(PLAYER_PINK)/1;         [смена хоз€ина ничейной шахты]
+  !!MN2&(owner)=(NO_OWNER):Oi^es_770_tyrantPlayer^/1;         [смена хоз€ина ничейной шахты]
 ; Take dwellings with no guards
 !!el&(objType)=(OBJ_CREATURE_GENERATOR_1);
   !!DW2:O?(owner)/1 G0/d/?(num:y);                   [текущий хоз€ин жилища (тип 17), количество охранников]
-  !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища  без охраны (1-4 уровни)]
+  !!DW2&(owner)=(NO_OWNER)/(num)=0:Oi^es_770_tyrantPlayer^/1; [смена хоз€ина ничейного жилища  без охраны (1-4 уровни)]
 !!el&(objType)=(OBJ_CREATURE_GENERATOR_4);
   !!DW2:O?(owner)/1 G0/d/?(num);                     [текущий хоз€ин жилища (тип 20), количество охранников]
-  !!DW2&(owner)=(NO_OWNER)/(num)=0:O(PLAYER_PINK)/1; [смена хоз€ина ничейного жилища без охраны (1-4 уровни)]
+  !!DW2&(owner)=(NO_OWNER)/(num)=0:Oi^es_770_tyrantPlayer^/1; [смена хоз€ина ничейного жилища без охраны (1-4 уровни)]
 !!en;
 
 ** end
