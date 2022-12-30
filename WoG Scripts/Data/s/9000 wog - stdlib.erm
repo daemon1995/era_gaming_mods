@@ -1,4 +1,7 @@
 ZVSE2
+; Author:   igrik, Archer30, daemon_n and various authors
+; Engine:   ERM 2.0+
+; Requires: ERA 3.3+, Era Erm Framework
 
 ; MAIN WOG Script
 
@@ -337,6 +340,54 @@ ZVSE2
 !!UN:C6918864/(UNC_UINT32)/?y6;
 !!SN:E6304144/2/y6/8/y4/y5/14;
 
+
+
+!?FU(WOG_NewWogObjects_GetVisitedText);
+!#VA(x:x) (y:x) (z:x) (optionId:x) (isRmc:x) (result:x);
+
+!!OW:C?(player:y)/?(interactPlayer:y);
+*!if&(player:y)=(interactPlayer:y); keep that for the future
+   *!OW:A(interactPlayer)/?(activeHero:y);
+   *!HE(activeHero):P?(hX:y)/
+*!en; 
+
+!!PM(x)/(y)/(z):V?(notVisited:y) P(interactPlayer)/?(visitedOnce:y);
+
+!!SN:T^wog.%(optionId).objName^/?(objName:z);
+!!if&(visitedOnce)<>(TRUE);
+  !!VR(str:z):S^%(objName)^;
+!!el;
+  !!if&(isRmc);
+    !!VR(objName):+^%T(wog.endl)%T(wog.endl)^;
+  !!el;
+    !!VR(objName):+^ ^;
+  !!en;
+  !!if&(notVisited)=(FALSE);
+    !!VR(str):S^%(objName)%T(wog.visited)^;
+  !!el;
+    !!VR(str):S^%(objName)%T(wog.notVisited)^;
+  !!en;
+!!en;
+!!VR(result):Z(str);
+
+!?FU(WOG_NewWogObjects_SetHint);
+!#VA(x:x) (y:x) (z:x) (objSubtype:x) (optionId:x);
+!!OB(x)/(y)/(z):T?(objType:y) U?s;
+!!if&(objType)=(OBJ_NEW_WOG_OBJECTS)/s=(objSubtype);
+  !!FU(WOG_NewWogObjects_GetVisitedText):P(x:x)/(y:x)/(z:x)/(optionId)/(FALSE)/?(str:z);
+  !!MM:M^%(str)^;
+!!en;
+
+!?FU(WOG_NewWogObjects_SetPopUp);
+!#VA(x:x) (y:x) (z:x) (objSubtype:x) (optionId:x);
+
+!!OB(x)/(y)/(z):T?(objType:y) U?s;
+!!if&(objType)=(OBJ_NEW_WOG_OBJECTS)/s=(objSubtype);
+  !!FU(WOG_NewWogObjects_GetVisitedText):P(x:x)/(y:x)/(z:x)/(optionId)/(TRUE)/?(str:z);
+  !!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/^%(str)^;
+!!en;
+
+
 ; ******************************************************************************
 ; ****************************** Town Manager **********************************
 
@@ -425,39 +476,6 @@ The game may fall at any time.^;
 !!UN:C4365236/4/?(ptrTable:y);
 !!UN:C(ptrTable)/(id)/4/?(result);
 
-
-; Get and set building cost: (© daemon_n)
-*!FU(WOG_Town_Building_ResourceCost):P(towntype)/(buildingId:y)/?y1/?y1/?y1/?y1/?y1/?y1/?y1;
-!?FU(WOG_Town_Building_ResourceCost);
-!#VA(townType:x) (buildingId:x) (cost[7]:x);
-!!if|(buildingId)<0/(buildingId)>43;
-  !!IF:M^ERROR: %(buildingId) is out of range [0;43]^;
-  !!FU:E;
-!!en;
-!!if|(townType)<0/(townType)>(TOWN_LAST_WOG);
-  !!IF:M^ERROR: %(buildingId) is out of range [0;43]^;
-  !!FU:E;
-!!en;
-!!if&(buildingId)>=30;                                 [dwellings]
-  !!VR(offset:y):S(townType)* 14 +(buildingId) -30 *28;
-  !!VR(srcArrayAddr:y):S6985856;
-!!el&(buildingId)>=17;                                 [spec building]
-  !!VR(offset:y):S(townType) *9 +(buildingId) -17 *28;
-  !!VR(srcArrayAddr:y):S6980420;
-!!el;                                                  [common building]
-  !!VR(offset:y):S(buildingId) *28;
-  !!VR(srcArrayAddr:y):S6979936;
-!!en;
-!!re i/0/(RES_GOLD);
-  !!FU:S(@cost[i])/?(argType:y);
-  !!if&(argType)=(ARG_SYNTAX_GET);
-    !!UN:C(srcArrayAddr)/(offset)/(UNC_INT)/?(cost[i]);
-  !!el&(argType)=(ARG_SYNTAX_SET);
-    !!UN:C(srcArrayAddr)/(offset)/(UNC_INT)/(cost[i]);
-  !!en;
-  !!VR(offset):+(UNC_INT);  
-!!en;
-
 ; ******************************************************************************
 ; ***************************** Battle Manager *********************************
 
@@ -474,6 +492,7 @@ The game may fall at any time.^;
 !!UN:C42231940/(UNC_UINT32)/?(ptr:y);
 !!UN:C(ptr)/56/(UNC_UINT32)/?(gex:y);
 !!FU|(gex)<(BATTLE_GEX_FIRST)/(gex)>(BATTLE_GEX_LAST):E;
+
 !!BU:E(gex)/?(stackId:y);
 !!VR(result)&(stackId)>=0/(stackId)<(BATTLE_MAX_STACKS):S(stackId);
 
@@ -487,17 +506,32 @@ The game may fall at any time.^;
 
 !!VR(result):S(NULL); 
 !!FU&(spellId)<0|(spellId)>69:E;
+
 !!SS(spellId):S?(spBits:y);  
 !!VR(spBits):&(bits);
 !!BM(target)&(spBits)=(bits):G(protecId)/?(duration:y)/?(power:y);
 !!VR(result)&(duration)>0:S(power);
 
+!?FU(WOG_Battle_GetHeroSpellSchoolLvl);
+!#VA(heroID:x) (spellID:x) (result:x);
+!!HE(heroID):Z?(hero:y);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/21440/4/?(ground:y);
+!!SN:E5133040/(CALLCONV_THISCALL)/(hero)/(spellID)/(ground);
+!!VR(result):Sv1;
+
+!?FU(WOG_Battle_CanCast);
+!#VA(side:x) (isHero:x) (result:x);
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+!!SN:E4323856/(CALLCONV_THISCALL)/(cmbMgr)/(side:x)/(isHero:x); [can cast this side]
+!!VR(result):Sv1;
+
 !?FU(WOG_Battle_CanStackReceiveSpell);
 !#VA(stackId:x) (spellID:x) (castingSide:x) (result:x);
-  !!BM(stackId):Z?(stack:y); I?(side:y);
-  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-  !!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; [can stackk apply buff/debuff]
-  !!VR(result):Sv1;
+
+!!BM(stackId):Z?(stack:y); I?(side:y);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; [can stackk apply buff/debuff]
+!!VR(result):Sv1;
 ; ******************************************************************************
 ; ***************************** Another functions ******************************
 
@@ -619,26 +653,45 @@ The game may fall at any time.^;
 
 ; -----------------------------------
 
-!?FU(WOG_Player_CheckEnoughResources);
-!#VA(result:x) (playerId:x) (wood:x) (mercury:x) (ore:x) (sulfur:x) (crystal:x) (gems:x) (gold:x) (mithril:x);
+!?FU(WOG_Player_CheckEnoughResources);  [by Archer30]
+; Check if a player has enough for all the given amount of resources.
+
+; Supports two call syntaxes:
+;   P(result)/(player Id)/(wood)/(mercury)...
+;   P(result)/(player Id)/(ID of dynamical array, containing resounce amount)
+
+; Resouces must be provided with this sequence: Wood, Mercury, Ore, Sulfur, Crystal, Gems, Gold and Mithril (optional)
+!#VA(result:x) (playerId:x) (thirdArg:x);
+
 !!VR(result):S(FALSE);
 
-!!OW:R(playerId)/(RES_GOLD)/?(count:y);   !!FU&(count)<(gold):E;
-!!OW:R(playerId)/(RES_WOOD)/?(count);     !!FU&(count)<(wood):E;
-!!OW:R(playerId)/(RES_MERCURY)/?(count);  !!FU&(count)<(mercury):E;
-!!OW:R(playerId)/(RES_ORE)/?(count);      !!FU&(count)<(ore):E;
-!!OW:R(playerId)/(RES_SULFUR)/?(count);   !!FU&(count)<(sulfur):E;
-!!OW:R(playerId)/(RES_CRYSTAL)/?(count);  !!FU&(count)<(crystal):E;
-!!OW:R(playerId)/(RES_GEMS)/?(count);     !!FU&(count)<(gems):E;
-
-; Check Mithril if Mithril is enabled (optional)
 !!FU:A?(numArgs:y);
+; Exit if invalid amount of parameters
+!!FU&(numArgs)<=2:E;
 
-!!if&(numArgs)>9;
-  !!UN:P36/?(mithrilEnabled:y);
+!!UN:P36/?(mithrilEnabled:y);
 
-  !!if&(mithrilEnabled);
-    !!OW:R(playerId)/(RES_MITHRIL)/?(count);  !!FU&(count)<(mithril):E;
+!!if&(numArgs)>(@thirdArg);
+  !!VR(lastResInd:y):S(numArgs) -(@thirdArg);
+  !!VR(lastResInd)&(mithrilEnabled)/(numArgs)>=10:S(RES_MITHRIL);
+
+  !!re i/(RES_FIRST)/(lastResInd);
+    !!VR(argPtr:y):Si +3;               [The definition of resources amount starts from x3]
+    !!OW:R(playerId)/i/?(count:y);
+    !!VR(count):-x(argPtr); 
+    !!FU&(count)<0:E;
+  !!en;
+!!el;
+  !!SN:M(thirdArg)/?(size:y);
+
+  !!VR(lastResInd):S(size) -1;
+  !!VR(lastResInd)&(mithrilEnabled)/(size)>=8:S(RES_MITHRIL);
+
+  !!re i/(RES_FIRST)/(lastResInd);
+    !!SN:M(thirdArg)/i/?(cost:y);
+    !!OW:R(playerId)/i/?(count);
+    !!VR(count):-(cost);
+    !!FU&(count)<0:E;
   !!en;
 !!en;
 
@@ -646,27 +699,46 @@ The game may fall at any time.^;
 
 ; -----------------------------------
 
-!?FU(WOG_Player_RemoveResources);
-!#VA(playerId:x) (wood:x) (mercury:x) (ore:x) (sulfur:x) (crystal:x) (gems:x) (gold:x) (mithril:x);
+!?FU(WOG_Player_RemoveResources);       [by Archer30]
+; Remove resouces from a given player, prevent any value to be negative.
 
-!!OW:R(playerId)/(RES_WOOD)/d-(wood);    
-!!OW:R(playerId)/(RES_MERCURY)/d-(mercury);   
-!!OW:R(playerId)/(RES_ORE)/d-(ore);      
-!!OW:R(playerId)/(RES_SULFUR)/d-(sulfur);    
-!!OW:R(playerId)/(RES_CRYSTAL)/d-(crystal);  
-!!OW:R(playerId)/(RES_GEMS)/d-(gems);     
-!!OW:R(playerId)/(RES_GOLD)/d-(gold);  
+; Supports two call syntaxes:
+;   P(player Id)/(wood)/(mercury)...
+;   P((player Id)/ID of dynamical array, containing resounce amount)
 
-; Remove Mithril if Mithril is enabled (optional)
+; Resouces must be provided with this sequence: Wood, Mercury, Ore, Sulfur, Crystal, Gems, Gold and Mithril (optional)
+!#VA(playerId:x) (secondArg:x);
+
 !!FU:A?(numArgs:y);
+; Exit if invalid amount of parameters
+!!FU&(numArgs)<=1:E;
 
-!!if&(numArgs)>8;
-  !!UN:P36/?(mithrilEnabled:y);
+!!UN:P36/?(mithrilEnabled:y);
 
-  !!if&(mithrilEnabled);
-    !!OW:R(playerId)/(RES_MITHRIL)/d-(mithril); 
+!!if&(numArgs)>(@secondArg);
+  !!VR(lastResInd:y):S(numArgs) -(@secondArg);
+  !!VR(lastResInd)&(mithrilEnabled)/(numArgs)>=9:S(RES_MITHRIL);
+
+  !!re i/(RES_FIRST)/(lastResInd);
+    !!VR(argPtr:y):Si +2;               [The definition of resources amount starts from x2]
+    !!OW:R(playerId)/i/?(count:y);
+    !!VR(count):-x(argPtr) F0/(INT_MAX); 
+    !!OW:R(playerId)/i/(count);
   !!en;
-!!en; 
+!!el;
+  !!SN:M(secondArg)/?(size:y);
+
+  !!VR(lastResInd):S(size) -1;
+  !!VR(lastResInd)&(mithrilEnabled)/(size)>=8:S(RES_MITHRIL);
+
+  !!re i/(RES_FIRST)/(lastResInd);
+    !!SN:M(secondArg)/i/?(cost:y);
+    !!OW:R(playerId)/i/?(count);
+    !!VR(count):-(cost) F0/(INT_MAX);
+    !!OW:R(playerId)/i/(count);
+  !!en;
+!!en;
+
 
 ; ******************************************************************************
 ; ****************************** Hero functions ********************************
@@ -1082,7 +1154,7 @@ The game may fall at any time.^;
   !!en;
   ; конфигурируем сообщение 
   !!SN:M(resurces)/f;
-  !!FU(WOG_SetupMultiPicDlg):P(resurces);
+  !!FU(PrepareMultiPicDialog):P(resurces);
   ; показать сообщение 
   !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z(text)/?(chosenPicture);
   !!if&(chosenPicture)=-1;; выходим, если нажата ОТМЕНА
@@ -1133,7 +1205,7 @@ The game may fall at any time.^;
 
 ; конфигурируем сообщение 
 !!SN:M(flags)/f;
-!!FU(WOG_SetupMultiPicDlg):P(flags);
+!!FU(PrepareMultiPicDialog):P(flags);
 ; показать сообщение 
 !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z(text)/?(chosenPicture);
 !!if&(chosenPicture)=-1;; выходим, если нажата ОТМЕНА
@@ -1148,41 +1220,6 @@ The game may fall at any time.^;
 ; патч памяти (возвращаем оригинальное название)
 !!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/(saveMemory:y);
 
-; Set up IF:N dialogue with array
-!?FU(WOG_SetupMultiPicDlg);              [by Berserker]
-!#VA(argsArr:x); SN:M array ID with picture type and subtype pairs.
-
-!!SN:M(argsArr)/?(numArgs:y);
-!!VR(numArgPairs:y):S(numArgs) :2;
-!!VR(numArgPairs)&(numArgPairs)>8:S8;
-
-!#VA(params[16]:y);
-
-!!re i/0/(params[SIZE])/1/-1;
-  !!VR(params[i]):S(NO_PIC_TYPE);
-!!en;
-
-!!VR(paramPtr:y):S(@params);
-!!VR(argInd:y):S0;
-
-!!re i/0/(numArgPairs)/1/-1;
-  !!SN:V(argsArr)/(argInd)/?(picType:y)/?(picValue:y);
-
-  !!if&(picType)<>(NO_PIC_TYPE);
-
-    !!if|(picType)<>(PIC_TYPE_MONSTER)/(picValue)>=(MON_FIRST);
-      !!VRy(paramPtr):S(picType);
-      !!VR(paramPtr):+1;
-      !!VRy(paramPtr):S(picValue);
-      !!VR(paramPtr):+1;
-    !!en;
-  !!en;
-
-  !!VR(argInd):+2;
-!!en;
-
-!!IF:N(params[0])/(params[1])/(params[2])/(params[3])/(params[4])/(params[5])/(params[6])/(params[7])/
-      (params[8])/(params[9])/(params[10])/(params[11])/(params[12])/(params[13])/(params[14])/(params[15]);
 
 ; **************************************************************************************************
 ; Get a valid position for BU:S summoning or moving a stack to a new position
@@ -1412,3 +1449,5 @@ The game may fall at any time.^;
 
 !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
 !!SN:E4810128/2/(cmbMgr)/(animation)/(hex)/(delay)/0;
+
+********************************* End of Era Project Team's Script *********************************
