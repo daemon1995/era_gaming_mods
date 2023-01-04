@@ -4,7 +4,7 @@ ZVSE2
 ** with some balancing suggestions from Kerill Kennedy.
 ** Requires WOG version 3.58 or later
 ** Updated  July 26, 2004
-** Updated Dec 2021 by Archer30
+** Updated Jan 2023 by Archer30
 
 ** Turns Conflux into a town of neutral creatures
 ** Fire/Air Messengers changed into new level 3 monsters
@@ -35,8 +35,8 @@ ZVSE2
 !!UN:P67/?(neutralTownOn:y);            [check if script is enabled]
 
 !!if&(neutralTownOn);                   [do conversion if script is enabled]
-  !!FU6104:P; 
-  !!FU(neutTown_SetMonTowns):P;
+  !!FU(WOG_67_SetUpMapObjectws):P; 
+  !!FU(WOG_67_SetNewMonsterFactions):P;
 !!en;
 
 ** end of timer routine
@@ -44,7 +44,7 @@ ZVSE2
 
 ** function to convert Conflux into neutral town
 
-!?FU6104;
+!?FU(WOG_67_SetUpMapObjectws);
 
 ** replace dwellings (by Thomas Franz alias samot)
 
@@ -311,7 +311,12 @@ ZVSE2
 
 ********* end of function FU6106 **************
 
-!?FU(NeutralTown1);                [Algor]
+; This must executed later than Enhanced Monsters stats alteration in order to override the changes
+; This must be executed earlier than Hero Spec Boost in order to be set up new creature specs
+!?FU(OnAfterErmInstructions);
+!!UN:P67/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
 // change Dwellings in the town
 !!UN:T8/0/0/138; [level 1 no upg - Halfling]
 !!UN:T8/0/1/143; [level 1    upg - Rogue]
@@ -338,25 +343,24 @@ ZVSE2
 !!MA:U168/135; [upg gorynych to rust dragon]
 
  [change messengers]
-
 !!MA:L164/2; [level 2 (3)]
 !!MA:L166/2;
 !!MA:C164/6/250; [costs $250]
 !!MA:C166/6/300; [costs $300]
-!!MA:F4/?v600; [griffin fight value]
-!!MA:F164/v600;
-!!MA:F5/?v600; [royal griffin fight value]
-!!MA:F166/v600;
-!!MA:I4/?v600; [griffin ai value]
-!!MA:I164/v600;
-!!MA:I5/?v600; [royal griffin ai value]
-!!MA:I166/v600;
-!!MA:G4/?v600; [griffin grow rate]
-!!MA:G164/v600;
-!!MA:G166/v600;
-!!MA:R4/?v600; [griffin grow H]
-!!MA:R164/v600;
-!!MA:R166/v600;
+!!MA:F4/?(fightValue:y); [griffin fight value]
+!!MA:F164/(fightValue);
+!!MA:F5/?(fightValue); [royal griffin fight value]
+!!MA:F166/(fightValue);
+!!MA:I4/?(aiValue:y); [griffin ai value]
+!!MA:I164/(aiValue);
+!!MA:I5/?(aiValue); [royal griffin ai value]
+!!MA:I166/(aiValue);
+!!MA:G4/?(growRate:y); [griffin grow rate]
+!!MA:G164/(growRate);
+!!MA:G166/(growRate);
+!!MA:R4/?(growH:y); [griffin grow H]
+!!MA:R164/(growH);
+!!MA:R166/(growH);
 !!MA:P164/30; [30 hit points]
 !!MA:P166/30;
 !!MA:S164/5; [Fire Messenger: speed 5]
@@ -371,14 +375,10 @@ ZVSE2
 !!MA:E166/6; [Air Messenger: max dmg 6]
 !!MA:X164/32784; [Fire Messenger: alive, attack twice for Fire Messengers]
 !!MA:X166/32786; [Air Messenger: fly, alive, attack twice for Air Messengers]
-!!MA:L164/2; //set Monster Level to L3
-!!MA:L166/2; //set Monster Level to L3
 
-!!UN:P50/?v1; [Check if Enhanced Monsters is enabled: y1=1 if yes]
-!!VRz707&v1=0:Sz167000;
-!!UN&v1=0:G1/164/2/707;      [fire messenger]
-!!VRz708&v1=0:Sz167001;
-!!UN&v1=0:G1/166/2/708;      [air messenger]
+; Set up messager descriptions (overrides new desc from Enhanced Monsters)
+!!SN:H^monname^/(MON_FIRE_MESSENGER)/2/z167000; [fire messenger]
+!!SN:H^monname^/(MON_AIR_MESSENGER)/2/z167001; [air messager]
 
  [adjust Rogues and Halflings]
 !!MA:L143/0; //set Rogue Monster Level to L1
@@ -417,48 +417,34 @@ ZVSE2
 !!MA:L135/6; // set Monster Level to L7
 
 ; Adjust fight values and AI values (1.2 times values of Black Dragon)
-!!MA:F(MON_BLACK_DRAGON)/?(fvBlackDragon:y);
-!!VR(fvRustDragon:y):S(fvBlackDragon) *6 :5;
-!!MA:F(MON_RUST_DRAGON)/(fvRustDragon);
+!!MA:F(MON_BLACK_DRAGON)/?(fightValue:y);
+!!VR(fightValue):*6 :5;
+!!MA:F(MON_RUST_DRAGON)/(fightValue);
 
-!!MA:I(MON_BLACK_DRAGON)/?(avBlackDragon:y);
-!!VR(avRustDragon:y):S(avBlackDragon) *6 :5;
-!!MA:I(MON_RUST_DRAGON)/(avRustDragon);
+!!MA:I(MON_BLACK_DRAGON)/?(aiValue:y);
+!!VR(aiValue:y):*6 :5;
+!!MA:I(MON_RUST_DRAGON)/(aiValue);
 
  [adjust conflux might hero specialties]
 !!HE128:X4/194/2/1/2; [Pasis - Werewolf/Troll specialist: +2 att, +1 def, +2 dmg]
-!!VRz169:Sz167002; [Pasis' specialty text]
-!!UN:G2/128/2/169; [Set Pasis' specialty text to z169]
 !!HE129:X0/13; [Thunar - Estates specialist]
-!!VRz170:Sz167003; [Thunar's specialty text]
-!!UN:G2/129/2/170; [Set Thunar's specialty text to z170]
 !!HE130:X0/20; [Ignissa - Artillery specialist]
-!!VRz171:Sz167004; [Ignissa's specialty text]
-!!UN:G2/130/2/171; [Set Ignissa's specialty text to z171]
 !!HE131:X5/2; [Lacus - Speed bonus (like Sir Mullich)]
-!!VRz172:Sz167005; [Lacus' specialty text]
-!!UN:G2/131/2/172; [Set Lacus' specialty text to z172]
 !!HE132:X4/193/3/3/3; [Monere - Sorceress/Enchanter specialist: +3 att, +3 def, +3 dmg]
-!!VRz173:Sz167006; [Monere's specialty text]
-!!UN:G2/132/2/173; [Set Monere's specialty text to z173]
 !!HE133:S13/0 S19/0 S23/2 X0/23; [Erdamon - Armorer Specialist - starts with Advanced Armorer instead of Basic Tactics and Estates]
-!!VRz174:Sz167007; [Erdamon's specialty text]
-!!UN:G2/133/2/174; [Set Erdamon's specialty text to z174]
 !!HE134:X1/164; [Fiur - Fire Messenger/Air Messenger specialist (old style)]
-!!VRz175:Sz167008; [Fiur's specialty text]
-!!UN:G2/134/2/175; [Set Fiur's specialty text to z175]
 !!HE135:X0/21 Y9/100/999/1; [Kalt - Learning bonus plus gains 100 experience daily (Blessing)]
-!!VRz176:Sz167009; [Kalt's specialty text]
-!!UN:G2/135/2/176; [Set Kalt's specialty text to z176]
 
+; Set up specialty descriptions from ert
+!!re i/(HERO_PASIS)/(HERO_KALT);
+  !!VR(ertInd:y):Si +166874;            [index of ert]
+  !!SN:H^spec^/i/2/z(ertInd);
+!!en;
 
 !!DO6100/0/155/1:P0; [iterate through all heroes to fix starting troops]
 !!DO6105/128/143/1:P; [set future starting troops for conflux heroes]
 
-!#UN:P67/?v1;                       [Algor]
-!#FU(NeutralTown1)&v1>0:P;
-
-!?FU(neutTown_SetMonTowns);
+!?FU(WOG_67_SetNewMonsterFactions);
 !!MA:O138/8; [these creatures all count as being conflux troops]
 !!MA:O143/8;
 !!MA:O140/8;

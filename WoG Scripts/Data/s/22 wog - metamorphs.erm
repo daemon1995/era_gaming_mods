@@ -19,7 +19,6 @@ ZVSE2
 
 Permanent Variables used:  v4500-v4603, z206-z209
 Temporary Variables used:  v1-v10, v13-v14, v24
-Functions used:  FU9600-FU9603
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -44,12 +43,11 @@ Functions used:  FU9600-FU9603
 --------------------------------------------------------------------------------------------------------------------
 
  [Store information about creature type (Metamorphs) in v variables)]
-!?FU(OnBattleRound)&i^battle_round^=0/1000/-998;
-
+!?FU(OnBeforeBattleUniversal)&1000/-998;
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
 
-!!DO9600/0/41/1:P; [Cycle through all battlefield stacks]
+!!DO(WOG_56_StoreMetamorphInfo)/0/41/1:P; [Cycle through all battlefield stacks]
 !!VRv4542:S-1; [Initialize v4542 to -1]
 
  [Battle location: v998/v999/v1000]
@@ -60,7 +58,7 @@ Functions used:  FU9600-FU9603
 --------------------------------------------------------------------------------------------------------------------
 
  [Store information about creature type (Metamorphs) in v variables]
-!?FU9600;
+!?FU(WOG_56_StoreMetamorphInfo);
 !!VRy1:S4500 +x16; [Index number for monster Type: y1]
 !!VRy2:S4550 +x16; [Index number for number in stack: y2]
 !!BMx16:T?vy1 B?vy2; [Store monster Type in vy1, Number in vy2]
@@ -71,6 +69,7 @@ Functions used:  FU9600-FU9603
 !?FU(OnBeforeBattleAction)&v4603=0/1000/-998;
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
+
 !!VRv4542:S-1; [Initialize v4542 to -1]
 !!BG:N?v1 A?v2; [Current stack number: v1, Action: v2]
 !!VRv3:S4500 +v1; [Index for original acting monster: v3]
@@ -214,26 +213,26 @@ Functions used:  FU9600-FU9603
 --------------------------------------------------------------------------------
 
  [Post-Action trigger]
-!?FU(OnAfterBattleAction)&v4603=0/1000/-998;
+!?FU(OnAfterBattleAction)&v4603=0/1000/-998/i^battle_round^>=0;
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
-!!BU:T?y1;
-!!FU&y1=1:E; [Exit if the tactical phase]
 
 !!BG:N?v1; [Current stack number: v1]
 !!BMv1:T?v2 N?v5; [Type of monster: v2, Number in stack: v5]
-!!FU9603&v2=(MON_EARTH_MESSENGER)/v5>=1:P; [Initial Transformation of Metamorph]
+!!FU(WOG_56_TransformMetamorphInit)&v2=(MON_EARTH_MESSENGER)/v5>=1:P; [Initial Transformation of Metamorph]
 
 --------------------------------------------------------------------------------
 
  [Initial Transformation of Metamorph]
-!?FU9603;
+!?FU(WOG_56_TransformMetamorphInit);
 !!VRv3:S0 R164; [Random number from 0..164 for monster: v3]
 !!VRv4:S-1; [Initialize v4 to -1]
 !!MA:Pv2/?v6; [Health of one Metamorph: v6]
 !!VRv6:*v5; [Total health of Metamorph stack: v6]
-!!DO9601/v3/164/1:P; [Determine new creature: v4]
-!!DO9601/0/v3/1&v4<0:P; [Determine new creature part 2: v4]
+
+!!DO(WOG_56_DetermineNewCreature)/v3/164/1:P; [Determine new creature: v4]
+!!DO(WOG_56_DetermineNewCreature)/0/v3/1&v4<0:P; [Determine new creature part 2: v4]
+
 !!BMv1:P?v8 O?v14; [Position of Metamorph: v8, Hero's slot: v14]
 !!VRy-4:Sv1 *-1 -1; [Negative of Metamorph stack number: y-4]
 !!EAy-4:E?y-5/d/d/d; [Experience of Metamorph stack: y-5]
@@ -271,7 +270,7 @@ Functions used:  FU9600-FU9603
 --------------------------------------------------------------------------------------------------------------------
 
  [Determine random creature Metamorph transforms into: v4]
-!?FU9601;
+!?FU(WOG_56_DetermineNewCreature);
 !!VRx16&x16>=122:+1; [Skip "Not Used (1)"]
 !!VRx16&x16>=124:+1; [Skip "Not Used (2)"]
 !!VRx16&x16>=126:+1; [Skip "Not Used (3)"]
@@ -292,19 +291,22 @@ Functions used:  FU9600-FU9603
 --------------------------------------------------------------------------------------------------------------------
 
  [After battle, set correct Metamorphs in hero's army]
-!?FU(OnAfterBattle)&1000/-998;
+!?FU(OnAfterBattleUniversal)&1000/-998;
 !!UN:P56/?(wogOption:y);                [Check if script is enabled]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
-; Set correct Metamorphs in hero's army
-!!DO9602/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1&i^wog_retreated_0^<>(TRUE):P;
-!!DO9602/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1&i^wog_retreated_1^<>(TRUE):P;
-!!SN:D;                                 [Redraw screen]
+; Set correct Metamorphs in hero's army (if the hero has retreated then it's not required, as the hero lose all the troops)
+!!DO(WOG_56_RestoreMetamorph)/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1&i^wog_isRetreated_0^<>(TRUE):P?(armyUpdated1:y);
+!!DO(WOG_56_RestoreMetamorph)/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1&i^wog_isRetreated_1^<>(TRUE):P?(armyUpdated2:y);
+!!SN|(armyUpdated1)/(armyUpdated2):D;   [Redraw screen]
 
 --------------------------------------------------------------------------------------------------------------------
 
  [After battle, set correct Metamorphs in hero's army]
-!?FU9602;
+!?FU(WOG_56_RestoreMetamorph);
+!#VA(armyUpdated:x);
+
+!!VR(armyUpdated):S(FALSE);
 !!VRy1:S4500 +x16; [Stack number index: y1]
 !!VRy10:Svy1; [Type of creature at start of battle: y10]
 !!BMx16:N?y2 O?y3; [Number of creatures in stack: y2, Hero slot #: y3]
@@ -312,6 +314,8 @@ Functions used:  FU9600-FU9603
  [Exit if not a Metamorph at start of battle,]
  [all killed, or a summoned creature there now]
 !!FU|y10<>(MON_EARTH_MESSENGER)/y2<1/y3<0:E;
+
+!!VR(armyUpdated):S(TRUE);
 
 !!MA:P(MON_EARTH_MESSENGER)/?y4; [Health of one Metamorph: y4]
 !!BMx16:T?y5; [Type of creature: y5]

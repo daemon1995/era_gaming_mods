@@ -178,7 +178,7 @@ ZVSE2
 ** end of timer routines
 
 ** start of movement trigger
-!?HM-1|i^wog_208_enabled^/i^wog_212_enabled^;                        [continue if navigation or scouting enabled]
+!?FU(OnHeroMove)|i^wog_208_enabled^/i^wog_212_enabled^;                        [continue if navigation or scouting enabled]
 !!HE-1:N?v7020 O?y-2;                          [get #, owner of hero]
 !!OW:C?y-3 Iy-3/?y-4 Gy-3/?y-5;                [get current player]
 !!FU&y-2<>y-3:E;                               [exit if not current player's hero]
@@ -209,9 +209,7 @@ ZVSE2
 
 
 ** start of battle-start trigger
-!?FU(OnBeforeBattle)|i^wog_204_enabled^/i^wog_207_enabled^;
-
-
+!?FU(OnBeforeBattleUniversal)|i^wog_204_enabled^/i^wog_207_enabled^;
 
 ** first aid
 !!if&i^wog_204_enabled^;
@@ -425,14 +423,21 @@ ZVSE2
 !?FU(OnAfterBattleUniversal)|i^wog_204_enabled^/i^wog_207_enabled^/i^wog_202_enabled^;                     [Continue trigger if any skills are enabled]
 ** first aid
 !!if&i^wog_204_enabled^;
-  !!BA:H0/?v7020;                             [get attacking hero #]
-  !!HEv7020&v7020>-1:O?v7021;                 [get attacking hero's owner]
-  !!HEv7020&v7020>-1/v7021<>-1:A2/6/?y-7/?y-8;          [see if attacking hero has a First Aid Tent]
-  !!FU7002&v7021<>-1/y-8>0/v7020>-1:P1;        [handle first aid tent for attacker]
-  !!BA:H1/?v7020;                             [get defending hero #]
-  !!HEv7020&v7020>-1:O?v7021;                 [get defending hero's owner]
-  !!HEv7020&v7020>-1/v7021<>-1:A2/6/?y-7/?y-8;          [see if defending hero has a First Aid Tent]
-  !!FU7002&v7021<>-1/y-8>0/v7020>-1:P2;        [handle first aid tent for defender]
+  !!HEi^battle_hero_0^:O?(owner:y);     [get attacking hero's owner]
+
+  !!if&(owner)<>(NO_OWNER);
+    !!HEi^battle_hero_0^A2/6/?(backpacked:y)/?(equipped:y); [see if attacking hero has a First Aid Tent]
+    !!FU(WOG_204_FirstAidAfterBattle)&(equipped)>0:P1; [handle first aid tent for attacker]
+  !!en;
+
+  !!if&i^battle_hero_1^>(NO_HERO);
+    !!HEi^battle_hero_1^:O?(owner);     [get defending hero's owner]
+
+    !!if&(owner)<>(NO_OWNER);
+      !!HEi^battle_hero_1^:A2/6/?(backpacked:y)/?(equipped:y); [see if defending hero has a First Aid Tent]
+      !!FU(WOG_204_FirstAidAfterBattle)&(equipped)>0:P2; [handle first aid tent for defender]
+    !!en;
+  !!en;
 !!en;
 
 ** mysticism
@@ -454,6 +459,7 @@ ZVSE2
 !!re i/(min)/(max);
   *!BA:M(enemySide)/i/?(mon:y)/?(qty:y);
   !!BMi:N?(qty:y) H?(hp:y) T?(mon:y);
+
   !!if&(mon)>(NO_MON)/(qty)>1/(hp)>0;
     !!MA:F(mon)/?(fv:y);
     !!VR(maxKillCount:y):S(qty) -1;
@@ -476,8 +482,10 @@ ZVSE2
 ** function to handle artillery, hero, skill level
 !?FU(WOG_201_KillWithArtillery);
   !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?(seed:y);
+  
   !!re (side:y)/0/i^battle_hero_vs_hero^;
     !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y);
+
     !!if&(ballista);
 
       !!VR(min:y):S(side) *21;
@@ -588,7 +596,11 @@ ZVSE2
 
 
 ** function to handle first aid tent
-!?FU7002;                 y1= HP   y2=slot y9= first aid
+!?FU(WOG_204_FirstAidAfterBattle);                 y1= HP   y2=slot y9= first aid
+!#VA(index:x);
+
+!!VRy30:Sx1 -1;                                     [Legacy]
+!!VRv7020:Si^battle_hero_%y30^;
 
 !!HEv7020:A2/5/?y7/?y8 E?y3/?y4/1 S27/?y9;          [check for Ammo Cart, get hero's level, first aid level]
 !!VRy5:S1;                                          [set multiplier to 1]
@@ -637,7 +649,7 @@ ZVSE2
 ** function to give gold - estates
 !?FU(WOG_203_SetUpEstatesDailyBonus);   x1=estates level  x2=hero level
 !!VRy1:S5 *x1 *x2;                            [gold = 5 x estates level x hero level]
-!!OW:Rv7021/6/dy1;                            [give gold]
+!!OW:Ri^timerOwner^/6/dy1;                            [give gold]
 ** end of function
 
 ** function for mysticism
@@ -742,13 +754,13 @@ ZVSE2
 
 ** function to iterate through current player's heroes (weekly)
 !?FU7012;
-!!HEx16:O?v7021;                              [get owner of iterated hero]
+!!HEx16:O?(owner:y);                              [get owner of iterated hero]
 
-!!if&v7021=i^timerOwner^;
-  !!HEx16:S(SKILL_ESTATES)/?y1;                            [get hero's estates level]
-  !!FU(WOG_203_SetUpEstatesWeeklyBonus)&i^wog_203_enabled^/y1>(SKILL_NOT_LEARNED):Px16/y1;     [if hero in use and it's that hero's owner's turn, continue in function 7013 (estates) - if enabled]
-  !!HEx16:S(SKILL_SCHOLAR)/?y1;                            [get hero's scholar skill level]
-  !!FU7014&i^wog_211_enabled^/y1>(SKILL_NOT_LEARNED):Px16/y1;                  [if hero in use and it's that hero's owner's turn, continue in function 7014 (scholar) - if enabled]
+!!if&(owner)=i^timerOwner^;
+  !!HEx16:S(SKILL_ESTATES)/?(skillLevel:y);                            [get hero's estates level]
+  !!FU(WOG_203_SetUpEstatesWeeklyBonus)&i^wog_203_enabled^/(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel);     [if hero in use and it's that hero's owner's turn, continue in function (estates) - if enabled]
+  !!HEx16:S(SKILL_SCHOLAR)/?(skillLevel);                            [get hero's scholar skill level]
+  !!FU(WOG_211_TeachScholarSpell)&i^wog_211_enabled^/(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel);                  [if hero in use and it's that hero's owner's turn, continue in function (scholar) - if enabled]
 !!en;
 ** end of function
 
@@ -759,32 +771,48 @@ ZVSE2
 !!HE(hero):B0/?z700;                           [get hero's name]
 !!HE(hero):R2/?y1;                             [get hero's sex]
 !!IF:W(hero);                                  [enable hero variables]
-!!VRw5&w8<1/(estatesLv)>=1:R0/0/5;             [if not set, get random resource #]
-!!VRw6&w8<2/(estatesLv)>=2:R0/0/5;
-!!VRw7&w8<3/(estatesLv)>=3:R0/0/5;
-!!VRw8&w8=0/(estatesLv)>=1:S1;                 [set to lock resources]
-!!VRw8&w8=1/(estatesLv)>=2:S2;
-!!VRw8&w8=2/(estatesLv)>=3:S3;
-!!VRy3:R0/1/2;                                [set quantity for resource 1]
-!!VRy3&w5=0|w5=2:*2;                          [double for wood or ore]
-!!VRy4:R0/1/2;                                [set quantity for resource 2]
-!!VRy4&w6=0|w6=2:*2;                          [double for wood or ore]
-!!VRy5:R0/1/2;                                [set quantity for resource 3]
-!!VRy5&w7=0|w7=2:*2;                          [double for wood or ore]
 
-!!if&1000;
-  !!IF&(estatesLv)=1:Q2/w5/y3/1/z148013;
-  !!IF&(estatesLv)=2:Q2/w5/y3/w6/y4/1/z148014;
-  !!IF&(estatesLv)=3:Q2/w5/y3/w6/y4/w7/y5/1/z148015;
+; Question: Is w8 really used for anything? - Archer30
+!!if&(estatesLv)>=(SKILL_BASIC);
+  !!VRw5&w8<1:R0/0/5;             [if not set, get random resource #]
+  !!VRw8&w8=0:S1;                 [set to lock resources]
+
+  !!if&(estatesLv)>=(SKILL_ADVANCED);
+    !!VRw6&w8<2:R0/0/5;
+    !!VRw8&w8=1:S2;
+
+    !!if&(estatesLv)>=(SKILL_EXPERT);
+      !!VRw7&w8<3:R0/0/5;
+      !!VRw8&w8=2:S3;
+    !!en;
+  !!en;
 !!en;
 
-!!OW&(estatesLv)=1:Rv7021/w5/dy3;                      [give the resources]
-!!OW&(estatesLv)=2:Rv7021/w5/dy3 Rv7021/w6/dy4;        [give the resources]
-!!OW&(estatesLv)=3:Rv7021/w5/dy3 Rv7021/w6/dy4 Rv7021/w7/dy5; [give the resources]
+!!VRy3:R0/1/2;                                [set quantity for resource 1]
+!!VRy3|w5=(RES_WOOD)/w5=(RES_ORE):*2;         [double for wood or ore]
+!!VRy4:R0/1/2;                                [set quantity for resource 2]
+!!VRy|w6=(RES_WOOD)/w6=(RES_ORE):*2;          [double for wood or ore]
+!!VRy5:R0/1/2;                                [set quantity for resource 3]
+!!VRy5|w7=(RES_WOOD)/w7=(RES_ORE):*2;         [double for wood or ore]
+
+!!if&1000;
+  !!IF&(estatesLv)=(SKILL_BASIC):Q2/w5/y3/1/z148013;
+  !!IF&(estatesLv)=(SKILL_ADVANCED):Q2/w5/y3/w6/y4/1/z148014;
+  !!IF&(estatesLv)>=(SKILL_EXPERT):Q2/w5/y3/w6/y4/w7/y5/1/z148015;
+!!en;
+
+!!if&(estatesLv)>=(SKILL_BASIC);
+  !!OW:Ri^timerOwner^/w5/dy3; [give the resources]
+
+  !!if&(estatesLv)>=(SKILL_ADVANCED);
+    !!OW:Ri^timerOwner^/w6/dy4; [give the resources]
+    !!OW&(estatesLv)>=(SKILL_EXPERT):Ri^timerOwner^/w7/dy5; [give the resources]
+  !!en;
+!!en;
 ** end of function
 
 ** function for scholar       x2=scholar level
-!?FU7014;
+!?FU(WOG_211_TeachScholarSpell);
 !#VA(hero:x) (scholarLv:x);
 
 !!HE(hero):B0/?z700;                           [get hero's name]
@@ -856,20 +884,24 @@ ZVSE2
 
 ** function to iterate through current player's heroes (daily)
 !?FU7020;
-!!HEx16:O?v7021;                              [get owner of iterated hero]
+!!HEx16:O?(owner:y);                              [get owner of iterated hero]
 
-!!if&v7021=i^timerOwner^;
-  !!HEx16:S(SKILL_PATHFINDING)/?y1;           [get hero's pathfinding skill level]
-  !!FU(WOG_209_SetUpPathfindingBonus)&i^wog_209_enabled^/y1>0:Px16/y1; [if hero has pathfinding, is in use and it's that hero's owner's turn, continue in function 7025 - if enabled]
-!!en;
+!!if&(owner)=i^timerOwner^;
+  !!HEx16:S(SKILL_PATHFINDING)/?(skillLevel:y);           [get hero's pathfinding skill level]
+  !!FU(WOG_209_SetUpPathfindingBonus)&i^wog_209_enabled^/(skillLevel)>0:Px16/(skillLevel); [if hero has pathfinding, is in use and it's that hero's owner's turn, continue in function 7025 - if enabled]
 
-!!if&i^timerDay^>1;
-  !!if&v7021=i^timerOwner^;
-    !!HEx16:S(SKILL_LEARNING)/?y1;            [get hero's learning skill level]
-    !!FU(WOG_205_SetUpLearningBonus)&i^wog_205_enabled^/y1>0:Px16/y1; [if hero has learning, is in use and it's that hero's owner's turn, continue in function 7021 - if enabled]
+  !!if&i^timerDay^>1;
+    !!HEx16|i^wog_205_enabled^/i^wog_203_enabled^:E?(exp:y)/?(level:y)/1;
 
-    !!HEx16:S(SKILL_ESTATES)/?y1 E?y2/?y3/1;  [get hero's estates skill level, hero level]
-    !!FU(WOG_203_SetUpEstatesDailyBonus)&i^wog_203_enabled^/y1>0:Py1/y3; [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
+    !!if&i^wog_205_enabled^;
+      !!HEx16:S(SKILL_LEARNING)/?(skillLevel); [get hero's learning skill level]
+      !!FU(WOG_205_SetUpLearningBonus)&(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel)/(exp)/(level); [if hero has learning, is in use and it's that hero's owner's turn, continue in function - if enabled]
+    !!en;
+
+    !!if&i^wog_203_enabled^;
+      !!HEx16:S(SKILL_ESTATES)/?(skillLevel); [get hero's estates skill level, hero level]
+      !!FU(WOG_203_SetUpEstatesDailyBonus)&(skillLevel)>(SKILL_NOT_LEARNED):P(skillLevel)/(level); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
+    !!en;
   !!en;
 !!en;
 
@@ -877,9 +909,27 @@ ZVSE2
 
 ** function for learning      x1=hero x2=learning level
 !?FU(WOG_205_SetUpLearningBonus);
-!!HEx1&x2=(SKILL_BASIC):Ed100;          [give 100 experience]
-!!HEx1&x2=(SKILL_ADVANCED):Ed200;       [give 200 experience]
-!!HEx1&x2>=(SKILL_EXPERT):Ed300;        [give 300 experience]
+!#VA(hero:x) (skillLevel:x) (exp:x) (level:x);
+
+!!UN:J1/?(maxLevel:y)/d;                [active only when the hero has not yet reach the level limit of the scenario. Note: Level limit is 0 by default.]
+!!FU&(maxLevel)>0/(level)>=(maxLevel):E;
+
+!!if&(skillLevel)=(SKILL_BASIC);
+  !!VR(exp):+100;                       [give 100 experience]
+!!el&(skillLevel)=(SKILL_ADVANCED);
+  !!VR(exp):+200;                       [give 200 experience]
+!!el&(skillLevel)>=(SKILL_EXPERT);
+  !!VR(exp):+300;                       [give 300 experience]
+!!en;
+
+; Fix exp if there is a level limit in the scenario
+!!if&(maxLevel)>0;
+  !!FU(ES_GetExpRequirementOfLevel):P(maxLevel)/?(maxExp:y);
+  !!VR(exp):F0/(maxExp);
+!!en;
+   
+!!HE(hero):E(exp);
+
 ** end of function
 
 
@@ -890,7 +940,7 @@ ZVSE2
 !!VRy4&x1=2:R799;                             [set random roll to 1.5% (12/800)]
 !!VRy4&x1=3:R599;                             [set random roll to 2.0% (12/600)]
 !!FU&y4>12:E;
-!!HEv7020:O?v7021;                            [get hero's owner]
+*!HEv7020:O?v7021;                            [get hero's owner]
 !!HEv7020:B0/?z700;                           [get hero's name]
 !!HEv7020:R2/?y1;                             [get hero's sex]
 !!VRz701&y1=0:Sz148017;
@@ -906,21 +956,21 @@ ZVSE2
 !!IF&1000/y4=2:Q2/20/y3/1/z148024;
 !!VRr&y4=2:S1 R24 *100;                       [random 1 to 25 x 100]
 !!IF&1000/y4=2:Q2/6/r/1^^;
-!!OW&y4=2:Rv7021/6/dr;                        [give gold]
+!!OW&y4=2:Ri^timerOwner^/6/dr;                        [give gold]
 !!IF&1000/y4=3:Q2/20/y3/1/z148025;
 !!VRs&y4=3:S0 R5;                             [random resource 0 to 5]
 !!VRr&y4=3:S1 R2;                             [random quantity 1 to 3]
 !!VRr&y4=3/s=0:*2;                            [double for wood]
 !!VRr&y4=3/s=2:*2;                            [double for ore]
 !!IF&1000/y4=3:Q2/s/r/1^^;
-!!OW&y4=3:Rv7021/s/dr;                        [give the resources]
+!!OW&y4=3:Ri^timerOwner^/s/dr;                        [give the resources]
 !!IF&1000/y4=4:Q2/20/y3/1/z148026;
 !!VRs&y4=4:S0 R5;                             [random resource 0 to 5]
 !!VRr&y4=4:S4 R2;                             [random quantity 4 to 6]
 !!VRr&y4=4/s=0:*2;                            [double for wood]
 !!VRr&y4=4/s=2:*2;                            [double for ore]
 !!IF&1000/y4=4:Q2/s/r/1^^;
-!!OW&y4=4:Rv7021/s/dr;                        [give resources]
+!!OW&y4=4:Ri^timerOwner^/s/dr;                        [give resources]
 !!UN&y4=4:R2;                                 [redraw resources bar]
 !!FU(WOG_212_GetRandMonAndNames)&y4=5:P?s;                            [call function 7019 to pick monster]
 !!MA&y4=5:Gs/?r;                              [get 1 weeks production]
@@ -943,7 +993,7 @@ ZVSE2
 !!HEv7020&y4=9:Wd+400;                        [increase movement]
 !!IF&1000/y4=10:Q2/20/y3/1/z148033;
 !!VRr&y4=10:S3 *x1 +16;                       [area]
-!!UN&y4=10:Sv7023/v7024/v7025/v7021/r;        [reveal area]
+!!UN&y4=10:Sv7023/v7024/v7025/i^timerOwner^/r;        [reveal area]
 !!FU(WOG_212_GetRandMonAndNames)&y4=11:P?s;                           [call function 7019 to pick monster]
 !!MA&y4=11:Vs/?r;                             [get AdvMapL]
 !!IF&1000/y4=11:Q2/20/y3/1/z148034;

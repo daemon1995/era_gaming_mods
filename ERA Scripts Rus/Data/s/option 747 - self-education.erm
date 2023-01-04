@@ -1,7 +1,6 @@
 ZVSE2
 ** Author orig.  : Algor
-** Rewritten by  : Archer30
-** Fully Rewritten by  : daemon_n 08 Aug 2022
+** Rewritten by  : daemon_n and Archer30 on 08 Aug 2022
 ** Name          : Self-education
 ** Name rus.     : Самообучение
 ** Options       : 747
@@ -18,6 +17,7 @@ ZVSE2
 ** и увеличивает эффективность "образовательных зданий" до 6/7/8% (на 20/40/60%).
 
 ** Прим: самообучение отключается, если в игре всего один игрок
+
 
 // Initialization
 !?FU(OnAfterErmInstructions);
@@ -38,69 +38,101 @@ ZVSE2
   !!UN:P747/?(wogOption:y);
   !!FU&(wogOption)<>(TRUE):E;
 
+  ; Check if there is only one player in the game. Skip giving exp if it does
   !!VRf:S0;
-  !!re i/0/(PLAYER_LAST);
+
+  !!re i/(PLAYER_FIRST)/(PLAYER_LAST);
     !!OW:Ii/d/?(isDead:y);
     !!VRf&(isDead)=0:+1;
   !!en;
 
-  !!if&f>1;
+  !!FU&f<=1:E;
 
-    !!OW:Wi^timerOwner^/?(townsNum:y);
+  ; Check towns for hereos in the garrison. If the garrison has no hero, try to use the hero visiting
+  !!OW:Wi^timerOwner^/?(townsNum:y);
 
-    !!if&(townsNum);
+  !!if&(townsNum)>0;
+    !!re i/0/(townsNum)/1/-1;
+      !!OW:Wi^timerOwner^/i/?(townId:y);
+      !!CA0/(townId):H0/?(hero:y) T?(townType:y);
 
-      !!re i/0/(townsNum)/1/-1;
-        !!OW:Wi^timerOwner^/i/?(townId:y);
-        !!CA0/(townId):H0/?(hero:y) T?(townType:y);
+      ; Check for the visiting hero if the garrison has no hero
+      !!CA0/(townId)&(hero)=(NO_HERO):H1/?(hero);
 
-        !!if&(hero)<>(NO_HERO);
-          !!HE(hero):S(SKILL_LEARNING)/?(skill:y) W?(movement:y)/1;
+      !!if&(hero)<>(NO_HERO);
+        !!HE(hero):S(SKILL_LEARNING)/?(skill:y) W?(movement:y)/1 E?(exp:y)/?(level:y)/1;
+        !!UN:J1/?(maxLevel:y)/d;        [active only when the hero has not yet reach the level limit of the scenario. Note: Level limit is 0 by default.]
+        !!co&(maxLevel)>0/(level)>=(maxLevel);
 
-          !!if&(movement);
-            !!VR(buildEfficiency:y):S(skill) +5;  [5% to *%8 per building depending on learning level]
-            !!VR(totalBuildEffect:y):S0;
+        !!if&(movement)>0;
+          !!VR(buildEfficiency:y):S(skill) +5; [5% to *%8 per building depending on learning level]
+          !!VR(totalBuildEffect:y):S0;
 
-            !!re j/0/4;
-              !!CA0/(townId):B3/j;
-              !!if&1;
-                !!VR(totalBuildEffect):+(buildEfficiency);
-              !!el;
-                !!br;
-              !!en;
+          ; Check Mage Guilds
+          !!re j/0/4;
+            !!CA0/(townId):B3/j;
+
+            !!if&1;
+              !!VR(totalBuildEffect):+(buildEfficiency);
+            !!el;
+              !!br;
             !!en;
-            ; Check Library for Tower
-            !!if&(townType)=(TOWN_TOWER);
-              !!CA0/(townId):B3/22;
-              !!VR(totalBuildEffect)&1:+(buildEfficiency);
-            ; Check Battle Scholar Academy for Dungeon
-            !!el&(townType)=(TOWN_DUNGEON);
-              !!CA0/(townId):B3/23;
-              !!VR(totalBuildEffect)&1:+(buildEfficiency);
-            ; Check Magic University for Conflux
-            !!el&(townType)=(TOWN_CONFLUX);
-              !!CA0/(townId):B3/21;
-              !!VR(totalBuildEffect)&1:+(buildEfficiency);
-            !!en;
-
-            !!VR(skill):*10 +(buildEfficiency);
-            !!VR(bonusExp:y):S(movement) :100 *(skill);
-            !!HE(hero):Ed(bonusExp) W0/1;
           !!en;
+
+          ; Check Library for Tower
+          !!if&(townType)=(TOWN_TOWER);
+            !!CA0/(townId):B3/22;
+            !!VR(totalBuildEffect)&1:+(buildEfficiency);
+          ; Check Battle Scholar Academy for Dungeon
+          !!el&(townType)=(TOWN_DUNGEON);
+            !!CA0/(townId):B3/23;
+            !!VR(totalBuildEffect)&1:+(buildEfficiency);
+          ; Check Magic University for Conflux
+          !!el&(townType)=(TOWN_CONFLUX);
+            !!CA0/(townId):B3/21;
+            !!VR(totalBuildEffect)&1:+(buildEfficiency);
+          !!en;
+
+          !!VR(skill):*10 +(buildEfficiency);
+          !!VR(bonusExp:y):S(movement) :100 *(skill);
+          !!VR(exp):+(bonusExp);
+
+          ; Fix exp if there is a level limit in the scenario
+          !!if&(maxLevel)>0;
+            !!FU(ES_GetExpRequirementOfLevel):P(maxLevel)/?(maxExp:y);
+            !!VR(exp):F0/(maxExp);
+          !!en;
+
+          !!HE(hero):E(exp) W0/1;       [Set movement points to 0 so the hero won't be calculated again in the next loop]
         !!en;
       !!en;
     !!en;
+  !!en;
 
-    !!OW:Hi^timerOwner^/1;
-    !!if&v1;
-      !!re i/2/v1/1/1;
-        !!VR(hero):Svi;
-        !!HE(hero):S(SKILL_LEARNING)/?(skill:y) W?(movement:y)/1;
-        !!if&(skill)/(movement);
-          !!VR(skill):*10;
-          !!VR(bonusExp:y):S(movement) :100 *(skill);
-          !!HE(hero):Ed(bonusExp) W0;
+  ; Check active heroes (heroes outside of towns)
+  ; Skip heroes that has added exp in the town hero loop by checking hero's current movement points
+  !!OW:Hi^timerOwner^/1;
+
+  !!if&v1>0;
+    !!re i/2/v1/1/1;
+      !!VR(hero):Svi;
+
+      !!HE(hero):S(SKILL_LEARNING)/?(skill:y) W?(movement:y)/1 E?(exp:y)/?(level:y)/1;
+      !!UN:J1/?(maxLevel:y)/d;          [active only when the hero has not yet reach the level limit of the scenario. Note: Level limit is 0 by default.]
+      !!co&(maxLevel)>0/(level)>=(maxLevel);
+
+      !!if&(movement)>0/(level)>(SKILL_NOT_LEARNED);
+        !!VR(skill):*10;
+        !!VR(bonusExp:y):S(movement) :100 *(skill);
+        !!VR(exp):+(bonusExp);
+
+        ; Fix exp if there is a level limit in the scenario
+        !!if&(maxLevel)>0;
+          !!FU(ES_GetExpRequirementOfLevel):P(maxLevel)/?(maxExp:y);
+          !!VR(exp):F0/(maxExp);
         !!en;
+
+        !!HE(hero):E(exp) W0;           [spend all the movement points]
       !!en;
     !!en;
   !!en;
