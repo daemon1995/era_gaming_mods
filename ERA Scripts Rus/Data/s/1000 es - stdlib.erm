@@ -58,6 +58,7 @@ ZVSE2
 !!en;
 
 // Check if the current map is a random map
+// This function must be put exactly this place in order to be executed by FU(ES_764_Initialization)
 !?FU(ES_CheckRandomMap);
 !#VA(result:x);
 
@@ -70,7 +71,8 @@ ZVSE2
 
 !#FU(ES_764_Initialization):P;
 
-// Temporally disable Extention Heroes if Tyrant is enabled, would be re-enabled again when Tyrant is set up
+// Temporally disable Extention Heroes if Tyrant is enabled, would be re-enabled again when the tyrant is set up
+// This is to make sure the tyrant has the highest priority to get these extention heroes
 !?FU(ES_770_DisableExtentionHeroes);
 !!UN:P100/?i^ES_100_enabled^;
 !!UN:P770/?(wogOption:y);
@@ -113,12 +115,8 @@ ZVSE2
 // The following changes are critical to the initialization of secondary skill text
 // Disable Resistance II if Enhanced Resistance is enabled
 !?FU(ES_777_DisableResistanceII);
-!!UN:P777/?(enhRes:y);                  [проверяем включена ли опция 777]
-
-!!if&(enhRes);
-  !!UN:P210/(FALSE);                    [если включена, отключаем опцию Сопротивление II]
-  !!VRv7195:S(FALSE);                   [...]
-!!en;
+!!UN:P777/?(enhResistance:y);           [проверяем включена ли опция 777]
+!!UN&(enhResistance):P210/(FALSE);      [если включена, отключаем опцию Сопротивление II]
 
 !#FU(ES_777_DisableResistanceII):P;
 
@@ -142,11 +140,7 @@ ZVSE2
 // Disable Sorcery II if Critical Sorcery is re-enabled
 !?FU(ES_789_DisableSorceryII);
 !!UN:P789/?(critSorcery:y);             [проверяем включена ли опция 789]
-
-!!if&(critSorcery);
-  !!UN:P213/0;                          [если включена, отключаем опцию Волшебство II]
-  !!VRv7198:S0;                         [...]
-!!en;
+!!UN&(critSorcery):P213/0;              [если включена, отключаем опцию Волшебство II]
 
 !#FU(ES_789_DisableSorceryII):P;
 
@@ -186,8 +180,6 @@ ZVSE2
   !!SN:E(address)/1/4880976/(ES_OnPlayerVisit_WaterWheel); [Trigger on player choosing a spell on the battlefield]
   !!SN:E(address)/1/4881456/(ES_OnPlayerVisit_WindMill); [Trigger on player choosing a spell on the battlefield]
 !!en;
-
-
 
 !?FU(ES_HOOK_AfterAttackMainFunc);      [by igrik]
 !!SN:X?(hook:y);
@@ -336,42 +328,6 @@ ZVSE2
   !!VR(string):Z(str);
 !!en;
 
-// Set up IF:N dialogue with array
-!?FU(ES_SetupMultiPicDlg);              [by Berserker]
-!#VA(argsArr:x); SN:M array ID with picture type and subtype pairs.
-
-!!SN:M(argsArr)/?(numArgs:y);
-!!VR(numArgPairs:y):S(numArgs) :2;
-!!VR(numArgPairs)&(numArgPairs)>8:S8;
-
-!#VA(params[16]:y);
-
-!!re i/0/(params[SIZE])/1/-1;
-  !!VR(params[i]):S(NO_PIC_TYPE);
-!!en;
-
-!!VR(paramPtr:y):S(@params);
-!!VR(argInd:y):S0;
-
-!!re i/0/(numArgPairs)/1/-1;
-  !!SN:V(argsArr)/(argInd)/?(picType:y)/?(picValue:y);
-
-  !!if&(picType)<>(NO_PIC_TYPE);
-
-    !!if|(picType)<>(PIC_TYPE_MONSTER)/(picValue)>=(MON_FIRST);
-      !!VRy(paramPtr):S(picType);
-      !!VR(paramPtr):+1;
-      !!VRy(paramPtr):S(picValue);
-      !!VR(paramPtr):+1;
-    !!en;
-  !!en;
-
-  !!VR(argInd):+2;
-!!en;
-
-!!IF:N(params[0])/(params[1])/(params[2])/(params[3])/(params[4])/(params[5])/(params[6])/(params[7])/
-      (params[8])/(params[9])/(params[10])/(params[11])/(params[12])/(params[13])/(params[14])/(params[15]);
-
 // Get a monster's rank with its experience
 ; Returns R11 as R10
 !?FU(ES_GetMonRankWithExp);             [by Hawaiing]
@@ -482,6 +438,70 @@ The game may fall at any time.^;
 !!UN:C(am)/92/(UNC_UINT32)/?(list:y);
 !!SN:E4228816/2/(list)/(x)/(y)/(z);
 !!VR(mapItem):Sv1;
+
+// Get a random unoccupied hero
+!?FU(ES_GetRandomUnoccupiedHero);       [by Archer30]
+!#VA(randHero:x);                       [Out. Random Hero number]
+!#VA(player:x);                         [Optional. Check whether the player is eligible to recruite the hero. value other than -1 ~ 7 would skip the check]
+
+; Standarise variables
+!!FU:A?(numArgs:y);
+!!VR(player)&(numArgs)<2:S-2;
+!!VR(player)&(player)<(ANY_PLAYER)/(player)>(PLAYER_LAST):S-2;
+
+!!if&(player)>-2;
+  !!if&(player)>(ANY_PLAYER);
+    !!VR(playerBits:y):S1 Sd<<(player);
+  !!el;
+    !!VR(playerBits):S255;
+  !!en;
+!!en;
+
+!!VR(randHero):S(NO_HERO);
+
+; Check if Hourglass of Asmodeus is enabled
+!!UN:P56/?(hourglassOn:y);
+
+!!FU(NewIntArray):P?(availHeroes:y);
+
+; Loop through all the heroes
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  ; Skip if the hero is Asmodeus (When Hourglass of Asmodeus is enabled)
+  !!co&(hourglassOn)/i=i^wog_106_Asmodeus^;
+
+  ; Skip if the hero is not allowed for the player
+  !!if&(player)>-2;
+    !!HEi:R3/?(isEnabled:y)/(playerBits);
+
+    !!co&(isEnabled)<>(TRUE);
+  !!en;
+
+  ; Check if the hero has an owner or is in a prison
+  !!HEi:O?(owner:y) P?(x:y)/?(y:y)/?(z:y);
+
+  ; Check if the hero is in a tavern if both no owner and not in a prison
+  !!if&(owner)=(NO_OWNER)/(x)<0/(y)<0/(z)<0;
+
+    !!re j/(PLAYER_FIRST)/(PLAYER_LAST);
+      !!OW:Vj/?(leftHero:y)/?(rightHero:y);
+
+      !!br&i=(leftHero);
+      !!br&i=(rightHero);
+    !!en;
+
+      ; Push the hero to the available heroes array if all the criteria are matched
+    !!FU(Array_Push)&j>(PLAYER_LAST):P(availHeroes)/i;
+  !!en;
+!!en;
+
+; Get the random hero from the array
+!!SN:M(availHeroes)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(lastIndex:y):S(size) -1;
+  !!VR(random:y):R0/0/(lastIndex);
+  !!SN:M(availHeroes)/(random)/?(randHero);
+!!en;
 
 // Resouces check and reduce for a given player
 !?FU(ES_Player_CheckEnoughResources);   [by Archer30]

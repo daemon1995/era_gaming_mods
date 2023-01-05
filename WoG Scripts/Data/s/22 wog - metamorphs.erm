@@ -17,7 +17,7 @@ ZVSE2
 
 ** Note: this script won't operate in MP (network) human-to-human battles.
 
-Permanent Variables used:  v4500-v4603, z206-z209
+Permanent Variables used:  v4500-v4602, z206-z209
 Temporary Variables used:  v1-v10, v13-v14, v24
 
 --------------------------------------------------------------------------------------------------------------------
@@ -25,35 +25,33 @@ Temporary Variables used:  v1-v10, v13-v14, v24
  [Check if script is enabled: v1]
 !?FU(OnAfterErmInstructions);
 !!UN:P56/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
  [Set Name and Description for Metamorph (Earth Messenger)]
-!!if&(wogOption);
-  !!SN:H^monname^/(MON_EARTH_MESSENGER)/0/z156000;
-  !!SN:H^monname^/(MON_EARTH_MESSENGER)/1/z156001;
-  !!SN:H^monname^/(MON_EARTH_MESSENGER)/2/z156002;
-  !!VRv4542:S-1; [Initialize v4542 to -1]
+!!SN:H^monname^/(MON_EARTH_MESSENGER)/0/z156000;
+!!SN:H^monname^/(MON_EARTH_MESSENGER)/1/z156001;
+!!SN:H^monname^/(MON_EARTH_MESSENGER)/2/z156002;
 
-   [Set new bonus lines for Metamorphs (but only when in Metamorph form)]
-  !!EA(MON_EARTH_MESSENGER):F97/10/?v2; [Bonus line number for Quicksand Post-Attack Spell: v2]
-  !!EA(MON_EARTH_MESSENGER):Bv2/1/87/43/0/5/10/15/20/25/30/35/40/45/50; [5% Magic Resistance per Rank]
-  !!EA(MON_EARTH_MESSENGER):F112/67/?v3; [Bonus line number for Summon Earth Elemental Pre-Attack Spell: v3]
-  !!EA(MON_EARTH_MESSENGER):Bv3/1/114/75/0/35/40/45/50/55/60/65/70/75/80; [75% Chance of Regeneration: Rank 1]
-!!en;
+ [Set new bonus lines for Metamorphs (but only when in Metamorph form)]
+!!EA(MON_EARTH_MESSENGER):F97/10/?(slot:y); [Bonus line number for Quicksand Post-Attack Spell: v2]
+!!EA(MON_EARTH_MESSENGER):B(slot)/1/87/43/0/5/10/15/20/25/30/35/40/45/50; [5% Magic Resistance per Rank]
+!!EA(MON_EARTH_MESSENGER):F112/67/?(slot); [Bonus line number for Summon Earth Elemental Pre-Attack Spell: v3]
+!!EA(MON_EARTH_MESSENGER):B(slot)/1/114/75/0/35/40/45/50/55/60/65/70/75/80; [75% Chance of Regeneration: Rank 1]
 
 --------------------------------------------------------------------------------------------------------------------
 
  [Store information about creature type (Metamorphs) in v variables)]
-!?FU(OnBeforeBattleUniversal)&1000/-998;
-!!UN:P56/?y-1; [Check if script is enabled: y-1]
-!!FU&y-1<>1:E; [Exit if script isn't enabled]
+; Note: OnBeforeBattleUniversal doesn't work for some reason
+!?FU(OnSetupBattlefield)&1000/-998;
+!!UN:P56/?(wogOption:y);                [Check if script is enabled: y-1]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
 !!DO(WOG_56_StoreMetamorphInfo)/0/41/1:P; [Cycle through all battlefield stacks]
-!!VRv4542:S-1; [Initialize v4542 to -1]
 
  [Battle location: v998/v999/v1000]
-!!TR998:G?y-5; [Check for special terrian type: y-5]
-!!VRv4603:S0; [Initialize v4603 to 0]
-!!VRv4603&y-5=21:S1; [Set v4603 to 21 if battle is on Cursed Ground: v4603]
+!!TR998:G?(terrainOverlay:y);           [Check for special terrian type: y-5]
+!!VRi^wog_56_isCursedGround^:S0;        [Initialize i^wog_56_isCursedGround^ to 0]
+!!VRi^wog_56_isCursedGround^&(terrainOverlay)=21:S1; [Set i^wog_56_isCursedGround^ to 21 if battle is on Cursed Ground: i^wog_56_isCursedGround^]
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -66,11 +64,11 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 --------------------------------------------------------------------------------------------------------------------
 
  [Check if Metamorphed creature defeats an enemy stack]
-!?FU(OnBeforeBattleAction)&v4603=0/1000/-998;
+!?FU(OnBeforeBattleAction)&i^wog_56_isCursedGround^=0/1000/-998;
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
 
-!!VRv4542:S-1; [Initialize v4542 to -1]
+!!VRi^wog_56_targetStack^:S-1; [Initialize i^wog_56_targetStack^ to -1]
 !!BG:N?v1 A?v2; [Current stack number: v1, Action: v2]
 !!VRv3:S4500 +v1; [Index for original acting monster: v3]
 !!VRv4:Svv3; [Original monster number of acting stack: v4]
@@ -84,20 +82,21 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!VRv4602:S-1; [Initialize v4602 to -1]
 !!VRv4602&y-2>=0/y-6=(MON_EARTH_MESSENGER)/v2=6/y-4>0:Sy-2; [Set v4602 to target's stack number if target is a Metamorph and it can retaliate]
 
-!!BG&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:E?v4542; [Target monster stack: v4542]
-!!FU&v4542<0:E; [Exit if no valid target monster]
-!!BMv4542&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:T?v4543; [Target type: v4543]
+!!BG&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:E?i^wog_56_targetStack^; [Target monster stack: i^wog_56_targetStack^]
+!!FU&i^wog_56_targetStack^<0:E; [Exit if no valid target monster]
+
+!!BMi^wog_56_targetStack^&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:T?v4543; [Target type: v4543]
 !!BG&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:N?v4544; [(Metamorph's) stack #: v4544]
 
 --------------------------------------------------------------------------------------------------------------------
 
  [Determine if victorious Metamorphed stack transforms again]
-!?FU(OnAfterBattleAction)&v4542>=0/v4603=0/1000/-998; 
+!?FU(OnAfterBattleAction)&i^wog_56_targetStack^>=0/i^wog_56_isCursedGround^=0/1000/-998; 
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!BU:C?y-3; [Check if battle is ending this turn: y-3=1 if yes]
 !!FU|y-1<>1/y-3=1:E; [Exit if script isn't enabled or battle is ending]
 
-!!BMv4542:N?v1; [Number of target monsters still alive: v1]
+!!BMi^wog_56_targetStack^:N?v1; [Number of target monsters still alive: v1]
 !!FU&v1>0:E; [Exit if any still alive]
 
 !!VRv1:Sv4544; [(Metamorph's) stack number: v1]
@@ -107,7 +106,8 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!MA:Pv4543/?v5; [Health of one target creature: v5]
 !!FU&v2=v4543:E; [Exit if target creature is the same type as Metamorph's current type]
 !!FU&v4<v5:E; [Exit if target creature's health is higher than (Metamorphs)]
-!!FU&v4543>=145/v4543<=149:E; [Exit if target creature is a War Machine]
+!!FU(WOG_CheckIfMonsterIsValid):Pv4543/?y30; [Exit if target creature is a War Machine, commander or emissary]
+!!FU&y30<>(TRUE):E;
 
 !!VRy-4:Sv1 *-1 -1; [Negative of Metamorph stack number: y-4]
 !!EAy-4:E?y-5/d/d/d; [Experience of Metamorph stack: y-5]
@@ -128,7 +128,7 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!BU:Sv4543/v9/v6/v8/v7/1; [Summon new (Metamorph) creature stack: type=v4543]
 !!BU:Ev6/?y-1; [Stack number of new (Metamorph) creature stack: y-1]
 !!BMy-1&v4543>=174/v4543<=191:E2; [Set Commander Monster Metamorph spell castings to 2]
-!!BMv4542&v4543>=174/v4543<=191:U4/?y-14; [Target Commander's spell number: y-14]
+!!BMi^wog_56_targetStack^&v4543>=174/v4543<=191:U4/?y-14; [Target Commander's spell number: y-14]
 !!BMy-1&v4543>=174/v4543<=191:U4/y-14; [Set Commander Monster Metamorph's spell number]
 !!BMy-1&y-1>=0:F?y-2; [New (Metamorph's) Flags: y-2]
 !!VRy-2:|67108864; [Add "done acting this round" Flag]
@@ -154,7 +154,7 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 
  [Post-Action Trigger if Metamorph is being attacked and retaliates]
  [to see if it transforms into the creature type that attacked it]
-!?FU(OnAfterBattleAction)&v4601>=0/v4603=0/1000/-998; [After action - only if v4601 isn't less than 0]
+!?FU(OnAfterBattleAction)&v4601>=0/i^wog_56_isCursedGround^=0/1000/-998; [After action - only if v4601 isn't less than 0]
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!BU:C?y-3; [Check if battle is ending this turn: y-3=1 if yes]
 !!FU|y-1<>1/y-3=1:E; [Exit if script isn't enabled or battle is ending]
@@ -213,7 +213,7 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 --------------------------------------------------------------------------------
 
  [Post-Action trigger]
-!?FU(OnAfterBattleAction)&v4603=0/1000/-998/i^battle_round^>=0;
+!?FU(OnAfterBattleAction)&i^wog_56_isCursedGround^=0/1000/-998/i^battle_round^>=0;
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
 
