@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.036 ******************
+                 ************** version: 1.038 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -66,6 +66,11 @@ You can conduct the priority order for equipping by reading the code. The lower 
 
 Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
+Changelog:
+1.038
+- Added compatibility with LotS mod
+- New difficulty levels are now availble when LotS mod is enabled
+- Growth Beyond 4000 now shows real value of stacks on adventure map. You can customize limits in file up to 1 million
 
 Changelog:
 1.036
