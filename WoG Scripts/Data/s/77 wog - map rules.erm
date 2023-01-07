@@ -149,13 +149,18 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!DO699/0/155/1&3:P; [grow hero monster stacks by 5%]
 
 !!if&i^timerDay^=1;
+  ; Level 5 on start
   !!FU(WOG_101_CheckMapRule):P8; [check for rule 8]
-  !!DO702/0/155/1&3:Pi^timerOwner^; [upgrade this player's heroes to 5th level on day 1]
-!!en;
+  !!DO702/(HERO_FIRST)/(HERO_LAST_WOG)/1&3:Pi^timerOwner^; [upgrade this player's heroes to 5th level on day 1]
 
-!!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
-!!OW&3:H-1/2/0; [number of heroes current player has: v2]
-!!DO703/1/v2/1&3/v2>0:P; [double hero movement of current player's heroes]
+  ; Double movement points (part 1 - only for the first player)
+  !!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
+
+  !!if&3;
+    !!OW:H(CURRENT_PLAYER)/2/0; [number of heroes current player has: v2]
+    !!DO703/1/v2/1&v2>0:P; [double hero movement of current player's heroes]
+  !!en;
+!!en;
 
 !!if&i^timerWeekday^=1/i^timerOnce^/i^timerDay^<>1;
   !!FU(WOG_101_CheckMapRule):P12; [check for rule 12]
@@ -1154,7 +1159,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** end of function
 
-; Capitol can be built in every town by Archer30 (replaces Heroes get 9th-10th skills)
+; Capitol can be built in every town by Archer30 (replaces Heroes get 9th-10th skills option)
 !?FU(OnStartOrLoad);                    [Note: The start game part is included in FU(WOG_101_ChooseMapRules). Here it doesn't work]
 !!FU(WOG_101_CheckMapRule):P14;
 !!UN&3:C4955234/(UNC_INT8)/?i^wog_124_patch^ C4955234/(UNC_INT8)/0;
@@ -1162,3 +1167,10 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !?FU(OnGameLeave);
 !!FU(WOG_101_CheckMapRule):P14;
 !!UN&3:C4955234/(UNC_INT8)/i^wog_124_patch^;
+
+; Double Movement Points (part 2)
+!?FU(WOG_OnGetHeroMovementPoints);
+!#VA(address:x);
+
+!!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
+!!UN&3:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/d*2;

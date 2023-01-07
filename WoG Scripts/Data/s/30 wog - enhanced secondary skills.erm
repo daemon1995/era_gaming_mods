@@ -72,20 +72,19 @@ ZVSE2
 
 
 ** Initialization Code
+!#UN:P201/?i^wog_201_enabled^;                 [Check if Artillery is enabled in WoGify Options]
+!#UN:P202/?i^wog_202_enabled^;                 [Check if Eagle Eye is enabled in WoGify Options]
+!#UN:P203/?i^wog_203_enabled^;                 [Check if Estates is enabled in WoGify Options]
+!#UN:P204/?i^wog_204_enabled^;                 [Check if First Aid is enabled in WoGify Options]
+!#UN:P205/?i^wog_205_enabled^;                 [Check if Learning is enabled in WoGify Options]
+!#UN:P206/?i^wog_206_enabled^;                 [Check if Luck is enabled in WoGify Options]
+!#UN:P207/?i^wog_207_enabled^;                 [Check if Mysticism is enabled in WoGify Options]
+!#UN:P208/?i^wog_208_enabled^;                 [Check if Navigation is enabled in WoGify Options]
+!#UN:P209/?i^wog_209_enabled^;                 [Check if Pathfinding is enabled in WoGify Options]
+!#UN:P211/?i^wog_211_enabled^;                 [Check if Scholar is enabled in WoGify Options]
+!#UN:P212/?i^wog_212_enabled^;                 [Check if Scouting is enabled in WoGify Options]
 
 !?FU(OnAfterErmInstructions);
-!!UN:P201/?i^wog_201_enabled^;                 [Check if Artillery is enabled in WoGify Options]
-!!UN:P202/?i^wog_202_enabled^;                 [Check if Eagle Eye is enabled in WoGify Options]
-!!UN:P203/?i^wog_203_enabled^;                 [Check if Estates is enabled in WoGify Options]
-!!UN:P204/?i^wog_204_enabled^;                 [Check if First Aid is enabled in WoGify Options]
-!!UN:P205/?i^wog_205_enabled^;                 [Check if Learning is enabled in WoGify Options]
-!!UN:P206/?i^wog_206_enabled^;                 [Check if Luck is enabled in WoGify Options]
-!!UN:P207/?i^wog_207_enabled^;                 [Check if Mysticism is enabled in WoGify Options]
-!!UN:P208/?i^wog_208_enabled^;                 [Check if Navigation is enabled in WoGify Options]
-!!UN:P209/?i^wog_209_enabled^;                 [Check if Pathfinding is enabled in WoGify Options]
-!!UN:P211/?i^wog_211_enabled^;                 [Check if Scholar is enabled in WoGify Options]
-!!UN:P212/?i^wog_212_enabled^;                 [Check if Scouting is enabled in WoGify Options]
-
 ; Set up new names and descriptions for War Machines
 !!SN&i^wog_204_enabled^:H^art^/(ART_FIRST_AID_TENT)/1/z148000;
 !!SN&i^wog_201_enabled^:H^art^/(ART_BALLISTA)/1/^%T(wog.201.ballista_description)^;
@@ -97,7 +96,6 @@ ZVSE2
 
 ; Disable the feature to remove Eagle Eye II skill when the hero has learned all the spells if Eagle Eye I is enabled
 !!VRi^wog_103_removeEagleEye^&i^wog_202_enabled^:S(FALSE);
-
 ** end of Initialization Code
 
 ; Set up Armorer and Sorcery II values
@@ -146,6 +144,7 @@ ZVSE2
 
 ** Заплатка к скриптам Грамотность и Орлиный глаз I, не позволяющая изучать
 ** запрещенные заклинания после загрузки\перезагрузки сейва
+; Question: Shouldn't UN:J values store in the save game? - Archer30
 
 !?FU(OnAfterLoadGame);
 !!UN:P152/?y1;                                [Summon Boat: y1=1 if banned]
@@ -170,12 +169,13 @@ ZVSE2
 !!UN&y10=1:J0/3/1;                            [Disable View Earth]
 
 ** Timer routines
-!?FU(OnEveryDay)|i^wog_203_enabled^/i^wog_205_enabled^/i^wog_209_enabled^;      [daily - continue if either estates, learning, pathfinding enabled]
-!!DO7020/0/155/1:P0;                           [iterate through all heroes]
+!?FU(OnEveryDay)&i^timerDay^>1;         [daily - continue if either estates or learning enabled]
+!!DO(WOG_203_205_ManageDailyEvents)/(HERO_FIRST)/(HERO_LAST_WOG)/1|i^wog_203_enabled^/i^wog_205_enabled^:P; [iterate through all heroes]
 
 !?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1; [weekly - continue if estates or scholar enabled]
-!!DO7012/0/155/1|i^wog_203_enabled^/i^wog_211_enabled^:P;            [iterate through all heroes]
+!!DO(WOG_203_211_ManageWeeklyEvents)/(HERO_FIRST)/(HERO_LAST_WOG)/1|i^wog_203_enabled^/i^wog_211_enabled^:P; [iterate through all heroes]
 ** end of timer routines
+
 
 ** start of movement trigger
 !?FU(OnHeroMove)|i^wog_208_enabled^/i^wog_212_enabled^;                        [continue if navigation or scouting enabled]
@@ -193,6 +193,7 @@ ZVSE2
 !!HEv7020&i^wog_212_enabled^/y-5<>8:S3/?y-1;              [get hero's scouting skill level if on land]
 !!FU7023&i^wog_212_enabled^/y-5<>8/y-1>0:Py-1;            [do scouting function - if enabled]
 ** end of movement trigger
+
 
 !?FU(OnAfterTacticsPhase)&i^wog_201_enabled^;
 ** artillery
@@ -269,8 +270,6 @@ ZVSE2
 !!VRy-14&i^wog_206_enabled^/y-16=0:S0;                         [set to 0 if tactics is disabled]
 !!VRy-13&i^wog_206_enabled^:Xy-14;                             [XOR - get difference between tactics levels in y-13]
 
-
-
 ** eagle eye
 !!VRv7018&i^wog_202_enabled^:S0;                               [reset v7018]
 !!VRv7019&i^wog_202_enabled^:S0;                               [reset v7019]
@@ -283,10 +282,8 @@ ZVSE2
 !!VRy-9&i^wog_202_enabled^:S-1;                                [reset y-9]
 !!BA&i^wog_202_enabled^:H1/?y-9;                               [get defending hero's #]
 !!FU7017&i^wog_202_enabled^/y-9>-1:Py-9/1;                     [call function 7017 for defending hero]
-
-
-
 ** end of battle-start trigger
+
 
 ** start of battlefield start trigger
 !?FU(OnSetupBattlefield)|i^wog_206_enabled^/i^wog_208_enabled^;                               [continue if luck or navigation enabled]
@@ -298,8 +295,8 @@ ZVSE2
 !!BA&i^wog_208_enabled^:H1/?v7020;                             [get defending hero #]
 !!IF&i^wog_208_enabled^/v7020>-1:Wv7020;                       [enable hero variable]
 !!DO7024/21/41/1&i^wog_208_enabled^/v7020>-1/w4>0:Pw4;         [prepare to add attack and defence to defending hero's troops]
-
 ** end of battlefield start trigger
+
 
 ** start of battle turn one trigger
 !?FU(OnBattleRound)&i^wog_206_enabled^/i^battle_round^=0; [revised JHV, <1-->=0][-1 caused CB crash w/tactics]
@@ -307,7 +304,6 @@ ZVSE2
                                      
 !!DO7010/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1:P(BATTLE_LEFT); [do function 7010 for luck - attacker]
 !!DO7010/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1:P(BATTLE_RIGHT); [do function 7010 for luck - defender]
-
 ** end of battle turn one trigger
 
 
@@ -399,7 +395,6 @@ ZVSE2
 
 !!VR(stack):Si^battle_acting_stack^;
 !!VRi^wog_202_spellCountered^:S(FALSE);
-
 ** end of pre-action trigger
 
 
@@ -415,7 +410,6 @@ ZVSE2
   !!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/1; [reset skill levels - attacker]
   !!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/1; [reset skill levels - defender]
 !!en;
-
 ** end of post-action trigger
 
 
@@ -445,8 +439,9 @@ ZVSE2
   !!HEi^battle_hero_0^:Id-i^wog_207_manaDiff_0^/1;
   !!HEi^battle_hero_1^:Id-i^wog_207_manaDiff_1^/1;
 !!en;
-
 ** end of battle end trigger
+
+
 !?FU(WOG_201_SelectBestTarget);
 !#VA(side:x) (dmg:x) (result:x);
 
@@ -540,11 +535,7 @@ ZVSE2
 
 *#VA(side:x);
 
-
-
 !#VA(usedY[2]:y);
-
-
 
 !!VR(enemySide:y):S(side) X1;
 !!VR(stack:y):S(NO_STACK);
@@ -612,6 +603,7 @@ ZVSE2
 !!DO7003/0/6/1:Px1/y1/y2;                           [heal next slot with >= 1 monster killed]
 ** end of function
 
+
 ** function to find slot where at least 1 cr was lost
 !?FU7003;           x1=filter x2=hp healed  x3=slot
 
@@ -626,6 +618,7 @@ ZVSE2
 !!FU7004&v2=7/y7>0/y6>0:Px1/x2/x3/y4/y5/y6/y7;      [try to heal stack if some lost but some left]
 !!VRx3:+1;                                          [next slot]
 ** end of function
+
 
 ** function to heal a stack
 !?FU7004;
@@ -646,11 +639,13 @@ ZVSE2
 !!VRv2&y5>0:Sx4;                                     [note that we healed a stack if we did]
 ** end of function
 
+
 ** function to give gold - estates
 !?FU(WOG_203_SetUpEstatesDailyBonus);   x1=estates level  x2=hero level
 !!VRy1:S5 *x1 *x2;                            [gold = 5 x estates level x hero level]
 !!OW:Ri^timerOwner^/6/dy1;                            [give gold]
 ** end of function
+
 
 ** function for mysticism
 !?FU(WOG_207_SetUpMysticismManaReduction);
@@ -704,6 +699,8 @@ ZVSE2
 !!VRy4:S0;
 !!VRy5:R0/0/6;                                [random slot # to start search from]
 !!DO7009/0/6/1:Px1/x2/y3/y4/y5;               [pick slots]
+** end of function
+
 
 ** function to pick slots
 !?FU7009;           x1=luck level x2=filter x3=%chance x4=slot counter  x5=random slot #
@@ -723,6 +720,7 @@ ZVSE2
 !!VRx5:+1;                                              [next slot]
 ** end of function
 
+
 ** function to check if unit has luck
 !?FU7010;               x1=side        x16=stack number
 !#VA(side:x);
@@ -740,6 +738,7 @@ ZVSE2
 !!en;
 ** end of function
 
+
 ** function to give unit luck bonus
 !?FU7011;            x1=stack #
 !#VA(stack:x);
@@ -748,12 +747,11 @@ ZVSE2
 !!BM(stack):Dd2;                                  [set defence]
 !!BM(stack):P?(pos:y);
 !!BM(stack):C(SPELL_FORTUNE)/(pos)/(SKILL_NOT_LEARNED)/100/(TRUE); [cast Fortune : 100 rounds]
-
-
 ** end of function
 
+
 ** function to iterate through current player's heroes (weekly)
-!?FU7012;
+!?FU(WOG_203_211_ManageWeeklyEvents);
 !!HEx16:O?(owner:y);                              [get owner of iterated hero]
 
 !!if&(owner)=i^timerOwner^;
@@ -763,6 +761,7 @@ ZVSE2
   !!FU(WOG_211_TeachScholarSpell)&i^wog_211_enabled^/(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel);                  [if hero in use and it's that hero's owner's turn, continue in function (scholar) - if enabled]
 !!en;
 ** end of function
+
 
 ** function for estates      x2=estates level
 !?FU(WOG_203_SetUpEstatesWeeklyBonus);
@@ -791,7 +790,7 @@ ZVSE2
 !!VRy3:R0/1/2;                                [set quantity for resource 1]
 !!VRy3|w5=(RES_WOOD)/w5=(RES_ORE):*2;         [double for wood or ore]
 !!VRy4:R0/1/2;                                [set quantity for resource 2]
-!!VRy|w6=(RES_WOOD)/w6=(RES_ORE):*2;          [double for wood or ore]
+!!VRy4|w6=(RES_WOOD)/w6=(RES_ORE):*2;          [double for wood or ore]
 !!VRy5:R0/1/2;                                [set quantity for resource 3]
 !!VRy5|w7=(RES_WOOD)/w7=(RES_ORE):*2;         [double for wood or ore]
 
@@ -810,6 +809,7 @@ ZVSE2
   !!en;
 !!en;
 ** end of function
+
 
 ** function for scholar       x2=scholar level
 !?FU(WOG_211_TeachScholarSpell);
@@ -858,6 +858,7 @@ ZVSE2
 !!en;
 ** Algor: end
 
+
 ** function for eagle eye            x1 = hero #     x2 = attacker/defender
 !?FU7017;
 !!HEx1:S11/?y1 A2/63/?y2/?y3 A2/64/?y2/?y4 A2/65/?y2/?y5;     [get eagle eye skill level, check for artifacts]
@@ -868,8 +869,8 @@ ZVSE2
 !!VRy6&y1>0/y3>0/y4>0/y5>0:+30;               [All three +30]
 !!VRv7018&y1>0/x2=0:Sy6;                      [set for attacker]
 !!VRv7019&y1>0/x2=1:Sy6;                      [set for defender]
-
 ** end of function
+
 
 ** function to pick a monster
 !?FU(WOG_212_GetRandMonAndNames);
@@ -879,33 +880,28 @@ ZVSE2
 
 !!SN:H^monname^/(mon)/0/?z704;          [get monster name]
 !!SN:H^monname^/(mon)/1/?z705;          [get monsters name]
-
 ** end of function
 
+
 ** function to iterate through current player's heroes (daily)
-!?FU7020;
+!?FU(WOG_203_205_ManageDailyEvents);
 !!HEx16:O?(owner:y);                              [get owner of iterated hero]
 
 !!if&(owner)=i^timerOwner^;
-  !!HEx16:S(SKILL_PATHFINDING)/?(skillLevel:y);           [get hero's pathfinding skill level]
-  !!FU(WOG_209_SetUpPathfindingBonus)&i^wog_209_enabled^/(skillLevel)>0:Px16/(skillLevel); [if hero has pathfinding, is in use and it's that hero's owner's turn, continue in function 7025 - if enabled]
+  !!HEx16|i^wog_203_enabled^/i^wog_205_enabled^:E?(exp:y)/?(level:y)/1;
 
-  !!if&i^timerDay^>1;
-    !!HEx16|i^wog_205_enabled^/i^wog_203_enabled^:E?(exp:y)/?(level:y)/1;
+  !!if&i^wog_203_enabled^;
+    !!HEx16:S(SKILL_ESTATES)/?(skillLevel:y); [get hero's estates skill level, hero level]
+    !!FU(WOG_203_SetUpEstatesDailyBonus)&(skillLevel)>(SKILL_NOT_LEARNED):P(skillLevel)/(level); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
+  !!en;
 
-    !!if&i^wog_205_enabled^;
-      !!HEx16:S(SKILL_LEARNING)/?(skillLevel); [get hero's learning skill level]
-      !!FU(WOG_205_SetUpLearningBonus)&(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel)/(exp)/(level); [if hero has learning, is in use and it's that hero's owner's turn, continue in function - if enabled]
-    !!en;
-
-    !!if&i^wog_203_enabled^;
-      !!HEx16:S(SKILL_ESTATES)/?(skillLevel); [get hero's estates skill level, hero level]
-      !!FU(WOG_203_SetUpEstatesDailyBonus)&(skillLevel)>(SKILL_NOT_LEARNED):P(skillLevel)/(level); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
-    !!en;
+  !!if&i^wog_205_enabled^;
+    !!HEx16:S(SKILL_LEARNING)/?(skillLevel); [get hero's learning skill level]
+    !!FU(WOG_205_SetUpLearningBonus)&(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel)/(exp)/(level); [if hero has learning, is in use and it's that hero's owner's turn, continue in function - if enabled]
   !!en;
 !!en;
-
 ** end of function
+
 
 ** function for learning      x1=hero x2=learning level
 !?FU(WOG_205_SetUpLearningBonus);
@@ -929,7 +925,6 @@ ZVSE2
 !!en;
    
 !!HE(hero):E(exp);
-
 ** end of function
 
 
@@ -1007,12 +1002,14 @@ ZVSE2
 !!SN:D;                                       [redraw screen]
 ** end of function
 
+
 ** function for navigation (add attack and defence)   (Parameters: x1=stat bonus)
 !?FU7024;
 
 !!BMx16:Adx1;                                 [set attack]
 !!BMx16:Ddx1;                                 [set defence]
 ** end of function
+
 
 ** function for pathfinding    x1 = hero  x2 = pathfinding
 !?FU(WOG_209_SetUpPathfindingBonus);
@@ -1027,6 +1024,7 @@ ZVSE2
 !!VRy2&x2=3/y2<1830:S1830;                    [set to 1830 if expert]
 !!HEx1:Wy2/1 Gy2;                             [set movement, reset intial movement if on land]
 ** end of function
+
 
 ** function to offset skill levels
 !?FU(WOG_210_SetOrRestoreResistance);   x1=hero  x2=set/reset
@@ -1058,7 +1056,6 @@ ZVSE2
 ** end of function
 
 
-
 ** function to check for combo artifacts
 !?FU7007;   x1= switch
 
@@ -1067,7 +1064,6 @@ ZVSE2
 
 !!IF&1000/x1=1/y2>0/y3>0/y4>0:Q2/8/63/8/64/8/65/1/z148038;
 !!IF&1000/x1=2/y2>0/y3>0/y4>0:Q2/8/57/8/58/8/59/1/z148039;
-
 ** end of function
 
 
@@ -1090,3 +1086,32 @@ ZVSE2
 **  object trigger - post visit - Boots of Polarity
 !$OB5/59&i^wog_202_enabled^;
 !!FU7007:P2;
+
+
+** Hooking trigger for Pathfinding
+!?FU(WOG_CreateERMHook)&i^wog_209_enabled^;
+!#VA(address:x);
+
+!!SN:E(address)/1/5131991/(WOG_OnGetMovementPointsByMonsterSpeed);
+
+!?FU(WOG_OnGetMovementPointsByMonsterSpeed);
+!#VA(address:x);
+
+!!UN:C(address)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(heroStruct:y) C(heroStruct)/26/2/?(hero:y);
+
+!!HE(hero):S(SKILL_PATHFINDING)/?(skillLevel:y);
+!!FU&(skillLevel)<=(SKILL_NOT_LEARNED):E;[exit if the hero has no Pathfinidng skill]
+
+!!UN:C(address)/(STRUCT_HOOK_CONTEXT_ECX)/4/?(lowestSpeed:y); [Get the lowest monster speed of the hero's army]
+!!FU&(lowestSpeed)>8:E;                 [exit if Pathfinding is not needed at all]
+
+!!if&(skillLevel)=(SKILL_BASIC);
+  !!VR(lowestSpeed):S6;
+!!el&(skillLevel)=(SKILL_ADVANCED);
+  !!VR(lowestSpeed):S7;
+!!el&(skillLevel)>=(SKILL_EXPERT);
+  !!VR(lowestSpeed):S8;
+!!en;
+
+!!UN:C(address)/(STRUCT_HOOK_CONTEXT_ECX)/4/(lowestSpeed:y);
+** end of trigger
