@@ -3,7 +3,7 @@ ZVSE2
 ** Requires WoG version 3.58 or later using ERM version 2.7 or later.
 ** WoGify Name: script42.erm
 ** Updated: October 21, 2004
-** Updated: Dec 2022 by Archer30
+** Updated: Jan 2023 by Archer30
 
 ** This script adds neutral garrisons to maps at appropriate choke points.
 ** Garrisons may be horizontal or vertical, standard or anti-magic.
@@ -25,7 +25,7 @@ ZVSE2
 ** some resources with the possibility of an artifact too.
 
 Temporary: v1-v9, z1-z6
-Functions: FU10850-FU10868
+Functions: FU10850-FU10865
 Dialogues: 88
 PO number: PO:N on Garrisons
 
@@ -33,7 +33,7 @@ PO number: PO:N on Garrisons
  [Garrison is trigger]
 
 !?OB(OBJ_GARRISON)&i^wog_42_enabled^;
-!!PO998:N?y30;
+!!PO998:N?y30;                          [Exit if not the specific garrisons]
 !!FU&y30=0:E;
 
 !!TR998:T?i^wog_42_terrainType^/d/d/d/d/d/d/d; [Check terrain: i^wog_42_terrainType^]
@@ -52,34 +52,32 @@ PO number: PO:N on Garrisons
 
 !!HE(CURRENT_HERO):R4/?i^wog_42_tacticsStatus^ R4/(FALSE); [Disable Tactics]
 
- [Set i^wog_42_isGarrisonBattle^ to 1 if any creatures in enemy/neutral garrison when attacked]
-!!VRi^wog_42_isGarrisonBattle^&v2>=0/v3<>v4:S1;
-
---------------------------------------------------------------------------
-
- [Start of garrison battle trigger]
-
-!?FU(OnBeforeBattleUniversal)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^=1;
-!!BA:E?y-1; [State of battle: y1]
-
-!!VRi^wog_42_isGarrisonBattle^&y-1<>0:S2; [Set i^wog_42_isGarrisonBattle^ to 2 to disable combat ERM for human vs. human or remote battle]
+ [Set i^wog_42_isGarrisonBattle^ to TRUE if any creatures in enemy/neutral garrison when attacked]
+!!VRi^wog_42_isGarrisonBattle^&v2>=0/v3<>v4:S(TRUE);
 
 --------------------------------------------------------------------------
 
  [Cast Quicksand, Land Mine, Frost Ring, Force Field, Forgetfulness and Fire Wall]
- [i^wog_42_isGarrisonBattle^=1 if a neutral garrison has been attacked, i^wog_42_terrainType^=terrain type]
+ [i^wog_42_isGarrisonBattle^=(TRUE) if a neutral garrison has been attacked, i^wog_42_terrainType^=terrain type]
 
-!?FU(OnBattleRound)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^=1/1000/-998;
-!!VRv2:S0;
-!!VRv2|i^wog_42_terrainType^=1/i^wog_42_terrainType^=4:S99; [Sand or Swamp]
-!!VRv2|i^wog_42_terrainType^=0/i^wog_42_terrainType^=2/i^wog_42_terrainType^=5/i^wog_42_terrainType^=6:S88; [Dirt, Grass, Rough, or Subterranean]
-!!FU10857&v997>=1/v2=99:P; [Place Quicksand if Sand or Swamp (every turn)]
-!!FU10860&v997=0:P; [Place Land Mines]
-!!VRv3:Sv997 %2; [Check remainder of division by 2]
-!!FU10858&v997>=1/v3=1/i^wog_42_terrainType^=7:P; [Place Fire Walls if Lava (every other turn)]
-!!FU10866&v997>=1/v3=1/v2=88:P; [Place Force Fields (every other turn) for: Dirt, Grass, Rough, and Subterranean]
-!!FU10867&v997>=1/v3=1/i^wog_42_terrainType^=3:P; [Cast Frost Ring if Snow (every other turn)]
-!!FU10868&v997>=1:P; [Attempt to cast Basic Forgetfulness on one attacker each turn]
+!?FU(OnBattleRound)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^/1000/-998/i^battle_round^>=0;
+*!FU(WOG_42_SetUpLandMines)&i^battle_round^=0:P; [Place Land Mines] - disabled until BM:Q/BM:C is fixed and no longer affect the defending stacks
+
+!!FU&i^battle_round^<1:E;
+
+*!if|i^wog_42_terrainType^=1/i^wog_42_terrainType^=4; [Sand or Swamp] 
+  *!FU(WOG_42_SetUpQuicksand):P; [Place Quicksand if Sand or Swamp (every turn)] - disabled until BM:Q/BM:C is fixed and no longer affect the defending stacks
+*!en;
+
+!!VR(isOddRound:y):Si^battle_round^ %2; [Check remainder of division by 2]
+
+!!if&(isOddRound)=1;
+  !!FU(WOG_42_SetUpFireWalls)&i^wog_42_terrainType^=7:P; [Place Fire Walls if Lava (every other turn)]
+  !!FU(WOG_42_SetUpForceFields)|i^wog_42_terrainType^=0/i^wog_42_terrainType^=2/i^wog_42_terrainType^=5/i^wog_42_terrainType^=6:P; [Place Force Fields (every other turn) for: Dirt, Grass, Rough, and Subterranean]
+  !!FU(WOG_42_CastFrostRings)&i^wog_42_terrainType^=3:P; [Cast Frost Ring if Snow (every other turn)]
+!!en;
+
+!!FU(WOG_42_CastForgerfulness):P; [Attempt to cast Basic Forgetfulness on one attacker each turn]
 
 --------------------------------------------------------------------------
 
@@ -210,10 +208,14 @@ PO number: PO:N on Garrisons
 
  [Place garrison if a valid space is found and depending]
  [on v6 frequency variable: a higher value=less frequent (1=always place)]
-!!if&v5>=v6/i^wog_42_garrisonCounter^<200;
-  !!UN:Ix1/x2/x3/33/y2/33/y3/-1/0; added 200 limit--JHV
+!!if&v5>=v6/i^wog_42_garrisonCounter^<200; added 200 limit--JHV
+  !!UN:Ix1/x2/x3/33/y2/33/y3/-1/0; 
   !!VRi^wog_42_garrisonCounter^:+1; count added Garrisons--JHV
-  !!POx1/x2/x3:N1;
+  !!VRy31:Sx1;
+  !!VRy32:Sx2;
+  !!VRy33:Sx3;
+  !!SN:O?y31/?y32/?y33;
+  !!POy31/y32/y33:N1;
 !!en;
 
 !!VRv5&v5=v8:S0; [Reset frequency counter]
@@ -518,28 +520,30 @@ PO number: PO:N on Garrisons
 
  [Set up Quicksand]
 
-!?FU10857;
+!?FU(WOG_42_SetUpQuicksand);
 
-!!VRi^wog_48_castStack^:S0; [Reset i^wog_48_castStack^]
-!!DO10859/21/39/1:P; [Find a living monster to cast Quick Sand spell: i^wog_48_castStack^]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20:C10/32/3/3/0; [Place random quick sand]
+!!FU(WOG_42_FindCasterStack):P?(stack:y); [Find a living monster to cast Quick Sand spell]
+!!FU&(stack)=(NO_STACK):E;
+
+!!BM(stack):C10/32/3/3/0; [Place random quick sand]
 
 --------------------------------------------------------------------------
 
  [Set up Fire Walls]
 
-!?FU10858;
+!?FU(WOG_42_SetUpFireWalls);
 
-!!VRi^wog_48_castStack^:S0; [Reset i^wog_48_castStack^]
-!!DO10859/21/39/1:P; [Find a living monster to cast Fire Wall spell: i^wog_48_castStack^]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20:C13/45/3/3/0 C13/46/3/3/0 C13/79/1/3/0;
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20:C13/97/3/3/0 C13/98/1/3/0 C13/113/1/3/0;
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20:C13/147/3/3/0 C13/148/3/3/0;
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20:C13/181/1/3/0 C13/182/1/3/0;
+!!FU(WOG_42_FindCasterStack):P?(stack:y); [Find a living monster to cast Fire Wall spell]
+!!FU&(stack)=(NO_STACK):E;
+
+!!BM(stack):C13/45/3/3/0 C13/46/3/3/0 C13/79/1/3/0;
+!!BM(stack):C13/97/3/3/0 C13/98/1/3/0 C13/113/1/3/0;
+!!BM(stack):C13/147/3/3/0 C13/148/3/3/0;
+!!BM(stack):C13/181/1/3/0 C13/182/1/3/0;
 
 --------------------------------------------------------------------------
 
- [Find a living monster to cast Fire Wall, Force Field or Frost Ring spell: i^wog_48_castStack^]
+ [Find a living monster to cast Fire Wall, Force Field or Frost Ring spell]
 
 !?FU10859;
 
@@ -547,29 +551,43 @@ PO number: PO:N on Garrisons
 !!VRi^wog_48_castStack^&y1>0:Sx16; [If stack has monsters remaining, use it as casting stack]
 !!VRx16&y1>0:S99; [Exit loop if valid stack found]
 
+!?FU(WOG_42_FindCasterStack);
+!#VA(stack:x);
+
+!!re (stack)/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST);
+  !!BM(stack):N?(num:y);
+
+  !!br&(num)>0;
+!!en;
+
+!!VR(stack)&(stack)>(BATTLE_DEFENDER_STACK_LAST):S(NO_STACK);
+
 --------------------------------------------------------------------------
 
  [Set up Land Mines]
 
-!?FU10860;
+!?FU(WOG_42_SetUpLandMines);
 
-!!BM21:Q1/14/0 Q1/15/0;
-!!BM21:Q1/31/0 Q1/32/0;
-!!BM21:Q1/48/0 Q1/49/0;
-!!BM21:Q1/65/0 Q1/66/0;
-!!BM21:Q1/82/0 Q1/83/0;
-!!BM21:Q1/99/0 Q1/100/0;
-!!BM21:Q1/116/0 Q1/117/0;
-!!BM21:Q1/133/0 Q1/134/0;
-!!BM21:Q1/150/0 Q1/151/0;
-!!BM21:Q1/167/0 Q1/168/0;
-!!BM21:Q1/184/0 Q1/185/0;
+!!FU(WOG_42_FindCasterStack):P?(stack:y);
+!!FU&(stack)=(NO_STACK):E;
+
+!!BM(stack):Q1/14/0 Q1/15/0;
+!!BM(stack):Q1/31/0 Q1/32/0;
+!!BM(stack):Q1/48/0 Q1/49/0;
+!!BM(stack):Q1/65/0 Q1/66/0;
+!!BM(stack):Q1/82/0 Q1/83/0;
+!!BM(stack):Q1/99/0 Q1/100/0;
+!!BM(stack):Q1/116/0 Q1/117/0;
+!!BM(stack):Q1/133/0 Q1/134/0;
+!!BM(stack):Q1/150/0 Q1/151/0;
+!!BM(stack):Q1/167/0 Q1/168/0;
+!!BM(stack):Q1/184/0 Q1/185/0;
 
 --------------------------------------------------------------------------
 
  [Setup Battlefield]
 
-!?FU(OnSetupBattlefield)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^=1/1000/-998;
+!?FU(OnSetupBattlefield)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^/1000/-998;
 !!BF:C;
 
 !!TR998:T?v1/d/d/d/d/d/d/d; [Check terrain: v1]
@@ -600,8 +618,8 @@ PO number: PO:N on Garrisons
 
  [Garrison post-visit trigger]
 
-!$OB(OBJ_GARRISON)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^>0;
-!!VRi^wog_42_isGarrisonBattle^:S0; [Clear i^wog_42_isGarrisonBattle^]
+!$OB(OBJ_GARRISON)&i^wog_42_enabled^/i^wog_42_isGarrisonBattle^;
+!!VRi^wog_42_isGarrisonBattle^:S(FALSE); [Clear i^wog_42_isGarrisonBattle^]
 !!PO998:N?v1; [Check if treasure already taken]
 !!HE(CURRENT_HERO):O?v2;  [Check if hero won the battle]
 !!FU10862&v1=1/v2>(NO_OWNER):P; [Give treasure]
@@ -707,60 +725,78 @@ PO number: PO:N on Garrisons
 
  [Set up Force Fields]
 
-!?FU10866;
+!?FU(WOG_42_SetUpForceFields);
 
-!!VRi^wog_48_castStack^:S0; [Reset i^wog_48_castStack^]
-!!DO10859/21/39/1:P; [Find a living monster to cast Force Field spell: i^wog_48_castStack^]
+!!FU(WOG_42_FindCasterStack):P?(stack:y); [Find a living monster to cast Force Field spell]
+!!FU&(stack)=(NO_STACK):E;
 
  [Check for a monster: -1 if no living monster]
-!!BU:E43/?y1; !!BU:E27/?y2; !!BU:E9/?y3;
+!!BU:E43/?(stack1:y); !!BU:E27/?(stack2:y); !!BU:E9/?(stack3:y);
 
  [Place force field #1 if no living monster]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20/y1=-1/y2=-1/y3=-1:C12/43/3/3/0;
+!!BM(stack)&(stack1)=(NO_STACK)/(stack2)=(NO_STACK)/(stack3)=(NO_STACK):C12/43/3/3/0;
 
  [Check for a monster: -1 if no living monster]
-!!BU:E179/?y1; !!BU:E163/?y2; !!BU:E145/?y3;
+!!BU:E179/?(stack1); !!BU:E163/?(stack2); !!BU:E145/?(stack3);
 
  [Place force field #2 if no living monster]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20/y1=-1/y2=-1/y3=-1:C12/179/3/3/0;
+!!BM(stack)&(stack1)=(NO_STACK)/(stack2)=(NO_STACK)/(stack3)=(NO_STACK):C12/179/3/3/0;
 
  [Check for a monster: -1 if no living monster]
-!!BU:E114/?y1; !!BU:E98/?y2; !!BU:E80/?y3;
+!!BU:E114/?(stack1); !!BU:E98/?(stack2); !!BU:E80/?(stack3);
 
  [Place force field #3 if no living monster]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20/y1=-1/y2=-1/y3=-1:C12/114/3/3/0;
+!!BM(stack)&(stack1)=(NO_STACK)/(stack2)=(NO_STACK)/(stack3)=(NO_STACK):C12/114/3/3/0;
 
 --------------------------------------------------------------------------
 
  [Cast Frost Rings]
 
-!?FU10867;
+!?FU(WOG_42_CastFrostRings);
 
-!!VRi^wog_48_castStack^:S0; [Reset i^wog_48_castStack^]
-!!DO10859/21/39/1:P; [Find a living monster to cast Frost Ring spell: i^wog_48_castStack^]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20:C20/29/3/3/0 C20/79/3/3/0 C20/131/1/3/0 C20/181/1/3/0;
+!!FU(WOG_42_FindCasterStack):P?(stack:y); [Find a living monster to cast Frost Ring spell]
+!!FU&(stack)=(NO_STACK):E;
+
+!!BM(stack):C20/29/3/3/0 C20/79/3/3/0 C20/131/1/3/0 C20/181/1/3/0;
 
 --------------------------------------------------------------------------
 
  [Attempt to Cast Basic Forgetfulness on one Attacker each turn]
 
-!?FU10868;
+!?FU(WOG_42_CastForgerfulness);
 
-!!VRi^wog_48_castStack^:S0; [Reset i^wog_48_castStack^]
-!!DO10859/21/39/1:P; [Find a living monster to cast Forgetfulness spell: i^wog_48_castStack^]
-!!VRy1:S0 R10; [Random stack number from 0 to 10: y1]
-!!BMy1:P?y2;   [Stack's position: y2]
-!!BU&y2>0/y2<186:Ey2/?y3;  [Check if stack is alive: y3>=0 if alive]
-!!BMy1&y2>0/y2<186:F?y4;   [Check stack's attribute flags: y4]
-!!VRy5:Sy4;                [Set y5 to the same value as y4]
-!!VRy6:Sy4;                [Set y6 to the same value as y4]
-!!VRy4:&4;     [Check if stack is a shooter: y4=4 if a shooter]
-!!VRy5:&1024;  [Check if stack is immune to mind spells: y5=1024 if immune]
-!!VRy6:&64;    [Check if stack is a siege weapon]
+!!FU(WOG_42_FindCasterStack):P?(casterStack:y); [Find a living monster to cast Forgetfulness spell]
+!!FU&(casterStack)=(NO_STACK):E;
 
- [Cast Basic Forgetfulness on stack at y2 if it's alive, at a valid posiition,]
+; Get a valid shooter stack for casting from the attacker's stack
+!!FU(NewIntArray):P?(shooterStacks:y);
+
+!!re i/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST);
+  !!BMi:T?(type:y) N?(num:y);
+  !!FU(WOG_CheckIfMonsterIsValid):P(type)/?(result:y);
+
+  !!if&(result)/(num)>0;
+    !!BMi:F?(monFlags:y);
+    !!VR(isShooter:y):S(monFlags) &(MON_FLAG_SHOOTER);
+
+    !!if&(isShooter);
+      !!FU(WOG_Battle_CanStackReceiveSpell):Pi/?(SPELL_FORGETFULNESS)/(BATTLE_RIGHT)/?(result:y);
+
+      !!FU(Array_Push)&(result):P(shooterStacks)/i;
+    !!en;
+  !!en;
+!!en;
+
+!!SN:M(shooterStacks)/?(size:y);
+!!FU&(size)=0:E;
+
+!!VR(itemInd:y):R0/1/(size) -1;
+!!SN:M(shooterStacks)/(itemInd)/?(shooterStack:y);
+!!BM(shooterStacks):P?(pos:y);
+
+ [Cast Basic Forgetfulness on stack if it's alive]
  [a shooter, not a siege weapon, and not immune to mind spells]
-!!BMi^wog_48_castStack^&i^wog_48_castStack^>20/y3>=0/y2>0/y2<186/y4=4/y5<>1024/y6<>64:C61/y2/1/3/0;
+!!BM(casterStack):C(SPELL_FORGETFULNESS)/(pos)/(SKILL_BASIC)/3/0;
 
 --------------------------------------------------------------------------
 
