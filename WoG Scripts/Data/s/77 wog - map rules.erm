@@ -31,7 +31,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 **   3. Monsters are half price on 7th day of week. (113)
 **   4. Heroes create magic plains each day. (114)
 **   5. All monsters attack twice. (115)
-**   6. Monster stacks in hero armies grow by 4% each day, to 10000 max. (116)
+**   6. Monster stacks in hero armies grow by 4% each day, to 100000 max. (116)
 **   7. Most dwellings also have boars. (117)
 **   8. Heroes start at 5th level (+5000 experience). (118)
 **   9. Heroes pick up double artifacts. (119)
@@ -374,10 +374,17 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** function to change monster stats (inverted speed, attack twice and breath attack)
 
+
+
 !?FU(WOG_101_SetUpMonsters);
+
 !!VR(invertedSpeedOn:y):S(FALSE);
 !!VR(attackTwiceOn:y):S(FALSE);
 !!VR(breathAttackOn:y):S(FALSE);
+!!VR(noShooting:y):S(FALSE);
+!!VR(noFlying:y):S(FALSE);
+
+
 
 !!FU(WOG_101_CheckMapRule):P2;          [check for rule 2]
 !!VR(invertedSpeedOn)&3:S(TRUE);
@@ -385,120 +392,123 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!VR(attackTwiceOn)&3:S(TRUE);
 !!FU(WOG_101_CheckMapRule):P18;         [check for rule 18]
 !!VR(breathAttackOn)&3:S(TRUE);
-
-!!if|(invertedSpeedOn)/(attackTwiceOn)/(breathAttackOn);
-  !!FU(GetMaxMonsterId):P?(lastMon:y);
-
-  !!re i/(MON_FIRST)/(lastMon);
-    !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
-    !!co&i>=(MON_CATAPULT)/i<=(MON_ARROW_TOWERS);
-    !!co&i>=(MON_COMMANDER_FIRST_A)/i<=(MON_COMMANDER_LAST_D);
-
-    !!FU(WOG_112_InvertMonsterSpeeds):Pi;[invert monster speeds]
-    !!MA&(attackTwiceOn):Xi/d|(MON_FLAG_ATTACKS_TWICE); [all monsters attack/shoot twice]
-    !!MA&(breathAttackOn):Xi/d|(MON_FLAG_WIDE_ATTACK); [all monsters gain breath weapon]
-  !!en;
-!!en;
-
-** end of function
-
-
-!?FU(OnSetupBattlefield);
-!!UN:P101/<5;
-!!FU&-1:E; // exit, if map rules are not enabled
-
-!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST); // loop through all stacks (do work for monster-rules)
-  !!FU(WOG_101_SetUpStack):Pi;
-!!en;
-** end of BF
-
-!?FU(OnBattleStackObtainsTurn);         [needed for summoned creatures]
-!#VA(stackSide:x) (stackInd:x);
-
-!!UN:P101/<5;
-!!FU&-1:E; // exit, if map rules are not enabled
-
-!!FU(WOG_101_SetUpStack):Pi^battle_current_stack^;
-** end of 77006
-
-
-!?FU(WOG_101_SetUpStack);
-!#VA(stack:x);
-
-** function to make monster x1 lose flying but gain no-retaliation if it flew
-** function to make monster x1 lose shooting but gain +50% hit points if it shot
-
-!!BM(stack):T?(mon:y) N?(num:y); // get creature type
-!!FU|(mon)<=(NO_MON)/(num)<=0:E; // exit, if there is no stack or dead
-
-!!FU&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):E;  // exit, if it is a war machine
-!!FU&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D):E;  // exit, if it is a commander
-!!FU|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):E;  // exit, if it is a dummy-catapult (from the War Machine Scriptes)
-
-!!FU(WOG_101_CheckMapRule):P1;          [check for rule 1 fliers lose flying but can't be retaliated against]
-
-!!if&3; if enabled
-  !!BM(stack):F?(flagBits:y);
-  !!VR(canFly:y):S(flagBits) &(MON_FLAG_FLYER); [just look at flying bit]
-
-  !!if&(canFly);
-    !!BM(stack):Fd-(MON_FLAG_FLYER);    [lose flying]
-    !!BM(stack):Fd|(MON_FLAG_NO_RETALIATION); [can't be retaliated against]
-  !!en;
-!!en; // end if
-
 !!FU(WOG_101_CheckMapRule):P19;         [check for rule 19 - shooters lose shooting but gain +50% hit points]
+!!VR(noShooting)&3:S(TRUE);
+!!FU(WOG_101_CheckMapRule):P1;          [check for rule 1 fliers lose flying but can't be retaliated against]
+!!VR(noFlying:y)&3:S(TRUE);
 
-!!if&3; if enabled
-  !!BM(stack):F?(flagBits);             [Check monster flag bits again as it may have been changed earlierly]
-  !!VR(canShoot:y):S(flagBits) &(MON_FLAG_SHOOTER); [just look at shooting bit]
-  
-  !!if&(canShoot);
-    !!BM(stack):Fd-(MON_FLAG_SHOOTER);  [lose shooting]
+!!VR(atLeastOneOptionIsEnabled:y):S(FALSE);
 
-    !!BM(stack):H?(health:y);
-    !!VR(health):*3 :2;                 [+50% health if creature shot]
-    !!BM(stack):H(health);
+!!re i/(@invertedSpeedOn)/(@invertedSpeedOn);(end_value);
+  !!if&yi;
+    !!VR(atLeastOneOptionIsEnabled:y):S(TRUE);
+    !!br;
   !!en;
-!!en; // end if
-
-** end of function
-
-
-** function to invert the speed of monster
-
-!?FU(WOG_112_InvertMonsterSpeeds);
-!#VA(mon:x);
-
-!!MA:S(mon)/?(speed:y); [get speed]
-
-!!if&(speed)<=1;
-  !!VR(newSpeed:y):S25;
-!!el&(speed)=2;
-  !!VR(newSpeed):S21;
-!!el&(speed)=3;
-  !!VR(newSpeed):S18;
-!!el&(speed)=4;
-  !!VR(newSpeed):S15;
-!!el&(speed)=5;
-  !!VR(newSpeed):S13;
-!!el&(speed)=6;
-  !!VR(newSpeed):S11;
-!!el&(speed)=7;
-  !!VR(newSpeed):S9;
-!!el&(speed)=8;
-  !!VR(newSpeed):S7;
-!!el&(speed)=9;
-  !!VR(newSpeed):S6;
-!!el&(speed)>=10/(speed)<=12;
-  !!VR(newSpeed):S5;
-!!el&(speed)>=13/(speed)<=17;
-  !!VR(newSpeed):S4;
-!!el;
-  !!VR(newSpeed):S3;
 !!en;
 
-!!MA:S(mon)/(newSpeed); [set speed]
+
+!!if&(atLeastOneOptionIsEnabled);
+
+  !!UN:C6768560/4/?(creatureInfoTablePtr:y);
+
+  !!FU(GetMaxMonsterId):P?(maxMonId:y);
+  !!FU(WOG_101_GetAffectedMonArray):P?(shouldThisMonIdBeAffected:y)/(maxMonId);
+
+  *!SN:M(shouldThisMonIdBeAffected)/?(size:y);
+
+  *!VR(size):-1;
+  *!FU&(size)<1:E;
+
+  !!if&(attackTwiceOn);
+    !!re i/(MON_FIRST)/(maxMonId);
+      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+      !!MA&(haveTo:y):Xi/d|(MON_FLAG_ATTACKS_TWICE);
+    !!en;
+  !!en;
+
+  !!if&(breathAttackOn);
+    !!re i/(MON_FIRST)/(maxMonId);
+      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+      !!MA&(haveTo:y):Xi/d|(MON_FLAG_WIDE_ATTACK);
+    !!en;
+  !!en;
+
+  !!if&(noShooting);
+    !!re i/(MON_FIRST)/(maxMonId);
+      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+      !!co&(haveTo:y)=(FALSE);
+      !!MA:Xi/?f;
+      !!VRf:&(MON_FLAG_SHOOTER);
+      !!if&f;
+        !!MA:Xi/d-(MON_FLAG_SHOOTER);
+        !!VR(offset:y):S116 *i +76;
+        !!UN:C(creatureInfoTablePtr:y)/(offset:y)/4/?h;
+        !!VRh:*3 :2;
+        !!UN:C(creatureInfoTablePtr:y)/(offset:y)/4/h;
+      !!en;
+    !!en;
+  !!en;
+
+  !!if&(noFlying);
+    !!re i/(MON_FIRST)/(maxMonId);
+      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+      !!co&(haveTo:y)=(FALSE);
+      !!MA:Xi/?f;
+      !!VRf:&(MON_FLAG_FLYER);
+      !!if&f;
+        !!MA:Xi/d-(MON_FLAG_FLYER) Xi/d|(MON_FLAG_NO_RETALIATION);
+      !!en;
+    !!en;
+  !!en;
+
+  !!if&(invertedSpeedOn);
+    !!VR(maxSpeed:y):S0;
+    !!re i/(MON_FIRST)/(maxMonId);
+      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+      !!co&(haveTo:y)=(FALSE);
+      !!MA:Si/?s;
+      !!VR(maxSpeed)&s>(maxSpeed):Ss;Fs/d;
+    !!en;
+    *!IF:M^%(maxSpeed)^;
+    !!re i/(MON_FIRST)/(maxMonId);
+      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+      !!co&(haveTo:y)=(FALSE);
+      !!MA:Si/?s;
+      !!VR(speed:y):S(maxSpeed) -s +3;F3/d;
+      !!MA:Si/(speed:y);
+
+      *!FU(WOG_112_InvertMonsterSpeeds):Pi;[invert monster speeds]
+    !!en;
+
+  !!en;
+
+
+
+  *!FU(WOG_101_RestoreCreatureStats):P(creatureInfoTablePtr:y);
+  
+!!en;
+
+
+
+  *!FU(GetMaxMonsterId):P?(lastMon:y);   [fix max mon id - Archer]
+
+!?FU(WOG_101_GetAffectedMonArray);
+!#VA(arrayId:x) (maxMonId:x);
+
+!!VR(arraySize:y):S(maxMonId) +1;
+!!FU(NewIntArray):P(arraySize)/?(arrayId);
+
+!!re (mon:y)/0/(maxMonId);
+  !!co&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS);  // exit, if it is a war machine
+  !!co&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D);  // exit, if it is a commander
+  !!co|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4);  // exit, if it is a dummy-catapult (from the War Machine Scriptes)
+
+  !!SN:M(arrayId)/(mon)/(TRUE);
+!!en;
+
+!!SN:F^ExtendArrayLifetime^/(arrayId);
+
+
 
 ** end of function
 
@@ -541,18 +551,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!TRy3/y4/y5:T?y8/d/d/d/d/d/d/d; [get terrain in y8, 8 = water]
 !!UN&y1=y2/y5=0/y6<>0/y7<>0/y8<>8:Iy3/y4/y5/46/0; [place magic plains]
 
- [If Passable Terrain script active, make squares passable again]
-!!UN:P63/?y9; [Check if Passable Terrain script is enabled: y9]
-!!FU:E;       [Exit if Passable Terrain isn't enabled] - the option has been removed
-
-!!UN:X?y10/?y11;          [Map size: y10]
-
-!!VRy12:Sy4 -3;  [Starting y-coordinate for loop (Magic Plains/Cursed Land): y12]
-!!VRy13:Sy4 +0;  [Ending y-coordinate for loop (Magic Plains/Cursed Land): y13]
-!!VRy12&y12<0:S0;         [No y-coordinate below 0: y12]
-!!VRy13&y13>=y10:Sy10 -1; [No y-coordinate above map size: y13]
-
-!!DO8/y12/y13/1:P0/y3/y5; [Make trees, mountains etc. passable again]
 
 ** end of function
 
@@ -596,8 +594,8 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 !!HEx1:C0/x16/?y1/?y2; [get y1 type y2 qty]
 !!VRy3:Sy2 *104 :100; [add 4%]
-!!VRy3&y3>10000/y2<10000:S10000; [limit to 10000]
-!!HEx1&y2<10000:C0/x16/y1/y3; [store new qty]
+!!VRy3&y3>100000/y2<100000:S100000; [limit to 10000]
+!!HEx1&y2<100000:C0/x16/y1/y3; [store new qty]
 
 ** end of function
 
@@ -1171,6 +1169,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ; Double Movement Points (part 2)
 !?FU(WOG_OnGetHeroMovementPoints);
 !#VA(address:x);
-
 !!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
+
 !!UN&3:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/d*2;
