@@ -1,0 +1,441 @@
+ZVSE2
+ 
+
+
+!?FU(gem_CreateERMHook);
+  *!SN:Ex1/1/7442976/(WOG_AddExp_AfterBattle);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/7439940/(WOG_FindExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  *!SN:Ex1/1/7707493/(WOG_ExpProc);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+  !!SN:Ex1/1/7439536/(WOG_BeforeExpRecal);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+  !!SN:Ex1/1/7445385/(WOG_OnMergeStackSourceExpCalc);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  !!SN:Ex1/1/7445452/(WOG_OnMergeStackDestExpCalc);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+  !!SN:Ex1/1/7445482/(WOG_OnMergeStackAddingNewExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+
+  !!SN:Ex1/1/7444877/(WOG_OnSourceStackExpMove);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  !!SN:Ex1/1/7445071/(WOG_OnDestStacExpMove);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+  !!SN:Ex1/1/7758541/(WOG_OnSourceStackExpDlgSplit);
+  !!SN:Ex1/1/7758645/(WOG_OnDistStackExpDlgSplit);
+
+  *!SN:Ex1/1/7503115/(WOG_OnStackExpBannerAdd);
+
+  !!SN:Ex1/1/7707236/(WOG_OnHeroSettingGuard_BeforeArmyMerge);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  !!SN:Ex1/1/7706929/(WOG_OnHeroSettingGuard_BeforeExpoSet);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+  !!SN:Ex1/1/7707182/(WOG_OnHeroSettingGuard_AfterExpoSet);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+
+660B68
+!?FU(WOG_OnHeroSettingGuard_BeforeArmyMerge);
+
+  !!FU(GetMaxMonsterId):P?(maxMonId:y);
+
+  !!re i/0/(ARMY_SLOT_LAST);
+    !!HE(CURRENT_HERO):C0/i/?i^wog_hero_type_%i^/?i^wog_hero_number_%i^ N?(heroId:y) P?(x:y)/?(y:y)/?(z:y);
+
+    !!EX(heroId:y)/i:E?i^wog_hero_expo_%i^;(expH[i]);
+
+    !!EX(x)/(y)/(z)/i/2:N?i^wog_town_number_%i^ T?i^wog_town_type_%i^ E?i^wog_town_expo_%i^;
+    !!FU(WOG_ValidateCrExpoMonId):P?i^wog_hero_type_%i^/(maxMonId:y) P?i^wog_town_type_%i^/(maxMonId:y);
+
+  !!en;
+
+!?FU(OnGameEnter);
+  !!HE(HERO_EDRIC):P?(x:y)/?(y:y)/?(z:y) C0/4/(MON_GHOST)/57000;
+  !!if&(x)>0;
+    !!re i/0/(ARMY_SLOT_LAST);
+      !!VR(rand:y):S130 *1000;
+      !!EX(x)/(y)/(z)/i/1:E(rand:y);?i^wog_hero_expo_%i^;(expH[i]);
+    !!en;
+
+  !!en;
+
+!?FU(WOG_ValidateCrExpoMonId);
+  !#VA(monId:x) (maxMonId:x);
+  !!VR(monId)&(monId)>(maxMonId):S(NO_MON);
+
+!?FU(WOG_OnHeroSettingGuard_BeforeExpoSet);
+
+    !!CA(CURRENT_TOWN):P?(x:y)/?(y:y)/?(z:y);
+
+    !#VA(numH[7]:y) (typeH[7]:y) (expH[7]:y) (heroSlotBeenUsed[7]:y);
+    !#VA(numT[7]:y) (typeT[7]:y) (expT[7]:y) (townSlotBeenUsed[7]:y);
+
+    !!re i/0/(ARMY_SLOT_LAST);
+      !!VR(numT[i]):Si^wog_town_number_%i^;
+      !!VR(typeT[i]):Si^wog_town_type_%i^;
+      !!VR(expT[i]):Si^wog_town_expo_%i^;
+
+      !!VR(numH[i]):Si^wog_hero_number_%i^;
+      !!VR(typeH[i]):Si^wog_hero_type_%i^;
+      !!VR(expH[i]):Si^wog_hero_expo_%i^;
+
+      !!HE(CURRENT_HERO):C0/i/?i^wog_merged_type_%i^/?i^wog_merged_number_%i^;
+
+      !!if&(numH[i])=i^wog_merged_number_%i^/(typeH[i])=i^wog_merged_type_%i^;
+        !!VRi^wog_merged_expo_%i^:S(expH[i]);
+        !!VR(heroSlotBeenUsed[i]):S(TRUE);
+        !!if&(numT[i])=0;
+          !!VR(townSlotBeenUsed[i]):S(TRUE);
+        !!en;
+        !!co;
+      !!en;
+
+      !!if&(numT[i])=i^wog_merged_number_%i^/(typeT[i])=i^wog_merged_type_%i^;
+        !!VRi^wog_merged_expo_%i^:S(expT[i]);
+        !!VR(townSlotBeenUsed[i]):S(TRUE);
+        !!co;
+      !!en;
+    !!en;
+
+    !!FU(NewIntArray):P?(monTypesT:y) P?(monTypesH:y);
+    !!re i/0/(ARMY_SLOT_LAST);
+      !!FU(Array_Push):P(monTypesT)/(typeT[i]) P(monTypesH)/(typeH[i]);
+    !!en;
+
+
+    !!re j/0/(townSlotBeenUsed[SIZE])/1/-1;
+
+      !!if&(townSlotBeenUsed[j])=(FALSE);
+        !!re i/j/(ARMY_SLOT_LAST);
+          !!if&(numT[j])/(typeT[j])=(typeT[i])/i>j;
+
+            !!FU(WOG_Fix_ComputeNewStackExp):P(numT[j])/(expT[j])/(numT[i])/(expT[i])/?(expT[j]);
+
+            !!VR(numT[j]):+(numT[i]);
+            !!VR(numT[i]):S(NULL);
+            !!VR(typeT[i]):S(NO_MON);
+            !!VR(expT[i]):S(NULL);
+            !!VR(townSlotBeenUsed[i]):S(TRUE);
+
+          !!en;
+        !!en;
+
+        !!if&(townSlotBeenUsed[j])=(FALSE)/(numT[j]);
+          !!VR(success:y):S(FALSE);
+          !!FU(Array_Find):P(monTypesH)/(WOG_Callback_isEqual)/?(result:y)/(typeT[j]);
+
+          !!if&(result)=(NO_MON);
+            !!FU(Array_Find):P(monTypesH)/(WOG_Callback_isEqual)/?(result:y)/(NO_MON);
+
+            !!VR(numH[result]):S(numT[j]);
+            !!VR(typeH[result]):S(typeT[j]);
+            !!VR(expH[result]):S(expT[j]);
+          !!el;
+            !!FU(WOG_Fix_ComputeNewStackExp):P(numT[j])/(expT[j])/(numH[result])/(expH[result])/?(expH[result]);
+            !!VR(numH[result]):+(numT[j]);
+            !!VR(numT[j]):S(NULL);
+            !!VR(typeT[j]):S(NO_MON);
+            !!VR(expT[j]):S(NULL);
+            !!VR(townSlotBeenUsed[j]):S(TRUE);
+          !!en;
+
+          !!VRi^wog_merged_expo_%(result)^:S(expH[result]);
+        !!en;
+
+      !!en;
+    !!en;
+ 
+    !!VR(heroArmySizeWithoutMerge:y):S(NULL);
+
+    !!re i/0/(ARMY_SLOT_LAST);
+      !!SN:M(monTypesT)/i/i^wog_town_type_%i^ M(monTypesH)/i/i^wog_town_type_%i^;
+      !!VR(heroArmySizeWithoutMerge:y)&i^wog_hero_type_%i^<>(NO_MON):+1;
+      !!SN:W^wog_town_type_%i^ W^wog_town_number_%i^ W^wog_town_expo_%i^
+      W^wog_hero_type_%i^ W^wog_hero_number_%i^ W^wog_hero_expo_%i^
+      W^wog_merged_number_%i^ W^wog_merged_type_%i^;
+    !!en;
+
+    !!FU(Array_SortedUnique):P?(monTypesT) P?(monTypesH);
+    !!FU(Array_CountValue):P(monTypesT)/(NO_MON)/?(isIncompleteT:y) P(monTypesH)/(NO_MON)/?(isIncompleteH:y);
+
+    !!SN:M(monTypesT)/?(towmArmySize:y) M(monTypesH)/?(heroArmySize:y);
+    !!VR(towmArmySize:y):-(isIncompleteT);
+    !!VR(heroArmySize:y):-(isIncompleteH);
+    !!VR(numberOfMerges:y):S(heroArmySizeWithoutMerge) +(towmArmySize:y) -7;
+
+    !!if&(numberOfMerges)>0;
+      !!re j/0/(ARMY_SLOT_LAST);
+
+        !!if&(heroSlotBeenUsed[j])=(FALSE);
+          *!VRi:Sj+1;
+          !!re i/j/(ARMY_SLOT_LAST);
+              *!IF:L^main loop %j -> it loop %i^;
+            !!co&(numberOfMerges)=(NULL);
+            !!if&(numH[j])/(typeH[j])=(typeH[i])/i>j;
+
+              !!FU(WOG_Fix_ComputeNewStackExp):P(numH[j])/(expH[j])/(numH[i])/(expH[i])/?(expH[j]);
+
+              !!VR(numH[j]):+(numH[i]);
+              !!VR(numH[i]):S(NULL);
+              !!VR(typeH[i]):S(NO_MON);
+              !!VR(expH[i]):S(NULL);
+              !!VR(heroSlotBeenUsed[i]):S(TRUE);
+              !!VR(numberOfMerges):-1;
+            !!en;
+          !!en;
+
+          !!VRi^wog_merged_expo_%j^:S(expH[j]);
+
+        !!en;
+      !!en;
+    !!en;
+
+
+!?FU(WOG_Callback_isEqual);
+  !#VA(it:x) (result:x) (list:x) (compare:x);
+  !!VR(result)&(it)=(compare):S(TRUE);
+
+!?FU(WOG_OnHeroSettingGuard_AfterExpoSet);&i^wog_fix_ExpToSet^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-24/4/?(stackId:y); C(ebp)/-20/4/?(creatureNum:y) C(ebp)/-284/4/?(creatureId:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^wog_merged_expo_%(stackId)^;i^wog_hero_expo_%i^;
+  !!VRi^wog_merged_expo_%(stackId)^:S(NULL);
+
+
+!?FU(WOG_ExpFix_NumArtsToPassToHero);
+  !#VA(dstCrExpo:x) (dstExpoOwnerId:x) (dstHeroId:x) (srcHeroId:x) (artsToDst:x) (artsToSrc:x);
+
+  !!VR(artsToDst):S(NULL);
+  !!VR(artsToSrc):S(NULL);
+  !!VR(dstOwner:y):S(NO_OWNER);
+  !!VR(srcOwner:y):S(NO_OWNER);
+  !!VR(dstArtsInBack:y):S64;
+
+  !!if&(dstHeroId)<>(NO_HERO);
+    !!HE(dstHeroId):O?(dstOwner:y) Z?(dstHero:y);
+    !!UN:C(dstHero)/980/1/?(dstArtsInBack:y);
+  !!en;
+  *!IF:M^%^;
+  !!VR(artsNonPassed:y):S(NULL);
+  !!if&(dstCrExpo)/(dstArtsInBack)<64;
+
+    !!UN:C(dstHero)/34/1/?(dstCrExpoHeroOwnerId:y);
+    !!if&(dstCrExpoHeroOwnerId)=(dstExpoOwnerId);
+      *!IF:M^%(dstCrExpo)^;
+      !!SN:E7502432/(CALLCONV_THISCALL)/(dstCrExpo);                         [GetArtsNum]
+      *!IF:M^%(dstCrExpo)^;
+      !!VR(maxArts:y):S64 -(dstArtsInBack);
+      !!VR(artsToDst):Sv1; Fd/(maxArts);
+          *!IF:M^%(artsToDst)^;
+
+      !!if&(artsToDst)>(maxArts);
+        !!VR(artsNotPassed:y):S(maxArts) -(artsToDst);
+        !!VR(artsToDst):S(maxArts);
+      !!en;
+    !!en;
+  !!en;
+
+  !!if&(artsNotPassed:y)/(srcHeroId:x)<>(NO_HERO);
+    !!HE(srcHeroId):O?(srcOwner:y) Z?(srcHero:y);
+    !!if&(srcOwner:y)=(dstExpoOwnerId:x);
+      !!UN:C(srcHero)/980/1/?(srcArtsInBack:y);
+      !!if&(dstArtsInBack)<64;
+        !!VR(maxArts:y):S64 -(dstArtsInBack);
+        !!VR(artsToSrc:x):S(artsNotPassed:y) Fd/(maxArts:y);
+      !!en;
+    !!en;
+  !!en;
+
+!?FU(WOG_OnStackExpBannerAdd);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(dstCrExpo:y) C(ebp)/8/4/?(srcCrExpo:y);
+
+  !!UN:C(dstCrExpo)/8/4/?(dstFlags:y) C(srcCrExpo)/8/4/?(srcFlags:y);                                                [get flags]
+
+  !!VR(srcOwnerType:y):S(srcFlags) Sd>>1 &15;                                                         [read 4th bits to get owner]
+  !!VR(dstOwnerType:y):S(dstFlags) Sd>>1 &15;                                                         [read 4th bits to get owner]
+
+  !!VR(dstOwnerType:y):S(dstFlags) Sd>>1 &15;                                                         [read 4th bits to get owner]
+    !!VR(srcArtsNum:y):S(srcFlags) Sd>>1 &3;                                                   [store]
+    *!IF:M^%(srcArtsNum:y)^;
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(dstArtsNum:y);
+
+  !!if|(srcOwnerType:y)=1/(dstOwnerType)=1;                                                                [if hero is owner]
+    !!if&(dstOwnerType)=1;
+      !!UN:C(dstCrExpo)/12/2/?(dstHeroId:y);
+    !!el;
+      !!VR(dstHeroId:y):S(NO_HERO);
+    !!en;
+
+    !!if&(srcOwnerType)=1;
+      !!UN:C(srcCrExpo)/12/2/?(srcHeroId:y);
+    !!el;
+      !!VR(srcHeroId:y):S(NO_HERO);
+    !!en;
+
+7502432
+7502432
+    *!SN:E7502432/(CALLCONV_THISCALL)/(srcCrExpo);                         [GetArtsNum]
+    *!VR(srcArtsNum:y):Sv1;(srcFlags) &3;                                                   [store]
+    *!SN:E7502432/(CALLCONV_THISCALL)/(srcCrExpo);                         [GetArtsNum]
+    *!VR(srcArtsNumA:y):Sv1;(srcFlags) &3;                                                   [store]
+
+    *!SN:E7502432/(CALLCONV_THISCALL)/(dstCrExpo);                         [GetArtsNum]
+
+    *!VR(dstArtsNum:y):Sv1;(dstFlags) &3;                                                   [store]
+
+
+    !!re i/0/3;
+      *!SN:E7504512/(CALLCONV_THISCALL)/(srcCrExpo);
+    !!en;
+    *!IF:M^%(dstCrExpo) %(srcArtsNum) %(srcArtsNumA:y)^;
+    !!FU:E;
+    !!if|(dstArtsNum)/(srcArtsNum)>1;
+
+      !!HE(dstHeroId:y):O?(dstOwnerId:y);
+      *!IF:M^%^;
+      !!FU(WOG_ExpFix_NumArtsToPassToHero):P(dstCrExpo)/(dstOwnerId:y)/(dstHeroId:y)/(srcHeroId)/?(artsToDstOwner:y)/?(artsToSrcOwner:y);
+      *!IF:M^%(artsToDstOwner:y)^;
+
+      !!if&(artsToDstOwner);
+        !!re i/0/(artsToDstOwner)/1/-1;
+          !!FU(AddArtToHero):P(dstHeroId:y)/(ART_WARLORDS_BANNER)/(NO_ART_MOD)/?(result:y); [try pass to hero]
+          !!if&(result);
+            !!SN:E7504512/(CALLCONV_THISCALL)/(dstCrExpo);                            [TakeArt]
+            !!VR(dstArtsNum:y):-1;
+          !!el;
+            !!br;
+          !!en;
+        !!en;
+      !!en;
+
+      !!if&(dstArtsNum:y);
+        
+      !!en;
+
+    !!en;
+    !!FU:E;
+    !!if&(srcOwnerType)=1;
+
+    !!VR(srcHeroId:y);
+    !!en;
+
+    !!VR(srcCrExpo)&(srcOwnerType)<>1:S(NULL);
+    !!VR(dstCrExpo)&(dstOwnerType)<>1:S(NULL);
+    !!if&(dstArtsNum);
+      
+
+
+    !!el;
+
+    !!en;
+
+    !!if&(srcCrExpo);
+      !!SN:E7502432/(CALLCONV_THISCALL)/(srcCrExpo);                         [GetArtsNum]
+      !!VR(artNums:y):S0;v1;                                                   [store]
+      *!IF:M^2^;
+
+      !!VR(artsPassed:y):S0;
+      !!VR(artsNonPassed:y):S0;
+
+      !!re i/0/(artNums)/1/-1;
+        !!FU(AddArtToHero):P(srcHeroId)/(ART_WARLORDS_BANNER)/(NO_ART_MOD)/?(result:y); [try pass to hero]
+      *!IF:M^3 %i^;
+
+        !!if&(result:y);
+          !!VR(artsPassed):+1;
+          !!SN:E7504512/(CALLCONV_THISCALL)/(srcCrExpo);                            [TakeArt]
+        !!el;
+          !!VR(artsNonPassed:y):+1;
+        !!en;
+      !!en;
+      *!IF:L^%(artsPassed:y) %(artsNonPassed:y)^;
+      !!IF:M^%(artsPassed:y)^;
+
+      !!if&(artsPassed);
+        !!SN:X?y99/0;
+        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7502262;
+      !!en;
+
+      !!if&(artsNonPassed);
+        !!VR(artsNonPassed):+1;
+        !!SN:E7502464/(CALLCONV_THISCALL)/(dstCrExpo)/(artsNonPassed); [SetArtsNum]
+      !!en;
+    !!en;
+
+  !!en;
+
+
+!?FU(WOG_OnSourceStackExpDlgSplit);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(dstNum:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(dstCurrExp:y);
+!!UN:C42116988/4/?(srcNum:y) C42336916/4/?(srcCurrExp:y);
+
+!!FU(WOG_Fix_ComputeNewStackExp):P(srcNum)/(srcCurrExp)/(dstNum)/(dstCurrExp)/?(exp:y);
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(exp);
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7758550;
+
+!?FU(WOG_OnDistStackExpDlgSplit);
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(srcNum:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(srcCurrExp:y);
+
+  !!UN:C42115932/4/?(dstNum:y) C42336940/4/?(dstCurrExp:y);
+
+  !!FU(WOG_Fix_ComputeNewStackExp):P(srcNum)/(srcCurrExp)/(dstNum)/(dstCurrExp)/?(exp:y);
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(exp);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7758654;
+
+!?FU(WOG_OnSourceStackExpMove);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7444918;
+
+!?FU(WOG_OnDestStacExpMove);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7445112;
+
+!?FU(WOG_OnMergeStackSourceExpCalc);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?i^wog_fix_srcCurrExp^;(currExp:y);?(ebp:y)
+
+!?FU(WOG_OnMergeStackDestExpCalc);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?i^wog_fix_dstCurrExp^;(currExp:y);?(ebp:y)
+
+!?FU(WOG_OnMergeStackAddingNewExp);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(srcExpOffset:y);
+
+  !!if&(srcExpOffset)<>(NO_MON);
+    !!UN:C(ebp)/32/4/?(srcNum:y);
+    !!VR(srcCurrExp:y):Si^wog_fix_srcCurrExp^;
+  !!en;
+
+  !!UN:C(ebp)/-16/4/?(destExpOffset:y);
+  !!if&(destExpOffset)<>(NO_MON);
+    !!UN:C(ebp)/36/4/?(dstNum:y);
+    !!VR(dstCurrExp:y):Si^wog_fix_dstCurrExp^;
+  !!en;
+  !!VRi^wog_fix_srcCurrExp^:S0;
+  !!VRi^wog_fix_dstCurrExp^:S0;
+
+  !!FU(WOG_Fix_ComputeNewStackExp):P(srcNum)/(srcCurrExp)/(dstNum)/(dstCurrExp)/?(exp:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(exp);
+
+!?FU(WOG_Fix_ComputeNewStackExp);
+  !#VA(srcNum:x) (srcCurrExp:x) (dstNum:x) (dstCurrExp:x) (result:x);
+  !!VRe1:S(srcNum) *(srcCurrExp);
+  !!VRe2:S(dstNum) *(dstCurrExp);
+  !!VRe2:+e1;
+  !!VRe1:S(srcNum) +(dstNum);
+  !!VRe2::e1;
+  !!VRe2&e2>1000000000:S1000000000;
+  !!VR(result):Se2;
+  (ax + by)/(c+d)  , we do the division first on the biggest operands
+  <=> a/(c+d)x + b/(c+d)y 
+
+!?FU(WOG_BeforeExpRecal);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(newNumber:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(crExpo:y)
+  C(crExpo)/4/?(currExp:y) C(crExpo)/4/4/?(currNum:y) Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7439580;
+  !!SN:X?y99/0;
+  !!if&(newNumber)>(currNum:y);
+
+    !!VR(difference:y):S(newNumber) -(currNum:y);
+    !!FU(WOG_Fix_ComputeNewStackExp):P(difference)/(NULL)/(currNum)/(currExp)/?(newExp:y);
+    !!UN:C(crExpo)/4/(newExp:y) C(crExpo)/4/4/(newNumber:y);
+  !!en;
+
