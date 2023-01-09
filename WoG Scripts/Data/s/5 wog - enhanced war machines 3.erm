@@ -96,8 +96,9 @@ ZVSE2
 
 !?OB(OBJ_ARTIFACT)&i^WOG_73_enabled^;                                                     [hero finds first aid tent on adventure map]
   !!OB998:U?(artifact:y);
-
-  !!if|(artifact)=(ART_BALLISTA)|(artifact)=(ART_AMMO_CART)|(artifact)=(ART_FIRST_AID_TENT);
+  *!SN:H^^
+  *!IF:L^%(artifact)^;
+  !!if|(artifact)=(ART_BALLISTA)/(artifact)=(ART_AMMO_CART)/(artifact)=(ART_FIRST_AID_TENT);
     !!HE-1:N?(heroId:y);                                                                    [store hero number in (heroId)]
     !!FU(WOG_73_Func_DismissOriginalBoughtMachines):P(heroId);                              [dismiss original war machines]
     !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);                                      [to show correct w vars]
@@ -112,6 +113,7 @@ ZVSE2
   !!HE-1:A2/i^WOG_73_visited_art_id^/d/?(equipped:y);                                       [vg nr of equipped first aid tents]
   !!if&(equipped);
     !!VR(wVar:y):Si^WOG_73_visited_art_id^ +77;
+    *!IF:L^%(wVar)^;
     !!VRw(wVar):+1;
   !!en;
 
@@ -387,7 +389,7 @@ ZVSE2
 !?FU(WOG_73_Func_DismissOriginalBoughtMachines);
 !#VA(heroId:x);
 
-!!FU:E;                                 [Temporarily disabled by Archer30 until daemon figures out what should be corrrected in this funciton. Why should the owner of war machines get a refund here?]
+*!FU:E;                                 [Temporarily disabled by Archer30 until daemon figures out what should be corrrected in this funciton. Why should the owner of war machines get a refund here?]
 
   //dismisses war machines that could be bought originally in heroes3 and gives back gold spent on them
   //x1 hero number
@@ -770,27 +772,33 @@ ZVSE2
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-16/4/?(tentsAmount:y);
 !!if&i^wog_isCBBattle^;
   !!UN:C(ebp)/-12/4/1; //don't allow to summon in CB
-!!en
-;
+!!en;
+
 !?FU(OnSetupBattlefield)&i^WOG_73_enabled^;
   !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21445/1/?(isBank:y);
 
   !!if&(isBank)=0;
-    !!FU(WOG_73_BattleFieldSetup):P(BATTLE_LEFT);
 
     !!BA:S?(isSiege:y);
-    !!HEi^battle_hero_0^:I?i^WOG_73_battle_hero_0_SpellPoints^/1;                     [get spell points of attacker hero]
-    !!HEi^battle_hero_1^&i^battle_hero_1^>(NO_HERO):I?i^WOG_73_battle_hero_1_SpellPoints^/1; [get spell points of attacker hero]
-
-    !!if&i^battle_hero_1^>(NO_HERO)/(isSiege)=0;
-      !!FU(WOG_73_BattleFieldSetup):P(BATTLE_RIGHT);
+    !!re i/0/i^battle_hero_vs_hero^;
+      !!HEi^battle_hero_%i^:I?i^WOG_73_battle_hero_%i_SpellPoints^/1;                     [get spell points of attacker hero]
+      !!FU(WOG_73_BattleFieldSetup):Pi/(isSiege);
     !!en;
+
+    *!FU(WOG_73_BattleFieldSetup):P(BATTLE_LEFT);
+
+    *!HEi^battle_hero_0^:I?i^WOG_73_battle_hero_0_SpellPoints^/1;                     [get spell points of attacker hero]
+    *!HEi^battle_hero_1^&i^battle_hero_1^>(NO_HERO):I?i^WOG_73_battle_hero_1_SpellPoints^/1; [get spell points of attacker hero]
+
+    *!if&i^battle_hero_1^>(NO_HERO);/(isSiege)=0;
+      *!FU(WOG_73_BattleFieldSetup):P(BATTLE_RIGHT)/(isSiege);
+    *!en;
 
   !!en;
 
 
 !?FU(WOG_73_BattleFieldSetup);
-!#VA(side:x);
+!#VA(side:x) (isSiege:x);
 
   !!if&(side)=(BATTLE_LEFT);
     !!VR(wmPos[3]:y):C52/18/154;
