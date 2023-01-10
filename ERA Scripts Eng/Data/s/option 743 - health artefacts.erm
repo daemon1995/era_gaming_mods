@@ -3,65 +3,61 @@ ZVSE2
 ** Name          : Health artefacts
 ** Name rus.     : Артефакты здоровья
 ** Options       : 743
-** Dialogs       : -
-** Variables     : -
-** Tmp variables : -
-** Timers        : -
-** Functions     : FU7986
-** PO-values     : -
 
-** Внимание! Для работы требуется "FUN.erm".
-
+** Fully Rewritten by daemon_n
 
 !?FU(OnAfterErmInstructions);
-!!UN:P743/?(wogOption:y);     [проверяем включена ли опция 743]
-!!FU&(wogOption)<>(TRUE):E;   [выход если опция не включена]
+  !!UN:P743/?(wogOption:y);     [проверяем включена ли опция 743]
+  !!FU&(wogOption)<>(TRUE):E;   [выход если опция не включена]
 
-!!SN:H^art^/(ART_RING_OF_VITALITY)/1/^%T(es.743.desc1)^;
-!!SN:H^art^/(ART_RING_OF_LIFE)/1/^%T(es.743.desc2)^;
-!!SN:H^art^/(ART_VIAL_OF_LIFEBLOOD)/1/^%T(es.743.desc3)^;
+  !!SN:H^art^/(ART_RING_OF_VITALITY)/1/^%T(es.743.desc1)^;
+  !!SN:H^art^/(ART_RING_OF_LIFE)/1/^%T(es.743.desc2)^;
+  !!SN:H^art^/(ART_VIAL_OF_LIFEBLOOD)/1/^%T(es.743.desc3)^;
 
-!?FU(OnStartOrLoad);
-!!UN:P743/?(wogOption:y);     [проверяем включена ли опция 743]
-!!FU&(wogOption)<>(TRUE):E;   [выход если опция не включена]
+!?FU(ES_CreateERMHook);
+!!UN:P743/?i^ES_health_artifacts_enabled^ P782/?i^ES_medicine_enabled^;?(medicine:y);     [проверяем включена ли опция 743]
 
-!!SN:L^EraPlugins\erm_hooker.era^/?(lib:y) A(lib)/^SetHook^/?(add:y);
-!!SN:E(add)/1/5137296/(ES_743_Hook); [установка хука на событие]
+!!if|i^ES_health_artifacts_enabled^/i^ES_medicine_enabled^;
+  !!SN:Ex1/1/5138208/(ES_AfterVitalityArtifactsBonusesCalculation); [установка хука на событие]
+!!en;
 
-!?FU(ES_743_Hook);            [вызов функции из хука]
-!!UN:P743/?y1;                [проверяем включена ли опция 743 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
+!?FU(ES_AfterVitalityArtifactsBonusesCalculation);            [вызов функции из хука]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(hero:y);
+  ec
+  !!UN:C(hero)/26/4/?(heroId:y) C(ebp)/8/4/?(monID:y);
+  !!MA:X(monID)/?f;
+  !!VRf:&(MON_FLAG_ALIVE);
+  !!if&f;
+    !!if&i^ES_medicine_enabled^;
+      !!HE(heroId:y):S(SKILL_FIRST_AID)/?(skillLvl:y) X?(spec:y)/?(skill:y);              [y11 - уровень Медицины героя [0..3]]
+      !!if&(skillLvl)/(spec)=0/(skill)=(SKILL_FIRST_AID);
+        !!VR(skillLvl):+1;
+      !!en;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(skillLvl);
+    !!en;
 
-!!SN:X?y1;                    [получить системный параметр хука]
-!!VRy2:Sy1 +24;               [перейти к [ECX]
-!!UN:Cy2/4/?y3;               [прочитать содержимое [ECX]
-!!VRy4:Sy3 +26;               [перейти к номеру героя [ECX +26]
-!!UN:Cy4/4/?y5;               [знать номер героя]
-!!VRy20:S0;                   [переменная о наличии надетых артов]
-!!HEy5:A2/94/d/?y21;          [y21 - количество надетых Колец живучести у героя]
-!!VRy20&y21>0:+5;             [y20=1, если надето Кольца живучести (соответствует 5%)]
-!!HEy5:A2/95/d/?y21;          [y21 - количество надетых Колец жизни у героя]
-!!VRy20&y21>0:+5;             [y20=1, если надето Кольцо жизни (соответствует 5%)]
-!!HEy5:A2/96/d/?y21;          [y21 - количество надетых Виалов жизненной силы у героя]
-!!VRy20&y21>0:+10;            [y20=1, если надето Кольцо жизни (соответствует 5%)]
-!!HEy5:A2/131/d/?y21;         [y21 - переменная о наличии надетого Элексира жизни у героя]
-!!VRy2:Sy1 +12;               [перейти к [ESP]
-!!UN:Cy2/4/?y3;               [прочитать содержимое [ESP]
-!!VRy4:Sy3 +8;                [перейти к номеру монстра [ESP +8]
-!!UN:Cy4/4/?y5;               [узнать номер монстра
-!!MA:Xy5/?y22;                [y22 - флаг монстра]
-!!VRy22:&16;                  [y22=16 если монстр живой, y22=0 если нет]
-!!VRy5:Sy3 +12;               [перейти к структуре монстра [ESP +12]
-!!UN:Cy5/4/?y6;               [прочитать содержимое [ESP +12]
-!!VRy7:Sy6 +76;               [перейти к HP монстра]
-!!UN:Cy7/4/?y8;               [прочитать его HP]
-!!VRy9&y21=0/y22<>0:Sy8 *y20 :100 +y8;[получаем бонусные HP + стандартные HP]
-!!VRy9&y21<>0|y22=0:Sy8;      [если элексир или нежить, то стандартный бонус]
-!!VRy9&y20=5:-1;              [вычитываем стандартные бонусы артефактов]
-!!VRy9&y20=10:-2;             [вычитываем стандартные бонусы артефактов]
-!!VRy9&y20=15:-3;             [вычитываем стандартные бонусы артефактов]
-!!VRy9&y20=20:-4;             [вычитываем стандартные бонусы артефактов]
-!!VRy9&y21<>0:-4;             [вычитываем стандартный бонус Элексира жизни]
-!!UN:Cy7/4/y9;                [установить новые HP]
+    !!if&i^ES_health_artifacts_enabled^;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?h;
 
-** end
+      !!HE(heroId):A2/131/?y99/?(elix:y);
+
+      !!if&(elix);
+        !!VR(bonus:y):S5;
+      !!el;
+        !!HE(heroId):A2/(ART_RING_OF_VITALITY)/?y99/?(ringA:y) A2/(ART_RING_OF_LIFE)/?y99/?(ringB:y) A2/(ART_VIAL_OF_LIFEBLOOD)/?y99/?(vial:y);
+        !!VR(ringA):F0/1;
+        !!VR(ringB):F0/1;
+        !!VR(vial):F0/1;
+        !!VR(bonus:y):S(vial) *2 +(ringA) +(ringB);
+      !!en;
+
+      !!if&(bonus)>0;
+        !!VR(bonus):*5;
+        !!VR(newHp:e):Sh :100 *(bonus);
+        !!VR(newHpY:y):S(newHp);
+        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/(newHpY);
+      !!en;
+    !!en;
+  !!el;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/0;
+  !!en;

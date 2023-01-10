@@ -328,6 +328,52 @@ ZVSE2
   !!VR(string):Z(str);
 !!en;
 
+
+!?FU(ES_Hero_GetFullSpellPoints);
+!#VA(hero:x) (result:x);
+
+!!HE(hero):Z?(heroStruct:y);            [get hero structure]
+!!UN:C(heroStruct)/1145/1/?(knowledge:y);(get hero knowledge]
+!!SN:E5131040/(CALLCONV_THISCALL_FLOAT)/(heroStruct); [get Intelligence power]
+!!VRe1:*10 *(knowledge);                [e1, emul to get max SP]
+!!VR(result):Se1;                       [return max hero SP]
+
+// Set up IF:N dialogue with array
+!?FU(ES_SetupMultiPicDlg);              [by Berserker]
+!#VA(argsArr:x); SN:M array ID with picture type and subtype pairs.
+
+!!SN:M(argsArr)/?(numArgs:y);
+!!VR(numArgPairs:y):S(numArgs) :2;
+!!VR(numArgPairs)&(numArgPairs)>8:S8;
+
+!#VA(params[16]:y);
+
+!!re i/0/(params[SIZE])/1/-1;
+  !!VR(params[i]):S(NO_PIC_TYPE);
+!!en;
+
+!!VR(paramPtr:y):S(@params);
+!!VR(argInd:y):S0;
+
+!!re i/0/(numArgPairs)/1/-1;
+  !!SN:V(argsArr)/(argInd)/?(picType:y)/?(picValue:y);
+
+  !!if&(picType)<>(NO_PIC_TYPE);
+
+    !!if|(picType)<>(PIC_TYPE_MONSTER)/(picValue)>=(MON_FIRST);
+      !!VRy(paramPtr):S(picType);
+      !!VR(paramPtr):+1;
+      !!VRy(paramPtr):S(picValue);
+      !!VR(paramPtr):+1;
+    !!en;
+  !!en;
+
+  !!VR(argInd):+2;
+!!en;
+
+!!IF:N(params[0])/(params[1])/(params[2])/(params[3])/(params[4])/(params[5])/(params[6])/(params[7])/
+      (params[8])/(params[9])/(params[10])/(params[11])/(params[12])/(params[13])/(params[14])/(params[15]);
+
 // Get a monster's rank with its experience
 ; Returns R11 as R10
 !?FU(ES_GetMonRankWithExp);             [by Hawaiing]
@@ -396,6 +442,22 @@ ZVSE2
 !!VR(value3:x):S(defStack) *1352 +21708 +(value);
 !!SN:E4461360/2/(value2)/(value3)/(direction);
 
+!?FU(ES_Hero_GetTownId);
+!#VA(heroId:x) (townId:x);
+!!VR(townId):S(NO_TOWN);
+!!HE(heroId:x):P?(hX:y)/?(hY:y)/?(hZ:y);
+!!if&(hX)>=0;
+  !!VR(x:y):S(hX) -1;
+  !!VR(y:y):S(hY);
+  !!VR(z:y):S(hZ);
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y)/(z);
+  !!if&(x)=(hX)/(y)=(hY)/(z)=(hZ);
+    !!CA(x)/(y)/(z):U?(townId);
+  !!en;
+!!en;
+
+
+
 // Check if it is allowed to build the building in the town
 !?FU(ES_CheckBuildingEligibility);      [by igrik]
 !#VA(townId:x);                         [town number on map (0...47)]
@@ -408,6 +470,7 @@ ZVSE2
 !!SN:E6033696/2/(ptr)/(building);
 !!VR(result)&v1<>(FALSE):S(TRUE);
 !!CA0/(townId):R(isbuilt);
+
 
 ; Get city structure
 !?FU(ES_GetTownStruct);
@@ -591,45 +654,12 @@ The game may fall at any time.^;
 !!en;
 
 // Get the total exp required for reaching a hero level
-!?FU(ES_GetExpRequirementOfLevel); [by Archer30]
-!#VA(lv:x) (exp:x);
+!?FU(ES_GetExpRequirementOfLevel); [by daemon_n]
+!#VA(lvl:x) (exp:x);
 
 !!VR(exp):S0;
-
-!!if&(lv)=1;
-  !!VR(exp):S0;
-!!el&(lv)=2;
-  !!VR(exp):S1000;
-!!el&(lv)=3;
-  !!VR(exp):S2000;
-!!el&(lv)=4;
-  !!VR(exp):S3200;
-!!el&(lv)=5;
-  !!VR(exp):S4600;
-!!el&(lv)=6;
-  !!VR(exp):S6200;
-!!el&(lv)=7;
-  !!VR(exp):S8000;
-!!el&(lv)=8;
-  !!VR(exp):S10000;
-!!el&(lv)=9;
-  !!VR(exp):S12200;
-!!el&(lv)=10;
-  !!VR(exp):S14700;
-!!el&(lv)=11;
-  !!VR(exp):S17500;
-!!el&(lv)=12;
-  !!VR(exp):S20600;
-!!el&(lv)>=13;
-  !!VR(expSecToLast:y):S17500;
-  !!VR(expLast:y):S20600;
-
-  !!re i/13/(lv);
-    !!VR(exp):S(expLast) -(expSecToLast) *6 :5 +(expLast);
-
-    !!if&i<(lv);
-      !!VR(expSecToLast):S(expLast);
-      !!VR(expLast):S(exp);
-    !!en;
-  !!en;
-!!en;
+!!FU&(lvl)<1:E;
+!!VR(saveV1:y):Sv1;
+!!SN:E5088784/(CALLCONV_FASTCALL)/(lvl:x);
+!!VR(exp):Sv1;
+!!VRv1:S(saveV1);

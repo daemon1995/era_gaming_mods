@@ -1,11 +1,12 @@
 ZVSE2
 ** Author orig.  : Algor
 ** Updated by    : Archer30
+** Fully Rewritten by  : daemon_n
 ** Name          : New mana regeneration system
 ** Name rus.     : Новая система восполнения маны
 ** Options       : 787
 ** Dialogs       : -
-** Variables     : w99
+** Variables     :
 
 
 !?FU(ES_787_Initialization);
@@ -14,11 +15,9 @@ ZVSE2
 
 !!UN:P35/(FALSE);                       [принудительно выключаем опцию 35 (Мистицизм 1)]
 
-!!VRi^es_787_prevPlayer^:S(NO_PLAYER);  [при старте игры (нет предыдущего игрока)]
-
 !!UN:A(ART_CHARM_OF_MANA)/1/1000;
 !!UN:A(ART_TALISMAN_OF_MANA)/1/2000;    [цена Амулета маны = 1000, Талисмана маны = 2000]
-!!UN:A(ART_MYSTIC_ORB_OF_MANA)/1/3000 A(ART_MYSTIC_ORB_OF_MANA)/3/4;      [цена Медали маны = 3000, класс = Minor]
+!!UN:A(ART_MYSTIC_ORB_OF_MANA)/1/3000 A(ART_MYSTIC_ORB_OF_MANA)/3/(ART_LEVEL_MINOR);      [цена Медали маны = 3000, класс = Minor]
 
 !#FU(ES_787_Initialization):P;
 
@@ -27,252 +26,224 @@ ZVSE2
 !!FU&(manaSys)<>(TRUE):E;               [выход если опция не включена]
 
 ; Set up new skill description
-!!SN:H^secskill^/(SKILL_MYSTICISM)/0/?(name:z);
-
-!!SN:T^es.787.desc^/?(desc1:z)/^percent1^/3/^min1^/1/^percent2^/20/^min2^/20;
-!!VR(basicDesc:z):S^{%T(es.basic)%(name)}%(desc1)^;
-!!SN:T^es.787.desc^/?(desc2:z)/^percent1^/6/^min1^/2/^percent2^/40/^min2^/40;
-!!VR(advancedDesc:z):S^{%T(es.advanced)%(name)}%(desc2)^;
-!!SN:T^es.787.desc^/?(desc3:z)/^percent1^/9/^min1^/3/^percent2^/60/^min2^/60;
-!!VR(expertDesc:z):S^{%T(es.expert)%(name)}%(desc3)^;
-!!VR(newLine:z):S^
-^;
-
-; Add in Mysticism II description if enabled
+!!SN:H^secskill^/(SKILL_MYSTICISM)/0/?(skillName:z);
 !!UN:P207/?(mysticismII:y);
-
-!!if&(mysticismII);
-  !!VR(basicDesc):+(newLine) +z175152;
-  !!VR(advancedDesc):+(newLine) +z175153;
-  !!VR(expertDesc):+(newLine) +z175154;
+!!re i/1/3;
+  !!VR(percent1:y):Si *3;
+  !!VR(percent2:y):Si *20;
+  !!SN:T^es.787.desc^/?(desc:z)/^percent1^/(percent1)/^min1^/i/^percent2^/(percent2:y)/^min2^/(percent2:y);
+  !!VR(rowNum:y):Si -1;
+  !!FU(ES_GetStringByFilename):P^skilllev^/(rowNum)/?(skillLevel:z);
+  !!VR(skillDesc:z):S^{%(skillLevel) %(skillName)}%(desc)^;
+  !!if&(mysticismII);                   [; Add in Mysticism II description if enabled]
+    !!VR(ertIndex:y):S175152 + i -1;
+    !!VR(skillDesc:z):+^%T(es.endl)^ +z(ertIndex);
+  !!en;
+  !!SN:H^secskill^/(SKILL_MYSTICISM)/i/(skillDesc); [; Change the descriptions]
+  !!VR(artId:y):S(ART_CHARM_OF_MANA) +i -1; [; Set Up new artifact descriptions]
+  !!SN:H^art^/(artId)/0/?(artName:z) H^art^/(artId)/1/^{%(artName)}%(desc)^;
 !!en;
-
-; Change the descriptions
-!!SN:H^secskill^/(SKILL_MYSTICISM)/(SKILL_BASIC)/(basicDesc);
-!!SN:H^secskill^/(SKILL_MYSTICISM)/(SKILL_ADVANCED)/(advancedDesc);
-!!SN:H^secskill^/(SKILL_MYSTICISM)/(SKILL_EXPERT)/(expertDesc);
-
 ; Set up new spec description
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
   !!HEi:X?(spec:y)/?(spec2:y);
   !!SN&(spec)=0/(spec2)=(SKILL_MYSTICISM):H^spec^/i/2/^%T(es.787.spec)^;
 !!en;
 
-; Set Up new artifact descriptions
-!!SN:H^art^/(ART_CHARM_OF_MANA)/0/?(name:z);
-!!SN:H^art^/(ART_CHARM_OF_MANA)/1/^{%(name)}%(desc1)^;
 
-!!SN:H^art^/(ART_TALISMAN_OF_MANA)/0/?(name);
-!!SN:H^art^/(ART_TALISMAN_OF_MANA)/1/^{%(name)}%(desc2)^;
-
-!!SN:H^art^/(ART_MYSTIC_ORB_OF_MANA)/0/?(name);
-!!SN:H^art^/(ART_MYSTIC_ORB_OF_MANA)/1/^{%(name)}%(desc3)^;
-
-!?FU(OnEveryDay)&i^timerDay^>1;         [каждый день для каждого игрока]
+!?FU(ES_CreateERMHook);
 !!UN:P787/?(wogOption:y);               [проверяем включена ли опция 7871]
 !!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
 
-!!VR(prevPlayer:y):Si^es_787_prevPlayer^; [номер предыдущего игрока 0-7]
-!!OW:C?i^es_787_prevPlayer^;            [номер текущего игрока сохраняем для использования как предыдущего при следующем срабатывании]
-!!DO(ES_787_SaveCurrSpellPoints)/(HERO_FIRST)/(HERO_LAST_WOG)/1&(prevPlayer)>(NO_PLAYER):P(prevPlayer); [Для каждого героя предыдущего игрока y1 сохраняем текущую ману в w99]
-!!DO(ES_787_RegenSpellPoints)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P; [Для каждого героя текущего игрока i^es_787_prevPlayer^ восстанавливаем ману]
+!!SN:Ex1/1/4863098/(ES_Hero_OnWellCheckingReportMsg);  [att well mana count]
+!!SN:Ex1/1/4863148/(ES_Hero_OnWellCheckingSpellPoints);  [att well mana count]
 
-!?FU(ES_787_SaveCurrSpellPoints); [Сохранение текущей маны героя x16 в w99 для героев игрока x1]
-!!HEx16:O?y1;                 [y1 - игрок-владелец героя x16 [0..7]]
-!!FU&y1<>x1:E;                [выход, если владелец героя не предыдущий игрок]
+!!SN:Ex1/1/5013369/(ES_Hero_BeforeManaAddedOutsideTown); [adding mana in main heores loop]
 
-!!IF:Wx16;                    [выбор героя для установки w99]
-!!HEx16:I?w99;                [сохранение текущей маны героя в w99]
+!!SN:Ex1/1/5013627/(ES_Hero_HeroRegeneratesManaInTown);  [DOWN HERO]
+!!SN:Ex1/1/5013731/(ES_Hero_HeroRegeneratesManaInTown);  [UP HERO]
 
-!?FU(OnAfterBattleUniversal); [в конце боя обновляем текущим количеством маны w99 сражавшихся героев]
-!!UN:P787/?y1;                [проверяем включена ли опция 787 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
+!!SN:Ex1/1/5128688/(ES_Hero_BeforeMistSpecBonusCount);  [myst spec just adds +1 to myst power]
 
-!!BA:H0/?y1 H1/?y2;           [y1/y2 - номера бьющихся героев (-2 - нет защитника)]
 
-!!if&y1>-1;
-  !!HEy1:I?y3;                [y3 - кол-во маны у героя]
-  !!IF:Wy1;                   [выбор героя для использования w99]
-  !!VRw99:Sy3;                [обновление w99]
+!?FU(ES_Hero_BeforeMistSpecBonusCount);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/0; ecx is Level in v2 = ((Level * 0.050000001 + 1.0) * v14) + 1;
+
+!?FU(ES_Hero_HeroRegeneratesManaInTown);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+  !!UN:C(hero)/24/2/?(currentSp:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(maxSp:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(currentSp:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(maxSp:y);
+
+  !!if&(currentSp)<(maxSp);
+    
+    !!FU(ES_Hero_GetSpRestoreCoeff):P(heroId)/?(coeff:y);
+
+    !!FU&(coeff)>4:E;                   [allow 100% restore]
+
+    !!HE(heroId):P?(x:y)/?(y:y)/?(z:y);
+    !!re i/1/4;
+      !!CA(x:y)/(y:y)/(z:y):B3/i;
+      !!VR(coeff)&1:+1;                 [add 20% per each MG level]
+    !!en;
+
+    !!if&(coeff)<5;                     [< 5 * 20% allow 100% restore]
+      !!FU(ES_787_RestoreMana):Px1/(STRUCT_HOOK_CONTEXT_EAX)/(coeff)/(currentSp)/(maxSp);
+    !!en;
+  !!en;
+
+!?FU(ES_Hero_OnWellCheckingReportMsg);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!FU(ES_Hero_GetSpRestoreCoeff):P(heroId)/?(coeff:y);
+  !!IF:M^%(coeff)^;
+
+!!if&(coeff)<5;                         [allow 100% restore]
+  !!UN:C(hero)/24/2/?(currentSp:y) Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(maxSp:y);
+  !!VR(savedCurrExp:y):S(currentSp);
+  !!FU(ES_787_RestoreMana):Px1/(STRUCT_HOOK_CONTEXT_EDI)/(coeff)/?(currentSp)/(maxSp);
+  !!VRi^es_787_sp_to_add^:S(currentSp);
+  !!VR(spToRestore:y):S(maxSp) -(currentSp) +(savedCurrExp:y);
+  !!UN:C(hero)/24/2/(spToRestore:y);
 !!en;
 
-!!if&y2>-1;
-  !!HEy2:I?y3;                [y3 - кол-во маны у героя]
-  !!IF:Wy2;                   [выбор героя для использования w99]
-  !!VRw99:Sy3;                [обновление w99]
+!?FU(ES_Hero_OnWellCheckingSpellPoints)&i^es_787_sp_to_add^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/i^es_787_sp_to_add^;
+!!VRi^es_787_sp_to_add^:S(NULL);
+
+!?FU(ES_787_RestoreMana);
+!#VA(hookContext:x) (hookContextOffset:x) (coeff:x) (currentSp:x) (maxSp:x);
+
+!!VR(needToRestore:y):S(maxSp) -(currentSp);
+!!VR(baseRestore:y):S20 *(coeff);
+!!if&(baseRestore)<(needToRestore);/;
+  !!VR(float:e):S(maxSp) :100 *(baseRestore);
+  !!VR(restoredSp:y):S(float) F(baseRestore)/(needToRestore);
+  !!if&(restoredSp)<(needToRestore);
+    !!VR(currentSp):+(restoredSp);
+    !!UN:C(hookContext)/(hookContextOffset)/4/(currentSp);
+  !!en;        
 !!en;
 
-!?FU(ES_787_RegenSpellPoints); [ежедневное восстановление маны героя x16 для героев игрока i^es_787_prevPlayer^]
-!!HEx16:O?y1;                 [y1 - игрок-владелец героя x16 [0..7]]
-!!FU&y1<>i^es_787_prevPlayer^:E; [выход, если владелец героя не текущий игрок]
+!?FU(ES_Hero_GetSpRestoreCoeff);
+!#VA(heroId:x) (result:x);
+!!HE(heroId):Z?(hero:y) O?(heroOwnerId:y) A2/(ART_WIZARDS_WELL)/?y99/?(isWell:y);
+!!if&(isWell);
+  !!VR(result):S100;
+!!el;
+  !!SN:E5128624/(CALLCONV_THISCALL)/(hero); [get myst power]
+  !!VR(result):Sv1;
+  !!VR(difficulty:y):S0;
+  !!if&(heroOwnerId)<>(NO_OWNER);
+    !!OW:I(heroOwnerId)/?(isAi:y);
+    !!UN:J2/?(difficulty:y);
+    !!VR(difficulty):*(isAi);
+    !!VR(result):+(difficulty);
+  !!en;
+!!en;
+	
+!?FU(ES_Hero_BeforeManaAddedOutsideTown);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(currentSp:y) C(hero)/34/1/?(heroOwnerId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(coeff:y); C(hero)/26/4/?(heroId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/?(maxSp:y);
 
-!!HEx16:A2/138/d/?y1;         [y1>0, если на герое надет Колодец Волшебника(138)]
-!!FU&y1>0:E;                  [выход, если на герое надет Колодец Волшебника]
 
-!!FU(ES_787_GetHeroData):Px16/?y1/?y2/?y3; [y1/y2/y3 - рейтинг/макс.мана/макс.восст.]
-!!IF:Wx16;                    [выбор героя для использования w99]
-!!VRy3:+w99;                  [y3 - мана после восстаногвления]
-!!VRy3&y3>y2:Sy2;             [не более макс. возможного запаса]
-!!VRy3&y3<w99:Sw99;           [и не менее того что было (экстра мана) ]
-!!VRy3&y3<0:S0;               [не меньше нуля]
-!!HEx16:Iy3/1;                [восстановление маны герою]
-
-!?OB(OBJ_MAGIC_WELL);         [посещение колодца маны (перед посещением)]
-!!UN:P787/?y1;                [проверяем включена ли опция 787 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
-
-!!HE-1:I?y1;                  [y1 - текущая мана героя]
-!!IF:W-1;                     [выбор текущего героя для использования w99]
-!!VRw99&w99>-1:Sy1;           [сохраняем текущую ману героя в w99, если герой сегодня еще не посещал колодец (w99>-1)]
-
-!$OB(OBJ_MAGIC_WELL);         [посещение колодца маны (после посещения)]
-!!UN:P787/?y1;                [проверяем включена ли опция 787 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
-
-!!IF:W-1;                     [выбор текущего героя для использования w99]
-!!FU&w99<0:E;                 [выход если герой сегодня уже посещал колодец]
-
-!!HE-1:Y61/d/?y1/2;           [y1 - длительность проклятия, запрещающего посещать Колодец]
-!!FU&y1>1/y1<10000:E;         [выход, если герою запрещено богами посещать Колодец]
-
-!!FU(ES_787_GetHeroData):P-1/?y1/?y2/?y3;[y1/y2/y3 - рейтинг/макс.мана/макс.восст.]
-!!VRy1:*20;                   [y1 - % восстановления маны в колодце (20% за ед. рейтинга), минимум восстановленной маны]
-!!VRy3:Sy2 *y1 :100;          [y3 - макс. возможное восстановление маны в колодце]
-!!VRy3&y3<y1:Sy1;             [...]
-!!VRy3:+w99;                  [мана после посещения колодца]
-!!VRy3&y3>y2:Sy2;             [не больше максимума]
-!!VRy3&y3<w99:Sw99;           [и не меньше того, что было до посещения]
-!!HE-1:Iy3/1;                 [восстановление маны герою]
-!!VRw99:Sy3 *-1;              [сохраняем текущую ману героя с минусом в w99 (признак посещения колодца сегодня)]
-
-!?FU(ES_787_GetHeroData);     [для героя x1 возврат в x2 рейтинга восполнения маны, в x3 - макс. запаса маны героя x1, в x4 - макс. восст. маны]
-** рейтинг восполенния маны
-!!HEx1:S8/?y1;                [y1 - уровень навыка Мистицизм [0..3]]
-!!HEx1:X?y2/?y3/d/d/d/d/d;    [для специалистов по Мистицизму y2=0,y3=8]
-!!VRy1&y2=0/y3=8:+1;          [y1 - уровень навыка Мистицизм с учетом специализации [0..4]]
-!!HEx1:A2/73/d/?y2;           [y2>0, если на герое надет Амулет Маны]
-!!VRy2&y2>0:S1;               [y2=1, если на герое надет Амулет Маны]
-!!HEx1:A2/74/d/?y3;           [y3>0, если на герое надет Талисман Маны]
-!!VRy3&y3>0:S2;               [y3=2, если на герое надет Талисман Маны]
-!!HEx1:A2/75/d/?y4;           [y4>0, если на герое надета Медаль Маны]
-!!VRy4&y4>0:S3;               [y4=3, если на герое надета Медаль Маны]
-!!VRy2:+y3 +y4;               [y2 - суммарный коэффициент для надетых артефактов из сборника Колодец Волшебника [0..6]]
-!!VRy10:S1;                   [y10 - базовый рейтинг восполнения]
-** бонус базового рейтинга для ИИ за уровень сложности
-!!HEx1:O?y11;                 [y11 - игрок-владелец героя]
-!!OW:Iy11/?y12;               [y12=1, для ИИ-игрока]
-!!UN:J2/?y13;                 [y13 - выбранный уровень сложности 0..4]
-!!VRy10&y12=1:+y13;           [ИИ получает +1 к базовому рейтингу восполнения за каждый уровень сложности выше легкого]
-**
-!!VRx2:Sy10 +y1 +y2;          [рейтинг восполнения = базовый рейтинг + бонус Мистизизма + бонус артефактов]
-** макс. запас маны
-!!HEx1:Fd/d/d/?y5;            [y5 - Знание героя]
-!!VRy5:*10;                   [y5 базовый макс. запас маны героя]
-!!HEx1:S24/?y2;               [y2 - уровень навыка Интеллект [0..3]]
-!!HEx1:X?y3/?y4/d/d/d/d/d;    [для специалистов по Интеллекту y3=0,y4=24]
-!!HEx1:Ed/?y6;                [y6 - уровень героя]
-!!VRy7:S0;                    [------------------------------------------]
-!!VRy7&y2=1:Sy5 :4;           [                                          ]
-!!VRy7&y2=2:Sy5 :2;           [ y7 - бонус запаса маны от Интеллекта     ]
-!!VRy7&y2=3:Sy5;              [     и специализации Интеллект            ]
-!!VRe99&y3=0/y4=24:Sy6 :20 +1;[                                          ]
-!!VRy7&y3=0/y4=24:*e99;       [------------------------------------------]
-!!VRx3:Sy5 +y7;               [макс. запас маны = запас от Знания + бонус от Интеллекта]
-
-** максимальное восстановление маны
-; Check if the hero is in a town
-!!VRy6:S(FALSE);
-
-!!HEx1:P?y3/?y4/?y5;          [y3,y4,y5 - координаты героя]
-!!VRy30:Sy3 -1;
-!!VRy31:Sy4;
-!!VRy32:Sy5;
-; Single UN:U call starts from x-1 of the hero's coordinate, if the found town is at the same coordinate of the hero, then the hero is in a town
-!!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/y30/y31/y32;
-
-!!VRy6&y30=y3/y31=y4/y32=y5:S(TRUE);[если герой в городе (слева и справа объект город)]
-
-!!VRy7:S0;                    [------------------------------------------]
-
-!!if&y6=1;
-  !!CAy3/y4/y5:B3/0;          [                                          ]
-  !!VRy7&1:S1;                [                                          ]
-  !!CAy3/y4/y5:B3/1;          [                                          ]
-  !!VRy7&1:S2;                [                                          ]
-  !!CAy3/y4/y5:B3/2;          [y7 - уровень гильдии магов в городе [0..5]]
-  !!VRy7&1:S3;                [                                          ]
-  !!CAy3/y4/y5:B3/3;          [                                          ]
-  !!VRy7&1:S4;                [                                          ]
-  !!CAy3/y4/y5:B3/4;          [                                          ]
-  !!VRy7&1:S5;                [------------------------------------------]
+!!FU(ES_Hero_GetTownId):P(heroId)/?(townId:y);
+!!if&(townId)<>(NO_TOWN);
+  !!CA0/(townId):B3/0;
+  !!if&1;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/0;
+    !!FU:E;
+  !!en;
 !!en;
 
-** y9 - % восстановления маны, y8 - мин. кол-во восстановленной маны
-!!VRy8:Sx2;                   [мин. 1 маны за единицу рейтинга восполнения на открытой местности/в городе без ГМ]
-!!VRy8&y7>0:Sx2 + y7 -1 *20;  [мин. 20 маны за доп.единицу рейтинга и уровень ГМ в городе с ГМ]
-!!VRy9:Sx2 * 3;               [3% за единицу рейтинга восполнения на открытой местности/в городе без ГМ]
-!!VRy9&y7>0:Sx2 + y7 -1 * 20; [20% за доп.единицу рейтинга и уровень ГМ в городе с ГМ]
-**
-!!VRy2:Sx3 *y9 :100;          [y2 - макс. количество маны, которое может восстановить герой]
-!!VRy2&y2<y8:Sy8;             [...]
-!!HEx1:Y6/?y11/?y12/d;        [y11/y12 - сила/продолжительность проклятия потери маны]
-!!HEx1:Y7/?y13/?y14/d;        [y13/y14 - сила/продолжительность благословения посполнения маны]
-!!VRy10:S0;                   [y10 - суммарный эффект проклятий/благословений маны]
-!!VRy10&y11>0/y12>0/y12<1000:-y11 -1; [...]
-!!VRy10&y13>0/y14>0/y14<1000:+y13;    [...]
-!!VRx4:Sy2 +y10;              [макс. восстановление = восстановление на базе рейтинга/ГМ + бонус/штраф благословений/проклятий]
-!!VRx4&x4<0:S0;               [не ниже 0]
+!!VR(difficulty:y):S0;
+!!if&(heroOwnerId)<>(NO_OWNER);
+  !!OW:I(heroOwnerId)/?(isAi:y);
+  !!UN:J2/?(difficulty:y);
+  !!VR(difficulty):*(isAi);
+!!en;
 
-!?FU(OnHeroScreenMouseClick); [клик в окне героя]
+!!VR(coeff):+(difficulty);
+
+!!VR(percent:y):S(coeff) *3;
+!!VR(bonus:e):S(maxSp) :100 *(percent);
+!!VR(newSp:y):S(bonus) F(coeff)/(maxSp);
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(newSp:y);
+
+
+!?FU(OnHeroScreenMouseClick)|i^mouse_item^=109/i^mouse_item^=113/i^mouse_item^=120; [клик в окне героя]
 !!UN:P787/?y1; !!FU&y1=0:E;   [выход если опция не включена]
+!!if&i^mouse_action^<>(MOUSE_LMB_RELEASED);
+  !!FU(ES_787_GetRestoreDescription):Pi^mouse_hero_0^/?(text:z);
+  !!VR(msgType:y):Si^mouse_action^ -12 *2 F(MSG_TYPE_MES)/(MSG_TYPE_POPUP);
+  !!IF:Q1/-1/-1/(msgType)/(text);
+  !!CM:R0;
+!!en;
 
-!!CM:I?y1 S?y2 F?y8;          [y1/y2 - место/флаги/тип клика]
-!!FU&y1<>109/y1<>113/y1<>120:E; [выход если нажатие не на мане]
 
-!!CM:H?y3/?y4;                [y3/y4 - левый/правый герои]
-!!FU(ES_787_GetHeroData):Py3/?y4/?y5/?y6;[y4/y5/y6 - рейтинг/макс.мана/макс.восст.]
-!!HEy3:B0/?z1 I?y7/1;         [z1/y7 - имя/мана героя]
-!!SN:T^es.787.heroScr^/?z2/^hero^/z1/^regenSp^/y6;
-!!IF&y2=13/y8=0:M^%Z2^;       [вывод сообщения ЛКМ (отпущена, без модификаторов)]
-!!IF&y2=14:M0/4/^%Z2^;        [вывод сообщения ПКМ]
-!!CM:R0;                      [отключаем стандартное действие по клику]
+!?FU(ES_787_GetSpRestoreAtPlace);
+!#VA(heroId:x) (maxSp:x) (restore:x);
+
+!!FU(ES_Hero_GetSpRestoreCoeff):P(heroId)/?(coeff:y);
+!!if&(coeff)=100;
+  !!VR(restore):S(maxSp);
+!!el;
+  !!VR(percent:y):S3;
+  !!VR(baseRestore:y):S1;
+  !!FU(ES_Hero_GetTownId):P(heroId)/?(townId:y);
+  !!if&(townId)<>(NO_TOWN);
+    !!CA0/(townId):B3/0;
+    !!if&1;
+      !!re i/1/4;
+        !!CA0/(townId):B3/i;
+        !!VR(coeff)&1:+1;
+      !!en;
+      !!VR(percent):S20;
+      !!VR(baseRestore):S20;
+    !!en;
+  !!en;
+
+  !!VR(percent):*(coeff);
+  !!VR(baseRestore):*(coeff);
+
+  !!VR(bonus:e):S(maxSp) :100 *(percent);
+  !!VR(restore):S(bonus) F(baseRestore)/(maxSp);
+!!en;
+
+!?FU(ES_787_GetRestoreDescription);
+!#VA(heroId:x) (text:x);
+  !!HE(heroId):B0/?(heroName:z) I?(currentSp:y)/1;
+  !!FU(ES_Hero_GetFullSpellPoints):P(heroId)/?(maxSp:y);
+  !!FU(ES_GetStringByFilename):P^genrltxt^/206/?z1;
+  !!SN:E6388190/(CALLCONV_CDECL)/?z2/z1/(heroName:z)/(currentSp)/(maxSp);
+  !!FU(ES_787_GetSpRestoreAtPlace):P(heroId)/(maxSp)/?(restore:y);
+
+  !!SN:T^es.787.heroScr^/?z1/^hero^/(heroName:z)/^regenSp^/(restore:y);
+  !!VR(text):Z^%z2%z1^;
 
 !?FU(OnHeroesMeetScreenMouseClick)|i^mouse_item^=113/i^mouse_item^=83/i^mouse_item^=114/i^mouse_item^=84;
-!!UN:P787/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
-
-!!CM:R0;                                [отключаем стандартное действие по клику]
-
-!!CM:H?(leftHero:y)/?(rightHero:y);
-
-!!if|i^mouse_item^=113/i^mouse_item^=83;
-  !!VR(hero:y):S(leftHero);
-!!el|i^mouse_item^=114/i^mouse_item^=84;
-  !!VR(hero):S(rightHero);
-!!en;
-
-!!FU(ES_787_GetHeroData):P(hero)/?(rating:y)/?(maxSp:y)/?(regenSp:y); [рейтинг/макс.мана/макс.восст.]
-!!HE(hero):B0/?(heroName:z) I?(sp:y)/1;
-!!SN:T^es.787.heroScr^/?z2/^hero^/(heroName)/^regenSp^/(regenSp);
-
-!!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
-  !!IF:M^%Z2^;                          [вывод сообщения ЛКМ (отпущена, без модификаторов)]
-!!el&i^mouse_action^=(MOUSE_RMB_PRESSED);
-  !!IF:M0/(MSG_TYPE_POPUP)^%Z2^;        [вывод сообщения ПКМ]
+!!UN:P787/?(wogOption:y); !!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
+!!if&i^mouse_action^<>(MOUSE_LMB_RELEASED);
+  !!VR(side:y):Si^mouse_item^ -113 F0/1;
+  !!FU(ES_787_GetRestoreDescription):Pi^mouse_hero_%(side)^/?(text:z);
+  !!VR(msgType:y):Si^mouse_action^ -12 *2 F(MSG_TYPE_MES)/(MSG_TYPE_POPUP);
+  !!IF:Q1/-1/-1/(msgType)/(text);
+  !!CM:R0;                                [отключаем стандартное действие по клику]
 !!en;
 
 !?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=2010; [клик на карте приключений]
 !!UN:P787/?y1;                [проверяем включена ли опция 787 в y1]
 !!FU&y1=0:E;                  [выход если опция не включена]
 
-!!CM:I?y1;                    [y1 - место нажатия]
-!!FU&y1<>2010:E;              [выход если нажатие не на мане]
+!!OW:A-1/?(heroId:y);
+!!if&(heroId)<>(NO_HERO);
+  !!HE(heroId):B0/?(heroName:z) I?(currentSp:y)/1;         [z1/y7 - имя/мана героя]
+  !!FU(ES_Hero_GetFullSpellPoints):P(heroId)/?(maxSp:y);
+  !!FU(ES_787_GetSpRestoreAtPlace):P(heroId)/(maxSp)/?(restore:y);
 
-!!OW:A-1/?y3;
-!!FU(ES_787_GetHeroData):Py3/?y4/?y5/?y6;[y4/y5/y6 - рейтинг/макс.мана/макс.восст.]
-!!HEy3:B0/?z1 I?y7/1;         [z1/y7 - имя/мана героя]
-!!SN:T^es.787.advMap^/?z2/^hero^/z1/^currSp^/y7/^maxSp^/y5/^regenSp^/y6;
-!!IF:M0/4/^%Z2^;              [вывод сообщения]
-!!CM:R0;                      [отключаем стандартное действие по клику]
+  !!SN:T^es.787.advMap^/?z2/^hero^/(heroName:z)/^currSp^/(currentSp:y)/^maxSp^/(maxSp)/^regenSp^/(restore:y);
+  !!IF:Q1/(PIC_TYPE_SPELL_POINTS)/(restore:y)/4/^%z2^;              [вывод сообщения]
+  !!CM:R0;                      [отключаем стандартное действие по клику]
 
-** end
+!!en;
