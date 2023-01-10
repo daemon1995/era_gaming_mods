@@ -72,19 +72,27 @@ ZVSE2
 
 
 ** Initialization Code
-!#UN:P201/?i^wog_201_enabled^;                 [Check if Artillery is enabled in WoGify Options]
-!#UN:P202/?i^wog_202_enabled^;                 [Check if Eagle Eye is enabled in WoGify Options]
-!#UN:P203/?i^wog_203_enabled^;                 [Check if Estates is enabled in WoGify Options]
-!#UN:P204/?i^wog_204_enabled^;                 [Check if First Aid is enabled in WoGify Options]
-!#UN:P205/?i^wog_205_enabled^;                 [Check if Learning is enabled in WoGify Options]
-!#UN:P206/?i^wog_206_enabled^;                 [Check if Luck is enabled in WoGify Options]
-!#UN:P207/?i^wog_207_enabled^;                 [Check if Mysticism is enabled in WoGify Options]
-!#UN:P208/?i^wog_208_enabled^;                 [Check if Navigation is enabled in WoGify Options]
-!#UN:P209/?i^wog_209_enabled^;                 [Check if Pathfinding is enabled in WoGify Options]
-!#UN:P211/?i^wog_211_enabled^;                 [Check if Scholar is enabled in WoGify Options]
-!#UN:P212/?i^wog_212_enabled^;                 [Check if Scouting is enabled in WoGify Options]
+[Check if Artillery, Eagle Eye, Estates, First Aid, Learning, Luck, Mysticism,
+Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Options]
 
 !?FU(OnAfterErmInstructions);
+
+!!re i/201/212;
+  !!UN:Pi/?i^wog_%i_enabled^;
+!!en;
+*!UN:P202/?i^wog_202_enabled^;                 [Check if Eagle Eye is enabled in WoGify Options]
+*!UN:P203/?i^wog_203_enabled^;                 [Check if Estates is enabled in WoGify Options]
+*!UN:P204/?i^wog_204_enabled^;                 [Check if First Aid is enabled in WoGify Options]
+*!UN:P205/?i^wog_205_enabled^;                 [Check if Learning is enabled in WoGify Options]
+*!UN:P206/?i^wog_206_enabled^;                 [Check if Luck is enabled in WoGify Options]
+*!UN:P207/?i^wog_207_enabled^;                 [Check if Mysticism is enabled in WoGify Options]
+*!UN:P208/?i^wog_208_enabled^;                 [Check if Navigation is enabled in WoGify Options]
+*!UN:P209/?i^wog_209_enabled^;                 [Check if Pathfinding is enabled in WoGify Options]
+*!UN:P210/?i^wog_210_enabled^;                 [Check if Pathfinding is enabled in WoGify Options]
+
+*!UN:P211/?i^wog_211_enabled^;                 [Check if Scholar is enabled in WoGify Options]
+*!UN:P212/?i^wog_212_enabled^;                 [Check if Scouting is enabled in WoGify Options]
+
 ; Set up new names and descriptions for War Machines
 !!SN&i^wog_204_enabled^:H^art^/(ART_FIRST_AID_TENT)/1/z148000;
 !!SN&i^wog_201_enabled^:H^art^/(ART_BALLISTA)/1/^%T(wog.201.ballista_description)^;
@@ -194,23 +202,39 @@ ZVSE2
 !!FU7023&i^wog_212_enabled^/y-5<>8/y-1>0:Py-1;            [do scouting function - if enabled]
 ** end of movement trigger
 
+*?FU(OnAfterTacticsPhase)&i^wog_201_enabled^;
+** artillery
+*!BU:T?t;
+*!if&t;
+*!el;
+  *!VRi^wog_201_Shoot^:S(TRUE);
+*!en;
+
+*?FU(OnCombatRound)&i^wog_201_Shoot^/v997>-1;
+*!VRi^wog_201_Shoot^:S(FALSE);
+!?FU(WOG_CreateERMHook);
+!!SN:Ex1/1/4607072/(WOG_201_KillWithArtilleryA);
 
 !?FU(OnAfterTacticsPhase)&i^wog_201_enabled^;
-** artillery
-!!BU:T?t;
-!!if&t;
+  !!VRi^wog_201_DoShoot^:S(TRUE);
+
+*?FU(WOG_201_KillWithArtilleryA)&i^wog_201_DoShoot^;
+
+!?FU(OnBeforeBattleAction);
+*!IF:L^%^;  
+!?FU(WOG_201_KillWithArtilleryA)&i^wog_201_DoShoot^;
+  *!IF:M^%^;
+  !!VRi^wog_201_DoShoot^:S(FALSE);
+
   !!FU(WOG_201_KillWithArtillery):P;
 !!el;
   !!VRi^wog_201_Shoot^:S(TRUE);
 !!en;
 
-!?FU(OnCombatRound)&i^wog_201_Shoot^/v997>-1;
-!!FU(WOG_201_KillWithArtillery):P;
-!!VRi^wog_201_Shoot^:S(FALSE);
-
-
 ** start of battle-start trigger
-!?FU(OnBeforeBattleUniversal)|i^wog_204_enabled^/i^wog_207_enabled^;
+!?FU(OnBeforeBattle)|i^wog_204_enabled^/i^wog_207_enabled^;
+
+
 
 ** first aid
 !!if&i^wog_204_enabled^;
@@ -246,12 +270,12 @@ ZVSE2
 !!en;
 
 !?FU(OnSetupBattlefield);               [Continue trigger if any skills are enabled]
-!!UN:P210/?(resistanceII:y);
-!!FU&(resistanceII)<>(TRUE);
+*!UN:P210/?(resistanceII:y);
+*!FU&(resistanceII)<>(TRUE);
 
 ** offset skill levels for resistance
-!!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/0;           [offset skill levels - attacker]
-!!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/0; [offset skill levels - defender]
+*!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/0;           [offset skill levels - attacker]
+*!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/0; [offset skill levels - defender]
 
 ** luck
 !!VRv7034&i^wog_206_enabled^:C-2/-2/-2/-2/-2/-2;               [reset v7034-v7039]
@@ -395,21 +419,125 @@ ZVSE2
 
 !!VR(stack):Si^battle_acting_stack^;
 !!VRi^wog_202_spellCountered^:S(FALSE);
+
 ** end of pre-action trigger
 
 
 ** start of post-action trigger
 !?FU(OnAfterBattleAction);              [Continue trigger if resistance is enabled]
-!!UN:P210/?(resistanceII:y);
-!!FU&(resistanceII)<>(TRUE);
+*!UN:P210/?(resistanceII:y);
+*!FU&(resistanceII)<>(TRUE);
 
 ** reset skill levels for resistance
 !!BU:C?(battleIsEnded:y);                             [check for end of battle]
 
 !!if&(battleIsEnded);
-  !!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/1; [reset skill levels - attacker]
-  !!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/1; [reset skill levels - defender]
+  *!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/1; [reset skill levels - attacker]
+  *!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/1; [reset skill levels - defender]
+
+  !!re i/0/i^battle_hero_vs_hero^;(end_value);
+    *!FU(WOG_204_FindTargetToResurrect):P;
+  !!en;
 !!en;
+*?FU(on);
+
+!?FU(WOG_204_FindTargetToResurrect);
+!#VA(side:x) (power:x);
+
+    !!VR(min:y):S(side) *21;
+    !!VR(max:y):S(min) +20;(ARMY_SLOT_LAST);
+    !!re i/(min)/(max);
+      !!BMi:N?n O?(slot:y) B?(startNumber:y);
+      !!if&(slot)<>(NO_STACK)/n>0/(startNumber:y)>n;
+        *!BMi:B?(startNumber:y);
+      !!en;
+    !!en;
+
+  *!re i/(min)/(max);
+    *!BMi:T?t N?n;
+    *!if&t=(MON_FIRST_AID_TENT)/n>0;
+      
+      *!IF:L^%n %t^;
+    *!en;
+  *!en;
+!?FU(OnAdventureMapRightMouseClick);
+!?FU(WOG_CreateERMHook);
+!!SN:Ex1/1/4600643/(Kong_BeforeWarMachinesInitialization);
+
+!?FU(Kong_BeforeWarMachinesInitialization);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-8/4/?(hero:y) 
+C(hero:y)/26/2/?(heroId:y) Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(side:y);
+!!if&(side)=(BATTLE_LEFT);
+
+  !!UN:C4600679/4/(MON_CATAPULT);
+  !!UN:C4600804/4/(MON_BALLISTA); 
+  !!UN:C4600902/4/(MON_FIRST_AID_TENT);
+  !!UN:C4600997/4/(MON_AMMO_CART);
+!!el;
+
+  !!UN:C4600902/4/(MON_FIRST_AID_TENT);
+  !!UN:C4600997/4/(MON_AMMO_CART);
+!!en;
+
+
+!?FU(WOG_204_GetResurrectPower);
+!#VA(side:x) (result:x);
+!!VR(result):S0;
+
+!!HEi^battle_hero_%i^:A2/(ART_FIRST_AID_TENT)/?y99/?(isTent:y);
+!!if&(isTent);
+   !!HEi^battle_hero_%i^:A2/(ART_AMMO_CART)/?y99/?(isAmmo:y) S(SKILL_FIRST_AID)/?(skillLvl:y) E?y99/?(heroLv:y)/1;
+   !!VR(multipler:y):S1 +(isAmmo) +(skillLvl);
+   !!VR(result):R0/1/50 + (heroLv) *(multipler);
+
+!!en;
+  *!VR(min:y):S(side) *21;
+  *!VR(max:y):S(min) +20;
+
+!?FU(OnAfterBattleUniversal);
+  !!re i/0/i^battle_hero_vs_hero^;(end_value);
+    !!HEi^battle_hero_%i^:O?o A2/(ART_FIRST_AID_TENT)/?y99/?(isTent:y);
+    *!IF:M^%o^;
+    !!if&o<>(NO_OWNER);/(isTent);
+      !!FU(WOG_204_GetResurrectPower):Pi/?(power:y);
+      !!if&(power);
+        !!FU(WOG_73_BattleFunc_CalculateStackHealing):Pi/(power:y)/?l/?n;
+        
+      !!en;
+    !!en;
+  !!en;
+
+
+
+!?FU(WOG_CreateERMHook);&i^wog_210_enabled^;
+*#VRi^wog_204_enabled^:S1;
+!!SN:Ex1/1/5130887/(WOG_OnBeforeHeroResistanceMultiplier);
+
+!?FU(WOG_OnBeforeHeroResistanceMultiplier);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero:y)/26/2/?(heroId:y);
+!!re i/0/2;
+  !!VR(artId:y):Si+(ART_GARNITURE_OF_INTERFERENCE);
+  !!HE(heroId):A2/(artId)/?(has:y)/?(art:y);
+  !!br&(art)=0;
+!!en;
+!!if&i>2;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-4/4/?(currentArtBonus:e);
+  !!VR(newBonus:e):S30:100 +(currentArtBonus:e);
+  !!UN:C(ebp:y)/-4/4/(newBonus:e);
+!!en;
+
+!?FU(OnGameEnter)&i^wog_210_enabled^; [resistance coeffs 10/20/30]
+  !!re i/1/3;
+    !!VR(offset:y):Si *4;
+    !!VRe1:S1 :10 *i;
+    !!UN:C6548040/(offset)/4/e1;
+  !!en;
+
+!?FU(OnGameLeave)&i^wog_210_enabled^; [resistance coeffs restoring]
+  !!VRe1:S1 :20;
+  !!VRe2:S1 :10;
+  !!VRe3:S1 :5;
+  !!UN:C6548044/4/4/e1 C6548044/8/4/e2 C6548044/12/4/e3;
 ** end of post-action trigger
 
 
@@ -439,9 +567,8 @@ ZVSE2
   !!HEi^battle_hero_0^:Id-i^wog_207_manaDiff_0^/1;
   !!HEi^battle_hero_1^:Id-i^wog_207_manaDiff_1^/1;
 !!en;
+
 ** end of battle end trigger
-
-
 !?FU(WOG_201_SelectBestTarget);
 !#VA(side:x) (dmg:x) (result:x);
 
@@ -453,12 +580,14 @@ ZVSE2
 
 !!re i/(min)/(max);
   *!BA:M(enemySide)/i/?(mon:y)/?(qty:y);
-  !!BMi:N?(qty:y) H?(hp:y) T?(mon:y);
+  !!BMi:N?(qty:y) H?(hp:y) T?(mon:y) O?(armySlot:y);
 
-  !!if&(mon)>(NO_MON)/(qty)>1/(hp)>0;
+  !!co|(armySlot)=(NO_MON);
+
+  !!if&(mon)>(NO_MON)/(qty)>0/(hp)>0;
     !!MA:F(mon)/?(fv:y);
-    !!VR(maxKillCount:y):S(qty) -1;
-    !!VR(currKillCount:y):S(dmg) :(hp) F0/(maxKillCount);
+    *!VR(maxKillCount:y):S(qty);
+    !!VR(currKillCount:y):S(dmg) :(hp) F0/(qty);
     !!VR(currKillFv:y):S(currKillCount) *(fv);
 
     ; Store the values if killing at least one
@@ -472,16 +601,13 @@ ZVSE2
 
 !?FU(OnStackToStackDamage)&i^wog_201_Shoot^;
 !!VRx4:Si^wog_201_Shoot^;
-!!VRi^wog_201_Shoot^:S(FALSE);
 
 ** function to handle artillery, hero, skill level
 !?FU(WOG_201_KillWithArtillery);
   !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?(seed:y);
-  
   !!re (side:y)/0/i^battle_hero_vs_hero^;
-    !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y);
-
-    !!if&(ballista);
+    !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y) S(SKILL_ARTILLERY)/?(artilleryLv:y);
+    !!if&(ballista)/(artilleryLv);
 
       !!VR(min:y):S(side) *21;
       !!VR(max:y):S(min) +20;
@@ -490,20 +616,21 @@ ZVSE2
         !!BMi:T?t N?n;
         !!if&n>0/t=(MON_BALLISTA);
           !!BMi:Z?(stack:y);
-
-          !!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLv:y)/1 S(SKILL_ARTILLERY)/?(artilleryLv:y); [check for Ammo Cart, get hero's level, artillery level]
-          !!VR(equipped):F0/1 +1;                        [ammo cart bonus]
+          !!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLv:y)/1; [check for Ammo Cart, get hero's level, artillery level]
+          !!VR(equipped):F0/1 +1;       [ammo cart bonus]
           !!VR(mult:y):S1 +(artilleryLv) *(equipped); [set multiplier to 1]
           !!VR(seed):+i^timerDay^ +(side) +i^battle_hero_%(side)^;
           !!FU(WOG_SafeRand):P1/50/(seed)/?(dmg:y);
-          !!VR(dmg:y):+(heroLv) *(mult);      [ballista damage: (1-50 + hero level) x bonus multiplier x ammo]
+          !!VR(dmg:y):+(heroLv) *100 *(mult); [ballista damage: (1-50 + hero level) x bonus multiplier x ammo]
           !!VR(oppSide:y):S(side) X1;
           !!FU(WOG_201_SelectBestTarget):P(oppSide)/(dmg)/?(targetStackId:y);
 
           !!if&(targetStackId)<>(NO_STACK);
-            !!VRi^wog_201_Shoot^:S(dmg);
-            !!BM(targetStackId:y):Z?p N?n;
-            !!UN:C(stack)/16/4/p;
+            !!BM(targetStackId:y):Z?(targetStack:y) N?n H?h L?l;
+            !!VR(maxDamage:y):Sn *h -l -1;
+            !!VRi^wog_201_Shoot^:S(dmg) Fd/(maxDamage);
+
+            !!UN:C(stack)/16/4/(targetStack:y);                 [set stack target]
             !!HEi^battle_hero_%(side)^:S(SKILL_ARTILLERY)/0;
 
             !!BMi:U3/?(shots:y) U3/1 G213/?(luck:y)/d  G213/0/d;
@@ -511,15 +638,14 @@ ZVSE2
             !!MM:S(msg:z);
             !!UN:C6919200/4/?(cmbMgr:y);
             *!SN:E4456064/(CALLCONV_THISCALL)/(stack);/p;
-            !!SN:E4453920/(CALLCONV_THISCALL)/(stack)/p;                  [shoot stack to stack]
-            !!SN:E4607072/(CALLCONV_THISCALL)/(cmbMgr)/0;                 [find next stack to act (start battle)]
+            *!SN:E4453920/(CALLCONV_THISCALL)/(stack)/(targetStack:y); [shoot stack to stack]
+            *!SN:E4607072/(CALLCONV_THISCALL)/(cmbMgr)/0; [find next stack to act (start battle)]
             !!BMi:U3/(shots:y) G213/(luck:y)/d;
 
             !!HEi^battle_hero_%(side)^:S(SKILL_ARTILLERY)/(artilleryLv:y);
             !!BM(targetStackId:y):N?(new:y);
             !!VR(lost:y):Sn -(new);
-
-            !!BM(targetStackId:y):Bd-(lost);
+            *!BM(targetStackId:y):Bd-(lost);
             !!VRi^wog_201_Shoot^:S(FALSE);
           !!en;
 
