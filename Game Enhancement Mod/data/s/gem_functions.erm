@@ -5,126 +5,114 @@ ZVSE2
 
 
 
-!?FU(gem_CheckModFolderNameExists);         [that function get mod list in array from !FU(gem_GetModList) and compare each folder with]
-!#VA(modNameForCheck:x) (isExist:x);
-  !!VR(emptyStr:z):S^%z(modNameForCheck)^ H1;
-  !!if|1/(emptyStr)=^^;        [show error if mod name is not string or empty]
-    !!IF:M^{The mod name you are trying to check is incorrect!}^;
-    !!FU:E;
-  !!en;
 
-  !!VR(textModNameForCheck:z):S^%z(modNameForCheck)^;
-  !!FU(gem_GetModList):P?(modListArrayID:y)/?(modsAmount:y);
 
-  !!FU(StrToLower):P(textModNameForCheck)/?(textModNameForCheck);
+!?FU(gem_GetRandomMon);
+  !#VA(mon:x) (monsToExcl:x) (mons[10]:x);
 
-  !!re i/0/(modsAmount)/1/-1;
-    !!SN:M(modListArrayID)/i/?(modName:z);
-    !!FU(StrToLower):P(modName)/?(modName);
+  !!FU(GetMaxMonsterId):P?(result:y);
+  !!VR(mon):R0/0/(result);
 
-    !!if&(textModNameForCheck)=(modName);
-      !!VR(isExist):S(TRUE);
-      !!FU:E;    
+  !!VR(flag:y):S(TRUE);
+  !!VR(flag)|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):S(FALSE); [not used]
+  !!VR(flag)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE); [Emissaries]
+  !!VR(flag)&(mon)>=(MON_PALADIN_A)/(mon)<=(MON_ASTRAL_SPIRIT_D):S(FALSE); [Commanders]
+  !!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE); [war_machines]
+  
+  !!if&(monsToExcl);
+    !!re i/0/(monsToExcl)/1/-1;
+      !!VR(flag)&(mon)=(mons[i]):S(FALSE); [ultra dragons]
     !!en;
   !!en;
 
-  !!VR(isExist):S(FALSE);
+  !!FU(gem_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
 
 
-!?FU(gem_GetModList);
-!#VA(modListArrayID:x) (modsAmount:x) (modListGlobalVar:x); 
-  !!FU:A?(numArgs:y);
+!?FU(gem_GetPlayerActiveHeroesList);
+!#VA(playerID:x) (array:x);
+  !!VR(array):S-1;
 
-  *!if&(numArgs)<2;
-    *!SN:F^ShowErmError^/^Substr: invalid arguments number. Expected at least {2} arguments^;
-    *!FU:E;
-  *!en;
+  !#VA(hero[8]:y);
+  !!OW:O(playerID)/?(heroesOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
+  !!if&(heroesOnMap);
+    !!FU(NewIntArray):P(heroesOnMap)/?(array);
+
+    !!re i/0/(heroesOnMap)/1/-1;
+      !!SN:M(array)/i/(hero[i]);
+    !!en;
+    !!SN:F^ExtendArrayLifetime^/(array);
+  !!en;
+
+!?FU(gem_GetPlayerHeroesList);
+!#VA(playerID:x) (array:x);
+  !!VR(array):S-1;
+
+  !!OW:H(playerID)/2;
+  !!if&v2;
+    !!FU(NewIntArray):Pv2/?(array);
+
+    !!re i/1/v2;
+      !!VR(ind:y):Si +2;
+      !!SN:M(array)/i/v(ind);
+    !!en;
+
+    !!SN:F^ExtendArrayLifetime^/(array);
+  !!en;
 
 
-  !!SN:L^vfs.dll^/?(dll:y) A(dll)/^GetMappingsReportA^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL);
-  !!SN:Bv1/v1/?s^gem_modList^;
+
+!?FU(gem_UpdateScoutingRange);
+!#VA(heroId:x) (arrayId:x);
   !!VR(savedV1:y):Sv1;
-  !!SN:A(dll)/^MemFree^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL)/(savedV1);
-  !!SN:Ks^gem_modList^/?(textLength:y);
+  !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+  !!FU:A?(argNum:y);
 
-  !!VR(garbageLength:y):S(NULL);
-  !!VR(endOfGarbage:y):S(NULL);
-  !!VR(skipNextText:y):S(FALSE);
-  !!FU(NewIntArray):P?(modNamesEndings:y);
-  !!VRs^gem_modListCut^:S^^;
+  !!if&(argNum)>1;
+    !!SN:M(arrayId)/?(size:y);
+    !!re i/0/(size)/1/-1;
+      !!SN:V(arrayId)/i/?(heroId);
+      !!HE(heroId):Z?(hero:y) P?(x:y)/?(y:y)/?(z:y) O?(owner:y);
 
-  !!re i/0/(textLength)/1/-1;
-
-    !!SN:Ks^gem_modList^/i/?(textSymbol:z);
-
-    !!if&(textSymbol)=^$^;
-      !!VRi:+10;
-      !!VRk:Si+1;
-      !!VR(modStart:y):Sk;
-      !!co;
+      !!SN:E5128928/(CALLCONV_THISCALL)/(hero);                                   [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
+      !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1; [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
     !!en;
-
-    !!if&(textSymbol)=^[^;
-      !!if&(garbageLength);
-        !!VRi:+(garbageLength);
-        !!co;
-      !!el;
-        !!VR(startOfTextGarbage:y):Si;
-        !!VR(skipNextText):S(TRUE);
-      !!en;
-    !!en;
-
-    !!if&(textSymbol)=^]^;
-        !!VR(garbageLength):Si -(startOfTextGarbage);
-        !!VR(skipNextText):S(FALSE);
-        !!co;
-    !!en;
-
-    !!VRs^gem_modListCut^&(skipNextText)=(FALSE):+^%(textSymbol)^;
+  !!el;
+    !!HE(heroId):Z?(hero:y) P?(x:y)/?(y:y)/?(z:y) O?(owner:y);
+    !!SN:E5128928/(CALLCONV_THISCALL)/(hero);                                   [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
+    !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1; [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
   !!en;
 
-  !!SN:Ks^gem_modListCut^/?(textLength:y);
+  !!VRv1:S(savedV1);
 
-  !!FU(NewStrArray):P?(modListArrayID);
-
-  !!re i/0/(textLength)/1/-1;
-    !!SN:Ks^gem_modListCut^/i/?(textSymbol);
-
-    !!if&(textSymbol)=^\^;
-      !!VR(modsAmount):+1;
-      !!co;
-    !!en;
-
-    !!VRs^gem_mod_no_%(modsAmount)^:+(textSymbol);
+!?FU(gem_AdvMgr_HideHero);
+  !#VA(hero[3]:x);
+  !!FU:A?(numArgs:y);
+  !!if&(numArgs)>1;
+    !!HE(hero[0])/(hero[1])/(hero[2]):Z?(badHero:y);
+  !!el;
+    !!HE(hero[0]):Z?(badHero:y);
   !!en;
+  !!SN:E5077328/(CALLCONV_THISCALL)/(badHero);         [hide hero if it is there]
 
-  !!VRs^gem_modList^:S^^;
-  !!VRs^gem_modListCut^:S^^;
-
-  !!re i/1/(modsAmount);
-    !!VRs^gem_mod_no_%i^:M6/?(latSymbol:y);
-    !!VR(latSymbol):+1;
-    !!VRs^gem_mod_no_%i^:M1/s^gem_mod_no_%i^/0/(latSymbol);
-    !!FU(Array_Push):P(modListArrayID)/s^gem_mod_no_%i^;
-
-    !!if&(numArgs)>2;                                   [if user asked mod list]
-      !!VRs^gem_modListCut^:+^%s(gem_mod_no_%i)
-^;                                             [add mod to the list on the next line]
-    !!en;
-
-    !!VRs^gem_mod_no_%i^:S^^;                           [remove global var]
+!?FU(gem_AdvMgr_ShowHero);
+  !#VA(hero[3]:x);
+  !!FU:A?(numArgs:y);
+  !!if&(numArgs)>1;
+    !!HE(hero[0])/(hero[1])/(hero[2]):Z?(heroPtr:y) N?(heroId:y);
+  !!el;
+    !!HE(hero[0]):Z?(heroPtr:y) N?(heroId:y);
   !!en;
+  !!SN:E5077056/(CALLCONV_THISCALL)/(heroPtr)/(OBJ_HERO)/(heroId:y);         [hide hero if it is there]
 
-  !!SN:F^ExtendArrayLifetime^/(modListArrayID);         [return id of array with mod list]
 
-  !!if&(numArgs)>2;                                     [if user asked mod list]
 
-    !!VRs^gem_modListCut^:M6/?(latSymbol);
 
-    !!VR(latSymbol):+1;
-    !!VRs^gem_modListCut^:M1/s^gem_modListCut^/0/(latSymbol);
-    !!VR(modListGlobalVar):Z^{~text align=left}%s(gem_modListCut)}^;
-  !!en;
+************************************************************************
+************************************************************************
+*********************** T E X T   H A N D L I N G **********************
+************************************************************************
+************************************************************************
+
 
 !?FU(gem_ExtractIntsFromText);                        [returns only integer numbers as int array elements from string]
   !#VA(strPtr:x);                       [Original string.]
@@ -218,26 +206,176 @@ ZVSE2
     !!IF:M^There are no numbers in the text you entered^;
   !!en;
 
+!?FU(gem_GetModList);
+!#VA(modListArrayID:x) (modsAmount:x) (modListGlobalVar:x); 
+  !!FU:A?(numArgs:y);
 
-!?FU(gem_GetRandomMon);
-  !#VA(mon:x) (monsToExcl:x) (mons[10]:x);
+  *!if&(numArgs)<2;
+    *!SN:F^ShowErmError^/^Substr: invalid arguments number. Expected at least {2} arguments^;
+    *!FU:E;
+  *!en;
 
-  !!FU(GetMaxMonsterId):P?(result:y);
-  !!VR(mon):R0/0/(result);
 
-  !!VR(flag:y):S(TRUE);
-  !!VR(flag)|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4):S(FALSE); [not used]
-  !!VR(flag)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE); [Emissaries]
-  !!VR(flag)&(mon)>=(MON_PALADIN_A)/(mon)<=(MON_ASTRAL_SPIRIT_D):S(FALSE); [Commanders]
-  !!VR(flag)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE); [war_machines]
-  
-  !!if&(monsToExcl);
-    !!re i/0/(monsToExcl)/1/-1;
-      !!VR(flag)&(mon)=(mons[i]):S(FALSE); [ultra dragons]
+  !!SN:L^vfs.dll^/?(dll:y) A(dll)/^GetMappingsReportA^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL);
+  !!SN:Bv1/v1/?s^gem_modList^;
+  !!VR(savedV1:y):Sv1;
+  !!SN:A(dll)/^MemFree^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL)/(savedV1);
+  !!SN:Ks^gem_modList^/?(textLength:y);
+
+  !!VR(garbageLength:y):S(NULL);
+  !!VR(endOfGarbage:y):S(NULL);
+  !!VR(skipNextText:y):S(FALSE);
+  !!FU(NewIntArray):P?(modNamesEndings:y);
+  !!VRs^gem_modListCut^:S^^;
+
+  !!re i/0/(textLength)/1/-1;
+
+    !!SN:Ks^gem_modList^/i/?(textSymbol:z);
+
+    !!if&(textSymbol)=^$^;
+      !!VRi:+10;
+      !!VRk:Si+1;
+      !!VR(modStart:y):Sk;
+      !!co;
+    !!en;
+
+    !!if&(textSymbol)=^[^;
+      !!if&(garbageLength);
+        !!VRi:+(garbageLength);
+        !!co;
+      !!el;
+        !!VR(startOfTextGarbage:y):Si;
+        !!VR(skipNextText):S(TRUE);
+      !!en;
+    !!en;
+
+    !!if&(textSymbol)=^]^;
+        !!VR(garbageLength):Si -(startOfTextGarbage);
+        !!VR(skipNextText):S(FALSE);
+        !!co;
+    !!en;
+
+    !!VRs^gem_modListCut^&(skipNextText)=(FALSE):+^%(textSymbol)^;
+  !!en;
+
+  !!SN:Ks^gem_modListCut^/?(textLength:y);
+
+  !!FU(NewStrArray):P?(modListArrayID);
+
+  !!re i/0/(textLength)/1/-1;
+    !!SN:Ks^gem_modListCut^/i/?(textSymbol);
+
+    !!if&(textSymbol)=^\^;
+      !!VR(modsAmount):+1;
+      !!co;
+    !!en;
+
+    !!VRs^gem_mod_no_%(modsAmount)^:+(textSymbol);
+  !!en;
+
+  !!VRs^gem_modList^:S^^;
+  !!VRs^gem_modListCut^:S^^;
+
+  !!re i/1/(modsAmount);
+    !!VRs^gem_mod_no_%i^:M6/?(latSymbol:y);
+    !!VR(latSymbol):+1;
+    !!VRs^gem_mod_no_%i^:M1/s^gem_mod_no_%i^/0/(latSymbol);
+    !!FU(Array_Push):P(modListArrayID)/s^gem_mod_no_%i^;
+
+    !!if&(numArgs)>2;                                   [if user asked mod list]
+      !!VRs^gem_modListCut^:+^%s(gem_mod_no_%i)%T(gem.endl)^;                                             [add mod to the list on the next line]
+    !!en;
+
+    !!VRs^gem_mod_no_%i^:S^^;                           [remove global var]
+  !!en;
+
+  !!SN:F^ExtendArrayLifetime^/(modListArrayID);         [return id of array with mod list]
+
+  !!if&(numArgs)>2;                                     [if user asked mod list]
+
+    !!VRs^gem_modListCut^:M6/?(latSymbol);
+
+    !!VR(latSymbol):+1;
+    !!VRs^gem_modListCut^:M1/s^gem_modListCut^/0/(latSymbol);
+    !!VR(modListGlobalVar):Z^{~text align=left}%s(gem_modListCut)}^;
+  !!en;
+
+
+
+
+!?FU(StringReplaceINT);
+!#VA(string:x) (substr:x) (result:x);
+  !!VRs^temp^:Sz(string);
+  !!SN:Ks^temp^/?(length:y);
+
+  !!re i/0/(length)/1/-1;
+    !!SN:Ks^temp^/i/?(char:z);
+    !!if&(char)<>^0^;
+      !!VR(int:y):V(char);
+      !!br&(int)>0;
+    !!en;
+  !!en;
+  !!if&i<(length);
+    !!VR(len:y):S(length) -i;
+    !!VRs^_temp^:M1/s^temp^/i/(len);
+    !!VR(int):Vs^_temp^;
+    !!SN:K^%(int)^/?(numLen:y);
+    !!VR(rPos:y):Si+(numLen);
+    !!VR(rLen:y):S(length) -(rPos);
+    !!VR(left:z):M1/s^temp^/0/i;
+    !!VR(right:z):M1/s^temp^/(rPos)/(rLen);
+    !!VR(result):Z^%(left)%z(substr)%(right)^;
+  !!el;
+    !!VR(result):Zz(string);
+  !!en;
+  !!SN:W^temp^ ^_temp^;
+
+
+
+
+!?FU(gem_CheckModFolderNameExists);         [that function get mod list in array from !FU(gem_GetModList) and compare each folder with]
+!#VA(modNameForCheck:x) (isExist:x);
+  !!VR(emptyStr:z):S^%z(modNameForCheck)^ H1;
+  !!if|1/(emptyStr)=^^;        [show error if mod name is not string or empty]
+    !!IF:M^{The mod name you are trying to check is incorrect!}^;
+    !!FU:E;
+  !!en;
+
+  !!VR(textModNameForCheck:z):S^%z(modNameForCheck)^;
+  !!FU(gem_GetModList):P?(modListArrayID:y)/?(modsAmount:y);
+
+  !!FU(StrToLower):P(textModNameForCheck)/?(textModNameForCheck);
+
+  !!re i/0/(modsAmount)/1/-1;
+    !!SN:M(modListArrayID)/i/?(modName:z);
+    !!FU(StrToLower):P(modName)/?(modName);
+
+    !!if&(textModNameForCheck)=(modName);
+      !!VR(isExist):S(TRUE);
+      !!FU:E;    
     !!en;
   !!en;
 
-  !!FU(gem_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
+  !!VR(isExist):S(FALSE);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+************************************************************************
+************************************************************************
+************************ D I A L O G   I T E M S ***********************
+************************************************************************
+************************************************************************
 
 
 +16 | id
@@ -255,12 +393,6 @@ ZVSE2
 +68 | Does the dialog close: 0-no, 1-yes; - only set
 ^;
 *!en;
-************************************************************************
-************************************************************************
-************************ D I A L O G   I T E M S ***********************
-************************************************************************
-************************************************************************
-
 !?FU(gem_DlgDefProc);
 !#VA(itemId:x) (currentFrame:x) (whenPressedFrame:x) (whenDisabledFrame:x) (closeDlg:x) (dlgObj:x);
   !!if&(itemId)<0;
@@ -353,60 +485,6 @@ ZVSE2
 
   !!VRv1:S(savedV1);
 
-!?FU(gem_GetPlayerActiveHeroesList);
-!#VA(playerID:x) (array:x);
-  !!VR(array):S-1;
-
-  !#VA(hero[8]:y);
-  !!OW:O(playerID)/?(heroesOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
-  !!if&(heroesOnMap);
-    !!FU(NewIntArray):P(heroesOnMap)/?(array);
-
-    !!re i/0/(heroesOnMap)/1/-1;
-      !!SN:M(array)/i/(hero[i]);
-    !!en;
-    !!SN:F^ExtendArrayLifetime^/(array);
-  !!en;
-
-
-
-!?FU(gem_GetPlayerHeroesList);
-!#VA(playerID:x) (array:x);
-  !!VR(array):S-1;
-
-  !!OW:H(playerID)/2;
-  !!if&v2;
-    !!FU(NewIntArray):Pv2/?(array);
-
-    !!re i/1/v2;
-      !!VR(ind:y):Si +2;
-      !!SN:M(array)/i/v(ind);
-    !!en;
-
-    !!SN:F^ExtendArrayLifetime^/(array);
-  !!en;
-!?FU(gem_UpdateScoutingRange);
-!#VA(heroId:x) (arrayId:x);
-  !!VR(savedV1:y):Sv1;
-  !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
-  !!FU:A?(argNum:y);
-
-  !!if&(argNum)>1;
-    !!SN:M(arrayId)/?(size:y);
-    !!re i/0/(size)/1/-1;
-      !!SN:V(arrayId)/i/?(heroId);
-      !!HE(heroId):Z?(hero:y) P?(x:y)/?(y:y)/?(z:y) O?(owner:y);
-
-      !!SN:E5128928/(CALLCONV_THISCALL)/(hero);                                   [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
-      !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1; [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
-    !!en;
-  !!el;
-    !!HE(heroId):Z?(hero:y) P?(x:y)/?(y:y)/?(z:y) O?(owner:y);
-    !!SN:E5128928/(CALLCONV_THISCALL)/(hero);                                   [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
-    !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1; [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
-  !!en;
-
-  !!VRv1:S(savedV1);
 
 !?FU(gem_DlgShowItem);
 !#VA(itemId:x) (showItem:x) (clickableItem:x) (redraw:x) (currentDlgStruct:x);
@@ -833,32 +911,6 @@ Garrison.txt
   !!CA0/x1:Ry2;
 
 
-!?FU(StringReplaceINT);
-!#VA(string:x) (substr:x) (result:x);
-  !!VRs^temp^:Sz(string);
-  !!SN:Ks^temp^/?(length:y);
-
-  !!re i/0/(length)/1/-1;
-    !!SN:Ks^temp^/i/?(char:z);
-    !!if&(char)<>^0^;
-      !!VR(int:y):V(char);
-      !!br&(int)>0;
-    !!en;
-  !!en;
-  !!if&i<(length);
-    !!VR(len:y):S(length) -i;
-    !!VRs^_temp^:M1/s^temp^/i/(len);
-    !!VR(int):Vs^_temp^;
-    !!SN:K^%(int)^/?(numLen:y);
-    !!VR(rPos:y):Si+(numLen);
-    !!VR(rLen:y):S(length) -(rPos);
-    !!VR(left:z):M1/s^temp^/0/i;
-    !!VR(right:z):M1/s^temp^/(rPos)/(rLen);
-    !!VR(result):Z^%(left)%z(substr)%(right)^;
-  !!el;
-    !!VR(result):Zz(string);
-  !!en;
-  !!SN:W^temp^ ^_temp^;
 
 
 
@@ -866,11 +918,3 @@ Garrison.txt
 
 
 
-
-
-
-
-
-
-
-  

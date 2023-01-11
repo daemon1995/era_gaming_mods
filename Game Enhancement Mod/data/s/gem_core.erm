@@ -6,15 +6,6 @@ ZVSE2
 ****************************************************************************************************
 UNIVERSAL START TRIGGER by igrik
 
-*?EX;
-*!IF:M^%^;
-!?FU(OnKeyPressed)&x1=(KEY_1);
-
-!!re i/500/502;
-  *!FU(gem_DlgItemPosition):Pi/d1/d1;
-
-!!en;
-
 !?FU(gem_OnPlaceRandMons);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(monAmount:y); edx mon amount
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(x:y); edx mon amount
@@ -197,10 +188,11 @@ UNIVERSAL START TRIGGER by igrik
     !!SN:Ex1/1/4893738/(WOG_OnAfterHeroSwap);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   !!en;
 
-
-
-
 !?FU(gem_CreateERMHook);                [функция хуков (x1 - адрес установки хука)\]
+*!SN:Ex1/1/5131303/(WOG_DoCalcHeroMovementPoints);
+*!SN:Ex1/1/5131803/(WOG_DoCalcHeroMovementPointsResult);
+*!SN:Ex1/1/5131991/(WOG_OnSetMovementPointsOnLand);
+5132013
   *!SN:Ex1/1/6116626/(gem_OnProcessEndInTownScreen);                                [нажатие клавиши в бою]
 
   *!SN:Ex1/1/4607760/(gem_OnStackGetTurn);                                [нажатие клавиши в бою]
@@ -243,7 +235,6 @@ UNIVERSAL START TRIGGER by igrik
   *!SN:Ex1/1/4230103/87021;                                [нажатие клавиши]
   *!SN:Ex1/1/4674071/87022;                                [нажатие клавиши в бою]
 
-  *!SN:Ex1/1/7443018/(gem_OnMergeStack);                                [нажатие клавиши в бою]
   *!SN:Ex1/1/7428021/(WOG_On_BM_K);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   *!SN:Ex1/1/4903264/(gem_StartBattle);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 
@@ -263,13 +254,134 @@ UNIVERSAL START TRIGGER by igrik
   *!SN:Ex1/1/5592448/(NetworkProcessReceivedData3);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   *!SN:Ex1/1/5599248/(NetworkProcessReceivedData4);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   ** end igrik script-79.wog
-  *!SN:Ex1/1/7778010/(CalcExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+
+!?FU(ArtGiveSpell_Switch);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/?(artId:y);
+
+  *!if&(artId)=(ART_BLANK_SHIELD);
+    *!UN:C5085052/1/(SPELL_DIMENSION_DOOR);
+    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/(ART_ARMAGEDDONS_BLADE);
+    *!FU:E;
+  *!en;
+  *!if&(artId)=(ART_ARMAGEDDONS_BLADE);
+    *!UN:C5085052/1/(SPELL_ARMAGEDDON);
+    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/(ART_ARMAGEDDONS_BLADE);
+
+    *!FU:E;
+  *!en;
+
+!?FU(gem_OnLegionCount);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/d*2;
+*!IF:L^%^;
+H3Dlg_ShowPopup
+*!SN:E6245264/(CALLCONV_THISCALL)/(dlg);
+!?FU(OnGameEnter);
+*?FU(OnAdventureMapRightMouseClick);
+*!OW:A-1/?(heroId:y);
+*!if&(heroId)>=0;
+  
+  *!VR(expToAdd:y):S456436;
+  *!HE(heroId):Z?(hero:y);
+  *!SN:E7441833/(CALLCONV_CDECL)/(hero)/(expToAdd:y)/0;
+*!en;
+*!UN:C5127905/-4/2/2;
+*!IF:L^%y1^;
 !?FU(gem_CreateERMHook);
   *!SN:Ex1/1/4649733/(HD_BattleOptionDlgProc);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 5F3CB1
 0x6241952
   *!SN:Ex1/1/6241841/(acm_NpcChangeName);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
 *!SN:Ex1/1/4479545/(gem_OnStackMove);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
+*!SN:Ex1/1/6029578/(gem_OnLegionCount);  
+*?FU(OnAdventureMapRightMouseClick);
+*!CM:P?(x:y)/?(y:y)/?(z:y);
+*!SN:O?(x)/?(y)/?(z);
+*!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
+*!SN:E4248400/(CALLCONV_FASTCALL)/?z1/(mapItem)/10/i^timerOwner^/^ daemon_n was right ^/1;   z1 - text.
+*!IF:M0/4/^%z1^;
+
+!?FU(gem_OnAfterAotDA);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(namePtr:y);
+*!SN:B(namePtr)/d/?z1;
+*!IF:L^%z1^;
+
+!?FU(gem_CreateERMHook);
+*!SN:Ex1/1/4248688/(gem_OnAfterAotDA);  
+
+
+*!SN:Ex1/1/4608191/(gem_OnAfterAotD);  
+*!SN:Ex1/1/5934747/(gem_OnArtifactCastMsg);
+
+
+!?FU(gem_OnArtifactCastMsg)&i^gem_artifact_to_cast_name^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(namePtr:y);
+!!SN:B(namePtr)/d/s^gem_artifact_to_cast_name^;
+
+!?FU(Arch_ArtCastSpell_Proc);
+!#VA(hero:x) (artId:x) (spellArrayId:x) (power:x);
+
+!!if&(hero);
+  !!SN:E5084256/(CALLCONV_THISCALL)/(hero)/(artId);
+  !!if&v1;
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78528/4/?(activeSide:y);
+
+    !!SN:M(spellArrayId)/?(size:y);
+    !!re i/0/(size)/1/-1;
+      !!SN:M(spellArrayId)/i/?(spellId:y);
+      !!SN:E5915616/(CALLCONV_THISCALL)/(cmbMgr)/(spellId)/(SKILL_EXPERT)/(activeSide:y)/1/2;
+      !!VR(canCast:y):Sv1;
+      !!if&(canCast);
+        !!SN:H^art^/(artId)/0/?(artName:z) W^gem_artifact_to_cast_name^/(TRUE) W^gem_artifact_to_cast_name^/(artName:z);
+        !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(spellId)/-1/2/-1/(SKILL_EXPERT)/(power) W^gem_artifact_to_cast_name^;//(activeSide:y)/1/2;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+!?FU(gem_OnAfterAotD);
+!!FU:E;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y);
+!!if&(hero);
+
+  !!VR(artId:y):S(ART_VIAL_OF_LIFEBLOOD);
+  !!FU(NewIntArray):P?(spells:y);
+  !!FU(Array_Push):P(spells)/(SPELL_PROTECTION_FROM_WATER)/(SPELL_COUNTERSTRIKE)/(SPELL_FIRE_SHIELD)/(SPELL_HASTE)/(SPELL_BLOODLUST);
+  !!VR(power:y):S12;
+  !!FU(Arch_ArtCastSpell_Proc):P(hero:y)/(artId:y)/(spells:y)/(power:y);
+!!en;
+
+*?FU(gem_CreateERMHook);
+  *!SN:Ex1/1/4638788/(gem_OnDlg_HeroPreview_SpellPowerWrite);
+
+*?FU(gem_OnDlg_HeroPreview_SpellPowerWrite);
+    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(txtPtr:y);
+    *!SN:B(txtPtr)/d/?(currentSp:z) B(txtPtr)/d/^123(%(currentSp:z))^;
+
+!?FU(gem_CreateERMHook);
+  *!SN:Ex1/1/5898725/(gem_OnSpellBeforeEagleEye);
+  *!SN:Ex1/1/5898969/(gem_OnSpellAfterEagleEye);
+
+
+
+  !?FU(gem_OnSpellBeforeEagleEye)&i^battle_hero_1^=(NO_HERO);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(caster:y);
+  !!if&(caster)=1;
+    !!SN:X?y99/0;
+    !!HE-10:Z?(hero:y);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-100/4/?i^old_side^ C(ebp)/-100/4/0 C(ebp)/-60/4/?i^old_hero^ C(ebp)/-60/4/(hero);
+    !!VRi^test_test^:S1;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5898850;
+  !!en;
+
+  !?FU(gem_OnSpellAfterEagleEye)&i^test_test^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-60/4/i^old_hero^ (ebp)/-100/4/i^old_side^;
+  !!VRi^test_test^:S0;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5899096;
+
+
+20AA6F6
+
 
 !?FU(gem_OnStackMove)&i^battle_round^<0/i^temp^=0;
   !!SN:X?y99/0;
@@ -279,73 +391,6 @@ UNIVERSAL START TRIGGER by igrik
   !!VRi^temp^:S1;
   !!BM(stackId:y):P(targetPos:y);
   !!VRi^temp^:S0;
-
-
-!?FU(WOG_AddExp);
-!#VA(exp[3]:y);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(exp[0]) C(ebp)/12/4/?(exp[1]); C(ebp)/16/4/?(exp[2]);
-*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(exp);
-!!re i/0/(exp[SIZE])/1/-2;
-  *!UN:C(exp[i])/4/?(exp[i]);
-  *!IF:L^%(exp[i])^;
-!!en;
-
-!?FU(gem_CreateERMHook);
-  *!SN:Ex1/1/7438308/(WOG_SetNewExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-  *!SN:Ex1/1/7441388/(WOG_SetExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-  *!SN:Ex1/1/7442976/(WOG_AddExp_AfterBattle);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-  *!SN:Ex1/1/7439971/(WOG_FindExp);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-
-!?FU(WOG_FindExp);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(expPerCreature:y);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(creature:y); C(creature)/4/?(currExp:y);
-*!IF:L^% (WOG_FindExp) %(expPerCreature) %(creature)^;
-
-!!if&(expPerCreature)>100000;
-  !!UN:C(expPerCreature)/4/?y1;
-  *!IF:L^%y1^;
-!!en;
-
-!?FU(WOG_SetNewExp);
-  *!IF:L^% (WOG_SetNewExp[i])^;
-
-5906498
-!?FU(WOG_SetExp);
-  *!IF:L^% (WOG_SetExp[i])^;
-
-!?FU(WOG_AddExp_AfterBattle);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/?(creature:y) C(creature:y)/4/?(currExp:y)
-       C(ebp)/-12/4/?(expToAdd:y);
-
-!?FU(ArtGiveSpell_Switch);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/?(artId:y);
-
-  !!if&(artId)=(ART_BLANK_SHIELD);
-    !!UN:C5085052/1/(SPELL_DIMENSION_DOOR);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/(ART_ARMAGEDDONS_BLADE);
-    !!FU:E;
-  !!en;
-  !!if&(artId)=(ART_ARMAGEDDONS_BLADE);
-    !!UN:C5085052/1/(SPELL_ARMAGEDDON);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/(ART_ARMAGEDDONS_BLADE);
-
-    !!FU:E;
-  !!en;
-!?FU(OnRecruitDlgAction); 
-
-  *!RD:C0/?y1/0; C1/d/d2;;
-
-  *!RD:C1/?y1/2; C1/d/d2;;
-
-!?FU(gem_CreateERMHook);
-  *!SN:Ex1/1/5574655/(gen_OnArtCheck);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-  *!SN:Ex1/1/4499964/(gen_OnArtTest);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-
-*?FU(gen_OnArtTest)&i^temp^;
-  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?y1 Cy1/12/4/0;
-  *!IF:M^%^;
-  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4499992;
-  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/8;?y1 Cy1/152/4/0;
 
 
 !?FU(OnKeyPressed_Battle)&x1=(KEY_Q);
@@ -379,4 +424,23 @@ UNIVERSAL START TRIGGER by igrik
 another battle features
 ********************************************************************************
 
+
+
+*!re i/0/155;(end_value);
+  *!MA:Ci/6/200000;
+*!en;
+
+*!FU(ClearScreenLog):P;
+*!FU(NewStrArray):P?y1;
+
+*!re i/0/15;
+  *!VRy2:R0/0/5;
+  *!FU(Array_Push):Py1/^ads^;
+  *!IF:L^%y2^;
+*!en;
+
+*!FU(Array_Find):Py1/^adS^/?y3/0;
+*!IF:L^%y3^;
 ;-------------------------------------------------------------------------------
+
+0052C1F0 int __thiscall Hero_Get_MoveDistance(_Hero_ *this, int packedmapitem)
