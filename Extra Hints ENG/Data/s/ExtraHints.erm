@@ -62,8 +62,8 @@ ZVSE2
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4899301; [0x4AC1E5; x1 - HookContext* c]
 !!en;
 
-; Calculate a string with guard description
-!!FU(Crypt_Calc_Guards_and_Set_Text)&(objType)=84:Pv998/v999/v1000/?(guardDesc:z);
+; Calculate a string with guard description for a crypt
+!!FU(CreatureBankCalcGuardsAndSetText)&(objType)=84:Pv998/v999/v1000/?(guardDesc:z);
 ;!IF:M^guardDesc = %(guardDesc:z)^; // debug
 
 ; Add to the final message a string with guard description
@@ -100,67 +100,35 @@ ZVSE2
 !!VR(playerBit:y):S1 Sd<<i^timerOwner^; // 1 + смещение на игрока
 !!VRy12:&(playerBit);                   
 !!if&y12;                               [If Cb has already been visited once but not plundered]
-  !!FU(Crypt_Calc_Guards_and_Set_Text):Py1/y2/y3; [(Set correct right click Information)]
+  !!FU(CreatureBankCalcGuardsAndSetText):Py1/y2/y3; [(Set correct right click Information)]
 !!en;
 
 
-!?FU(Crypt_Calc_Guards_and_Set_Text);
+!?FU(CreatureBankCalcGuardsAndSetText);
 !#VA(coordX:x) (coordY:x) (coordL:x) (guardDesc:x);
 
-; Clear all global counters
-!!re (guardType:y)/56/69/1;  // For each Necropolis creature
+; Clear all global creature counters
+!!re (guardType:y)/0/(MON_LAST_WOG);  // For each creature in the game
   !!VRi^totalGuardCounter_%(guardType)^:S0;
 !!en;
-!!VRi^totalGuardCounter_187^:S0;  // For Soul Eater Defender
 
 ; Clear global strings for guard description
 !!VRs^fullGuardDescription^:S^%T(extra_hints.guard_desc.guarded_by)^;
 !!VRs^fullGuardDesc^:S^^; // for a string without last comma
 
 ; Loop for each stack in CB
-*!FU(NewIntArray):P?(types:y) P?(nums:y);
-
-*!re i/0/(ARMY_SLOT_LAST);
-  *!CB(coordX)/(coordY)/(coordL):Gi/?(guardType:y)/?(guardCount:y);
-  *!SN:M(types)/?(typesSize:y);
-  *!VR(used:y):S(FALSE);
-  *!if&(typesSize:y);
-    *!re j/0/(typesSize)/1/-1;
-      *!SN:M(types)/j/?(type:y);
-      *!if&(type)=(guardType);
-        *!SN:M(nums:y)/j/d(guardCount);
-        *!VR(used:y):S(TRUE);
-        *!br;
-      *!en;
-    *!en;
-  *!en;
-
-  *!if|(typesSize:y)=0/(used)=0;
-    *!FU(Array_Push):P(types:y)/(guardType) P(nums:y)/(guardCount);
-  *!en;
-*!en;
-
-*!IF:L^types = %(types), nums = %(nums)^;
-
-; Loop for each stack in CB
-!!re i/0/6/1;
+!!re i/0/(ARMY_SLOT_LAST);
   !!CB(coordX)/(coordY)/(coordL):Gi/?(guardType:y)/?(guardCount:y);
   !!VRi^totalGuardCounter_%(guardType)^&(guardCount)>0: +(guardCount);
 !!en;
 
 ; Get the string for each slot in CB
-!!re (guardType:y)/56/69/1;  // For each Necropolis creature
+!!re (guardType:y)/0/(MON_LAST_WOG);  // For each creature in the game
   !!if&i^totalGuardCounter_%(guardType)^>0;
     !!FU(WOG_GetCreatureAmountString):Pi^totalGuardCounter_%(guardType)^/?(guardCountDesc:z);
     !!SN:H^monname^/(guardType)/1/?(guardName:z); // Plural name
     !!VRs^fullGuardDescription^: +(guardCountDesc) +^ ^ +(guardName) +^%T(extra_hints.guard_desc.and)^;
   !!en;
-!!en;
-; Code for Soul Eater
-!!if&i^totalGuardCounter_187^>0;
-  !!FU(WOG_GetCreatureAmountString):Pi^totalGuardCounter_187^/?(guardCountDesc:z);
-  !!SN:H^monname^/187/0/?(guardName:z); // Singular name
-  !!VRs^fullGuardDescription^: +(guardCountDesc) +^ ^ +(guardName) +^%T(extra_hints.guard_desc.and)^;
 !!en;
 
 ; Delete the last comma
@@ -174,7 +142,7 @@ ZVSE2
 
 ;!IF:L^%s(fullGuardDesc)^; // Debug
 
-; return the full string into main function
+; Return the full string into main function
 !!VR(guardDesc):Zs^fullGuardDesc^;
 
 
