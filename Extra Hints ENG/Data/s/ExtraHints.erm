@@ -12,7 +12,7 @@ ZVSE2
 !!FU(WOG_AdvMgr_GetMapItem):Pv998/v999/v1000/?(mapItem:y); [mapItem:y - address]
 !!OBv998/v999/v1000:T?(objType:y) U?(objSubtype:y);
 
-!!VR(delim:z):S^=^;                     [define a separator to separate a hint string into object name and guard description]
+!!VR(delim:z):S^=^;                     [define a separator to separate an object name from guard description in RMC hint string]
 
 ; hintString - a string from RMC hint
 ; Last number:
@@ -55,23 +55,13 @@ ZVSE2
   !!en;
 !!en;
 
-; Get crypt status. If plundered - skip the dialog with choice and jump to the "minus morale" dialog
-!!CBv998/v999/v1000:T?(isVisited:y);
-!!if&(isVisited);
-  !!SN:X?y99/0;                         [it is: return NO_EXEC_DEFAULT]
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4899301; [0x4AC1E5; x1 - HookContext* c]
-!!en;
-
 ; Calculate a string with guard description for a crypt
 !!FU(CreatureBankCalcGuardsAndSetText)&(objType)=84:Pv998/v999/v1000/?(guardDesc:z);
-;!IF:M^guardDesc = %(guardDesc:z)^; // debug
 
 ; Add to the final message a string with guard description
-!!VR(youHaveFoundMsgPtr:z)&(objType)=16:S^%T(extra_hints.creature_banks.visiting1)^ +(objName) +^%T(extra_hints.creature_banks.visiting2)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Common CB]
-!!VR(youHaveFoundMsgPtr:z)&(objType)=25:S^%T(extra_hints.dragon_utopia.visiting)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Dragon Utopia]
-!!VR(youHaveFoundMsgPtr:z)&(objType)=84:S^%T(extra_hints.crypt.visiting)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Crypt]
-
-;!IF:M^%(youHaveFoundMsgPtr:z)^; // debug
+!!VR(youHaveFoundMsgPtr:z)&(objType)=16:S^{%(objName)}%T(wog.endl)%T(wog.endl)%T(extra_hints.creature_banks.visiting1)^ +(objName) +^%T(extra_hints.creature_banks.visiting2)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Common CB]
+!!VR(youHaveFoundMsgPtr:z)&(objType)=25:S^{%(objName)}%T(wog.endl)%T(wog.endl)%T(extra_hints.dragon_utopia.visiting)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Dragon Utopia]
+!!VR(youHaveFoundMsgPtr:z)&(objType)=84:S^{%(objName)}%T(wog.endl)%T(wog.endl)%T(extra_hints.crypt.visiting)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Crypt]
 
 ; Put the final message into text buffer
 !!SN:E6388190/(CALLCONV_CDECL)/6911016/(youHaveFoundMsgPtr:z);
@@ -83,25 +73,44 @@ ZVSE2
 
 
 !?OB84;
-!!VR(playerBit:y):S1 Sd<<i^timerOwner^; // 1 + offset for each next player
-!!CB998:Vd|(playerBit);                 // Add object to player as revealed
+!!VR(playerBit:y):S1 Sd<<i^timerOwner^; [1 + offset for each next player]
+!!CB998:Vd|(playerBit);                 [Add object to player as revealed]
 
 
-!?FU(OnAdventureMapRightMouseClick);
-!#VA(usedY[22]:y);     
-!!VRy10:S84;                            [Crypt]
-!!VRy11:S0;                             [Subtype]
-!!CM:P?y1/?y2/?y3;                      [Get courser position]
-!!SN:O?y1/?y2/?y3;                      [Find building entrance in the clicking area]
-!!OBy1/y2/y3:T?y4 U?y5;                 [Get type and subtype]
-!!FU|y4<>y10/y5<>y11:E;                 [Get Type of Object and Exit if its not the Crypt]
-!!CBy1/y2/y3:V?y12;                     [Get bit mask of object visiting by all players]
-
-!!VR(playerBit:y):S1 Sd<<i^timerOwner^; // 1 + смещение на игрока
-!!VRy12:&(playerBit);                   
-!!if&y12;                               [If Cb has already been visited once but not plundered]
-  !!FU(CreatureBankCalcGuardsAndSetText):Py1/y2/y3; [(Set correct right click Information)]
+!?FU(Crypt_SkipMsgIfVisited);
+; Get crypt status. If plundered - skip the dialog with choice and jump to the "minus morale" dialog
+!!CB998:T?(isVisited:y);
+!!if&(isVisited);
+  !!SN:X?y99/0;                         [it is: return NO_EXEC_DEFAULT]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4899301; [0x4AC1E5; x1 - HookContext* c]
 !!en;
+
+
+!?FU(OnAdventureMapRightMouseClick);   
+!!CM:P?(coordX:y)/?(coordY:y)/?(coordL:y);              [Get courser position]
+!!SN:O?(coordX:y)/?(coordY:y)/?(coordL:y);              [Find building entrance in the clicking area]
+!!OB(coordX)/(coordY)/(coordL):T?(objType:y) U?(objSubtype:y); [Get type and subtype]
+
+!!VR(cryptType:y):S84;                                  [Crypt]
+!!VR(commonCbType:y):S16;                               [Common CB]
+
+; A code for crypt - adding HotA-styled hint
+!!if&(objType)=(cryptType);
+  !!CB(coordX)/(coordY)/(coordL):V?(bitMask:y);           [Get bit mask of object visiting by all players]
+  !!VR(playerBit:y):S1 Sd<<i^timerOwner^;                 [1 + offset for each next player]
+  !!VR(bitMask):&(playerBit);                   
+  *!if&(bitMask);                                         [If Cb has already been visited once but not plundered]
+    *!FU(CreatureBankCalcGuardsAndSetText):P(coordX)/(coordY)/(coordL); [(Set correct right click Information)]
+  *!en;
+!!en;
+
+; A code for common CBs - adding one more \n for RMC hints
+*!if&(objType)=(commonCbType);
+  *!FU(WOG_AdvMgr_GetMapItem):P(coordX)/(coordY)/(coordL)/?(mapItem:y); [mapItem:y - address]
+  *!VR(delim:z):S^%T(wog.endl)%T(wog.endl)^;                     [define a separator to separate an object name from guard description in RMC hint string]
+  *!SN:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/(objSubtype)/i^timerOwner^/(delim:z)/1; [Common CB: 0-6 - subtype]
+  *!IF:L^%(hintString)^;
+*!en;
 
 
 !?FU(CreatureBankCalcGuardsAndSetText);
@@ -110,6 +119,7 @@ ZVSE2
 ; Clear all global creature counters
 !!re (guardType:y)/0/(MON_LAST_WOG);  // For each creature in the game
   !!VRi^totalGuardCounter_%(guardType)^:S0;
+  *!VRs^totalGuardDescription_%(guardType)^:S^^;  // A separate string for each monster
 !!en;
 
 ; Clear global strings for guard description
@@ -127,6 +137,8 @@ ZVSE2
   !!if&i^totalGuardCounter_%(guardType)^>0;
     !!FU(WOG_GetCreatureAmountString):Pi^totalGuardCounter_%(guardType)^/?(guardCountDesc:z);
     !!SN:H^monname^/(guardType)/1/?(guardName:z); // Plural name
+    *!VRs^totalGuardDescription_%(guardType)^: +(guardCountDesc) +^ ^ +(guardName); // A separate string for each monster
+    ;!IF:L^%s(totalGuardDescription_%(guardType))^; // Debug
     !!VRs^fullGuardDescription^: +(guardCountDesc) +^ ^ +(guardName) +^%T(extra_hints.guard_desc.and)^;
   !!en;
 !!en;
