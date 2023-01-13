@@ -12,26 +12,26 @@ ZVSE2
 !!FU(WOG_AdvMgr_GetMapItem):Pv998/v999/v1000/?(mapItem:y); [mapItem:y - address]
 !!OBv998/v999/v1000:T?(objType:y) U?(objSubtype:y);
 
-!!VR(delim:z):S^=^;                     [define separator for parsing a hint string]
+!!VR(delim:z):S^=^;                     [define a separator to separate a hint string into object name and guard description]
 
-; z3 - a string from RMC hint
+; hintString - a string from RMC hint
 ; Last number:
 ; 0 - Guarded by (10-19) creatures
 ; 1 - Guarded by мало (5-9) Зеленые драконы, и мало (5-9) Красные драконы, и пара (1-4) Золотые драконы, и пара (1-4) Черные драконы
-!!SN&(objType)=16:E4248400/(CALLCONV_FASTCALL)/?z3/(mapItem)/(objSubtype)/i^timerOwner^/(delim:z)/1; [Common CB: 0-6 - subtype]
-*!SN&(objType)=85:E4248400/(CALLCONV_FASTCALL)/?z3/(mapItem)/7/i^timerOwner^/^^/1;  [Shipwreck: 7 - subtype (16/7 from WOG table in memory)]
-*!SN&(objType)=24:E4248400/(CALLCONV_FASTCALL)/?z3/(mapItem)/8/i^timerOwner^/^^/1;  [Derelict Ship: 8 - subtype (16/8 from WOG table in memory)]
-!!SN&(objType)=84:E4248400/(CALLCONV_FASTCALL)/?z3/(mapItem)/9/i^timerOwner^/(delim:z)/1; [Crypt: 9 - subtype (16/9 from WOG table in memory)]
-!!SN&(objType)=25:E4248400/(CALLCONV_FASTCALL)/?z3/(mapItem)/10/i^timerOwner^/(delim:z)/1; [Dragon Utopia: 10 - subtype (16/10 from WOG table in memory)]
+!!SN&(objType)=16:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/(objSubtype)/i^timerOwner^/(delim:z)/1; [Common CB: 0-6 - subtype]
+*!SN&(objType)=85:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/7/i^timerOwner^/^^/1;  [Shipwreck: 7 - subtype (16/7 from WOG table in memory)]
+*!SN&(objType)=24:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/8/i^timerOwner^/^^/1;  [Derelict Ship: 8 - subtype (16/8 from WOG table in memory)]
+!!SN&(objType)=84:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/9/i^timerOwner^/(delim:z)/1; [Crypt: 9 - subtype (16/9 from WOG table in memory)]
+!!SN&(objType)=25:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/10/i^timerOwner^/(delim:z)/1; [Dragon Utopia: 10 - subtype (16/10 from WOG table in memory)]
 
-;!IF:M^z3 = %z3^; // debug
+;!IF:L^hintString = %(hintString)^; // debug
 
-; Get a string with CB name (objName) from z3
-!!SN:Kz3/?(lenz3:y);
+; Get a string with CB name (objName) from hint string
+!!SN:K(hintString)/?(lenHintString:y);
 !!VR(objName:z):S^^;
 
-!!re i/0/(lenz3)/1;
-  !!SN:Kz3/i/?(char:z);
+!!re i/0/(lenHintString)/1;
+  !!SN:K(hintString)/i/?(char:z);
   !!if&(char)<>(delim:z);
     !!VR(objName):+(char);
   !!el;
@@ -40,13 +40,13 @@ ZVSE2
   !!en;
 !!en;
 
-; Get a string with guard description (guardDesc) from z3
+; Get a string with guard description (guardDesc) from hint string
 !!SN:K(objName)/?(lenName:y);
 !!VR(guardDesc:z):S^^;
 !!VR(lenName):+1;
 
-!!re j/(lenName)/(lenz3)/1;
-  !!SN:Kz3/j/?(char:z);
+!!re j/(lenName)/(lenHintString)/1;
+  !!SN:K(hintString)/j/?(char:z);
   !!if&(char)<>(delim:z);
     !!VR(guardDesc):+(char);
   !!el;
@@ -116,6 +116,31 @@ ZVSE2
 ; Clear global strings for guard description
 !!VRs^fullGuardDescription^:S^%T(extra_hints.guard_desc.guarded_by)^;
 !!VRs^fullGuardDesc^:S^^; // for a string without last comma
+
+; Loop for each stack in CB
+*!FU(NewIntArray):P?(types:y) P?(nums:y);
+
+*!re i/0/(ARMY_SLOT_LAST);
+  *!CB(coordX)/(coordY)/(coordL):Gi/?(guardType:y)/?(guardCount:y);
+  *!SN:M(types)/?(typesSize:y);
+  *!VR(used:y):S(FALSE);
+  *!if&(typesSize:y);
+    *!re j/0/(typesSize)/1/-1;
+      *!SN:M(types)/j/?(type:y);
+      *!if&(type)=(guardType);
+        *!SN:M(nums:y)/j/d(guardCount);
+        *!VR(used:y):S(TRUE);
+        *!br;
+      *!en;
+    *!en;
+  *!en;
+
+  *!if|(typesSize:y)=0/(used)=0;
+    *!FU(Array_Push):P(types:y)/(guardType) P(nums:y)/(guardCount);
+  *!en;
+*!en;
+
+*!IF:L^types = %(types), nums = %(nums)^;
 
 ; Loop for each stack in CB
 !!re i/0/6/1;
