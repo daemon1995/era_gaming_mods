@@ -6,13 +6,23 @@ ZVSE2
 !!SN:Ex1/1/4857430/(Before_CB_MSG_Hook);[0x4A1E56 - for Dragon Utopia]
 !!SN:Ex1/1/4899257/(Before_CB_MSG_Hook);[0x4AC1B9 - for Crypt/Derelict Ship/Shipwreck]
 !!SN:Ex1/1/4899229/(Crypt_SkipMsgIfVisited); [0x4AC19D - for plundered Crypt]
+*!SN:Ex1/1/4248482/(GetCrBankText); [0040D3A2 - new delimeter for common CB] 
+
+
+*?FU(GetCrBankText); // ПЕРЕПИСАТЬ, МЕНЯТЬ ED
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); [get ebp]
+*!UN:C(ebp)/20/1/?(isRmc:y); [get ebp+14h offset - address of bool (RMC/not RMC)]
+
+*!if&(isRmc);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/6685616; [get ebp+10h offset - address of delimeter and replace it with address of right delimeter]
+*!en;
 
 
 !?FU(Before_CB_MSG_Hook);
 !!FU(WOG_AdvMgr_GetMapItem):Pv998/v999/v1000/?(mapItem:y); [mapItem:y - address]
 !!OBv998/v999/v1000:T?(objType:y) U?(objSubtype:y);
 
-!!VR(delim:z):S^=^;                     [define a separator to separate an object name from guard description in RMC hint string]
+!!VR(delim:z):S^=^;                     [define a delimeter to separate an object name from guard description in RMC hint string]
 
 ; hintString - a string from RMC hint
 ; Last number:
@@ -23,8 +33,6 @@ ZVSE2
 *!SN&(objType)=24:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/8/i^timerOwner^/^^/1;  [Derelict Ship: 8 - subtype (16/8 from WOG table in memory)]
 !!SN&(objType)=84:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/9/i^timerOwner^/(delim:z)/1; [Crypt: 9 - subtype (16/9 from WOG table in memory)]
 !!SN&(objType)=25:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/10/i^timerOwner^/(delim:z)/1; [Dragon Utopia: 10 - subtype (16/10 from WOG table in memory)]
-
-;!IF:L^hintString = %(hintString)^; // debug
 
 ; Get a string with CB name (objName) from hint string
 !!SN:K(hintString)/?(lenHintString:y);
@@ -64,7 +72,7 @@ ZVSE2
 !!VR(youHaveFoundMsgPtr:z)&(objType)=84:S^{%(objName)}%T(wog.endl)%T(wog.endl)%T(extra_hints.crypt.visiting)%T(wog.endl)%T(wog.endl)^ +(guardDesc); [Crypt]
 
 ; Put the final message into text buffer
-!!SN:E6388190/(CALLCONV_CDECL)/6911016/(youHaveFoundMsgPtr:z);
+!!SN:E6388190/(CALLCONV_CDECL)/6911016/(youHaveFoundMsgPtr:z);  [6911016 - txt buffer address]
 
 ; Make a hook
 !!UN&(objType)=16:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/6911016; [Common CB]
@@ -92,55 +100,43 @@ ZVSE2
 !!OB(coordX)/(coordY)/(coordL):T?(objType:y) U?(objSubtype:y); [Get type and subtype]
 
 !!VR(cryptType:y):S84;                                  [Crypt]
-!!VR(commonCbType:y):S16;                               [Common CB]
 
 ; A code for crypt - adding HotA-styled hint
 !!if&(objType)=(cryptType);
   !!CB(coordX)/(coordY)/(coordL):V?(bitMask:y);           [Get bit mask of object visiting by all players]
   !!VR(playerBit:y):S1 Sd<<i^timerOwner^;                 [1 + offset for each next player]
-  !!VR(bitMask):&(playerBit);                   
-  *!if&(bitMask);                                         [If Cb has already been visited once but not plundered]
-    *!FU(CreatureBankCalcGuardsAndSetText):P(coordX)/(coordY)/(coordL); [(Set correct right click Information)]
-  *!en;
+  !!VR(bitMask):&(playerBit);                             [Once visited, reveal the crypt guards to the player]
 !!en;
-
-; A code for common CBs - adding one more \n for RMC hints
-*!if&(objType)=(commonCbType);
-  *!FU(WOG_AdvMgr_GetMapItem):P(coordX)/(coordY)/(coordL)/?(mapItem:y); [mapItem:y - address]
-  *!VR(delim:z):S^%T(wog.endl)%T(wog.endl)^;                     [define a separator to separate an object name from guard description in RMC hint string]
-  *!SN:E4248400/(CALLCONV_FASTCALL)/?(hintString:z)/(mapItem)/(objSubtype)/i^timerOwner^/(delim:z)/1; [Common CB: 0-6 - subtype]
-  *!IF:L^%(hintString)^;
-*!en;
 
 
 !?FU(CreatureBankCalcGuardsAndSetText);
 !#VA(coordX:x) (coordY:x) (coordL:x) (guardDesc:x);
-
-; Clear all global creature counters
-!!re (guardType:y)/0/(MON_LAST_WOG);  // For each creature in the game
-  !!VRi^totalGuardCounter_%(guardType)^:S0;
-  *!VRs^totalGuardDescription_%(guardType)^:S^^;  // A separate string for each monster
-!!en;
 
 ; Clear global strings for guard description
 !!VRs^fullGuardDescription^:S^%T(extra_hints.guard_desc.guarded_by)^;
 !!VRs^fullGuardDesc^:S^^; // for a string without last comma
 
 ; Loop for each stack in CB
+!!FU(NewIntArray):P?(types:y) P?(nums:y); [create 2 empty arrays]
+
 !!re i/0/(ARMY_SLOT_LAST);
   !!CB(coordX)/(coordY)/(coordL):Gi/?(guardType:y)/?(guardCount:y);
-  !!VRi^totalGuardCounter_%(guardType)^&(guardCount)>0: +(guardCount);
+  !!co&(guardType)=(NO_MON); [if empty guard(-1)] - continue
+  !!FU(Array_IndexOf):P(types)/(guardType)/?(index:y);
+  !!if&(index)<>(NO_MON);
+    !!SN:M(nums)/(index)/d(guardCount);
+  !!el;
+    !!FU(Array_Push):P(types:y)/(guardType) P(nums:y)/(guardCount);
+  !!en;
 !!en;
 
-; Get the string for each slot in CB
-!!re (guardType:y)/0/(MON_LAST_WOG);  // For each creature in the game
-  !!if&i^totalGuardCounter_%(guardType)^>0;
-    !!FU(WOG_GetCreatureAmountString):Pi^totalGuardCounter_%(guardType)^/?(guardCountDesc:z);
-    !!SN:H^monname^/(guardType)/1/?(guardName:z); // Plural name
-    *!VRs^totalGuardDescription_%(guardType)^: +(guardCountDesc) +^ ^ +(guardName); // A separate string for each monster
-    ;!IF:L^%s(totalGuardDescription_%(guardType))^; // Debug
-    !!VRs^fullGuardDescription^: +(guardCountDesc) +^ ^ +(guardName) +^%T(extra_hints.guard_desc.and)^;
-  !!en;
+!!SN:M(types)/?(typesSize:y); [get size of types-array]
+!!re i/0/(typesSize)/1/-1;
+  !!SN:M(types)/i/?t M(nums)/i/?n;
+  ;!IF:L^type = %t, num = %n^;
+  !!SN:H^monname^/t/1/?(guardName:z); [1 - Plural name]
+  !!FU(WOG_GetCreatureAmountString):Pn/?(guardCountDesc:z);
+  !!VRs^fullGuardDescription^: +(guardCountDesc) +^ ^ +(guardName) +^%T(extra_hints.guard_desc.and)^;
 !!en;
 
 ; Delete the last comma
@@ -152,10 +148,8 @@ ZVSE2
   !!VRs^fullGuardDesc^:+(char);
 !!en;
 
-;!IF:L^%s(fullGuardDesc)^; // Debug
-
 ; Return the full string into main function
-!!VR(guardDesc):Zs^fullGuardDesc^;
+!!VR(guardDesc):Zs^fullGuardDesc^;  [guardDesc - addr of s^fullGuardDesc^]
 
 
 !?FU(WOG_GetCreatureAmountString);
