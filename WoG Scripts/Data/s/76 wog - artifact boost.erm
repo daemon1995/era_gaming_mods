@@ -43,6 +43,7 @@ ZVSE2
 ** The other variables may be used elsewhere but will be trashed by this code.
 
 ** Functions Used: 599-609, 612, 613
+!#DC(WOG_ART_BOOST_W_VAR_ID) = 33;
 
 
 ; Set up global vars for Diplomat's Ring and Emblem of Conizance
@@ -75,20 +76,17 @@ ZVSE2
 ** Timer routine
 
 !?FU(OnEveryDay)&i^timerWeekday^=1;
-
+*?FU(OnKeyPressed_AdvMap)&x1=(KEY_HOME);
   !!UN:P102/?(wogOption:y);               [Check if Artifact Boost Script is enabled in WoGify Options]
   !!FU&(wogOption)<>(TRUE):E;             [Exit if it isn't]
 
-  !!re i/(HERO_FIRST)/(HERO_LAST_WOG);    [Iterate through all heroes]
-    !!HEi:O?v602;                         [Get owner of the iterated hero]
+  !!OW:Hi^timerOwner^/1;
 
-    !!if&v602=i^timerOwner^;
-      !!VRv600:Si;
-      !!FU602:P;                          [if hero in use, continue in function 602]
-    !!en;
+  !!re (vHeroId:y)/2/v1/1/1; loop this player hero!
+    !!HEv(vHeroId):A2/(ART_SURCOAT_OF_COUNTERPOISE)/?y99/?(artBonus:y);
+    !!FU602:Pv(vHeroId:y)/(artBonus);                          [Iterate through all player heroes]
   !!en;
 
-** end of timer routine
 
 !?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/999;[R-click trigger for enabling/disabling weekly creatures from artifacts]
   !!UN:P102/?y-1; [Check if Artifact Boost Script is enabled in WoGify Options]
@@ -138,13 +136,114 @@ ZVSE2
 ** note the code is broken up into multiple functions to speed it up
 ** checking 156 heroes for 12 artifacts would take forever
 
+*?FU(WOG_102_Get)
+  !?FU(WOG_102_GetBirdPercepBon);
+  !#VA(heroId:x) (armyArrayId:x) (artsNum:x);
+  !!VR(monBon:y):S6 *(artsNum);
+  !!FU(Array_Push):P(armyArrayId)/(MON_ROYAL_GRIFFIN)/(monBon);
+  !!if&i^timerIsAi^=(FALSE);
+    !!FU(WOG_102_GetArmyAddMsg):P(heroId)/(MON_ROYAL_GRIFFIN)/1;
+  !!en;
+
+  !?FU(WOG_102_GetPermaSphereBon);
+  !#VA(heroId:x) (armyArrayId:x) (artsNum:x);
+  !!HE(heroId):S(SKILL_WISDOM)/?(skillLvl:y);
+  !!VR(monBon:y):S(skillLvl:y) +1 *(artsNum);
+  !!FU(Array_Push):P(armyArrayId)/(MON_ARCH_MAGE)/(monBon);
+  !!if&i^timerIsAi^=(FALSE);
+    !!VR(index:y):S(monBon) F1/2 Sd-1 |(Wisdom) F1/2;
+    !!FU(WOG_102_GetArmyAddMsg):P(heroId)/(MON_ARCH_MAGE)/(index:y);
+  !!en;
+  !?FU(WOG_102_GetVelnerSphereBon);
+  !#VA(heroId:x) (armyArrayId:x) (artsNum:x);
+  !!HE(heroId):F?y99/?(defense:y)/?y99/?y99;
+  !!VR(monBon:y):S(defense:y) :10 +1 *(artsNum);
+  !!FU(Array_Push):P(armyArrayId)/(MON_MIGHTY_GORGON)/(monBon);
+  !!if&i^timerIsAi^=(FALSE);
+    !!VR(index:y):S(monBon) F1/2 Sd-1 |(defense) F1/2;
+    !!FU(WOG_102_GetArmyAddMsg):P(heroId)/(MON_MIGHTY_GORGON)/1;
+  !!en;
+  !?FU(WOG_102_GetLifePendantBon);
+  !#VA(heroId:x) (armyArrayId:x) (artsNum:x);
+  !!VR(monBon:y):S24 *(artsNum);
+  !!FU(Array_Push):P(armyArrayId)/(MON_SPRITE)/(monBon);
+  !!if&i^timerIsAi^=(FALSE);
+    !!FU(WOG_102_GetArmyAddMsg):P(heroId)/(MON_SPRITE)/1;
+  !!en;
+  !?FU(WOG_102_GetDeathPendantBon);
+  !#VA(heroId:x) (armyArrayId:x) (artsNum:x);
+  !!VR(monBon:y):S12 *(artsNum);
+  !!FU(Array_Push):P(armyArrayId)/(MON_ZOMBIE)/(monBon);
+  !!if&i^timerIsAi^=(FALSE);
+    !!FU(WOG_102_GetArmyAddMsg):P(heroId)/(MON_ZOMBIE)/1;
+  !!en;
+
+  !?FU(WOG_102_GetArmyAddMsg);
+  !#VA(heroId:x) (monId:x) (ind:x);
+  !!HE(heroId):B0/?(heroName:z) R2/?(gender:y);
+  !!SN:T^wog.whose%(gender:y)^/?(whose:z)
+  T^wog.102.giveCreature.%(monId).%(ind)^/?(msg:z)/^heroName^/(heroName:z)/^whose^/(whose:z)/^whose^/(whose:z);
+  !!VRs^wog_102_AddArmyMsg^:+^%(msg:z)%T(wog.endl)^;
+
+!?FU(WOG_102_GivingSingleCreatureArts);
+  !#VA(heroId:x) (artBonus:x);
+  !#VA(artsToGiveCreatures[5]:y) (fooPtrs[5]:y);
+  !!VR(artsToGiveCreatures[0]):C(ART_BIRD_OF_PERCEPTION)/(ART_SPHERE_OF_PERMANENCE)/
+  (ART_ORB_OF_VULNERABILITY)/(ART_PENDANT_OF_LIFE)/(ART_PENDANT_OF_DEATH);
+
+  !!VR(fooPtrs[0]):C(WOG_102_GetBirdPercepBon)/(WOG_102_GetPermaSphereBon)/
+  (WOG_102_GetVelnerSphereBon)/(WOG_102_GetLifePendantBon)/(WOG_102_GetDeathPendantBon);
+
+  !!FU(NewIntArray):P?(monArmy:y);
+  !!IF:W(heroId);
+  !!re i/0/(artsToGiveCreatures[SIZE])/1/-1;
+    !!HE(heroId):A2/(artsToGiveCreatures[i])/?y99/?(equippedArts:y);
+    !!if&(equippedArts);
+      !!VR(bit:y):S1 Sd<<i &w(WOG_ART_BOOST_W_VAR_ID);
+      !!if|(bit)=0/i^timerIsAi^;
+
+        !!FU(fooPtrs[i]):P(heroId)/(monArmy)/(equippedArts:y);
+      !!en;
+    !!en;
+  !!en;
+
+  !!SN:M(monArmy)/?(size:y);
+
+  !!if&(size);
+    !!if&i^timerIsAi^=0;
+      !!FU(NewIntArray):P(size)/?(monDlg:y);
+      !!re i/0/(size)/2/-1;
+        !!VRj:Si +1;
+        !!SN:M(monArmy)/i/?(monType:y) M(monArmy)/j/?(monNum:y);
+        !!VR(monNum):Sd<<(artBonus:x) Sd<<16 |(monType:y);
+        !!SN:M(monDlg)/i/(PIC_TYPE_MONSTER) M(monDlg)/j/(monNum:y);
+      !!en;
+      !!FU(Array_Push)&(artBonus):P(monDlg)/(PIC_TYPE_ART)/(ART_SURCOAT_OF_COUNTERPOISE);
+      !!FU(PrepareMultiPicDialog):P(monDlg);
+
+      !!IF:N(MSG_TYPE_MES)/s^wog_102_AddArmyMsg^;^lol^;
+      !!VRs^wog_102_AddArmyMsg^:S^^;
+    !!en;
+
+    !!re i/0/(size)/2/-1;
+      !!VRj:Si +1;
+      !!SN:M(monArmy)/i/?(monType:y) M(monArmy)/j/?(monNum:y);
+      !!VR(monNum):Sd<<(artBonus);
+      !!HE(heroId):C2/(monType:y)/(monNum)/1;
+    !!en;
+  !!en;
+
+
+
 !?FU602;
+!#VA(heroId:x) (artBonus:x);
 
-!!OW:Iv602/?v603; [get AI (1) or human (0)]
+!!FU(WOG_102_GivingSingleCreatureArts):P(heroId:x)/(artBonus:x);
 
-!!HEv600:A2/63/0/?v610; [check for Bird Of Perception]
-!!HEv600:A2/103/0/?v611; [check for Pendant Of Life]
-!!HEv600:A2/104/0/?v612; [check for Pendant Of Death]
+
+!!OW:Ii^timerOwner^/?v603; [get AI (1) or human (0)]
+!!VRv600:S(heroId);
+
 !!HEv600:A2/16/0/?v613; [check for Targ Of The Rampaging Ogre]
 !!HEv600:A2/56/0/?v614; [check for Dead Man's Boots]
 !!HEv600:A2/107/0/?v615; [check for Pendant Of Total Recall]
@@ -158,12 +257,12 @@ ZVSE2
 !!HEv600:A2/105/0/?v623; [check for Pendant Of Free Will]
 !!HEv600:A2/67/0/?v624; [check for Diplomat's Ring]
 !!HEv600:A2/58/0/?v625; [check for Surcoat Of Counterpoise]
-!!HEv600:A2/93/0/?v626; [check for Orb Of Vulnerability]
-!!HEv600:A2/92/0/?v627; [check for Sphere Of Permanence]
-!!HEv600:A2/126/0/?v628; [check for Orb Of Inhibition]
 
-!!VRv608:Sv610 +v611 +v612 +v613 +v614 +v615 +v616 +v617 +v618 +v619 +v620 +v621 +v622 +v623;
-!!VRv608:+v624 +v625 +v626 +v627 +v628;
+
+
+!!VRv608:Sv613 +v614 +v615 +v616 +v617 +v618 +v619 +v620 +v621 +v622 +v623;
+!!VRv608:+v624 +v625;
+
 !!FU601&v608>0:P; [handle any artifacts if found]
 
 ** end of function
@@ -187,65 +286,6 @@ ZVSE2
 !!IF&5/v625>0:M1/z102023;
 !!VRv631:S1;
 !!VRv631&v625>0:S2; [some effects will be multiplied by v631 - doubled for Surcoat]
-
-!!VRy3:Sw33;
-!!VRy3:&1;
-!!IF&5/v610>0/y3=0:Q1/21/5/1^%Z102024^;
-!!VRv610:*6;
-!!VRv610:*v631; [Surcoat factor]
-!!HEv600&5/v610>0/y3=0:C2/5/v610/1; [give 6 royal griffins per Bird]
-!!FU603&-5/v610>0:P5/v610; [offer AI griffins]
-
-!!VRy3:Sw33;
-!!VRy3:&8;
-!!IF&5/v611>0/y3=0:Q1/21/119/1^%Z102025^;
-!!VRy1:S24;
-!!VRy1:*v631; [Surcoat factor]
-!!HEv600&5/v611>0/y3=0:C2/119/y1/1; [give 24 sprites]
-!!FU603&-5/v611>0:P119/y1; [offer AI sprites]
-
-!!VRy3:Sw33;
-!!VRy3:&16;
-!!IF&5/v612>0/y3=0:Q1/21/59/1^%Z102026^;
-!!VRy1:S12;
-!!VRy1:*v631; [Surcoat factor]
-!!HEv600&5/v612>0/y3=0:C2/59/y1/1; [give 12 zombies]
-!!FU603&-5/v612>0:P59/y1; [offer AI zombies]
-
-!!VRy3:Sw33;
-!!VRy3:&4;
-!!HEv600:S7/?y2; [get wisdom level]
-!!VRy1:Sy2;
-!!VRy1:+1; [and one more]
-!!VRy1:*v626; [per Orb Of Vulnerability]
-!!VRy1:*v631; [Surcoat factor]
-
-!!if&5/v626>0/y3=0;
-  !!IF&y1=1:Q1/21/35/1^%Z102027^;
-  !!IF&y1>1/y2=0:Q1/21/35/1^%Z102028^;
-  !!IF&y1>1/y2>0:Q1/21/35/1^%Z102029^;
-  !!HEv600&y3=0:C2/35/y1/1; [give 1-4 archmages]
-!!en;
-
-!!FU603&-5/v626>0:P35/y1; [offer AI archmages]
-
-!!VRy3:Sw33;
-!!VRy3:&2;
-!!HEv600:Fd/?y2/d/d; [get defense]
-!!VRy2::10; [every 10 gets you a mighty gorgon]
-!!VRy1:Sy2;
-!!VRy1:+1; [plus one base gorgon]
-!!VRy1:*v627; [per Sphere Of Permanence]
-!!VRy1:*v631; [Surcoat factor]
-
-!!if&5/v627>0/y3=0;
-  !!IF&y1=1:Q1/21/103/1^%Z102030^;
-  !!IF&y1>1/y2=0:Q1/21/103/1^%Z102031^;
-  !!IF&y1>1/y2>0:Q1/21/103/1^%Z102032^;
-  !!HEv600:C2/103/y1/1; [give 1 or more mighty gorgons]
-!!en;
-
-!!FU603&-5/v627>0:P103/y1; [offer AI mighty gorgons]
 
 !!if&v614>0;
   !!IF&5:Q1/8/56/1/z102033;
@@ -273,7 +313,7 @@ ZVSE2
     !!VRv24:*v616; [gold per emblem - Archer30: a bit too imbalance? should count only 1 emblem?]
     
     !!IF&5:Q1/(PIC_TYPE_RES_GOLD)/v24/(MSG_TYPE_MES)/z102035;
-    !!OW:Rv602/(RES_GOLD)/dv24; [give the gold]
+    !!OW:Ri^timerOwner^/(RES_GOLD)/dv24; [give the gold]
   !!en;
 !!en;
 
@@ -282,7 +322,7 @@ ZVSE2
 !!VRy1&v625>0:S42; [double area for Surcoat - 30 times square root of 2]
 
 !!if&v617>0;
-  !!UN:Sv604/v605/v606/v602/y1; [reveal area]
+  !!UN:Sv604/v605/v606/i^timerOwner^/y1; [reveal area]
   !!UN:R1; [redraw screen]
 !!en;
 
@@ -462,33 +502,6 @@ ZVSE2
 ** end of function
 
 
-** function to try to give creatures to AI hero
-** x1=creature type x2=quantity
-
-!?FU603;
-
-!!VRv609:S0 -1; [-1 indicates no slot found]
-!!DO604/0/6/1:Px1; [iterate through slots]
-!!HEv600&v609>=0:C0/v609/?v26/d; [see what's in the slot we found]
-!!HEv600&v609>=0/v26=x1:C0/v609/x1/dx2; [gain creatures in existing slot]
-!!HEv600&v609>=0/v26=-1:C0/v609/x1/x2; [set creatures in empty slot]
-
-** end of function
-
-
-** function to check if an AI hero slot is empty or has a given creature type
-** x1=creature type x16=slot
-** result is to set v609 to the slot # if usable
-
-!?FU604;
-
-!!HEv600:C0/x16/?v26/d; [check creature type without modifying]
-!!VRv609&v26=-1:Sx16; [it's empty!]
-!!VRv609&v26=x1:Sx16; [it's our type!]
-
-** end of function
-
-
 ** function to add one slot's number of troops
 ** slot number is in x16; result accumulates in k
 
@@ -506,7 +519,7 @@ ZVSE2
 !#VA(randMon:x);
 
 !!VR(randMon):S(NO_MON);
-!!FU(NewIntArray):P?(armyMons:y);
+!!FU(NewIntArray):P?(monArmy:y);
 
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
   !!HEv600:C0/i/?(mon:y)/?(qty:y);
@@ -517,17 +530,17 @@ ZVSE2
     !!VR(hasAtkTwice:y):S(monFlags) &(MON_FLAG_ATTACKS_TWICE);
     !!VR(hasNoRetail:y):S(monFlags) &(MON_FLAG_NO_RETALIATION);
 
-    !!FU(Array_Push)|(hasAtkTwice)=(FALSE)/(hasNoRetail)=(FALSE):P(armyMons)/(mon);
+    !!FU(Array_Push)|(hasAtkTwice)=(FALSE)/(hasNoRetail)=(FALSE):P(monArmy)/(mon);
   !!en;
 !!en;
 
-!!SN:M(armyMons)/?(size:y);
+!!SN:M(monArmy)/?(size:y);
 
 !!if&(size)>0;
   !!VR(maxIndex:y):S(size) -1;
   !!VR(random:y):R0/0/(maxIndex);
 
-  !!SN:M(armyMons)/(random)/?(randMon);
+  !!SN:M(monArmy)/(random)/?(randMon);
 !!en;
 
 ** end of function
