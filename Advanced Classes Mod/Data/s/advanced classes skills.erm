@@ -91,10 +91,13 @@ Disable Various WoG Options which can conflict with Advanced Classes Mod
 !#UN:A154/2/5;                          [set hardened shield - left hand]
 !#UN:A155/2/7;                          [set slava's ring of power - ring]
 
+
+Enable Artefact to appear on the map
 !#UN:A141/0 A141/3/8;                   [Magic Wand]
 !#UN:A142/0 A142/3/4;                   [Gold Tower Arrow]
 !#UN:A143/0 A143/3/8;                   [Monster's Power]
 !#UN:A160/0 A160/3/8;                   [Gate Key]
+
 
 *Show splash screen at first mod start
 !#UN:V?y1/?y2;                          [Check ERA version]
@@ -315,7 +318,7 @@ Disable Various WoG Options which can conflict with Advanced Classes Mod
 ********************************************************************************
 !?FU(OnGameEnter);                      [At gamestart]
 
-!!VRv576:&-9;                           [Remove two secret skill option from WoG by removing 4th bit set on variable 576]
+!!VRv576:&-9;                           [Remove two secret skills option from WoG by removing 4th bit set on variable 576]
 
 !!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y10; [Check for Third Upgrade Mod and disable hook if present to prevent zero Exp bug because Amethyst hooks at the same spot]
 !!if&y10=0;
@@ -371,12 +374,6 @@ Disable Various WoG Options which can conflict with Advanced Classes Mod
 thanks to Daemon :)
 !!VRe1:S5:4;                            [create 1,25 multiplier]
 !!UN:C6548272/4/e1;                     [Set the damage from the Artifacts Orbs to +25% instead of +50%]
-
-Enable Artefact to appear on the map
-!#UN:A141/0 A141/3/8;                   [Magic Wand]
-!#UN:A142/0 A142/3/4;                   [Gold Tower Arrow]
-!#UN:A143/0 A143/3/8;                   [Monster's Power]
-!#UN:A160/0 A160/3/8;                   [Gate Key]
 
 
 !?FU(Necro_ChangePower_2);
@@ -454,8 +451,13 @@ Enable Artefact to appear on the map
   !!SN:W^Master_Level_Global_Value^/?y92;
   !!SN:W^Grandmaster_Level_Global_Value^/?y93;
 
-  !!HE-1:N?y1;
-  !!FU(acm_RecalcClassPoints):Py1/?y10/?y20/?y30/(TRUE);
+  !!HE-1:N?y1; [CW fix to keep hero number for later processing; otherwise value is overwritten by (itemId) used later]
+  !!HE-1:N?(hero:y);
+  ;[CW: changed call to get more information -- START]  
+  !!FU(Calc_Class_Points_Original):Py1/0/?y10/?y20/?y30/?y40/?y41/?y42/?y43/?y44/?y45/?y46/?y47/?y48; 
+  *!FU(acm_RecalcClassPoints):Py1/?y10/?y20/?y30/(TRUE);
+  ;[y40/y41/y42: hero changes W/M/A, y43/y44/y45: master skill bonus, y46/y47: easy class changes, y48: artefact sets changes]
+  ;[CW: changed call to get more information -- END]
 
   !!SN&y10>=y93:T^AC_Misc.Grandmaster^/?z6; !!SN&y10<y93:T^AC_Misc.Master^/?z6; !!SN&y10<y92:T^AC_Misc.Expert^/?z6; !!SN&y10<y91:T^AC_Misc.Adept^/?z6;
   !!SN&y20>=y93:T^AC_Misc.Grandmaster^/?z7; !!SN&y20<y93:T^AC_Misc.Master^/?z7; !!SN&y20<y92:T^AC_Misc.Expert^/?z7; !!SN&y20<y91:T^AC_Misc.Adept^/?z7;
@@ -466,8 +468,7 @@ Enable Artefact to appear on the map
   !!SN:T^AC_Misc.Mage^/?z4;
   !!SN:T^AC_Misc.Adventurer^/?z5;
 
-  !!SN:T^AC_Misc.Bonus Table 2^/?s^Bonus Table 2^;
-  *!IF:M^%S(Bonus Table 2)^;
+  !!SN:T^AC_Misc.Bonus Table 2^/?s^Bonus Table 2^;  
 
   !!DL270:N^Class_Table.txt^;             [parse dialogue]
   !!SN:T^AC_Misc.Bonus Table 20^/?z20 Iz20/?z20;
@@ -479,22 +480,44 @@ Enable Artefact to appear on the map
 
   !!SN:T^AC_Misc.Bonus Table 8^/?z13;
   !!SN:T^AC_Misc.Bonus Table 9^/?z14;
-  !!SN:T^AC_Misc.Bonus Table 10^/?z15;
-  !!SN:T^AC_Misc.Bonus Table 11^/?z16;
+  !!SN:T^AC_Misc.Bonus Table 10^/?z15;   
+  !!SN:T^AC_Misc.Bonus Table 11^/?z16 Iz16/?z16;  [CW: change info (footline) on class experience table dialog]
 
-  *!SN:T^AC_Misc.Bonus Table 40^/?z40; *!DL270:A40/3/z40/1;
-  !!re i/41/60;
+  ;[CW: color the skills the hero has START]
+  ;[the idea is to color the skills which the hero currently has to give a better overview]
+  ;[using v41..v50 for warrior    skills in sequences they are shown in the screen]
+  ;[using v71..v79 for mage       skills in sequences they are shown in the screen]
+  ;[using v91..v99 for adventurer skills in sequences they are shown in the screen]
+ 
+  !!VRv41:C22/23/1/19/6/9/20/10/26/12; [warrior skills:    Offense,   Armorer,      Archery,  Warfare,   Leadership, Luck,       Artillery, Ballistics,  Resistance, Necromancy]
+  !!VRv71:C25/24/7/8/18/14/15/16/17;    [mage skills:       Sorcery,   Intelligence, Wisdom,   Mysticism, Scholar,    Fire Magic, Air Magic, Water Magic, Earth Magic]
+  !!VRv91:C27/0/3/2/4/11/21/13/5;    [adventurer skills: First Aid, Pathfinding,  Scouting, Logistics, Diplomacy,  Eagle Eye,  Learning,  Estates,     Nobility]
+
+  !!re i/41/109;
+    !!VRi&i=61:S71; [skip values 61 to 70]
+    !!VRi&i=80:S81; [skip value  80]
+    !!VRi&i=90:S91; [skip value  90]
+    !!VRi&i=100:S101; [skip value 100]
+    
+    !!VR(isSkill:y):S(FALSE);          [init with FALSE]
+    !!VR(isSkill)&i>=41/i<=50:S(TRUE); [warrior    skill from 41 to 50]
+    !!VR(isSkill)&i>=71/i<=79:S(TRUE); [mage       skill from 71 to 79]
+    !!VR(isSkill)&i>=91/i<=99:S(TRUE); [adventurer skill from 91 to 99]
+
+    !!VR(color:z)&i>=41/i<=49:S^Red^;
+    !!VR(color:z)&i>=50/i<=50:S^DarkGrey^;
+    !!VR(color:z)&i>=71/i<=79:S^DodgerBlue^;
+    !!VR(color:z)&i>=91/i<=99:S^LimeGreen^;
+      
     !!SN:T^AC_Misc.Bonus Table %i^/?(text:z);
-    !!DL270:Ai/(DLG_CMD_SET_TEXT)/(text)/1; A51/3/z51/1;
+    
+    !!if&(isSkill))(TRUE):;
+      !!HE(hero):Svi/?(skillIndex:y);  [vi is the skill number taken from the arrays defined above]
+      !!VR(text)&(skillIndex)>0:S^{~%(color)}%(text){~}^;
+    !!en:;    
+    !!DL270:Ai/(DLG_CMD_SET_TEXT)/(text)/1; [e.g. A51/3/z51/1;]
   !!en;
-
-  !!re i/7/10;
-    !!re j/1/9;
-      !!VR(itemId:y):Si*10 +j;
-      !!SN:T^AC_Misc.Bonus Table %(itemId)^/?(text:z);
-      !!DL270:A(itemId)/(DLG_CMD_SET_TEXT)/(text)/1;
-    !!en;
-  !!en;
+  ;[CW: color the skills the hero has END]
 
   !!SN:T^AC_Misc.Bonus Table 61^/?z61 T^AC_Misc.Bonus Table 62^/?z62;
   !!DL270:A61/3/z50/1 A62/3/z61/1 A63/3/z50/1 A64/3/z62/1;
@@ -949,6 +972,18 @@ Close Dialouge
 !!en;
 
 !?FU(Calc_Class_Points_Original);                [Calculate class points function]
+;[CW: additional parameters to return more detailed information - START]
+;[x6  = OUT hard coded warrior offset for specific heroes]
+;[x7  = OUT hard coded mage offset for specific heroes]
+;[x8  = OUT hard coded adventurer offset for specific heroes]
+;[x9  = OUT extra points for warrior master level skills]
+;[x10 = OUT extra points for mage master level skills]
+;[x11 = OUT extra points for adventurer master level skills]
+;[x12 = OUT current extra points in case of easy class option is active]
+;[x13 = OUT maxium extra points in case of easy class option is active]
+;[x14 = OUT additional points coming from equiped artefacts]
+!!VRx6:S0; !!VRx7:S0; !!VRx8:S0; !!VRx9:S0; !!VRx10:S0; !!VRx11:S0; !!VRx12:S0; !!VRx13:S0; !!VRx14:S0; [init OUT variables]
+;[CW: additional parameters to return more detailed information - END]
 
 !!HEx1:B2/?y2;
 !!VRy3:Sy2 %2;
@@ -966,6 +1001,7 @@ Close Dialouge
 !!VRy30&y1>0:+7;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Pathfinding_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S1/?y1;                          [Archery]
 !!VRy10&y1>0:+7;                        [warrior]
@@ -973,6 +1009,7 @@ Close Dialouge
 !!VRy30&y1>0:+2;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Archery_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S2/?y1;                          [Logistics]
 !!VRy10&y1>0:+3;                        [warrior]
@@ -980,6 +1017,7 @@ Close Dialouge
 !!VRy30&y1>0:+6;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Logistics_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S3/?y1;                          [Scouting]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -987,6 +1025,7 @@ Close Dialouge
 !!VRy30&y1>0:+8;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Scouting_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S4/?y1;                          [Diplomacy]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -994,6 +1033,7 @@ Close Dialouge
 !!VRy30&y1>0:+6;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Diplomacy_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S5/?y1;                          [Nobility]
 !!VRy10&y1>0:+4;                        [warrior]
@@ -1001,6 +1041,7 @@ Close Dialouge
 !!VRy30&y1>0:+7;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Nobility_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S6/?y1;                          [Leadership]
 !!VRy10&y1>0:+6;                        [warrior]
@@ -1008,6 +1049,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Leadership_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S7/?y1;                          [Wisdom]
 !!VRy10&y1>0:+1;                        [warrior]
@@ -1015,6 +1057,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Wisdom_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S8/?y1;                          [Mysticism]
 !!VRy10&y1>0:+4;                        [warrior]
@@ -1022,6 +1065,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Mysticism_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S9/?y1;                          [Luck]
 !!VRy10&y1>0:+6;                        [warrior]
@@ -1029,6 +1073,7 @@ Close Dialouge
 !!VRy30&y1>0:+4;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Luck_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S10/?y1;                         [Ballistics]
 !!VRy10&y1>0:+6;                        [warrior]
@@ -1036,6 +1081,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Ballistics_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S11/?y1;                         [Eagle Eye]
 !!VRy10&y1>0:+3;                        [warrior]
@@ -1043,6 +1089,7 @@ Close Dialouge
 !!VRy30&y1>0:+6;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Eagle Eye_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S12/?y1;                         [Necromancy]
 !!VRy10&y1>0:+4;                        [warrior]
@@ -1056,6 +1103,7 @@ Close Dialouge
 !!VRy30&y1>0:+6;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Estates_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S14/?y1;                         [Fire Magic]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -1063,6 +1111,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Fire Magic_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S15/?y1;                         [Air Magic]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -1070,6 +1119,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Air Magic_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S16/?y1;                         [Water Magic]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -1077,6 +1127,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Water Magic_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S17/?y1;                         [Earth Magic]
 !!VRy10&y1>0:+1;                        [warrior]
@@ -1084,6 +1135,7 @@ Close Dialouge
 !!VRy30&y1>0:+2;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Earth Magic_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S18/?y1;                         [Scholar]
 !!VRy10&y1>0:+3;                        [warrior]
@@ -1091,6 +1143,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Scholar_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S19/?y1;                         [Tactics/Warfare]
 !!VRy10&y1>0:+7;                        [warrior]
@@ -1098,6 +1151,7 @@ Close Dialouge
 !!VRy30&y1>0:+2;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Tactics_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S20/?y1;                         [Artillery]
 !!VRy10&y1>0:+6;                        [warrior]
@@ -1105,6 +1159,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Artillery_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S21/?y1;                         [Learning]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -1112,6 +1167,7 @@ Close Dialouge
 !!VRy30&y1>0:+6;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Learning_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 !!HEx1:S22/?y1;                         [Offense]
 !!VRy10&y1>0:+8;                        [warrior]
@@ -1119,6 +1175,7 @@ Close Dialouge
 !!VRy30&y1>0:+1;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Offense_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S23/?y1;                         [Armorer]
 !!VRy10&y1>0:+7;                        [warrior]
@@ -1126,6 +1183,7 @@ Close Dialouge
 !!VRy30&y1>0:+2;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Armorer_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S24/?y1;                         [Intelligence]
 !!VRy10&y1>0:+4;                        [warrior]
@@ -1133,6 +1191,7 @@ Close Dialouge
 !!VRy30&y1>0:+2;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Intelligence_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S25/?y1;                         [Sorcery]
 !!VRy10&y1>0:+1;                        [warrior]
@@ -1140,6 +1199,7 @@ Close Dialouge
 !!VRy30&y1>0:+2;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Sorcery_0_Hero%X1^/?y1; !!VRy20&y1=1:+2; [mage]
+!!VRx10&y1=1:+2; [CW: add 2 extra points for mage]
 
 !!HEx1:S26/?y1;                         [Resistance]
 !!VRy10&y1>0:+6;                        [warrior]
@@ -1147,6 +1207,7 @@ Close Dialouge
 !!VRy30&y1>0:+3;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_Resistance_0_Hero%X1^/?y1; !!VRy10&y1=1:+2; [warrior]
+!!VRx9&y1=1:+2; [CW: add 2 extra points for warrior]
 
 !!HEx1:S27/?y1;                         [First Aid]
 !!VRy10&y1>0:+2;                        [warrior]
@@ -1154,12 +1215,17 @@ Close Dialouge
 !!VRy30&y1>0:+6;                        [adventurer]
 !!SN&y1>0:W^Number_Of_Hero_Skills^/d+1;
 !!SN:W^H3_First Aid_0_Hero%X1^/?y1; !!VRy30&y1=1:+2; [adventurer]
-
+!!VRx11&y1=1:+2; [CW: add 2 extra points for adventurer]
 
 
 ***************************************
 **Special Hero Starting Conditions**
 ***************************************
+
+;[CW: additional parameters to return more detailed information - START]
+;[save values of y10, y20 and y30 to determine changes after this section]
+!!VRy40:Sy10; !!VRy50:Sy20; !!VRy60:Sy30;
+;[CW: additional parameters to return more detailed information - END]
 
 !!VRy10&x1=4:-7; !!VRy30&x1=4:+7;       [Lord Haart Starts with +7 A -7 W Points]
 !!VRy10&x1=9:+5; !!VRy30&x1=9:-5;       [Adela Starts with +5 W -5 A Points]
@@ -1191,13 +1257,39 @@ Close Dialouge
 *!VRy30&x1=129:-5;                      [Thunar Starts with -5 A Points]
 *!VRy20&x1=129:+5;                      [Thunar Starts with +5 M Points]
 *!VRy10&x1=129:-5;                      [Thunar Starts with -5 W Points]
+
+;[CW:################################################################################################]
+;[CW: additional parameters to return more detailed information - START]
+!!VRx6:Sy10-y40; !!VRx7:Sy20-y50; !!VRx8:Sy30-y60; [hero changes: x6=W, x7=M, x8=A]
+*!IF:M^After normal calculation: W=%Y10, M=%Y20, A=%Y30^; Test
+;[save values of y10 to determine changes after this section, always the same for all classes]
+!!VRy40:Sy10;
+!!VRx13:S0;                             [init max number of class points from Easier Class Option]
+;[CW: additional parameters to return more detailed information - END]
+;[CW:################################################################################################]
+
 !!SN:W^Easier_Class_option^/?y80;       [If option active you get +5 to all class points between level 20 and 30]
 !!if&y80=1;
+  ;[CW:################################################################################################]
+  ;[CW: additional parameters to return more detailed information - START]
+  !!VRx13:S5;                           [max number of class points from Easier Class Option when option is active]
+  ;[CW: additional parameters to return more detailed information - END]
+  ;[CW:################################################################################################]
+
   !!HEx1:E?y81/?y82/1;
   !!VRy10&y82>=20:+1; !!VRy10&y82>=22:+1; !!VRy10&y82>=25:+1; !!VRy10&y82>=27:+1; !!VRy10&y82>=30:+1;
   !!VRy20&y82>=20:+1; !!VRy20&y82>=22:+1; !!VRy20&y82>=25:+1; !!VRy20&y82>=27:+1; !!VRy20&y82>=30:+1;
   !!VRy30&y82>=20:+1; !!VRy30&y82>=22:+1; !!VRy30&y82>=25:+1; !!VRy30&y82>=27:+1; !!VRy30&y82>=30:+1;
 !!en;
+
+;[CW:################################################################################################]
+;[CW: additional parameters to return more detailed information - START]
+!!VRx12:Sy10-y40; [easy class changes for all classes: x12]
+*!IF:M^After special class option calculation: W=%Y10, M=%Y20, A=%Y30^;
+;[save values of y10 to determine changes after this section, always the same for all classes]
+!!VRy40:Sy10;
+;[CW: additional parameters to return more detailed information - END]
+;[CW:################################################################################################]
 
 !!FU(Count_Set_Pieces_2):Px1/0/0/?y90/?y91/?y92; [Check for class Sets]
 !!VRy10&y91=3:+5;                       [+5 Warrior Class Points]
@@ -1208,6 +1300,14 @@ Close Dialouge
 !!VRy10&y51=1:+1;                       [+1 Warrior Class Points]
 !!VRy20&y51=1:+1;                       [+1 Mage Class Points]
 !!VRy30&y51=1:+1;                       [+1 Adventurer Class Points]
+
+;[CW:################################################################################################]
+;[CW: additional parameters to return more detailed information - START]
+!!VRx14:Sy10-y40; [artefact sets changes for all classes: x14]
+*!IF:M^After artefact calculation: W=%Y10, M=%Y20, A=%Y30^;
+;[CW: additional parameters to return more detailed information - END]
+;[CW:################################################################################################]
+
 ****************************************
 
 !!VRx3:Sy10;
@@ -2958,11 +3058,11 @@ Creature speed   Base movement
 
   !!VRy45&y78<15:S1T1;
   !!VRy45&y78<12:S2T1;
-  !!VRy45&y78<10:S3T2;
-  !!VRy45&y78<5:S6T2;
+  !!VRy45&y78<10:S4T2;
+  !!VRy45&y78<5:S7T2;
 
   !!VRy5:Sy91 *y92 *y45;                [Level*Attack from Hero]
-  !!VRy5::2;                            [Halve number of creatures to fight]
+  !!VRy5::3;                            [Halve number of creatures to fight]
   !!VRy5&y5<50:S25R50;
   !!VRy47:Sy5;
   !!IF&999:Q2/20/y3/21/y4/2/z199147;
@@ -4172,7 +4272,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !?FU(ACM_Generate_Random_Stack);
 **x1=current side(0-1)
 **x2=random enemy stack
-!!VRx2:S(NO_STACK);
+!!VRx2:S(NO_STACK);				   
 !!VRv8:C0/0/0;
 !!DO(ACM_Generate_Random_Stack_0)/21/41/1&x1=0:P-1;     
 !!DO(ACM_Generate_Random_Stack_0)/0/20/1&x1=1:P-1;
@@ -4719,6 +4819,7 @@ Till here Normal Necromancy
           !!if&y15<>-1;
             !!VRi^ACM_Artillery_Shoot^:Sy13;
             !!BMy15:Z?p N?n;
+            !!IF:M^Target %Y15 y13 is%Y13 and %Vp and %Vn   and y6 is%Y6   and hero is %Y2^;
             !!UN:Cy6/16/4/p;
             !!HEi^battle_hero_%Y2^:S20/0;[Set Artillery level to zero]
 
@@ -4753,6 +4854,7 @@ Till here Normal Necromancy
 
 !!re i/y1/y2;  
   !!BMi:N?y5 H?y6 T?y7;
+  !!FU|y7=145/y7=146/y7=147/y7=148/y7=149:E; [Exit for Warmachines]
   !!if&y7>-1/y5>1/y6>0;
     !!MA:Fy7/?y8;
     !!VRy9:Sy5 -1;
@@ -9484,39 +9586,39 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 10 times
 !!en;
 
 
-
-
+UNC hacks to change commanders attributes per skill at game start. Attack and Defense values are reduced.
 !?FU(OnGameEnter);
 *Attack
 !!VR(offset:y):S4*(UNC_INT);
-!!UN:C8002440/(offset)/(UNC_INT)/20; Change GM Attack to +20
+!!UN:C8002440/(offset)/(UNC_INT)/20;    [Change GM Attack to +20]
 
 *Defense
 !!VR(offset:y):S7*(UNC_INT);
-!!UN:C8002440/(offset)/(UNC_INT)/15; Change Expert Defense to +15
+!!UN:C8002440/(offset)/(UNC_INT)/15;    [Change Expert Defense to +15]
 
 !!VR(offset:y):+4;
-!!UN:C8002440/(offset)/(UNC_INT)/22; Change Master Defense to +22
+!!UN:C8002440/(offset)/(UNC_INT)/22;    [Change Master Defense to +22]
 
 !!VR(offset:y):+4;
-!!UN:C8002440/(offset)/(UNC_INT)/30; Change GM Defense to +30
+!!UN:C8002440/(offset)/(UNC_INT)/30;    [Change GM Defense to +30]
 
 
 *Magic Resistance
 !!VR(offset:y):S30*(UNC_INT);
-!!UN:C8002440/(offset)/(UNC_INT)/5; Change Basic Magic Resistance to +5
+!!UN:C8002440/(offset)/(UNC_INT)/5;     [Change Basic Magic Resistance to +5]
 
 !!VR(offset:y):+4;
-!!UN:C8002440/(offset)/(UNC_INT)/10; Change Advanced Magic Resistance to +10
+!!UN:C8002440/(offset)/(UNC_INT)/10;    [Change Advanced Magic Resistance to +10]
 
 !!VR(offset:y):+4;
-!!UN:C8002440/(offset)/(UNC_INT)/15; Change Expert Magic Resistance to +15
+!!UN:C8002440/(offset)/(UNC_INT)/15;    [Change Expert Magic Resistance to +15]
 
 !!VR(offset:y):+4;
-!!UN:C8002440/(offset)/(UNC_INT)/25; Change Master Magic Resistance to +30
+!!UN:C8002440/(offset)/(UNC_INT)/25;    [Change Master Magic Resistance to +30]
 
 !!VR(offset:y):+4;
-!!UN:C8002440/(offset)/(UNC_INT)/35; Change GM Magic Resistance to +35
+!!UN:C8002440/(offset)/(UNC_INT)/35;    [Change GM Magic Resistance to +35]
+
 
 ****************************************************************************************************
 *Astral Spirit and Brute casting damage*
@@ -14946,14 +15048,14 @@ Also show if Mastery is active or not
 !!if&(id)>=174/(id)<=191/y30>=0;        [if any commander and a hero is present]
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(thisMonInfoPtr:y) C(thisMonInfoPtr)/28/4/?(descPtr:y); [Get monster type]
   !!FU(Check_Com_Masteries):Py30/?y10/?y11/?y12/?y13; [Pass Hero Number and return commander class]
-  !!VRy13&y13>1:-1;                     [get correct offset for class name description (1-9)]
-  !!SN&y13>0:T^AC_Misc.Commander_Opt_%Y13^/?z2; [get text strings]
-  !!SN&y13=0:T^AC_Misc.Commander_Opt_No_Class^/?z2; [...]
+  !!VRy13:-1;                           [get correct offset for class name description (1-9)]  
+  !!SN&y13>-1:T^AC_Misc.Commander_Opt_%Y13^/?z2; [get text strings]
+  !!SN&y13=-1:T^AC_Misc.Commander_Opt_No_Class^/?z2; [...]
   !!SN&y10=0:T^AC_Misc.Com_Mastery_Disabled^/?z3; [...]
   !!SN&y10=1:T^AC_Misc.Com_Mastery_active^/?z3; [...]
   !!COy30:X2/?y40;                      [Get Commander Level]
   !!SN:T^AC_Misc.Com_Battle_Text^/?z1/^level^/y40/^kills^/y11/^mastery^/z3/^class^/z2; [Set text to show]
-  !!SN:B(descPtr:y)/d/^%Z1^;
+  !!SN:B(descPtr:y)/d/^%Z1^;            [set commander description in battle]
 !!en;
 
 [set commander description in battle]
@@ -14963,13 +15065,12 @@ Also show if Mastery is active or not
 !!if&y1>=0/y1<=186;                     [If a valid battlefield position]
   !!BU:Ey1/?y2; !!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
   !!BMy2:T?y3 I?y4;                     [get monster type and side index]
-  !!BHy4:N?y5;                          [Get hero or commander ID]
-  !!IF:M^%Y3 and %Y5^;
+  !!BHy4:N?y5;                          [Get hero or commander ID]  
   !!if&y3>=174/y3<=191/y5>=0;           [if any commander and a hero]
     !!FU(Check_Com_Masteries):Py5/?y10/?y11/?y12/?y13; [Pass Hero Number and return commander class]
-    !!VRy13&y13>1:-1;                   [get correct offset for class name description (1-9)]
-    !!SN&y13>0:T^AC_Misc.Commander_Opt_%Y13^/?z2; [get text strings]
-    !!SN&y13=0:T^AC_Misc.Commander_Opt_No_Class^/?z2; [...]
+    !!VRy13&y13:-1;                     [get correct offset for class name description (1-9)]
+    !!SN&y13>-1:T^AC_Misc.Commander_Opt_%Y13^/?z2; [get text strings]
+    !!SN&y13=-1:T^AC_Misc.Commander_Opt_No_Class^/?z2; [...]
     !!SN&y10=0:T^AC_Misc.Com_Mastery_Disabled^/?z3; [...]
     !!SN&y10=1:T^AC_Misc.Com_Mastery_active^/?z3; [...]
     !!COy5:X2/?y40;                     [Get Commander Level]
@@ -26093,6 +26194,7 @@ x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
 
   !!FU(acm_Dlg_WarMachines_Destruct):P;
   !!UN:R4;
+
 
 
 
