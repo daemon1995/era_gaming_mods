@@ -260,7 +260,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 ** eagle eye
 !!VRv7018&i^wog_202_enabled^:S0;                               [reset v7018]
 !!VRv7019&i^wog_202_enabled^:S0;                               [reset v7019]
-!!VRi^wog_202_spellCountered^:S(FALSE);                        [reset global flag of whether a spell has been countered]
+!!VRi^wog_202_heroSpellCountered^:S(FALSE);                        [reset global flag of whether a spell has been countered]
 
 !!VRy-9&i^wog_202_enabled^:S-1;                                [reset y-9]
 !!BA&i^wog_202_enabled^:H0/?y-9;                               [get attacking hero's #]
@@ -315,30 +315,36 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!SS(spell):O?(spellTargetType:y);
   !!VR(isBenificial)&(spellTargetType)=1:S(TRUE);
 !!el&(action)=(BATTLE_ACTION_MONSTER_CAST);
+  ; Check if the target is valid, if not, check the casting position and see if there is a dead stack (need this for Archangel resurrection casting)
   !!if&(target)=(NO_STACK);
     !!BG:D?(pos:y);
     !!BU:D(pos)/?(target:y);
-    !!FU&(target)<0;
+    !!FU&(target)<0:E;
   !!en;
+
   !!BM(target):I?(targetSide:y);
   !!VR(isBenificial)&(targetSide)=i^battle_acting_side^:S(TRUE);
 !!en;
 
+!!FU&(isBenificial)<>(TRUE):E;
+
 ; Check if it is lucky enough to counter
 !!VR(result:y):S(FALSE);
 !!VR(random:y):R0/0/99;                 [random roll]
-!!VR(result)&(isBenificial)/i^battle_acting_side^=(BATTLE_LEFT)/v7019>0/(random)<v7019:S(TRUE); [if attacker cast, check against defender Eagle Eye rating]
-!!VR(result)&(isBenificial)/i^battle_acting_side^=(BATTLE_RIGHT)/v7018>0/(random)<v7018:S(TRUE); [if defender cast, check against attacker Eagle Eye rating]
+!!VR(result)&i^battle_acting_side^=(BATTLE_LEFT)/v7019>0/(random)<v7019:S(TRUE); [if attacker cast, check against defender Eagle Eye rating]
+!!VR(result)&i^battle_acting_side^=(BATTLE_RIGHT)/v7018>0/(random)<v7018:S(TRUE); [if defender cast, check against attacker Eagle Eye rating]
 !!FU&(result)<>(TRUE):E;
 
-; Play sound
-!!SN:P^telptin^;
+!!if&i^battle_isVisible^;
+  ; Play sound
+  !!SN:P^telptin^;
 
-; Show shield animation on the target or acting stack if massive
-!!if&(target)>(NO_STACK);
-  !!BM(target):V32;
-!!el;
-  !!BMi^battle_acting_stack^:V32;
+  ; Show shield animation on the target or acting stack if massive
+  !!if&(target)>(NO_STACK);
+    !!BM(target):V32;
+  !!el;
+    !!BMi^battle_acting_stack^:V32;
+  !!en;
 !!en;
 
 ; Reduce mana (spell count) and show animation on the caster
@@ -348,7 +354,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!BMi^battle_acting_stack^:Ed-1;      [reduce spell count by 1]
   !!BG:A(BATTLE_ACTION_WALK);           [make unit move (cancel action), possible to get morale]
   ; Show mana drained animation on the casting monster
-  !!BMi^battle_acting_stack^:V76;
+  !!BMi^battle_acting_stack^&i^battle_isVisible^:V76;
 ; For hero cast
 !!el&(action)=(BATTLE_ACTION_HERO_CAST);
   ; Reduce mana by the cost of the spell supposed to cast (by daemon_n)
@@ -364,31 +370,39 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!en;
 
   ; Set to no cast and pass the turn
-  ; Note: BG:A would result in grid hiding. Here we pass the stack turn and get back to redraw grids and spell book button
+  ; Note: BG:A would result in grid visually missing. Here we pass the stack turn and get back to redraw grids and spell book button
   !!BG:A(BATTLE_ACTION_SKIP);
   !!BHi^battle_acting_side^:M1;
-  !!VRi^wog_202_spellCountered^:S(TRUE);
+  !!VRi^wog_202_heroSpellCountered^:S(TRUE);
 
   ; Show mana drained animation on the hero
-  !!if&i^battle_current_side^=(BATTLE_LEFT);
-    !!VR(pos:y):S0;                     [attakcing hero]
-  !!el;
-    !!VR(pos):S16;                      [defending hero]
-  !!en;
+  !!if&i^battle_isVisible^;
+    !!if&i^battle_current_side^=(BATTLE_LEFT);
+      !!VR(pos:y):S0;                   [attakcing hero]
+    !!el;
+      !!VR(pos):S16;                    [defending hero]
+    !!en;
 
-  !!FU(WOG_PlayAnimationOnHex):P76/(pos)/100;
+    !!FU(WOG_PlayAnimationOnHex):P76/(pos)/100;
+  !!en;
 !!en;
 
 ; Show combat msg
-!!VRz2:Sz148004;                        [set combat message]
-!!MM:Sz2;                               [display combat message]
+!!if&i^battle_isVisible^;
+  !!VRz2:Sz148004;                      [set combat message]
+  !!MM:Sz2;                             [display combat message]
+!!en;
 
-; Return to the stack turn
-!?FU(OnBeforeBattleStackTurn)&i^wog_202_enabled^/i^wog_202_spellCountered^;
+; Return to the caster's stack turn
+; This is needed as when we cancel the hero spell with BG:A, the action turn is finished and roll to the next stack. We don't want to skip the caster's turn when the spell failed as it is way too imba
+!?FU(OnBeforeBattleStackTurn)&i^wog_202_enabled^/i^wog_202_heroSpellCountered^;
 !#VA(stack:x);
 
 !!VR(stack):Si^battle_acting_stack^;
-!!VRi^wog_202_spellCountered^:S(FALSE);
+!!BM(stack):F?(flags:y);
+!!VR(flags):d~(MON_FLAG_ACTED);
+!!BM(stack):F(flags);
+!!VRi^wog_202_heroSpellCountered^:S(FALSE);
 
 ** end of pre-action trigger
 
