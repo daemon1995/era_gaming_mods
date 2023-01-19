@@ -58,45 +58,34 @@ The following functions are executed in gem_settigns.erm
 
 ____________________________________________________________________________________________________
 
-
-
-!?FU(OnGameEnter);
-!!TL:E1;
-
-!?FU(OnGameLeave);
-!!TL:E0;
-
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
 *                       [ scripts for the battles]
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
 !?FU(OnKeyPressed_AdvMap)&x1=(KEY_W)/999;     
-  !!OW:C?y4;                              
-  !!SN:W^Current_Battle_Type%Y4^/?y1;     
-    !!VRy2&y1<>8:Sy1*2;
-    !!VRy2&y1=8:S1;
-    !!SN:W^Current_Battle_Type%Y4^/y2;
-    !!FU(gem_Button_Switch):P;                 
-  !!FU(gem_Autobattle_Check_And_Sound):P1;
+  !!VRi^Current_Battle_Type%i(timerOwner)^:Sd<<1;
+  !!if&i^Current_Battle_Type%i(timerOwner)^>(GEM_BATTLE_TYPE_ASK_BEFORE_START);
+    !!VRi^Current_Battle_Type%i(timerOwner)^:S(GEM_BATTLE_TYPE_NO_AUTO);
+  !!en;
+  !!FU(gem_Button_Switch):P;                 
+  !!FU(gem_Autobattle_Check_And_Sound):P(TRUE);
 
 !?FU(gem_Autobattle_Check_And_Sound);
 !#VA(playSound:x);
-  !!OW:C?y4;
-  !!SN:W^Current_Battle_Type%Y4^/?y2;
-  !!SN:W^gem_CheckGameLang^/?y5;
-  !!if|y2<2:;
+  !!if|i^Current_Battle_Type%i(timerOwner)^=(GEM_BATTLE_TYPE_NO_AUTO);
     !!UN:C6916044/4/0;
-    !!SN&y2=1/(playSound):T^%Y5_gem_map.battle1^/?z-1;
   !!el:;
     !!UN:C6916044/4/1;
-    !!SN&y2=2/(playSound):T^%Y5_gem_map.battle2^/?z-1;
-    !!SN&y2=4/(playSound):T^%Y5_gem_map.battle3^/?z-1;
-    !!SN&y2=8/(playSound):T^%Y5_gem_map.battle4^/?z-1;
   !!en;
-  !!IF&(playSound):L^%Z-1^;
-  !!FU(gem_SaveBattleOptionsToIni)&x1=1:P;     [save options]
 
+  !!if&(playSound);
+    !!FU(IntLog2):Pi^Current_Battle_Type%i(timerOwner)^/?(stringId:y);
+    !!VR(stringId):+1;
+    !!SN:T^gem.map.battle%(stringId)^/?(msg:z);
+    !!IF:L^%(msg:z)^;
+    !!FU(gem_SaveBattleOptionsToIni):P;     [save options]
+  !!en;
 
 **  Disable autobattle vs human players (by daemon_n)
 ** Spell Points Delete in the autobattle, supports battle replay
@@ -110,12 +99,24 @@ ________________________________________________________________________________
     !!BA:Q0;
     !!FU:E;                             [and exit func]
   !!en;
+
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4337680/(gem_AI_CastSpell);
+
+!?FU(gem_AI_CastSpell); // jump
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(activeSide:y);
+  !!VR(owner:y):Si^battle_owner_%(activeSide)^;
+
+!!if&i^battle_human_%(activeSide)^/
+i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
+*!IF:M^i wanna cast but daemon_n doesn't allow^;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4337852;
+!!en;
+
 !?FU(OnBeforeBattle)&i^battle_humanOnly^=(FALSE)/1000/i^battle_isNetwork^=(FALSE);     [before Human battle]
   !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
-  *!if&(isAi)=(TRUE):;                  [if ai attacks]
-    *!BA:Od/?(currPlayer);              [set choice of human from right side]
-  *!en;
-  *!IF:M^1^;
+
   !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
     !!BA:Q0;
     !!FU:E;                             [and exit func]
@@ -130,19 +131,19 @@ ________________________________________________________________________________
   !!en;
 
   !!VRi^Current_Battle_Type%(currPlayer)^&(isAutoBattleState)=(TRUE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):S(GEM_BATTLE_TYPE_AUTO_MANA);
-  !!VRi^gem_Was_Mana_Removed^:S(FALSE);                 [was not remove the SP]
 
 
   !!if&i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START):;                                 [if choising]
      !!VRi^Current_Battle_Type_Choice%(currPlayer)^&i^Current_Battle_Type_Choice%(currPlayer)^=(NULL):S(GEM_BATTLE_TYPE_NO_AUTO);
-     !!FU(gem_CheckGameLang):P;
 
-     !!SN:T^%s(gem_m).battlelist1^/?z-1;
-     !!SN:T^%s(gem_m).battlelist2^/?z-2;
-     !!SN:T^%s(gem_m).battlelist3^/?z-3;
-     !!SN:T^%s(gem_m).battlelist4^/?z-4;
+     !!SN:T^gem.map.battlelist1^/?z-1;
+     !!SN:T^gem.map.battlelist2^/?z-2;
+     !!SN:T^gem.map.battlelist3^/?z-3;
+     !!SN:T^gem.map.battlelist4^/?z-4;
      !!IF:G1/1/i^Current_Battle_Type_Choice%(currPlayer)^/-1/-2/-3/-4;                  [show message]
      !!SN:W^Current_Battle_Type_Choice%(currPlayer)^/v1;  [store choice]
+  !!el;
+    !!VRi^Current_Battle_Type_Choice%(currPlayer)^:Si^Current_Battle_Type%(currPlayer)^;
   !!en;
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):;                   [if choisen]
@@ -153,16 +154,13 @@ ________________________________________________________________________________
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA):;                   [if choisen]
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
-
     !!BA:Q1;                              [set auto]
     !!FU:E;                               [end]
   !!en;
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE):;
+    
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
-
-    !!FU(gem_Spellpoints_Removing):P;     [start remove mana func]
-    !!VRi^gem_Was_Mana_Removed^:S(TRUE); [store it]
     !!BA:Q1;                              [set auto]
     !!FU:E;                               [end]
   !!en;                                   [final] 
@@ -175,13 +173,8 @@ ________________________________________________________________________________
   !!FU(gem_DlgShowItem):P30723/0/0/1;/1;
 
 !?FU(OnBattleReplay)&i^battle_humanOnly^=(FALSE);
-*!IF:L^%i(gem_replay_counter)^;
-  !!if&i^gem_Was_Mana_Removed^;
-    !!FU(gem_Spellpoints_Giving):P;             [give mana]
-    !!VRi^gem_Was_Mana_Restored^:S(TRUE);
-  !!en;
 
-  !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):+1;
+!!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):+1;
 
 
 !?FU(OnAfterBattle)&i^battle_humanOnly^=(FALSE)/(ERM_FLAG_IS_HUMAN);
@@ -193,52 +186,10 @@ ________________________________________________________________________________
 
     !!FU(gem_Button_Switch):P;
 
-    !!UN:P900/?y1;
-    !!UN&y1=0:J11/1;
-
-
-    !!if&i^gem_Was_Mana_Removed^/i^gem_Was_Mana_Restored^=(FALSE);
-      !!FU(gem_Spellpoints_Giving):P;
-    !!en;
-
-      !!VRi^gem_Was_Mana_Removed^:S(FALSE);
-      !!VRi^gem_Was_Mana_Restored^:S(FALSE);
-
     !!VRi^gem_BeforeBattleResultClose^:S(FALSE);
 
   !!en;
 
-!?FU(gem_Spellpoints_Removing);                 [taking SP func]
-  !!if&i^battle_human_0^;
-      !!FU&904:E;                               [exit if human uses berserker's potion (61wog)]
-      !!HE-10:I?i^gem_Auto_Spellpoints^/1 I0/1; [store SP Availabilityin y1 / take off SP]
-
-  !!el&i^battle_hero_1^<>(NO_HERO);
-      !!FU&905:E;                               [exit if human has no hero or uses berserker's potion (61wog)]
-      !!HE-20:I?i^gem_Auto_Spellpoints^/1 I0/1; [store SP Availabilityin y1 / take off SP]
-
-  !!en;
-
-
-!?FU(gem_Spellpoints_Giving);                   [restore SP func]
-  !!if&i^battle_human_0^;                       [if human hero is attacker]
-      !!FU&904:E;                               [exit if human uses berserker's potion (61wog)]
-      !!HE-10:Idi^gem_Auto_Spellpoints^/1;      [store SP Availabilityin y1 / take off SP]
-      !!VRi^WOG_73_battle_hero_0_SpellPoints^&v847:Si^gem_Auto_Spellpoints^;
-  !!el&i^battle_hero_1^<>(NO_HERO);             [if human defending]
-      !!FU&905:E;                               [exit if human has no hero or uses berserker's potion (61wog)]
-      !!HE-20:Idi^gem_Auto_Spellpoints^/1;      [restore SP]
-      !!VRi^WOG_73_battle_hero_1_SpellPoints^&v847:Si^gem_Auto_Spellpoints^;
-  !!en;
-
-** enable sod style of creatures window in battle without troop experience script
-!?FU(OnBeforeBattle)&1000/i^battle_humanOnly^=(FALSE);                            [before Human battle]
-  !!UN:P900/?y1;                          [check troop experience script]
-  !!if&y1=0:;                             [if disabled]
-    !!UN:J11/1;                           [enable sod style of window]
-  !!el:;                                  [else]
-    !!UN:J11/0;                           [enable wog style of window]
-  !!en;  
 
 !?FU(OnGameEnter)&999;
 !!if&i^gem_Quick_Combat_Check^;
@@ -312,62 +263,18 @@ ________________________________________________________________________________
 
 
 
+right-click msg of Lord buttons
+!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=i^mithrilB_Button_ID^;
+!!OW:Cd/?(clickedPlayer:y);
+!!OW:R(clickedPlayer)/(RES_MITHRIL)/?(resNumber:y);
 
-!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^;
-
-    !!if&i^manualf_Button_ID^=i^mouse_item^:;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button1hint^/?z-1;
-      !!CM:R0;
-      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
-    !!en;
-
-    !!if&i^automf_Button_ID^=i^mouse_item^:;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button2hint^/?z-1;
-      !!CM:R0;
-      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
-    !!en;
-
-    !!if&i^autowm_Button_ID^=i^mouse_item^:;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button3hint^/?z-1;
-      !!CM:R0;
-      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
-    !!en;
-
-    !!if&i^choiceB_Button_ID^=i^mouse_item^:;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button4hint^/?z-1;
-      !!CM:R0;
-      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
-   !!en:;
-
-**** right-click msg of Lord buttons
-
-    !!if&i^mouse_item^=i^optionB_Button_ID^;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button5hint^/?z-1;
-      !!CM:R0;
-      !!IF:M0/4/^%Z-1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
-    !!en;
-    
-    !!if&i^mouse_item^=i^mithrilB_Button_ID^;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button6hint^/?z-1;
-
-      !!OW:Cd/?(clickedPlayer:y);
-      !!OW:R(clickedPlayer)/(RES_MITHRIL)/?(resNumber:y);
-
-      !!if&(resNumber)>0;
-          !!SN:T^%s(gem_s).line7+^/?z1/^mithril^/(resNumber);
-      !!el;
-          !!SN:T^%s(gem_s).line7^/?z1/^mithril^/(resNumber);
-      !!en;
-
-      !!CM:R0;
-      !!IF:M0/4/^%z1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
-    !!en;
-
-    !!if&i^indicator_Button_ID^=i^mouse_item^:;
-      !!SN:W^gem_CheckGameLang^/?y5 T^%Y5_gem_map.button7hint^/?z-1;
-      !!CM:R0;
-      !!IF:M0/4/^%Z-1^;
-   !!en:;
+!!if&(resNumber)>0;
+  !!SN:T^gem.settings.line7+^/?z1/^mithril^/(resNumber);
+!!el;
+  !!SN:T^gem.settings.line7^/?z1/^mithril^/(resNumber);
+!!en;
+!!CM:R0;
+!!IF:M0/4/^%z1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;    
 
 ____________________________________________________________________________________________________
 
@@ -415,19 +322,3 @@ This part of code needs to be executed LATER than GEM. Please don't change the f
 !!FU(WriteIniInts):P(filePath)/^main^/^gem_enemyHeroScreen^/?i^gem_option_4_%i(gem_CurPlay)^;
 !!FU(SaveIni):P(filePath);
 
-
-**** End Game Enhancement Mod Part 2/2
-
-*?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>=252/i^mouse_battleHex^<=253/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^=0;
-  *!OW:Cd/?(meID:y);
-  *!if&i^battle_owner_0^=(meID);
-    *!VR(hostileSide:y):S(BATTLE_RIGHT);
-  *!el;
-    *!VR(hostileSide:y):S(BATTLE_LEFT);
-  *!en;
-  *!VR(clickSide:y):Si^mouse_battleHex^ -252;
-  *!if&(clickSide)=(hostileSide);
-    *!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78528/4/?(storeActiveSide:y) C(cmbMgr)/78528/4/(hostileSide);
-    *!SN:E5893136/(CALLCONV_THISCALL)/(cmbMgr);
-    *!UN:C(cmbMgr)/78528/4/(storeActiveSide);
-  *!en;
