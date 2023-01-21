@@ -63,10 +63,10 @@ ZVSE2
   !!VR(unitLimit)&(diff)>=4:S100; // max 100 for impossible
 
   ; Emblem of Cognizance
-  !!VR(goldLimit)&(diff)=1:S100000; // max 100000 gold for normal and easy
-  !!VR(goldLimit)&(diff)=2:S50000; // max 50000 for hard
-  !!VR(goldLimit)&(diff)=3:S25000; // max 25000 for expert
-  !!VR(goldLimit)&(diff)>=4:S10000; // max 10000 for impossible
+  !!VR(goldLimit):S(unitLimit) *100;100000; // max 100000 gold for normal and easy
+  *!VR(goldLimit)&(diff)=2:S50000; // max 50000 for hard
+  *!VR(goldLimit)&(diff)=3:S25000; // max 25000 for expert
+  *!VR(goldLimit)&(diff)>=4:S10000; // max 10000 for impossible
 !!en;
 
 ; Set global var to be used each week
@@ -80,11 +80,24 @@ ZVSE2
   !!UN:P102/?(wogOption:y);               [Check if Artifact Boost Script is enabled in WoGify Options]
   !!FU&(wogOption)<>(TRUE):E;             [Exit if it isn't]
 
-  !!OW:Hi^timerOwner^/1;
-  !!re (vHeroId:y)/2/v1/1/1; loop this player hero!
-    !!HEv(vHeroId):A2/(ART_SURCOAT_OF_COUNTERPOISE)/?y99/?(artBonus:y);
-    !!FU602:Pv(vHeroId:y)/(artBonus);                          [Iterate through all player heroes]
+  !!OW:Hi^timerOwner^/1; 
+  
+  !!if&v1;
+    !!FU(NewIntArray):Pv1/?(heroes:y);
+    !!re (vHeroId:y)/2/v1/1/1; loop this player hero!
+      !!VR(itemId:y):S(vHeroId) -2;
+      !!SN:M(heroes)/(itemId:y)/v(vHeroId); daemon_n added this part cause some fucntions below changes v-var array
+    !!en;
+
+    !!VR(size:y):Sv1;
+    !!re i/0/(size:y)/1/-1;
+      !!SN:M(heroes)/i/?(heroId:y);
+      !!HE(heroId:y):A2/(ART_SURCOAT_OF_COUNTERPOISE)/?y99/?(artBonus:y);
+      !!FU602:P(heroId:y)/(artBonus);                          [Iterate through all player heroes]
+    !!en;
+
   !!en;
+
 
 
 !?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/999;[R-click trigger for enabling/disabling weekly creatures from artifacts]
@@ -200,8 +213,7 @@ ZVSE2
     !!if&(equippedArts);
       !!VR(bit:y):S1 Sd<<i &w(WOG_ART_BOOST_W_VAR_ID);
       !!if|(bit)=0/i^timerIsAi^;
-
-        !!FU(fooPtrs[i]):P(heroId)/(monArmy)/(equippedArts:y);
+        !!FU(fooPtrs[i]):P(heroId)/(monArmy)/(equippedArts:y); [call function by ptr id]
       !!en;
     !!en;
   !!en;
@@ -240,23 +252,32 @@ ZVSE2
 
 !!FU(WOG_102_GivingSingleCreatureArts):P(heroId:x)/(artBonus:x);
 
+!!FU(WOG_102_GivingStaticBonusArts):P(heroId:x)/(artBonus:x);
+
+!!FU(WOG_102_AskingStaticBonusArts):P(heroId:x)/(artBonus:x);
+
 
 !!OW:Ii^timerOwner^/?v603; [get AI (1) or human (0)]
 !!VRv600:S(heroId);
 
 !!HEv600:A2/16/0/?v613; [check for Targ Of The Rampaging Ogre]
+
 !!HEv600:A2/56/0/?v614; [check for Dead Man's Boots]
 !!HEv600:A2/107/0/?v615; [check for Pendant Of Total Recall]
 !!HEv600:A2/65/0/?v616; [check for Emblem Of Cognizance]
 !!HEv600:A2/64/0/?v617; [check for Stoic Watchman]
-!!HEv600:A2/101/0/?v618; [check for Pendant Of Second Sight]
 !!HEv600:A2/102/0/?v619; [check for Pendant Of Holiness]
+!!HEv600:A2/100/0/?v622; [check for Pendant Of Dispassion]
+
+!!HEv600:A2/101/0/?v618; [check for Pendant Of Second Sight] upgrade
+!!HEv600:A2/105/0/?v623; [check for Pendant Of Free Will]
+
+
+!!HEv600:A2/58/0/?v625; [check for Surcoat Of Counterpoise]
 !!HEv600:A2/59/0/?v620; [check for Boots Of Polarity]
 !!HEv600:A2/57/0/?v621; [check for Garniture Of Interference]
-!!HEv600:A2/100/0/?v622; [check for Pendant Of Dispassion]
-!!HEv600:A2/105/0/?v623; [check for Pendant Of Free Will]
+
 !!HEv600:A2/67/0/?v624; [check for Diplomat's Ring]
-!!HEv600:A2/58/0/?v625; [check for Surcoat Of Counterpoise]
 !!HEv600:A2/(ART_ORB_OF_INHIBITION)/0/?v628; [check for ART_ORB_OF_INHIBITION]
 
 
@@ -397,7 +418,7 @@ ZVSE2
 !!en;
 
 ; Diplomat's Ring (works only for human players)
-!!if&v624>0/5;
+!!if&5/v624>0;
   ; Check if the hero has any level 1 monster
   !!VR(hasLvOneMon:y):S(FALSE);
 
@@ -406,11 +427,8 @@ ZVSE2
 
     !!if&(mon)>(NO_MON)/(qty)>0;
       !!MA:L(mon)/?(lv:y);
-
-      !!br&(lv)=(MON_MIN_LEVEL);
+      !!VR(hasLvOneMon)&(lv)=(MON_MIN_LEVEL):S(TRUE);
     !!en;
-
-    !!VR(hasLvOneMon)&i<=(ARMY_SLOT_LAST):S(TRUE);
   !!en;
 
   ; Ask if the hero would like to double level 1 monsters if he/she has any
@@ -428,9 +446,8 @@ ZVSE2
         !!if&(mon)>(NO_MON)/(qty)>0;
           !!MA:L(mon)/?(lv:y);
 
-          !!if&(mon)>(NO_MON)/(qty)>0;
-            !!VR(additionalUnits:y):S(qty) F0/i^wog_102_diplomatsRingLimit^;
-            !!VR(additionalUnits)&v625>0:*2; // double bonus for Surcoat
+          !!if&(mon)>(NO_MON)/(qty)>0/(lv)=(MON_MIN_LEVEL);
+            !!VR(additionalUnits:y):S(qty) F0/i^wog_102_diplomatsRingLimit^ Sd<<v625;// double bonus for Surcoat
             !!HEv600:C0/(slot)/?(mon)/d(additionalUnits); // add bonus creatures to the original creatures
           !!en;
         !!en;
@@ -447,7 +464,7 @@ ZVSE2
 !!en;
 
 ; Orb Of Inhibition (works only for human players)
-!!if&v628>0/5;
+!!if&5/v628>0;
   ; Find a monater from the hero's army which did not learn either Attack Twice or No Retailiation
   !!FU(WOG_102_GetRandMonFromHeroArmy):P?(mon:y);
 
@@ -495,9 +512,8 @@ ZVSE2
 ; Targ Of The Rampaging Ogre
 !!if&v613>0;
   !!IF&5:M1/z102057;
-  !!VR(qty:y):S30;
-  !!VR(qty):*v631; [Surcoat factor]
-  !!HEv600:Tv604/v605/v606/90/(qty); [ogre fight]
+  !!VR(qty:y):S30 Sd<<v631;[Surcoat factor]
+  !!HEv600:Tv604/v605/v606/(MON_OGRE)/(qty); [ogre fight]
 !!en;
 
 ** end of function

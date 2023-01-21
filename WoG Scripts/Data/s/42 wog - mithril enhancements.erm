@@ -197,7 +197,11 @@ entrance squares. Do not use this with another script that might do the same
   !!UN:P36/?v1;              (Check if Mithril Enhancements script is enabled: v1)
   !!FU&v1=0:E;               (If script is disabled or not player's turn, exit trigger)
 
-  !!CM:P?v4/?v5/?v6;         (Get location: v4/v5/v6)
+  !!CM:P?v4/?v5/?v6 P?y1/?y2/?y3;         (Get location: v4/v5/v6)
+  !!SN:O?y1/?y2/?y3;
+  *!if&y1=v1/y2=v2/y3=v3;
+    
+  *!en;
   !!TRv4/v5/v6:E?y-20;       (Check for yellow trigger square: y-20)
   !!FU&y-20:E;
 
@@ -245,9 +249,11 @@ entrance squares. Do not use this with another script that might do the same
   !!if&-9;
     !!FU8185&v1=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/(CURRENT_HERO);
     !!FU8185&v1=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO);                      [(Monolith (with instruction on which type and what hero))]
-    !!FU8173&v1=(OBJ_SHRINE_OF_MAGIC_INCANTATION):P;                           [(Shrine level 1)]
-    !!FU8174&v1=(OBJ_SHRINE_OF_MAGIC_GESTURE):P;                               [(Shrine level 2)]
-    !!FU8175&v1=(OBJ_SHRINE_OF_MAGIC_THOUGHT):P;                               [(Shrine level 3)]
+    
+    !!if|v1=(OBJ_SHRINE_OF_MAGIC_INCANTATION)/v1=(OBJ_SHRINE_OF_MAGIC_GESTURE)/v1=(OBJ_SHRINE_OF_MAGIC_THOUGHT);
+      !!VR(lvl:y):Sv1 - (OBJ_SHRINE_OF_MAGIC_INCANTATION) +1;
+      !!FU(WOG_36_UpgradeShrines):P(lvl:y);
+    !!en;
 
     !!FU(WOG_36_UpgradeWaterWheel)&v1=(OBJ_WATER_WHEEL):P;                     [(Water Wheel)]
     !!FU(WOG_36_UpgradeWindmill)&v1=(OBJ_WINDMILL):P;                          [(Windmill)]
@@ -560,59 +566,32 @@ entrance squares. Do not use this with another script that might do the same
 
 
 *** Upgrade Shrines ***
-** Level 1 Shrine **
-!?FU8173;
-!!SRv4/v5/v6:S?y1;   (Get Spell Number: y1)
-!!OW:R-1/7/?y2;  (Get amount of mithril)
-!!FU&y2<1:E; (Exit if not enough mithril)
-!!UN:N1/z1/y1;   (get Spell name: z1)
-!!CM:R0;         (disable standard popup)
-!!IF:Q1/7/1/2/z136027;
-!!FU&-1:E;
-!!OW:R-1/7/d-1; (Take Mithril)
-!!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?y2;
-!!POv4/v5/v6:Hd1 H?y6;
 
-!!VRy2:Sdy6 Rd/y2;
-!!FU(WOG_GENERATE_SPELL):P1/1/0/0/1/1/y1; [Spell number in y-99, skip banned spells, exclude spell y1]
-!!SRv4/v5/v6&y-99>=0:Sy-99; (Setup new Spell)
 
-** Level 2 Shrine **
-!?FU8174;
-!!SRv4/v5/v6:S?y1;   (Get Spell Number: y1)
-!!OW:R-1/7/?y2;  (Get amount of mithril)
-!!FU&y2<2:E; (Exit if not enough mithril)
-!!UN:N1/z1/y1;   (get Spell name: z1)
-!!CM:R0;         (disable standard popup)
-!!POv4/v5/v6:H?y6;
-*!IF:L^%y6^;
-!!IF:Q1/7/2/2/z136028;
-!!FU&-1:E;
-!!OW:R-1/7/d-2; (Take Mithril)
-!!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?y2;
-!!POv4/v5/v6:Hd1 H?y6;
+!?FU(WOG_36_UpgradeShrines);
+!#VA(shrineLvl:x) (usedY[2]:y);
 
-!!VRy2:Sdy6 Rd/y2;
-!!FU(WOG_GENERATE_SPELL):P2/2/0/0/1/1/y1; [Spell number in y-99, skip banned spells, exclude spell y1]
-!!SRv4/v5/v6&y-99>=0:Sy-99; (Setup new Spell)
-
-** Level 3 Shrine **
-!?FU8175;
-!!SRv4/v5/v6:S?y1;   (Get Spell Number: y1)
-!!OW:R-1/7/?y2;      (Get amount of mithril)
-!!FU&y2<3:E; (Exit if not enought mithril)
-!!UN:N1/z1/y1;   (get Spell name: z1)
-!!CM:R0;         (disable standard popup)
-!!IF:Q1/7/3/2/z136029;
-!!FU&-1:E;
-!!OW:R-1/7/d-3; (Take Mithril)
-!!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?y2;
-!!POv4/v5/v6:Hd1 H?y6;
-
-!!VRy2:Sdy6 Rd/y2;
-!!FU(WOG_GENERATE_SPELL):P3/3/0/0/1/1/y1; [Spell number in y-99, skip banned spells, exclude spell y1]
-!!SRv4/v5/v6&y-99>=0:Sy-99; (Setup new Spell)
-
+!!OW:R-1/(RES_MITHRIL)/?(resNumber:y);  (Get amount of mithril)
+!!if&(resNumber)>=(shrineLvl);
+  !!SRv4/v5/v6:S?(currentSpellId:y);   (Get Spell Number: y1)
+  !!POv4/v5/v6:H?(currentValue:y);
+  !!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?(newSeed:y);
+  !!VR(newSeed):+(currentValue:y);
+  !!FU(WOG_SetRandomSeed):P(newSeed)/?(oldSeed:y);
+  !!FU(WOG_GENERATE_SPELL):P(shrineLvl:x)/(shrineLvl:x)/0/0/1/1/(currentSpellId:y); [Spell number in y-99, skip banned spells, exclude spell y1]
+  !!FU(WOG_SetRandomSeed):P(oldSeed)/?(oldSeedA:y);
+  !!if&y-99>=(SPELL_FIRST);
+    !!CM:R0;
+    !!SN:H^spell^/(currentSpellId)/(SPELL_TEXT_NAME)/?z1;
+    !!VRy2:S(resNumber);
+    !!IF:Q1/(PIC_TYPE_SPELL)/(currentSpellId)/(RES_MITHRIL)/(shrineLvl:x)/(MSG_TYPE_QUESTION)/z136027;
+    !!if&1;
+      !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-(shrineLvl);
+      !!POv4/v5/v6:Hd1; increase value for next rng
+      !!SRv4/v5/v6:Sy-99; (Setup new Spell)
+    !!en;
+  !!en;
+!!en;
 
 *** Castles ***
 !?FU8176;
@@ -663,23 +642,54 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Witch Hut ***
 !?FU8177;
+!#VA(usedY[6]:y);
 !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y2;        (Get amount of mithril)
 !!FU&y2<2:E;       (Check if enough Mithril)
 
-!!WHv4/v5/v6:S?y1; (Get skill)
-!!UN:N4/z1/y1;     (Get skill name)
-!!CM:R0;           (disable standard popup)
-!!IF:Q1/7/2/2/z136043;
-!!FU&-1:E;
+!!WHv4/v5/v6:S?(currentSkill:y); (Get skill)
 
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-2;   (Take Mithril)
-!!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?y2;
-!!POv4/v5/v6:H?y6;
-!!VRy6:+1;
-!!VRy2:Sdy6 Rd/y2;
-!!VRy2:R0/0/26;
-!!VRy2&y2=>y1:+1; (Draw random skill)
-!!WHv4/v5/v6:Sy2; (Set skill)
+!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+!!VR(skillBanPtr:y):S(gameMgr) +321112;
+!!FU(NewIntArray):P?(skills:y);
+
+!!re i/0/(SEC_SKILL_LAST);
+  !!co&i=(currentSkill:y);
+  !!UN:C(skillBanPtr)/i/(UNC_INT8)/?(isBanned:y);
+  !!if&(isBanned)=(FALSE);
+    !!FU(Array_Push):P(skills)/i;
+  !!en;
+!!en;
+
+!!SN:M(skills)/?(size:y);
+
+!!if&(size);
+
+
+  !!UN:N4/z1/(currentSkill:y);     (Get skill name)
+  !!CM:R0;           (disable standard popup)
+  !!VR(currentSkill):*3 +3;
+  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(currentSkill)/(RES_MITHRIL)/2/(MSG_TYPE_QUESTION)/z136043;
+
+  !!if&1;
+    !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-2;   (Take Mithril)
+    !!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?(newSeed:y);
+    !!POv4/v5/v6:H?y6 Hd1;                        [setting new value for next time rng;]
+    !!VR(newSeed):+y6;
+    !!VR(size):-1;
+    !!FU(WOG_SafeRand):P0/(size)/(newSeed:y)/?i;
+    !!SN:M(skills)/i/?(newSkill:y);
+    !!WHv4/v5/v6:S(newSkill:y); (Set skill)
+  !!en;
+!!en;
+
+
+
+
+
+
+
+
+
 
 *** Water Wheel ***
 !?FU(WOG_36_UpgradeWaterWheel);

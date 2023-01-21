@@ -64,23 +64,23 @@ ________________________________________________________________________________
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
 !?FU(OnKeyPressed_AdvMap)&x1=(KEY_W)/999;     
-  !!VRi^Current_Battle_Type%i(timerOwner)^:Sd<<1;
-  !!if&i^Current_Battle_Type%i(timerOwner)^>(GEM_BATTLE_TYPE_ASK_BEFORE_START);
-    !!VRi^Current_Battle_Type%i(timerOwner)^:S(GEM_BATTLE_TYPE_NO_AUTO);
+
+  !!VR(lol:y):Si^Current_Battle_Type%i(timerOwner)^ Sd<<1;
+  !!if&(lol)>(GEM_BATTLE_TYPE_ASK_BEFORE_START);
+    !!VR(lol):S(GEM_BATTLE_TYPE_NO_AUTO);
   !!en;
-  !!FU(gem_Button_Switch):P;                 
-  !!FU(gem_Autobattle_Check_And_Sound):P(TRUE);
+  !!VRi^Current_Battle_Type%i(timerOwner)^:S(lol);
+  !!FU(gem_Button_Switch):P(lol);                 
+  !!FU(gem_Autobattle_Check_And_Sound):P(lol)/(TRUE);
 
 !?FU(gem_Autobattle_Check_And_Sound);
-!#VA(playSound:x);
-  !!if|i^Current_Battle_Type%i(timerOwner)^=(GEM_BATTLE_TYPE_NO_AUTO);
-    !!UN:C6916044/4/0;
-  !!el:;
-    !!UN:C6916044/4/1;
-  !!en;
+!#VA(battleType:x) (playSound:x);
+
+  !!VR(setAuto:y):S(battleType) -1 F0/1;
+  !!UN:C6916044/4/(setAuto);
 
   !!if&(playSound);
-    !!FU(IntLog2):Pi^Current_Battle_Type%i(timerOwner)^/?(stringId:y);
+    !!FU(IntLog2):P(battleType)/?(stringId:y);
     !!VR(stringId):+1;
     !!SN:T^gem.map.battle%(stringId)^/?(msg:z);
     !!IF:L^%(msg:z)^;
@@ -95,7 +95,6 @@ ________________________________________________________________________________
 
   !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
     !!VRi^gem_replay_counter^:S1;
-
     !!BA:Q0;
     !!FU:E;                             [and exit func]
   !!en;
@@ -184,7 +183,7 @@ i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
       !!VRi^gem_replay_counter^:S0;
     !!en;
 
-    !!FU(gem_Button_Switch):P;
+    !!FU(gem_Button_Switch):Pi^Current_Battle_Type%i(timerOwner)^;
 
     !!VRi^gem_BeforeBattleResultClose^:S(FALSE);
 
@@ -197,14 +196,14 @@ i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
     !!OW:Ii/?(isAi:y)/?(isDead:y);
 
     !!if&(isAi)=(FALSE)/(isDead)=(FALSE);
-      !!SN:W^Current_Battle_Type%i^/8;  [ set "ask -before battle"]
+      !!SN:W^Current_Battle_Type%i^/(GEM_BATTLE_TYPE_ASK_BEFORE_START);  [ set "ask -before battle"]
     !!en;
   !!en;
 
   !!SN:W^gem_Quick_Combat_Check^/(FALSE);
 !!en;
 
-!!FU(gem_Button_Switch):P;
+!!FU(gem_Button_Switch):Pi^Current_Battle_Type%i(timerOwner)^;
 
 !?FU(OnGameEnter);
   !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
@@ -215,41 +214,34 @@ i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
 
 !?FU(OnEveryDay)&1000;
 
-!!FU(gem_Button_Switch):P;&i^timerDay^>0
-!!FU(gem_Autobattle_Check_And_Sound):P0;
+!!FU(gem_Button_Switch):Pi^Current_Battle_Type%i(timerOwner)^;&i^timerDay^>0
+!!FU(gem_Autobattle_Check_And_Sound):Pi^Current_Battle_Type%i(timerOwner)^/0;
+
 
 !?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_RELEASED);
+  
+  
+      !#VA(bttns[4]:x);
+      !!VR(bttns[0]):Ci^manualf_Button_ID^/i^automf_Button_ID^/i^autowm_Button_ID^/i^choiceB_Button_ID^;
+      !!re i/0/(bttns[SIZE])/1/-1;
+        !!if&(bttns[i])=i^mouse_item^;
 
-    !!if&i^manualf_Button_ID^=i^mouse_item^:;
-      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_NO_AUTO);
-      !!FU(gem_Button_Switch):P;
-      !!FU(gem_Autobattle_Check_And_Sound):P1; !!FU:E;
-    !!en;
+          !!VRi^Current_Battle_Type%i(timerOwner)^:S1 Sd<<i;
+          !!FU(gem_Button_Switch):Pi^Current_Battle_Type%i(timerOwner)^;
+          !!FU(gem_Autobattle_Check_And_Sound):P(TRUE);
+          !!br;
+        !!en;
 
-    !!if&i^automf_Button_ID^=i^mouse_item^:;
-      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_AUTO_MANA);
-      !!FU(gem_Button_Switch):P;
-      !!FU(gem_Autobattle_Check_And_Sound):P1;!!FU:E;
-    !!en;
-
-    !!if&i^autowm_Button_ID^=i^mouse_item^:;
-      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
-      !!FU(gem_Button_Switch):P;
-      !!FU(gem_Autobattle_Check_And_Sound):P1;!!FU:E;
-    !!en;
-
-    !!if&i^choiceB_Button_ID^=i^mouse_item^:;
-      !!SN:W^Current_Battle_Type%i(gem_CurPlay)^/(GEM_BATTLE_TYPE_ASK_BEFORE_START);
-      !!FU(gem_Button_Switch):P;
-      !!FU(gem_Autobattle_Check_And_Sound):P1;!!FU:E;
-    !!en:;
+      !!en;
 
 
 !?FU(gem_Button_Switch)&999;
+  !#VA(battleType:x);
   !!UN:J8/1/^gem_interface.pac^; !!FU&-1:E;
   !!SN:F^GetButtonID^/^indicator^; !!FU&v1<1:E;
 
-  !!VR(setFrame:y):Si^Current_Battle_Type%i(gem_CurPlay)^;
+  !!FU(IntLog2):P(battleType:x)/?(setFrame:y);
+  !!VR(setFrame:y):*2;S(battleType:x) -1;i^Current_Battle_Type%i(gem_CurPlay)^;
   !!VR(setFrame)&(setFrame)=(GEM_BATTLE_TYPE_ASK_BEFORE_START):-1;
   !!FU(H3Dlg_GetRootDlg):P?(rootDlg:y);
   !!FU(H3Dlg_GetCurrentDlg):P?(currentDlg:y);
