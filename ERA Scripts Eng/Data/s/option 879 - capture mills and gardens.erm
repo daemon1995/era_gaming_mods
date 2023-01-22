@@ -12,14 +12,16 @@ ZVSE2
 ** Tmp variables : v1-v3, z1
 ** Timers        : -
 ** Functions     : -
-** PO-values     : V0,V1 (mills and leprechaun's gardens squares)
+** PO-values     : V0, V1 (mills and leprechaun's gardens squares)
 
 ** дублирование стандартных триггеров
 
 28.07.2022 Fully rewritten by daemon_n
 
+
 !?FU(ES_OnPlayerVisit_MystGarden)&i^ES_879_isAuto^=(FALSE);
   !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
+
   !!if&999;
     !!GD2:B?(resType:y);
     !!VR(value:y):S5;
@@ -29,6 +31,7 @@ ZVSE2
 
 !?FU(ES_OnPlayerVisit_WaterWheel)&i^ES_879_isAuto^=(FALSE);
   !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
+
   !!if&999;
     !!WM2:B?(value:y);
     !!VR(value):*500;
@@ -46,13 +49,18 @@ ZVSE2
 
 !?FU(ES_879_ShowMessage)&999;
 !#VA(owner:x) (objType:x) (res:x) (value:x);
+
   !!if&(owner)<>i^timerOwner^;
     !!if&(owner)=(NO_OWNER);
       !!SN:T^es.879.%x2_Gives^/?(msg:z);
       !!IF:Q2/x3/x4/1/(msg);
     !!el;
-      !!SN:T^es.879.%x2_Owned^/?(msg:z);
-      !!IF:M(msg);
+      !!OW:T(owner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
+
+      !!if&(team)<>(newTeam);
+        !!SN:T^es.879.%x2_Owned^/?(msg:z);
+        !!IF:M(msg);
+      !!en;
     !!en;
   !!el;
     !!SN:T^es.879.%x2_Sent^/?(msg:z);
@@ -61,16 +69,27 @@ ZVSE2
 
 !?FU(ES_879_OnVisitResourceObject);
 !#VA(addr:x) (owner:x);
+
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(coords:y);
   !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);/8/?(sth:y)/8;
   !!VRv2:C(x)/(y)/(z);
-  !!PO(x)/(y)/(z):O?(owner) Oi^timerOwner^;
-  !!if&(owner)<>(NO_OWNER)/(owner)<>i^timerOwner^;
-    !!PO(x)/(y)/(z):V0/0 V1/0;
+  !!PO(x)/(y)/(z):O?(owner);
+
+  !!if&(owner)=(NO_OWNER);
+    !!PO(x)/(y)/(z):Oi^timerOwner^;
+    !!PO(x)/(y)/(z):V0/0 V1/0;          [res type and num]
+  !!el;
+    !!OW:T(owner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
+
+    !!if&(team)<>(newTeam);
+      !!PO(x)/(y)/(z):Oi^timerOwner^;
+      !!PO(x)/(y)/(z):V0/0 V1/0;        [res type and num]
+    !!en;
   !!en;
 
   !!if&(ERM_FLAG_IS_HUMAN);
-    !!HE-1:P?(xH:y)/?(yH:y)/?(zH:y);
+    !!HE(CURRENT_HERO):P?(xH:y)/?(yH:y)/?(zH:y);
+
     !!if|(xH)<>(x)/(yH)<>(y)/(zH)<>(z);
       !!VRi^ES_879_isRMC^:S(TRUE);
     !!en;
@@ -80,15 +99,17 @@ ZVSE2
 !?FU(OnAdventureMapRightMouseClick_Quit)&i^ES_879_isRMC^;
   !!VRi^ES_879_isRMC^:S(FALSE);
 
-!?FU(OnAdventureMapRightMouseClick);
+!?FU(OnAdventureMapRightMouseClick)&i^ES_879_isRMC^<>(TRUE);
   !!UN:P879/?(wogOption:y);               [провер€ем включена ли опци€]
-  !!FU|(wogOption)<>(TRUE)/i^ES_879_isRMC^:E;
+  !!FU&(wogOption)<>(TRUE):E;
 
   !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer)/?(activeHero:y);
+
   !!if&(activeHero)<>(NO_HERO);
     !!HE(activeHero):P?(x:y)/?(y:y)/?(z:y);
     !!FU&i^mouse_mapX^=(x)/i^mouse_mapY^=(y)/i^mouse_mapZ^=(z):E; // exit if click on hero
   !!en;
+
   !!CM:P?(x:y)/?(y:y)/?(z:y);             [координаты клика]
 
   !!OB(x)/(y)/(z):T?(objType:y);          [тип объекта]
@@ -144,6 +165,7 @@ ZVSE2
 
   !!PO(x)/(y)/(z):O?(owner:y);
   !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(newHint:z);
+
   !!if&(owner)>(NO_OWNER);
     !!VR(ownerStrIndex:y):S(owner) +23;
     !!FU(ES_GetStringByFilename):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
@@ -153,8 +175,8 @@ ZVSE2
   !!MM:M^%(newHint)^;
 
 !?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1/i^timerOnce^; [поставка ресурсов владельцам мельниц/садов каждый первый день недели, начина€ с 8го дн€]
-  !!UN:P879/?y1;                [провер€ем включена ли опци€ в y1]
-  !!FU&y1=0:E;                  [выход, если опци€ не включена]
+  !!UN:P879/?(wogOption:y);             [провер€ем включена ли опци€ в y1]
+  !!FU&(wogOption)<>(TRUE):E;           [выход, если опци€ не включена]
 
   !!FU(NewIntArray):P8/?(liveArr:y); 
   !!re (playerID:y)/0/(PLAYER_LAST);
@@ -164,11 +186,13 @@ ZVSE2
 
   !!re i/0/(HERO_LAST_WOG);
     !!HEi:O?(owner:y);
+
     !!if&(owner)=(NO_OWNER);
       !!HEi:Z?(hero:y);
       !!br;
     !!en;
   !!en;
+
   !!VRi^ES_879_isAuto^:S(TRUE);
   !!FU(ES_879_CollectResources):P4864048/(OBJ_MYSTICAL_GARDEN)/(hero)/(liveArr);
   !!FU(ES_879_CollectResources):P4880976/(OBJ_WATER_WHEEL)/(hero)/(liveArr);
@@ -182,13 +206,16 @@ ZVSE2
 !#VA(x:y) (y:y) (z:y); 
 
 !!VR(x):S-1;                                                  [init as start]
+
 !!re i;                                                       [endless loop]
   !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y)/(z); 
   !!br&(x)<0;                                                 [exit loop if nothing found]
 
   !!PO(x)/(y)/(z):O?(owner:y);                                [get obj owner]
+
   !!if&(owner)<>(NO_OWNER);                                   [if there is one]
     !!SN:V(liveArr)/(owner)/?(isAlive:y);                     [check if lives]
+
     !!if&(isAlive);
       !!UN:C(hero)/34/1/(owner);                              [set hero as obj owner color]
       !!OB(x)/(y)/(z):T?(heroCheck:y);
@@ -210,6 +237,7 @@ ZVSE2
 
 !?FU(ES_879_AdjustStoredRes);
 !#VA(x:x) (y:x) (z:x) (objType:x); 
+
 !!if&(objType)=(OBJ_MYSTICAL_GARDEN);
   !!GD(x)/(y)/(z):B?(resType:y);
   !!VR(value:y):S5;
@@ -221,13 +249,12 @@ ZVSE2
 !!el;
   !!ML(x)/(y)/(z):B?(resType:y)/?(value:y);
 !!en;
+
 !!PO(x)/(y)/(z):V0/(resType) V1/(value);
 
-
-
-** end
 !?FU(ES_879_GetObjectName);
 !#VA(x:x) (y:x) (z:x) (objType:x) (objNamePtr:x);
+
   ; Set up object names
   !!FU(ES_GetStringByFilename):P^objnames^/(objType)/?(objName:z); [windmill]
   ; Set up "Improved" object text if Mithril Enhancedment is enabled
@@ -236,3 +263,5 @@ ZVSE2
   !!PO(x)/(y)/(z)&(enhMithril):N?(isUpg);
   !!VR(objName)&(isUpg):S^%T(es.879.improved)%(objName)^;
   !!VR(objNamePtr):Z(objName);
+
+** end
