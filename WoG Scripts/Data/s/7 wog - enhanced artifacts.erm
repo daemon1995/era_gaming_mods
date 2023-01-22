@@ -539,32 +539,34 @@ ZVSE2
 ** end of function
 
 ** start of object trigger - monsters
-!?OB(OBJ_MONSTER)&i^wog_71_enabled^;    [object trigger - monsters]
-!!VRi^wog_71_origAggression^:S0;
 
-!!MO998:R?(aggression:y)/1;             [get aggression level]
+!?FU(WOG_CreateERMHook)&i^wog_71_enabled^;
+!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplo);
+!!SN:Ex1/1/4879500/(WOG_71_OnMonsterAttackDiplo);
 
-!!if&(aggression)>0/(aggression)<10;
-  !!VR(origAggression:y):S(aggression); [copy to (oriAggression)]
-  !!HE(CURRENT_HERO):A2/(ART_STATESMANS_MEDAL)/?(backpacked:y)/?(medalEquipped:y); [(backpacked), (medalEquipped), see if hero has a Statesman's Medal]
-  !!VR(aggression)&(medalEquipped)>0:-1;            [reduce by 1 if not compliant or savage]
-  !!HE(CURRENT_HERO):A2/(ART_DIPLOMATS_RING)/?(backpacked)/?(ringEquipped:y); [(backpacked), (ringEquipped), see if hero has a Diplomat's Ring]
-  !!VR(aggression)&(ringEquipped)>0:-1;            [reduce by 1 if not compliant or savage]
-  !!HE(CURRENT_HERO):A2/(ART_AMBASSADORS_SASH)/?(backpacked)/?(sashEquipped:y); [(backpacked), (sashEquipped), see if hero has an Ambassador's Sash]
-  !!VR(aggression)&(sashEquipped)>0:-1;            [reduce by 1 if not compliant or savage]
 
-  !!if&i^wog_71_newCombiArtEnabled^;
-    !!VR(aggression)&(medalEquipped)>0/(ringEquipped)>0/(sashEquipped)>0:-1; [if hero has all 3 reduce by 1 if not compliant or savage]
+!?FU(WOG_71_GetDiploBonus);
+!#VA(heroId:x) (result:x);
+!!VR(result):S(NULL);
+!!if&(heroId)<>(NO_HERO);
+  !!re i/0/2;
+    !!VR(artId:y):Si +(ART_STATESMANS_MEDAL);
+    !!HE(heroId):A2/(artId)/?(backpacked:y)/?(equipped:y);
+    !!VR(result)&(equipped):+1;
   !!en;
-
-  !!if&(aggression)<(origAggression);
-    !!VR(aggression):F0/10;
-    !!MO998:R(aggression)/1;            [set new aggression level]
-    !!VRi^wog_71_origAggression^:S(origAggression);
-  !!en;
+  !!VR(result)&(result)=3:+1;
 !!en;
 
-** end of object trigger - monsters
+!?FU(WOG_71_OnMonsterAttackDiplo);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/2/?(activeHeroId:y);
+!!FU(WOG_71_GetDiploBonus):P(activeHeroId:y)/?(result:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d(result);?(ebp:y) C(ebp)/-4/4/d(counter) C(ebp)/-4/4/?y66;?(value:y);
+
+!?FU(WOG_71_OnMonsterClickDiplo);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/2/?(activeHeroId:y);
+!!FU(WOG_71_GetDiploBonus):P(activeHeroId:y)/?(result:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/d(result);?(ebp:y) C(ebp)/-4/4/d(counter) C(ebp)/-4/4/?y66;?(value:y);
+
 
 ** start of artifact trigger
 ; Trigger for equipping new combination artifact pieces
