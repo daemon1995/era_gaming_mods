@@ -246,8 +246,15 @@ ZVSE2
   !!FU(WOG_39_GetSpellBySkill):P(specSkill)/?(spellID:y)/?(isBuf:y);
 
   !!if&(spellID)<>(NO_SPELL);
-    !!VR(oppSide:y)&(isBuf):S(side);
-    !!FU(WOG_39_SetCreatureBuffs):P(side)/(oppSide)/(spellID)/5;
+    !!FU(WOG_Battle_CanCast):P(side)/(TRUE)/?(result:y);
+    !!if&(result:y);
+      !!VR(oppSide:y)&(isBuf):S(side);
+      !!FU(WOG_Battle_SetSideSpellEffects):P(side)/(oppSide)/(spellID)/5/(SKILL_EXPERT)/(FALSE);
+      !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+      !!SN:E4625200/(CALLCONV_THISCALL)/(cmbMgr);         [recalc luck and morale]
+      !!SN&i^battle_isVisible^:D;
+    !!en;
+
   !!el&(specSkill)=(SKILL_EAGLE_EYE);
     !!FU(WOG_39_AddCreatureFlags):P(side)/1/(MON_FLAG_FLYER);
   !!el&(specSkill)=(SKILL_MYSTICISM);
@@ -285,26 +292,6 @@ ZVSE2
       !!BMi&l<=(maxLevel):Fd|(flag);
     !!en;
   !!en;
-
-!?FU(WOG_39_SetCreatureBuffs);
-!#VA(casterSide:x) (targetSide:x) (spell:x) (duration:x);
-
-  !!FU(WOG_Battle_CanCast):P(casterSide)/(TRUE)/?(result:y);
-
-  !!if&(result);
-    !!VR(start:y):S(targetSide) *(BATTLE_STACKS_PER_SIDE);
-    !!VR(end:y):S(start) +20;
-
-    !!re i/(start)/(end);
-      !!FU(WOG_Battle_CanStackReceiveSpell):Pi/(spell)/(casterSide)/?(result:y);
-      !!BMi&(result):M(spell)/(duration)/(SKILL_EXPERT);
-    !!en;
-
-    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
-    !!SN:E4625200/(CALLCONV_THISCALL)/(cmbMgr);         [recalc luck and morale]
-    !!SN&i^battle_isVisible^:D;
-  !!en;
-
 
 
 -----------------------When next monster gain control---------------------------

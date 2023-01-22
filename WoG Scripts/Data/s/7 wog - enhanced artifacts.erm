@@ -58,7 +58,10 @@ ZVSE2
 **     The Vestments of Authority: monster aggression is further reduced by 1
 ** Ring of Life                                                            {Treasure}
 ** Vial of Lifeblood                                                       {Treasure}
-
+!?FU(WOG_CreateERMHook)&i^wog_71_enabled^;
+!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplo);
+!!SN:Ex1/1/4879500/(WOG_71_OnMonsterAttackDiplo);
+!!SN:Ex1/1/5137385/(WOG_71_OnMonGetSpec);
 
 
 ** All artifacts function for the AI if worn.
@@ -327,16 +330,7 @@ ZVSE2
 
 ** start of pre-battle trigger **
 !?FU(OnBeforeBattleUniversal)&i^wog_71_enabled^;
-!!if&i^wog_71_origAggression^>0;
-  !!OB998:T?(type:y);                          [check for monster stack at position]
 
-  !!if&(type)=(OBJ_MONSTER);
-    !!MO998:G?(qty:y);                         [check for monsters at position]
-    !!MO998&(qty)>0:Ri^wog_71_monsterAggression^/1; [reset monster aggression level if i^wog_71_origAggression^ is set (for diplo arts)]
-  !!en;
-
-  !!VRi^wog_71_origAggression^:S0;
-!!en;
 
 !!BA:H0/?y-3;                                  [get attacking hero #]
 !!HEy-3&y-3>-1:A2/76/?y-4/?y-5 A2/77/?y-4/?y-6 A2/78/?y-4/?y-7 A2/139/?y-4/?y-8;  [see if attacker has Conjuring items or Ring of the Magi]
@@ -359,10 +353,42 @@ ZVSE2
 ** start of battlefield start trigger
 !?FU(OnSetupBattlefield)&i^wog_71_enabled^;
 
-!!BA:H0/?v7057;                                       [get attacking hero #]
-!!FU7034&v7057>-1:P-1/20;
-!!BA:H1/?v7057;                                       [get defending hero #]
-!!FU7034&v7057>-1:P20/-1;
+!#VA(arts[10]:y) (spells[10]:y) (sides[10]:y);
+!!VR(arts[0]):C(ART_PENDANT_OF_DISPASSION)/(ART_PENDANT_OF_SECOND_SIGHT)/(ART_PENDANT_OF_HOLINESS)/(ART_PENDANT_OF_FREE_WILL)/(ART_PENDANT_OF_TOTAL_RECALL)/
+(ART_ORB_OF_VULNERABILITY)/(ART_ORB_OF_THE_FIRMAMENT)/(ART_ORB_OF_SILT)/(ART_ORB_OF_TEMPESTUOUS_FIRE)/(ART_ORB_OF_DRIVING_RAIN);
+!!VR(spells[0]):C(SPELL_BLOODLUST)/(SPELL_AIR_SHIELD)/(SPELL_BLESS)/(SPELL_STONE_SKIN)/(SPELL_PRECISION)/
+73/(SPELL_PROTECTION_FROM_AIR)/(SPELL_PROTECTION_FROM_EARTH)/(SPELL_PROTECTION_FROM_FIRE)/(SPELL_PROTECTION_FROM_WATER);
+!!VR(sides[0]):C0/0/0/0/0/1/0/0/0/0;
+!!re i/0/i^battle_hero_vs_hero^;
+  !!re j/0/(arts[SIZE])/1/-1;
+    !!HEi^battle_hero_%i^:A2/(arts[j])/?y99/?(isEqipped:y);
+    !!if&(isEqipped);|i;
+      !!VR(targetSide:y):Si X(sides[j]);
+      !!FU(WOG_Battle_SetSideSpellEffects):Pi/(targetSide)/(spells[j])/50/(SKILL_NOT_LEARNED)/(FALSE);
+    !!en;
+  !!en;
+!!en;
+
+!!FU(WOG_CleanUpSpells):P73/(WOG_StackIsLiving);
+
+!?FU(WOG_StackIsLiving);
+!#VA(stackId:x) (result:x);
+!!BM(stackId):F?f;
+!!VR(result):Sf &(MON_FLAG_ALIVE);
+
+!?FU(WOG_CleanUpSpells);
+!#VA(spellId:x) (callback:x);
+!!re i/0/(BATTLE_STACK_LAST);
+  !!BMi:N?n T?t;
+  !!if&n/t<>(NO_MON);
+    !!FU(callback):Pi/?(result:y);
+    !!if&(result)=(FALSE);
+      !!BMi:Z?(stack:y);
+      !!SN:E4473392/(CALLCONV_THISCALL)/(stack)/(spellId);
+    !!en;
+  !!en;
+!!en;
+
 ** end of battlefield start trigger
 
 ** start of magic resist trigger
@@ -377,90 +403,43 @@ ZVSE2
 !!VRy-2&y-3=1/y-1>20/v7134>100:*v7134 :100;         [calculate new damage - defender cast]
 !!MR&y-3=1/y-1>20/v7134>100:Dy-2;                   [set new damage - defender cast]
 
+!?FU(WOG_71_OnMonGetSpec);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y)  C(ebp)/8/4/?(monType:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monInfo:y);
 
-** end of magic resist trigger
 
-
-** function to check for battle artifacts     (Parameters: x1=base hero stack, x2=base enemy stack)
-!?FU7034;
-!!VRy1:Sx1;                                 [hero's base stack number]
-!!VRy2:Sx2;                                 [enemy's base stack number]
-!!HEv7057:A2/100/?y7/?y8;                   [see if hero has a Pendant of Focused Rage (Dispassion)]
-!!DO7035/0/20/1&y8>0:Py1/43/50/0;           [prepare to bloodlust hero's troops]
-!!HEv7057:A2/101/?y7/?y8;                   [see if hero has a Pendant of Second Sight]
-!!DO7035/0/20/1&y8>0:Py1/28/50/0;           [prepare to air shield hero's troops]
-!!HEv7057:A2/102/?y7/?y8;                   [see if hero has a Pendant of Holiness]
-!!DO7035/0/20/1&y8>0:Py1/41/50/0;           [prepare to bless hero's troops]
-!!HEv7057:A2/103/?y7/?y8;                   [see if hero has a Pendant of Life]
-!!DO7036/0/20/1&y8>0:Py1/1/1;               [prepare to add hit points to hero's living troops]
-!!HEv7057:A2/104/?y7/?y8;                   [see if hero has a Pendant of Death]
-!!DO7036/0/20/1&y8>0:Py1/5/2;               [prepare to add attack to hero's undead troops]
-!!DO7036/0/20/1&y8>0:Py1/5/3;               [prepare to add defense to hero's undead troops]
-!!DO7036/0/20/1&y8>0:Py1/1/4;               [prepare to add speed to hero's undead troops]
-!!HEv7057:A2/105/?y7/?y8;                  [see if hero has a Pendant of Resolve (Free Will)]
-!!DO7035/0/20/1&y8>0:Py1/46/50/0;           [prepare to stoneskin hero's troops]
-!!HEv7057:A2/107/?y7/?y8;                   [see if hero has a Pendant of True Aim (Total Recall)]
-!!DO7035/0/20/1&y8>0:Py1/44/50/0;           [prepare to precision hero's troops]
-!!HEv7057:A2/92/?y7/?y8;                    [see if hero has a Sphere of Permanence]
-!!DO7036/0/20/1&y8>0:Py1/10/6;              [prepare to add 10 health to hero's non-living non-undead troops]
-!!HEv7057:A2/93/?y7/?y8;                    [see if hero has an Orb of Vulnerability]
-!!DO7035/0/20/1&y8>0:Py2/73/50/0;           [prepare to disease opponent's troops]
-!!HEv7057:A2/79/?y7/?y8;                    [see if hero has an Orb of the Firmament]
-!!DO7035/0/20/1&y8>0:Py1/30/50/0;           [prepare to prot air hero's troops]
-!!HEv7057:A2/80/?y7/?y8;                    [see if hero has an Orb of Silt ]
-!!DO7035/0/20/1&y8>0:Py1/33/50/0;           [prepare to prot earth hero's troops]
-!!HEv7057:A2/81/?y7/?y8;                    [see if hero has an Orb of Tempestuous Fire]
-!!DO7035/0/20/1&y8>0:Py1/31/50/0;           [prepare to prot fire hero's troops]
-!!HEv7057:A2/82/?y7/?y8;                    [see if hero has an Orb of Driving Rain]
-!!DO7035/0/20/1&y8>0:Py1/32/50/0;           [prepare to prot water hero's troops]
-*!HEv7057:A2/76/?y7/?y8;                    [see if hero has a Collar of Conjuring]
-*!DO7036/0/20/1&y8>0:Py1/1/5;               [prepare to add to spells remaining of hero's troops]
-*!HEv7057:A2/77/?y7/?y8;                    [see if hero has a Ring of Conjuring]
-*!DO7036/0/20/1&y8>0:Py1/2/5;               [prepare to add to spells remaining of hero's troops]
-*!HEv7057:A2/78/?y7/?y8;                    [see if hero has a Cape of Conjuring]
-*!DO7036/0/20/1&y8>0:Py1/3/5;               [prepare to add to spells remaining of hero's troops]
-*!HEv7057:A2/139/?y7/?y8;                   [see if hero has a Ring of the Magi]
-*!DO7036/0/20/1&y8>0:Py1/56/5;              [prepare to add to spells remaining of hero's troops]
-
-** end of function
-
-** function to spell troops         (Parameters: x1=stack, x2=spell, x3=rounds, x4=level)
-!?FU7035;
-!!VRx1:+1;                                  [increment stack number]
-!!BMx1:F?y1;                                [read stack flags: y1]
-!!VRy1&x2=44:&4;                            [if spell is Precision check if stack is a shooter]
-!!BMx1&y1>0/x2=44:Mx2/x3/x4;                [cast precision only on shooter stacks]
-!!BMx1&x2<>44:Mx2/x3/x4;                    [Fix Valery, y1 returned negative values if dragons]
-
-** end of function
-
-** function to edit monster stats   (Parameters: x1=stack, x2=stat bonus, x3=filter)
-!?FU7036;
-
-!!VRx1:+1;                                           [increment stack number]
-!!VRi:S1;                                            [set i to 1]
-!!BMx1&x3>0:F?i;                                     [read flags if P3 is set]
-!!VRi&x3=1:&16;                                      [just look at alive bit]
-!!VRi|x3=2/x3=3/x3=4:&262144;                        [just look at undead bit]
-!!VRi&x3=6:&262160;                                  [just look at alive & undead bits]
-!!BMx1&i>0/x3=1:T?y2;                                [get monster type]
-!!MA&i>0/x3=1/y2>-1:Ly2/?y3;                         [get monster level]
-!!VRx2&i>0/x3=1/y2>-1/y3=0:S1;                       [level 1 = 1]
-!!VRx2&i>0/x3=1/y2>-1/y3=1:S3;                       [level 2 = 3]
-!!VRx2&i>0/x3=1/y2>-1/y3=2:S6;                       [level 3 = 6]
-!!VRx2&i>0/x3=1/y2>-1/y3=3:S10;                      [level 4 = 10]
-!!VRx2&i>0/x3=1/y2>-1/y3=4:S15;                      [level 5 = 15]
-!!VRx2&i>0/x3=1/y2>-1/y3=5:S25;                      [level 6 = 25]
-!!VRx2&i>0/x3=1/y2>-1/y3=6:S50;                      [level 7 = 50]
-
-!!BMx1&i>0/x3=1:Hdx2;                                [set hit points]
-!!BMx1&i>0/x3=2:Adx2;                                [set attack]
-!!BMx1&i>0/x3=3:Ddx2;                                [set defense]
-!!BMx1&i>0/x3=4:Sdx2;                                [set speed]
-!!BMx1&i>0/x3=5:Edx2;                                [set spells remaining]
-!!BMx1&i=0/x3=6:Hdx2;                                [set hit points]
-
-** end of function
+!!HE(heroId:y):A2/(ART_PENDANT_OF_LIFE)/?y99/?(isEqipped:y);                   [see if hero has a Pendant of Life]
+!!if&(isEqipped:y);
+  !!MA:X(monType)/?f;
+  !!VRf:&(MON_FLAG_ALIVE);
+  !!if&f;
+    !!MA:L(monType)/?l;
+    !!if&l<5;
+      !!VR(saveL:y):Sl +1;
+      !!VRl:S1 +(saveL:y) *(saveL:y) :2;
+    !!el;
+      !!VRl:-5 *25 +25;
+    !!en;
+    !!UN:C(monInfo)/76/4/dl;[add hit points to hero's living troops]
+  !!en;
+!!en;
+!!HE(heroId:y):A2/(ART_SPHERE_OF_PERMANENCE)/?y99/?(isEqipped:y);                   [see if hero has a Sphere of Permanence]
+!!if&(isEqipped:y);
+  !!MA:X(monType)/?f;
+  !!VRf:&262160;                                  [just look at alive & undead bits]
+  !!if&f=0;
+    !!UN:C(monInfo)/76/4/d10; [ add 10 health to hero's non-living non-undead troops]
+  !!en;
+!!en;
+!!HE(heroId:y):A2/(ART_PENDANT_OF_DEATH)/?y99/?(isEqipped:y);                   [see if hero has a Pendant of Death]
+!!if&(isEqipped:y);
+  !!MA:X(monType)/?f;
+  !!VRf:&(MON_FLAG_UNDEAD);
+  !!if&f;
+    !!UN:C(monInfo)/80/4/d1 C(monInfo)/84/4/d5 C(monInfo)/88/4/d5; [to add attack,defense and speed to hero's undead troops]
+  !!en;
+!!en;
 
 ** function to check when artifacts are put on
 !?FU7037;             [artifacts on]
@@ -540,9 +519,8 @@ ZVSE2
 
 ** start of object trigger - monsters
 
-!?FU(WOG_CreateERMHook)&i^wog_71_enabled^;
-!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplo);
-!!SN:Ex1/1/4879500/(WOG_71_OnMonsterAttackDiplo);
+
+
 
 
 !?FU(WOG_71_GetDiploBonus);
