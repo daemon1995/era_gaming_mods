@@ -1,0 +1,183 @@
+ZVSE2
+
+
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4854758/(gem_Before_CB_MSG_Hook);[0x4A13E6 - for common CB]
+!!SN:Ex1/1/4857390/(gem_Before_CB_MSG_Hook);[0x4A1E56 - for Dragon Utopia]
+!!SN:Ex1/1/4899257/(gem_Before_CB_MSG_Hook);[0x4AC1B9 - for Crypt/Derelict Ship/Shipwreck]
+!!SN:Ex1/1/4899229/(gem_Crypt_SkipMsgIfVisited); [0x4AC19D - for plundered Crypt]
+!!SN:Ex1/1/4283118/(gem_AdvMgr_Get_Object_RightClick_Descr); [00415AEE - new RMC hints for CB ]
+!!SN:Ex1/1/5209386/(gem_BeforeMultyPicDlg);
+
+!!UN:C4275747/1/4/6685616;  [\n\0 -> \n\n\0 for getCrBank text]
+
+
+!?FU(gem_BeforeMultyPicDlg)&i^WOG_DlgAtRmc^;  [Pinning dialog window to object coordinates ]
+!!CM:A?(x:y)/?(y:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(xPos:y) C(ebp)/12/4/?(yPos:y);
+!!UN:C(ebp)/8/4/(x:y) C(ebp)/12/4/(y:y);
+
+
+!?FU(gem_AdvMgr_Get_Object_RightClick_Descr);  [Replacing CB guard text description with pictures]
+!!VRi^isRmcHint^:S(TRUE);  [Set RMC hint flag]
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!SN:O?(x)/?(y)/?(z);
+!!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y);
+
+!!if|(objType)=16/(objType)=84/(objType)=25;
+  !!CB(x)/(y)/(z):V?(bitMask:y) T?(isPlundered:y);           [Get bit mask of object visiting by all players]
+  !!OW:C?y99/?(clickedPlayer:y);
+  !!VR(playerBit:y):S1 Sd<<(clickedPlayer:y);                 [1 + offset for each next player]
+  !!VR(bitMask):&(playerBit);                             [Once visited, reveal the crypt guards to the player]  ; Get the information about CB
+  !!if&(bitMask)/(isPlundered:y)=(FALSE);
+    !!FU(gem_CreatureBankCalcGuardsAndSetText):P(x)/(y)/(z)/(objType)/(objSubtype);
+    ; Jump over standart cb dialog
+    !!SN:X?y99/0;                         [it is: return NO_EXEC_DEFAULT]
+  !!en;
+!!en;
+
+!!VRi^isRmcHint^:S(FALSE); [Reset RMC hint flag]
+
+
+!?FU(gem_Before_CB_MSG_Hook); [Main fuction - visiting CB]
+!!VRi^isVisit^:S(TRUE); [Set visit flag]
+!!OBv998/v999/v1000:T?(objType:y) U?(objSubtype:y);
+; Get the information about CB
+!!FU(gem_CreatureBankCalcGuardsAndSetText):Pv998/v999/v1000/(objType)/(objSubtype);
+; Jump over standart cb dialog
+!!SN:X?y99/0;                         [it is: return NO_EXEC_DEFAULT]
+
+!!if&(objType)=25;                    [Dragon Utopia: preventing crash]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4857435; [x1 - HookContext* c]
+!!en;
+
+!!VRi^isVisit^:S(FALSE); [Reset visit flag]
+
+
+!?OB84; [Reveal the crypt guards if player visited it]
+!!VR(playerBit:y):S1 Sd<<i^timerOwner^; [1 + offset for each next player]
+!!CB998:Vd|(playerBit);                 [Add object to player as revealed]
+
+
+!?FU(gem_Crypt_SkipMsgIfVisited); [Get crypt status. If plundered - skip the dialog with choice and jump to the "minus morale" dialog]
+!!CB998:T?(isVisited:y);
+
+!!if&(isVisited);
+  !!SN:X?y99/0;                                 [it is: return NO_EXEC_DEFAULT]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4899301; [0x4AC1E5; x1 - HookContext* c]
+!!en;
+
+
+!?FU(gem_GetCreatureBankId);
+!#VA(objType:x) (objSubtype:x) (objId:x);
+
+!!if&(objType)=85;
+  !!VR(objId):S7;
+!!el&(objType)=24;
+  !!VR(objId):S8;
+!!el&(objType)=84;
+  !!VR(objId):S9;
+!!el&(objType)=25;
+  !!VR(objId):S10;
+!!el;
+  !!VR(objId):S(objSubtype);     
+!!en;
+
+
+!?FU(gem_GetCreatureBankNameById);
+!#VA(objId:x) (objName:x);
+
+!!UN:C6750876/4/?(cbTablePtr:y);
+!!VR(offset:y):S(objId) *100 *(UNC_INT) +(UNC_INT);
+!!UN:C(cbTablePtr)/(offset)/4/?(strPtr:y);
+!!SN:B(strPtr)/d/?(objNameStr:z);
+
+!!VR(objName):Z(objNameStr);
+
+
+!?FU(gem_CreatureBankCalcGuardsAndSetText);
+!#VA(coord[3]:x) (objType:x) (objSubtype:x);
+
+!!FU(gem_GetCreatureBankId):P(objType)/(objSubtype)/?(objId:y);    [Get CB id]
+!!FU(gem_GetCreatureBankNameById):P(objId)/?(objName:z);           [Get CB name]
+; Loop for each stack in CB - calculate sum of each monster type
+!!FU(NewIntArray):P?(types:y) P?(nums:y); [create 2 empty arrays]
+
+!!re i/0/(ARMY_SLOT_LAST);
+  !!CB(coord[0])/(coord[1])/(coord[2]):Gi/?(guardType:y)/?(guardCount:y);
+  !!co&(guardType)=(NO_MON); [if empty guard(-1)] - continue
+  !!FU(Array_IndexOf):P(types)/(guardType)/?(index:y);
+  !!if&(index)<>(NO_MON);
+    !!SN:M(nums)/(index)/d(guardCount);
+  !!el;
+    !!FU(Array_Push):P(types:y)/(guardType) P(nums:y)/(guardCount);
+  !!en;
+!!en;
+
+!!SN:M(types)/?(typesSize:y); [get size of types-array]
+!!FU(NewIntArray):P?(pics:y);
+
+!!re i/0/(typesSize)/1/-1;
+  !!SN:M(types)/i/?t M(nums)/i/?n;
+  !!FU(gem_GetCreatureAmountString):Pn/?(guardCountDesc:z);
+  ; Building new monster desc
+  !!SN:H^monname^/t/1/?s^monName_%t^;
+  !!VR(monStringWithNumber:z):S(guardCountDesc) +^ ^ + s^monName_%t^;
+  !!SN:H^monname^/t/1/(monStringWithNumber);
+  !!FU(Array_Push):P(pics)/(PIC_TYPE_MONSTER)/t;
+!!en;
+
+!!FU(PrepareMultiPicDialog):P(pics);
+
+!!if&i^isVisit^;
+  ; Get the visit message
+  !!FU(gem_GetVisitString):P(objId)/(objName)/?(message:z);
+  ; Show a message 
+  !!IF:N(MSG_TYPE_QUESTION)/^%(message)^;
+!!en;
+
+!!if&i^isRmcHint^;
+  ; Get the RMC hint message
+  !!FU(WOG_GetGeneralText):P203/?(strGuardedBy:z); [Get "Guarded by" string]
+  !!VR(message:z):S^{%(objName)}%T(wog.endl)%T(wog.endl)%(strGuardedBy)^;
+  ; Show a message
+  !!VRi^WOG_DlgAtRmc^:S(TRUE);
+  !!IF:N(MSG_TYPE_POPUP)/^%(message)^;
+  !!VRi^WOG_DlgAtRmc^:S(FALSE);
+!!en;
+
+; Return old monster desc and clear global var
+!!re i/0/(typesSize)/1/-1;
+  !!SN:M(types)/i/?t;
+  !!SN:H^monname^/t/1/s^monName_%t^ W^monName_%t^;
+!!en;
+
+
+!?FU(gem_GetVisitString);
+!#VA(objId:x) (objName:x) (returnedVisitStr:x);
+
+!!if&(objId)=7;
+  !!FU(WOG_GetStringByFilename):P^advevent^/122/?(message:z);  [Shipwreck]
+!!el&(objId)=8;
+  !!FU(WOG_GetStringByFilename):P^advevent^/41/?(message:z);  [Derelict Ship]
+!!el&(objId)=9;
+  !!FU(WOG_GetStringByFilename):P^advevent^/119/?(message:z);  [Crypt]
+!!el&(objId)=10;
+  !!FU(WOG_GetStringByFilename):P^advevent^/47/?(message:z);  [Dragon Utopia]
+!!el;
+  !!FU(WOG_GetStringByFilename):P^advevent^/32/?(message:z);  [Common CB]
+  !!SN:E6388190/(CALLCONV_CDECL)/?(varStr:z)/(message:z)/^%z(objName)^; [Replace %s in message with z(objName)]
+  !!VR(message:z):S^{%z(objName)}%T(wog.endl)%T(wog.endl)%(varStr)^;     
+!!en;
+
+!!VR(returnedVisitStr):Z^%(message)^;
+
+
+!?FU(gem_GetCreatureAmountString);
+!#VA(totalGuardCnt:x) (returnedStr:x);
+
+!!SN:E4500144/(CALLCONV_FASTCALL)/(totalGuardCnt)/1;  [1 - without "yellow" numbers, 2 - with]
+!!SN:Bv1/d/?(strMonsterCount:z);
+!!VR(returnedStr):Z^%(strMonsterCount)^;
+
+**end
