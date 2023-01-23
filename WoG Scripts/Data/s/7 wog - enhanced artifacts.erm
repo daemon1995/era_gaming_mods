@@ -9,13 +9,8 @@ ZVSE2
 ** Special thanks to Fnord for help with bug fixing and script maintenance
 ** Artifact descriptions transferred to script75 on Jul. 18. 2004 by Hermann the Weird
 ** Updated Nov 2022 by Archer30 for new 
+** Updated Jan 2023 by daemon_n withperfect optimization and nativization kek 
 
-** Variables Used: i
-** V variables:    v998, v7057-v7079,  v7133-v7134
-** Z variables:    z1-z4
-** Y Variables:    y1-y10
-** Functions Used: 7030-7038
-** Timers Used: 51
 
 
 ** Improves many weak artifacts
@@ -59,9 +54,37 @@ ZVSE2
 ** Ring of Life                                                            {Treasure}
 ** Vial of Lifeblood                                                       {Treasure}
 !?FU(WOG_CreateERMHook)&i^wog_71_enabled^;
-!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplo);
+!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplo);    [hooks for the artifacts decreasing mon gression]
 !!SN:Ex1/1/4879500/(WOG_71_OnMonsterAttackDiplo);
-!!SN:Ex1/1/5137385/(WOG_71_OnMonGetSpec);
+
+!!SN:Ex1/1/5137385/(WOG_71_OnMonGetSpec);                               [hook for the artifacts giving mon stats]
+
+!!SN:Ex1/1/5134831/(WOG_71_OnHeroGetSorceryEffect);                     [now works for the AI and descriptions]
+
+!?FU(WOG_71_OnHeroGetSorceryEffect);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
+
+!!HE(heroId):A2/139/?y99/?(isRingOfMagi:y);                             [see if attacker has Conjuring items or Ring of the Magi]
+!!VR(bonus:y):S(NULL);
+!!if&(isRingOfMagi);
+  !!VR(bonus:y):S50;
+!!el;
+  !!re i/0/2;(end_value);
+    !!VR(artId:y):S(ART_COLLAR_OF_CONJURING) +i;
+    !!HE(heroId):A2/(artId)/?y99/?(isEqipped:y);
+    !!if&(isEqipped);
+      !!VR(artBonus:y):Si *5 +5;
+      !!VR(bonus:y):+(artBonus);
+    !!en; 
+  !!en;
+!!en;
+
+!!if&(bonus);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/12/4/?(damage:e);
+  !!VR(bonusDamage:e):S(damage) :100 *(bonus) +(damage:e);
+  !!UN:C(ebp)/12/4/(bonusDamage:e);
+!!en;
+
 
 
 ** All artifacts function for the AI if worn.
@@ -75,103 +98,25 @@ ZVSE2
 
 !?FU(OnAfterErmInstructions);
 !!if&i^wog_219_enabled^;
-  !!UN:A146/2/4;                                [set axe of smashing - right hand]
-  !!UN:A147/2/6;                                [set mithril mail - torso]
-  !!UN:A148/2/4;                                [set sword of sharpness - right hand]
-  !!UN:A149/2/1;                                [set helm of immortality - head]
-  !!UN:A150/2/3;                                [set pendant of sorcery - neck]
-  !!UN:A151/2/8;                                [set boots of haste - feet]
-  !!UN:A152/2/5;                                [set bow of seeking - left hand]
-  !!UN:A153/2/7;                                [set dragon eye ring - ring]
-  !!UN:A154/2/5;                                [set hardened shield - left hand]
-  !!UN:A155/2/7;                                [set slava's ring of power - ring]
 
-  !!VRv7060:S1 R4;                                      [random primary skill value 1-5]
-  !!VRv7061:S0 R27;                                     [random secondary skill 0-27]
-  !!VRv7062:S1 R4;
-  !!VRv7063:S0 R27;
-  !!VRv7064:S1 R4;
-  !!VRv7065:S0 R27;
-  !!VRv7066:S1 R4;
-  !!VRv7067:S0 R27;
-  !!VRv7068:S1 R4;
-  !!VRv7069:S0 R27;
-  !!VRv7070:S1 R4;
-  !!VRv7071:S0 R27;
-  !!VRv7072:S1 R4;
-  !!VRv7073:S0 R27;
-  !!VRv7074:S1 R4;
-  !!VRv7075:S0 R27;
-  !!VRv7076:S1 R4;
-  !!VRv7077:S0 R27;
-  !!VRv7078:S1 R4;
-  !!VRv7079:S0 R27;
+  !#VA(artSlots[10]:y);
+  !#VA(skillBitSet[10]:y);
 
-  !!UN:N4/960/v7061;                          [store skill name]
-  !!UN:N4/961/v7063;
-  !!UN:N4/962/v7065;
-  !!UN:N4/963/v7067;
-  !!UN:N4/964/v7069;
-  !!UN:N4/965/v7071;
-  !!UN:N4/966/v7073;
-  !!UN:N4/967/v7075;
-  !!UN:N4/968/v7077;
-  !!UN:N4/969/v7079;
-
-
-
-  !!VRz970:Sz171000;
-  !!VRz971:Sz171001;
-  !!UN:A146/10/970;
-  !!UN:A146/9/971;
-  ***
-  !!VRz972:Sz171002;
-  !!VRz973:Sz171003;
-  !!UN:A147/10/972;
-  !!UN:A147/9/973;
-  ***
-  !!VRz974:Sz171004;
-  !!VRz975:Sz171005;
-  !!UN:A148/10/974;
-  !!UN:A148/9/975;
-  ***
-  !!VRz976:Sz171006;
-  !!VRz977:Sz171007;
-  !!UN:A149/10/976;
-  !!UN:A149/9/977;
-  ***
-  !!VRz978:Sz171008;
-  !!VRz979:Sz171009;
-  !!UN:A150/10/978;
-  !!UN:A150/9/979;
-  ***
-  !!VRz980:Sz171010;
-  !!VRz981:Sz171011;
-  !!UN:A151/10/980;
-  !!UN:A151/9/981;
-  ***
-  !!VRz982:Sz171012;
-  !!VRz983:Sz171013;
-  !!UN:A152/10/982;
-  !!UN:A152/9/983;
-  ***
-  !!VRz984:Sz171014;
-  !!VRz985:Sz171015;
-  !!UN:A153/10/984;
-  !!UN:A153/9/985;
-  ***
-  !!VRz986:Sz171016;
-  !!VRz987:Sz171017;
-  !!UN:A154/10/986;
-  !!UN:A154/9/987;
-  ***
-  !!VRz988:Sz171018;
-  !!VRz989:Sz171019;
-  !!UN:A155/10/988;
-  !!UN:A155/9/989;
+  !!VR(artSlots[0]):C4/6/4/1/3/8/5/7/5/7;[set axe of smashing etc right slots ]
+  !!VR(skillBitSet[0]):C1/2/1/2/4/8/1/12/2/15;
+  !!re i/0/9;(ART_SLAVAS_RING_OF_POWER);
+    !!VR(artId:y):Si +(ART_AXE_OF_SMASHING);
+    !!VR(randomPSval:y):R0/1/5;
+    !!VR(randomSSnum:y):R0/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+    !!SN:H^secskill^/(randomSSnum)/0/?(skillName:z);
+    !!UN:A(artId:y)/2/(artSlots[i]);
+    !!FU(PackUnion):P(randomPSval)/8/(skillBitSet[i])/8/(randomSSnum)/8/?(result:y);
+    !!VRi^wog_219_art_%(artId:y)^:S(result:y);
+    !!SN:T^wog.219.%(artId:y).name^/?(artName:z)/^value^/(randomPSval)/^skillName^/(skillName);
+    !!SN:T^wog.219.%(artId:y).description^/?(artDesc:z)/^value^/(randomPSval)/^skillName^/(skillName);
+    !!SN:H^art^/(artId:y)/0/(artName:z) H^art^/(artId:y)/1/^{%(artName:z)}%T(wog.endl)%T(wog.endl)%(artDesc:z)^;
+  !!en;
 !!en;
-
-*****
 
 !!if&i^wog_71_enabled^;
   !!UN:A66/3/2;                                 [set class to treasure - statesman's medal]
@@ -198,6 +143,34 @@ ZVSE2
   !!UN:A105/3/4;                                [set class to minor - pendant of resolve (free will)]
 !!en;
 
+** end of Initialization Code
+
+!?FU(OnEquipArt)&v998>=(ART_AXE_OF_SMASHING)/v998<=(ART_SLAVAS_RING_OF_POWER);
+!!FU(WOG_219_ArtProc):Pv998/1;
+
+!?FU(OnUnequipArt)&v998>=(ART_AXE_OF_SMASHING)/v998<=(ART_SLAVAS_RING_OF_POWER);
+!!FU(WOG_219_ArtProc):Pv998/-1;
+
+!?FU(WOG_219_ArtProc);
+!#VA(artId:x) (value:x);
+!#VA(pSkills[4]:y);
+
+!!FU(UnpackUnion):Pi^wog_219_art_%(artId)^/?(psValue:y)/8/?(psBitSet:y)/8/?(sSkill:y)/8;
+!!re i/0/3;
+  !!VR(bitMask:y):S1 Sd<<i &(psBitSet:y);
+  !!if&(bitMask);
+    !!VR(pSkills[i]):S(psValue:y) *(value);
+  !!en;
+!!en;
+
+!!HE(CURRENT_HERO):Fd(pSkills[0])/d(pSkills[1])/d(pSkills[2])/d(pSkills[3]) S(sSkill)/?(lvl:y);
+
+  !!if&(value)>0;
+    !!HE(CURRENT_HERO)&(lvl)<(SKILL_EXPERT):S(sSkill)/d1;
+  !!el&(lvl:y)>(SKILL_NOT_LEARNED);
+    !!HE(CURRENT_HERO):S(sSkill)/d-1;
+  !!en;
+
 ; Add extra description to the set pieces of The Garb of the Forest Lord and The Vestments of Authority
 ; This must be executed as late as possible
 !?FU(OnAfterErmInited)&i^wog_71_newCombiArtEnabled^;
@@ -217,20 +190,8 @@ ZVSE2
 !!SN:T^wog.71.combiDesc%(combiArt)^/?(combiDesc:z);
 !!SN:H^art^/(art)/1/^%(desc)%(combiDesc)^;
 
-** end of Initialization Code
 
-
-**
-!?AE0&i^wog_219_enabled^; take off artifact trigger
-
-!!FU7038&v998>145/v998<156:P;
-**
-
-**
-!?AE1&i^wog_219_enabled^; put on artifact trigger
-
-!!FU7037&v998>145/v998<156:P;
-**
+** end of function
 
 
 ** Timer routine
@@ -280,8 +241,9 @@ ZVSE2
         !!en;
 
         !!FU(PrepareMultiPicDialog):P(monsters);
-        !!HEi:B0/?z1;
-        !!IF:N1/z171020;
+        !!HEi:B0/?(heroName:z);
+        !!SN:T^wog.71.join^/?(msg:z)/^heroName^/(heroName);
+        !!IF:N1/(msg:z);
 
         !!HEi:C25/1/23/2/17/4/15/8/-1/0/-1/0/-1/0; [give 1 war unicorn, 2 dendroid soldiers, 4 battle dwarves, 8 centaur captains - use HE:C in order to manage them altogether]
       !!el&i^timerIsAi^;
@@ -313,13 +275,14 @@ ZVSE2
 
 !!if&(monCount)>0;
   !!if&1000;
-    !!HE(hero):B0/?z1;                  [get hero name]
+    !!HE(hero):B0/?(heroName:z);                  [get hero name]
     !!HE(hero):R2/?(gender:y);          [get hero sex]
-    !!SN:T^wog.whose%(gender)^/?z2;     
-    !!SN:H^art^/(artifact)/0/?z3;       [get artifact name]
+    !!SN:T^wog.whose%(gender)^/?(whose:z);     
+    !!SN:H^art^/(artifact)/0/?(artName:z);       [get artifact name]
     !!VR(isPlural:y):S(monCount) -1 B;  [get creature name]
-    !!SN:H^monname^/(monster)/(isPlural)/?z4;
-    !!IF:Q1/(PIC_TYPE_ART)/(artifact)/(MSG_TYPE_MES)/z171023;
+    !!SN:H^monname^/(monster)/(isPlural)/?(monName:z);
+    !!SN:T^wog.71.upgrade^/?(msg:z)/^monName^/(monName:z)/^heroName^/(heroName)/^whose^/(whose)/^artName^/(artName);
+    !!IF:Q1/(PIC_TYPE_ART)/(artifact)/(MSG_TYPE_MES)/(msg:z);
   !!en;
 
   !!VR(upgMon:y):S(monster) +1;         [set for upgrade]
@@ -328,27 +291,6 @@ ZVSE2
 
 ** end of function
 
-** start of pre-battle trigger **
-!?FU(OnBeforeBattleUniversal)&i^wog_71_enabled^;
-
-
-!!BA:H0/?y-3;                                  [get attacking hero #]
-!!HEy-3&y-3>-1:A2/76/?y-4/?y-5 A2/77/?y-4/?y-6 A2/78/?y-4/?y-7 A2/139/?y-4/?y-8;  [see if attacker has Conjuring items or Ring of the Magi]
-!!VRv7133:S100;                                [set for 100%]
-!!VRv7133&y-3>-1/y-5>0:+5;                     [add 5% for Collar of Conjuring]
-!!VRv7133&y-3>-1/y-6>0:+10;                    [add 10% for Ring of Conjuring]
-!!VRv7133&y-3>-1/y-7>0:+15;                    [add 15% for Cape of Conjuring]
-!!VRv7133&y-3>-1/y-8>0:+50;                    [add 50% for Ring of the Magi]
-
-!!BA:H1/?y-3;                                  [get defending hero #]
-!!HEy-3&y-3>-1:A2/76/?y-4/?y-5 A2/77/?y-4/?y-6 A2/78/?y-4/?y-7 A2/139/?y-4/?y-8;  [see if defender has Conjuring items or Ring of the Magi]
-!!VRv7134:S100;                                [set for 100%]
-!!VRv7134&y-3>-1/y-5>0:+5;                     [add 5% for Collar of Conjuring]
-!!VRv7134&y-3>-1/y-6>0:+10;                    [add 10% for Ring of Conjuring]
-!!VRv7134&y-3>-1/y-7>0:+15;                    [add 15% for Cape of Conjuring]
-!!VRv7134&y-3>-1/y-8>0:+50;                    [add 50% for Ring of the Magi]
-
-** end of pre-battle trigger **
 
 ** start of battlefield start trigger
 !?FU(OnSetupBattlefield)&i^wog_71_enabled^;
@@ -389,20 +331,6 @@ ZVSE2
   !!en;
 !!en;
 
-** end of battlefield start trigger
-
-** start of magic resist trigger
-!?FU(OnMagicBasicResistance);
-
-!!BG:N?y-1 A?y-3;                                   [get active stack #, action type]
-!!MR:D?y-2;                                         [get spell damage]
-
-!!VRy-2&y-3=1/y-1<21/v7133>100:*v7133 :100;         [calculate new damage - attacker cast]
-!!MR&y-3=1/y-1<21/v7133>100:Dy-2;                   [set new damage - attacker cast]
-
-!!VRy-2&y-3=1/y-1>20/v7134>100:*v7134 :100;         [calculate new damage - defender cast]
-!!MR&y-3=1/y-1>20/v7134>100:Dy-2;                   [set new damage - defender cast]
-
 !?FU(WOG_71_OnMonGetSpec);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y)  C(ebp)/8/4/?(monType:y);
@@ -441,87 +369,6 @@ ZVSE2
   !!en;
 !!en;
 
-** function to check when artifacts are put on
-!?FU7037;             [artifacts on]
-
-!!HE(CURRENT_HERO)&v998=146:Fdv7060/d/d/d;                               [set axe of smashing]
-!!VRy2&v998=146:Sv7061;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=147:Fd/dv7062/d/d;                               [set mithril mail]
-!!VRy2&v998=147:Sv7063;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=148:Fdv7064/d/d/d;                               [set sword of sharpness]
-!!VRy2&v998=148:Sv7065;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=149:Fd/dv7066/d/d;                               [set helm of immortality]
-!!VRy2&v998=149:Sv7067;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=150:Fd/d/dv7068/d;                               [set pendant of sorcery]
-!!VRy2&v998=150:Sv7069;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=151:Fd/d/d/dv7070;                               [set boots of haste]
-!!VRy2&v998=151:Sv7071;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=152:Fdv7072/d/d/d;                               [set bow of seeking]
-!!VRy2&v998=152:Sv7073;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=153:Fd/d/dv7074/dv7074;                          [set dragon eye ring]
-!!VRy2&v998=153:Sv7075;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=154:Fd/dv7076/d/d;                               [set hardened shield]
-!!VRy2&v998=154:Sv7077;                                      [copy to y2]
-!!HE(CURRENT_HERO)&v998=155:Fdv7078/dv7078/dv7078/dv7078;                [set slava's ring of power]
-!!VRy2&v998=155:Sv7079;                                      [copy to y2]
-!!HE(CURRENT_HERO):Sy2/?y3;                                              [get skill level]
-!!HE(CURRENT_HERO)&y3<3:Sy2/d1;                                          [set skill]
-
-** end of function
-
-** function to check when artifacts are taken off
-!?FU7038;            [artifacts off]
-
-!!VRy1&v998=146:S0 -v7060;                           [invert value]
-!!HE(CURRENT_HERO)&v998=146:Fdy1/d/d/d;                          [reset axe of smashing]
-!!VRy2&v998=146:Sv7061;                              [copy to y2]
-
-!!VRy1&v998=147:S0 -v7062;                           [invert value]
-!!HE(CURRENT_HERO)&v998=147:Fd/dy1/d/d;                          [reset mithril mail]
-!!VRy2&v998=147:Sv7063;                              [copy to y2]
-
-!!VRy1&v998=148:S0 -v7064;                           [invert value]
-!!HE(CURRENT_HERO)&v998=148:Fdy1/d/d/d;                          [reset sword of sharpness]
-!!VRy2&v998=148:Sv7065;                              [copy to y2]
-
-!!VRy1&v998=149:S0 -v7066;                           [invert value]
-!!HE(CURRENT_HERO)&v998=149:Fd/dy1/d/d;                          [reset helm of immortality]
-!!VRy2&v998=149:Sv7067;                              [copy to y2]
-
-!!VRy1&v998=150:S0 -v7068;                           [invert value]
-!!HE(CURRENT_HERO)&v998=150:Fd/d/dy1/d;                          [set pendant of sorcery]
-!!VRy2&v998=150:Sv7069;                              [copy to y2]
-
-!!VRy1&v998=151:S0 -v7070;                           [invert value]
-!!HE(CURRENT_HERO)&v998=151:Fd/d/d/dy1;                          [set boots of haste]
-!!VRy2&v998=151:Sv7071;                              [copy to y2]
-
-!!VRy1&v998=152:S0 -v7072;                           [invert value]
-!!HE(CURRENT_HERO)&v998=152:Fdy1/d/d/d;                          [reset bow of seeking]
-!!VRy2&v998=152:Sv7073;                              [copy to y2]
-
-!!VRy1&v998=153:S0 -v7074;                           [invert value]
-!!HE(CURRENT_HERO)&v998=153:Fd/d/dy1/dy1;                        [reset dragon eye ring]
-!!VRy2&v998=153:Sv7075;                              [copy to y2]
-
-!!VRy1&v998=154:S0 -v7076;                           [invert value]
-!!HE(CURRENT_HERO)&v998=154:Fd/dy1/d/d;                          [reset hardened shield]
-!!VRy2&v998=154:Sv7077;                              [copy to y2]
-
-!!VRy1&v998=155:S0 -v7078;                           [invert value]
-!!HE(CURRENT_HERO)&v998=155:Fdy1/dy1/dy1/dy1;                    [reset slava's ring of power]
-!!VRy2&v998=155:Sv7079;                              [copy to y2]
-
-!!HE(CURRENT_HERO):Sy2/?y3;                                      [get skill level]
-!!HE(CURRENT_HERO)&y3<3/y3>0:Sy2/d-1;                            [reset skill]
-
-** end of function
-
-** start of object trigger - monsters
-
-
-
-
 
 !?FU(WOG_71_GetDiploBonus);
 !#VA(heroId:x) (result:x);
@@ -544,49 +391,3 @@ ZVSE2
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/2/?(activeHeroId:y);
 !!FU(WOG_71_GetDiploBonus):P(activeHeroId:y)/?(result:y);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/d(result);?(ebp:y) C(ebp)/-4/4/d(counter) C(ebp)/-4/4/?y66;?(value:y);
-
-
-** start of artifact trigger
-; Trigger for equipping new combination artifact pieces
-; Note: When checking HE:A2 value OnEquipArt, the artifact being equipped is not counted
-!?FU(OnEquipArt)&i^wog_71_newCombiArtEnabled^;
-!!FU:E;                                 [Disable as not showing anything is closer to vanilla H3 behaviour]
-
-!!if|v998=(ART_CENTAUR_AXE)/v998=(ART_SHIELD_OF_THE_DWARVEN_LORDS)/v998=(ART_BREASTPLATE_OF_PETRIFIED_WOOD)/v998=(ART_HELM_OF_THE_ALABASTER_UNICORN);
-  !!FU(WOG_71_ShowCombiArtInfo):P0/v998;
-!!el|v998=(ART_STATESMANS_MEDAL)/v998=(ART_DIPLOMATS_RING)/v998=(ART_AMBASSADORS_SASH);
-  !!FU(WOG_71_ShowCombiArtInfo):P1/v998;
-!!en;
-
-** end of artifact trigger
-
-** function to check for combo artifacts
-; Note: It is not possible to declare two different array lengths in the same function, thus numCombiArtPieces has to be used instead of combiArtPieces[SIZE]
-!?FU(WOG_71_ShowCombiArtInfo);
-!#VA(combiArt:x) (equippingArt:x);
-!#VA(combiArtPieces[4]:y);
-
-!!if&(combiArt)=0;
-  !!VR(combiArtPieces):C(ART_CENTAUR_AXE)/(ART_SHIELD_OF_THE_DWARVEN_LORDS)/(ART_BREASTPLATE_OF_PETRIFIED_WOOD)/(ART_HELM_OF_THE_ALABASTER_UNICORN);
-  !!VR(numCombiArtPieces:y):S4;
-!!el;
-  !!VR(combiArtPieces):C(ART_STATESMANS_MEDAL)/(ART_DIPLOMATS_RING)/(ART_AMBASSADORS_SASH);
-  !!VR(numCombiArtPieces):S3;
-!!en;
-
-!!re i/0/(numCombiArtPieces)/1/-1;
-  !!co&(combiArtPieces[i])=(equippingArt); [skip HE:A2 checking if the artifact is the one being equipped since HE:A2 would not count it in]
-
-  !!HE(CURRENT_HERO):A2/(combiArtPieces[i])/?(backpacked:y)/?(equipped:y);
-  !!br&(equipped)<=0;
-!!en;
-
-!!if&i=(numCombiArtPieces);             [if the loop wasn't broken, i equals to numCombiArtPieces eventually]
-  !!if&(combiArt)=0;
-    !!IF:N8/7/8/13/8/19/8/25 N1/z171024;[The Garb of the Forest Lord]
-  !!el;
-    !!IF:Q2/8/66/8/67/8/68/1/z171025;   [The Vestments of Authority]
-  !!en;
-!!en;
-
-** end of function
