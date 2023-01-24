@@ -1,0 +1,129 @@
+ZVSE2
+
+
+!?FU(gem_CreateERMHook);
+
+!!SN:Ex1/1/5103807/(gem_OnHeroDoll_Rmc);
+!!SN:Ex1/1/5104507/(gem_OnHeroBackPack_Rmc);
+
+!!SN:Ex1/1/5962335/(gem_OnSwapHeroDoll_Rmc);
+!!SN:Ex1/1/5963278/(gem_OnSwapHeroBackPack_Rmc);
+
+!!SN:Ex1/1/5371339/(gem_OnKingdomHeroDoll_Rmc);
+!!SN:Ex1/1/5371665/(gem_OnKingdomHeroBackPack_Rmc);
+
+; Reset artifact description
+!!SN:Ex1/1/5086548/(gem_AfterShowNewArtifactDescription);
+!!SN:Ex1/1/5104570/(gem_AfterShowNewArtifactDescription);
+!!SN:Ex1/1/5371406/(gem_AfterShowNewArtifactDescription);
+!!SN:Ex1/1/5371730/(gem_AfterShowNewArtifactDescription);
+
+
+!?FU(gem_OnHeroDoll_Rmc);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(comboSetId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-28/4/?(artId:y);
+!!if&(comboSetId:y)<>(NO_ART)/(artId)<>(NO_ART);
+  !!UN:C6916976/4/?(heroPtr:y) C(heroPtr)/26/2/?(heroId:y);
+  !!FU(gem_WorkWithArtifact):P(heroId)/(artId);
+!!en;
+
+
+!?FU(gem_OnHeroBackPack_Rmc);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-20/4/?(artId:y);
+!!if&(artId)<>(NO_ART);
+  !!UN:C6916976/4/?(heroPtr:y) C(heroPtr)/26/2/?(heroId:y);
+  !!FU(gem_WorkWithArtifact):P(heroId)/(artId);
+!!en;
+
+
+!?FU(gem_OnSwapHeroDoll_Rmc);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-8/4/?(artId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
+!!FU(gem_WorkWithArtifact):P(heroId)/(artId);
+
+
+!?FU(gem_OnSwapHeroBackPack_Rmc);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-20/4/?(artId:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
+!!FU(gem_WorkWithArtifact):P(heroId)/(artId);
+
+
+!?FU(gem_OnKingdomHeroDoll_Rmc);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(artId:y) Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(heroPtr:y) C(heroPtr)/26/2/?(heroId:y);
+!!FU(gem_WorkWithArtifact):P(heroId)/(artId);
+
+
+!?FU(gem_OnKingdomHeroBackPack_Rmc);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(artId:y) Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(heroPtr:y) C(heroPtr)/26/2/?(heroId:y);
+!!FU(gem_WorkWithArtifact):P(heroId)/(artId);
+
+
+!?FU(gem_WorkWithArtifact);
+!#VA(heroId:x) (artId:x);
+
+!!if&(artId)<>(NO_ART)/(artId)<1000;
+  !!FU(gem_CreateArtArray):P(artId)/?(arts:y)/?(comboArtId:y);
+  !!SN&(comboArtId)<>(NO_ART):H^art^/(artId)/1/?s^basicArtDesc^;  [Get basic artifact description]
+  !!FU(gem_LoopArrayAndFormArtDesc)&(comboArtId)<>(NO_ART):P(heroId)/(artId)/(arts)/(comboArtId);
+!!en;
+
+
+!?FU(gem_CreateArtArray);
+!#VA(artId:x) (arts:x) (comboArtId:x);
+
+!!VR(comboArtId):S(NO_ART);
+!!UN:A(artId)/5/?(ourComboId:y);  [Check if artifact is a part of compound artifact]
+!!if&(ourComboId)<>(NO_ART);
+  !!UN:A(ourComboId)/?(comboArtId:x)/d/d;  [Get the id of compound artifact]
+  !!FU(NewIntArray):P?(arts:x);  [Define array for art ids]
+  !!SN:F^ExtendArrayLifetime^/(arts);
+  !!re i/7/(ART_LAST_WOG);  [Loop all arts]
+    !!UN:Ai/5/?(combId:y); 
+    !!if&(combId)=(ourComboId);  [Find art that matches by id with art is being clicked]
+      !!FU(Array_Push):P(arts)/i;  [Push it into array]
+    !!en;
+  !!en;
+!!en;
+
+
+!?FU(gem_LoopArrayAndFormArtDesc);
+!#VA(heroId:x) (artId:x) (arrArtId:x) (comboArtId:x);
+
+; Reset variables
+!!VR(counter:y):S0;
+
+; Get size of types-array
+!!SN:M(arrArtId)/?(arrSize:y);
+
+; Form a string for common artifacts
+!!re i/0/(arrSize)/1/-1;
+  !!SN:M(arrArtId)/i/?(artIdf:y);
+  !!SN:H^art^/(artIdf)/0/?(artName:z);
+  !!HE(heroId):A2/(artIdf)/?y99/?(isEquipped:y);
+  !!VR(counter:y)&(isEquipped)>0: +1;
+  !!VR(artString:z)&(isEquipped)>0:S^{~LightGreen}%(artName){~}^;
+  !!VR(artString:z)&(isEquipped)=0:S^{~Grey}%(artName){~}^;
+  !!VR(equippedArts:z): +^%T(wog.endl)%(artString)^;
+!!en;
+
+; Form a string for compound artifact and counter
+!!SN:H^art^/(comboArtId)/0/?(artName:z);
+!!VR(artString:z)&(counter)>0:S^{~LightGreen}%(artName) (%(counter)/%(arrSize)){~}%T(wog.endl)^;
+!!VR(artString:z)&(counter)=0:S^{~Grey}%(artName) (%(counter)/%(arrSize)){~}%T(wog.endl)^;
+
+; Form a result string
+!!VR(addArtDesc:z):S^%T(wog.endl)%T(wog.endl)%T(wog.endl)%(artString)%(equippedArts)^;
+
+; Add a result string to default artifact description
+!!SN:H^art^/(artId)/1/^%s(basicArtDesc)%(addArtDesc)^;
+
+; Set flag
+!!VRi^art_isChanged^:S(artId);(TRUE);
+
+
+!?FU(gem_AfterShowNewArtifactDescription)&i^art_isChanged^;  [Reset artifact description to basic artifact description]
+!!SN:H^art^/i^art_isChanged^/1/s^basicArtDesc^;
+!!VRs^basicArtDesc^:S^^;
+!!VRi^art_isChanged^:S(FALSE);
+
+** end
