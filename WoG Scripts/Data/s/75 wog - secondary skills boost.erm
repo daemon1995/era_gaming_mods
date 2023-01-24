@@ -48,7 +48,7 @@ ZVSE2
 !!en;
 ** End of Initialization Code
 
-
+!#UN:P218/?i^wog_218_enabled^;
 -------------------------------------------------------------------------
 
 
@@ -226,6 +226,7 @@ ZVSE2
 !!VRv902&v901>0:*15;
 !!VRv902&v901>0:+5;
 !!VRv911&v901>0:S0 R99; [roll percentile dice...]
+
 !!FU649&v901>0/v911<v902:P; [handle learning bonus]
 
 ** End of level up trigger for learning
@@ -419,56 +420,24 @@ ZVSE2
      Tactics
 *************************************************************************
 
-!?FU(OnBeforeBattleUniversal);     [Pre-battle trigger for tactics]
+!?FU(WOG_CreateERMHook)&i^wog_218_enabled^;
 
-!!UN:P218/?y-1;     [Check if tactics is enabled in WoG options]
-!!FU&y-1<>1:E;     [Exit if it isn't]
+!!SN:Ex1/1/5137385/(WOG_218_OnMonGetSpec);                               [hook for the artifacts giving mon stats]
+!?FU(WOG_218_OnMonGetSpec);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
+!!HE(heroId):S(SKILL_TACTICS)/?(speedBon:y);
+!!if&(speedBon);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monInfo:y);
+  !!UN:C(monInfo)/80/4/?s;
+  !!if&s;
+    !!UN:C(monInfo)/80/4/d(speedBon);
+  !!en;
+!!en;
 
-!!VRv36:S0;
-
-!!BA:H0/?y-1;     [get attacking hero number]
-!!BA:H1/?y-2;     [get defending hero number]
-!!HEy-1:S19/?v35;     [get attackers tactics]
-!!HEy-2&y-2>=0:S19/?v36;     [get defenders tactics - if any]
-
-!!FU&v35=0/v36=0:E;     [Exit if no one has tactics]
-
-!!HEy-1&v35>0:R4/0;     [remove attackers tactics]
-!!HEy-2&y-2>=0/v36>0:R4/0;     [remove defenders tactics - if any]
-
-** End of pre-battle function to remove tactics
-
-
-!?FU(OnSetupBattlefield)&v35<>v36; [Battle start trigger for tactics, before tactics phase]
-
-!!UN:P218/?y-1;     [Check if tactics is enabled in WoG options]
-!!FU&y-1<>1:E;     [Exit if it isn't]
-
-!!BH0:N?y-1;     [attacking hero #]
-!!BH1:N?y-2;     [defending hero #]
-
-!!FU&v35=0/v36=0:E;     [Exit if no one has tactics]
-!!FU&v35=v36:E;     [Exit if equal tactics level]
-
-!!VRy-5&v35>v36:S0 +v35 -v36;     [Set bonus for attacker - if attackers tactics superior]
-!!VRy-5&v35<v36:S0;     [Set bonus for attacker - if defenders tactics superior]
-
-!!VRy-6&v35>v36:S0;     [Set bonus for defender - if attackers tactics superior]
-!!VRy-6&v35<v36:S0 +v36 -v35;     [Set bonus for defender - if defenders tactics superior]
-
-!!DO667/0/41/1:Py-5/0;     [give +speed via tactics, attacker]
-!!DO667/0/41/1&y-2>=0:Py-6/1;     [give +speed via tactics, defender - if any]
-
-** End of battle round trigger for tactics, before tactics phase
-
-
-!?FU667;     [Function to give +speed via tactics]
-
-!!BMx16:I?y1 T?y2 N?y3;     [get side, type, qty]
-!!BMx16&y3>0/y1=x2/v7180<>1/y2<>145/y2<>146/y2<>147/y2<>148/y2<>149:Sdx1;            [add bonus speed if Warmachine II is disabled]
-!!BMx16&y3>0/y1=x2/v7180=1/y2<>124/y2<>145/y2<>146/y2<>147/y2<>148/y2<>149:Sdx1;     [add bonus speed if Warmachine II is enabled]
-
-** End of function to give +speed via tactics
+!?FU(OnBeforeBattleUniversal)&i^wog_218_enabled^;
+!!re i/0/i^battle_hero_vs_hero^;(end_value);
+  !!HEi^battle_hero_%i^:R4/0;
+!!en;
 
 
 !?FU661;     [Function to set flag 270 if this is a human vs. human network battle]
