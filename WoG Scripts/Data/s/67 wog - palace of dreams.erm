@@ -140,7 +140,7 @@ Variables Used in this Script: v1-v2,v101-v111,z1,z3-z6,z450
     !!DO(WOG_11_Resources)/1/100/1:P;
   !!el;
     ; Generate random artifacts and store in v101 - v103
-    !!FU(NewIntArray):P?(validArtsArray:y);
+    !!FU(NewIntArray):P?(validArtifactList:y);
     !!FU(GetMaxArtifactId):P?(lastArt:y);
 
     !!re i/(ART_CENTAUR_AXE)/(lastArt);
@@ -153,11 +153,12 @@ Variables Used in this Script: v1-v2,v101-v111,z1,z3-z6,z450
         ; Check if the artifact is an "usual" artifact
         !!UN:Ai/3/?(artLevel:y);
 
-        !!FU(Array_Push)&(artLevel)>(ART_LEVEL_SPECIAL):P(validArtsArray)/i;
+        !!FU(Array_Push)&(artLevel)>(ART_LEVEL_SPECIAL):P(validArtifactList)/i;
       !!en;
     !!en;
 
-    !!DO(WOG_11_Artifacts)/1/100/1:P(validArtsArray);
+    ; Execute 100 times before getting tired
+    !!DO(WOG_11_Artifacts)/1/100/1:P(validArtifactList);
   !!en;
 !!en;
 
@@ -243,7 +244,7 @@ Variables Used in this Script: v1-v2,v101-v111,z1,z3-z6,z450
 ---------------------------------------------------------------------------------
 
 !?FU(WOG_11_Artifacts);  [Start of main function - Artifacts]
-!#VA(validArtsArray:x);
+!#VA(validArtifactList:x);
 
 !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-100;  [Reduce player's gold by 100]
 !!UN&(ERM_FLAG_IS_HUMAN):R2;
@@ -252,17 +253,30 @@ Variables Used in this Script: v1-v2,v101-v111,z1,z3-z6,z450
   disabled artifacts are skipped]
 !!IF:V2/0;
 
-!!SN:M(validArtsArray)/?(size:y);
+!!SN:M(validArtifactList)/?(size:y);
 !!VR(lastIndex:y):S(size) -1;
 
 !!re i/101/103;
-  !!if&i=102;
-    !!VR(index:y):R0/0/(lastIndex);     [Here we use both VR:R and VR:T to make the result "more random"]
-  !!el;
-    !!VR(index):T0/0/(lastIndex);
-  !!en;
+  !!re j/0/1;                           [50% generates the second time for Reliec artifacts, unless the condition is not met]
+    !!if&i=102;
+      !!VR(index:y):R0/0/(lastIndex);   [Here we use both VR:R and VR:T to make the result "more random"]
+    !!el;
+      !!VR(index):T0/0/(lastIndex);
+    !!en;
 
-  !!SN:M(validArtsArray)/(index)/?vi;
+    !!SN:M(validArtifactList)/(index)/?vi;
+
+    ; Check if we need to reroll
+    !!UN:Avi/3/?(artLevel:y);
+
+    !!if&(artLevel)=(ART_LEVEL_RELIC);  [50% chance of relic being "rerolled"]
+      !!VR(random:y):R0/0/1;
+
+      !!br&(random)=0;
+    !!el;
+      !!br;
+    !!en;
+  !!en;
 !!en;
 
  [Chance of getting 3 artifacts the same is miniscule so this increases it a bit]
@@ -307,7 +321,7 @@ Variables Used in this Script: v1-v2,v101-v111,z1,z3-z6,z450
 !!IF&v105=1/-1000:V1/1;
 
  [Check if player has enough gold to play again]
-!!OW:R-1/6/?v1;
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?v1;
 !!IF&1/v1<100/1000:M1/z111021;
 !!VRx16&1/v1<100:S101; [Exit DO loop]
 
