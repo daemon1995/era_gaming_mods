@@ -194,33 +194,241 @@ ZVSE2
   !!en;
 !!en;
 
+!?FU(gem_OnOpenCreatureCombatDlg);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(stack:y);
 
-** 2-Hex creatures now can return after back attack 
-*?FU(gem_OnBeforeHarpyTryMoveBack); depricated by game bug fixes plugin
-  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stack:y);                        [Get Stack structure]
-  *!UN:C(stack)/132/4/?f;                                                 [Get Stack flags]
-  *!VRf:&(MON_FLAG_WIDE);
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(stack)/244/4/?(side:y);
+!#VA(hero[2]:y) (armyPtr[2]:y);
+!!UN:C(cmbMgr:y)/21440/4/?(ground:y) C(cmbMgr)/21452/4/?(hero[0]) C(cmbMgr)/21456/4/?(hero[1])
+C(cmbMgr)/21700/4/?(armyPtr[0]) C(cmbMgr)/21704/4/?(armyPtr[1]);
 
-  *!if&f;                                                                 [if 2-Hex]
-    *!SN:F^PluginExists^/^game bug fixes extended^;
-    *!if&v1=0;
-      *!UN:C(stack)/68/4/?(secondHexOrient:y) C(stack)/244/4/?(stackSide:y);
+!!VR(oppSide:y):S1 X(side);
 
-      *!if&(secondHexOrient)=(stackSide);                                   [If creature was turned to the other side]
+!!if&(side);
+  !!UN:C(cmbMgr)/21448/4/?(town:y);
+!!el;
+  !!VR(town:y):S(NULL);
+!!en;
 
-        *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(startPos:y);                 [Get start Stack pos]
+!!SN:E4447296/(CALLCONV_THISCALL)/(stack)/(hero[side])/(armyPtr[side])/(town)/(hero[oppSide])/(armyPtr[oppSide])/(ground);         [recalc luck and morale for stack only]
 
-        *!if&(stackSide);
-          *!VR(startPos):-1;
-        *!el;
-          *!VR(startPos):+1;
-        *!en;
-        *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/(startPos);                    [Correct start Stack pos depending on stackSide]
-      *!en;
-    *!en;
+!?FU(gem_CreateERMHook);
+
+// open creatureInfoIncombat;
+
+!!SN:Ex1/1/6240062/(gem_OnOpenCreatureCombatDlg); // for morale stat changing
 
 
-  *!en;
+//stat changing
+!!SN:Ex1/1/4500782/(gem_OnAfterArmySetNegativeMorale); // for morale stat changing
+
+!!SN:Ex1/1/4501536/(gem_OnAfterArmySetNegativeLuck); for negative luck stat changing in combat only
+!!SN:Ex1/1/4447389/(gem_OnAfterArmySetPositiveLuck); for positive luck stat changing in combat only
+
+!!SN:Ex1/1/4501694/(gem_OnCreatureGetLuckLvl); for luck stat changing not in combat only
+
+
+// text changing
+!!SN:Ex1/1/4505906/(gem_OnCreatureLuckDescriptionHalfingPart);
+!!SN:Ex1/1/4506010/(gem_OnCreatureLuckDescriptionSpellPartStart);
+!!SN:Ex1/1/4506086/(gem_OnCreatureLuckDescriptionSpellPartEnd);
+
+
+!!SN:Ex1/1/4505740/(gem_OnCreatureArchiDevilDescriptionCreate);
+!!SN:Ex1/1/4504226/(gem_OnCreatureArchAngelDescriptionCreate);
+!!SN:Ex1/1/4504330/(gem_OnCreatureGhostDragonDescriptionCreate);
+!!SN:Ex1/1/4504347/(gem_OnCreatureGhostDragonDescriptionCreate);
+  
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4608191/(gem_OnAfterArtSpellCasting);  
+
+
+!?FU(gem_OnCreatureArchAngelDescriptionCreate);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(namePtr:y);
+  !!if&i^gem_MonPlusMoraleChanger^;
+    !!SN:H^monname^/i^gem_MonPlusMoraleChanger^/1/?z3;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/9598952;                         [set new ptr at mon name]
+    !!VRi^gem_MonPlusMoraleChanger^:S0;
+    !!VR(power:y):S2;  
+  !!el;
+    !!VR(power:y):S1;
+  !!en;
+  !!FU(gem_BufferEndingEditor):P6969508/(power);
+
+
+
+!?FU(gem_OnCreatureArchiDevilDescriptionCreate);
+  !!if&i^gem_MonMinusLuckChanger^;
+    !!SN:H^monname^/i^gem_MonMinusLuckChanger^/1/?z2;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/9598440;                         [set new ptr at mon name]
+    !!VR(power:y):S2;
+    !!VRi^gem_MonMinusLuckChanger^:S0;
+  !!el;
+    !!VR(power:y):S1;
+  !!en;
+
+  !!FU(gem_BufferEndingEditor):P6969512/(power);
+
+!?FU(gem_BufferEndingEditor);
+!#VA(bufferPtr:x) (newEnding:x);
+
+  !!UN:C(bufferPtr:x)/4/?(facingPtr:y);
+  !!SN:B(facingPtr:y)/d/?z1;
+  !!SN:Kz1/?(length:y);
+  !!VR(length):-1;
+  !!SN:Kz1/(length:y)/^%(newEnding)^;
+  !!SN:B(facingPtr:y)/d/z1;
+
+!?FU(gem_OnCreatureLuckDescriptionHalfingPart)&i^gem_MonPlusLuckChanger^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/16/4/?(monLuck:y) C(ebp)/20/4/?(heroLuck:y)
+C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
+*!VRi^weNeedReturn^:S(TRUE);
+*!IF:L^%(monLuck) %(heroLuck:y)^;
+!?FU(gem_OnCreatureLuckDescriptionSpellPartStart)&i^gem_MonPlusLuckChanger^;/i^weNeedReturn^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); C(ebp)/16/4/?(bonusLuck:y) C(ebp)/20/4/?(luck:y);
+*!if&i^weNeedReturn^;
+*!IF:L^%^;
+  !!SN:H^monname^/(MON_GHOST_BEHEMOTH)/1/?z3;
+  !!FU(gem_BufferEndingEditor):P6969508/i^gem_MonPlusLuckPower^;
+
+  !!UN:C6969508/4/?(txtPtr:y);
+  !!SN:E6388190/(CALLCONV_CDECL)/?z2/(txtPtr:y)/z3;/0/0;
+  !!FU(gem_BufferEndingEditor):P6969508/1;
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/9598440 C(ebp)/16/4/di^gem_MonPlusLuckPower^;
+  C(ebp)/20/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/d-i^gem_MonPlusLuckPower^ ;
+  !!VRi^gem_MonPlusLuckPower^:S(NULL);
+*!en;
+
+!?FU(gem_OnCreatureLuckDescriptionSpellPartEnd)&i^gem_MonPlusLuckChanger^;/i^weNeedReturn^;
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4505994; return dunction described above
+!!VRi^gem_MonPlusLuckChanger^:S(NULL);
+
+
+!?FU(OnGameEnter);      [block wog luck/morale combat bonuses]
+!!re i/0/4;
+  !!UN:C7725542/i/1/144;
+!!en;
+
+!?FU(gem_OnAfterArmySetNegativeMorale);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(morale:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(oppArmy:y);
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(ownArmy:y);
+  !!FU(gem_ArmyCompareTypeIteraror):P(ownArmy)/(MON_SUPREME_ARCHANGEL)/?(result:y);
+
+  !!VR(moraleChanger:y):S0;
+  !!if&(result:y);
+    !!VRi^gem_MonPlusMoraleChanger^:S(MON_SUPREME_ARCHANGEL);
+    !!VR(moraleChanger:y):+1;
+  !!el;
+    !!VRi^gem_MonPlusMoraleChanger^:S(NULL);
+  !!en;
+
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/20/4/?(oppArmy:y);
+
+  !!if&(oppArmy:y);
+    !!VR(currentDecrease:y):S0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(bone:y); using native iterator value as bone/ghost dragon already there;
+    !!VR(decrease:y):S0;
+    !!if&(bone)<>7;
+      !!VR(currentDecrease:y):S1;
+    !!en;
+    
+    !!FU(gem_ArmyCompareTypeIteraror):P(oppArmy)/(MON_BLOOD_DRAGON)/?(result:y);
+    !!if&(result);
+      !!VR(minusMoralMonId:y):S(MON_BLOOD_DRAGON);
+      !!VR(decrease:y):S2;
+    !!el;
+      !!FU(gem_ArmyCompareTypeIteraror):P(oppArmy)/(MON_DRACOLICH)/?(result:y);
+      !!if&(result:y);
+        !!VR(minusMoralMonId:y):S(MON_DRACOLICH);
+        !!VR(decrease:y):S1;
+      !!el;
+        !!VR(minusMoralMonId:y):S(NULL);
+      !!en;
+    !!en;
+    !!VRi^gem_MonMinusMoralePower^:S(decrease) F(currentDecrease)/(decrease);
+    !!VRi^gem_MonMinusMoraleChanger^:S(minusMoralMonId);
+    !!if&(decrease);
+      !!VR(moraleChanger):-(decrease) +(currentDecrease);
+    !!en;
+
+  !!en;
+  !!if&(moraleChanger:y);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d(moraleChanger:y);
+  !!en;
+!?FU(gem_OnCreatureGhostDragonDescriptionCreate)&i^gem_MonMinusMoralePower^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(dragonId:y);
+!!if&(dragonId:y)=(NO_MON);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/i^gem_MonMinusMoraleChanger^;
+!!el;
+  !!if&i^gem_MonMinusMoraleChanger^;
+    !!VR(dragonId):Si^gem_MonMinusMoraleChanger^;
+  !!en;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/(dragonId:y);
+    !!VRi^gem_MonMinusMoraleChanger^:S(NULL);
+    !!VR(power:y):Si^gem_MonMinusMoralePower^;
+    !!VRi^gem_MonMinusMoralePower^:S(NULL);
+    !!FU(gem_BufferEndingEditor):P6969512/(power);
+!!en;
+
+
+!?FU(gem_OnAfterArmySetNegativeLuck);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/20/4/?(oppArmy:y);
+
+  !!FU(gem_ArmyCompareTypeIteraror):P(oppArmy)/(MON_HELL_BARON)/?(result:y);
+  !!if&(result:y);
+    !!VR(luckChanger:y):S-2;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(arch:y); using native iterator value as devil/archdevil already there;
+    !!if&(arch:y)<>7;
+      !!VR(luckChanger):+1;
+    !!en;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(luckChanger:y); change luck by hostile creatures 
+    !!VRi^gem_MonMinusLuckChanger^:S(MON_HELL_BARON);
+  !!en;
+
+!?FU(gem_OnAfterArmySetPositiveLuck);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/12/4/?(ownArmy:y);
+  !!FU(gem_ArmyCompareTypeIteraror):P(ownArmy)/(MON_GHOST_BEHEMOTH)/?(result:y);
+  !!if&(result);
+    !!VR(luckChanger:y):S2;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(luckChanger:y); change luck by ally creatures
+    !!VRi^gem_MonPlusLuckChanger^:S(MON_GHOST_BEHEMOTH);
+    !!VRi^gem_MonPlusLuckPower^:S2;
+  !!el;
+    !!VRi^gem_MonPlusLuckChanger^:S(NULL);
+    !!VRi^gem_MonPlusLuckPower^:S(NULL);
+  !!en;
+
+!?FU(gem_OnCreatureGetLuckLvl);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(ownArmy:y);
+  !!FU(gem_ArmyCompareTypeIteraror):P(ownArmy)/(MON_GHOST_BEHEMOTH)/?(result:y);
+  !!if&(result);
+    !!VR(luckChanger:y):S2;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(luckChanger:y); change luck by ally creatures
+    !!VRi^gem_MonPlusLuckChanger^:S(MON_GHOST_BEHEMOTH);
+    !!VRi^gem_MonPlusLuckPower^:S2;
+  !!el;
+    !!VRi^gem_MonPlusLuckChanger^:S(NULL);
+    !!VRi^gem_MonPlusLuckPower^:S(NULL);
+  !!en;
+
+!?FU(gem_ArmyCompareTypeIteraror);
+!#VA(armyPtr:x) (monId:x) (result:x);
+!!VR(result):S(NULL);
+!!if&(armyPtr);
+  !!re i/0/(ARMY_SLOT_LAST);
+    !!VR(offset:y):Si *(SIZEOF_INT);
+    !!UN:C(armyPtr)/(offset)/4/?t;
+    !!if&t=(monId);
+      !!VR(result):S(TRUE);
+      !!br;
+    !!en;
+  !!en;
+!!en;
 
 ************************************************************************
 ************************************************************************
@@ -252,6 +460,10 @@ fill refugees by mons to evade pikeman creatures there
         !!en;
       !!en;
     !!en;
+
+!?FU(gem_OnAfterArtSpellCasting);
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+!!SN:E4625200/(CALLCONV_THISCALL)/(cmbMgr);         [recalc luck and morale]
 
 witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !?FU(OnAfterErmInstructions);
