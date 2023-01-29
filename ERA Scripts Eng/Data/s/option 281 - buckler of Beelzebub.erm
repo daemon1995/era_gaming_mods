@@ -21,6 +21,24 @@ ZVSE2
 ; Enable spell on the artifact
 !!UN:A(ART_BLANK_SHIELD)/8/(TRUE);
 
+// artifact #(ART_BLANK_SHIELD) put on
+!?FU(OnEquipArt)&v998=(ART_BLANK_SHIELD);
+; disable this script if option disabled
+!!UN:P281/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; increase primary skills by 2 if v998=(ART_BLANK_SHIELD)
+!!HE(CURRENT_HERO):Fd2/d2/d2/d2;
+
+// artifact #(ART_BLANK_SHIELD) taken off
+!?FU(OnUnequipArt)&v998=(ART_BLANK_SHIELD);
+; disable this script if option disabled
+!!UN:P281/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; decrease primary skills by 2 if v998=(ART_BLANK_SHIELD)
+!!HE(CURRENT_HERO):Fd-2/d-2/d-2/d-2;
+
 // Change the spell of AB depending on the actual artifact equipped
 !?FU(ES_OnArtifactGiveSpell);
 !#VA(address:x);
@@ -38,8 +56,27 @@ ZVSE2
   !!UN:C(address)/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT)/(ART_ARMAGEDDONS_BLADE);
 !!en;
 
-// Add in no retaliation flag for the current stack with the owner having a Buckler of Beelzebub
-!?FU(OnBeforeBattleAction);
+// Add no retaliation flag to the stacks with the owner having a Buckler of Beelzebub
+!?FU(OnSetupBattlefield);
+!!UN:P281/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!HEi:A2/(ART_BLANK_SHIELD)/?(backpacked:y)/?(equipped:y);
+
+  !!if&(equipped)>0;
+    !!VR(firstStack:y):Si *(BATTLE_DEFENDER_STACK_FIRST);
+    !!VR(lastStack:y):S(firstStack) +(BATTLE_STACKS_PER_SIDE) -1;
+
+    !!re (stack:y)/(firstStack)/(lastStack);
+      !!BM(stack):T?(type:y);
+      !!BM(stack)&(type)>(NO_MON)/(type)<>(MON_ARROW_TOWERS):Fd|(MON_FLAG_ATTACKS_ALL_AROUND);
+    !!en;
+  !!en;
+!!en;
+
+; For summoned stacks
+!?FU(OnBattleStackObtainsTurn);
 !!UN:P281/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -47,7 +84,32 @@ ZVSE2
 
 !!if&(hero)>(NO_HERO);
   !!HE(hero):A2/(ART_BLANK_SHIELD)/?(backpacked:y)/?(equipped:y);
-  !!BMi^battle_acting_stack^&(equipped)>0:Fd|(MON_FLAG_NO_RETALIATION);
+
+  !!if&(equipped)>0;
+    !!BMi^battle_current_stack^:T?(type:y);
+    !!BMi^battle_current_stack^&(type)<>(MON_ARROW_TOWERS):Fd|(MON_FLAG_NO_RETALIATION);
+  !!en;
 !!en;
+
+// Fix the returned values of EEF function for getting the hero's primary skills without artifact
+!?FU(GetHeroPrimarySkillsWithoutArts);
+!#VA(hero:x);      Hero ID or (CURRENT_HERO).
+!#VA(attack:x);    Out. Attack value.
+!#VA(defense:x);   Out. Defense value.
+!#VA(power:x);     Out. Power value.
+!#VA(knowledge:x); Out. Knowledge value.
+
+!!UN:P281/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!HE(hero):A2/(ART_BLANK_SHIELD)/?(backped:y)/?(equipped:y);
+
+!!if&(equipped);
+  !!VR(attack):-2;
+  !!VR(defense):-2;
+  !!VR(power):-2;
+  !!VR(knowledge):-2;
+!!en;
+
 
 ** end
