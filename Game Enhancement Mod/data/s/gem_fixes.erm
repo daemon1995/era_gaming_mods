@@ -700,6 +700,59 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
     !!en;
   !!en;
 
+************************************************************************
+************************************************************************
+******************************* LUCK FIXES *****************************
+************************************************************************
+************************************************************************
+
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4461853/(gem_CheckMeleeNegativeLuck);
+!!SN:Ex1/1/4453947/(gem_CheckRangeNegativeLuck);
+
+!?FU(gem_CheckMeleeNegativeLuck);
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4461866; [Jump over hero check]
+!!FU(wog_CheckNegativeLuck):Px1;
+
+!?FU(gem_CheckRangeNegativeLuck);
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4453960; [Jump over hero check]
+!!FU(gem_CheckNegativeLuck):Px1;
+
+!?FU(gem_CheckNegativeLuck);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(currentStackPtr:y) C(currentStackPtr)/1260/4/?(luck:y); 
+!!UN:C(currentStackPtr)/248/4/?(currentStack:y) C(currentStackPtr)/244/4/?(side:y);
+
+!!VR(currentStack)&(side): +21;  [For right side]
+
+!!if&(luck)<0;
+  !!VR(luck)&(luck)<-3:S-3;
+  !!VR(luck):*-1;
+  !!VR(rand:y):R0/1/12;
+  !!if&(rand)<=(luck);
+    !!UN:C(currentStackPtr)/112/4/-1; [set stack atrr "isLucky" to -1]
+    !!BA:Q?(isQuick:y);
+    !!if&(isQuick)=0;
+      !!FU(GetTextFileString):P^genrltxt^/45/?(str:z);
+      !!BM(currentStack):T?t N?n;
+      !!VRn:-1 F0/1;
+      !!SN:H^monname^/t/n/?(name:z);
+      !!SN:E6388190/(CALLCONV_CDECL)/?(varStr:z)/(str:z)/(name); [Replace %s in str with name]
+      !!MM:S(varStr:z);         [вывод текста в лог битвы]
+      !!SN:P^BADLUCK^;          [вывод звука удачи]
+      !!BM(currentStack):V48;   [анимаци€ неудачи на отр€де]
+    !!en;
+  !!en;
+!!en;
+
+!?FU(OnStackToStackDamage)&x9=0; (x1 - atck stack, x2 - def stack, x4 - final dmg)
+!!BMx1:Z?(structure:y);
+!!UN:C(structure)/112/4/?(isLucky:y);
+
+!!if&(isLucky)=-1;
+  !!VRx4::2; decrease base damage
+!!en;
 
 ************************************************************************
 ************************************************************************
