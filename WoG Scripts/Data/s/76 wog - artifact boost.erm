@@ -563,102 +563,89 @@ ZVSE2
 
 
 ** trigger for clicking on Village Hall
-
-!?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED); // trigger for click inside a town (TH0 will not work, because Wog crashes, if you build something inside a TH0-trigger)
-!!UN:P102/?y-1; [Check if Artifact Boost script is enabled in WoGify Options]
-!!FU&y-1<>1:E;     [Exit if it isn't]
-
-!!CM:I?y-1; // get the clicked field
-!!FU|y-1<10/y-1>13:E; // exit, if not clicked at Village-, Town- or City-Hall or Capitol
-
-!!CA-1:H0/?y1 H1/?y2 U?y3; // get garrison and visiting hero / town number
-
-!!VRv628:S0; // init
-!!HEy1&y1>-1:A2/66/0/?v628; // check for Statesman's Medal - garrision hero
-!!VRy1&v628=0:Sy2; // use visiting instead, if garrison has no Medal (or there is no)
-!!HEy1&y1>-1:A2/66/0/?v628; // check for Statesman's Medal - garrision hero
-!!FU&v628<1:E; // exit, if nobody has the medal
-
-!!IF:V2/0; [AI won't give medal]
-!!IF&1000:Q2/8/66/2/z102058;
-!!FU605&2:Py1; [handle giving the medal]
-!!SN:D; // redraw screen
-
-** end of trigger
-
 ** function to handle statesman's medal when trade chosen
 
-!?FU605;
-!!CA(CURRENT_TOWN):T?y7 U?y31; [get town type]
+!?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/999; // trigger for click inside a town (TH0 will not work, because Wog crashes, if you build something inside a TH0-trigger)
+!!UN:P102/?y-1; [Check if Artifact Boost script is enabled in WoGify Options]
+!!FU&y-1<>1:E;     [Exit if it isn't]
+!#VA(usedY[3]:y);
+!!OW:C?y99/?(clickedPlayer:y);
+!!CM:I?y-1; // get the clicked field
+!!FU|y-1<10/y-1>13:E; // exit, if not clicked at Village-, Town- or City-Hall or Capitol
+!!CA-1:H0/?(heroId:y) H1/?(anotherHeroId:y) O?(townOwner:y); // get garrison and visiting hero / town number
+!!FU&(townOwner)<>(clickedPlayer):E;
+!!VRv628:S0; // init
 
-; Build 1st upgraded dwelling if it is allowed
-!!VRy1:S(FALSE);
-!!CA(CURRENT_TOWN):B3/37; [check for upgraded dwelling 1]
-!!FU(WOG_Town_IsPossibleToBuildBuilding):Py31/30/?y32;
-!!FU(WOG_Town_IsPossibleToBuildBuilding):Py31/37/?y33;
+!!HE(heroId:y)&(heroId:y)>-1:A2/(ART_STATESMANS_MEDAL)/?y99/?v628; // check for Statesman's Medal - garrision hero
+!!VR(heroId:y)&v628=0:S(anotherHeroId:y); // use visiting instead, if garrison has no Medal (or there is no)
+!!HE(heroId:y)&(heroId:y)>-1:A2/(ART_STATESMANS_MEDAL)/?y99/?v628 O?(heroOwner:y); // check for Statesman's Medal - garrision hero
 
-; If level 1 dwelling has not been built, check if the town is eligible to build one
-!!if&-1/y32/y32;
-  !!VRy1:S(TRUE); [y1=1 means we would build upgraded dwelling 1]
-  !!CA(CURRENT_TOWN):B3/30; [check for basic dwelling 1 - to see if we should add creatures]
-  !!CA(CURRENT_TOWN)&-1:B6/30; [build basic dwelling if needed]
+!!FU|v628<1/(heroOwner:y)<>(townOwner):E; // exit, if nobody has the medal
 
-  !!FU(WOG_Town_ShowBuildingConstructionAnimation):Py31/37;
+*!IF:V2/0; [AI won't give medal]
+!!FU(NewIntArray):P?(buldingList:y);
+!!CA(CURRENT_TOWN):U?(townId:y);
+!!FU(WOG_102_GetBuildingArrayList):P(townId)/(buldingList:y);
+!!SN:M(buldingList:y)/?(size:y);
+!!if&(size);
 
-  !!VRy8:Sy7;
-  !!VRy8:*14; [get number of 1st level creature]
-  !!VRy8:+1;  [upgraded]
-  !!VRy8&y8=113:S119; [sprites]
-  !!MA:Gy8/?y9; [get growth rate of that creature]
-  !!CA(CURRENT_TOWN)&-1:M1/0/d/y9; [add creatures (0 = 1st level) if dwelling 1 wasn't there before]
-  !!UN:N2/326/y7/37; [name of upgrade building]
+  !!IF:Q2/(PIC_TYPE_ART)/(ART_STATESMANS_MEDAL)/(MSG_TYPE_QUESTION)/z102058;
+  !!if&2;
+
+    *!FU(WOG_Town_IsPossibleToBuildBuilding):P(townId)/30/?(canBuild:y);
+
+    !!re i/0/(size)/1/-1;
+      !!SN:M(buldingList)/i/?(buildingId:y);
+      !!FU(WOG_Town_ShowBuildingConstructionAnimation):P(townId:y)/(buildingId:y);      
+    !!en;
+
+    ; Show info and remove medal
+    *!IF&y1=1/y2=1/y3>0:M1/z102060;
+    *!IF&y1=1/y2=1/y3=0:M1/z102061;
+    *!IF&y1=1/y2=0/y3>0:M1/z102062;
+    *!IF&y1=0/y2=1/y3>0:M1/z102063;
+    *!IF&y1=1/y2=0/y3=0:M1/z102064;
+    *!IF&y1=0/y2=1/y3=0:M1/z102065;
+    *!IF&y1=0/y2=0/y3>0:M1/z102066;
+    *!VRy4:Sy1 +y2 +y3; // if y4 is now 0, nothing is built
+
+    *!if&y4=0;
+      *!IF:M1/z102067; // nothing built
+    *!el;
+      !!HE(heroId:y):A3/(ART_STATESMANS_MEDAL)/1/1; // remove Statesman's Medal, if something is built
+    *!en;
+      !!CM:R0;
+
+  !!en;
 !!en;
+!?FU(WOG_102_GetBuildingArrayList);
+!#VA(townId:x) (arrayId:x);
 
-; Build special buildings if requirements are met
-; look-up table of special building numbers by town
-!!VRy4:S21;
-!!VRy4|y7=(TOWN_RAMPART)/y7=(TOWN_NECROPOLIS):S17;
-!!VRy4&y7=(TOWN_DUNGEON):S22;
+!!CA0/(townId):T?(townType:y); [get town type]
 
-!!VRy2:S(FALSE);
-!!CA(CURRENT_TOWN):B3/y4; [check for special building]
-!!FU(WOG_Town_IsPossibleToBuildBuilding):Py31/y4/?y32;
-
-!!if&-1/y32;
-  !!VRy2:S(TRUE); [y2=1 means we built special building]
-  !!FU(WOG_Town_ShowBuildingConstructionAnimation):Py31/y4;
+!!VR(specBuidldingId:y):S21;
+!!if|(townType:y)=(TOWN_RAMPART)/(townType:y)=(TOWN_NECROPOLIS);
+  !!VR(specBuidldingId:y):S17;
+!!el&(townType:y)=(TOWN_DUNGEON);
+  !!VR(specBuidldingId:y):S22;
 !!en;
-
-!!UN:N2/327/y7/y4; [name of special building]
-
-; Build Resources Silo if market is built
-!!VRy3:S(FALSE); [assume nothing built]
-
-!!CA(CURRENT_TOWN):B3/15; [check for resource silo]
-!!FU(WOG_Town_IsPossibleToBuildBuilding):Py31/15/?y32;
-
-!!if&-1/y32;
-  !!VRy3:S(TRUE);
-  !!FU(WOG_Town_ShowBuildingConstructionAnimation):Py31/15;
+!#VA(buildings[4]:y);
+!!VR(buildings[0]):C30/37/(specBuidldingId)/15;
+!!CA0/(townId):B3/30;                          [check if little building isn't built]
+!!if&-1;
+  !!VR(trick:y):S(TRUE);
+  !!CA0/(townId):B6/30;
 !!en;
-
-!!UN:N2/328/y7/15; [name of resource silo]
-
-; Show info and remove medal
-!!IF&y1=1/y2=1/y3>0:M1/z102060;
-!!IF&y1=1/y2=1/y3=0:M1/z102061;
-!!IF&y1=1/y2=0/y3>0:M1/z102062;
-!!IF&y1=0/y2=1/y3>0:M1/z102063;
-!!IF&y1=1/y2=0/y3=0:M1/z102064;
-!!IF&y1=0/y2=1/y3=0:M1/z102065;
-!!IF&y1=0/y2=0/y3>0:M1/z102066;
-!!VRy4:Sy1 +y2 +y3; // if y4 is now 0, nothing is built
-
-!!if&y4=0;
-  !!IF:M1/z102067; // nothing built
-!!el;
-  !!HEx1:A3/66/1/1; // remove Statesman's Medal, if something is built
-  !!CM:R0;
+!!re i/0/(buildings[SIZE])/1/-1;
+  !!CA0/(townId):B3/(buildings[i]);
+  !!if&-1;
+    !!FU(WOG_Town_IsPossibleToBuildBuilding):P(townId)/(buildings[i])/?(canBuild:y);
+    !!FU(Array_Push)&(canBuild):P(arrayId)/(buildings[i]);
+  !!en;
+!!en;
+!!if&(trick:y);                                           [return to builded state]
+  !!VR(trick:y):S(TRUE);
+  !!CA0/(townId):B2/30;
 !!en;
 
 ** end of function
