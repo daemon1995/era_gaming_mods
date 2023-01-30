@@ -338,6 +338,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
   !!if&3;
     !!UN:P(optionNumber)/(TRUE);
+    !!VRi^wog_101_map_rule_%i_isEnabled^:S(TRUE);
   !!el;
     !!UN:P(optionNumber)/(FALSE);
   !!en;
@@ -424,11 +425,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
   !!FU(GetMaxMonsterId):P?(maxMonId:y);
   !!FU(WOG_101_GetAffectedMonArray):P?(shouldThisMonIdBeAffected:y)/(maxMonId);
-
-  *!SN:M(shouldThisMonIdBeAffected)/?(size:y);
-
-  *!VR(size):-1;
-  *!FU&(size)<1:E;
 
   !!if&(attackTwiceOn);
     !!re i/(MON_FIRST)/(maxMonId);
@@ -742,11 +738,66 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 
 ** hero level-up trigger
+!?FU(OnHeroGainLevel)&i^wog_101_map_rule_16_isEnabled^/i^wog_101_numberOfArtsLeft^=0;
+!!HE(CURRENT_HERO):O?o;
+!!if&o<>(NO_OWNER);
+  !!HE(CURRENT_HERO):E?(exp:y)/?(lvl:y)/1;
+  !!OW:Io/?(isAi:y);
+  !!if&(isAi);
+    !!VR(artLevel:y):S1 Sd<<(lvl);
+    !!UN:J6/(artLevel)/?(art:y);
+    !!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
+  !!el;
+    !!VRf:S0;
+    !!re i/(lvl:y)/104;
+      !!FU(WOG_GetExpRequirementOfLevel):Pi/?(neededExp:y);
+      !!if&(exp)<(neededExp);
+        !!br;
+      !!en;
+      !!VRf:+1;
+    !!en;
+    !!VRi^wog_101_numberOfArts^:Sf;
+    !!VRi^wog_101_numberOfArtsLeft^:Sf;
+    !!VRi^wog_101_startLvl^:S(lvl:y);
+  !!en;
+!!en;
 
-!?FU(OnHeroGainLevel);
 
-!!FU(WOG_101_CheckMapRule):P16; [check for rule 16]
-!!FU712&3:P; [give hero an artifact]
+!?FU(OnAfterHeroGainLevel)&i^wog_101_numberOfArts^;
+!!VRi^wog_101_numberOfArtsLeft^:-1;
+
+!!if&i^wog_101_numberOfArtsLeft^=0;
+
+  !!VR(arraySize:y):Si^wog_101_numberOfArts^ Sd<<1;
+  !!FU(NewIntArray):P(arraySize:y)/(PIC_TYPE_ART)/?(artList:y);
+
+  !!re i/1/(arraySize:y)/2;/1/-1;
+    !!VR(vLvl:y):Si Sd>>1 +i^wog_101_startLvl^ :6 +1 F1/4;
+    !!VR(artLevel:y):S1 Sd<<(vLvl);
+    !!UN:J6/(artLevel)/?(art:y);
+    !!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
+    !!SN:M(artList)/i/(art);
+  !!en;
+
+  !!VR(dlgNums:y):S(arraySize) :16;
+  !!VR(remainder:y):S(arraySize) %16 F0/1;
+  !!VR(dlgNums):+(remainder);
+  !!VR(itemsLeft:y):S(arraySize:y);
+  !!HE(CURRENT_HERO):B0/?z2;
+
+  !!re i/0/(dlgNums)/1/-1;
+    !!VR(firstItem:y):Si *16;
+    !!VR(count:y):S16 F1/(itemsLeft);
+    !!VR(itemsLeft):-(count:y);
+    !!FU(Array_Slice):P(artList)/(firstItem)/(count)/?(picsArray:y);
+    !!FU(PrepareMultiPicDialog):P(picsArray:y);
+    !!IF:N(MSG_TYPE_MES)/z101048;
+  !!en;
+
+  !!VRi^wog_101_numberOfArts^:S0;
+  !!VRi^wog_101_startLvl^:S0;
+
+!!en;
 
 ** end of hero level-up trigger
 
@@ -806,24 +857,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** end of function
 
 
-** function to give hero an artifact based on experience
-
-!?FU712;
-!!HE(CURRENT_HERO):O?(owner:y) Ed/?(level:y); [get experience]
-
-!!VR(level)::6 +1 F1/4;
-!!VR(artLevel:y):S1 Sd<<(level);
-!!UN:J6/(artLevel)/?(art:y);
-
-!!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
-
-!!if&(owner)<>(NO_OWNER);
-  !!HE(CURRENT_HERO):B0/?z2; [get hero name]
-  !!OW:I(owner)/?(isAi:y); [get AI 1 or human 0]
-  !!IF&(isAi)<>(TRUE):Q2/(PIC_TYPE_ART)/(art)/(MSG_TYPE_MES)/z101048;
-!!en;
-
-** end of function
 
 
 ** Object triggers for Rogue fights
