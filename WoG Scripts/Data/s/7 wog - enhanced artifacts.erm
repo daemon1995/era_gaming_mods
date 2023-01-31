@@ -59,34 +59,6 @@ ZVSE2
 
 !!SN:Ex1/1/5137385/(WOG_71_OnMonGetSpec);                               [hook for the artifacts giving mon stats]
 
-!!SN:Ex1/1/5134831/(WOG_71_OnHeroGetSorceryEffect);                     [now works for the AI and descriptions]
-
-!?FU(WOG_71_OnHeroGetSorceryEffect);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
-
-!!HE(heroId):A2/139/?y99/?(isRingOfMagi:y);                             [see if attacker has Conjuring items or Ring of the Magi]
-!!VR(bonus:y):S(NULL);
-!!if&(isRingOfMagi);
-  !!VR(bonus:y):S50;
-!!el;
-  !!re i/0/2;(end_value);
-    !!VR(artId:y):S(ART_COLLAR_OF_CONJURING) +i;
-    !!HE(heroId):A2/(artId)/?y99/?(isEqipped:y);
-    !!if&(isEqipped);
-      !!VR(artBonus:y):Si *5 +5;
-      !!VR(bonus:y):+(artBonus);
-    !!en; 
-  !!en;
-!!en;
-
-!!if&(bonus);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/12/4/?(damage:e);
-  !!VR(bonusDamage:e):S(damage) :100 *(bonus) +(damage:e);
-  !!UN:C(ebp)/12/4/(bonusDamage:e);
-!!en;
-
-
-
 ** All artifacts function for the AI if worn.
 
 
@@ -167,8 +139,10 @@ ZVSE2
 
   !!if&(value)>0;
     !!HE(CURRENT_HERO)&(lvl)<(SKILL_EXPERT):S(sSkill)/d1;
+    !!FU(WOG_193_UpdateWarFareLevel)&i^wog_193_enabled^=1:P-1/w48;
   !!el&(lvl:y)>(SKILL_NOT_LEARNED);
     !!HE(CURRENT_HERO):S(sSkill)/d-1;
+    !!FU(WOG_193_UpdateWarFareLevel)&i^wog_193_enabled^=1:P-1/w48;
   !!en;
 
 ; Add extra description to the set pieces of The Garb of the Forest Lord and The Vestments of Authority
@@ -258,6 +232,44 @@ ZVSE2
   !!SN&1000:D;                            [redraw screen to show upgraded creatures]
 !!en;
 
+
+!?FU(OnBeforeBattleUniversal)&i^wog_71_enabled^;
+
+
+!!re i/0/i^battle_hero_vs_hero^;
+  !!VR(bonus:y):S(NULL);
+  !!HEi^battle_hero_%i^:A2/(ART_RING_OF_THE_MAGI)/?y-4/?(isRingOfMagi:y);
+  !!if&(isRingOfMagi:y);
+    !!VR(bonus:y):S50;
+  !!el;
+    !!re j/0/2;
+      !!VR(artId:y):Sj +(ART_COLLAR_OF_CONJURING);
+      !!HEi^battle_hero_%i^:A2/(artId:y)/?y-4/?(isEqipped:y);
+      !!if&(isEqipped);
+        !!VR(bonusAdd:y):Sj*5 +5;
+        !!VR(bonus):+(bonusAdd);
+      !!en;
+    !!en;
+  !!en;
+  !!VRi^wog_71_hero_%i_spell_damage^:S100 +(bonus);
+!!en;
+!?FU(OnMagicBasicResistance)&i^wog_71_enabled^;
+
+!!BG:A?y-3;                                   [get active stack #, action type]
+!!if&y-3=(BATTLE_ACTION_HERO_CAST);
+  !!BG:N?y-1;
+  !!VR(side:y):Sy-1 -20 F0/1; X1;
+  !!if&i^wog_71_hero_%i_spell_damage^>100;
+    !!MR:D?(damage:y);                                         [get spell damage]
+    !!VR(damage):*i^wog_71_hero_%i_spell_damage^ :100;
+    !!MR:D(damage:y);
+  !!en;
+!!en;
+
+!?FU(OnAfterBattleUniversal)&i^wog_71_enabled^;
+!!re i/0/i^battle_hero_vs_hero^;
+  !!VRi^wog_71_hero_%i_spell_damage^:S(NULL);
+!!en;
 
 
 ** end of function
