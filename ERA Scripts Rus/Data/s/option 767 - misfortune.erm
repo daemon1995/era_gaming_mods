@@ -1,9 +1,9 @@
 ZVSE2
 ** Author orig.  : Algor
-** Rewritten by  : JackSlater
+** Rewritten by  : daemon_n
 
 ** Name          : Misfortune and demoralization
-** Name rus.     : Неудача и деморализация
+** Name rus.     : Ќеудача и деморализаци€
 ** Options       : 767
 ** Dialogs       : -
 ** Variables     : 
@@ -12,73 +12,83 @@ ZVSE2
 ** Functions     : -
 ** PO-values     : -
 
-** Убирает ограничение игры на максимльную/минимальную мораль и удачу отрядов.
-** Нативные шансы для положительного боевого духа и удачи = 1/24 за каждый поинт
-** Нативные шансы для отрицательного боевого духа и удачи = 1/12 за каждый поинт
+** ƒобавл€ет в игру отрицательную удачу (неудачу).
+** Ўанс срабатывани€ положительной удачи - 5% за уровень удачи отр€да.
+** Ўанс срабатывани€ отрицательной удачи (неудачи) - 10% за уровень неудачи отр€да.
+** устанавливает ограничени€ на максимльную/минимальную мораль отр€дов в -10..+20.
+** Ўанс срабатывани€ положительной морали - 5% за уровень морали отр€да.
+** Ўанс срабатывани€ отрицательной морали - 10% за уровень деморалиации отр€да.
 
-!?FU(OnStartOrLoad);         
-!!UN:P767/?(wogOption:y);          
 
-!!if&(wogOption)<>0;
-  ; BattleMgr_CheckGoodMorale
-  ; Max good morale
-  !!UN:C4605344/1/24;  4645A0 (offset 2) cmp     eax, 3
-  !!UN:C4605318/1/24;  464586 (offset 3) mov     [ebp+index+4], 3
-  ; Max bad morale
-  !!UN:C4605324/1/-12;  46458C (offset 2) cmp     eax, 0FFFFFFFDh
-  !!UN:C4605331/1/-12;  464593 (offset 3) mov     [ebp+index], 0FFFFFFFDh
+!?FU(OnStartOrLoad);                    // при входе в игру - установка параметров морали (спс. Igor)
+!!UN:P767/?(wogOption:y);               // выход если опци€ не включена
 
-  ; BattleMgr_Check_BadMorale
-  ; Max good morale
-  !!UN:C4605836/1/24;  46478C (offset 2) cmp     eax, 3
-  !!UN:C4605771/1/24;  46474B (offset 3) mov     [ebp+limMoral], 3
-  ; Max bad morale
-  !!UN:C4605820/1/-12;  46477C (offset 2) cmp     eax, 0FFFFFFFDh
-  !!UN:C4605780/1/-12;  464754 (offset 3) mov     [ebp+index], 0FFFFFFFDh
+!!SN:L^badluck.era^/?(badLuck:y);
+!!UN&(badLuck)<>0:P767/(FALSE);
 
-  ; BattleStack_Shoot
-  ; Max good luck
-  !!UN:C4453976/1/24;  43F658 (offset 2) cmp     eax, 3
-  !!UN:C4453983/1/24;  43F65F (offset 3) mov     [ebp+defIndex], 3
-
-  ; BattleStack_AtackMelee
-  ; Max good luck
-  !!UN:C4461882/1/24;  44153A (offset 2) cmp     eax, 3
-  !!UN:C4461889/1/24;  441541 (offset 3) mov     [ebp+a5], 3
-
-  ; Set max bad luck
-  !!VRi^maxBadLuck^:S12;
+!!if&(wogOption)<>0;                    // если опци€ включена
+  !!UN:C4605318/1/20;                   // максимум морали
+  !!UN:C4605344/1/20;                   // ...
+  !!UN:C4605354/1/20;                   // делитель шанса выпадени€ положительной морали - 1/20
+  !!UN:C4605324/1/-10;                  // минимум морали
+  !!UN:C4605331/1/-10;                  // ...
+  !!UN:C4605854/1/10;                   // делитель шанса выпадени€ отрицательной морали- 1/10
   !!VRi^es_767_enabled^:S(TRUE);
+!!en; 
+
+!?FU(OnGameLeave)&i^es_767_enabled^;
+// если выключена, выставл€ем значени€ по-умолчанию
+  !!UN:C4605318/1/3;                    // ...
+  !!UN:C4605344/1/3;                    // ...
+  !!UN:C4605354/1/24;                   // ...
+  !!UN:C4605324/1/-3;                   // ...
+  !!UN:C4605331/1/-3;                   // ...
+  !!UN:C4605854/1/12;                   // ...
+
+!?FU(OnStackToStackDamage)&x9=0/i^es_767_enabled^;
+!!BMx1:G213/?(luck:y)/d;
+
+!!if&(luck)<0;
+
+  !!VR(luck):*-5;
+  !!VR(rand:y):R0/0/99;
+  !!if&(rand)<(luck);
+
+    !!VRx4::2; decrease base damage
+
+    !!BA:Q?(isQuick:y);
+    !!if&(isQuick)=0;
+      !!FU(GetTextFileString):P^genrltxt^/45/?(str:z);
+      !!BMx1:T?t N?n;
+      !!VRn:-1 F0/1;
+      !!SN:H^monname^/t/n/?(name:z);
+      !!FU(ES_AdjustString):P(str:z)/(name)/?(res:z);
+
+      !!MM:S(res:z);                 [вывод текста в лог битвы]
+      !!SN:P^BADLUCK^;          [вывод звука удачи]
+      !!BMx1:V48;               [анимаци€ неудачи на отр€де]
+    !!en;
+  !!en;
 !!en;
 
-!?FU(OnGameLeave)&i^es_767_enabled^; [Set native parameters]
-; BattleMgr_CheckGoodMorale
-; Max good morale
-!!UN:C4605344/1/3;  4645A0 (offset 2) cmp     eax, 3
-!!UN:C4605318/1/3;  464586 (offset 3) mov     [ebp+index+4], 3
-; Max bad morale
-!!UN:C4605324/1/-3;  46458C (offset 2) cmp     eax, 0FFFFFFFDh
-!!UN:C4605331/1/-3;  464593 (offset 3) mov     [ebp+index], 0FFFFFFFDh
+!?FU(ES_AdjustString);
+!#VA(str:x) (name:x) (res:x);
+!!SN:Kz(str)/?(len:y);
+!!VR(len):-1;
 
-; BattleMgr_Check_BadMorale
-; Max good morale
-!!UN:C4605836/1/3;  46478C (offset 2) cmp     eax, 3
-!!UN:C4605771/1/3;  46474B (offset 3) mov     [ebp+limMoral], 3
-; Max bad morale
-!!UN:C4605820/1/-3;  46477C (offset 2) cmp     eax, 0FFFFFFFDh
-!!UN:C4605780/1/-3;  464754 (offset 3) mov     [ebp+index], 0FFFFFFFDh
-
-; BattleStack_Shoot
-; Max good luck
-!!UN:C4453976/1/3;  43F658 (offset 2) cmp     eax, 3
-!!UN:C4453983/1/3;  43F65F (offset 3) mov     [ebp+defIndex], 3
-
-; BattleStack_AtackMelee
-; Max good luck
-!!UN:C4461882/1/3;  44153A (offset 2) cmp     eax, 3
-!!UN:C4461889/1/3;  441541 (offset 3) mov     [ebp+a5], 3
-
-; Set max bad luck
-!!VRi^maxBadLuck^:S3;
-
-** end
+!!re i/0/(len);
+  !!SN:Kz(str)/i/?(char:z);
+  !!if&(char)=^%^/i<(len);
+    !!VRn:Si +1;
+    !!SN:Kz(str)/n/?(char:z);
+    
+    !!if&(char)=^s^;
+      !!VR(leftStr:z):M1/z(str)/0/i;
+      !!VR(len):-i -1;
+      !!VR(rightStr:z):M1/z(str)/n/(len);
+      !!VRs^temp^:S(leftStr) +z(name) +(rightStr);
+      !!VR(res):Z^%(leftStr)%z(name)%(rightStr)^;s^temp^; +z(name) +(rightStr);
+      !!br;
+    !!en;
+  !!en;
+!!en;
