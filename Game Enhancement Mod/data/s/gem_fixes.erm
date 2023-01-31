@@ -239,7 +239,7 @@ C(cmbMgr)/21700/4/?(armyPtr[0]) C(cmbMgr)/21704/4/?(armyPtr[1]);
 !!SN:Ex1/1/4504330/(gem_OnCreatureGhostDragonDescriptionCreate);
 !!SN:Ex1/1/4504347/(gem_OnCreatureGhostDragonDescriptionCreate);
   
-
+!?FU(gem_CreateERMHook);
 !!SN:Ex1/1/4608191/(gem_OnAfterArtSpellCasting);  
 
 
@@ -429,36 +429,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     !!en;
   !!en;
 !!en;
-
-
-// Magog's Fireball attack to indirect targets respecsts fire immunity (same as in HotA)
-!?FU(gem_CreateERMHook);
-!#VA(address:x);
-
-!!SN:E(address)/1/4454655/(gem_OnCalcMonsterDamage);                      [trigger on calculating monster damage]
-
-!?FU(gem_OnCalcMonsterDamage);
-!#VA(address:x);
-
-!!UN:C(address)/(STRUCT_HOOK_CONTEXT_EDI)/4/?(stackPtr:y);
-!!UN:C(stackPtr)/244/4/?(side:y) C(stackPtr)/248/4/?(stackPerSide:y);
-!!VR(stack:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackPerSide);
-
-; Exit if for some reaosn the stack ID is wrong
-!!FU|(stack)<(BATTLE_STACK_FIRST)/(stack)>(BATTLE_STACK_LAST):E;
-; Exit if the stack is the one being targeted
-!!BG:E?(targetStack:y);
-!!FU&(stack)=(targetStack):E;
-
-; Check if the stack has fire immunity
-!!BM(stack):F?(flags:y);
-!!VR(isFireImmune:y):S(flags) &(MON_FLAG_FIRE_IMMUNITY) B;
-!!FU&(isFireImmune)=0:E;
-
-; Jump if the target has fire immunity
-!!SN:X?(var:y)/0;
-!!UN:C(address)/(STRUCT_HOOK_CONTEXT_RET)/4/4454786;
-
 
 ************************************************************************
 ************************************************************************
@@ -736,6 +706,8 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 ************************************************************************
 ************************************************************************
 
+!#VRi^maxBadLuck^:S3;
+
 !?FU(gem_CreateERMHook);
 !!SN:Ex1/1/4461853/(gem_CheckMeleeNegativeLuck);
 !!SN:Ex1/1/4453947/(gem_CheckRangeNegativeLuck);
@@ -757,8 +729,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 !!VR(currentStack)&(side): +(BATTLE_STACKS_PER_SIDE);                                         [For right side]
 
 !!if&(luck)<0;
-  !!UN:C4453976/1/?(value:y);                                                                 [Read max value for misfortune]
-  !!VR(luck):*-1 F1/(value);
+  !!VR(luck):*-1 F1/i^maxBadLuck^;                                                            [Read max value for misfortune]
   !!VR(rand:y):R0/1/12;
   !!if&(rand)<=(luck);
     !!UN:C(currentStackPtr)/112/4/-1;                                                         [set stack atrr "isLucky" to -1]
