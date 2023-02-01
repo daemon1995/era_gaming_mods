@@ -4,10 +4,10 @@ ZVSE2
 * Updated: Febrary 26, 2012 by rennyo
 * Further Updated: September 15, 2004 by Timothy to change local y variables
 * used in triggers to y- variables.
-* Rewritten by Archer30 and daemon_n on May 2022
+* Updated by Archer30 on Jan 2023
 
 *War Machine script 0.9 by Overlord
-*Reserved: TM41, v591, v2000-v2074, FU901-FU927, w81-83
+*Reserved: TM41, v591, v2000-v2074, FU903-FU927, w81-83
 *Temporary: z1-z4
 *
 *ballista "base on ballista level" upgrades in towns
@@ -33,7 +33,13 @@ ZVSE2
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Check if script is enabled]
 
 ; Temporary fix for the issue stacks become First Aide Tent
-!?FU(OnBattleRound)&i^battle_round^=0/i^wog_54_enabled^;
+; There should not be more than one tent or catapult on one side of the battlefield, otherwise the script would break
+!?FU(OnSetupBattlefield_Quit)&i^wog_54_enabled^;
+!!VRi^wog_54_tent_0^:S(NO_STACK);
+!!VRi^wog_54_tent_1^:S(NO_STACK);
+!!VRi^wog_54_catapult_0^:S(NO_STACK);
+!!VRi^wog_54_catapult_1^:S(NO_STACK);
+
 !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
   !!BMi:T?(type:y);
 
@@ -41,25 +47,40 @@ ZVSE2
     !!BMi:I?(side:y);
     !!VRi^wog_54_tent_%(side)^:Si;
   !!el&(type)=(MON_CATAPULT)/i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
-    !!BMi:I?(side:y);
+    !!BMi:I?(side);
     !!VRi^wog_54_catapult_%(side)^:Si;
   !!en;
 !!en;
 
+!!SN:H^monname^/(MON_CATAPULT)/0/?s^wog_54_catapultName_0^;
+!!SN:H^monname^/(MON_CATAPULT)/1/?s^wog_54_catapultName_1^;
+
+!!SN:H^monname^/(MON_MAGOG)/0/?s^wog_54_magogName_0^;
+!!SN:H^monname^/(MON_MAGOG)/1/?s^wog_54_magogName_1^;
+
+!!SN:H^monname^/(MON_FIRST_AID_TENT)/0/?s^wog_54_tentName_0^;
+!!SN:H^monname^/(MON_FIRST_AID_TENT)/1/?s^wog_54_tentName_1^;
+
+!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/?s^wog_54_santaName_0^;
+!!SN:H^monname^/(MON_SANTA_GREMLIN)/1/?s^wog_54_santaName_1^;
+
 !?FU(OnBeforeBattleAction)&i^wog_54_enabled^; get before action
 !!BG:E?(targetStack:y) H?(actingHero:y) A?(actionType:y);
 
-!!BMi^battle_acting_stack^:T?(type:y) I?(side:y) N?(num:y) F?(monFlags:y); monster flags (132165 = catapult if not siege)
+!!BMi^battle_acting_stack^:T?(type:y) I?(side:y) N?(num:y);
+
+!!FU(WOG_54_FixeMonsterInfo):P(targetStack) Pi^battle_acting_stack^;
 
 ; Catapult
-; 132165 - no moral, immume to mind spell, siege weapon, shooting, double hex
-!!if&(monFlags)=132165/i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
-  !!FU925&(type)=(MON_CATAPULT):P(actionType); catapult first stage
-  !!FU901&(type)=(MON_MAGOG)/v2059=1:P1/(actionType)/(actingHero)/(num); catapult second stage
+!!if|i^battle_acting_stack^=i^wog_54_catapult_0^/i^battle_acting_stack^=i^wog_54_catapult_1^;
+  !!if&i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
+    !!FU(WOG_54_CatapultFirstStage)&(type)=(MON_CATAPULT):P(actionType); catapult first stage
+    !!FU(WOG_54_CatapultSecondStage)&(type)=(MON_MAGOG)/i^wog_54_catapultActivity^=1:P1/(actionType)/(actingHero)/(num); catapult second stage
+  !!en;
 !!en;
 
 ; Ballista
-!!FU902&(type)=(MON_BALLISTA)/(actionType)=7:P0/(targetStack); ballista
+!!FU(WOG_54_Ballista)&(type)=(MON_BALLISTA)/(actionType)=7:P0/(targetStack); ballista
 
 ; First Aid Tent
 !!FU919&(type)=(MON_SANTA_GREMLIN)/i^wog_54_hasCasualties^:P2; [first aid other action - 2]
@@ -69,11 +90,11 @@ ZVSE2
     !!FU922:P0/(targetStack);
   ; if the action is not first aid healing - Convert First Aid Tent to Santa Gremlin
   !!el;
-    !!FU903&(actionType)<>(BATTLE_ACTION_TENT_HEAL):P(actingHero); [first aid start - side, hero, stack, action, spells] - Set i^wog_54_hasCasualties^ to TRUE if there is a creature to res - only if the hero has first aid skill
+    !!FU903:P(actingHero); [first aid start - side, hero, stack, action, spells] - Set i^wog_54_hasCasualties^ to TRUE if there is a creature to res - only if the hero has first aid skill
   !!en;
 !!en;
 
-!?FU901&i^wog_54_enabled^; catapult action * magog *
+!?FU(WOG_54_CatapultSecondStage)&i^wog_54_enabled^; catapult action * magog *
 !#VA(mode:x) (actionType:x) (actingHero:x) (num:x);
 
 * 1
@@ -84,7 +105,7 @@ ZVSE2
     !!BMi^battle_acting_stack^:T(MON_CATAPULT);
   !!el;
     !!VRv(index):-1;
-    !!VRv2059:S3;
+    !!VRi^wog_54_catapultActivity^:S3;
     !!VRv2054:Si^battle_acting_stack^;
   !!en;
 
@@ -92,27 +113,26 @@ ZVSE2
 * 2
 !!el;
   !!BMv2054:T(MON_CATAPULT);
-  !!VRv2059:S0;
-  !!UN:G1/(MON_MAGOG)/0/0 G1/(MON_MAGOG)/1/0; restore magog
+  !!VRi^wog_54_catapultActivity^:S0;
+  !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_magogName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_magogName_1^; restore magog
 !!en;
 
 !?FU919&i^wog_54_enabled^;
 !#VA(mode:x);
 !#VA(targetHero:x) (targetNum:x) (targetStack:x);   [mode 0 only]
 
-* 1
+!!VRi^wog_54_hasCasualties^:S0;
+* 1 mouse click
 !!if&(mode)=0;
   !!BMi^wog_54_tent_%i(battle_acting_side)^:T(MON_FIRST_AID_TENT);
-  !!UN:G1/(MON_SANTA_GREMLIN)/0/0 G1/(MON_SANTA_GREMLIN)/1/0;
-  !!VRi^wog_54_hasCasualties^:S0;
+  !!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_santaName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_santaName_1^;
   !!FU906:P(MON_FIRST_AID_TENT)/(targetHero)/(targetNum)/(targetStack);
-* 3
+* 3 before battle action
 !!el&(mode)=2;
   !!BG:A?(actionType:y);
   !!FU|(actionType)<4/(actionType)>8/(actionType)=6/(actionType)=7:E; exit if action is not right
 
   !!BMi^battle_acting_stack^:T(MON_FIRST_AID_TENT);
-  !!VRi^wog_54_hasCasualties^:S0;
 !!en;
 
 !?FU903&i^wog_54_enabled^;
@@ -126,10 +146,7 @@ ZVSE2
 
 !!VRi^wog_54_hasCasualties^:S(TRUE); there is a creature to resurrect
 
-!!SN:H^monname^/(MON_FIRST_AID_TENT)/0/?(singName:z);
-!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/(singName);
-!!SN:H^monname^/(MON_FIRST_AID_TENT)/1/?(plurName:z);
-!!SN:H^monname^/(MON_SANTA_GREMLIN)/1/(plurName);
+!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_tentName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_tentName_1^;
 
 !!BMi^wog_54_tent_%i(battle_acting_side)^:T(MON_SANTA_GREMLIN); change to santa gremlin
 !!BG:A(BATTLE_ACTION_CANCEL);           [cancel action]
@@ -151,7 +168,7 @@ ZVSE2
   !!en;
 !!en;
 
-!?FU902&i^wog_54_enabled^;
+!?FU(WOG_54_Ballista)&i^wog_54_enabled^;
 !#VA(mode:x) (targetStack:x);
 
 * 1
@@ -177,7 +194,7 @@ ZVSE2
   !!VRy13&y15>0:-y11;
   !!VRy13&y15>0/y13<1:S1; no less than 1 speed
   !!BMv2055:Ky8 Sy13; give additional damage and speed loss
-  !!BU:R;
+  !!SN:D;
 !!en;
 
 !?FU920&i^wog_54_enabled^;
@@ -201,42 +218,28 @@ ZVSE2
 !!BG:E(targetStack) Di^mouse_battleHex^; get first aid tent
 
 !!BMi^wog_54_tent_%i(battle_current_side)^:T(MON_FIRST_AID_TENT);           [source of all evil]
-!!UN:G1/(MON_SANTA_GREMLIN)/0/0 G1/(MON_SANTA_GREMLIN)/1/0;
+!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_santaName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_santaName_1^;
 !!VRi^wog_54_hasCasualties^:S0;
 !!BG:A(BATTLE_ACTION_TENT_HEAL); call resurrection
 
-!?FU925&i^wog_54_enabled^; check catapults avaiabitity
+!?FU(WOG_54_CatapultFirstStage)&i^wog_54_enabled^; check catapults avaiabitity
 !#VA(action:x); 
 
-!!VRv2074:S0;
 !!VR(index:y):Si^battle_acting_side^ +2068;
 !!FU&v(index)=0:E; exit if no shots
 
-!!FU926&i^battle_acting_side^=(BATTLE_LEFT):P0/103 P0/121 P0/137;
-!!FU926&i^battle_acting_side^=(BATTLE_RIGHT):P1/117 P1/116 P1/133 P1/150 P1/151;
-!!FU&v2074=1:E; exit if enemy found
-
-!!SN:H^monname^/(MON_CATAPULT)/0/?(singName:z);
-!!SN:H^monname^/(MON_MAGOG)/0/(singName);
-!!SN:H^monname^/(MON_CATAPULT)/1/?(plurName:z);
-!!SN:H^monname^/(MON_MAGOG)/1/(plurName);
+!!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_catapultName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_catapultName_1^;
 
 !!BMi^battle_acting_stack^:T(MON_MAGOG); change to magog
 
 !!BG:A(BATTLE_ACTION_CANCEL); cancel action
-!!VRv2059:S1; set activity to 1
-
-!?FU926&i^wog_54_enabled^;
-!!BU:Ex2/?y1;
-!!FU&y1=-1:E;
-!!BMy1:I?y2;
-!!VRv2074&y2<>x1:S1;
+!!VRi^wog_54_catapultActivity^:S1; set activity to 1
 
 ************************* after action combat screen ***************************
 
-!?FU(OnAfterBattleAction)&i^wog_54_enabled^; get after action
-!!FU902&v2053=2:P1;
-!!FU901&v2059=3:P2;
+!?FU(OnBattleActionEnd)&i^wog_54_enabled^; get after action
+!!FU(WOG_54_Ballista)&v2053=2:P1;
+!!FU(WOG_54_CatapultSecondStage)&i^wog_54_catapultActivity^=3:P2;
 !!FU922&i^wog_54_hasCasualties^=2:P1;
 
 !?FU922&i^wog_54_enabled^;
@@ -248,8 +251,9 @@ ZVSE2
   !!BMx2:L?v2058; get before heal
 * 2
 !!el;
+  !!BG:E?y30;
   !!VRi^wog_54_hasCasualties^:S0;
-  !!BMi^battle_acting_stack^:Lv2058 I?y2; restore old and get index.
+  !!BMy30:Lv2058 I?y2; restore old and get index.
   !!BHy2:N?y3; get hero
   !!HEy3:S27/?y11;
   !!IF:Wy3;
@@ -261,7 +265,7 @@ ZVSE2
   !!VRy1&y11=2:S75;
   !!VRy1&y11=3:S100;
   !!VRy1:*y7 :100; get quantity to heal
-  !!FU923:Pi^battle_acting_stack^/y1/y11;
+  !!FU923:Py30/y1/y11;
 !!en;
 
 !?FU923&i^wog_54_enabled^;
@@ -279,6 +283,17 @@ ZVSE2
 !!BMx1:Ny2 Ly3;
 !!FU923:P(stack)/x2/x3;
 
+************************* MOUSE HOVER combat screen ****************************
+
+!?FU(OnBattleMouseHint)&i^mouse_battleHex^>=1/i^mouse_battleHex^<=185;
+!!BU:Ei^mouse_battleHex^/?(stack:y); check monster position
+!!FU&(stack)=(NO_STACK):E; exit if no monster
+
+!!BM(stack):N?(num:y);
+!!FU&(num)<=0:E;
+
+!!FU(WOG_54_FixeMonsterInfo):P(stack);
+
 ************************* MOUSE CLICK combat screen ****************************
 
 !?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^wog_54_enabled^;
@@ -286,24 +301,22 @@ ZVSE2
 !!FU&y1=(NO_STACK):E; exit if no monster
 !!FU&y1=i^battle_current_stack^:E;
 
-!!BMy1:T?y2 I?y3 L?y5 H?y6 N?y7 F?y8 B?y9; y2 = monster , y3 = hero side
+!!BMy1:T?y2 I?y3 L?y5 H?y6 N?y7 B?y9; y2 = monster , y3 = hero side
 !!BHy3:N?y4; get hero number
 
-; 132165 - no moral, immume to mind spell, siege weapon, shooting, double hex
-; 132161 - no moral, immume to mind spell, siege weapon, double hex
-!!UN&y8<>132165/y2=(MON_MAGOG):G1/(MON_MAGOG)/0/0 G1/(MON_MAGOG)/1/0; restore magog if mouse click on real magogs
-!!VRz1&y8=132165:Sz154002;
-!!VRz2&y8=132165:Sz154003;
-!!UN&y8=132165:G1/(MON_MAGOG)/0/1 G1/(MON_MAGOG)/1/2;
-!!FU901&y2=(MON_MAGOG)/v2059=1/y8=132165:P1/y1/0/y3/y4/y7; catapult view
+; Catapult
+!!if|y1=i^wog_54_catapult_0^/y1=i^wog_54_catapult_1^;
+  !!FU(WOG_54_CatapultSecondStage)&y2=(MON_MAGOG)/i^wog_54_catapultActivity^=1:P1/y1/0/y3/y4/y7; catapult view
+!!en;
 
-!!FU919&y2=(MON_SANTA_GREMLIN)/i^wog_54_hasCasualties^/y8=132161:P0/y4/y7/y1;
-* reset santa gremlin *
-!!UN&y2=(MON_SANTA_GREMLIN)/i^wog_54_hasCasualties^>0/y8<>132161:G1/(MON_SANTA_GREMLIN)/0/0 G1/(MON_SANTA_GREMLIN)/1/0;
-!!UN&y2=(MON_MAGOG)/v2059>0/y8<>132165:G1/(MON_SANTA_GREMLIN)/0/0 G1/(MON_SANTA_GREMLIN)/1/0; restore magog
-*
-; There are casualties on the action side
-!!FU920&i^wog_54_hasCasualties^/y8<>132161:Py2/y4/y6/y5/y7/y9/y1; [mon, hero, starting hp, lost hp, qty, starting qty, stack, position] - convert from Santa to First Aid Tent
+; First Aid Tent
+!!if|y1=i^wog_54_tent_0^/y1=i^wog_54_tent_1^;
+  !!if&y2=(MON_SANTA_GREMLIN)/i^wog_54_hasCasualties^=1;
+    !!FU919:P0/y4/y7/y1;
+    !!FU920:Py2/y4/y6/y5/y7/y9/y1; [mon, hero, starting hp, lost hp, qty, starting qty, stack, position] - convert from Santa to First Aid Tent
+  !!en;
+!!en;
+
 !!FU906&y2>=(MON_CATAPULT)/y2<=(MON_AMMO_CART):Py2/y4/y7/y1; stats change if machines
 
 !?FU906&i^wog_54_enabled^; x1 = machine , x2 = hero
@@ -321,22 +334,23 @@ ZVSE2
   !!VRy13:Sv2073;
 !!en;
 
-!!VRz1&x1=(MON_BALLISTA):Sz154004;
-!!VRz1&x1=(MON_AMMO_CART):Sz154005;
-!!VRz1&x1=(MON_FIRST_AID_TENT):Sz154006;
-!!VRz1&x3>1:Sz154007;
-!!VRz1:Sz154008;
+; Set custom war machine names - Disable by Archer30 for compatibility concern
+*!VRz1&x1=(MON_BALLISTA):Sz154004;
+*!VRz1&x1=(MON_AMMO_CART):Sz154005;
+*!VRz1&x1=(MON_FIRST_AID_TENT):Sz154006;
+*!VRz1&x3>1:Sz154007;
+*!VRz1:Sz154008;
 
-!!if&x1=(MON_CATAPULT);
-  !!VRz1:Sz154009;
-  !!VRz1&x3>1:Sz154010;
-  !!VRz1&y12=1:Sz154011;
-  !!VRz1&y12=2:Sz154012;
-  !!VRz1&y12=3:Sz154013;
-  !!VRz1&x3>1:Sz154014;
-!!en;
+*!if&x1=(MON_CATAPULT);
+  *!VRz1:Sz154009;
+  *!VRz1&x3>1:Sz154010;
+  *!VRz1&y12=1:Sz154011;
+  *!VRz1&y12=2:Sz154012;
+  *!VRz1&y12=3:Sz154013;
+  *!VRz1&x3>1:Sz154014;
+*!en;
 
-!!UN:G1/x1/1/1 G1/x1/0/1;
+*!UN:G1/x1/1/1 G1/x1/0/1;
 
 * hit points
 !!if&x1=(MON_CATAPULT);
@@ -363,7 +377,7 @@ ZVSE2
 
 *********************** Pre-Post Combat and ammo cart **************************
 
-; Multiplaer support
+; Multiplayer support
 !?FU(OnBeforeBattleBeforeDataSend)&i^wog_54_enabled^;
 !!IP:Di^battle_owner_1^ Wi^battle_hero_0^/81/83;
 !!IP:V2000/2074;                        [Legacy, not sure if it is necessary]
@@ -510,8 +524,6 @@ ZVSE2
 !!CM:R1 F?v2048 I?v2049 A?v2051/?v2050;
 !!FU910&v2048=0/v2050<375:Pv2051/v2050/0/0/v2049/0;
 
-
-
 !?FU910&i^wog_54_enabled^;
 !!CA(CURRENT_TOWN):T?(townType:y) H1/?(heroVisitor:y) U?x6; get town type
 !!FU916:P(townType)/x1/x2/x5;
@@ -528,7 +540,9 @@ ZVSE2
 !!VRy6:Swy5 +1; get w-var for type, add 1 top skip 0
 !!HE(heroVisitor):A2/x1/d/?y1 B0/?z3 Ed/?y9/1 O?y10; hero level y9
 !!VRwy5&y1=0:S0; set w-var to 0
+
 !!UN&y1=0:G1/x2/0/0 G1/x2/1/0;
+
 !!UN:Ax1/10/0 Ax1/9/0; restore desc
 !!FU&y1=0:E; stop if found
 !!CM:R0; Disable standard reaction
@@ -802,3 +816,25 @@ ZVSE2
 !!IF&v1=2:Q1/9/v2/9/v3/4^%Z1^;
 !!IF&v1=3:Q1/9/v2/9/v3/9/v4/4^%Z1^;
 !!UN:A0/9/0 A0/9/10;
+
+**** Fix monster info for the given stack on the battlefield ****
+
+!?FU(WOG_54_FixeMonsterInfo);
+!#VA(stack:x);
+
+!!FU|(stack)<(BATTLE_STACK_FIRST)/(stack)>(BATTLE_STACK_LAST):E;
+
+!!BM(stack):T?(type:y);
+!!FU&(type)<>(MON_MAGOG)/(type)<>(MON_SANTA_GREMLIN):E;
+
+!!if|(stack)=i^wog_54_catapult_0^/(stack)=i^wog_54_catapult_1^;
+  !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_catapultName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_catapultName_1^;
+!!el;
+  !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_magogName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_magogName_1^;
+!!en;
+
+!!if|(stack)=i^wog_54_tent_0^/(stack)=i^wog_54_tent_1^;
+  !!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_tentName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_tentName_1^;
+!!el;
+  !!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_santaName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_santaName_1^;
+!!en;
