@@ -148,10 +148,18 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!FU(WOG_101_CheckMapRule):P6; [check for rule 6]
 !!DO699/0/155/1&3:P; [grow hero monster stacks by 5%]
 
-!!if&i^timerDay^=1;
+!!if&i^timerDay^=1/i^wog_101_map_rule_8_isEnabled^;
   ; Level 5 on start
-  !!FU(WOG_101_CheckMapRule):P8; [check for rule 8]
-  !!DO702/(HERO_FIRST)/(HERO_LAST_WOG)/1&3:Pi^timerOwner^; [upgrade this player's heroes to 5th level on day 1]
+  !#VA(tavernHeroes[2]:y);
+  !!OW:Hi^timerOwner^/1 Vi^timerOwner^/?(tavernHeroes[0])/?(tavernHeroes[1]);
+  !!re i/2/v1/1/1;
+    !!FU702:Pvi;                      [upgrade this player's heroes to 5th level on day 1]
+  !!en;
+  !!re i/0/(tavernHeroes[SIZE])/1/-1;
+    !!if&(tavernHeroes[i])<>(NO_HERO);
+      !!FU702:P(tavernHeroes[i]); 
+    !!en;
+  !!en;
 
   ; Double movement points (part 1 - only for the first player)
   !!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
@@ -267,59 +275,87 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!en;
 
 !!if&v1=4;
-  !!DO725/1/100/1:Py2; [get 1st random rule from selected rules if that option was chosen]
-  !!DO726/1/100/1:Py2; [get 2nd random rule from selected rules if that option was chosen]
-  !!VRy3:Sv3; [random from selected rule 1]
-  !!VRy4:Sv4; [random from selected rule 2]
+  !!DO725/1/100/1:Py2;                                             [get 1st random rule from selected rules if that option was chosen]
+  !!DO726/1/100/1:Py2;                                             [get 2nd random rule from selected rules if that option was chosen]
+  !!VRy3:Sv3;                                                      [random from selected rule 1]
+  !!VRy4:Sv4;                                                      [random from selected rule 2]
 !!en;
 
-!!FU(WOG_101_SetMapRulesBits)|-2/v1=4:Py3 Py4; [set the bits for our random rules]
+!!FU(WOG_101_SetMapRulesBits)|-2/v1=4:Py3 Py4;                     [set the bits for our random rules]
 
-!!DO(WOG_101_AddPapyrusMessages)/1/21/1:P; [add papyrus messages for any rules that are active - now disabled as you can always check them from WoG Options menu]
+!!DO(WOG_101_AddPapyrusMessages)/1/21/1:P;                         [add papyrus messages for any rules that are active - now disabled as you can always check them from WoG Options menu]
 
-!!VRv600:S0; [flag for 1st rule announced]
-!!UN:P230/?y6; [Check if Display Map Rules chosen at Map Start is enabled: y6]
-!!FU(WOG_230_AnnounceMapRules)&y6=1:P; [announce rules to first player, who is always human]
+!!VRv600:S0;                                                       [flag for 1st rule announced]
+!!UN:P230/?y6;                                                     [Check if Display Map Rules chosen at Map Start is enabled: y6]
+!!FU(WOG_230_AnnounceMapRules)&y6=1:P;                             [announce rules to first player, who is always human]
 
-!!UN:R5/1/1; [Change mouse cursor to "wait" hourglass symbol]
-!!UN:R7/0/1; [Show mouse cursor and disable changing]
+!!UN:R5/1/1;                                                       [Change mouse cursor to "wait" hourglass symbol]
+!!UN:R7/0/1;                                                       [Show mouse cursor and disable changing]
 
 !!FU(WOG_101_SetUpMonsters):P;
 
-!!FU(WOG_101_CheckMapRule):P7; [check for rule 7]
-!!UN&3:U17/-1/?y1; [count dwellings]
-!!VRv600:S-1; [reset coordinate index]
-!!VRy4:S140; // set y4 to boars
-!!UN:P67/=1; // check if Neutral town is active (flag1)
-!!VRy4&1:S112; // if yes set to Air Elementals instead of boars
-!!DO701/1/y1/1&3:Py4; [add boars / Air Elementals to dwellings]
+!!FU(WOG_101_CheckMapRule):P7;                                     [check for rule 7]
+!!UN&3:U17/-1/?y1;                                                 [count dwellings]
+!!VRv600:S-1;                                                      [reset coordinate index]
+!!VRy4:S140;                                                       [set y4 to boars]
+!!UN:P67/=1;                                                       [check if Neutral town is active (flag1)]
+!!VRy4&1:S112;                                                     [if yes set to Air Elementals instead of boars]
+!!DO701/1/y1/1&3:Py4;                                              [add boars / Air Elementals to dwellings]
 
-!!FU(WOG_101_CheckMapRule):P8; [check for rule 8]
-!!DO702/(HERO_FIRST)/(HERO_LAST_WOG)/1&3:P-1; [upgrade unowned heroes to 5th level]
+!!FU(WOG_101_CheckMapRule):P8;                                     [check for rule 8]
+!!if&3;
+    !!FU(WOG_101_CheckMapRule):P16;                                [check for rule 8]
+    *!if&3;
+      *!VRi^wog_101_map_rule_16_isEnabled^:S(FALSE);
+    *!en;
+    !!re i/0/(PLAYER_LAST);
+      !!OW:Vi/?l/?r;
+      !!VRi^wog_101_hero_inTavern_%l^:S(TRUE);
+      !!VRi^wog_101_hero_inTavern_%r^:S(TRUE);
+    !!en;
+    !!VRi^wog_101_hero_inTavern_-1^:S(FALSE);
 
-!!FU(WOG_101_CheckMapRule):P14; [check for rule 14] - Capitol can be built in every town
+    !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+      !!HEi:O?o;
+      !!if&o=(NO_OWNER);
+        !!if&i^wog_101_hero_inTavern_%i^<>(TRUE);
+          !!FU702:Pi;
+        !!el;
+          !!VRi^wog_101_hero_inTavern_%i^:S(FALSE);
+        !!en;
+      !!en;
+    !!en;
+    *!DO702/(HERO_FIRST)/(HERO_LAST_WOG)/1:P-1;                    [upgrade unowned heroes to 5th level]
+    *!FU(WOG_101_CheckMapRule):P16;                                [check for rule 8]
+    *!if&3;
+      *!VRi^wog_101_map_rule_16_isEnabled^:S(TRUE);
+    *!en;
+
+!!en;
+
+!!FU(WOG_101_CheckMapRule):P14;                                    [check for rule 14] - Capitol can be built in every town]
 !!UN&3:C4955234/(UNC_INT8)/?i^wog_124_patch^ C4955234/(UNC_INT8)/0;
 
-!!FU(WOG_101_CheckMapRule):P20; [check for rule 20]
+!!FU(WOG_101_CheckMapRule):P20;                                    [check for rule 20]
 
 !!if&3;
-  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?y1; [count towns: y1]
-  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y5; [count confluxes: y5]
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?y1;                                  [count towns: y1]
+  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y5;                             [count confluxes: y5]
 
   !!if&y1>0/y5=0;
-    !!VRv600:S-1; [reset coordinate index]
-    !!DO717/1/y1/1:P; [build grails in towns]
+    !!VRv600:S-1;                                                  [reset coordinate index]
+    !!DO717/1/y1/1:P;                                              [build grails in towns]
   !!en;
 !!en;
 
-!!FU(WOG_101_CheckMapRule):P21; [check for rule 21]
+!!FU(WOG_101_CheckMapRule):P21;                                    [check for rule 21]
 
 !!if&3;
-  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?y1; [Number of Towns on map: y1]
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?y1;                                  [Number of Towns on map: y1]
 
   !!if&y1>0;
-    !!VRv1:S-1; [reset coordinate index]
-    !!DO(WOG_239_PlaceWarlordsBanner)/1/y1/1&3/y1>0:P; [Place Warlord's Banners in front of towns]
+    !!VRv1:S-1;                                                    [reset coordinate index]
+    !!DO(WOG_239_PlaceWarlordsBanner)/1/y1/1&3/y1>0:P;             [Place Warlord's Banners in front of towns]
   !!en;
 !!en;
 
@@ -339,6 +375,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
   !!if&3;
     !!UN:P(optionNumber)/(TRUE);
     !!VRi^wog_101_map_rule_%i_isEnabled^:S(TRUE);
+    *!IF:M^%i^;
   !!el;
     !!UN:P(optionNumber)/(FALSE);
   !!en;
@@ -622,9 +659,14 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** function to make hero x16 at least 5th level if it has owner x1
 
 !?FU702;
+!!HEx1:E?(exp:y)/?l/1;
 
-!!HEx16:O?y1; [get hero's owner]
-!!HEx16&y1=x1:Ed5000; [give 5000 experience]
+!!if&(exp)<5000;
+
+  !!VR(exp):-5000 *-1; -(exp);
+  !!HEx1:Ed(exp:y);
+!!en;
+ Ed5000; [give 5000 experience]
 
 ** end of function
 
@@ -740,11 +782,15 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** hero level-up trigger
 !?FU(OnHeroGainLevel)&i^wog_101_map_rule_16_isEnabled^/i^wog_101_numberOfArtsLeft^=0;
 !!HE(CURRENT_HERO):O?o;
-!!if&o<>(NO_OWNER);
+
+*!IF:L^%o^;
+*!if&o<>(NO_OWNER);
+
   !!HE(CURRENT_HERO):E?(exp:y)/?(lvl:y)/1;
   !!OW:Io/?(isAi:y);
-  !!if&(isAi);
-    !!VR(artLevel:y):S1 Sd<<(lvl);
+  !!if|(isAi)/o=(NO_OWNER);
+    !!VR(vLvl:y):S(lvl:y) Sd>>1 :6 +1 F1/4;
+    !!VR(artLevel:y):S1 Sd<<(vLvl);
     !!UN:J6/(artLevel)/?(art:y);
     !!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
   !!el;
@@ -760,7 +806,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
     !!VRi^wog_101_numberOfArtsLeft^:Sf;
     !!VRi^wog_101_startLvl^:S(lvl:y);
   !!en;
-!!en;
+*!en;
 
 
 !?FU(OnAfterHeroGainLevel)&i^wog_101_numberOfArts^;
