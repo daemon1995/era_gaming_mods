@@ -847,8 +847,6 @@ ZVSE2
 !!UN:P795/?(wogOption:y);
 !!FU&(wogOption)=(FALSE):E;
 
-!!SN:H^monname^/(MON_ROGUE)/0/?s^es_795_singRogueName^;
-!!SN:H^monname^/(MON_ROGUE)/1/?s^es_795_plurRogueName^;
 
 ; Creature Conflict
 !!if&i^opt795.10.dc^<>0;        [кол-во защищающихся существ в конфликте]
@@ -937,248 +935,167 @@ ZVSE2
   !!en;     
 !!en; 
 
-!?FU(OnAfterLoadGame);                  // при загрузке игры
-!!SN:W^auto.a^/0;                       // сброс параметров автобоя
 
-!?FU(Event_AfterStackObtainsTurn);  [триггер: после фазы регенерации; проверки на мораль, страх; и после установки активного стека]
-!!SN:W^auto.a^/?y10 W^auto.a^/0 W^auto.b^/?y11 W^auto.c^/?y12 W^auto.s^/?y13; [получение настроек автобоя]
-!!UN&y10<>0:Cy10/1/y11 C6916068/1/y12 C6916072/1/y13;                         [восстановление параметров автобоя]
-!!SN:W^opt795.10.dt^/?y1 W^opt795.10.dc^/?y2 W^opt795.10.ds^/?y3;             [y1/y2/y3 - тип/кол-во/номер отряда защищающихся существ]
-!!BG:N?y4;
-!!BMy4:T?y5;                        [y4/y5 - номер/тип активного стека]
+!?FU(OnBattleRound)&i^battle_round^>=0;
+!!re i/0/1;
+  !!VRi^es_795_assassins_acted_%i^:S(FALSE);
+!!en;
 
-!!if|y2=0/y3<>y4;                   [если нет защищающегося отряда или не его ход, получаем данные по ассасинам]
-  ** &y2=0 [y1/y2/y3 - тип/кол-во/номер отряда ассасинов]
-  !!VRy1:S143;
-  !!SN:W^opt795.11.an^/?y2 W^opt795.11.as^/?y3;
-!!en; 
+!?FU(OnBattleRegeneratePhase)&i^battle_round^>=0;
+!!UN:P795/?(wogOption:y);
+!!FU&(wogOption)=(FALSE):E;
 
-!!FU|y2=0/y4<>y3/y5<>y1:E;          [выход, если нет или не ходит защищающийся отряд/ассасин или если тип отряда не совпадает]
+!!VRr:R0/0/3;
+!!VR(actSide:y):Sx1 :21;
+!!VR(actHero:y):Si^battle_hero_%(actSide)^;
+!!FU&r:E;
 
-!!UN:C6919200/4/?y10;               [y10 - combatmanager]
-!!VRy1:Sy10 +78532;                 [y1 - адрес статуса автобоя]
-!!UN:Cy1/1/?y11;                    [y11 - статус автобоя]
-!!UN:C6916068/1/?y12 C6916068/1/1;  [y12 - статус автобоя - существа, существа ходят автоматически]
-!!UN:C6916072/1/?y13 C6916072/1/0;  [y13 - статус автобоя - заклинания, заклинания НЕ кастуются автоматически]
-!!SN:W^auto.a^/y1 W^auto.b^/y11 W^auto.c^/y12 W^auto.s^/y13; [сохранение настроек автобоя]
-!!SN:E4683792/2/y10;                [включение автобоя]
+!!if&(actHero)<>(NO_HERO)/i^es_795_assassins_acted_%(actSide:y)^=(FALSE)/   
+i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE);
 
-!?FU(OnBeforeBattleUniversal);          // перед боем сброс боевых переменных ассасинов
-!!UN:P795/?y1;
-!!FU&y1=0:E;                            // выход если опция не включена
+  !!VR(oppSide:y):S(actSide) X1;
 
-!!SN:W^opt795.11.br0^/-1 W^opt795.11.br1^/-1;
-!!SN:W^opt795.11.as^/-1 W^opt795.11.an^/0;
-!!SN:W^opt795.11.tf^/1;                 // установка флага "Тактическая фаза"
+  !!FU(NewIntArray):P?(targetStackPtrs:y);
+  !!VR(start:y):S(oppSide) *(BATTLE_STACKS_PER_SIDE);
+  !!VR(end:y):S(start) +(BATTLE_STACKS_PER_SIDE) -1;
 
-!?FU(OnBattleReplay);                   // перед переигрываемой битвой сброс боевых переменных ассасинов
-!!UN:P795/?y1;
-!!FU&y1=0:E;                            // выход если опция не включена
+  !!re i/(start:y)/(end:y);(end_value);
+    !!BMi:N?n T?t S?s;
+    !!if&n>0/t<>(NO_MON)/s>0;
+      !!BMi:Z?(stackStruct:y);
+      !!FU(ES_996_CheckStackCanAct):P(stackStruct:y)/?(canAct:y);
+      !!if&(canAct);
+        !!FU(Array_Push):P(targetStackPtrs)/(stackStruct);
+      !!en;
+    !!en;
+  !!en;
+  !!SN:M(targetStackPtrs)/?(size:y);
+  !!if&(size);
+    !!FU(Array_Shuffle):P(targetStackPtrs);
+    !!VR(success:y):S(FALSE);
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
 
-!!SN:W^opt795.11.br0^/-1 W^opt795.11.br1^/-1;
-!!SN:W^opt795.11.as^/-1 W^opt795.11.an^/0;
-!!SN:W^opt795.11.tf^/1;                 // установка флага "Тактическая фаза"
+    !!re (stackIdFromAray:y)/0/(size)/1/-1;
+      !!SN:M(targetStackPtrs)/(stackIdFromAray)/?(targetStackPtr:y);
+      !!FU(NewIntArray):P?(availableGexes:y);                                     [prepare array of the hexes]
+      !!UN:C(targetStackPtr)/132/4/?f C(targetStackPtr)/132/4/d~(MON_FLAG_FLYER); [remove flying]
+      !!UN:C(targetStackPtr)/696/4/?(bindDuration:y) C(targetStackPtr)/696/4/0;   [and bind spell]
 
-!?FU(OnAfterTacticsPhase);              // После тактической фазы
-!!SN:W^opt795.11.tf^/0;                 // Сброс флага "Тактическая фаза"
+      !!re i/0/(BATTLE_HEX_LAST);                                                 [loop hexes]
+        !!SN:E5390176/(CALLCONV_THISCALL)/(targetStackPtr)/i/0;                   [can stack reach that hex]
+        !!if&v1;
+          !!FU(Array_Push):P(availableGexes)/i;                                   [add into array]
+        !!en;
+      !!en;
+      !!UN:C(targetStackPtr)/132/4/f C(targetStackPtr)/696/4/(bindDuration:y);    [restore flying and bind duration]
+      !!SN:M(availableGexes)/?(numOfHexes:y);                                     [get array size]
+      !!if&(numOfHexes);                                                          [if not empty]
+        !!VR(numOfHexes):-1;
+        !!VR(randHexIndex:y):R0/0/(numOfHexes);                                   [get random hex]
+        !!SN:M(availableGexes)/(randHexIndex:y)/?(randPos:y);                     [get position]
+        !!VR(success:y):S(TRUE);
+        !!br;
+      !!en;
+    !!en;
 
-!?FU(OnBattleRegeneratePhase);          [на фазе регенераци не в тактической фазе появляются ассасины соотв. героя]
-!!UN:P795/?y1;
-!!FU&y1=0:E;                            [выход если опция не включена]
+    !!FU&(success:y)<>(TRUE):E;                                                                 [end if no targets]
+    !!VRi^es_795_summoned_stack_id^:S(NO_STACK);                                                    [assume summon is failed]
+    !!UN:P758/?(wogOption:y) P758/0;
 
-!!SN:W^opt795.11.tf^/?y1;
-!!FU&y1=1:E;                            [выход если тактическая фаза]
+    !!SN:E4692528/(CALLCONV_THISCALL)/(cmbMgr:y)/(actSide:y)/(MON_ROGUE)/i^opt795.11.%(actHero:y)^/(randPos:y)/4194304/1; [summmon stack]
 
-** исчезновение ассасинов совершивших действие
-!!SN:W^opt795.11.an^/?y1 W^opt795.11.as^/?y2;
+    !!VR(assassinsStackId:y):Si^es_795_summoned_stack_id^;
+    !!VRi^es_795_summoned_stack_id^:S(NULL);
+    !!if&(assassinsStackId:y)<>(NO_STACK);                                                   [if not failed]
+      !!SN:E4628608/(CALLCONV_FASTCALL)/(cmbMgr);
+      !!VR(showIt:y):Sv1 X1;
+      !!if&(showIt:y);
+        !!SN:P^CLONE^;                                                                              [play sound]
+        !!VRz1:S^%T(es.795.assassins.appear)^;
+        !!MM:Sz1;                                                                               [^%T(es.795.singName)^]
+      !!en;
+      !!BM(assassinsStackId:y):Z?(assassinsStack:y) G213/0/d;
+      !!UN:C(targetStackPtr)/248/4/?(id:y);
+      !!VR(targetStackId:y):S21 *(oppSide) +(id);
+      !!BM(targetStackId):P?p F?f;
+      !!VRf:&(MON_FLAG_WIDE) B;                  [check mon is wide]
 
-!!if&y2>=0;                             [если есть отряд ассасинов на поле]
-  !!VRy3:Sy2 :21;
-  !!BA:Hy3/?y4;                         [y3/y4 - сторона/герой-владелец походившего отряда ассасинов]
-  !!BMy2:N?y5;
-  !!SN:W^opt795.11.%Y4^/y5;             [сохраняем герою количество выживших после действия ассасинов]
+      !#VA(positions[2]:y);
 
-  !!if&y5>0;                            [убираем отряд, если остались выжившие ассасины]
-    !!UN:C6919200/4/?y11;               [Менеджер битвы]
-    !!VRy12:Sy2 *1352 +21708 +y11 +234;
-    !!UN:Cy12/1/1;                      [указываем, что отряд умер]
-    !!BMy2:F?y6 P?y7;                   [y6/y7 - флаги/позиция отряда ассасинов]
-    !!VRy6:|268435456 |1073741824 |64;  [ставим флаги "принесён в жертву", "серый цвет", "БМ"]
-    !!BMy2:Fy6;                         [обновляем флаги]
-    !!BA:Q?f;                           [f - статус битвы]
+      !!VR(positions[0]):Sp;
+      !!if&(oppSide);
+        !!VR(positions[1]):Sp-1;
+      !!el;
+        !!VR(positions[1]):Sp+1;
+      !!en;
+      !!FU(NewIntArray):P?(nearHeaxesArr:y);
 
-    !!if&f=0;                           [текст + звук + анимация №50 перед исчезновением для не-быстрой битвы]
-      !!VRz1:Sz179410;
-      !!MM:Sz1;                         [вывод текста исчезновения в лог битвы]
-      !!SN:P^CLONE^;                    [вывод звука]
-      !!UN:C6919200/4/?y8;
-      !!SN:E4810128/2/y8/50/y7/40/0;    [вывод анимации]
-    !!en; 
 
-    !!BMy2:N0 B0;                       [обнуляем численность]
-    !!SN:E4621680/2/y11/51/1;           [функция "убрать тело", если мертв]
+      !!re i/0/f;                                 [if target is wide]
+        !!VR(offset:y):S(positions[i]) *12 +78952;
+        !!VRo:S1 Xf;
+        !!re j/0/5;
+          !!UN:C(cmbMgr)/(offset)/2/?(hexId:y);
+          !!SN:E5390176/(CALLCONV_THISCALL)/(assassinsStack)/(hexId:y)/0; can stack reach hex
+          !!if&v1;/(hexId)>(BATTLE_HEX_FIRST)/(hexId)<>(positions[o]);
+            !!FU(ES_IfHexIsFree):P(hexId)/?(isFree:y);
+            !!if&(isFree)/(hexId)<>(positions[o]);
+              !!FU(Array_Push):P(nearHeaxesArr)/(hexId:y);
+            !!en;
+          !!en;
+          !!VR(offset):+2;
+        !!en;
+      !!en;
+      !!FU(Array_SortedUnique):P(nearHeaxesArr);
+      !!SN:M(nearHeaxesArr)/?(size:y);
 
-    !!SN:H^monname^/(MON_ROGUE)/0/s^es_795_singRogueName^; [Возвращаем название "Головорезов"]
-    !!SN:H^monname^/(MON_ROGUE)/1/s^es_795_plurRogueName^;
+      !!if&(size);
+        !!VR(size):-1;
+        !!VR(randomInd:y):R0/0/(size);
+        !!SN:M(nearHeaxesArr)/(randomInd)/?(positionToMove:y);
+        !!UN:C(cmbMgr)/78544/4/(positionToMove);
+        !!SN:E4479536/(CALLCONV_THISCALL)/(assassinsStack)/(positionToMove:y)/0; [move to position;]
+      !!en;
 
-    !!SN:E4797616/2/y11/0/1;            [обновление сетки поля боя]
-  !!en; 
+      !!UN:C(assassinsStack)/136/4/?(singlDescPtr:y) C(assassinsStack)/140/4/?(multDescPtr:y);
+      !!SN:B(singlDescPtr)/d/?(storeS:z) B(multDescPtr)/d/?(storeP:z);
+      !!SN:B(singlDescPtr)/d/^%T(es.795.assassins.singName)^ B(multDescPtr)/d/^%T(es.795.assassins.plurName)^;
 
-  !!SN:W^opt795.11.an^/0 W^opt795.11.as^/-1; [обнуляем данные об ассасинах на поле]
-  !!FU:E;                               [ассасины не могут быть призваны сразу после исчезновения]
-!!en; 
+      !!SN:E4478848/(CALLCONV_THISCALL)/(assassinsStack)/(positions[0])/0;     [make attack to position;]
+      !!SN:B(singlDescPtr)/d/(storeS:z) B(multDescPtr)/d/(storeP:z);
 
-**
-!!BG:N?y1 Q?y2;                         [y1/y2 - номер активного отряда/сторона (0/1)]
-!!BA:Hy2/?y3;
-!!FU&y3<0:E;                            [y3 - герой-владелец активного отряда, выход, если героя нет]
+      !!BM(assassinsStackId:y): P?p;
+      !!BM(assassinsStackId:y):Fd|268435456 Fd|1073741824 B0 N0;
+      !!UN:C(assassinsStack:y)/234/1/1;                                        [указываем, что отряд умер]
+      !!VRi^es_795_assassins_acted_%(actSide:y)^:S(TRUE);
 
-!!SN:W^opt795.11.f%Y3^/?y4;
-!!FU&y4=1:E;                            [y4 - запрет появления ассасинов у героя. выход, если запрещено]
+      !!if&(showIt:y);
+        !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+        !!SN:E4810128/2/(cmbMgr:y)/50/p/40/0;                                  [animate]
+        !!VRz1:S^%T(es.795.assassins.disappear)^;
+        !!MM:Sz1;
+      !!en;
+      !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/51/1;                       [remove body]
 
-!!SN:W^opt795.11.%Y3^/?y4;
-!!FU&y4<1:E;                            [y4 - кол-во ассасинов у героя. выход, если ассасинов нет]
 
-!!SN:W^opt795.11.br%Y2^/?y5;            [y5 - раунд, в котором призывались ассасины]
-!!FU&i^battle_round^<=y5:E;             [выход, если ассасины героя уже появлялись в текущем раунде]
+    !!en;
+    !!UN:P758/(wogOption:y);
+  !!en;
+!!en;
 
-!!VRi:R0/0/3;
-!!FU&i>0:E;                             [шанс появления ассасинов в раунде - 25% и увеличивается за каждый отряд в армии героя]
 
-** поиск позиции для призыва, натрезвую разбираться в этом не советую
-!!VRy8:S0;
-!!VRy6:Sy2 -1 *-1 *21;
-!!VRy7:Sy6+20;                          [инициализация переменных для поиска вражеских отрядов]
+!?FU(ES_BattleStack_InitParams)&i^es_795_summoned_stack_id^=(NO_STACK);
+!!VRi^es_795_summoned_stack_id^:Sx1;
+!!VR(monFlags:y):S(MON_FLAG_NO_MORALE) |(MON_FLAG_NO_RETALIATION) |(MON_FLAG_NO_MORALE)
+|(MON_FLAG_SIEGE_WEAPON) |(MON_FLAG_FIRE_IMMUNITY);
+!!BMx1:Sd100 Fd|(monFlags:y) A10 D10 H20 L0 U1/5 U2/7 G(SPELL_ANTI_MAGIC)/10/(SKILL_EXPERT); [параметры ассасинов 10ат/10зщ/20зд/10ск/5-7ур]
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+!!SN:E4628608/(CALLCONV_FASTCALL)/(cmbMgr);
+!!if&v1=0;
+  !!BMx1:P?p;
+  !!SN:E4810128/2/(cmbMgr:y)/50/p/40/0;    [вывод анимации]
+!!en;
 
-!!re i/y6/y7;
-  !!BMi:N?y9;
-  !!VRy8&y9>0:+1;                       [y8 - кол-во вражеских отрядов]
-!!en; 
-
-!!VRy8:-1;
-!!VRj:S1 Ry8;
-!!VRy8:S0;                              [j - случайный отряд, рядом с которым появятся ассасины]
-
-!!re i/y6/y7;
-  !!BMi:N?y9;
-  !!VRy8&y9>0:+1;                       [y8 - номер найденного вражеского отряда]
-
-  !!br&y8=j;                            [i - номер отряда, рядом с которым появятся ассасины]
-!!en; 
-
-!!VRi&i>41:S41;
-!!BMi:P?y10;                            [y10 позиция отряда, рядом с которым появятся ассасины]
-** debug !_!IF:M^Target:%Vi Position:%Y10^;
-!!VRy11:Sy10 :17;
-!!VRy12:Sy11 %2;                        [y11/y12 - номер/четность ряда отряда, рядом с которым появятся ассасины]
-!!VRi:S0;                               [i - номер заполняемого элемента массива]
-!!SN:M-1/18/0/0 W^opt795.ar^/v1;        [Mi^opt795.ar^ - массив возможных позиций появления ассасинов]
-
-!!re l/-35/33/68;                       [проверяем дальние ряды (+-2)]
-  !!VRy13:Sy10 +l +1 :17;               [y13 - проверяемый ряд]
-  !!br|y13<0/y13>10;                    [прерываем проверку, если ряд вне поля]
-  
-  !!VRj:Sy10 +l;
-  !!VRk:Sj +2;                          [j/k - диапазон проверяемых позиций]
-
-  !!re y14/j/k;                         [y14 - проверяемая позиция]
-    !!VRy15:Sy14 :17;
-    !!VRy16:Sy14 %17;                   [y15/y16 - проверяемая позиция/ряд/номер в ряде]
-
-    !!if&y13=y15/y16<>0/y16<>16/y14>0/y14<186;  [если проверяемая позиция в нужном ряде и не за пределами поля]
-      !!BU:Dy14/?y17 Oy14/?y18;         [y17=-2 - в позиции живой отряд, y18<>0 - в позиции препятствие]
-
-      !!if&y17<>-2/y18=0;               [если позиция доступна]
-        !!SN:Mi^opt795.ar^/i/y14;       [сохраняем ее номер в массив]
-        !!VRi:+1;                       [и увеличиваем счетчик]
-      !!en; 
-    !!en; 
-  !!en; 
-!!en; 
-
-!!VRy21:S-19 +y12;
-!!VRy22:S15 +y12;                       [y21/y22 - смещения позиций для проверки ближних рядов]
-
-!!re l/y21/y22/34;                      проверяем ближние ряды (+-1)]
-  !!VRy13:Sy10 +l +1 :17;               [y13 - проверяемый ряд]
-  !!br|y13<0/y13>10;                    [прерываем проверку, если ряд вне поля]
-
-  !!VRj:Sy10 +l;
-  !!VRk:Sj +3;                          [j/k - диапазон проверяемых позиций]
-
-  !!re y14/j/k;                         [y14 - проверяемая позиция]
-    !!VRy15:Sy14 :17;
-    !!VRy16:Sy14 %17;                   [y15/y16 - проверяемая позиция/ряд/номер в ряде]
-
-    !!if&y13=y15/y16<>0/y16<>16/y14>0/y14<186;  [если проверяемая позиция в нужном ряде и не за пределами поля]
-      !!BU:Dy14/?y17 Oy14/?y18;         [y17=-2 - в позиции живой отряд, y18<>0 - в позиции препятствие]
-
-      !!if&y17<>-2/y18=0;               [если позиция доступна]
-        !!SN:Mi^opt795.ar^/i/y14;       [сохраняем ее номер в массив]
-        !!VRi:+1;                       [и увеличиваем счетчик]
-      !!en; 
-    !!en; 
-  !!en; 
-!!en; 
-
-!!VRj:Sy10 -2;
-!!VRk:Sj +4;                            [j/k - диапазон проверяемых позиций в ряде цели]
-
-!!re y14/j/k;                           [y14 - проверяемая позиция]
-  !!VRy15:Sy14 :17;
-  !!VRy16:Sy14 %17;                     [y15/y16 - проверяемая позиция/ряд/номер в ряде]
-
-  !!if&y13=y15/y16<>0/y16<>16/y14>0/y14<186;  [если проверяемая позиция в нужном ряде и не за пределами поля]
-    !!BU:Dy14/?y17 Oy14/?y18;           [y17=-2 - в позиции живой отряд, y18<>0 - в позиции препятствие]
-
-    !!if&y17<>-2/y18=0;                 [если позиция доступна]
-      !!SN:Mi^opt795.ar^/i/y14;         [сохраняем ее номер в массив]
-      !!VRi:+1;                         [и увеличиваем счетчик]
-    !!en; 
-  !!en; 
-!!en; 
-**призыв ассасинов
-!!FU&i=0:E;                             [отмена призыва ассасинов, если не найдена свободная позиция в радиусе 2х гексов от цели]
-
-!!SN:W^opt795.11.br%Y2^/v997;           [сохраняем раунд призыва ассасинов]
-!!VRi:-1;
-!!VRy19:S0 Ri;
-!!SN:Mi^opt795.ar^/y19/?y20;            [y20 - случайная доступная позиция для призыва]
-
-!!if&i^battle_isVisible^;               [текст + звук + анимация №50 перед появлением для не-быстрой битвы]
-  !!VRz1:Sz179409;
-  !!MM:Sz1;                             [вывод текста появления в лог битвы]
-  !!SN:P^CLONE^;                        [вывод звука]
-  !!UN:C6919200/4/?y25;
-  !!SN:E4810128/2/y25/50/y20/40/0;      [вывод анимации]
-!!en; 
-
-!!BU:S(MON_ROGUE)/y4/y20/y2/-1/1 Ey20/?y23;     [y23 - номер отряда появившихся ассасинов]
-!!FU|y23<0/y23>41:E;                    [выход, если призыв неудачен]
-
-!!SN:W^opt795.11.as^/y23 W^opt795.11.an^/y4; [сохраняем номер и численность отряда появившихся ассасинов]
-!!BMy23:A10 D10 H20 L0 S10 U1/5 U2/7;   [параметры ассасинов 10ат/10зщ/20зд/10ск/5-7ур]
-!!BMy23:F?y24;                          [y24 - флаги отряда ассасинов]
-!!VRy24:|33554432 |65536 |131072;       [нет ответа, нет морали, не может ждать]
-!!BMy23:Fy24;                           [обновляем флаги отряда ассасинов]
-
-!!SN:H^monname^/(MON_ROGUE)/0/^%T(es.795.singName)^;
-!!SN:H^monname^/(MON_ROGUE)/1/^%T(es.795.plurName)^;[установка новых названий ассасинов]
-
-!!SN:Mi^opt795.ar^;                     // удаление временного массива
-
-*!SN:Q;                                 [прерывание фазы регенерации] - Do we realy need this?
-
-!?FU(OnBattleStackObtainsTurn);         [при получении отрядом хода передаем ход появившимся ассасинам]
-!!UN:P795/?y1;
-!!FU&y1=0:E;                            [выход если опция не включена]
-
-!!SN:W^opt795.11.as^/?y1;               [y1 - номер отряда ассасинов]
-!!FU&y1<0:E;                            [выход, если ассасинов нет]
-
-!!VRy2:Sy1 :21;
-!!VRy1&y1>20:-21;                       [y2/y1 - сторона и номер отряда для SN:X]
-!!SN:Xy2/y1;                            [передача хода ассасинам]
 
 !?FU(OnHeroScreenMouseClick);           [Клик в окне героя]
 !!UN:P795/?y1;
@@ -1192,31 +1109,32 @@ ZVSE2
 !!HE(CURRENT_HERO):N?y1;
 !!SN:W^opt795.11.%Y1^/?y2;              [y2 - количество ассасинов у героя]
 
-!!if&y2<1;                              [вывод информации об ассасинах героя и запрос роспуска, если ассасины есть]
-  !!VRz2:Sz179412;                      // 
-  !!IF:M1/z2;                           // 
+!!if&i^opt795.11.%Y1^<1;                              [вывод информации об ассасинах героя и запрос роспуска, если ассасины есть]
+  !!IF:M1/^%T(es.795.assassins.noUnits)^;                           // 
 !!el;                                   // 
-  !!SN:W^opt795.11.f%Y1^/?y3;           // y3 - запрет участия ассасинов в битвах
-  !!VRz2:Sz179411;
-  !!VRz2&y3=1:Sz179192;                 // z2 - текст сообщения
-  !!IF:Q1/z2;                           // вывод кол-ва ассасинов и запрос роспуска
-  !!SN&1:W^opt795.11.f%Y1^/0;           // разрешение участия в битве при положительном ответе
-  !!SN&-1:W^opt795.11.f%Y1^/1;          // запрет участия в битве при отрицательно ответе
-!!en;                                   // 
+  *!SN:W^opt795.11.f%Y1^/?y3;           // y3 - запрет участия ассасинов в битвах
+  !!SN:T^es.795.assassins.header^/?(msg:z)/^num^/i^opt795.11.%Y1^;
 
-!?FU(OnBeforeBattleAction);             // перед действием в бою
-!!UN:P795/?y1;
-!!FU&y1=0:E;                            // выход, если опция не включена
+  !!if&i^opt795.11.f%Y1^;
+    !!VR(add:z):S^%T(es.795.assassins.restrict)^;
+  !!el;
+    !!VR(add:z):S^%T(es.795.assassins.allow)^;
+  !!en;
+  !!VR(msg):+^%T(es.endl)%T(es.endl)^ +(add);
+  !!IF:Q1/(msg);текст сообщения
+  !!if&1;
+    !!VRi^opt795.11.f%Y1^:S(FALSE); [разрешение участия в битве при положительном ответе]
+  !!el;
+    !!VRi^opt795.11.f%Y1^:S(TRUE);  [запрет участия в битве при отрицательно ответе]
+  !!en;
+!!en;
 
-!!BG:A?y1;
-!!SN:W^opt795.11.a^/y1;                 // сохраняем последнее выполненное действие
 
 !?FU(OnAfterBattleUniversal);
 !!UN:P795/?y1;
 !!FU&y1=0:E;                            [выход если опция 795 не включена]
 
-!!SN:H^monname^/(MON_ROGUE)/0/s^es_795_singRogueName^;[возвращаем оригинальные названия Воров]
-!!SN:H^monname^/(MON_ROGUE)/1/s^es_795_plurRogueName^;
+
 
 !!BA:H0/?y1 H1/?y2;
 !!FU&y2<1:E;                            // y1/y2 - атакующий/защищающийся герои, выход, если не битва двух героев
@@ -1246,13 +1164,13 @@ ZVSE2
   !!VRy5:+y3;
   !!SN:W^opt795.11.%Y1^/y5;             // ...
 !!el;                                   // Человеку дается выбор ассасины/золото
-  !!SN:H^monname^/(MON_ROGUE)/0/^%T(es.795.singName)^;// установка новых названий ассасинов
-  !!SN:H^monname^/(MON_ROGUE)/1/^%T(es.795.plurName)^;
+  !!SN:H^monname^/(MON_ROGUE)/0/?(storeS:z) H^monname^/(MON_ROGUE)/0/^%T(es.795.assassins.singName)^;// установка новых названий ассасинов
+  !!SN:H^monname^/(MON_ROGUE)/1/?(storeP:z) H^monname^/(MON_ROGUE)/1/^%T(es.795.assassins.plurName)^;
 
   !!VRy7:Sy3 *200;                      // y7 - компенсация в золоте 200 за ассасина
-  !!VRz1:Sz179418;                      // z1 - текст присоединения ассасинов
+  *!VRz1:Sz179418;                      // z1 - текст присоединения ассасинов
   !!VRy5:Sy3 *65536 +(MON_ROGUE);       // y5 - количество существ для отображения в диалоге
-  !!IF:Q1/6/y7/21/y5/7^%Z1^;            // вывод вопроса о присоединении
+  !!IF:Q1/6/y7/21/y5/7^%T(es.795.assassins.capture)^;            // вывод вопроса о присоединении
 
   !!if&1;                               // если выбрано золото
     !!OW:Ry4/6/dy7;
@@ -1262,6 +1180,8 @@ ZVSE2
     !!VRy5:+y3;
     !!SN:W^opt795.11.%Y1^/y5;           // добавляем ассасинов
   !!en;                                 // ...
+  !!SN:H^monname^/(MON_ROGUE)/0/(storeS:z);// установка новых названий ассасинов
+  !!SN:H^monname^/(MON_ROGUE)/1/(storeP:z);
 !!en;                                   // ...
 
 ** end
