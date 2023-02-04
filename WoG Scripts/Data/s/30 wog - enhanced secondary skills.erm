@@ -210,6 +210,15 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 !?FU(WOG_CreateERMHook);
 !!SN:Ex1/1/4607915/(WOG_201_KillWithArtillery); hook before artifact cast
+!!SN:Ex1/1/4718431/(WOG_OnHeroMove);
+
+!?FU(WOG_OnHeroMove);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(activeHeroPtr:y);
+!!if&(activeHeroPtr)=0;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4721255;
+!!en;
+
 
 ** start of battle-start trigger
 !?FU(OnBeforeBattle)|i^wog_204_enabled^/i^wog_207_enabled^;
@@ -293,13 +302,15 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !?FU(OnSetupBattlefield)|i^wog_206_enabled^/i^wog_208_enabled^;                               [continue if luck or navigation enabled]
 
 ** navigation
-!!BA&i^wog_208_enabled^:H0/?v7020;                             [get attacking hero #]
-!!IF&i^wog_208_enabled^/v7020>-1:Wv7020;                       [enable hero variable]
-!!DO7024/0/20/1&i^wog_208_enabled^/v7020>-1/w4>0:Pw4;          [prepare to add attack and defence to attacking hero's troops]
-!!BA&i^wog_208_enabled^:H1/?v7020;                             [get defending hero #]
-!!IF&i^wog_208_enabled^/v7020>-1:Wv7020;                       [enable hero variable]
-!!DO7024/21/41/1&i^wog_208_enabled^/v7020>-1/w4>0:Pw4;         [prepare to add attack and defence to defending hero's troops]
-** end of battlefield start trigger
+
+!!re i/0/i^battle_hero_vs_hero^;[get attacking hero #]
+  !!IF:Wi^battle_hero_%i^; [enable hero variable]
+  !!co&w4<1;
+  !!re j/0/(BATTLE_STACKS_PER_SIDE)/1/-1;[prepare to add attack and defence to attacking hero's troops]
+    !!VR(stackId:y):Si *(BATTLE_STACKS_PER_SIDE) +j;
+    !!BM(stackId:y):Adw4 Ddw4;
+  !!en;
+!!en;
 
 
 ** start of battle turn one trigger
@@ -1041,49 +1052,31 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!IF&1000/y4=7:Q2/11/1/1^^;
 !!HEv7020&y4=7:R1/d1;                         [+1 luck]
 !!IF&1000/y4=8:Q2/20/y3/1/z148031;
-!!HEv7020&y4=8:E?y5/?y6/1;                    [get hero's level]
-!!VRr&y4=8:Sy6 T20 *50;                       [(level + 0-20) x 50]
+!!HEv7020&y4=8:E?y5/?y6/1;                     [get hero's level]
+!!VRr&y4=8:Sy6 T20 *50;                        [(level + 0-20) x 50]
 !!IF&1000/y4=8:Q2/17/r/1^^;
-!!HEv7020&y4=8:Edr;                           [give experience]
+!!HEv7020&y4=8:Edr;                            [give experience]
 !!IF&1000/y4=9:Q2/20/y3/1/z148032;
-!!HEv7020&y4=9:Wd+400;                        [increase movement]
+!!HEv7020&y4=9:Wd+400;                         [increase movement]
 !!IF&1000/y4=10:Q2/20/y3/1/z148033;
-!!VRr&y4=10:S3 *x1 +16;                       [area]
-!!UN&y4=10:Sv7023/v7024/v7025/i^timerOwner^/r;        [reveal area]
-!!FU(WOG_212_GetRandMonAndNames)&y4=11:P?s;                           [call function 7019 to pick monster]
-!!MA&y4=11:Vs/?r;                             [get AdvMapL]
+!!VRr&y4=10:S3 *x1 +16;                        [area]
+!!UN&y4=10:Sv7023/v7024/v7025/i^timerOwner^/r; [reveal area]
+!!FU(WOG_212_GetRandMonAndNames)&y4=11:P?s;    [call function 7019 to pick monster]
+!!MA&y4=11:Vs/?r;                              [get AdvMapL]
 !!IF&1000/y4=11:Q2/20/y3/1/z148034;
 !!IF&1000/y4=11:Q2/21/s/2/z148035;
-!!HEv7020&2/y4=11:Tv7023/v7024/v7025/s/r;     [fight monsters]
-!!FU(WOG_212_GetRandMonAndNames)&y4=12:P?s;                           [call function 7019 to pick monster]
-!!MA&y4=12:Hs/?r;                             [get AdvMapH]
+!!HEv7020&2/y4=11:Tv7023/v7024/v7025/s/r O?o;  [fight monsters]
+!!FU(WOG_212_GetRandMonAndNames)&y4=12:P?s;    [call function 7019 to pick monster]
+!!MA&y4=12:Hs/?r;                              [get AdvMapH]
 !!IF&1000/y4=12:Q2/20/y3/1/z148036;
 !!IF&1000/y4=12:Q2/21/s/2/z148037;
-!!HEv7020&2/y4=12:Tv7023/v7024/v7025/s/r;     [fight monsters]
+!!HEv7020&2/y4=12:Tv7023/v7024/v7025/s/r O?o;  [fight monsters]
+!!if&o=(NO_OWNER);
+  !!HEv7020:P?y1/?y2/?y3 Z?y4;
+  !!UN:Cy4/7/1/y1 Cy4/9/1/y1 Cy4/10/1/y3;
+!!en;
+
 !!SN:D;                                       [redraw screen]
-** end of function
-
-
-** function for navigation (add attack and defence)   (Parameters: x1=stat bonus)
-!?FU7024;
-
-!!BMx16:Adx1;                                 [set attack]
-!!BMx16:Ddx1;                                 [set defence]
-** end of function
-
-
-** function for pathfinding    x1 = hero  x2 = pathfinding
-!?FU(WOG_209_SetUpPathfindingBonus);
-
-!!HEx1:P?v7023/?v7024/?v7025;                 [get hero's position]
-!!TR7023:T?y1/d/d/d/d/d/d/d;                  [get terrain type]
-!!FU&y1=8:E;                                  [exit if on water]
-
-!!HEx1:W?y2/1;                                [get movement if on land]
-!!VRy2&x2=1/y2<1700:S1700;                    [set to 1700 if basic]
-!!VRy2&x2=2/y2<1760:S1760;                    [set to 1760 if advanced]
-!!VRy2&x2=3/y2<1830:S1830;                    [set to 1830 if expert]
-!!HEx1:Wy2/1 Gy2;                             [set movement, reset intial movement if on land]
 ** end of function
 
 
