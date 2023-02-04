@@ -258,43 +258,20 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!en;
 !!en;
 
-!?FU(OnSetupBattlefield);               [Continue trigger if any skills are enabled]
-*!UN:P210/?(resistanceII:y);
-*!FU&(resistanceII)<>(TRUE);
-
-** offset skill levels for resistance
-*!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/0;           [offset skill levels - attacker]
-*!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/0; [offset skill levels - defender]
-
-** luck
-!!VRv7034&i^wog_206_enabled^:C-2/-2/-2/-2/-2/-2;               [reset v7034-v7039]
-!!BA&i^wog_206_enabled^:H0/?v7020;                             [get attacking hero #]
-!!HEv7020&i^wog_206_enabled^/v7020>-1:S9/?y-1;                 [get attacker's luck skill level]
-!!FU7008&i^wog_206_enabled^/y-1>0/v7020>-1:Py-1/1;             [call function 7008 if attacking hero has luck]
-!!BA&i^wog_206_enabled^:H1/?v7020;                             [get defending hero #]
-!!HEv7020&i^wog_206_enabled^/v7020>-1:S9/?y-2;                 [get defender's luck skill level]
-!!FU7008&i^wog_206_enabled^/y-2>0/v7020>-1:Py-2/2;             [call function 7008 if defending hero has luck]
-
-!!BA&i^wog_206_enabled^:H0/?y-11;                              [get attacking hero #]
-!!BA&i^wog_206_enabled^:H1/?y-12;                              [get defending hero #]
-!!HEy-11&i^wog_206_enabled^:S19/?y-13 R4/?y-15;                [get attackers tactics level, tactics status]
-!!HEy-12&i^wog_206_enabled^/y-12>=0:S19/?y-14 R4/?y-16;        [get defenders tactics, tactics status - if any]
-!!VRy-13&i^wog_206_enabled^/y-15=0:S0;                         [set to 0 if tactics is disabled]
-!!VRy-14&i^wog_206_enabled^/y-16=0:S0;                         [set to 0 if tactics is disabled]
-!!VRy-13&i^wog_206_enabled^:Xy-14;                             [XOR - get difference between tactics levels in y-13]
+!?FU(OnSetupBattlefield)&i^wog_202_enabled^;               [Continue trigger if any skills are enabled]
 
 ** eagle eye
-!!VRv7018&i^wog_202_enabled^:S0;                               [reset v7018]
-!!VRv7019&i^wog_202_enabled^:S0;                               [reset v7019]
+!!VRv7018:S0;                               [reset v7018]
+!!VRv7019:S0;                               [reset v7019]
 !!VRi^wog_202_heroSpellCountered^:S(FALSE);                        [reset global flag of whether a spell has been countered]
 
-!!VRy-9&i^wog_202_enabled^:S-1;                                [reset y-9]
-!!BA&i^wog_202_enabled^:H0/?y-9;                               [get attacking hero's #]
-!!FU7017&i^wog_202_enabled^/y-9>-1:Py-9/0;                     [call function 7017 for attacking hero]
+!!VRy-9:S-1;                                [reset y-9]
+!!BA:H0/?y-9;                               [get attacking hero's #]
+!!FU7017&y-9>-1:Py-9/0;                     [call function 7017 for attacking hero]
 
-!!VRy-9&i^wog_202_enabled^:S-1;                                [reset y-9]
-!!BA&i^wog_202_enabled^:H1/?y-9;                               [get defending hero's #]
-!!FU7017&i^wog_202_enabled^/y-9>-1:Py-9/1;                     [call function 7017 for defending hero]
+!!VRy-9:S-1;                                [reset y-9]
+!!BA:H1/?y-9;                               [get defending hero's #]
+!!FU7017&y-9>-1:Py-9/1;                     [call function 7017 for defending hero]
 ** end of battle-start trigger
 
 
@@ -314,12 +291,39 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 
 ** start of battle turn one trigger
-!?FU(OnBattleRound)&i^wog_206_enabled^/i^battle_round^=0; [revised JHV, <1-->=0][-1 caused CB crash w/tactics]
+!?FU(OnBattleRound)&i^wog_206_enabled^/i^battle_round^=0;
 ** luck
-                                     
-!!DO7010/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1:P(BATTLE_LEFT); [do function 7010 for luck - attacker]
-!!DO7010/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1:P(BATTLE_RIGHT); [do function 7010 for luck - defender]
-** end of battle turn one trigger
+ ** luck
+
+!!re i/0/i^battle_hero_vs_hero^;
+  !!HEi^battle_hero_%i^:S(SKILL_LUCK)/?(luckLevel:y);
+  !!if&(luckLevel);
+    !!FU(NewIntArray):P?(mons:y);
+    !!re j/0/(ARMY_SLOT_LAST);
+      !!BA:Mi/j/?n/?t;
+      !!if&t<>(NO_MON)/n>0;
+        !!FU(Array_Push):P(mons)/j;
+      !!en;
+    !!en;
+    !!SN:M(mons)/?(size:y);
+    !!if&(size);
+      !!VR(chance:y):S10 *(luckLevel);
+      !!VR(luckLevel):F0/(size);
+      !!FU(Array_Shuffle):P(mons);
+      !!re j/0/(luckLevel)/1/-1;
+        !!FU(Array_Pop):P(mons)/?(stackBySideId:y);
+        !!VR(rand:y):R0/1/100;
+        !!if&(chance)>=(rand);
+          !!VR(stackId:y):Si *(BATTLE_STACKS_PER_SIDE) +(stackBySideId);
+          !!BM(stackId):Z?s Dd2 Ad2; P?(pos:y) ; C(SPELL_FORTUNE)/(pos)/(SKILL_NOT_LEARNED)/100/1 Dd2 Ad2;
+          !!FU(WOG_Battle_CanStackReceiveSpell):P(stackId)/(SPELL_FORTUNE)/i/?(canRecieveSpell:y);
+          !!HEi^battle_hero_%i^:Z?h;
+          !!SN&(canRecieveSpell:y):E4474384/(CALLCONV_THISCALL)/s/(SPELL_FORTUNE)/100/0/h;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
 
 ** start of pre-action trigger
@@ -764,62 +768,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 ** end of function
 
 
-** function for luck      x1=luck   x2=att/def (1/2)
-!?FU7008;
-
-!!VRy3:Sx1 *10;                               [multiply skill level by 10 to get % chance]
-!!VRy4:S0;
-!!VRy5:R0/0/6;                                [random slot # to start search from]
-!!DO7009/0/6/1:Px1/x2/y3/y4/y5;               [pick slots]
-** end of function
-
-
-** function to pick slots
-!?FU7009;           x1=luck level x2=filter x3=%chance x4=slot counter  x5=random slot #
-
-!!VRy1:Sx5 %7;                                [get an actual slot number]
-!!BA&x2=1:M0/y1/?y2/?y3;                      [creatures - attacker]
-!!BA&x2=2:M1/y1/?y2/?y3;                      [creatures - defender]
-!!VRy6&y3>0:R0/0/99;                          [random roll for luck]
-!!VRx4&x3>y6/y3>0:+1;                         [increment slot counter]
-!!VRv7034&x2=1/x3>y6/y3>0/x4=1:Sy1;           [store slot # - attacker]
-!!VRv7035&x2=1/x3>y6/y3>0/x4=2/x1>1:Sy1;      [store slot # - attacker]
-!!VRv7036&x2=1/x3>y6/y3>0/x4=3/x1=3:Sy1;      [store slot # - attacker]
-!!VRv7037&x2=2/x3>y6/y3>0/x4=1:Sy1;           [store slot # - defender]
-!!VRv7038&x2=2/x3>y6/y3>0/x4=2/x1>1:Sy1;      [store slot # - defender]
-!!VRv7039&x2=2/x3>y6/y3>0/x4=3/x1=3:Sy1;      [store slot # - defender]
-
-!!VRx5:+1;                                              [next slot]
-** end of function
-
-
-** function to check if unit has luck
-!?FU7010;               x1=side        x16=stack number
-!#VA(side:x);
-
-!!BMx16:O?(heroArmySlot:y);                            [get hero slot number]
-
-!!if&(side)=(BATTLE_LEFT);
-  !!FU7011&(heroArmySlot)=v7034:Px16;               [call function 7011 if attacking unit has luck]
-  !!FU7011&(heroArmySlot)=v7035:Px16;               [call function 7011 if attacking unit has luck]
-  !!FU7011&(heroArmySlot)=v7036:Px16;               [call function 7011 if attacking unit has luck]
-!!el;
-  !!FU7011&(heroArmySlot)=v7037:Px16;               [call function 7011 if defending unit has luck]
-  !!FU7011&(heroArmySlot)=v7038:Px16;               [call function 7011 if defending unit has luck]
-  !!FU7011&(heroArmySlot)=v7039:Px16;               [call function 7011 if defending unit has luck]
-!!en;
-** end of function
-
-
-** function to give unit luck bonus
-!?FU7011;            x1=stack #
-!#VA(stack:x);
-
-!!BM(stack):Ad2;                                  [set attack]
-!!BM(stack):Dd2;                                  [set defence]
-!!BM(stack):P?(pos:y);
-!!BM(stack):C(SPELL_FORTUNE)/(pos)/(SKILL_NOT_LEARNED)/100/(TRUE); [cast Fortune : 100 rounds]
-** end of function
 
 
 ** function to iterate through current player's heroes (weekly)
