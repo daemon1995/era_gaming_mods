@@ -77,13 +77,6 @@ ZVSE2
     !!SN:M(targetStacks)/(randomInd)/?(targetStackId);
   !!en;
 
-!?FU(WOG_CreateERMHook);
-!!SN:Ex1/1/5934747/(WOG_33_OnArtifactCasts); // allows to change text before casting with artifact spell
-
-!?FU(WOG_33_OnArtifactCasts)&i^WOG_33_new_name^;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(namePtr:y);
-!!SN:B(namePtr)/d/s^WOG_33_new_name^;
-
 !?FU(WOG_33_CastTargetSpellAtPos);
 !#VA(pos:x) (spellID:x) (schoolLvl:x) (checkStack:x);
   *!BG:A?(oldAction:y) A(BATTLE_ACTION_MONSTER_CAST);
@@ -95,13 +88,17 @@ ZVSE2
 
   !!BU:G?(isMagicPlant:y); [Battlefield: y7 (1=Magic Plains)]
   !!BU&(isMagicPlant)=1:G-1; [Battlefield: y7 (1=Magic Plains)]
-  !!VRi^WOG_33_new_name^:S(TRUE);
-  !!VRs^WOG_33_new_name^:S^%T(wog.33.prefix)^;
 
-  !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(pos)/2/-1/(schoolLvl)/(power);
+  !#VA(patches[5]:y);
+  !!re i/0/4;
+    !!UN:C5899003/i/1/?(patches[i]) C5899003/i/1/(OPCODE_NOP_1);
+  !!en;
 
+  !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(pos)/0/-1/(schoolLvl)/(power);
+  !!re i/0/4;
+    !!UN:C5899003/i/1/(patches[i]);
+  !!en;
 
-  !!SN:W^WOG_33_new_name^;
   !!BU&(isMagicPlant)=1:G1;
   !!UN:C(cmbMgr)/78528/4/(saveSide);
 
@@ -239,9 +236,13 @@ ZVSE2
 
     !!el&(size)>1;
       !!FU(Array_Clone):P(spellArray)/?(newArray:y);
-      !!VR(spellInd):X1;
-      !!SN:V(newArray)/(spellInd)/?(otherSpell:y);
-      !!VR(spellInd):X1;
+      *!VR(spellInd):X1;
+      !!if&(spellInd);
+        !!VR(otherSpellInd:y):S0;
+      !!el;
+        !!VR(otherSpellInd:y):S1;
+      !!en;
+      !!SN:V(newArray)/(otherSpellInd)/?(otherSpell:y);
       !!SN:V(newArray)/(spellInd)/(otherSpell:y);
       !!FU(Array_SortedUnique):P(newArray);
       !!VR(success):S(TRUE);
@@ -255,8 +256,14 @@ ZVSE2
   
 !?FU(WOG_33_ReportSpellCastFail);
 !#VA(spellID:x);
-!!SN:H^spell^/(spellID:x)/0/?(spellName:z) T^wog.33.fail^/?(msg:z)/^spellName^/(spellName);
-!!MM:S(msg);
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+
+!!SN:E4628608/(CALLCONV_FASTCALL)/(cmbMgr);
+!!VR(showIt:y):Sv1 X1;
+!!if&(showIt:y);
+  !!SN:H^spell^/(spellID:x)/0/?(spellName:z) T^wog.33.fail^/?(msg:z)/^spellName^/(spellName);
+  !!MM:S(msg);
+!!en;
 
 !?FU(WOG_33_CheckHexIsObstacle);
 !#VA(hexId:x) (result:x);
@@ -305,13 +312,10 @@ ZVSE2
     !!FU(Array_Push)&(result):P(hexArray)/i;
   !!en;
 
-
 !?FU(OnCombatRound)&i^battle_round^>=0/i^WOG_33_enabled^;
   !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?(seed:y);
   !!VR(seed):+i^battle_round^;
   !!FU(WOG_SafeRand):P1/100/(seed)/?(random:y);
-  *!FU(WOG_GetRandomSeed):P?(oldSeed:y);(seed)/?(oldSeed:y);
-  *!VR(random:y):Rd/(seed) R0/1/100 Rd/(oldSeed);
 
   !!if&(random)<=i^WOG_33_cast_chance^;
     !!VRi^WOG_33_this_round_cast_chance^:Si^WOG_33_cast_chance^;
@@ -328,7 +332,6 @@ ZVSE2
   !!en;
 
   !!VR(chance:y):R0/1/100;i^WOG_33_this_round_cast_chance^;
-  *!IF:L^%(chance) <= %i(WOG_33_this_round_cast_chance) ^;
   !!if&(chance)<=i^WOG_33_this_round_cast_chance^;
     !!FU(WOG_33_CastSpellProcedure):Pi^WOG_33_spells_array_ID^;
     !!VRi^WOG_33_this_round_cast_chance^:S0;
@@ -412,7 +415,6 @@ ZVSE2
 ---------------------------------------------------------------------------------------
 
 ** End of Script **
-
 
 !?FU(WOG_33_CheckSpellIsValid);
 !#VA(spellID:x) (result:x);
