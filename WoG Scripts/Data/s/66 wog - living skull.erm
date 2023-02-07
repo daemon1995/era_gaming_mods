@@ -398,7 +398,7 @@ Variables that MUST be preserved outside this script: z454
 !!FU&-1:E;
 
  [Check player's current amount of resource (v76) - store amount in v77]
-!!OW:R-1/v76/?v77;
+!!OW:R(CURRENT_PLAYER)/v76/?v77;
 
  [If player doesn't have enough to pay the fee, display message]
 !!IF&v77<2:Q1/v76/2/1/z112046;
@@ -409,7 +409,7 @@ Variables that MUST be preserved outside this script: z454
 !!FU&v77<2:E;
 
  [Reduce player's resource number v76 by 2 and display thank you message]
-!!OW:R-1/v76/d-2;
+!!OW:R(CURRENT_PLAYER)/v76/d-2;
 !!IF:Q1/v76/-100002/1/z112047;
 
  [Calculate x and y artifact location values in relation to current hero's position]
@@ -473,7 +473,7 @@ Variables that MUST be preserved outside this script: z454
 !!FU&-1:E;
 
  [Check player's current amount of gold - store amount in v77]
-!!OW:R-1/6/?v77;
+!!OW:R(CURRENT_PLAYER)/6/?v77;
 
  [If player doesn't have enough to pay the fee, display message]
 !!IF&v77<1000:Q1/6/1000/1/z112066;
@@ -484,7 +484,7 @@ Variables that MUST be preserved outside this script: z454
 !!FU&v77<1000:E;
 
  [Reduce player's gold by 1000 and display thank you message]
-!!OW:R-1/6/d-1000;
+!!OW:R(CURRENT_PLAYER)/6/d-1000;
 !!IF:Q1/6/-101000/1/z112067;
 
  [Check current player]
@@ -570,16 +570,19 @@ Variables that MUST be preserved outside this script: z454
  [Start of Function - show a random artifact on the map to first visitor each week]
 
 !?FU(WOG_12_ShowRandomArtifact);
-!!UN:U5/-1/?y1; [Number of artifacts on map: y1]
-!!VRy-5&y1<1:S0; [Set y-5 to 0 if no artifacts: y-5]
-!!FU&y1<1:E; [Exit if no artifacts on the map]
+!!UN:U(OBJ_ARTIFACT)/(ANY_OBJ)/?y1; [Number of artifacts on map: y1]
 
-!!VRy2:Sy1 -1;
-!!VRy3:S1 Ry2; [Random artifact on map: y3]
-!!UN:U5/-1/y3/2; [Store coordinates in v2/v3/v4]
-!!VRv27:S5; [Artifact type: 5]
+!!if&y1<1;
+  !!VRy-5:S0; [Set y-5 to 0 if no artifacts: y-5]
+  !!FU:E; [Exit if no artifacts on the map]
+!!en;
+
+!!VRy3:R0/1/y1; [Random artifact on map: y3]
+!!UN:U(OBJ_ARTIFACT)/(ANY_OBJ)/y3/2; [Store coordinates in v2/v3/v4]
+!!VRv27:S(OBJ_ARTIFACT); [Artifact type: 5]
 !!OB2:U?v30; [Artifact #: v30]
-!!UN:N0/23/v30; [Artifact name: z23]
+
+!!SN:H^art^/v30/0/?z23; [Artifact name: z23]
 
 !!IF:Q1/8/v30/1/z112077; [Display message]
 
@@ -613,12 +616,16 @@ Variables that MUST be preserved outside this script: z454
 !!if&v27=(OBJ_ARTIFACT)/v30>=(ART_CENTAUR_AXE);
   !!UN:Av30/3/?y1;
 
-  !!if&y1<=(ART_LEVEL_MINOR);
-    !!VRy2:Sy1; [Mithril cost = class cost: y2]
+  !!if&y1=(ART_LEVEL_TREASURE);
+    !!VRy2:Sy1;    [Mithril cost = class cost: y2]
+  !!el&y1=(ART_LEVEL_MINOR);
+    !!VRy2:Sy1 *2; [Mithril cost = class cost: y2]
   !!el&y1=(ART_LEVEL_MAJOR);
     !!VRy2:Sy1 *3; [Mithril cost = class cost: y2]
   !!en;
-  * [Treasure (2), Minor (4), Major (8), Relic (16)]
+
+  ; Show msg and end the function if the artifact level is special or relic
+  !!IF|y1=(ART_LEVEL_SPECIAL)/y1=(ART_LEVEL_RELIC):Q1/(PIC_TYPE_ART)/v30/(MSG_TYPE_MES)/^%T(wog.12.cantBring)^;
 !!el&v27=(OBJ_SPELL_SCROLL);
   !!VRy2:S6;[Spell scroll: 6 Mithril: y2]
 !!en;
@@ -630,7 +637,7 @@ Variables that MUST be preserved outside this script: z454
 
 !!FU&-1:E; [Exit if player doesn't agree to pay the Mithril]
 
-!!OW:R-1/7/?y3; [Check player's current Mithril: y3]
+!!OW:R(CURRENT_PLAYER)/7/?y3; [Check player's current Mithril: y3]
 
  [If player doesn't have enough Mithril, display this and exit]
 !!IF&y3<y2:Q1/7/y2/1/z112074;
@@ -638,7 +645,7 @@ Variables that MUST be preserved outside this script: z454
 
  [Reduce player's Mithril]
 !!VRy8:Sy3 -y2;
-!!OW:R-1/7/y8;
+!!OW:R(CURRENT_PLAYER)/7/y8;
 
  [If player paid the Mithril, remove Artifact from map and equip on hero]
  [Replace artifact with Mithril paid]
