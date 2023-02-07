@@ -1,6 +1,8 @@
 ZVSE2
 ** Author orig.  : Algor
 ** Updated by    : Archer30
+** Updated by    : daemon_n - no more w-vars, changed trigger to execute after neutral hero
+
 ** Name          : Elemental suppression
 ** Name rus.     : Подавление стихий
 ** Options       : 776
@@ -82,77 +84,57 @@ ZVSE2
 !!UN:C5129872/(UNC_INT8)/i^es_776_patch1^;
 !!UN:C5129873/(UNC_INT)/i^es_776_patch2^;
 
-!?FU(OnBeforeBattleUniversal);[Начало боя: сохранение параметров школ маги героев и их подавление]
-!!UN:P776/?y1;                [проверяем включена ли опция 776 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
+!?FU(ES_776_StoreAndChangeMagicSchoolLvl);
+!#VA(heroId:x) (value:x);
+!!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+  !!HE(heroId):Si/?i^es_776_%i_lvl^;
+  !!VR(newLevel:y):Si^es_776_%i_lvl^ -(value) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
+  !!HE(heroId):Si/(newLevel:y);
+!!en;
 
-!!BA:H0/?y1;                  [y1 - атакующий герой]
-!!BA:H1/?y2;                  [y2 - защищающийся герой]
-!!FU&y2<0:E;                  [выход если битва против монстров без героя]
-!!IF:Wy1;                     [выбор атакующего героя для установки w95-w98]
-!!HEy1:S14/?w95;              [w95 - уровень магии огня (0..3) атакующего героя]
-!!HEy1:S15/?w96;              [w96 - уровень магии воздуха (0..3) атакующего героя]
-!!HEy1:S16/?w97;              [w97 - уровень магии воды (0..3) атакующего героя]
-!!HEy1:S17/?w98;              [w98 - уровень магии земли (0..3) атакующего героя]
-!!IF:Wy2;                     [выбор защищающегося героя для установки w95-w98]
-!!HEy2:S14/?w95;              [w95 - уровень магии огня (0..3) защищающегося героя]
-!!HEy2:S15/?w96;              [w96 - уровень магии воздуха (0..3) защищающегося героя]
-!!HEy2:S16/?w97;              [w97 - уровень магии воды (0..3) защищающегося героя]
-!!HEy2:S17/?w98;              [w98 - уровень магии земли (0..3) защищающегося героя]
-!!HEy1:S11/?y3;               [y3 - уровень СП (0..3) атакующего героя]
-!!HEy1:X?y5/?y6/d/d/d/d/d;    [y5=0, y6=11 для специалиста по ПС]
-!!VRy3&y5=0/y6=11:+1;         [y3 - уровень СП атакующего героя с учетом специализации(0..4)]
-!!HEy1:A2/63/d/?y5;           [y5 - кол-во надетых на героя Птица познания]
-!!VRy3&y5>0:+1;               [y3+=1, если надета Птица познания]
-!!HEy1:A2/64/d/?y5;           [y5 - кол-во надетых на героя Бесстрашных хранителей]
-!!VRy3&y5>0:+1;               [y3+=1, если надет Бесстрашный хранитель]
-!!HEy1:A2/65/d/?y5;           [y5 - кол-во надетых на героя Символов Знаний]
-!!VRy3&y5>0:+2;               [y3+=2, если надет Символ знаний]
-!!HEy2:S11/?y4;               [y4 - уровень СП (0..3) защищающегося героя]
-!!HEy2:X?y5/?y6/d/d/d/d/d;    [y5=0, y6=11 для специалиста по ПС]
-!!VRy4&y5=0/y6=11:+1;         [y4 - уровень СП атакующего героя с учетом специализации(0..4)]
-!!HEy2:A2/63/d/?y5;           [y5 - кол-во надетых на героя Птица познания]
-!!VRy4&y5>0:+1;               [y4+=1, если надета Птица познания]
-!!HEy2:A2/64/d/?y5;           [y5 - кол-во надетых на героя Бесстрашных хранителей]
-!!VRy4&y5>0:+1;               [y4+=1, если надет Бесстрашный хранитель]
-!!HEy2:A2/65/d/?y5;           [y5 - кол-во надетых на героя Символов Знаний]
-!!VRy4&y5>0:+2;               [y4+=2, если надет Символ знаний]
-!!FU&y3=y4:E;                 [выход если суммарные уровни ПС у противников равные (y3=y4)]
-!!VRy1&y3>y4:Sy2;             [y1 - номер героя с более слабым ПС]
-!!VRy2:Sy4 -y3;               [y2 - разница уровней ПС героев]
-!!VRy2&y3>y4:*-1;             [y2 - уровень результирующего подавления]
-!!IF:Wy1;                     [выбор героя для чтения w95-w98]
-!!VRy3:Sw95 -y2;              [y3 - новый уровень магии огня]
-!!VRy3&y3<0:S0;               [...неотрицательный]
-!!HEy1:S14/y3;                [подавляем магию огня]
-!!VRy3:Sw96 -y2;              [y3 - новый уровень магии воздуха]
-!!VRy3&y3<0:S0;               [...неотрицательный]
-!!HEy1:S15/y3;                [подавляем магию воздуха]
-!!VRy3:Sw97 -y2;              [y3 - новый уровень магии воды]
-!!VRy3&y3<0:S0;               [...неотрицательный]
-!!HEy1:S16/y3;                [подавляем магию воды]
-!!VRy3:Sw98 -y2;              [y3 - новый уровень магии земли]
-!!VRy3&y3<0:S0;               [...неотрицательный]
-!!HEy1:S17/y3;                [подавляем магию земли]
+!?FU(ES_776_RestoreMagicSchoolLvl);
+!#VA(heroId:x);
+!!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+  !!HE(heroId):Si/i^es_776_%i_lvl^;
+  !!SN:Wi^es_776_%i_lvl^;
+!!en;
 
-!?FU(OnAfterBattleAction);    [восстановление параметров школ маги героев по окончании боя]
+!?FU(ES_776_Hero_GetSuppressionPower);
+!#VA(heroId:x) (result:x);
+!!VR(result):S(NULL);
+!!HE(heroId):X?(spec:y)/?(specSkill:y) S(SKILL_EAGLE_EYE)/?(result);
+!!VR(result)&(spec)=0/(specSkill)=(SKILL_EAGLE_EYE):+1;
+!!re i/(ART_BIRD_OF_PERCEPTION)/(ART_EMBLEM_OF_COGNIZANCE);
+  !!HE(heroId):A2/i/?y99/?(isEquipped:y);
+  !!VR(result)&(isEquipped):+1;
+!!en;
+!!VR(result)&(isEquipped):+1;          [+2 for last art]
+
+!?FU(OnSetupBattlefield)&i^battle_hero_vs_hero^;
+!!UN:P776/?(isEnabled:y);
+!!FU&(isEnabled:y)=0:E;
+!#VA(suppLvls[2]:y);
+
+!!re i/0/(BATTLE_RIGHT);
+  !!FU(ES_776_Hero_GetSuppressionPower):Pi^battle_hero_%i^/?(suppLvls[i]);
+!!en;
+!!if&(suppLvls[0])<>(suppLvls[1]);
+  !!VRi^es_776_need_to_restore_skills^:S(BATTLE_RIGHT) +1;
+  !!VR(valueToDecrease:y):S(suppLvls[0]) -(suppLvls[1]);
+  !!if&(valueToDecrease:y)>0;
+    !!VR(side:y):S(BATTLE_RIGHT);
+  !!el;
+    !!VR(valueToDecrease):*-1;
+    !!VR(side:y):S(BATTLE_LEFT);
+  !!en;
+  !!FU(ES_776_StoreAndChangeMagicSchoolLvl):Pi^battle_hero_%(side)^/(valueToDecrease:y);
+  !!VRi^es_776_need_to_restore_skills^:S(side) +1;
+!!en;
+
+!?FU(OnAfterBattleAction)&i^es_776_need_to_restore_skills^;
 !!BU:C?y1;                    [y1=1, если бой закончен]
 !!FU&y1=0:E;                  [выход, если бой не закончен]
+!!VR(side:y):Si^es_776_need_to_restore_skills^ -1;
+!!FU(ES_776_RestoreMagicSchoolLvl):Pi^battle_hero_%(side)^;
 
-!!UN:P776/?y1;                [проверяем включена ли опция 776 в y1]
-!!FU&y1=0:E;                  [выход если опция не включена]
-!!BA:H0/?y1;                  [y1 - атакующий герой]
-!!BA:H1/?y2;                  [y2 - защищающийся герой]
-!!FU&y2<0:E;                  [выход если битва против монстров без героя]
-!!IF:Wy1;                     [выбор атакующего героя для чтения w95-w98]
-!!HEy1:S14/w95;               [w95 - уровень магии огня (0..3) атакующего героя]
-!!HEy1:S15/w96;               [w96 - уровень магии воздуха (0..3) атакующего героя]
-!!HEy1:S16/w97;               [w97 - уровень магии воды (0..3) атакующего героя]
-!!HEy1:S17/w98;               [w98 - уровень магии земли (0..3) атакующего героя]
-!!IF:Wy2;                     [выбор защищающегося героя для чтения w95-w98]
-!!HEy2:S14/w95;               [w95 - уровень магии огня (0..3) защищающегося героя]
-!!HEy2:S15/w96;               [w96 - уровень магии воздуха (0..3) защищающегося героя]
-!!HEy2:S16/w97;               [w97 - уровень магии воды (0..3) защищающегося героя]
-!!HEy2:S17/w98;               [w98 - уровень магии земли (0..3) защищающегося героя]
-
-** end
+!!VRi^es_776_need_to_restore_skills^:S(FALSE);
