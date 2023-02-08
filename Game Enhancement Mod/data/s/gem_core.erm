@@ -19,38 +19,30 @@ UNIVERSAL START TRIGGER by igrik
   !!UN:Cx1/28/4/?(monType:y); eax mon type
 
   !!if&(monAmount)>1000;
-    !!IF:L^send this autosave to daemon_n {~>CPRSMALL.def:0:%(MON_PIT_LORD) mirror}
-
+    !!IF:L^send this autosave to daemon_n
     (x)=%(x) (y)=%(y) (z)=%(z) (monAmount)=%(monAmount) (monType)=%(monType)^;
   !!en;
 
 : EDI (0), ESI (4), EBP (8), ESP (12), EBX (16), EDX (20), ECX (24), EAX (28)
 : RetAddr (32)
 
-*?FU(OnBattleScreenMouseClick);
-*!IF:L^%i(mouse_item)^;
-*!if&i^mouse_item^>10000;
-*!re i/0/1;
-  *!VR(itemId:y):Si^mouse_item^ +i;
-  *!FU(gem_DlgItemPosition):P(itemId)/d/d/d/d/?(parrent:y);
-  *!IF:L^%(parrent)^;
-*!en;
-  *!FU(gem_GetItemStructure):P11000/?(str:y);
-  *!IF:L^%(str)^;
-  *!SN:E4519584/(CALLCONV_THISCALL)/(str);
-  *!FU(gem_DlgItemPosition):Pi^mouse_item^/?(x:y)/?(y:y);
-  *!FU(gem_DlgItemSize):Pi^mouse_item^/?(width:y)/?(height:y);
-  *!FU(gem_DlgItemPosition):Pi^mouse_item^/0/d/1;
-  *!FU(gem_DlgShowItem):Pi^mouse_item^/0/0/1;
+!?FU(OnAfterErmInstructions);
+!!FU(gem_GetGameVersion):P^@@gem_GameVersionAtStart^;
 
-  *!UN:C(WND_MANAGER)/(UNC_INT)/?(wndMgr:y);
-  *!SN:E6304144/(CALLCONV_THISCALL)/(wndMgr)/(x)/(y)/(width)/(height);
-  *!SN:D;
-  *!BU:R;
-*!en;
+!?FU(gem_GetGameVersion);
+!#VA(variableName:x);
+!!SN:L^assemblyMainPlugin.era^/?(pluginAddress:y);
+!!if&(pluginAddress);
+  !!SN:A(pluginAddress)/^GetInstalledGameVersion^/?(funcAddr:y);
+  !!if&(funcAddr);
+    !!SN:E(funcAddr)/(CALLCONV_CDECL)/?(version:e);
+    !!VRs^%z(variableName)^:S^%(version:e)^;
+  !!en;
+!!en;
 
 
 !?FU(OnStartOrLoad);
+  !!FU(gem_GetGameVersion):P^@@gem_GameVersionAtLoad^;
 
   !!UN:V?y1/?y1/?i^gem_amount_of_players^/?i^gem_several_PC^/?y1;
   !!VRi^gem_OnlyOneBattleReplayIsAllowed^:S(FALSE);

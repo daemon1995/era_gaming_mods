@@ -4,11 +4,7 @@ ZVSE2
 ** Idea and original script - Berserker
 ** Reworked to support the mod "10 Secondary Skills" от igrik'а - Algor
 ** Rewritten in ERM 2 to support "Warfare" WoG-option - daemon_n
-
-!#UN:P182/0;                            // отключение WoG-опции 182 "Показ скрытых навыков" за ненадобностью
-
-!?FU(OnStartOrLoad);                  // после загрузки игры 
-!!UN:P182/0;                            // отключение WoG-опции 182 "Показ скрытых навыков" за ненадобностью
+** fixed warfare blinks, fixed empty page display
 
 !?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_flags^=(NO_MOUSE_FLAGS);           // при клике в окне героя
   !!SN:F^GetButtonID^/^sss_next^;
@@ -26,9 +22,6 @@ ZVSE2
     !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
     !!FU(sss_DoNotRefreshHeroScreenTwice):P;
   !!en;
-
-
-
 
 
 !?FU(OnOpenHeroScreen);
@@ -73,54 +66,37 @@ ZVSE2
   !!FU(sss_DoNotRefreshHeroScreenTwice):P;
 
 !?FU(sss_SwithPage);                // отображение x1 страницы втор.навыков в экране героя
-!#VA(page:x) (skills:y);
+!#VA(page:x);
   !!HE-1:Z?(hero:y);
   !!UN:C(hero)/257/4/?(storedSkills:y);
+  !!VR(heroSkillsToShowPtr:y):S(hero) +229;
 
   !!FU(NewIntArray):P?(skillsList:y);
   !!UN:P193/?(warfare:y);
-
+  !!VR(warfarePlaced:y):S(FALSE);
   !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST):;
     !!HE-1:Si/?(learned:y);
 
     !!if&(learned);
-
-      !!if&(warfare);
-        !!if|i=(SKILL_BALLISTICS)/i=(SKILL_ARTILLERY)/i=(SKILL_FIRST_AID);
-          !!IF:W-1;
-          !!if&w48;
-            !!co&i<>w48;                                                    [user choice from WarFare skill]
-          !!el;
-            !!HE-1:X?(skillSpec:y)/?(skill:y);
-
-            !!if&(skillSpec);
-              !!if|(skill)=(SKILL_BALLISTICS)/(skill)=(SKILL_ARTILLERY)/(skill)=(SKILL_FIRST_AID);
-                !!co&i<>(skill);                                                    [user choice from WarFare skill]
-              !!el;
-                !!co&i<>(SKILL_FIRST_AID);                                                    [user choice from WarFare skill]
-              !!en;
-            !!el;
-                !!co&i<>(SKILL_FIRST_AID);                                                    [user choice from WarFare skill]
-            !!en;
+      !!if|i=(SKILL_BALLISTICS)/i=(SKILL_ARTILLERY)/i=(SKILL_FIRST_AID);
+        !!if&(warfare);
+          !!if&(warfarePlaced:y)=(FALSE);
+            !!VR(warfarePlaced:y):S(TRUE);
+            !!IF:W-1;
+            !!FU(Array_Push):P(skillsList)/w48;
           !!en;
-        !!en;      
+          !!co;
+        !!en;
       !!en;
 
       !!FU(Array_Push):P(skillsList)/i;
-      !!VR(skills):+1;
     !!en;
   !!en;
-
+  !!SN:M(skillsList)/?(skills:y);
   !!FU&(skills)=0:E;
-
   !!UN:C7620583/1/?(maxToShow:y);                    // y6 - максимальное количество втор.навыков отображаемых в окне героя
 
-  !!if&(maxToShow)=(skills);
-    !!VR(totalPages:y):S1;
-  !!el;
-    !!VR(totalPages:y):S(skills) :(maxToShow) +1;
-  !!en;
-
+  !!VR(totalPages:y):S(skills) :(maxToShow) F1/(maxToShow);
 
   !!if&(page)>(totalPages);
     !!VRi^sss_CurrentPage^:S1;
@@ -129,7 +105,7 @@ ZVSE2
   !!en;
 
   !!VR(startSkill:y):Si^sss_CurrentPage^ -1 *(maxToShow);
-  !!VR(lastSkill:y):Si^sss_CurrentPage^ *(maxToShow); -(tail); +(startSkill); %(maxToShow); +(page);
+  !!VR(lastSkill:y):Si^sss_CurrentPage^ *(maxToShow);
 
   !!VR(lastSkill)&(lastSkill)>(skills):S(skills) %(maxToShow) +(startSkill);
   !!VR(skillsToShow:y):S(lastSkill) -(startSkill);
