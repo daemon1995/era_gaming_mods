@@ -78,7 +78,7 @@ ZVSE2
   !!VR(skillBitSet[0]):C1/2/1/2/4/8/1/12/2/15;
 
   ; Set up the array for random skills in order to generate different skills - Archer30
-  ; If Warfare is enabled, War Machines skills will be skipped (lees issue and less imba)
+  ; If Warfare is enabled, War Machines skills will be skipped (less issue and less imba)
   !!FU(NewIntArray):P?(secondarySkillList:y);
   !!UN:P193/?(warfareEnabled:y);
 
@@ -96,17 +96,16 @@ ZVSE2
   !!re i/0/9;(ART_SLAVAS_RING_OF_POWER);
     !!VR(artId:y):Si +(ART_AXE_OF_SMASHING);
     !!VR(randomPSval:y):R0/1/5;
-    !!VR(randomSSnum:y):R0/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
     ; Pop and get the skill from the array
-    *!FU(Array_Pop):P(secondarySkillList)/?(randomSSnum:y);
+    !!FU(Array_Pop):P(secondarySkillList)/?(randomSS:y);
 
-    !!SN:H^secskill^/(randomSSnum)/0/?(skillName:z);
+    !!SN:H^secskill^/(randomSS)/0/?(skillName:z);
     !!UN:A(artId:y)/2/(artSlots[i]);
-    !!FU(PackUnion):P(randomPSval)/8/(skillBitSet[i])/8/(randomSSnum)/8/?(result:y);
+    !!FU(PackUnion):P(randomPSval)/8/(skillBitSet[i])/8/(randomSS)/8/?(result:y);
     !!VRi^wog_219_art_%(artId:y)^:S(result:y);
     !!SN:T^wog.219.%(artId:y).description^/?(artDesc:z)/^value^/(randomPSval)/^skillName^/(skillName);
     !!SN:H^art^/(artId:y)/0/?(artName:z);
-    *!SN:T^wog.219.%(artId:y).name^/?(artName:z)/^value^/(randomPSval)/^skillName^/(skillName); [Archer30: Why did we disabled the custom commander artifact name feature?]
+    *!SN:T^wog.219.%(artId:y).name^/?(artName:z)/^value^/(randomPSval)/^skillName^/(skillName); [Archer30: Why did we disable the custom commander artifact name feature?]
     !!SN:H^art^/(artId:y)/1/^{%(artName:z)}%T(wog.endl)%T(wog.endl)%(artDesc:z)^;
   !!en;
 !!en;
@@ -149,8 +148,10 @@ ZVSE2
 !#VA(pSkills[4]:y);
 
 !!FU(UnpackUnion):Pi^wog_219_art_%(artId)^/?(psValue:y)/8/?(psBitSet:y)/8/?(sSkill:y)/8;
+
 !!re i/0/3;
   !!VR(bitMask:y):S1 Sd<<i &(psBitSet:y);
+
   !!if&(bitMask);
     !!VR(pSkills[i]):S(psValue:y) *(value);
   !!en;
@@ -158,13 +159,19 @@ ZVSE2
 
 !!HE(CURRENT_HERO):Fd(pSkills[0])/d(pSkills[1])/d(pSkills[2])/d(pSkills[3]) S(sSkill)/?(lvl:y);
 
-  !!if&(value)>0;
-    !!HE(CURRENT_HERO)&(lvl)<(SKILL_EXPERT):S(sSkill)/d1;
-    !!FU(WOG_193_UpdateWarFareLevel)&i^wog_193_enabled^=1:P-1/w48;
-  !!el&(lvl:y)>(SKILL_NOT_LEARNED)/(lvl)<(SKILL_EXPERT); [Arcerh30: if the hero granted Expert level SS by equipping the art, he/she granted the SS on Expert level permantely - same as in the original WoG Script]
-    !!HE(CURRENT_HERO):S(sSkill)/d-1;
-    !!FU(WOG_193_UpdateWarFareLevel)&i^wog_193_enabled^=1:P-1/w48;
-  !!en;
+!!if&(value)>0;
+  !!HE(CURRENT_HERO)&(lvl)<(SKILL_EXPERT):S(sSkill)/d1;
+  !!FU(WOG_193_UpdateWarFareLevel)&i^wog_193_enabled^=1:P-1/w48;
+!!el&(lvl:y)>(SKILL_NOT_LEARNED)/(lvl)<(SKILL_EXPERT); [Arcerh30: if the hero granted Expert level SS by equipping the art, he/she granted the SS on Expert level permantely - same as in the original WoG Script]
+  !!HE(CURRENT_HERO):S(sSkill)/d-1;
+  !!FU(WOG_193_UpdateWarFareLevel)&i^wog_193_enabled^=1:P-1/w48;
+!!en;
+
+; Update for Secondary skills and spell points - Why haven't these be updated in AE triggers like Primary skills?
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED);
+!!VR(screenUpdate:y):S(FALSE);
+!!VR(screenUpdate)&i^mouse_item^>=2/i^mouse_item^<=10:S(TRUE);
+!!SN&(screenUpdate):D;
 
 ; Add extra description to the set pieces of The Garb of the Forest Lord and The Vestments of Authority
 ; This must be executed as late as possible
