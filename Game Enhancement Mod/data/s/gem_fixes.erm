@@ -150,7 +150,7 @@ ZVSE2
 ***************************** BATTLE FIXES *****************************
 ************************************************************************
 ************************************************************************
-//fix of the gold disappearing OnBattleReplay
+// fix of the gold disappearing OnBattleReplay
 !?FU(OnBeforeBattleReplay);
 !!if&i^battle_owner_1^<>(NO_OWNER);
   !!OW:Ri^battle_owner_1^/(RES_GOLD)/?i^gem_DefPlayerGold^;
@@ -457,6 +457,61 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 ; Jump if the target has fire immunity
 !!SN:X?(var:y)/0;
 !!UN:C(address)/(STRUCT_HOOK_CONTEXT_RET)/4/4454786;
+
+
+// Enable AI's Berserk casting
+; This script replaces 50% of AI's Advanced/Expert Fireball/Inferno casting to Berserk
+; This script requires BG:E returns a valid stack to work
+; This script assumes Berserk is a fire spell
+; This script checks the targeted stack and see if it can receive Berserk - may be improved to include the surroudning stacks and evalute whether casting Berserk is better
+!?FU(OnBeforeBattleAction)&i^battle_ai_%i(battle_acting_side)^;
+; Exit if it is not hero casting
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_HERO_CAST):E;
+
+; Exit if the hero does not learn Berserk
+!!BG:H?(hero:y);
+!!HE(hero):M(SPELL_BERSERK)/?(hasBerserk:y);
+!!FU&(hasBerserk)<>(TRUE):E;
+
+; Exit if the hero does not have Fire Magic level greater than Advanced
+!!HE(hero):S(SKILL_FIRE_MAGIC)/?(spellLv:y);
+!!TRi^battle_x^/i^battle_y^/i^battle_z^:G?(overlay:y);
+!!VR(spellLv)|(overlay)=46/(overlay)=226:S(SKILL_EXPERT);
+!!FU&(spellLv)<=(SKILL_BASIC):E;
+
+; Now there is a chance to change the target spell to Berserk if it is casting Fireball or Inferno
+!!BG:S?(spell:y);
+
+!!if|(spell)=(SPELL_FIREBALL)/(spell)=(SPELL_INFERNO);
+  ; Check if the hero has sufficient mana to cast Berserk
+  !!SS(spell):C(spellLv)/?(cost:y);
+  !!SS(SPELL_BERSERK):C(spellLv)/?(newCost:y);
+
+  !!HE(hero):I?(mana:y)/1;
+  !!VR(newMana:y):S(mana) +(cost) -(newCost);
+
+  !!if&(newMana)>0;
+    ; Check if the target can receive Berserk (only the target but not the surrounding)
+    !!BG:E?(stack:y);
+
+    !!if&(stack)>(NO_STACK);
+      !!BM(stack):Z?(stackStruct:y);
+      !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+      !!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_BERSERK)/i^battle_acting_side^/(stackStruct)/1/1; [can stack apply buff/debuff]
+
+      !!if&v1;
+        ; Check if it is lucky enough to replace (50% chance)
+        !!VR(random:y):R0/0/0;                [Customise the chance here]
+
+        !!if&(random)=0;
+          !!HE(hero):I(newMana)/1;
+          !!BG:S(SPELL_BERSERK);
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
 
 ************************************************************************

@@ -5006,22 +5006,88 @@ w   Spell Immunity  119
 ****************************************************************************************************
 
 
-*Illithids and Alhoons have 25% chance to cast Hypnothize with attacks
-!?MF1;
+*Illithids and Alhoons casts Hypnothize with attacks by Archer30
+; The max target health to be Hypothized is the same as Fangarm's ability from HotA (20 + 25*(Illithird count))
+; If the requirements of casting Hypnotize are met, it will be cast with 100% chance.
+; The following script won't be executed in TUM Reborn as it has included
 
-!!UN:C42149568/4/?y10;                  [Get Physical Damage type]
-!!FU&y10<>4462398:E;                    [Only Trigger when doing a melee attack]
+!?FU(tum_OnAfterMelee)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE); [hook from TUM]
+!#VA(atkStack:x) (defStack:x);
 
-!!MF:W?y80 F?y1 N?y4; !!FU|y80>0/y1=0:E;[Exit if Moat damage or no damage]
+!!BM(defStack):N?(defNum:y);
 
-!!BG:A?y1 N?y2 D?y3;                    [action type, Attacking stack number, Destination Poistion and Hero]
-!!FU|y1<>6/y3=-1:E;                     [Exit if no melee attack]
-!!if&y1=6/y2<>y4/y3>=0/y3<=186:;
-    !!BMy2:T?y5;                        [Creature Type]
-    !!if|y5=274/y5=282;                 [If Illiths or Alhoons]
-        !!BMy2:C60/y3/3/3/1;            [Cast 60 Hypnotize at Stack Position]
+!!if&(defNum)>0;
+  !!BM(atkStack):T?(atkMon:y);
+  ; Check if the attacker can cast Hynothize
+  !!FU(tum_hypnothize_CheckIfMonIsEligible):P(atkMon)/?(canCastHypnothize:y);
+
+  !!if&(canCastHypnothize);
+    !!BM(atkStack):I?(atkSide:y);
+    ; Check the defender's immunity to Hynothize
+    !!FU(tum_hypnothize_CanStackBeHypnothized):P(defStack)/(SPELL_HYPNOTIZE)/(atkSide)/?(acceptSpell:y);
+
+    !!if&(acceptSpell);
+      ; Archer's idea (100% cast if condition meet)
+      ; Check if the total HP of the defender is lower than 20 + 25*(attacker count)
+      ; Attacker's power
+      !!BM(atkStack):N?(atkNum:y);
+      !!VR(maxHypnothizeHp:y):S25 *(atkNum) +20;
+      ; Defender's total Hp
+      !!BM(defStack):H?(hp:y) L?(lostHp:y);
+      !!VR(totlaHp:y):S(hp) *(defNum) -(lostHp);
+      ; Cast if condition meet
+      !!if&(maxHypnothizeHp)>=(totlaHp);
+        !!BM(defStack):P?(pos:y);
+        !!BM(atkStack):C(SPELL_HYPNOTIZE)/(pos)/(SKILL_EXPERT)/3/(FALSE);
+
+        ; Remove Attack Twice and retailiations temporarily for the victim and restore later
+        !!BM(defStack):F?(flags:y) Fd~(MON_FLAG_ATTACKS_TWICE) R?(retals:y) R0;
+        !!VR(hasAttackTwice:y):S(flags) &(MON_FLAG_ATTACKS_TWICE) B;
+        !!FU(PackUnion):P(defStack)/8/(retals)/16/(hasAttackTwice)/7/1/1/?i^tum_hypnothize_stackData^;
+      !!en;
+
+      ; Perry's idea (25% chance to cast, disabled for now)
+      *!VR(random:y):R0/0/3;
+
+      *!if&(random)=0;
+        *!BM(defStack):P?(pos:y);
+        *!BM(atkStack):C(SPELL_HYPNOTIZE)/(pos)/(SKILL_EXPERT)/127/(FALSE);
+      *!en;
     !!en;
-!!en:;
+  !!en;
+!!en;
+
+!?FU(OnBattleActionEnd)&i^tum_hypnothize_stackData^<>0/i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
+!!FU(UnpackUnion):Pi^tum_hypnothize_stackData^/?(defStack:y)/8/?(retals:y)/8/?(hasAttackTwice:y)/7/?(value:y)/1;
+!!BM(defStack):R(retals);
+!!BM(defStack)&(hasAttackTwice):Fd|(MON_FLAG_ATTACKS_TWICE);
+
+!?FU(tum_hypnothize_CheckIfMonIsEligible)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)|(mon)=274/(mon)=282:S(TRUE);
+
+!?FU(tum_hypnothize_CanStackBeHypnothized)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
+!#VA(stackId:x) (spellId:x) (castingSide:x) (result:x);
+
+; Get the offset of the power address
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatManager:y);
+!!VR(offset:y):S(castingSide) *(UNC_INT) +21460;
+
+; Set the power to max
+!!UN:C(combatManager)/(offset)/(UNC_INT)/?(power:y);
+!!UN:C(combatManager)/(offset)/(UNC_INT)/127;
+
+; Check if the stack can receive Hypnothize with the new power (requires WoG Scripts to work! - wait for TUM update and change the prefix)
+!!FU(WOG_Battle_CanStackReceiveSpell):P(stackId)/(spellId)/(castingSide)/?(result);
+
+; Restore the power
+!!UN:C(combatManager)/(offset)/(UNC_INT)/(power);
+
+
+
+
 ****************************************************************************************************
 
 
