@@ -23,7 +23,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** - FU710 - 9th / 10th skill: added check for warfare
 ** - Heroes pick up double artifacts works only for artifacts that are on the map if you start the game
 **   (modified ?OB5 new FU727, reuse of TM19 (script00), once at day 1)
-*  - FU(WOG_101_ChooseMapRules) / FU701: Dwellings have Air Elementals instead of Boars if Neutral Town (script67) is active
+*  - FU(WOG_101_ChooseMapRules) / FU(WOG_117_AddBoarsOrAirElemsToDwells): Dwellings have Air Elementals instead of Boars if Neutral Town (script67) is active
 
 ** Rules: (Number in parenthesis is ERM code)
 **   1. Fliers can't fly but instead aren't retaliated against. (111)
@@ -294,15 +294,21 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 !!FU(WOG_101_SetUpMonsters):P;
 
+; Most dwellings also have Boars
+; This option is fully compatible with Neighbour Creatures. If there is any other script that changes dwelling creatures, the compatibility may be broken
 !!FU(WOG_101_CheckMapRule):P7;                                     [check for rule 7]
-!!UN&3:U17/-1/?y1;                                                 [count dwellings]
-!!VRv600:S-1;                                                      [reset coordinate index]
-!!VRy4:S140;                                                       [set y4 to boars]
-!!UN:P67/=1;                                                       [check if Neutral town is active (flag1)]
-!!VRy4&1:S112;                                                     [if yes set to Air Elementals instead of boars]
-!!DO701/1/y1/1&3:Py4;                                              [add boars / Air Elementals to dwellings]
+
+!!if&3;
+  !!UN:U17/-1/?y1;                                                 [count dwellings]
+  !!VRv600:S-1;                                                      [reset coordinate index]
+  !!VRy4:S(MON_BOAR);                                                [set y4 to boars]
+  !!UN:P67/=1;                                                       [check if Neutral town is active (flag1)]
+  !!VRy4&1:S(MON_AIR_ELEMENTAL);                                     [if yes set to Air Elementals instead of boars]
+  !!DO(WOG_117_AddBoarsOrAirElemsToDwells)/1/y1/1:Py4;             [add boars / Air Elementals to dwellings]
+!!en;
 
 !!FU(WOG_101_CheckMapRule):P8;                                     [check for rule 8]
+
 !!if&3;
     !!FU(WOG_101_CheckMapRule):P16;                                [check for rule 8]
     *!if&3;
@@ -313,10 +319,12 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
       !!VRi^wog_101_hero_inTavern_%l^:S(TRUE);
       !!VRi^wog_101_hero_inTavern_%r^:S(TRUE);
     !!en;
+
     !!VRi^wog_101_hero_inTavern_-1^:S(FALSE);
 
     !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
       !!HEi:O?o;
+
       !!if&o=(NO_OWNER);
         !!if&i^wog_101_hero_inTavern_%i^<>(TRUE);
           !!FU702:Pi;
@@ -330,7 +338,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
     *!if&3;
       *!VRi^wog_101_map_rule_16_isEnabled^:S(TRUE);
     *!en;
-
 !!en;
 
 !!FU(WOG_101_CheckMapRule):P14;                                    [check for rule 14] - Capitol can be built in every town]
@@ -344,7 +351,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
   !!if&y1>0/y5=0;
     !!VRv600:S-1;                                                  [reset coordinate index]
-    !!DO717/1/y1/1:P;                                              [build grails in towns]
+    !!DO(WOG_130_BuildGrailsInTowns)/1/y1/1:P;                     [build grails in towns]
   !!en;
 !!en;
 
@@ -646,12 +653,18 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** function to add boars to dwelling number x16 if not first level
 
-!?FU701;
+!?FU(WOG_117_AddBoarsOrAirElemsToDwells);
 ** x1 = new type (140 = boars, 112 = Air Elemental)
 !!UN:U17/-1/-1/600; [get dwelling location into v600-v602]
+
+; Check if the first slot is a unwanted creature, exit if positive (for the concern of Upgraded Dwellings, Neutral Town option)
 !!DW600:M0/?y1/?y2; [get y1 type y2 qty in slot 0]
+!!FU|y1=(MON_BOAR)/y1=(MON_NOMAD)/y1=(MON_AIR_ELEMENTAL)/y1=(MON_STORM_ELEMENTAL):E;
+; Exit if the first slot is level 1
 !!MA:Ly1/?y3; // get monster Level
-!!DW600&y3>0:M1/x1/12; [12 boars / Air Elementals in slot 1]
+!!FU&y3=0:E;
+
+!!DW600:M1/x1/12; [12 boars / Air Elementals in slot 1]
 
 ** end of function
 
@@ -1068,7 +1081,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** function to build a grail in town # x16
 
-!?FU717;
+!?FU(WOG_130_BuildGrailsInTowns);
 
 !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/600; [get town location into v600-v602]
 !!CA600:B1/26; [build grail]
@@ -1261,36 +1274,92 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** end of function
 
 ; Capitol can be built in every town by Archer30 (replaces Heroes get 9th-10th skills option)
-!?FU(OnStartOrLoad);                    [Note: The start game part is included in FU(WOG_101_ChooseMapRules). Here it doesn't work]
+; Note: The start game part is included in FU(WOG_101_ChooseMapRules), a.k.a. OnEveryDay day 1. Please, no more OnStartOrLoad
+!?FU(OnAfterLoadGame);
 !!FU(WOG_101_CheckMapRule):P14;
+
 !!if&3;
   !!UN:C4955234/(UNC_INT8)/?i^wog_124_patch^ C4955234/(UNC_INT8)/0;
-  *!re i/0/5;(end_value);
-    *!UN:C5005463/i/1/?i^wog_124_capture_patch%i^ C5005463/i/1/(OPCODE_NOP_1);
-    *!IF:M^%^;
-  *!en;
 !!en;
-4894378
 
-*?FU(WOG_CreateERMHook);
-*!SN:Ex1/1/6025353/(WOG_TownHook);
-
-*?FU(WOG_TownHook);
-*!SN:X?y99/0;
-*!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6025618;
 !?FU(OnGameLeave);
 !!FU(WOG_101_CheckMapRule):P14;
+
 !!if&3;
   !!UN:C4955234/(UNC_INT8)/i^wog_124_patch^;
-  *!re i/0/5;(end_value);
-    *!UN:C5005463/i/1/i^wog_124_capture_patch%i^;
-  *!en;
 !!en;
 
-; Double Movement Points (part 2)
+// Fix the problem Capitol got destoyed after captured
+// Rebuild the capitol if it was demolished after a battle
+!?FU(WOG_CreateERMHook);
+!!SN:Ex1/1/4859261/(WOG_OnAfterCaptureTown);
+
+!?FU(OnSetupBattlefield);
+!!FU(WOG_101_CheckMapRule):P14;
+!!FU&-3:E;
+
+!!VRi^wog_124_capitolCoordinates^:S0;
+
+; Check if the battle happens in/outside of a town with Capitol
+; Her we use UN:P904/905 to check as BA:S checks only a town with walls
+!!UN:P904/(TRUE) P905/(FALSE);
+!!CAi^battle_x^/i^battle_y^/i^battle_z^:B3/13; [13 - Capitol]
+!!UN:P905/?(hasError:y);
+
+; Re-enable error msg
+!!UN:P904/(FALSE);
+
+; Exit if the battle has no town included
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+  !!FU:E;
+!!en;
+
+; Store town coordinates if it has Capitol built
+!!FU(PackUnion)&1:Pi^battle_x^/8/i^battle_y^/8/i^battle_y^/8/1/8/?i^wog_124_capitolCoordinates^;
+
+!?FU(WOG_OnAfterCaptureTown)&i^wog_124_capitolCoordinates^<>0;
+!!FU(WOG_101_CheckMapRule):P14;
+!!FU&-3:E;
+
+!!FU(UnpackUnion):Pi^wog_124_capitolCoordinates^/?(x:y)/8/?(y:y)/8/?(z:y)/8/?(value:y)/8;
+
+!!CA(x)/(y)/(z):B3/13;
+!!CA(x)/(y)/(z)&-1:B6/13;
+
+!!VRi^wog_124_capitolCoordinates^:S0;
+
+// Rebuild the Capitol if the town was captured without a fight
+!?OB(OBJ_TOWN);
+!!FU(WOG_101_CheckMapRule):P14;
+!!FU&-3:E;
+
+!!VRi^wog_124_capitolCoordinates^:S0;
+
+!!CA998:B3/13;
+
+; Store town coordinates if it has Capitol built
+!!FU(PackUnion)&1:Pv998/8/v999/8/v1000/8/1/8/?i^wog_124_capitolCoordinates^;
+
+!?FU(OnPreTownScreen)&i^wog_124_capitolCoordinates^<>0;
+!!FU(WOG_101_CheckMapRule):P14;
+!!FU&-3:E;
+
+!!FU(UnpackUnion):Pi^wog_124_capitolCoordinates^/?(x:y)/8/?(y:y)/8/?(z:y)/8/?(value:y)/8;
+
+!!CA(x)/(y)/(z):B3/13;
+!!CA(x)/(y)/(z)&-1:B6/13;
+
+!!VRi^wog_124_capitolCoordinates^:S0;
+
+// Clear variable after loading a save
+!?FU(OnAfterLoadGame);
+!!VRi^wog_124_capitolCoordinates^:S0;
+
+
+// Double Movement Points (part 2)
 !?FU(WOG_OnGetHeroMovementPoints);
 !#VA(address:x);
 !!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
 
 !!UN&3:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/d*2;
-
