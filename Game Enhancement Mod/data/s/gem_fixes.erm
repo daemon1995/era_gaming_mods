@@ -464,10 +464,10 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
 
 // Enable AI's Berserk casting
-; This script replaces 50% of AI's Advanced/Expert Fireball/Inferno casting to Berserk
+; This script replaces 50% of AI's Fireball/Inferno/Meteor Shower casting to Berserk
+; This script assumes that Berserk is a fire spell. AI will only cast Berserk when it has Advanced/Expert Fire Magic
 ; This script requires BG:E returns a valid stack to work
-; This script assumes Berserk is a fire spell
-; This script checks the targeted stack and see if it can receive Berserk - may be improved to include the surroudning stacks and evalute whether casting Berserk is better
+; This script checks the targeted stack and see if it can receive Berserk - may be improved to include the surroudning stacks and evalute whether casting Berserk is ideal
 !?FU(OnBeforeBattleAction)&i^battle_ai_%i(battle_acting_side)^;
 ; Exit if it is not hero casting
 !!BG:A?(action:y);
@@ -484,10 +484,10 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!VR(spellLv)|(overlay)=46/(overlay)=226:S(SKILL_EXPERT);
 !!FU&(spellLv)<=(SKILL_BASIC):E;
 
-; Now there is a chance to change the target spell to Berserk if it is casting Fireball or Inferno
+; Now there is a chance to change the target spell to Berserk if it is casting Fireball/Inferno/Meteor Shower
 !!BG:S?(spell:y);
 
-!!if|(spell)=(SPELL_FIREBALL)/(spell)=(SPELL_INFERNO);
+!!if|(spell)=(SPELL_FIREBALL)/(spell)=(SPELL_INFERNO)/(spell)=(SPELL_METEOR_SHOWER);
   ; Check if the hero has sufficient mana to cast Berserk
   !!SS(spell):C(spellLv)/?(cost:y);
   !!SS(SPELL_BERSERK):C(spellLv)/?(newCost:y);
@@ -499,14 +499,14 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     ; Check if the target can receive Berserk (only the target but not the surrounding)
     !!BG:E?(stack:y);
 
-    !!if&(stack)>(NO_STACK);
+    !!if&(stack)>(NO_STACK);            [The target must be alive]
       !!BM(stack):Z?(stackStruct:y);
       !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
       !!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_BERSERK)/i^battle_acting_side^/(stackStruct)/1/1; [can stack apply buff/debuff]
 
       !!if&v1;
         ; Check if it is lucky enough to replace (50% chance)
-        !!VR(random:y):R0/0/0;                [Customise the chance here]
+        !!VR(random:y):R0/0/1;          [Customise the chance here]
 
         !!if&(random)=0;
           !!HE(hero):I(newMana)/1;
