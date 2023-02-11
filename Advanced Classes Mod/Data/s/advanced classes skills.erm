@@ -2898,9 +2898,9 @@ Creature speed   Base movement
 !!VRy5&y5=15/y60=0:S5;                  [Only 50% chance to get an artifact]
 !!VRy5&y5=16/y60=0:S5;                  [Only 50% chance to get an spell]
 
-!!HEy1:A2/52/?y40/?y41 A2/53/?y40/?y41; [Check for Spyglas and Speculum]
+!!HEy1:A2/52/?y40/?y43 A2/53/?y40/?y44; [Check for Spyglas and Speculum]
 !!VRy42:S17; 
-!!VRy42|y41>0/y42>0:S18;                [If any of the spyglasses equipped extend range of events to 18]
+!!VRy42|y43>0/y44>0:S18;                [If any of the spyglasses equipped extend range of events to 18]
 
 *!VRy5:S0R17; ** TEST**
 *!VRy5:S12; ** TEST**
@@ -4262,9 +4262,10 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
     !!SN:Pz5;                           [Play Sound]
     !!BMy40:V49;                        [Play animation]
     !!SN&y45>1:T^AC_Misc.Magic Artillery 1^/?z4 Iz4/?z4;
-    !!IF&y45>1:Q1/21/y41/1^%Z4^;        [Multikill]
+    *!IF&y45>1:Q1/21/y41/1^%Z4^;        [Multikill]
     !!SN&y45=1:T^AC_Misc.Magic Artillery 2^/?z4 Iz4/?z4;
-    !!IF&y45=1:Q1/21/y41/1^%Z4^;        [If only a single unit was killed]
+    *!IF&y45=1:Q1/21/y41/1^%Z4^;        [If only a single unit was killed]
+    !!BU:Mz4;
   !!en;
 !!en;
 
@@ -4769,12 +4770,12 @@ Till here Normal Necromancy
 !!BU:T?t;                               [Check if Tactics phase]
 !!if&t;
   !!FU(ACM_KillWithArtillery):P;        [if tactiv phase run script]
-!!el;
+!!el;  
   !!VRi^ACM_Artillery_Shoot^:S1;        [set flag to true]
 !!en;
 
 
-!?FU(OnCombatRound)&i^ACM_Artillery_Shoot^/v997>-1;
+!?FU(OnCombatRound)&v997=0;
 !!FU(ACM_KillWithArtillery):P;          [On the first visible combat round run script]
 !!VRi^ACM_Artillery_Shoot^:S(FALSE);    [remove flag so it runs only once]
 
@@ -4784,13 +4785,11 @@ Till here Normal Necromancy
 !!VRi^ACM_Artillery_Shoot^:S(FALSE);    [set flag to false after first damage was inflicted]
 
 
-** function to handle artillery, hero, skill level
 !?FU(ACM_KillWithArtillery);
   !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?y1;
   !!re y2/0/i^battle_hero_vs_hero^;
     !!HEi^battle_hero_%Y2^:A2/4/?y99/?y3;[get if hero has ballista in backpack]
     !!HEi^battle_hero_%Y2^:S20/?y11;    [get artillery skill level]
-
     !!if&y3=1/y11>0;                    [if ballista is present and hero has Artillery skill]
       !!VRy4:Sy2 *21;                   [set battle sides]
       !!VRy5:Sy4 +20;
@@ -4799,7 +4798,6 @@ Till here Normal Necromancy
         !!BMi:T?t N?n;                  [get type and number]
         !!if&n>0/t=146;                 [if ballista stack]
           !!BMi:Z?y6;
-
           !!HEi^battle_hero_%Y2^:N?v7020;[Get hero number]
           !!VRy40:Sy2;
           !!VRy40:-1*-1;                [Get other hero if available]
@@ -4814,7 +4812,8 @@ Till here Normal Necromancy
           !!VRy13&y25=1:S0;             [Set damage to zero if defender has the artifact to prevent damage]
 
           !!VRy14:Sy2 X1;
-          !!FU(ACM_SelectBestTarget):Py14/y13/?y15; [select target to shoot. Pass damage and return target]
+          !!FU(ACM_Generate_Random_Stack):Py2/?y15; [return a random enemy stack to shoot]
+          !!VRy15&y13=0:S-1;            [Exit if the damage preventing artifact is present]
 
           !!if&y15<>-1;
             !!VRi^ACM_Artillery_Shoot^:Sy13;
@@ -25793,7 +25792,8 @@ Weakness, Stone Skin, Prayer, Mirth, Sorrow, Fortune, Misfortune, Haste, Slow, S
 !!if&y3>-1/y3<187;                      [If casted spell is not mass and current stack is the target]
   !!BU:Ey3/?y1;                         [Get stack id standing on hex]
   !!BMy1&y1>=0:Gy2/?y3/?y4;             [Get current duration and power of the spell]
-  !!BMy1&y3=y7/y1>=0:Gy2/y6/y4;         [Set duration if spell target valid]
+  *!BMy1&y3=y7/y1>=0:Gy2/y6/y4;         
+  !!BMy1&y1>=0:Gy2/y6/y4;               [Set duration if spell target valid, because according to TheInvisible1966 it sometimes fails to set propper duration]
 !!en;
 !!SN:W^Duration_Mod_Changed^/1;
 
@@ -25804,13 +25804,15 @@ x1 hero id, x2 spell id, x3 type of target, x4 hero side, x5 new spell duration,
 !!VRy2:Sy1+x4;                          [Sum of hero side and stack side variables. Equals 1 if both from different side.]
 
 !!if&x3=-1/y2=1;                        [If spell is mass, affects enemies and current stack is enemy]
-!!BMx16:Gx2/?y2/?y3;                    [Get current duration and power of the spell]
-!!BMx16&y2=x6:Gx2/x5/y3;                [Set duration if spell target valid]
+  !!BMx16:Gx2/?y2/?y3;                  [Get current duration and power of the spell]
+  *!BMx16&y2=x6:Gx2/x5/y3;              
+  !!BMx16&y2>0:Gx2/x5/y3;               [Set duration if spell target valid]
 !!en;
 
 !!if&x3=1/y2<>1;                        [If spell is mass, affects allies and current stack is ally]
-!!BMx16:Gx2/?y2/?y3;
-!!BMx16&y2=x6:Gx2/x5/y3;                [Set duration if spell target valid]
+  !!BMx16:Gx2/?y2/?y3;
+  *!BMx16&y2=x6:Gx2/x5/y3;              
+  !!BMx16&y2>0:Gx2/x5/y3;               [Set duration if spell target valid]
 !!en;
 
 
@@ -31149,5 +31151,22 @@ Resource  Heroes are able to upgrade their troops by clicking on the portrait
 !?DL&v998=193/v999=30722/v1000=13;       [Close Dialogue with Confirm Button Save all Settings]
 !!DL:C1;
 
+
+
+*?FU(gem_CreateERMHook);
+*!SN:Ex1/1/5934078/(gem_AfterSpellAtStackDesc);
+
+*?FU(gem_AfterSpellAtStackDesc);
+*!SN:B6911016/d/?z1;
+
+*!BH0:N?y4; Get left hero number
+
+
+*!FU(ACM_Calc_Magic_Pierce):Py4/?y74;   [Pass hero number and return magic pierce value]
+*!FU(H3_Calc_Crit_Chance_and_Damage):Py4/?y16/?y99/0; [IF 1 at the end it means to in fight 0 means only check]
+
+*!MM:M?z10;                             [Get Text that is shown]
+*!VRz12:S^%Z1    Crit Chance:{%Y16%}  Crit Damage:{%Y99%}  Magic Pierce:{%Y74}^;
+*!MM:Mz12; 
 
 
