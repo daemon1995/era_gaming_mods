@@ -67,10 +67,14 @@ You can conduct the priority order for equipping by reading the code. The lower 
 Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
 Changelog:
+1.0381
+- Stack Exp Rebalance option Illithids and Alhoons casts Hypnothize with attacks by Archer 
+- removed ACM saved variables
+
 1.038
-- Added compatibility with LotS mod
+- Growth Beyond 4000 now shows real value of stacks on adventure map. You can customize limits in erm file up to 1 million. 
+- Added future compatibility with LotS mod
 - New difficulty levels are now availble when LotS mod is enabled
-- Growth Beyond 4000 now shows real value of stacks on adventure map. You can customize limits in file up to 1 million
 
 Changelog:
 1.036
