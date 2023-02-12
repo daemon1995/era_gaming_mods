@@ -12,6 +12,38 @@ ZVSE2
 !#UN:C4599192/2/12523;
 !#UN:C4599194/4/2425393296;
 
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4499810/(gem_ARMY_OnGetAiValue);
+
+!?FU(gem_ARMY_OnGetAiValue);&i^timerOwner^=7;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(armyPtr:y);
+!!VR(numOffset:y):S28;
+!!VR(result:y):S0;
+!!if&(armyPtr);
+  !!re i/0/(ARMY_SLOT_LAST);
+    !!VR(offset:y):Si *(SIZEOF_INT);
+    !!UN:C(armyPtr)/(offset)/4/?t;
+    !!if&t>(NO_MON)/t<=(MON_LAST_WOG);
+      !!MA:It/?(aiValue:y);
+      !!VR(offset):+28;
+      !!UN:C(armyPtr)/(offset)/4/?(num:y);
+
+      !!VR(value:y):S(num) *(aiValue);
+      !!VR(saveResult:y):S(result);
+      !!VR(result):+(value:y);
+
+      !!if&(result)<(saveResult);
+        !!VR(result):S1000000000;(INT32_MAX);
+        !!br;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+*!VR(re)
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(result);
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4499845;
+*!IF:L^%^;
 
 // Divide all the AI values by 15 in order to prevent negative values after gathering massive amount of troops.
 !?FU(OnAfterErmInstructions);
@@ -96,6 +128,85 @@ ZVSE2
   !!UN:C5578846/1/1/40; [new gold cost text field width (default 32)]
   !!UN:C5578848/2/1/36; [new gold cost text field xPos (default 40)]
 
+
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/5576191/(gem_OnRecruitCreatureDlgLeftClick);
+
+
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/5574304/(gem_OnOpenRecruitDlg);
+
+!?FU(OnOpenRecruitDlg);
+!!VRi^gem_RecruitDlg_NeedToGetData^:S1;
+
+!?FU(OnCloseRecruitDlg);
+!!VRi^gem_CurrentProc_Dlg^:S0;
+!!VRi^gem_CurrentProc_Msg^:S0;
+!!VRi^gem_RecruitDlg_CurrentDlg^:S0;
+
+!?FU(gem_OnOpenRecruitDlg)&i^gem_RecruitDlg_NeedToGetData^;
+!!FU(H3Dlg_GetCurrentDlg):P?i^gem_RecruitDlg_CurrentDlg^;
+!!VRi^gem_RecruitDlg_NeedToGetData^:S0;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?i^gem_CurrentProc_Dlg^ Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y)
+C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
+!!FU(gem_RecruitDlg_SetMax):Px1;
+
+!?FU(OnKeyPressed)&i^gem_CurrentProc_Dlg^;
+
+!!if&x1>=(KEY_1)/x1<=(KEY_4)|x1=(KEY_RIGHT)/x1=(KEY_LEFT);
+!!FU(H3Dlg_GetCurrentDlg):P?(currentDlg:y);
+!!FU&i^gem_RecruitDlg_CurrentDlg^<>(currentDlg):E;
+  !!VR(dlg:y):Si^gem_CurrentProc_Dlg^;
+  !!UN:C(dlg:y)/88/4/?(currIndex:y);
+  !#VA(items[4]:y);
+  !!UN:C(dlg:y)/96/4/?(items[1]) C(dlg:y)/100/4/?(items[2]) C(dlg:y)/92/4/?(items[0]) C(dlg:y)/104/4/?(items[3]);
+  !!VR(max:y):S-1;
+  !!re i/0/3;
+    !!if&(items[i])<>(NO_MON);
+      !!VR(max:y):+1;
+    !!en;
+  !!en;
+
+  !!if&(max:y);
+    !!VR(saveIndex:y):S(currIndex);
+    !!if&x1<(KEY_1);
+      !!VR(offset:y):Sx1 -38;
+      !!VR(currIndex):+(offset:y);
+      !!if&(currIndex)>(max:y);
+        !!VR(currIndex):S0;
+      !!el&(currIndex)<0;
+        !!VR(currIndex):S(max:y);
+      !!en;
+    !!el;
+      !!VR(currIndex:y):Sx1 -(KEY_1);
+    !!en;
+    !!VR(currIndex):F0/(max:y);
+    !!if&(saveIndex)<>(currIndex);
+      !!VR(currIndex):+538;
+      !!VR(msg:y):Si^gem_CurrentProc_Msg^;
+      !!UN:C(msg)/4/4/12 C(msg)/4/512 C(msg)/8/4/(currIndex);
+      !!SN:E5573952/(CALLCONV_THISCALL)/(dlg:y)/(msg:y);
+    !!en;
+  !!en;
+!!en;
+
+!?FU(gem_OnRecruitCreatureDlgLeftClick);
+!!FU(gem_RecruitDlg_SetMax):Px1;
+!?FU(gem_RecruitDlg_SetMax);
+!#VA(hookContext:x);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(isRmc:y);
+!!FU&(isRmc):E;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(dlg:y) C(dlg)/172/4/?(availableCreatures:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(msg:y) C(msg)/8/4/?(clickedItem:y);
+*!IF:M^%(clickedItem) %(isRmc:y)^;
+!!if&(clickedItem)<1000/(availableCreatures:y)>0;
+  !!UN:C(msg)/4/4/13 C(msg)/4/512 C(msg)/8/4/532;
+  !!SN:E5573952/(CALLCONV_THISCALL)/(dlg)/(msg);
+
+!!en;
+
+
 !?FU(OnGameLeave);
   !!TL:E0; disable mulpiplayer timer
 
@@ -124,8 +235,6 @@ ZVSE2
     !!SN:F^GetButtonID^/^Peons^;
     !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
   !!en;
-
-
 
 
 !?FU(gem_OnPlaceBattleBttns)&i^gem_IsHdModLoaded^=(FALSE);
