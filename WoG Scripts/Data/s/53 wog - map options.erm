@@ -405,8 +405,6 @@ Dialogue Box numbers used: 17
 !#UN&v1=1:A155/1;
 
 // Enable Vial of Dragon Blood and Armageddon's Blade for random maps - not directly spawning on the maps though
-!?FU(OnAfterErmInstructions);
-
 
 !?FU(WOG_234_BanArtifacts);
 !!FU(WOG_CheckRandomMap):P?(isRandMap:y);         [Check random map]
@@ -1141,7 +1139,6 @@ Variables: v3320-v3325 (v3326-v3330 reserved)
 !!VRv3325&y-5=0:-y-100;                        [Remove disabled state of v3325 for this player: v3325]
 
 !!DO(WOG_185_ManageDisablingStates)/3320/3325/1:P1; [Save the disabling state variables to disk file]
-
 ----------------------------------------------------------------------------------------------------------
 
  [Load or save the disabling state variables to/from disk file]
@@ -1209,67 +1206,74 @@ Variables used: v1..v4, z-1..z-10, y1..y6, y-1..y-13, x1, x16
 !!UN:P220/?(wogOption:y); [Check if script is enabled]
 !!FU&(wogOption)<>(TRUE):E; [Exit if not enabled]
 
-!!FU(WOG_220_SelectTownTypes):P; [Select town types]
-!!FU&i^wog_220_chosenTownBits^=511:E;
 
-!!UN:U(OBJ_TOWN)/-1/?(numTowns:y); [Number of towns: y-11]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO(WOG_220_CycleThroughTowns)/1/(numTowns)/1&(numTowns)>0:P; [Cycle through towns if any disallowed]
+!!FU(NewIntArray):P?(allowedTowns:y);
+!!FU(WOG_220_SelectTownTypes):P?(allowedTowns:y); [Select town types]
+!!SN:M(allowedTowns)/?(size:y);
+
+!!if&(size)/(size)<=(TOWN_LAST_WOG);
+  !!UN:U(OBJ_TOWN)/-1/?(numTowns:y); [Number of towns: y-11]
+  !!if&(numTowns);
+    !!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
+    !!DO(WOG_220_CycleThroughTowns)/1/(numTowns)/1:P(allowedTowns:y)/(size); [Cycle through towns if any disallowed]
+  !!en;
+!!en;
+!!FU&i^wog_220_chosenTownBits^=511:E;
 
 --------------------------------------------------------------------------------
 
  [Select town types]
 !?FU(WOG_220_SelectTownTypes);
+!#VA(arrayId:x);
 ; Read and store choices in ini
 !!VR(filename:z):S^wog.ini^;
 !!FU(ReadIniInts):P(filename)/^Select Neutral Town Types^/^Town_Choices_Bits^/?(chosenTownBits:y)/511;
-
 !!re i/0/8;(end_value);
   !!VR(zVar:y):Si+2 *-1;
   !!FU(WOG_Town_GetName):Pi/?z(zVar);
 !!en;
-!!IF:G0/1/(chosenTownBits)/^%T(wog.220.header)^/-2/-3/-4/-5/-6/-7/-8/-9/-10/0/0/0;
-!!VRi^wog_220_chosenTownBits^:Sv1;
-!!FU&i^wog_220_chosenTownBits^=511:E;
 
-!!VR(chosenTownBits):Si^wog_220_chosenTownBits^;
+!!re j;
 
+  !!IF:G0/1/(chosenTownBits)/^%T(wog.220.header)^/-2/-3/-4/-5/-6/-7/-8/-9/-10/0/0/0;
+  !!VR(chosenTownBits:y):Sv1;
+  
+  !!if&(chosenTownBits)<>0;
+    !!re i/(TOWN_FIRST)/(TOWN_LAST_WOG);
+      !!VR(townBits:y):S1 Sd<<i;
+      !!VR(isAllowed:y):S(chosenTownBits) &(townBits);
+      !!if&(isAllowed);
+        !!FU(Array_Push):P(arrayId)/i;
+      !!en;
+    !!en;
+    !!br;
+  !!el;
+    !!IF:M^%T(wog.220.deny)^;
+  !!en;
+
+!!en;
 !!FU(WriteIniInts):P(filename)/^Select Neutral Town Types^/^Town_Choices_Bits^/(chosenTownBits);
 !!FU(SaveIni):P(filename);
 
-!!FU(NewIntArray):P?i^wog_220_chosenTownsArray^/(M_TEMP);
-
-!!re i/(TOWN_FIRST)/(TOWN_LAST_WOG);
-  !!VR(townBits:y):S1 Sd<<i;
-  !!VR(isAllowed:y):S(chosenTownBits) &(townBits);
-
-  !!FU(Array_Push)&(isAllowed)<>(FALSE):Pi^wog_220_chosenTownsArray^/i;
-!!en;
-
-!!if&(chosenTownBits)=0;
-  !!IF:M^%T(wog.220.deny)^;
-  !!FU(WOG_220_SelectTownTypes):P; [Call function again if no towns chosen]
-!!en;
-
-!!VRi^wog_220_chosenTownBits^:S(chosenTownBits);
 
 --------------------------------------------------------------------------------
 
  [Cycle through towns]
 !?FU(WOG_220_CycleThroughTowns);
+!#VA(townTypesArray:x) (size:x);
 !!UN:U98/-1/-1/2; [Store next town's coordinates in v2/v3/v4]
 !!CA2:O?y1; [Owner of town: y1]
 !!FU&y1>=0:E; [Exit function if town is owned]
 
 !!CA2:T?y2; [Type of town: y2]
-!!VRy30:S1 Sd<<y2;                      [Convert to bits]
-!!VRy-12:Si^wog_220_chosenTownBits^ &y30; [Check if town type is allowed]
-!!FU&y-12<>(FALSE):E; [Exit function if town type is allowed]
+*!VRy30:S1 Sd<<y2;                      [Convert to bits]
+*!VRy-12:Si^wog_220_chosenTownBits^ &y30; [Check if town type is allowed]
+*!FU&y-12<>(FALSE):E; [Exit function if town type is allowed]
 
-!!SN:Mi^wog_220_chosenTownsArray^/?y31;
-!!VRy31:-1;
+*!SN:Mi^wog_220_chosenTownsArray^/?y31;
+!!VRy31:S(size:x) -1;
 !!VRy32:R0/0/y31;
-!!SN:Mi^wog_220_chosenTownsArray^/y32/?y6;
+!!SN:M(townTypesArray:x)/y32/?y6;
 !!CA2:Ty6 I0; [Set town to new allowable town type and redraw outside: y6]
 
 !!DO(WOG_220_ChangeGarrisonMons)/0/6/1:Py6; [Change garrison creatures to match new town type]
