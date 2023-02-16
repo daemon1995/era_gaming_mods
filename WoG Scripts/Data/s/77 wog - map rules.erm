@@ -177,7 +177,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
     !!UN:U(OBJ_MINE)/(ANY_OBJ)/?(minesQty:y); [count mines: y1]
 
     !!if&(minesQty)>0;
-      !!VRv600:S-1; [reset coordinate index]
+      !!VRv2:S-1; [reset coordinate index]
       !!DO(WOG_122_ChangeMineProductions)/1/(minesQty)/1:P; [change mine production once/week] - This will be reverted by Mithril Enhancedment script (Protected Mines)
     !!en;
   !!en;
@@ -185,7 +185,9 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 !!if&i^timerMonthDay^=1/i^timerDay^<>1;
   !!FU(WOG_101_CheckMapRule):P13; [check for rule 13]
-  !!DO704/(HERO_FIRST)/(HERO_LAST_WOG)/1&3:P; [clear learning stones etc. on day 1 of month]
+  !!if&3;
+    !!FU(WOG_101_ClearHeroVisistedObjects):P;
+  !!en;
 !!en;
 
 !!FU(WOG_101_CheckMapRule):P4; [check for rule 4]
@@ -716,14 +718,11 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!FU&y1<7:E; // exit if lower than Centaur's Axe
 
 !!UN:P904/1; // disable WOG error messages (because of bug with the AR receiver)
-!!AR998:G0/?y98/?y99;
-!!AR998&y99<1:G1/?y98/?y99;
-!!AR998&y99<1:G2/?y98/?y99;
-!!AR998&y99<1:G3/?y98/?y99;
-!!AR998&y99<1:G4/?y98/?y99;
-!!AR998&y99<1:G5/?y98/?y99;
-!!AR998&y99<1:G6/?y98/?y99; // check for guardians in slots 1-7
-!!FU&y99>0:E; // exit, if artifact is still guarded (hero chose not to fight)
+!!re i/0/(ARMY_SLOT_LAST);// check for guardians in slots 1-7
+  !!AR998:Gi/?y98/?y99;
+  !!FU&y99>0:E; // exit, if artifact is still guarded (hero chose not to fight)
+!!en;
+
 
 !!UN:P904/0; // enable  WOG error messages again
 
@@ -754,10 +753,10 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!en;
 
 
-
-** hero movement trigger
 !?FU(WOG_CreateERMHook);
-!!SN:Ex1/1/4721035/(WOG_101_MapRules);
+!!SN:Ex1/1/4721035/(WOG_101_MapRules);** hero movement trigger
+
+!!SN:Ex1/1/6025347/(WOG_101_OnCaptureTownCapitolDestruction);
 
 !?FU(WOG_101_MapRules)&i^wog_101_map_rule_10_isEnabled^/i^timerIsHuman^;
   !!FU721:Pi^timerOwner^; (owner); [do a Cover Of Darkness for a non-teammate of a human player]
@@ -765,34 +764,22 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** end of hero movement trigger
 
 
-** function to let hero x16 revisit objects
-
-!?FU704;
-
-!!HEx16:O?y1; [get owner]
-!!OW:C?y2; [get current player]
-!!DO705/0/9/1&y1=y2:Px16; [mark learning stones through schools of war as unvisited]
-
-** end of function
-
-
-** function to let hero x1 revisit object x16
-
-!?FU705;
-
-!!HEx1:Vx16/0; [set hero to have not visited all objects of this type]
-
+** function to let hero revisit objects
+!?FU(WOG_101_ClearHeroVisistedObjects);
+!!re i/0/(HERO_LAST_WOG);
+  !!re j/0/9;
+    !!HEi:Vj/0; [set hero to have not visited all objects of this type]
+  !!en;
+!!en;
 ** end of function
 
 
 ** function to change a mine's produced resource
-
 !?FU(WOG_122_ChangeMineProductions);
 
-!!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/600; [get mine location into v600-v602]
+!!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/2; [get mine location into v600-v602]
 !!VRy1:R0/(RES_FIRST)/(RES_LAST_SOD); [random 0-6]
-!!MN600:Ry1/1; [set random resource produced]
-
+!!MN2:Ry1/1; [set random resource produced]
 ** end of function
 
 
@@ -1279,19 +1266,22 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ; Capitol can be built in every town by Archer30 (replaces Heroes get 9th-10th skills option)
 ; Note: The start game part is included in FU(WOG_101_ChooseMapRules), a.k.a. OnEveryDay day 1. Please, no more OnStartOrLoad
+!?FU(WOG_101_OnCaptureTownCapitolDestruction)&i^wog_101_map_rule_14_isEnabled^;
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6025676;
+
 !?FU(OnAfterLoadGame);
 !!FU(WOG_101_CheckMapRule):P14;
 
 !!if&3;
   !!UN:C4955234/(UNC_INT8)/?i^wog_124_patch1^ C4955234/(UNC_INT8)/0;
-  !!UN:C6025485/(UNC_INT8)/?i^wog_124_patch2^ C6025485/(UNC_INT8)/(OPCODE_NOP_2);
 !!en;
 
 !?FU(OnGameLeave);
 !!FU(WOG_101_CheckMapRule):P14;
 
 !!if&3;
-  !!UN:C4955234/(UNC_INT8)/i^wog_124_patch1^ C6025485/(UNC_INT8)/i^wog_124_patch2^;;
+  !!UN:C4955234/(UNC_INT8)/i^wog_124_patch1^;
 !!en;
 
 
