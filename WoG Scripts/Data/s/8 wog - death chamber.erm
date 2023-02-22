@@ -6,6 +6,7 @@ ZVSE2
 
 ***Rewritten with ERM 2.0:  August 2, 2022 by daemon_n
 ***UPDATED November 1, 2022 by daemon_n
+***UPDATED February 22, 2023 by daemon_n
 
 **This script allows for heroes to visit the new WoG structure in the Castle
 **Objects in the Map Editor that resembles a pile of skulls (it is the 7th
@@ -84,11 +85,11 @@ ZVSE2
     !!if&(cbGrowth);
       !!VRi^WOG_70_BattleDifficulty^:+(coeff);
     !!en;
-
+    *!IF:M^%i(WOG_70_BattleDifficulty)^;
     !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(battlefields:y) P(WOG_OPT_NEW_BATTLE_FIELDS)/0; 
 
-    !!HE-1:Tv998/v999/v1000/65/1 O?(owner:y); **Trigger battle with the Lich King
-    !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(battlefields:y); 
+    !!HE-1:Tv998/v999/v1000/(MON_POWER_LICH)/1 O?(owner:y); **Trigger battle with the Lich King
+    !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/(battlefields:y); 
 
     !!if&(owner)<>(NO_OWNER);
       **==============================================================================
@@ -105,7 +106,7 @@ ZVSE2
 
       !!if&(mithril);
         !!VR(picType[0]):S(RES_MITHRIL);
-        !!VR(value[0]):Si^WOG_70_BattleDifficulty^ +*2 +2;
+        !!VR(value[0]):Si^WOG_70_BattleDifficulty^ *2 +2;
         !!OW:R-1/(RES_MITHRIL)/d(value); **Give Mithril to current player
         !!VR(picType[1]):S(PIC_TYPE_MONSTER);
         !!VR(value[1]):S(ghosts)* 65536 |(MON_GHOST);
@@ -115,7 +116,7 @@ ZVSE2
       !!en;
       
       !!SN:T^wog.70.reward^/?(msg:z)/^number^/(ghosts);
-      !!VR(gold:y):Si^WOG_70_BattleDifficulty^ *2500 +6000;
+      !!VR(gold:y):Si^WOG_70_BattleDifficulty^ *3000 +6000;
       !!OW:R-1/(RES_GOLD)/d(gold); **Give Mithril to current player
       !!IF:Q3/(RES_GOLD)/(gold)/(picType[0])/(value[0])/(picType[1])/(value[1])/1/(msg);
       !!HE-1:C2/(MON_GHOST)/(ghosts)/1;  **Give 60 Ghosts to current hero
@@ -159,23 +160,27 @@ ZVSE2
   !!BF:O62/21 O62/24 O62/26 O62/27 O62/30 O62/157 O62/160 O62/162 O62/163 O62/166;
   **Place 4 tombstones to close up area in middle of battlefield
   !!BF:O61/75 O61/79 O61/109 O61/113;
-
   **Code for attributes for the Lich King stacks
-  !!VR(hp:y):Si^WOG_70_BattleDifficulty^ +*200 +400;
+  !!VR(hp:y):Si^WOG_70_BattleDifficulty^ *200 +400;
   !!VR(statsBon:y):Si^WOG_70_BattleDifficulty^ *2;
 
+
   **Lich King has 50 speed for duration of combat && endless retaliations each round
-  
-  !!BM(BATTLE_DEFENDER_STACK_FIRST):S50 H(hp) R5000 Fd|(MON_FLAG_ATTACKS_TWICE) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon) Z?(struct:y);
+  !!VR(kingStack:y):S(BATTLE_DEFENDER_STACK_FIRST);
+  !!BM(kingStack):S50 H(hp) R5000 Fd|(MON_FLAG_ATTACKS_TWICE) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon) Z?(struct:y);
 
   !!UN:C(struct)/136/4/?(descPtr:y); 
   !!SN:B(descPtr)/d/^%T(wog.70.name)^;set new stack creature name
 
   !!if&(statsBon)>4;
-    !!BM(BATTLE_DEFENDER_STACK_FIRST):Fd|(MON_FLAG_FLYER) Fd(MON_FLAG_NO_MELEE_PENALTY) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
+    !!BM(kingStack):Fd|(MON_FLAG_FLYER) Fd(MON_FLAG_NO_MELEE_PENALTY) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
     
     !!if&(statsBon)>6;
-      !!BM(BATTLE_DEFENDER_STACK_FIRST):Fd|(MON_FLAG_NO_RETALIATION) Fd(MON_FLAG_ATTACKS_ALL_AROUND) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
+      !!BM(kingStack):Fd|(MON_FLAG_NO_RETALIATION) Fd(MON_FLAG_ATTACKS_ALL_AROUND) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
+    !!en;
+
+    !!if&(statsBon)>10;
+      !!BM(kingStack):Fd|(MON_FLAG_FIRE_IMMUNITY);
     !!en;
   !!en;
 
@@ -209,8 +214,11 @@ ZVSE2
 
 !?FU(OnBeforeBattleAction)&i^WOG_70_BattleDifficulty^/i^WOG_70_BattleRound^>=0/i^battle_acting_stack^=21;/x1=21;
   !!BM(BATTLE_DEFENDER_STACK_FIRST):P?p Z?s; **Power Lich King casts "Death Ripple"
-  !!re i/0/i^WOG_70_BattleDifficulty^/1/-1;
-    !!VR(power:y):Si %2 +1 +i^WOG_70_BattleDifficulty^-1;
+  !!VR(castLimiter:y):S4;
+  !!VR(damageBonus:y):Si^WOG_70_BattleDifficulty^ -(castLimiter:y) F0/(INT_MAX);
+  !!VR(castNumber:y):Si^WOG_70_BattleDifficulty^ F1/(castLimiter:y);
+  !!re i/0/(castNumber:y)/1/-1;
+    !!VR(power:y):Si %2 +1 +i^WOG_70_BattleDifficulty^ +(damageBonus:y) -1;
     !!VR(schoolLvl:y):S(power) F1/3;
 
     !!VRi^WOG_70_casting_death_ripple^:S1;
@@ -221,7 +229,7 @@ ZVSE2
 
   **Code to summon additional Lich stacks onto battlefield during second round
   !!if&i^WOG_70_BattleRound^=1;
-    !!VRk:R0/1/10 Sdi^WOG_70_BattleDifficulty^; T10;
+    !!VRk:R0/1/10 Sdi^WOG_70_BattleDifficulty^;
 
     !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_REMOVE_OBSTACLE)/60/3/3/0;**Lich King removes the 4 huge Crypts closing up the battlefield
 
@@ -260,14 +268,15 @@ ZVSE2
 **Triggers for Power Lich King's spellcasting
 
 !?FU(OnBeforeBattleAction)&i^WOG_70_BattleDifficulty^/i^WOG_70_BattleRound^>=0;/i^battle_acting_side^=(BATTLE_RIGHT);
-!!VR(addPow:y):Si^WOG_70_BattleDifficulty^ F1/20;
 
 !!if&i^battle_acting_side^=(BATTLE_RIGHT);
-  !!BMi^battle_acting_stack^:G(SPELL_FIRE_SHIELD)/?(dur:y)/?(power:y) P?(pos:y); [**Get FIRE SHIELD info from current stack]
-  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(SPELL_FIRE_SHIELD)/(pos:y)/(addPow:y)/1/0;               [**Power Lich King casts BASIC FIRE SHIELD]
+  !!VR(addPow:y):Si^WOG_70_BattleDifficulty^ F1/20;
 
-  !!BMi^battle_acting_stack^:G(SPELL_COUNTERSTRIKE)/?(dur:y)/?(power:y);         [**Get FIRE SHIELD info from current stack]
-  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(SPELL_COUNTERSTRIKE)/(pos:y)/(addPow:y)/1/0;             [**Power Lich King casts BASIC FIRE SHIELD]
+  !!BMi^battle_acting_stack^:G(SPELL_FIRE_SHIELD)/?(dur:y)/?(power:y) P?(pos:y);
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0:C(SPELL_FIRE_SHIELD)/(pos:y)/(SKILL_BASIC)/(addPow:y)/0;
+
+  !!BMi^battle_acting_stack^:G(SPELL_COUNTERSTRIKE)/?(dur:y)/?(power:y);
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0:C(SPELL_COUNTERSTRIKE)/(pos:y)/(SKILL_BASIC)/(addPow:y)/0;
 !!el;
   
   !!if&i^WOG_70_BattleDifficulty^=1;
@@ -282,14 +291,23 @@ ZVSE2
   !!el&i^WOG_70_BattleDifficulty^=4;
     !!VR(spell:y):S(SPELL_SORROW);
   !!el;
-    !!VR(spell:y):S(SPELL_SLOW);
+    !#VA(spells[4]:y);
+    !!VR(spells[0]):C(SPELL_MISFORTUNE)/(SPELL_DISRUPTING_RAY)/(SPELL_WEAKNESS)/(SPELL_SORROW);
+    !!FU(WOG_GetRandomSeedByCoord):Pv998/v999/v1000/?(seed:y);
+    !!VR(rmg1:y):Si^battle_round^ *12;
+    !!VR(rmg2:y):Si^battle_acting_stack^ *21 :12 +(rmg1:y);
+    !!VR(seed):+(rmg2:y); +i^battle_acting_stack^;
+    !!FU(WOG_SafeRand):P0/3/(seed)/?r;
+    !!VR(spell:y):S(spells[r]);
   !!en;
 
-  !!BMi^battle_acting_stack^:G(spell)/?(dur:y)/?(power:y) P?(pos:y);             [**Get FIRE SHIELD info from current stack]
-  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(dur:y)=0/(power:y)=1:C(spell)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
-  !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_FIREBALL)/(pos:y)/(addPow:y)/1/0;                           [**Power Lich King casts BASIC FIREBALL]
-!!en;
+  !!BMi^battle_acting_stack^:P?(pos:y);
+  !!FU(WOG_Battle_CanStackReceiveSpell):Pi^battle_acting_stack^/(SPELL_FIREBALL)/(BATTLE_RIGHT)/?(result:y);
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(result:y):C(SPELL_FIREBALL)/(pos:y)/(SKILL_BASIC)/(addPow:y)/1;
 
+  !!FU(WOG_Battle_CanStackReceiveSpell):Pi^battle_acting_stack^/(spell)/(BATTLE_RIGHT)/?(result:y);
+  !!BM(BATTLE_DEFENDER_STACK_FIRST)&(result:y):C(spell)/(pos:y)/(SKILL_BASIC)/(addPow:y)/1;
+!!en;
 
 // Right-clicking dialogue
 !?FU(OnAdventureMapRightMouseClick);

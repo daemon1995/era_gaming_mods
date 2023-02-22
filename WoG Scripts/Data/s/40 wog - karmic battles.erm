@@ -65,19 +65,22 @@ ZVSE2
 ; Set up variables if the karma type is not 0 (type 0 has no karmic battles)
 !!if&i^wog_38_karmaType^<>0;
   !!VRw49:+1; ** count w49 up, if battlescript called
-  !!VRi^wog_38_randomSeed^&1000:R0/0/(INT_MAX); [generate a random seed to ensure the results are the same on battle replay - for human only]
+  !!if&(ERM_FLAG_IS_HUMAN);
+    !!VR(minValue:y):Sw49 + 1000000;
+    !!VRi^wog_38_randomSeed^:R0/(minValue:y)/(INT_MAX); [generate a random seed to ensure the results are the same on battle replay - for human only]
+  !!en;
 !!en;
 
 
 ** manage stacks to be summoned after tactics phase
-!?FU(OnAfterTacticsPhase)&i^wog_48_isNeutralBattle^/1000;
+!?FU(OnAfterTacticsPhase)&i^wog_48_isNeutralBattle^/(ERM_FLAG_IS_HUMAN);
 !!IF:Wi^battle_hero_0^; ** all the function calls below will use w49 - @daemon_n: wrong, it requires reinit
 
 ; x1=Karmic Battle Counter x2=multiplier x3=startPos x4=increase
 !!if&i^wog_38_karmaType^>=1/i^wog_38_karmaType^<=3;
   !!DO(WOG_38_SummonRandomStacks)/1/6/1:Pw49/1/5/34;     ** summon 6 random stacks
 !!el&i^wog_38_karmaType^>=4/i^wog_38_karmaType^<=5;
-  !!DO(WOG_38_SummonRandomStacks)/1/3/1:Pw49/2/39/34/;    ** summon 3 random stacks
+  !!DO(WOG_38_SummonRandomStacks)/1/3/1:Pw49/2/39/34;    ** summon 3 random stacks
 !!el&i^wog_38_karmaType^>=6/i^wog_38_karmaType^<=7;
   !!DO(WOG_38_SummonRandomStacks)/1/1/1:Pw49/4/91/0;     ** summon 1 random stack
 
@@ -95,8 +98,8 @@ ZVSE2
 !!VR(num)&i^Tougher_Karmic_Battles_on^:*2; [Multiple by two if Tougher Karmic Battles is enabled]
 
 !!VR(level:y):S(counter:x) :10 F0/13;        ** set Level
-!!VR(randomSeed:y):Si^wog_38_randomSeed^ +x16;
-!!VR(type:y):R0/(randomSeed) R0/(TOWN_CASTLE)/(TOWN_FORTRESS);       ** calculate creature
+!!VR(randomSeed:y):S(proposedPos:x) *2 -(posOffset:x) *x16 -10000000 +i^wog_38_randomSeed^;
+!!FU(WOG_SafeRand):P(TOWN_CASTLE)/(TOWN_FORTRESS)/(randomSeed)/?(type:y);
 !!VR(type):*14 +(level);
 
 !!VR(type)&(type)=102:S(MON_SERPENT_FLY);       [Correct Serpent Fly number]
@@ -109,7 +112,7 @@ ZVSE2
 !!MA:X(type)/?(monFlags:y);  ** Check monster Flags
 !!VR(isWide:y):S(monFlags) &(MON_FLAG_WIDE);     ** Check for 2-hex creature
 
-!!DO(WOG_38_FindValidPos)/1/200/1:P(proposedPos)/(isWide)/?(pos:y); ** find a position with no obstacles
+!!DO(WOG_38_FindValidPos)/1/200/1:P(proposedPos)/(isWide)/(randomSeed:y)/?(pos:y); ** find a position with no obstacles
 
 !!BU:S(type)/(num)/(pos)/1/-1/0;
 !!VR(proposedPos):+(posOffset);          ** increase position number: (pos)
@@ -117,9 +120,13 @@ ZVSE2
 
 ** find a position with no obstacles
 !?FU(WOG_38_FindValidPos);
-!#VA(proposedPos:x) (isWide:x) (pos:x);
+!#VA(proposedPos:x) (isWide:x) (randomSeed:x) (pos:x);
 
-!!VR(pos):R0/0/7;
+*!VR(pos):R0/0/7;
+!!FU(WOG_SafeRand):P0/7/(randomSeed)/?(pos);
+*!VR(pos):Sr;R0/0/7;
+
+*!IF:M^%(pos) %(randomSeed)^;
 !!VR(pos):+(proposedPos);         ** (proposedPos) is offset position
 !!BU:O(pos)/?(obstFlags:y);       ** check for obstacle: (obstflags)=0 if no obstacle
 !!BU:E(pos)/?(stack:y);       ** check for monster: (stack)<0 if no monster
@@ -148,7 +155,7 @@ ZVSE2
 !#VA(counter:x);
 
 !!VR(type:y):S(MON_PIKEMAN);
-!!VR(random:y):R0/i^wog_38_randomSeed^ R0/0/1;
+!!FU(WOG_SafeRand):P0/1/i^wog_38_randomSeed^/?(random:y);
 
 !!if&(counter)>0/(counter)<10;
   !!VR(type)&(random)=0:S(MON_PEASANT);
