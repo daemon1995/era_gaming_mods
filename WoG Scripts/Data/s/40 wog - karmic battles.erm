@@ -57,41 +57,44 @@ ZVSE2
 
 
 ** before battle
-!?FU(OnBeforeBattle)&i^wog_48_isNeutralBattle^/1000;
-!!VRi^wog_38_karmaType^:S0 R9;  ** set random parameter for battle script (0-9): i^wog_38_karmaType^
+!?FU(OnBeforeBattleUniversal)&i^wog_48_isNeutralBattle^;
+!!VRi^wog_38_karmaType^:R0/0/9;  ** set random parameter for battle script (0-9): i^wog_38_karmaType^
 !!IF:Wi^battle_hero_0^;
 !!VRw49:F1/(INT_MAX);   ** prevent 0-stacks if hero gets attacked by Tim`s WM
 
+; Set up variables if the karma type is not 0 (type 0 has no karmic battles)
 !!if&i^wog_38_karmaType^<>0;
   !!VRw49:+1; ** count w49 up, if battlescript called
-  !!VRi^wog_38_randomSeed^:R0/0/(INT_MAX); [generate a random seed to ensure the results are the same on battle replay]
+  !!VRi^wog_38_randomSeed^&1000:R0/0/(INT_MAX); [generate a random seed to ensure the results are the same on battle replay - for human only]
 !!en;
 
 
 ** manage stacks to be summoned after tactics phase
 !?FU(OnAfterTacticsPhase)&i^wog_48_isNeutralBattle^/1000;
 !!IF:Wi^battle_hero_0^; ** all the function calls below will use w49 - @daemon_n: wrong, it requires reinit
-!!VR(baseValue:y):Sw49;
-; x1=multiplier x2=startPos x3=increase
+
+; x1=Karmic Battle Counter x2=multiplier x3=startPos x4=increase
 !!if&i^wog_38_karmaType^>=1/i^wog_38_karmaType^<=3;
-  !!DO(WOG_38_SummonRandomStacks)/1/6/1:P(baseValue)/1/5/34;     ** summon 6 random stacks
+  !!DO(WOG_38_SummonRandomStacks)/1/6/1:Pw49/1/5/34;     ** summon 6 random stacks
 !!el&i^wog_38_karmaType^>=4/i^wog_38_karmaType^<=5;
-  !!DO(WOG_38_SummonRandomStacks)/1/3/1:P(baseValue)/2/39/34/;    ** summon 3 random stacks
+  !!DO(WOG_38_SummonRandomStacks)/1/3/1:Pw49/2/39/34/;    ** summon 3 random stacks
 !!el&i^wog_38_karmaType^>=6/i^wog_38_karmaType^<=7;
-  !!DO(WOG_38_SummonRandomStacks)/1/1/1:P(baseValue)/4/91/0;     ** summon 1 random stack
+  !!DO(WOG_38_SummonRandomStacks)/1/1/1:Pw49/4/91/0;     ** summon 1 random stack
+
+; x1=Karmic Battle Counter
 !!el&i^wog_38_karmaType^>=8;
-  !!FU(WOG_38_SummonCalculatedStacks):P(baseValue:y);             ** summon 2 calculated stacks
+  !!FU(WOG_38_SummonCalculatedStacks):Pw49;             ** summon 2 calculated stacks
 !!en;
 
 
 ** summon random stacks
 !?FU(WOG_38_SummonRandomStacks);
-!#VA(baseValue:x) (multiplier:x) (proposedPos:x) (posOffset:x);
+!#VA(counter:x) (multiplier:x) (proposedPos:x) (posOffset:x);
 
-!!VR(num:y):S(baseValue:x) *(multiplier);        ** number per stack
+!!VR(num:y):S(counter:x) *(multiplier);        ** number per stack
 !!VR(num)&i^Tougher_Karmic_Battles_on^:*2; [Multiple by two if Tougher Karmic Battles is enabled]
 
-!!VR(level:y):S(baseValue:x) :10 F0/13;        ** set Level
+!!VR(level:y):S(counter:x) :10 F0/13;        ** set Level
 !!VR(randomSeed:y):Si^wog_38_randomSeed^ +x16;
 !!VR(type:y):R0/(randomSeed) R0/(TOWN_CASTLE)/(TOWN_FORTRESS);       ** calculate creature
 !!VR(type):*14 +(level);
@@ -142,72 +145,73 @@ ZVSE2
 
 ** summon calculated stacks
 !?FU(WOG_38_SummonCalculatedStacks);
-!!VR(baseValue:y):Sx1;
+!#VA(counter:x);
+
 !!VR(type:y):R0/i^wog_38_randomSeed^ R0/0/1;
-!!VR(type)&(baseValue:y)>0/(baseValue:y)<10/(type)=0:S139; **Peasant
-!!VR(type)&(baseValue:y)>0/(baseValue:y)<10/(type)=1:S118; **Pixie
+!!VR(type)&(counter)>0/(counter)<10/(type)=0:S139; **Peasant
+!!VR(type)&(counter)>0/(counter)<10/(type)=1:S118; **Pixie
 
-!!VR(type)&(baseValue:y)>=10/(baseValue:y)<20/(type)=0:S119; **Sprite
-!!VR(type)&(baseValue:y)>=10/(baseValue:y)<20/(type)=1:S138; **Halfling
+!!VR(type)&(counter)>=10/(counter)<20/(type)=0:S119; **Sprite
+!!VR(type)&(counter)>=10/(counter)<20/(type)=1:S138; **Halfling
 
-!!VR(type)&(baseValue:y)>=20/(baseValue:y)<30:S0 R2;
-!!VR(type)&(baseValue:y)>=20/(baseValue:y)<30/(type)=0:S112;  **Air Elemental
-!!VR(type)&(baseValue:y)>=20/(baseValue:y)<30/(type)=1:S140;  **Boar
-!!VR(type)&(baseValue:y)>=20/(baseValue:y)<30/(type)=2:S143;  **Rogue
+!!VR(type)&(counter)>=20/(counter)<30:S0 R2;
+!!VR(type)&(counter)>=20/(counter)<30/(type)=0:S112;  **Air Elemental
+!!VR(type)&(counter)>=20/(counter)<30/(type)=1:S140;  **Boar
+!!VR(type)&(counter)>=20/(counter)<30/(type)=2:S143;  **Rogue
 
-!!VR(type)&(baseValue:y)>=30/(baseValue:y)<40/(type)=0:S127; **Storm Elemantal
-!!VR(type)&(baseValue:y)>=30/(baseValue:y)<40/(type)=1:S159; **Ghost
+!!VR(type)&(counter)>=30/(counter)<40/(type)=0:S127; **Storm Elemantal
+!!VR(type)&(counter)>=30/(counter)<40/(type)=1:S159; **Ghost
 
-!!VR(type)&(baseValue:y)>=40/(baseValue:y)<50:S0 R2;
-!!VR(type)&(baseValue:y)>=40/(baseValue:y)<50/(type)=0:S115; **Water Elemental
-!!VR(type)&(baseValue:y)>=40/(baseValue:y)<50/(type)=1:S141; **Mummy
-!!VR(type)&(baseValue:y)>=40/(baseValue:y)<50/(type)=2:S142; **Nomad
+!!VR(type)&(counter)>=40/(counter)<50:S0 R2;
+!!VR(type)&(counter)>=40/(counter)<50/(type)=0:S115; **Water Elemental
+!!VR(type)&(counter)>=40/(counter)<50/(type)=1:S141; **Mummy
+!!VR(type)&(counter)>=40/(counter)<50/(type)=2:S142; **Nomad
 
-!!VR(type)&(baseValue:y)>=50/(baseValue:y)<110:S0 R2; **Random number 0..2
+!!VR(type)&(counter)>=50/(counter)<110:S0 R2; **Random number 0..2
 
-!!VR(type)&(baseValue:y)>=50/(baseValue:y)<60/(type)=0:S123; **Ice Elemental
-!!VR(type)&(baseValue:y)>=50/(baseValue:y)<60/(type)=1:S166; **Air Messenger
-!!VR(type)&(baseValue:y)>=50/(baseValue:y)<60/(type)=2:S192; **Sylvan Centaur
+!!VR(type)&(counter)>=50/(counter)<60/(type)=0:S123; **Ice Elemental
+!!VR(type)&(counter)>=50/(counter)<60/(type)=1:S166; **Air Messenger
+!!VR(type)&(counter)>=50/(counter)<60/(type)=2:S192; **Sylvan Centaur
 
-!!VR(type)&(baseValue:y)>=60/(baseValue:y)<70/(type)=0:S114; **Fire Elemental
-!!VR(type)&(baseValue:y)>=60/(baseValue:y)<70/(type)=1:S164; **Fire Messenger
-!!VR(type)&(baseValue:y)>=60/(baseValue:y)<70/(type)=2:S137; **Sharpshooter
+!!VR(type)&(counter)>=60/(counter)<70/(type)=0:S114; **Fire Elemental
+!!VR(type)&(counter)>=60/(counter)<70/(type)=1:S164; **Fire Messenger
+!!VR(type)&(counter)>=60/(counter)<70/(type)=2:S137; **Sharpshooter
 
-!!VR(type)&(baseValue:y)>=70/(baseValue:y)<80/(type)=0:S129; **Energy Elemental
-!!VR(type)&(baseValue:y)>=70/(baseValue:y)<80/(type)=1:S165; **Earth Messenger
-!!VR(type)&(baseValue:y)>=70/(baseValue:y)<80/(type)=2:S167; **Water Messenger
+!!VR(type)&(counter)>=70/(counter)<80/(type)=0:S129; **Energy Elemental
+!!VR(type)&(counter)>=70/(counter)<80/(type)=1:S165; **Earth Messenger
+!!VR(type)&(counter)>=70/(counter)<80/(type)=2:S167; **Water Messenger
 
-!!VR(type)&(baseValue:y)>=80/(baseValue:y)<90/(type)=0:S113; **Earth Elemental
-!!VR(type)&(baseValue:y)>=80/(baseValue:y)<90/(type)=1:S170; **Arctic Sharpshooter
-!!VR(type)&(baseValue:y)>=80/(baseValue:y)<90/(type)=2:S194; **Werewolf
+!!VR(type)&(counter)>=80/(counter)<90/(type)=0:S113; **Earth Elemental
+!!VR(type)&(counter)>=80/(counter)<90/(type)=1:S170; **Arctic Sharpshooter
+!!VR(type)&(counter)>=80/(counter)<90/(type)=2:S194; **Werewolf
 
-!!VR(type)&(baseValue:y)>=90/(baseValue:y)<100/(type)=0:S125; **Magma Elemental
-!!VR(type)&(baseValue:y)>=90/(baseValue:y)<100/(type)=1:S171; **Lava Sharpshooter
-!!VR(type)&(baseValue:y)>=90/(baseValue:y)<100/(type)=2:S144; **Troll
+!!VR(type)&(counter)>=90/(counter)<100/(type)=0:S125; **Magma Elemental
+!!VR(type)&(counter)>=90/(counter)<100/(type)=1:S171; **Lava Sharpshooter
+!!VR(type)&(counter)>=90/(counter)<100/(type)=2:S144; **Troll
 
-!!VR(type)&(baseValue:y)>=100/(baseValue:y)<110/(type)=0:S120; **Psychic Elemental
-!!VR(type)&(baseValue:y)>=100/(baseValue:y)<110/(type)=1:S169; **War Zealot
-!!VR(type)&(baseValue:y)>=100/(baseValue:y)<110/(type)=2:S193; **Sorceress
+!!VR(type)&(counter)>=100/(counter)<110/(type)=0:S120; **Psychic Elemental
+!!VR(type)&(counter)>=100/(counter)<110/(type)=1:S169; **War Zealot
+!!VR(type)&(counter)>=100/(counter)<110/(type)=2:S193; **Sorceress
 
-!!VR(type)&(baseValue:y)>=110/(baseValue:y)<120:S0 R3;
-!!VR(type)&(baseValue:y)>=110/(baseValue:y)<120/(type)=0:S121; **Magic Elemental
-!!VR(type)&(baseValue:y)>=110/(baseValue:y)<120/(type)=1:S172; **Nightmare
-!!VR(type)&(baseValue:y)>=110/(baseValue:y)<120/(type)=2:S136; **Enchanter
-!!VR(type)&(baseValue:y)>=110/(baseValue:y)<120/(type)=3:S195; **Hell Steed
+!!VR(type)&(counter)>=110/(counter)<120:S0 R3;
+!!VR(type)&(counter)>=110/(counter)<120/(type)=0:S121; **Magic Elemental
+!!VR(type)&(counter)>=110/(counter)<120/(type)=1:S172; **Nightmare
+!!VR(type)&(counter)>=110/(counter)<120/(type)=2:S136; **Enchanter
+!!VR(type)&(counter)>=110/(counter)<120/(type)=3:S195; **Hell Steed
 
-!!VR(type)&(baseValue:y)>=120/(baseValue:y)<130/(type)=0:S130; **Firebird
-!!VR(type)&(baseValue:y)>=120/(baseValue:y)<130/(type)=1:S168; **Gorynych
+!!VR(type)&(counter)>=120/(counter)<130/(type)=0:S130; **Firebird
+!!VR(type)&(counter)>=120/(counter)<130/(type)=1:S168; **Gorynych
 
-!!VR(type)&(baseValue:y)>=130/(baseValue:y)<140/(type)=0:S130; **Phoenix
-!!VR(type)&(baseValue:y)>=130/(baseValue:y)<140/(type)=1:S168; **Gorynych (Guthllu)
+!!VR(type)&(counter)>=130/(counter)<140/(type)=0:S130; **Phoenix
+!!VR(type)&(counter)>=130/(counter)<140/(type)=1:S168; **Gorynych (Guthllu)
 
-!!VR(type)&(baseValue:y)>=140/(type)=0:S150 R8; **Random Level 8
-!!VR(type)&(baseValue:y)>=140/(type)=1:S132 R4; **Random Powerful Neutral Dragon
-!!VR(type)&(baseValue:y)>=140/(type)=136:S196;  **Dracolich
+!!VR(type)&(counter)>=140/(type)=0:R0/150/158; **Random Level 8
+!!VR(type)&(counter)>=140/(type)=1:R0/132/136; **Random Powerful Neutral Dragon
+!!VR(type)&(counter)>=140/(type)=136:S196;  **Dracolich
 !!MA:X(type)/?(monFlags:y);  ** Check monster Flags
 !!VR(isWide:y):S(monFlags) &(MON_FLAG_WIDE);     ** Check for 2-hex creature
 
-!!VR(num:y):S(baseValue:y);
+!!VR(num:y):S(counter);
 !!VR(num)&i^Tougher_Karmic_Battles_on^:*2;
 
 !!DO(WOG_38_FindValidPos)/1/200/1:P73/(isWide)/?(pos:y); ** find a position with no obstacles
@@ -217,13 +221,11 @@ ZVSE2
 
 
 ** after battle - give AI experience
-!?FU(OnAfterBattle)&i^wog_48_isNeutralBattle^/-1000;
+!?FU(OnAfterBattleUniversal)&i^wog_48_isNeutralBattle^/-1000;
 !!UN:P38/?(wogOption:y);
 
 !!if&(wogOption);
   !!IF:Wi^battle_hero_0^;
-  !!VRw49:+1;
-  !!VRw49:*500;
-  !!HEi^battle_hero_0^:Edw49;
-  !!VRw49::1000;
+  !!VR(exp:y):Sw49 *500;
+  !!HEi^battle_hero_0^:Ed(exp)/?(level:y)/1;
 !!en;

@@ -97,6 +97,16 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ; Set up Resistance, Armorer and Sorcery II values
 !?FU(OnGameEnter);
+!!if&i^wog_210_enabled^;
+  !!UN:C6548044/(UNC_INT)/?i^wog_210_patch1^;
+  !!UN:C6548048/(UNC_INT)/?i^wog_210_patch2^;
+  !!UN:C6548052/(UNC_INT)/?i^wog_210_patch3^;
+
+  !!UN:C6548044/(UNC_INT)/1036831949;   [set Basic Resistance]
+  !!UN:C6548048/(UNC_INT)/1045220556;   [set Advanced Resistance]
+  !!UN:C6548052/(UNC_INT)/1050253721;   [set Expert Resistance]
+!!en;
+
 !!UN:P214/?(armorer:y);
 
 !!if&(armorer);
@@ -104,9 +114,9 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!UN:C6547984/(UNC_INT)/?i^wog_214_patch2^;
   !!UN:C6547988/(UNC_INT)/?i^wog_214_patch3^;
 
-  !!UN:C6547980/(UNC_INT)/1036831949;                   [set basic armorer]
-  !!UN:C6547984/(UNC_INT)/1041865112;                   [set advance armorer]
-  !!UN:C6547988/(UNC_INT)/1045220556;                   [set expert armorer]
+  !!UN:C6547980/(UNC_INT)/1036831949;   [set Basic Armorer]
+  !!UN:C6547984/(UNC_INT)/1041865112;   [set Advanced Armorer]
+  !!UN:C6547988/(UNC_INT)/1045220556;   [set Expert Armorer]
 !!en;
 
 !!UN:P213/?(sorceryII:y);
@@ -116,23 +126,20 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!UN:C6548096/(UNC_INT)/?i^wog_213_patch2^;
   !!UN:C6548100/(UNC_INT)/?i^wog_213_patch3^;
 
-  !!UN:C6548092/(UNC_INT)/1036831949;                   [set basic sorcery]
-  !!UN:C6548096/(UNC_INT)/1045220556;                   [set advance sorcery]
-  !!UN:C6548100/(UNC_INT)/1050253721;                   [set expert sorcery]
+  !!UN:C6548092/(UNC_INT)/1036831949;   [set Basic Sorcery]
+  !!UN:C6548096/(UNC_INT)/1045220556;   [set Advanced Sorcery]
+  !!UN:C6548100/(UNC_INT)/1050253721;   [set Expert Sorcery]
 !!en;
-
-!!if&i^wog_210_enabled^;                                [resistance coeffs 10/20/30]
-  !!re i/1/3;
-    !!VR(offset:y):Si *(SIZEOF_INT);
-    !!VRe1:S1 :10 *i;
-    !!UN:C6548040/(offset)/(UNC_INT)/e1;
-  !!en;
-!!en;
-
 
 
 ; Restore Resistance, Armorer and Sorcery II values
 !?FU(OnGameLeave);
+!!if&i^wog_210_enabled^;
+  !!UN:C6548044/(UNC_INT)/i^wog_210_patch1^;
+  !!UN:C6548048/(UNC_INT)/i^wog_210_patch2^;
+  !!UN:C6548052/(UNC_INT)/i^wog_210_patch3^;
+!!en;
+
 !!UN:P214/?(armorer:y);
 
 !!if&(armorer);
@@ -149,12 +156,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!UN:C6548100/(UNC_INT)/i^wog_213_patch3^;
 !!en;
 
-!!if&i^wog_210_enabled^;
-  !!VRe1:S1 :20;
-  !!VRe2:S1 :10;
-  !!VRe3:S1 :5;
-  !!UN:C6548040/4/4/e1 C6548040/8/4/e2 C6548040/12/4/e3;
-!!en;
 
 ** Заплатка к скриптам Грамотность и Орлиный глаз I, не позволяющая изучать
 ** запрещенные заклинания после загрузки\перезагрузки сейва
@@ -506,27 +507,27 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
       *!en;
     *!en;
   *!en;
-
-
-
-!?FU(WOG_CreateERMHook)&i^wog_210_enabled^;
-*#VRi^wog_204_enabled^:S1;
-!!SN:Ex1/1/5130887/(WOG_OnBeforeHeroResistanceMultiplier);
-
-!?FU(WOG_OnBeforeHeroResistanceMultiplier);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero:y)/26/2/?(heroId:y);
-!!re i/0/2;
-  !!VR(artId:y):Si+(ART_GARNITURE_OF_INTERFERENCE);
-  !!HE(heroId):A2/(artId)/?(has:y)/?(art:y);
-  !!br&(art)=0;
-!!en;
-!!if&i>2;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-4/4/?(currentArtBonus:e);
-  !!VR(newBonus:e):S30:100 +(currentArtBonus:e);
-  !!UN:C(ebp:y)/-4/4/(newBonus:e);
-!!en;
-
 ** end of post-action trigger
+
+
+// Additional resistance for the resistance artifacts combo
+!?FU(OnDwarfMagicResistance)&i^wog_210_enabled^;
+; Exit if the targeted stack does not belong to a hero
+!!MR:N?(stack:y);
+!!BM(stack):I?(side:y);
+!!FU&i^battle_hero_%(side)^=(NO_HERO):E;
+
+; Exit if the owner of the stack does not own all 3 resistance artifacts
+!!re i/(ART_GARNITURE_OF_INTERFERENCE)/(ART_BOOTS_OF_POLARITY);
+  !!HEi^battle_hero_%(side)^:A2/i/?(backpacked:y)/?(equipped:y);
+
+  !!FU&(equipped)=0:E;
+!!en;
+
+; Increase spell immunity by 20
+!!MR:F?(resist:y);
+!!VR(resist):+20 F0/100;
+!!MR:F(resist);
 
 
 ** start of battle end trigger

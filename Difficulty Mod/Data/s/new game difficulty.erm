@@ -5006,10 +5006,10 @@ w   Spell Immunity  119
 ****************************************************************************************************
 
 
-*Illithids and Alhoons casts Hypnothize with attacks by Archer30
+*Illithid and Alhoon cast Hypnotize with attacks by Archer30
 ; The max target health to be Hypothized is the same as Fangarm's ability from HotA (20 + 25*(Illithird count))
 ; If the requirements of casting Hypnotize are met, it will be cast with 100% chance.
-; The following script won't be executed in TUM Reborn as it has included
+; The following script won't be executed in TUM Reborn as it has been included
 
 !?FU(tum_OnAfterMelee)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE); [hook from TUM]
 !#VA(atkStack:x) (defStack:x);
@@ -5019,67 +5019,63 @@ w   Spell Immunity  119
 !!if&(defNum)>0;
   !!BM(atkStack):T?(atkMon:y);
   ; Check if the attacker can cast Hynothize
-  !!FU(tum_hypnothize_CheckIfMonIsEligible):P(atkMon)/?(canCastHypnothize:y);
+  !!FU(tum_CheckIfMonCanHypnotize):P(atkMon)/?(canCastHypnotize:y);
 
-  !!if&(canCastHypnothize);
+  !!if&(canCastHypnotize);
     !!BM(atkStack):I?(atkSide:y);
     ; Check the defender's immunity to Hynothize
-    !!FU(tum_hypnothize_CanStackBeHypnothized):P(defStack)/(SPELL_HYPNOTIZE)/(atkSide)/?(acceptSpell:y);
+    !!FU(tum_CheckIfStackCanBeHypnotized):P(defStack)/(SPELL_HYPNOTIZE)/(atkSide)/?(acceptSpell:y);
 
     !!if&(acceptSpell);
-      ; Archer's idea (100% cast if condition meet)
       ; Check if the total HP of the defender is lower than 20 + 25*(attacker count)
       ; Attacker's power
       !!BM(atkStack):N?(atkNum:y);
-      !!VR(maxHypnothizeHp:y):S25 *(atkNum) +20;
+      !!VR(maxHypnotizeHp:y):S25 *(atkNum) +20;
       ; Defender's total Hp
       !!BM(defStack):H?(hp:y) L?(lostHp:y);
       !!VR(totlaHp:y):S(hp) *(defNum) -(lostHp);
       ; Cast if condition meet
-      !!if&(maxHypnothizeHp)>=(totlaHp);
+      !!if&(maxHypnotizeHp)>=(totlaHp);
         !!BM(defStack):P?(pos:y);
         !!BM(atkStack):C(SPELL_HYPNOTIZE)/(pos)/(SKILL_EXPERT)/3/(FALSE);
 
         ; Remove Attack Twice and retailiations temporarily for the victim and restore later
         !!BM(defStack):F?(flags:y) Fd~(MON_FLAG_ATTACKS_TWICE) R?(retals:y) R0;
         !!VR(hasAttackTwice:y):S(flags) &(MON_FLAG_ATTACKS_TWICE) B;
-        !!FU(PackUnion):P(defStack)/8/(retals)/16/(hasAttackTwice)/7/1/1/?i^tum_hypnothize_stackData^;
+        !!FU(PackUnion):P(defStack)/8/(retals)/16/(hasAttackTwice)/7/1/1/?i^tum_hypnotize_stackData^;
       !!en;
-
-      ; Perry's idea (25% chance to cast, disabled for now)
-      *!VR(random:y):R0/0/3;
-
-      *!if&(random)=0;
-        *!BM(defStack):P?(pos:y);
-        *!BM(atkStack):C(SPELL_HYPNOTIZE)/(pos)/(SKILL_EXPERT)/127/(FALSE);
-      *!en;
     !!en;
   !!en;
 !!en;
 
-!?FU(OnBattleActionEnd)&i^tum_hypnothize_stackData^<>0/i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
-!!FU(UnpackUnion):Pi^tum_hypnothize_stackData^/?(defStack:y)/8/?(retals:y)/8/?(hasAttackTwice:y)/7/?(value:y)/1;
+!?FU(OnBattleActionEnd)&i^tum_hypnotize_stackData^<>0/i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
+!!FU(UnpackUnion):Pi^tum_hypnotize_stackData^/?(defStack:y)/8/?(retals:y)/8/?(hasAttackTwice:y)/7/?(value:y)/1;
 !!BM(defStack):R(retals);
 !!BM(defStack)&(hasAttackTwice):Fd|(MON_FLAG_ATTACKS_TWICE);
 
-!?FU(tum_hypnothize_CheckIfMonIsEligible)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
+!?FU(tum_CheckIfMonCanHypnotize)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
 !#VA(mon:x) (result:x);
 
 !!VR(result):S(FALSE);
 !!VR(result)|(mon)=274/(mon)=282:S(TRUE);
 
-!?FU(tum_hypnothize_CanStackBeHypnothized)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
+!?FU(tum_CheckIfStackCanBeHypnotized)&i^Exp_TUM_Abilities^/i^tum_reborn^<>(TRUE);
 !#VA(stackId:x) (spellId:x) (castingSide:x) (result:x);
 
 ; Get the offset of the power address
 !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatManager:y);
 !!VR(offset:y):S(castingSide) *(UNC_INT) +21460;
 
-; Set the power to max
+; Set the power to max (value depending on whether Prima is loaded)
 !!UN:C(combatManager)/(offset)/(UNC_INT)/?(power:y);
-!!UN:C(combatManager)/(offset)/(UNC_INT)/127;
 
-; Check if the stack can receive Hypnothize with the new power (requires WoG Scripts to work! - wait for TUM update and change the prefix)
+!!VR(newPower:y):S127;
+!!SN:F^PluginExists^/^Prima^;
+!!VR(newPower:y)&v1:S249;
+
+!!UN:C(combatManager)/(offset)/(UNC_INT)/(newPower);
+
+; Check if the stack can receive Hypnotize with the new power (requires WoG Scripts to work! - wait for TUM update and change the prefix)
 !!FU(WOG_Battle_CanStackReceiveSpell):P(stackId)/(spellId)/(castingSide)/?(result);
 
 ; Restore the power
