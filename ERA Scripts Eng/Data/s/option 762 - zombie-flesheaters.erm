@@ -20,30 +20,35 @@ ZVSE2
 !!VR(fv):*105 :100;
 !!MA:F(MON_ZOMBIE)/(fv);
 
-!?FU(OnMonsterPhysicalDamage);
-!#VA(atkStack:x);
+!?FU(OnStackToStackDamage);
+!#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distancArg:x) (isTheoretical:x);
+
+; Exit if the attacking stack ID is out-of-limit (Would be screwed if missing and damaged by Fire Shield)
+!!FU|(defStack)<(BATTLE_STACK_FIRST)/(defStack)>(BATTLE_STACK_LAST):E;
+!!FU&(isTheoretical):E;
 
 !!UN:P762/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-; Exit if the attacking stack ID is out-of-limit (Would be screwed if missing and damaged by Fire Shield)
-!!FU|(atkStack)<(BATTLE_STACK_FIRST)/(atkStack)>(BATTLE_STACK_LAST):E;
-
-; Check if the defedning monster (must be a living one) would be be killed by the Zombie attacker
-!!MF:N?(defStack:x) F?(dmg:y);
-
+; Check if the attacking monster is a flesh eater
 !!BM(atkStack):T?(type:y);
-!!BM(defStack):F?(monFlags:y) N?(num:y) H?(hp:y) L?(lostHp:y);
-!!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);'
-!!VR(defCurrTotalHp:y):S(num) *(hp) -(lostHp);
+!!FU(ES_762_CheckIfMonIsEligible):P(type)/?(result:y);
 
-; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
-!!if&(isAlive)/(dmg)>=(defCurrTotalHp);
-  !!FU(ES_762_CheckIfMonIsEligible):P(type)/?(result:y);
+!!if&(result);
+  ; Check if the defedning monster is a living one
+  !!BM(defStack):F?(monFlags:y);
+  !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);
 
-  !!if&(result);
-    !!VRi^es_762_regenHp^:S(defCurrTotalHp);
-    !!BM(defStack):Fd|813694976 E0 K1;    [добавляем цели флаги жертвы/клона/неизменяемости цвета]
+  !!if&(isAlive);
+    ; Check if the defending monster would be be killed by the flesh eater
+    !!BM(defStack):N?(num:y) H?(hp:y) L?(lostHp:y);
+    !!VR(defCurrTotalHp:y):S(num) *(hp) -(lostHp);
+
+    ; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
+    !!if&(finalDmg)>=(defCurrTotalHp);
+      !!VRi^es_762_regenHp^:S(defCurrTotalHp);
+      !!BM(defStack):Fd|813694976 E0 K1;    [добавляем цели флаги жертвы/клона/неизменяемости цвета]
+    !!en;
   !!en;
 !!en;
 

@@ -40,12 +40,17 @@ ZVSE2
 !!BG:A?(action:y);
 
 !!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
-  !!BMi^battle_acting_stack^:T?(type:y) F?(flags:y);
-  !!VR(moraled:y):S(flags) &(MON_FLAG_MORALE) B;
+  !!BMi^battle_acting_stack^:T?(type:y);
+  !!FU(ES_758_CheckIfMonIsEligible):P(type)/?(result:y);
 
-  !!if&(type)=(MON_ROGUE)/(moraled)<>(TRUE);
-    !!BG:E?(defStack:y);
-    !!VRi^es_758_defStack^&(defStack)>(NO_STACK):S(defStack);
+  !!if&(result);
+    !!BMi^battle_acting_stack^:F?(flags:y);
+    !!VR(moraled:y):S(flags) &(MON_FLAG_MORALE);
+
+    !!if&(moraled)=(FALSE);
+      !!BG:E?(defStack:y);
+      !!VRi^es_758_defStack^&(defStack)>(NO_STACK):S(defStack);
+    !!en;
   !!en;
 !!en;
 
@@ -61,13 +66,8 @@ ZVSE2
   ; Show battle log and play animation/sound
   !!if&i^battle_isVisible^;
     !!BMi^battle_acting_stack^:N?(cutthroatNum:y) T?(type:y);
-
-    !!if&(cutthroatNum)=1;
-      !!SN:H^monname^/(type)/0/?(cutthroatName:z);
-    !!el;
-      !!SN:H^monname^/(type)/1/?(cutthroatName);
-    !!en;
-
+    !!VR(isPlural:y):S(cutthroatNum) B;
+    !!SN:H^monname^/(type)/(isPlural)/?(cutthroatName:z);
     !!SN:T^es.758.battleLog^?(battleLog:z)/^cutthroat^/(cutthroatName);
     !!MM:S(battleLog);
 
@@ -84,5 +84,12 @@ ZVSE2
 
 !!VR(stack):Si^battle_acting_stack^;
 !!VRi^es_758_defStack^:S(NO_STACK);
+
+// Funciton to check if the targeted monster is eligible for cutting throat
+!?FU(ES_758_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_ROGUE):S(TRUE);
 
 ** end
