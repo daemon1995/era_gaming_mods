@@ -232,7 +232,7 @@ ZVSE2
 ; Multiplayer support
 !?FU(OnBeforeBattleBeforeDataSend)&i^wog_54_enabled^;
 !!IP:Di^battle_owner_1^ Wi^battle_hero_0^/81/83;
-!!IP:V2000/2074;                        [Legacy, not sure if it is necessary]
+!!IP:V2000/2074;                        [Legacy.Used for checking whether a town's war mchine has been bought in a day]
 
 !?FU(OnBeforeBattleUniversal)&i^wog_54_enabled^;
 !!FU915:P0/0 P1/0; store enabler
@@ -342,6 +342,99 @@ ZVSE2
 !!HEy1&v2=1/x1=1/x2=1/v2063=1:A1/4/13;
 !!HEy1&v3=1/x1=1/x2=1/v2064=1:A1/5/14;
 !!HEy1&v4=1/x1=1/x2=1/v2065=1:A1/6/15;
+
+**** First Aid Tents healing ****
+
+!?FU(OnBattleStackObtainsTurn)&i^wog_54_enabled^;
+!#VA(stackSide:x) (stackInd:x);
+
+  !!BMi^battle_current_stack^:T?(monType:y);
+
+  !!if&(monType)=(MON_FIRST_AID_TENT);
+    !!FU(WOG_54_GetHealingPoints):Pi^battle_current_side^/?i^wog_54_Battle_HealPower^;
+  !!en;
+
+!?FU(WOG_BattleTent_BeforeIterateLoses)&i^wog_54_Battle_HealPower^>0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(side:y);
+  !!VR(min:y):S(side) *21;
+  !!VR(max:y):S(min) +20;
+  !!VR(minLoses:y):S0;
+
+  !!VR(maxLoses:y):S0;
+  !!VR(stackToHeal:y):S(NO_STACK);
+
+  !!re i/(min)/(max);
+    !!BMi:F?f N?n;
+    !!VRf:&(MON_FLAG_DIED);
+
+    !!if&f=0/n>0;
+      !!BMi:B?s H?h L?l;
+      !!VR(minLoses:y):Ss -n*h +l Fd/(INT_MAX);
+
+      !!if&(minLoses)>(maxLoses);
+        !!VR(maxLoses):S(minLoses);
+        !!VR(stackToHeal):Si -(min);
+      !!en;
+    !!en;
+  !!en;
+
+  !!if&(stackToHeal)>(NO_STACK);
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/(stackToHeal);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4667564;
+  !!en;
+
+!?FU(WOG_BattleTent_PrepareHealing)&i^wog_54_Battle_HealPower^>0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stack:y);
+  !!FU(WOG_54_BattleFunc_GetStackId):P(stack)/?(stackId:y);
+  !!BM(stackId):L?l;
+
+  !!if&i^wog_54_Battle_HealPower^>l;
+    !!VRi:Si^wog_54_Battle_HealPower^;
+    !!BM(stackId):N?(currentNum:y) B?(startNum:y) H?(health:y);
+    !!VR(maxHeal:y):S(startNum) -(currentNum) *(health) +l;
+    !!FU(WOG_54_BattleFunc_CalculateStackHealing):P(stackId)/i^wog_54_Battle_HealPower^/?(hpLost:y)/?(num:y);
+    !!BM(stackId):N(num);
+    !!VRi^wog_54_Battle_HealPower^:Fd/(maxHeal);
+
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^wog_54_Battle_HealPower^;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(hpLost);
+  !!en;
+
+  !!VRi^wog_54_Battle_HealPower^:S0;
+
+!?FU(WOG_54_BattleFunc_GetStackId);
+!#VA(stack:x) (stackId:x);
+
+  !!UN:C(stack)/244/4/?(side:y) C(stack)/248/4/?(index:y);;
+  !!VR(stackId):S(side)*21 +(index);
+
+!?FU(WOG_54_BattleFunc_CalculateStackHealing);
+!#VA(stackId:x) (healPower:x) (hpLost:x) (num:x);
+
+  !!BM(stackId):H?(maxHp:y) B?(startNum:y) L?(hpLost) N?(num);
+
+  !!if&(healPower)>(hpLost);
+
+    !!BM(stackId):Z?(stack:y);
+    !!SN:E4468128/(CALLCONV_THISCALL)/(stack)/0;       [get  current hp]
+
+    !!VR(totalMaxHp:y):S(startNum) *(maxHp);
+    !!VR(assumedHp:y):Sv1 +(healPower) Fd/(totalMaxHp);
+    !!VR(remainder:y):S(assumedHp) %(maxHp);
+
+    !!VR(num):S(assumedHp) :(maxHp); +1;
+
+    !!if&(remainder:y)>0;
+      !!VR(hpLost):S(maxHp) -(remainder);
+      !!VR(num):+1;
+
+    !!el;
+      !!VR(hpLost):S0;
+    !!en;
+  !!el;
+    !!VR(hpLost):-(healPower);
+  !!en;
 
 ****************************** Adventure Map ***********************************
 
