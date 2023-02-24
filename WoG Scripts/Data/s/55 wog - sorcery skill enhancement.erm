@@ -150,12 +150,12 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
     !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(activeHero)/(sorceryLevel)/?(result:y);
 
     !!if&(result);
-      !!FU5000:P(x)/(y)/(z)/(activeHero)/(sorceryLevel);
+      !!FU(WOG_23_MainProcedure):P(x)/(y)/(z)/(activeHero)/(sorceryLevel);
     !!en;
   !!en;
 
 -----------------------------------------------------------------------------------------
-!?FU5000;  [Start of Function 5000 - get coordinates and object type/subtype] [and control word at the right-click location]
+!?FU(WOG_23_MainProcedure);  [Start of Function 5000 - get coordinates and object type/subtype] [and control word at the right-click location]
 !#VA(x:x) (y:x) (z:x) (heroId:x) (sorceryLevel:x) ;
 
   !!OB(x)/(y)/(z):H?(customHint:y) T?(objType:y) U?(objSubtype:y) C?(cWord:y);   [Get object type (y4), subtype (y5) and control word (y6)]
@@ -163,7 +163,6 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
    
   !!IF:V3/0;[Set Flag 3 to false]
   !!if&(objType)>0/(objType)<>(OBJ_HERO);
-
     //Guarded Object Section
     !!if|(objType)=(OBJ_ARTIFACT)/(objType)=(OBJ_RESOURCE)/(objType)=(OBJ_SPELL_SCROLL);
       !!if&(objType)=(OBJ_ARTIFACT);
@@ -304,16 +303,26 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
         !!VR(value):*500;
 
       !!el&(objType)=(OBJ_MYSTICAL_GARDEN);
-        !!GD(x)/(y)/(z):T?(hasRes:y) B?(pic);[Check Garden's bonus type (y1) and resource type (y2)]
+        !!GD(x)/(y)/(z):T?(hasRes:y) B?(pic) N?(id:y);[Check Garden's bonus type (y1) and resource type (y2)]
+
         !!if&(hasRes);
           !!VR(value):S5;
           !!VR(value)&(pic)=(RES_GOLD):*100;
+        !!el;
+          !!GD(x)/(y)/(z):N?(id:y);[Check Garden's bonus type (y1) and resource type (y2)]
+          !!UN:C6933756/4/?(activePlayer:y) C(activePlayer)/184/4/?(visitedGardensBitset:y);
+          !!VR(bit:y):S1 Sd<<(id);
+          !!VR(visitedGardensBitset:y):&(bit);
+          !!if&(visitedGardensBitset)=0;
+            !!UN:C(activePlayer)/184/4/d|(bit:y);
+          !!en;
         !!en;
       !!en;
-
-      !!if&(value)>0;                       [(NO_PIC_TYPE);]
+      !!if&(value)>0;<>(NO_PIC_TYPE);                       [;]
         !!CM:R(FALSE);
         !!FU(WOG_23_VisitObjectRemote):P(x)/(y)/(z)/(heroId)/(pic)/(value)/(sorceryLevel);
+      !!el&(value)<>(NO_PIC_TYPE);
+        !!FU(WOG_AdvMgr_SetObjectAsVisited):P(x)/(y)/(z)/(heroOwner);
       !!en;
     !!en;
   !!en;
@@ -326,12 +335,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
   !!UN:C6546672/4/?e2;
   !!VRe1:*e2;
   !!VR(exp):Se1;
-      ; Set PO number to be compatible with Capture Mills and Gardens
-      *!UN:P879/?y30;
-      *!if&y30;
-        *!POx1/x2/x3:Oi^timerOwner^ V0/x4 V1/x5;
-        *!CM:R0;
-      *!en;
+
 -----------------------------------------------------------------------------------------
 !?FU(WOG_23_VisitObjectRemote);
 !#VA(x:x) (y:x) (z:x) (heroId:x) (pic:x) (value:x) (sorceryLevel:x);

@@ -184,8 +184,26 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!UN&y10=1:J0/3/1;                            [Disable View Earth]
 
 ** Timer routines
-!?FU(OnEveryDay)&i^timerDay^>1;         [daily - continue if either estates or learning enabled]
-!!DO(WOG_203_205_ManageDailyEvents)/(HERO_FIRST)/(HERO_LAST_WOG)/1|i^wog_203_enabled^/i^wog_205_enabled^:P; [iterate through all heroes]
+!?FU(OnEveryDay)&i^wog_205_enabled^/i^timerDay^>1;         [daily - continue if either estates or learning enabled]
+!!UN:J1/?(maxLevel:y)/d;                [active only when the hero has not yet reach the level limit of the scenario. Note: Level limit is 0 by default.]
+
+!!re i/0/(HERO_LAST_WOG);
+  !!HEi:S(SKILL_LEARNING)/?(skillLevel:y); [get hero's learning skill level]
+  !!if&(skillLevel:y)>0;
+    !!HEi:E?(exp:y)/?l/1;
+    !!if|(maxLevel)=0/l<=(maxLevel);
+      !!VR(skillLevel):*100;
+      !!if&(maxLevel);
+        !!FU(WOG_GetExpRequirementOfLevel):P(maxLevel)/?(maxExp:y);
+        !!VR(exp):+(skillLevel);
+        !!if&(exp)>=(maxExp);
+          !!co;
+        !!en;
+      !!en;
+      !!HEi:Ed(exp:y);
+    !!en;
+  !!en;
+!!en;
 
 !?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1; [weekly - continue if estates or scholar enabled]
 !!DO(WOG_203_211_ManageWeeklyEvents)/(HERO_FIRST)/(HERO_LAST_WOG)/1|i^wog_203_enabled^/i^wog_211_enabled^:P; [iterate through all heroes]
@@ -435,25 +453,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ** end of pre-action trigger
 
-
-** start of post-action trigger
-*?FU(OnAfterBattleAction);              [Continue trigger if resistance is enabled]
-*!UN:P210/?(resistanceII:y);
-*!FU&(resistanceII)<>(TRUE);
-
-** reset skill levels for resistance
-*!BU:C?(battleIsEnded:y);                             [check for end of battle]
-
-*!if&(battleIsEnded);
-  *!FU(WOG_210_SetOrRestoreResistance):Pi^battle_hero_0^/1; [reset skill levels - attacker]
-  *!FU(WOG_210_SetOrRestoreResistance)&i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^/1; [reset skill levels - defender]
-
-  *!re i/0/i^battle_hero_vs_hero^;(end_value);
-    *!FU(WOG_204_FindTargetToResurrect):P;
-  *!en;
-*!en;
-*?FU(on);
-
 !?FU(WOG_204_FindTargetToResurrect);
 !#VA(side:x) (power:x);
 
@@ -626,8 +625,8 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
             !!UN:C(stack)/16/4/(targetStack:y);                              [set stack target]
 
-            *!IF:M^1^;
             !!BMi:U3/?(shots:y) U3/1 G213/?(luck:y)/d  G213/0/d;
+
             !!if&i^battle_isVisible^;
               !!VR(msg:z):S^%T(wog.201.ballista_log)^;
               !!MM:S(msg:z);
@@ -712,13 +711,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!IF&1000/y5>1:Q2/21/x5/1/z148008;
 !!UN:R1;                                            [redraw screen to show revived creatures]
 !!VRv2&y5>0:Sx4;                                     [note that we healed a stack if we did]
-** end of function
-
-
-** function to give gold - estates
-!?FU(WOG_203_SetUpEstatesDailyBonus);   x1=estates level  x2=hero level
-!!VRy1:S5 *x1 *x2;                            [gold = 5 x estates level x hero level]
-!!OW:Ri^timerOwner^/6/dy1;                            [give gold]
 ** end of function
 
 
