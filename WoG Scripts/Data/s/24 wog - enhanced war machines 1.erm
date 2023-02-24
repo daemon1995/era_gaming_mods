@@ -4,7 +4,7 @@ ZVSE2
 * Updated: Febrary 26, 2012 by rennyo
 * Further Updated: September 15, 2004 by Timothy to change local y variables
 * used in triggers to y- variables.
-* Updated by Archer30 on Jan 2023
+* Updated by Archer30 and daemon_n on Feb 2023
 
 *War Machine script 0.9 by Overlord
 *Reserved: TM41, v591, v2000-v2074, FU903-FU927, w81-83
@@ -32,22 +32,17 @@ ZVSE2
 
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Check if script is enabled]
 
-; Temporary fix for the issue stacks become First Aide Tent
-; There should not be more than one tent or catapult on one side of the battlefield, otherwise the script would break
+; Fix stack becomes catapult and vice versa
+; There should not be more than one catapult on one side of the battlefield, otherwise the script would break
 !?FU(OnSetupBattlefield_Quit)&i^wog_54_enabled^;
-!!VRi^wog_54_tent_0^:S(NO_STACK);
-!!VRi^wog_54_tent_1^:S(NO_STACK);
 !!VRi^wog_54_catapult_0^:S(NO_STACK);
 !!VRi^wog_54_catapult_1^:S(NO_STACK);
 
 !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
   !!BMi:T?(type:y);
 
-  !!if&(type)=(MON_FIRST_AID_TENT);
+  !!if&(type)=(MON_CATAPULT)/i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
     !!BMi:I?(side:y);
-    !!VRi^wog_54_tent_%(side)^:Si;
-  !!el&(type)=(MON_CATAPULT)/i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
-    !!BMi:I?(side);
     !!VRi^wog_54_catapult_%(side)^:Si;
   !!en;
 !!en;
@@ -57,12 +52,6 @@ ZVSE2
 
 !!SN:H^monname^/(MON_MAGOG)/0/?s^wog_54_magogName_0^;
 !!SN:H^monname^/(MON_MAGOG)/1/?s^wog_54_magogName_1^;
-
-!!SN:H^monname^/(MON_FIRST_AID_TENT)/0/?s^wog_54_tentName_0^;
-!!SN:H^monname^/(MON_FIRST_AID_TENT)/1/?s^wog_54_tentName_1^;
-
-!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/?s^wog_54_santaName_0^;
-!!SN:H^monname^/(MON_SANTA_GREMLIN)/1/?s^wog_54_santaName_1^;
 
 !?FU(OnBeforeBattleAction)&i^wog_54_enabled^; get before action
 !!BG:E?(targetStack:y) H?(actingHero:y) A?(actionType:y);
@@ -82,29 +71,14 @@ ZVSE2
 ; Ballista
 !!FU(WOG_54_Ballista)&(type)=(MON_BALLISTA)/(actionType)=7:P0/(targetStack); ballista
 
-; First Aid Tent
-!!FU919&(type)=(MON_SANTA_GREMLIN)/i^wog_54_hasCasualties^:P2; [first aid other action - 2]
-
-!!if&(type)=(MON_FIRST_AID_TENT)/i^wog_54_hasCasualties^=0;
-  !!if&(actionType)=(BATTLE_ACTION_TENT_HEAL);
-    !!FU922:P0/(targetStack);
-  ; if the action is not first aid healing - Convert First Aid Tent to Santa Gremlin
-  !!el;
-    !!FU903:P(actingHero); [first aid start - side, hero, stack, action, spells] - Set i^wog_54_hasCasualties^ to TRUE if there is a creature to res - only if the hero has first aid skill
-  !!en;
-!!en;
-
 !?FU(WOG_54_CatapultSecondStage)&i^wog_54_enabled^; catapult action * magog *
 !#VA(mode:x) (actionType:x) (actingHero:x) (num:x);
 
 * 1
 !!if&(mode)=1;
-  !!VR(index:y):Si^battle_acting_side^ +2068;
-
   !!if&(actionType)<>(BATTLE_ACTION_SHOOT);
     !!BMi^battle_acting_stack^:T(MON_CATAPULT);
   !!el;
-    !!VRv(index):-1;
     !!VRi^wog_54_catapultActivity^:S3;
     !!VRv2054:Si^battle_acting_stack^;
   !!en;
@@ -115,57 +89,6 @@ ZVSE2
   !!BMv2054:T(MON_CATAPULT);
   !!VRi^wog_54_catapultActivity^:S0;
   !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_magogName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_magogName_1^; restore magog
-!!en;
-
-!?FU919&i^wog_54_enabled^;
-!#VA(mode:x);
-!#VA(targetHero:x) (targetNum:x) (targetStack:x);   [mode 0 only]
-
-!!VRi^wog_54_hasCasualties^:S0;
-* 1 mouse click
-!!if&(mode)=0;
-  !!BMi^wog_54_tent_%i(battle_acting_side)^:T(MON_FIRST_AID_TENT);
-  !!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_santaName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_santaName_1^;
-  !!FU906:P(MON_FIRST_AID_TENT)/(targetHero)/(targetNum)/(targetStack);
-* 3 before battle action
-!!el&(mode)=2;
-  !!BG:A?(actionType:y);
-  !!FU|(actionType)<4/(actionType)>8/(actionType)=6/(actionType)=7:E; exit if action is not right
-
-  !!BMi^battle_acting_stack^:T(MON_FIRST_AID_TENT);
-!!en;
-
-!?FU903&i^wog_54_enabled^;
-!#VA(hero:x);
-
-!!HE(hero):S(SKILL_FIRST_AID)/?(firstAidLv:y);
-!!FU&(firstAidLv)=(SKILL_NOT_LEARNED):E; exit if no first aid skill
-
-!!FU(WOG_54_CheckIfAnyMonDead):Pi^battle_acting_side^/?(hasCasualty:y);
-!!FU&(hasCasualty)=(FALSE):E; exit if no creature to resurrect
-
-!!VRi^wog_54_hasCasualties^:S(TRUE); there is a creature to resurrect
-
-!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_tentName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_tentName_1^;
-
-!!BMi^wog_54_tent_%i(battle_acting_side)^:T(MON_SANTA_GREMLIN); change to santa gremlin
-!!BG:A(BATTLE_ACTION_CANCEL);           [cancel action]
-
-!?FU(WOG_54_CheckIfAnyMonDead);
-!#VA(side:x) (hasCasualty:x);
-
-!!VR(hasCasualty):S(FALSE);
-!!VR(firstStack:y):S(BATTLE_ATTACKER_STACK_FIRST);
-!!VR(firstStack)&(side)=(BATTLE_LEFT):S(BATTLE_DEFENDER_STACK_FIRST);
-!!VR(lastStack:y):S(firstStack) +20;
-
-!!re i/(firstStack)/(lastStack);
-  !!BMi:B?(startingQty:y) N?(qty:y) T?(mon:y);
-
-  !!if&(startingQty)>(qty)/(mon)>(NO_MON);
-    !!VR(hasCasualty):S(TRUE);
-    !!br;
-  !!en;
 !!en;
 
 !?FU(WOG_54_Ballista)&i^wog_54_enabled^;
@@ -197,36 +120,11 @@ ZVSE2
   !!SN:D;
 !!en;
 
-!?FU920&i^wog_54_enabled^;
-; x1 = mon
-; x2 = hero
-; x3 = starting hp
-; x4 = lost hp
-; x5 = qty
-; x6 = starting qty
-; x7 = stack
-!#VA(monType:x) (heroId:x) (startingHP:x) (lostHP:x) (currCrtQty:x) (startCrtQty:x) (targetStack:x);
-
-!!BG:H?(activeHeroNumber:y);
-!!FU&(heroId)<>(activeHeroNumber):E; exit if different hero
-!!FU&(currCrtQty)=(startCrtQty):E;                           [exit if maximum creature founded - should allow healing at least?]
-
-!!CM:R0;
-
-!!VR(currCrtQty):+1; add +1 creature
-!!BM(targetStack):L(startingHP) N(currCrtQty);                         [set hitpoints to 0 - to full actually]
-!!BG:E(targetStack) Di^mouse_battleHex^; get first aid tent
-
-!!BMi^wog_54_tent_%i(battle_current_side)^:T(MON_FIRST_AID_TENT);           [source of all evil]
-!!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_santaName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_santaName_1^;
-!!VRi^wog_54_hasCasualties^:S0;
-!!BG:A(BATTLE_ACTION_TENT_HEAL); call resurrection
-
 !?FU(WOG_54_CatapultFirstStage)&i^wog_54_enabled^; check catapults avaiabitity
 !#VA(action:x); 
 
-!!VR(index:y):Si^battle_acting_side^ +2068;
-!!FU&v(index)=0:E; exit if no shots
+!!BMi^battle_acting_stack^:U3/?(shots:y);
+!!FU&(shots)<=0:E; exit if no shots
 
 !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_catapultName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_catapultName_1^;
 
@@ -240,48 +138,6 @@ ZVSE2
 !?FU(OnBattleActionEnd)&i^wog_54_enabled^; get after action
 !!FU(WOG_54_Ballista)&v2053=2:P1;
 !!FU(WOG_54_CatapultSecondStage)&i^wog_54_catapultActivity^=3:P2;
-!!FU922&i^wog_54_hasCasualties^=2:P1;
-
-!?FU922&i^wog_54_enabled^;
-!#VA(mode:x) (targetStack:x);
-
-* 1
-!!if&x1=0;
-  !!VRi^wog_54_hasCasualties^:S2;
-  !!BMx2:L?v2058; get before heal
-* 2
-!!el;
-  !!BG:E?y30;
-  !!VRi^wog_54_hasCasualties^:S0;
-  !!BMy30:Lv2058 I?y2; restore old and get index.
-  !!BHy2:N?y3; get hero
-  !!HEy3:S27/?y11;
-  !!IF:Wy3;
-  !!VRy6:Sw82 +1;
-  !!VRy7:Sy11 +y6 *20 +80; first aid + level * 20, +80
-  * set healing points *
-  !!VRy1&y11=0:S25;
-  !!VRy1&y11=1:S50;
-  !!VRy1&y11=2:S75;
-  !!VRy1&y11=3:S100;
-  !!VRy1:*y7 :100; get quantity to heal
-  !!FU923:Py30/y1/y11;
-!!en;
-
-!?FU923&i^wog_54_enabled^;
-!#VA(stack:x) (healingHp:x) (firstAidLv:x);
-
-!!BMx1:B?y1 N?y2 H?y3 L?y4 L?y5; get information
-!!VRy4:-x2;
-!!BMx1&y4>-1:Ly4; all or partial healing
-!!FU&y4>-1:E; stop if completed
-!!BMx1&y4<0:L0;
-!!FU&y1=y2:E; stop if maximum creature
-!!FU&x3=0:E; stop if no first aid skills
-!!VRx2:-y5;
-!!VRy2:+1;
-!!BMx1:Ny2 Ly3;
-!!FU923:P(stack)/x2/x3;
 
 ************************* MOUSE HOVER combat screen ****************************
 
@@ -297,6 +153,8 @@ ZVSE2
 ************************* MOUSE CLICK combat screen ****************************
 
 !?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^wog_54_enabled^;
+!#VA(usedY[10]:y);
+
 !!BU:Ei^mouse_battleHex^/?y1; check monster position
 !!FU&y1=(NO_STACK):E; exit if no monster
 !!FU&y1=i^battle_current_stack^:E;
@@ -309,71 +167,65 @@ ZVSE2
   !!FU(WOG_54_CatapultSecondStage)&y2=(MON_MAGOG)/i^wog_54_catapultActivity^=1:P1/y1/0/y3/y4/y7; catapult view
 !!en;
 
+!!BMi^battle_current_stack^:T?(currType:y);
+
 ; First Aid Tent
-!!if|y1=i^wog_54_tent_0^/y1=i^wog_54_tent_1^;
-  !!if&y2=(MON_SANTA_GREMLIN)/i^wog_54_hasCasualties^=1;
-    !!FU919:P0/y4/y7/y1;
-    !!FU920:Py2/y4/y6/y5/y7/y9/y1; [mon, hero, starting hp, lost hp, qty, starting qty, stack, position] - convert from Santa to First Aid Tent
+!!if&(currType)=(MON_FIRST_AID_TENT)/i^wog_54_Battle_HealPower^>0;
+  !!FU(WOG_54_FirstAidTentHeals)|y2<(MON_CATAPULT)/y2>(MON_ARROW_TOWERS):P0/y1;
+!!en;
+
+; Change cursor to healable when a target is not full comparing with its initial status
+!?FU(OnBattleMouseHint)&i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^wog_54_enabled^;
+!!BU:Ei^mouse_battleHex^/?(targetStack:y); check monster position
+!!FU&(targetStack)=(NO_STACK):E; exit if no monster
+!!FU&(targetStack)=i^battle_current_stack^:E;
+
+!!BM(targetStack):T?(targetType:y);
+!!BMi^battle_current_stack^:T?(currType:y);
+
+!!if&(currType)=(MON_FIRST_AID_TENT);
+  !!if|(targetType)<(MON_CATAPULT)/(targetType)>(MON_ARROW_TOWERS);
+    !!BM(targetStack):L?(lostHp:y) N?(num:y) B?(startNum:y);
+
+    !!UN|(lostHp)>0/(num)<(startNum):R5/2/17;
   !!en;
 !!en;
 
-!!FU906&y2>=(MON_CATAPULT)/y2<=(MON_AMMO_CART):Py2/y4/y7/y1; stats change if machines
+!?FU(WOG_54_FirstAidTentHeals);
+!#VA(mode:x) (targetStack:x);
 
-!?FU906&i^wog_54_enabled^; x1 = machine , x2 = hero
-!#VA(mon:x) (hero:x) (num:x) (stack:x);
+; Exit if the target is full
+!!BM(targetStack):L?(lostHp:y) N?(num:y) B?(startNum:y);
+!!FU&(lostHp)<=0/(num)>=(startNum):E;
 
-!!IF:Wx2; set W var for hero
-!!VRy5:Sx1 -65;
-!!VRy6:Swy5 +1; y6 = level of machine
+; Exit if the target is not the same side with the tent
+!!BMi^battle_current_stack^:I?(currSide:y);
+!!BM(targetStack):I?(targetSide:y);
+!!FU&(currSide)<>(targetSide):E;
 
-!!if&x4<21;
-  !!VRy12:Sv2070;                       [Ballistics level]
-  !!VRy13:Sv2072;                       [Hero exp]
-!!el;
-  !!VRy12:Sv2071;
-  !!VRy13:Sv2073;
-!!en;
+; Heal
+!!CM:R0;
 
-; Set custom war machine names - Disable by Archer30 for compatibility concern
-*!VRz1&x1=(MON_BALLISTA):Sz154004;
-*!VRz1&x1=(MON_AMMO_CART):Sz154005;
-*!VRz1&x1=(MON_FIRST_AID_TENT):Sz154006;
-*!VRz1&x3>1:Sz154007;
-*!VRz1:Sz154008;
+!!BM(targetStack):P?(pos:y);
+!!BG:D(pos) E(targetStack);_
+!!BG:A(BATTLE_ACTION_TENT_HEAL); 
 
-*!if&x1=(MON_CATAPULT);
-  *!VRz1:Sz154009;
-  *!VRz1&x3>1:Sz154010;
-  *!VRz1&y12=1:Sz154011;
-  *!VRz1&y12=2:Sz154012;
-  *!VRz1&y12=3:Sz154013;
-  *!VRz1&x3>1:Sz154014;
-*!en;
+!?FU(WOG_54_GetHealingPoints);
+!#VA(side:x) (healHp:x);
 
-*!UN:G1/x1/1/1 G1/x1/0/1;
+!!VR(healHp):S0;
 
-* hit points
-!!if&x1=(MON_CATAPULT);
-  !!VRy9&y12=0:S500;
-  !!VRy9&y12>0:Sy12 *50 *y12 +550;
-  !!VRy10:Sy13 *50 +y9 -50;
-!!el&x1=(MON_BALLISTA);
-  !!VRy10:Sy6 *50 +200;
-!!el&x1=(MON_FIRST_AID_TENT);
-  !!VRy10:Sy6 *25 + 125;
-!!el&x1=(MON_AMMO_CART);
-  !!VRy10:Sy6 *10 +90;
-!!en;
+; Exit if the side has no hero
+!!BH(side):N?(hero:y);
+!!FU&(hero)<=(NO_HERO):E;
 
-!!BMx4:Hy10 I?y11;
-!!MA:Px1/y10;
-
-* calculate shots for catapult *
-!!FU&v2052=98:E; exit if siege
-
-!!VRy12:S2068 +y11;
-!!VRy11:Svy12;
-!!MA&x1=(MON_CATAPULT):N(MON_CATAPULT)/y11;
+; Calculate healing points
+!!HE(hero):S(SKILL_FIRST_AID)/?(firstAidLv:y);
+!!IF:W(hero);
+!!VR(tentLv:y):Sw82 +1;
+!!VR(fullHealHp:y):S(firstAidLv) +(tentLv) *20 +80;
+!!VR(coefficient:y):S(firstAidLv) +1 F1/4;
+!!VR(healHp):S(coefficient) *(fullHealHp) :4;
 
 *********************** Pre-Post Combat and ammo cart **************************
 
@@ -383,60 +235,14 @@ ZVSE2
 !!IP:V2000/2074;                        [Legacy, not sure if it is necessary]
 
 !?FU(OnBeforeBattleUniversal)&i^wog_54_enabled^;
-**[function  without bugs]
-!!VRv1:Sv998;   [updated by rennyo 26..02.2012]
-!!VRv2:Sv999;   [updated by rennyo 26..02.2012]
-!!VRv3:Sv1000;  [updated by rennyo 26..02.2012]
-
-!!OBv1/v2/v3:T?v2052;
-!!CAv1/v2/v3&v2052=98:U?v7; town number
- [Count number of towns - store in y-2]
-!!UN&v2052=34:U98/-1/?y-2;
-!!DO927/1/y-2/1&v2052=34/y-2>0:P;  check if attacked hero in any town
-
 !!FU915:P0/0 P1/0; store enabler
-!!FU917:P; change stats
-
-**
-!?FU927&i^wog_54_enabled^; check if attacked hero in this town
-!!UN:U98/-1/x16/4;
-!!FU&v1<>v4|v2<>v5/v3<>v6:E;
- [process only if attacked hero visiting town]
-!!CAv1/v2/v3:U?v7 H0/?y-1; store town number & check if hero in town harrison
-!!VRv2052&y-1=-1:S98; it is a siege if only 1 hero in town
-
-**
-!?FU917&i^wog_54_enabled^;
-!!CA0/v7&v2052=98:B3/7; check if town has fort
-!!CA0/v7&v2052=98/-1:B3/8; check if town has citadel
-!!CA0/v7&v2052=98/-1:B3/9; check if town has castle
-!!VRv2052&v2052=98/-1:S0; town without fort
-!!MA&v2052<>98:X(MON_CATAPULT)/132165 M(MON_CATAPULT)/0 E(MON_CATAPULT)/200 N(MON_CATAPULT)/8; not town or no fort
-!!MA&v2052=98:X(MON_CATAPULT)/132197 M(MON_CATAPULT)/0 E(MON_CATAPULT)/200 N(MON_CATAPULT)/8; town with fort
-!!FU918&v2052<>98:P0 P1;
-
-!?FU918&i^wog_54_enabled^;
-!!BA:Hx1/?y1;
-!!FU&y1<0:E;
-
-!!HEy1:S10/?y2;
-!!VRy3:S2068 +x1;
-!!VRvy3&y2=1:S2;
-!!VRvy3&y2=2:S4;
-!!VRvy3&y2=3:S8;
 
 !?FU(OnBattleRound)&i^wog_54_enabled^/i^battle_round^>0; set mana for ammo cart
 !!DO907/0/41/1:P1;
 
 !?FU(OnSetupBattlefield)&i^wog_54_enabled^; set machines attributes
-!!FU924:P; check siege mode AGAIN, if AI don't GET IT!
-!!FU909&v2052<>98:P0/119 P1/135; call if no siege battle
-!!DO908/0/41/1:P;
-
-!?FU924&i^wog_54_enabled^;
-!!BU:E119/?x1;
-!!VRv2052&x1>-1:S98; if catapult found its a siege mode, set v2052 = 98
-!!MA&x1>-1:X(MON_CATAPULT)/132197 M(MON_CATAPULT)/0 E(MON_CATAPULT)/0;
+!!FU(WOG_54_SummonBallistaInNonSiege)&i^wog_isSiege^<>(TRUE):P0/119 P1/135; call if no siege battle
+!!FU(WOG_54_ChangeWarMachineStats):P;
 
 !?FU(OnAfterBattleUniversal)&i^wog_54_enabled^; after battle check & re-set enabler
 !!FU912:P1/0 P1/1;
@@ -459,40 +265,73 @@ ZVSE2
 !!VRy6&y6>y9:Sy9; set max if y6 > y9
 !!HEy3:Iy6/1;
 
-!?FU908&i^wog_54_enabled^;
-!!BMx16:T?x6 I?x7;
-!!FU|x6<(MON_CATAPULT)/x6>(MON_AMMO_CART):E; exit
-!!BHx7:N?x5;
-!!FU&x5<0:E; exit if no hero set
-!!IF:Wx5;
-!!VRx4:Sx6 -65;
-!!VRx3:Swx4 +1; get w-var for type, add 1 top skip 0
-*
-!!VRx1:Sv2070 +x7; new method to get sec + skill
-!!VRx2:Sv2072 +x7;
-* change catapult stats
-!!VRx8&x6=(MON_CATAPULT)/x1=0:S500;
-!!VRx8&x6=(MON_CATAPULT)/x1>0:Sx1 *50 *x1 +550;
-* hit points warmachines
-!!VRx9&x6=(MON_CATAPULT):Sx2 *50 +x8 -50;
-!!VRx9&x6=(MON_BALLISTA):Sx3 *50 +200;
-!!VRx9&x6=(MON_FIRST_AID_TENT):Sx3 *25 +125;
-!!VRx9&x6=(MON_AMMO_CART):Sx3 *10 +90;
-!!BMx16:Hx9;
+!?FU(WOG_54_ChangeWarMachineStats);
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!BMi:T?(type:y) N?(num:y);
 
-!?FU909&i^wog_54_enabled^;
+  !!if&(type)>=(MON_CATAPULT)/(type)<=(MON_AMMO_CART)/(num)>0;
+    !!BMi:I?(side:y);
+
+    !!if&i^battle_hero_%(side)^>(NO_HERO);
+      !!VR(hero:y):Si^battle_hero_%(side)^;
+      !!IF:W(hero);
+      !!VR(index:y):S(type) -65;
+      !!VR(machineLv:y):Sw(index) +1;
+
+      !!if&(type)=(MON_CATAPULT);
+        !!HE(hero):S(SKILL_BALLISTICS)/?(ballisticsLv:y) E?(exp:y)/?(heroLv:y)/1;
+        !!VR(baiscHp:y)&(ballisticsLv)=(SKILL_NOT_LEARNED):S500;
+        !!VR(baiscHp)&(ballisticsLv)>(SKILL_NOT_LEARNED):S(ballisticsLv) *(ballisticsLv) *50 +550;
+        !!VR(hp:y):S(heroLv) *50 +(baiscHp) -50;
+      !!el&(type)=(MON_BALLISTA);
+        !!VR(hp):S(machineLv) *50 +200;
+      !!el&(type)=(MON_FIRST_AID_TENT);
+        !!VR(hp):S(machineLv) *25 + 125;
+      !!el&(type)=(MON_AMMO_CART);
+        !!VR(hp):S(machineLv) *10 +90;
+      !!en;
+
+      !!BMi:H(hp) L0;
+    !!en;
+  !!en;
+!!en;
+
+!?FU(WOG_54_SummonBallistaInNonSiege)&i^wog_54_enabled^;
+!#VA(side:x) (pos:x);
+
 * place real catapults *
-!!BA:Hx1/?y1;
-!!FU&y1<0:E; exit if no hero found
-!!HEy1:S10/?y11; get ballistics secondary skills
-!!FU912:P6/x2/x1/1;
-!!BU&y11>0/v1=0:S(MON_CATAPULT)/1/x2/x1/-1/0;
+!!BA:H(side)/?(hero:y);
+!!FU&(hero)<=(NO_HERO):E; exit if no hero found
+
+!!HE(hero):S(SKILL_BALLISTICS)/?(ballisticsLv:y); get ballistics secondary skills
+!!FU912:P6/(pos)/(side)/1;
+
+!!if&(ballisticsLv)>(SKILL_NOT_LEARNED)/v1=0; [v1 from FU912?]
+  !!BU:S(MON_CATAPULT)/1/(pos)/(side)/-1/0;
+
+  ; Set up data for the summoned Ballista
+  !!BU:E(pos)/?(stack:y);
+
+  !!if&(stack)>(NO_STACK);
+    !!BM(stack):T?(type:y);
+
+    !!if&(type)=(MON_CATAPULT);
+      !!BM(stack):Fd~(MON_FLAG_SIEGE_WEAPON) U2/200;
+
+      !!VR(shots:y)&(ballisticsLv)=(SKILL_BASIC):S2;
+      !!VR(shots)&(ballisticsLv)=(SKILL_ADVANCED):S4;
+      !!VR(shots)&(ballisticsLv)>=3:S8;
+
+      !!BM(stack):U3/(shots);
+    !!en;
+  !!en;
+!!en;
 
 !?FU915&i^wog_54_enabled^;
 !!BA:Hx1/?y1;
 !!FU&y1<0:E;
-!!HEy1&x1=0/x2=0:A2/4/d/?v2060 A2/5/d/?v2061 A2/6/d/?v2062 Fd/d/d/?v2066 S10/?v2070 Ed/?v2072;
-!!HEy1&x1=1/x2=0:A2/4/d/?v2063 A2/5/d/?v2064 A2/6/d/?v2065 Fd/d/d/?v2067 S10/?v2071 Ed/?v2073;
+!!HEy1&x1=0/x2=0:A2/4/d/?v2060 A2/5/d/?v2061 A2/6/d/?v2062 Fd/d/d/?v2066 S10/?v2070 Ed/?v2072/1;
+!!HEy1&x1=1/x2=0:A2/4/d/?v2063 A2/5/d/?v2064 A2/6/d/?v2065 Fd/d/d/?v2067 S10/?v2071 Ed/?v2073/1;
 !!FU912:P6/y1/4/2 P6/y1/5/3 P6/y1/6/4; call enabler
 !!HEy1&v2=1/x2=0:A-4;
 !!HEy1&v3=1/x2=0:A-5;
@@ -520,55 +359,88 @@ ZVSE2
 !!UN:A4/10/0 A4/9/0 A5/10/0 A5/9/0 A6/10/0 A6/9/0; restore desc
 !!FU912:P2/v2048;
 
-!?FU(OnTownMouseClick)&i^wog_54_enabled^; inside town
-!!CM:R1 F?v2048 I?v2049 A?v2051/?v2050;
-!!FU910&v2048=0/v2050<375:Pv2051/v2050/0/0/v2049/0;
+!?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^wog_54_enabled^;
+!#VA(usedY[17]:y);
 
-!?FU910&i^wog_54_enabled^;
-!!CA(CURRENT_TOWN):T?(townType:y) H1/?(heroVisitor:y) U?x6; get town type
-!!FU916:P(townType)/x1/x2/x5;
-!!FU&(heroVisitor)<0|v1=-1:E; exit
-!!VRx1:Sv1;
-!!VRx5&x5<>22:S16;
-!!VRx2&x1=4:S(MON_BALLISTA);
-!!VRx2&x1=5:S(MON_AMMO_CART);
-!!VRx2&x1=6:S(MON_FIRST_AID_TENT);
+; Exit if no visiting hero
+!!CA(CURRENT_TOWN):H1/?(heroVisitor:y);
+!!FU&(heroVisitor)=(NO_HERO):E;
 
+; Exit if it was not clicked on the Blacksmith
+!!CA(CURRENT_TOWN):T?(townType:y) U?(townId:y); get town type
+
+!!VR(item:y):Si^mouse_item^;
+!!VR(warMachineArt:y):S(NO_ART);
+
+!!if&(item)=16;
+  !!if|(townType)=(TOWN_CASTLE)/(townType)=(TOWN_DUNGEON)/(townType)=(TOWN_CONFLUX);
+    !!VR(warMachineArt):S(ART_BALLISTA);
+  !!el|(townType)=(TOWN_RAMPART)/(townType)=(TOWN_NECROPOLIS)/(townType)=(TOWN_FORTRESS);
+    !!VR(warMachineArt):S(ART_FIRST_AID_TENT);
+  !!el;
+    !!VR(warMachineArt):S(ART_AMMO_CART);
+  !!en;
+!!en;
+
+!!VR(warMachineArt)&(townType)=(TOWN_STRONGHOLD)/(item)=22:S(ART_BALLISTA);
+
+!!FU&(warMachineArt)=(NO_ART):E;
+
+; Exit if the visiting hero does not own the targeted war machine
+!!VR(warMachineMon:y)&(warMachineArt)=(ART_BALLISTA):S(MON_BALLISTA);
+!!VR(warMachineMon)&(warMachineArt)=(ART_AMMO_CART):S(MON_AMMO_CART);
+!!VR(warMachineMon)&(warMachineArt)=(ART_FIRST_AID_TENT):S(MON_FIRST_AID_TENT);
 
 !!IF:W(heroVisitor); set W var for hero
-!!VRy5:Sx2 -65;
+!!VRy5:S(warMachineMon) -65;
 !!VRy6:Swy5 +1; get w-var for type, add 1 top skip 0
-!!HE(heroVisitor):A2/x1/d/?y1 B0/?z3 Ed/?y9/1 O?y10; hero level y9
-!!VRwy5&y1=0:S0; set w-var to 0
+!!HE(heroVisitor):A2/(warMachineArt)/d/?y1 B0/?z3 Ed/?y9/1 O?y10; hero level y9
 
-!!UN&y1=0:G1/x2/0/0 G1/x2/1/0;
+!!if&y1=0;
+  !!VRwy5:S0; set w-var to 0
+  !!FU:E; stop if not found
+!!en;
 
-!!UN:Ax1/10/0 Ax1/9/0; restore desc
-!!FU&y1=0:E; stop if found
+; Exit if the Black Smith is a Ghosts' house (appear after demolishing the Village Hall)
+!!CA(CURRENT_TOWN):B3/10;
+!!FU&-1:E;
+
+; Now the script starts
 !!CM:R0; Disable standard reaction
-!!VRy16:S2000 +x6; get towns number store in v2000 + townnumber
+
+!!VRy16:S2000 +(townId); get towns number store in v2000 + townnumber
 !!VRy17:Svy16; get number from vy16
-!!OW:Ry10/6/?y11; get gold from player
+
+!!OW:Ry10/(RES_GOLD)/?y11; get gold from player
 !!VRy8:Sy6 +1; next level
-!!UN:N2/1/x4/x5 N3/2/x2/0; get ballista name & object name
-!!FU913:Px2/x1/(heroVisitor)/y8; get stats
-!!VRz5:Sz154015;
-!!VRz6:Sz154016;
-!!UN:Ax1/10/5 Ax1/9/6;
-!!MA:Cx2/6/?y7; y7 = gold cost
+!!UN:N2/1/(townType)/(item) N3/2/(warMachineMon)/0; get ballista name & object name
+
+!!FU913:P(warMachineArt)/(heroVisitor)/y8; get stats
+
+; Change artifact name and description
+; Using z5/z6 is necessary for the ert variable conversion
+!!VRz5:Sz154016;
+!!VRz6:Sz154015;
+!!SN:H^art^/(warMachineArt)/0/?z30 H^art^/(warMachineArt)/1/?z31;
+!!SN:H^art^/(warMachineArt)/0/z5 H^art^/(warMachineArt)/1/z6;
+
+!!MA:C(warMachineMon)/(RES_GOLD)/?y7; y7 = gold cost
 !!VRy7::5 *y8; gold cost is level * machine / 5
-!!VRy15:S2; set to choices
-!!VRz4&y11<y7:Sz154017;
-!!VRz4&y9<y8:Sz154018;
-!!VRz4&y17>0:Sz154019;
-!!VRy15&y11<y7|y9<y8:S4; set to message with no buttons
-!!VRy15&y17>0:S4; also
-!!VRz4&y15=2:S^^;
-!!IF:Q1/8/x1/36/y7/y15/z154020;
-!!FU&y15=4|-1:E; stop function
-!!VRy11:-y7; sub money
-!!OW:Ry10/6/y11; new money
+!!VRy15:S(MSG_TYPE_QUESTION); set to choices
+!!VRz4&y11<y7:Sz154017;                 [Not enough money]
+!!VRz4&y9<y8:Sz154018;                  [Level is too low]
+!!VRz4&y17>0:Sz154019;                  [Usable once per day]
+!!VRy15|y11<y7/y9<y8/y17>0:S(MSG_TYPE_MES); set to message with no choice
+!!VRz4&y15=(MSG_TYPE_QUESTION):S^^;
+
+!!IF:V1/0;
+!!IF:Q1/(PIC_TYPE_ART)/(warMachineArt)/(PIC_TYPE_MONEY)/y7/y15/z154020;
+!!SN:H^art^/(warMachineArt)/0/z30 H^art^/(warMachineArt)/1/z31;
+!!FU&-1:E; stop function
+
+!!OW:Ry10/(RES_GOLD)/d-y7; new money
 !!VRwy5:+1; add level to W var for machine
+
 !!VRvy16:+1; add for use only 1 time/castle/day
 
 !?FU(OnHeroScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside hero screen
@@ -586,11 +458,11 @@ ZVSE2
 !#VA(clickedSlot:x) (warMachine:x) (heroId:x) (mouseFlagHeroSwap:x) (mouseFlagHero:x);  (idk3:x) (idk4:x);
 
 !!VR(clickedSlot)&(clickedSlot)>58:-44; trade right hero fix
-!!VRx1&(clickedSlot)>39:-25; trade left hero fix
-!!VRx1&(clickedSlot)=15:S(MON_BALLISTA);
-!!VRx1&(clickedSlot)=16:S(MON_AMMO_CART);
-!!VRx1&(clickedSlot)=17:S(MON_FIRST_AID_TENT);
-!!VRx1&(clickedSlot)=18:S(MON_CATAPULT);
+!!VR(clickedSlot)&(clickedSlot)>39:-25; trade left hero fix
+!!VR(clickedSlot)&(clickedSlot)=15:S(MON_BALLISTA);
+!!VR(clickedSlot)&(clickedSlot)=16:S(MON_AMMO_CART);
+!!VR(clickedSlot)&(clickedSlot)=17:S(MON_FIRST_AID_TENT);
+!!VR(clickedSlot)&(clickedSlot)=18:S(MON_CATAPULT);
 !!VR(warMachine)&(clickedSlot)=(MON_CATAPULT):S(ART_CATAPULT);
 !!VR(warMachine)&(clickedSlot)=(MON_BALLISTA):S(ART_BALLISTA);
 !!VR(warMachine)&(clickedSlot)=(MON_AMMO_CART):S(ART_AMMO_CART);
@@ -600,11 +472,12 @@ ZVSE2
 !!FU&(wmAmount)=0:E; exit if no found
 
 !!CM:R0;
+
 !!IF:W(heroId); set W var for hero
 !!VRy5:S(clickedSlot) -65;
 !!VRy6:Swy5 +1;
 
-!!FU913&(mouseFlagHero)>0:P(warMachine)/(warMachine)/(heroId)/y6; get stats
+!!FU913&(mouseFlagHero)>0:P(warMachine)/(heroId)/y6; get stats
 *
 !!VRz1&(warMachine)=(ART_CATAPULT)/(skilLvl)=0:Sz154021;
 !!VRz1&(warMachine)=(ART_CATAPULT)/(skilLvl)=1:Sz154022;
@@ -622,7 +495,7 @@ ZVSE2
 
 !!VRz2&(warMachine)=6:Sz154031;
 !!VRz2&x4=0:Sz154032;
-!!IF&(mouseFlagHero)>(NO_MOUSE_FLAGS):Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_POPUP)^%Z1
+!!IF&(mouseFlagHero)>(NO_MOUSE_FLAGS):Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_MES)^%Z1
 
 %Z2^;
 !!if&(mouseFlagHero)=(NO_MOUSE_FLAGS);
@@ -636,7 +509,7 @@ ZVSE2
 !!UN:Ax2/10/0;
 !!VRz8&(heroSex)=0:Sz154037;
 !!VRz8&(heroSex)=1:Sz154038;
-!!IF&x5=0:Q1/8/x2/2/z154039;
+!!IF&x5=0:Q1/8/x2/(MSG_TYPE_QUESTION)/z154039;
 
 !!FU912&(mouseFlagHero)=(NO_MOUSE_FLAGS)/1:P7/x3/x2/v1;
 !!FU&(mouseFlagHero)<>(NO_MOUSE_FLAGS):E; exit if not x5
@@ -648,37 +521,7 @@ ZVSE2
 !!VRz2&x2=6:Sz154043;
 !!VRz4&x5=0/v1=1:Sz154044;
 !!VRz4&x5=0/v1=0:Sz154045;
-!!IF:Q1/8/(warMachine)/1/z154046;
-
-!?FU916&i^wog_54_enabled^;
-!!VRv1:S0;
-!!VRv2&x1=0:C240/251/364/369; castle
-!!VRv2&x1=1:C627/137/668/186; rampart
-!!VRv2&x1=2:C495/227/613/353; tower
-!!VRv2&x1=3:C684/272/780/367; inferno
-!!VRv2&x1=4:C402/252/471/296; necropolis
-!!VRv2&x1=5:C546/248/618/328; dungeon
-!!VRv2&x1=6:C622/286/765/361; stronghold
-!!VRv2&x1=7:C360/160/454/238; fortress
-!!VRv2&x1=8:C463/200/533/255; conflux
-!!VRv1&x2<v2|x2>v4:S-1;
-!!VRv1&x3<v3|x3>v5:S-1;
-!!FU&v1=-1:E; exit if out of range
-!!VRv1:S-1;
-!!VRv1&x4=16/x1=0:S4; castle
-!!VRv1&x4=16/x1=1:S6; rampart
-!!VRv1&x4=16/x1=2:S5; tower
-!!VRv1&x4=16/x1=3:S5; inferno
-!!VRv1&x4=16/x1=4:S6; necropolis
-!!VRv1&x4=23/x1=4:S6; necropolis
-!!VRv1&x4=16/x1=5:S4; dungeon
-!!VRv1&x4=16/x1=6:S5; stronghold
-!!VRv1&x4=22/x1=6:S4; stronghold
-!!VRv1&x4=16/x1=7:S6; fortress 1
-!!VRv1&x4=14/x1=7:S6; fortress 2
-!!VRv1&x4=13/x1=7:S6; fortress 3
-!!VRv1&x4=14/x1=8:S4; conflux
-!!VRv1&x4=16/x1=8:S4; conflux
+!!IF:Q1/8/(warMachine)/(MSG_TYPE_MES)/z154046;
 
 ********************************* Functions ************************************
 
@@ -732,19 +575,20 @@ ZVSE2
 ************************** Get Z-var for warmachines ***************************
 
 !?FU913&i^wog_54_enabled^;
-!#VA(slot:x) (art:x) (heroId:x);
+!#VA(art:x) (heroId:x) (nextLv:x);
+!#VA(usedY[10]:y);
 
-!!HE(heroId):S27/?y10 S20/?y11 S10/?y12 Ed/?(heroLevel:y)/1;
+!!HE(heroId):Ed/?(heroLevel:y)/1;
 
 * catapult
 !!if&(art)=(ART_CATAPULT);
-  !!HE(heroId):S(SKILL_BALLISTICS)/?(skilLvl:y) Ed/?(heroLevel:y)/1;
+  !!HE(heroId):S(SKILL_BALLISTICS)/?(skilLv:y) Ed/?(heroLevel:y)/1;
 
-  !!if&(skilLvl);
-    !!VR(hp:y):S(skilLvl) *50 *(skilLvl) +550;
+  !!if&(skilLv)>(SKILL_NOT_LEARNED);
+    !!VR(hp:y):S(skilLv) *(skilLv) *50 +550;
     !!VRy10:S1;
 
-    !!re i/1/(skilLvl);
+    !!re i/1/(skilLv);
       !!VRy10:*2;
     !!en;
 
@@ -759,36 +603,36 @@ ZVSE2
   !!VRz5:Sz154048;
 * first aid tent
 !!el&(art)=(ART_FIRST_AID_TENT);
-  !!HE(heroId):S(SKILL_FIRST_AID)/?(skilLvl:y);
+  !!HE(heroId):S(SKILL_FIRST_AID)/?(skilLv);
 
-  !!if&(skilLvl);
+  !!if&(skilLv);
     !!VRz6:Sz154049;
   !!el;
     !!VRz6:S^^;
   !!en;
 
-  !!VRy8:Sx4 *25 +125;
-  !!VRy7:S(skilLvl) +x4 *20 +80; first aid + level * 20, +80
+  !!VRy8:S(nextLv) *25 +125;
+  !!VRy7:S(skilLv) +(nextLv) *20 +80; first aid + level * 20, +80
 
   !!VRz5:Sz154050;
 * ammo cart
 !!el&(art)=(ART_AMMO_CART);
-  !!VRy8:Sx4 *10 +90;
-  !!VRz4&x4=1:S^^;
-  !!VRz4&x4>1:Sz154051;
+  !!VRy8:S(nextLv) *10 +90;
+  !!VRz4&(nextLv)=1:S^^;
+  !!VRz4&(nextLv)>1:Sz154051;
   !!VRz5:Sz154052;
 * Ballista
 !!el&(art)=(ART_BALLISTA);
-  !!HE(heroId):S(SKILL_ARTILLERY)/?(skilLvl:y);
+  !!HE(heroId):S(SKILL_ARTILLERY)/?(skilLv);
 
-  !!if&(skilLvl);
+  !!if&(skilLv);
     !!VRz6:Sz154053;
   !!el;
     !!VRz6:S^^;
   !!en;
 
-  !!VRy8:Sx4 *50 +200;
-  !!VRy7:S(skilLvl) +x4 *20 +80; artillery + level * 20, +80
+  !!VRy8:S(nextLv) *50 +200;
+  !!VRy7:S(skilLv) +(nextLv) *20 +80; artillery + level * 20, +80
 
   !!VRz5:Sz154054;
 !!en;
@@ -825,16 +669,10 @@ ZVSE2
 !!FU|(stack)<(BATTLE_STACK_FIRST)/(stack)>(BATTLE_STACK_LAST):E;
 
 !!BM(stack):T?(type:y);
-!!FU&(type)<>(MON_MAGOG)/(type)<>(MON_SANTA_GREMLIN):E;
+!!FU&(type)<>(MON_MAGOG):E;
 
 !!if|(stack)=i^wog_54_catapult_0^/(stack)=i^wog_54_catapult_1^;
   !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_catapultName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_catapultName_1^;
 !!el;
   !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_magogName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_magogName_1^;
-!!en;
-
-!!if|(stack)=i^wog_54_tent_0^/(stack)=i^wog_54_tent_1^;
-  !!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_tentName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_tentName_1^;
-!!el;
-  !!SN:H^monname^/(MON_SANTA_GREMLIN)/0/s^wog_54_santaName_0^ H^monname^/(MON_SANTA_GREMLIN)/1/s^wog_54_santaName_1^;
 !!en;

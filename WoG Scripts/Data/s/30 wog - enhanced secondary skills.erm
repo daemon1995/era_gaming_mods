@@ -184,24 +184,22 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!UN&y10=1:J0/3/1;                            [Disable View Earth]
 
 ** Timer routines
-!?FU(OnEveryDay)&i^wog_205_enabled^/i^timerDay^>1;         [daily - continue if either estates or learning enabled]
-!!UN:J1/?(maxLevel:y)/d;                [active only when the hero has not yet reach the level limit of the scenario. Note: Level limit is 0 by default.]
+!?FU(OnEveryDay)&i^wog_205_enabled^/i^timerDay^>1;         [daily - continue if learning enabled]
+!!UN:J1/?(maxLevel:y)/d;                [Note: Level limit is 0 by default, if there is no limit]
+!!FU(WOG_GetExpRequirementOfLevel)&(maxLevel)>0:P(maxLevel)/?(maxExp:y);
 
-!!re i/0/(HERO_LAST_WOG);
-  !!HEi:S(SKILL_LEARNING)/?(skillLevel:y); [get hero's learning skill level]
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:S(SKILL_LEARNING)/?(skillLevel:y) E?(exp:y)/?(level:y)/1;
+  !!co&(maxLevel)>0/(level)>=(maxLevel);[active only when the hero has not yet reach the level limit of the scenario.]
+
   !!if&(skillLevel:y)>0;
-    !!HEi:E?(exp:y)/?l/1;
-    !!if|(maxLevel)=0/l<=(maxLevel);
-      !!VR(skillLevel):*100;
-      !!if&(maxLevel);
-        !!FU(WOG_GetExpRequirementOfLevel):P(maxLevel)/?(maxExp:y);
-        !!VR(exp):+(skillLevel);
-        !!if&(exp)>=(maxExp);
-          !!co;
-        !!en;
-      !!en;
-      !!HEi:Ed(exp:y);
-    !!en;
+    !!VR(bonusExp:y):S(skillLevel) *100;
+    !!VR(exp):+(bonusExp);
+
+    ; Fix exp if there is a level limit in the scenario
+    !!VR(exp)&(maxLevel)>0:F0/(maxExp);
+
+    !!HEi:E(exp)/?(level)/1;
   !!en;
 !!en;
 
@@ -759,8 +757,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 ** end of function
 
 
-
-
 ** function to iterate through current player's heroes (weekly)
 !?FU(WOG_203_211_ManageWeeklyEvents);
 !!HEx16:O?(owner:y);                              [get owner of iterated hero]
@@ -891,51 +887,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 !!SN:H^monname^/(mon)/0/?z704;          [get monster name]
 !!SN:H^monname^/(mon)/1/?z705;          [get monsters name]
-** end of function
-
-
-** function to iterate through current player's heroes (daily)
-!?FU(WOG_203_205_ManageDailyEvents);
-!!HEx16:O?(owner:y);                              [get owner of iterated hero]
-
-!!if&(owner)=i^timerOwner^;
-  !!HEx16|i^wog_203_enabled^/i^wog_205_enabled^:E?(exp:y)/?(level:y)/1;
-
-  !!if&i^wog_203_enabled^;
-    !!HEx16:S(SKILL_ESTATES)/?(skillLevel:y); [get hero's estates skill level, hero level]
-    !!FU(WOG_203_SetUpEstatesDailyBonus)&(skillLevel)>(SKILL_NOT_LEARNED):P(skillLevel)/(level); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
-  !!en;
-
-  !!if&i^wog_205_enabled^;
-    !!HEx16:S(SKILL_LEARNING)/?(skillLevel); [get hero's learning skill level]
-    !!FU(WOG_205_SetUpLearningBonus)&(skillLevel)>(SKILL_NOT_LEARNED):Px16/(skillLevel)/(exp)/(level); [if hero has learning, is in use and it's that hero's owner's turn, continue in function - if enabled]
-  !!en;
-!!en;
-** end of function
-
-
-** function for learning      x1=hero x2=learning level
-!?FU(WOG_205_SetUpLearningBonus);
-!#VA(hero:x) (skillLevel:x) (exp:x) (level:x);
-
-!!UN:J1/?(maxLevel:y)/d;                [active only when the hero has not yet reach the level limit of the scenario. Note: Level limit is 0 by default.]
-!!FU&(maxLevel)>0/(level)>=(maxLevel):E;
-
-!!if&(skillLevel)=(SKILL_BASIC);
-  !!VR(exp):+100;                       [give 100 experience]
-!!el&(skillLevel)=(SKILL_ADVANCED);
-  !!VR(exp):+200;                       [give 200 experience]
-!!el&(skillLevel)>=(SKILL_EXPERT);
-  !!VR(exp):+300;                       [give 300 experience]
-!!en;
-
-; Fix exp if there is a level limit in the scenario
-!!if&(maxLevel)>0;
-  !!FU(ES_GetExpRequirementOfLevel):P(maxLevel)/?(maxExp:y);
-  !!VR(exp):F0/(maxExp);
-!!en;
-   
-!!HE(hero):E(exp);
 ** end of function
 
 
