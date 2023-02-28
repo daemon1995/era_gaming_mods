@@ -101,8 +101,9 @@ Enable Artefact to appear on the map
 
 *Show splash screen at first mod start
 !#UN:V?y1/?y2;                          [Check ERA version]
-!#SN:T^AC_Misc.ATTENTION GRANDPA^/?z2;
-!#IF&y2<3800:M^%Z2^;                    [Updated to version 3.8.0 with png support and SN_H support for spells]
+!#SN:T^AC_Misc.ATTENTION GRANDPA^/?z2/^version^/y2; !!SN:Iz2/?z2; [Interpolate String]
+!#IF&y2<3903:M^%Z2^;                    [Updated to version 3.93 with png support and SN_H support for spells]
+
 
 !#VRz-2:S^ACM Update 1.07^;             [User-defined section of WoG.ini file ("ACM Update 1.0X")]
 !#UN:N6/-1/1/-2;                        [Check if ACM Update 1.0X Message has already been displayed]
@@ -421,12 +422,13 @@ thanks to Daemon :)
 
 
 !?FU(Necro_ChangePower_2);
+
+*!BA:H0/?y50;                            [Attacker Hero Number]
 !!SN:X?y1;
 !!VRy2:Sy1 +8;  !!UN:Cy2/4/?y3;
 !!VRy4:Sy3 -4;  !!UN:Cy4/4/?y5;
 !!SN:X?y9 Xy5 X?e5 Xy9;
 !!VRe5::2;                              [divide necromancy by 2, including Artifacts and Necro Amplifier]
-*!VRe5:S1:100; Set to 1 percent always
 !!SN:X?y9 Xe5 X?y5 Xy9;
 !!UN:Cy4/4/y5;
 
@@ -588,7 +590,7 @@ thanks to Daemon :)
 
   !!DL270:S;
 
-!?DL&v998=667/v999=45/v1000=(MOUSE_RMB_PRESSED);
+
 !?FU(OnCustomDialogEvent)&x1=667/i^mouse_item^=45/i^mouse_action^<>(MOUSE_LMB_RELEASED);
 !!if&i^mouse_action^=(MOUSE_RMB_PRESSED);
   !!DL:C1;
@@ -614,6 +616,7 @@ Close Dialouge
 !!DL:C1;
 
 
+*Options menu at map start to select gameplay modes
 !?FU(ACM_Game_start_Options);
 
 !!FU(ACM_LoadOptionsFromIni):P;         [Try to load options from ini]
@@ -1306,7 +1309,7 @@ Close Dialouge
 ;[CW:################################################################################################]
 ;[CW: additional parameters to return more detailed information - START]
 !!VRx6:Sy10-y40; !!VRx7:Sy20-y50; !!VRx8:Sy30-y60; [hero changes: x6=W, x7=M, x8=A]
-*!IF:M^After normal calculation: W=%Y10, M=%Y20, A=%Y30^; Test
+*!IF:M^After normal calculation: W=%Y10, M=%Y20, A=%Y30^; 
 ;[save values of y10 to determine changes after this section, always the same for all classes]
 !!VRy40:Sy10;
 !!VRx13:S0;                             [init max number of class points from Easier Class Option]
@@ -2886,7 +2889,7 @@ Creature speed   Base movement
 
 
 ** start of movement trigger
-!?HM-1;                                [continue if scouting is enabled]
+!?HM-1;                                 [continue if scouting is enabled]
 
 !!HE-1:N?y1 O?y2 S3/?y3;                [get #, owner of  and scouting skill]
 !!OW:C?y30 Iy30/?y40 Gy30/?y50;         [get current player and if human player is sitting in front of the screen]
@@ -2940,9 +2943,15 @@ Creature speed   Base movement
 !!VRy5&y5=15/y60=0:S5;                  [Only 50% chance to get an artifact]
 !!VRy5&y5=16/y60=0:S5;                  [Only 50% chance to get an spell]
 
+*code for new scouting event
 !!HEy1:A2/52/?y40/?y43 A2/53/?y40/?y44; [Check for Spyglas and Speculum]
-!!VRy42:S17; 
+!!VRy42:S17;                            [Range of events from 1 to 17, also number of events]
 !!VRy42|y43>0/y44>0:S18;                [If any of the spyglasses equipped extend range of events to 18]
+!!VRy70:S0+y43+y44;                     [count variable to hold number of equipped spyglasses]
+!!if&y42=18/y5=18;                      [If new event roll]
+  !!VRy71:S1R3;                         [lower the chance the get ACM rewards as it can be very strong]
+  !!FU&y71>y70:E;                       [Exit if roll not successful round about 50% chance to succeed]
+!!en; 
 
 *!VRy5:S18; ** TEST**
 
@@ -3005,6 +3014,7 @@ Creature speed   Base movement
 !!if|x4=5/x4=17;                        [Event 5 and 17 are free creatures]
   !!FU(pick_a_monster):P?y4;            [Creatures joining the hero army]
   !!VRy1:S0R2;
+  !!VRy1&-1000:S2;                      [computer player always gets creatures from own faction to avoid littering his army]
     !!if&y1=2;
       !!HEx1:B2/?y1;                    [Get faction]
       !!VRy4|y1=0/y1=1:S0R13;           [Castle]
@@ -3022,7 +3032,7 @@ Creature speed   Base movement
       !!VRy4&y40>=0/y5>0:Sy40;          [Change monster to one of the hereos army]
       !!if|y4=-1/y5=0;
         !!VRy6:S0R6;                    [Generate random slot]
-        !!HEx1&999:C0/y6/?y40/?y5;     [Check creature slot]
+        !!HEx1&999:C0/y6/?y40/?y5;      [Check creature slot]
         !!VRy4&y40>=0/y5>0:Sy40;        [Change monster to one of the hereos army]
       !!en;
     !!en;
@@ -3056,7 +3066,7 @@ Creature speed   Base movement
 !!en;
 
 !!if&x4=7;
-  !!IF&999:Q2/20/y3/11/1/1/z199143;    [7=+1luck]
+  !!IF&999:Q2/20/y3/11/1/1/z199143;     [7=+1luck]
   !!HEx1:R1/d1;                         [+1 luck]
 !!en;
 
@@ -3078,7 +3088,7 @@ Creature speed   Base movement
   !!IF&999:Q2/20/y3/24/21/1/z199146;
   !!VRy60:S3 *x2 +10;                   
   !!VRy60&x5=1:+3;
-  !!UN&999:Sy80/y81/y82/x3/y60;             [reveal area]
+  !!UN&999:Sy80/y81/y82/x3/y60;         [reveal area]
 !!en;
 
 !!if|x4=11/x4=12/x4=13;                 [12 = fight monsters]
@@ -3096,13 +3106,13 @@ Creature speed   Base movement
   !!VRy45&y78<5:S7R2;
 
   !!VRy5:Sy91 *y92 *y45;                [Level*Attack from Hero]
-  !!VRy5::3;                            [Halve number of creatures to fight]
+  !!VRy5::3;                            [a third of number of creatures to fight]
   !!VRy5&y5<50:S25R50;
   !!VRy47:Sy5;
   !!IF&999:Q2/20/y3/21/y4/2/z199147;
   !!SN&2:W^Scouting_Fight_Trigger^/1;
   !!SN&-2:W^Scouting_Fight_Trigger^/0;
-  !!HEx1&2/999:Ty80/y81/y82/y4/y5 O?o;      [fight monsters]
+  !!HEx1&2/999:Ty80/y81/y82/y4/y5 O?o;  [fight monsters]
   !!if&o=(NO_OWNER);
     !!HEx1:P?y1/?y2/?y3 Z?y4;
     !!UN:Cy4/7/1/y1 Cy4/9/1/y1 Cy4/10/1/y3;
@@ -4537,15 +4547,26 @@ Till here Normal Necromancy
 !!HEx16:O?y1;                           [Checke Hero Owner]
 !!FU&y1=-1:E;                           [Exit if none]
 
-!!HEx16:S13/?y3;                        [(Check level of Estates)]
-!!FU&y3=0:E;                            [(Abort if none)]
+!!HEx16:S13/?y3;                        [Check level of Estates]
+!!FU&y3=0:E;                            [Abort if none]
 
 !!SN:W^H3_Estates_0_Hero%X16^/?y11;     [Checke ob der Held Master Estates hat und Speichere in y11]
 !!SN:W^H3_Estates_1_Hero%X16^/?y12;     [Checke ob der Held Grandmaster Estates hat und Speichere in y12]
 
 !!VRy10&y3=1:S125; !!VRy10&y3=2:S250; !!VRy10&y3=3/y11=0/y12=0:S250; !!VRy10&y3=3/y11=1/y12=0:S500; !!VRy10&y3=3/y11=1/y12=1:S1500; [Calc bonus gold]
+
+!!HEx16:X?y30/?y31/?y32/?y32/?y32/?y32/?y32  E?y20/?y21/1; [Check Hero Speciality and level]
+!!if&y31=13/y30=0;                      [if Estates specialist]
+  !!FU(Skill_Value_Database):Px16/13/y21/?y71; [Pass Hero Number, Skill, Hero Level, Return Value]
+  !!VRy72&y3=1:Sy21*3*125:100-1;        [Get value for 3% increase for Basic]
+  !!VRy72&y3=2:Sy21*3*250:100-1;        [Get value for 3% increase for Advanced]
+  !!VRy72&y3=3:Sy21*3*500:100-1;        [Get value for 3% increase for Expert]
+  !!VRy10:-y72+y71;                     [Substract the native value and add the 10% increase to get correct total value]
+!!en;
+
 !!OW:Ry1/6/dy10;                        [Add gold to current player]
 !!UN:R2;                                [Redraw Screen to show ne value of gold]
+
 
 !?FU(OnAfterBattleUniversal)&1000;
 
@@ -9889,11 +9910,16 @@ x1=Hero Number, x2=returns spell damage from commander, x3 Spell Number, x4=In F
 
 !!COx1:X2/?y40 S4/?y60;                 [Get Commander Level and Magic Level of Commander]
 !!HEx1:I?y10/1;                         [Get Hero Spell Points]
-!!VRy46:Sy40*2;                         [+2 Base Spell Damage per Commander Level below level 40]
-!!VRy46&y40>40:Sy40*5;                  [+5 Base Spell Damage per Commander Level above level 40]
+!!VRy46:Sy40*2;                         [+2 Base Spell Damage per Commander level]
+!!VRy46&y40>30:Sy40*3;                  [+3 Base Spell Damage per Commander level at level 30]
+!!VRy46&y40>40:Sy40*4;                  [+4 Base Spell Damage per Commander level at level 40]
+!!VRy46&y40>45:Sy40*5;                  [+5 Base Spell Damage per Commander level at level 45]
+!!VRy46&y40>50:Sy40*6;                  [+6 Base Spell Damage per Commander level at level 50]
+
 *Set base spell damage
-!!VRy20:S40; !!VRy20&y60=1:S40; !!VRy20&y60=2:S70; !!VRy20&y60=3:S110; !!VRy20&y60=4:S180; !!VRy20&y60=5:S350; [Set Base damage of cast 30 for basic 300 for GM]
+!!VRy20:S20; !!VRy20&y60=1:S20; !!VRy20&y60=2:S50; !!VRy20&y60=3:S100; !!VRy20&y60=4:S150; !!VRy20&y60=5:S300; [Set Base damage of cast 30 for basic 300 for GM]
 !!VRy20:+y46;                           [Add some more base spell damage with each level]
+
 !!VRy60:+2;                             [Spell Point cost +2]
 !!HEx1:S25/?y30;                        [Get sorcery from hero]
 !!SN:W^H3_Sorcery_0_Hero%X1^/?y31;
@@ -9918,7 +9944,7 @@ x1=Hero Number, x2=returns spell damage from commander, x3 Spell Number, x4=In F
 !?MF1;
 
 !!BG:A?y1;                              [Aktion in y1]
-!!if&y1=6|y1=7;                        [Attack or Shoot]
+!!if&y1=6|y1=7;                         [Attack or Shoot]
   !!BG:N?y1;                            [Attacking Stack]
   !!MF:N?y4;                            [damage receiving stack]
   !!SN:W^Damage_Counter_Attacking_Stack^/?y50;
@@ -9941,7 +9967,7 @@ x1=Hero Number, x2=returns spell damage from commander, x3 Spell Number, x4=In F
 !?MR1;
 
 !!BG:A?y1;                              [Aktion in y1]
-!!if&y1=1;                             [If Hero cast]
+!!if&y1=1;                              [If Hero cast]
   !!MR:N?y4 F?y3;                       [damage receiving stack and get damage]
   !!FU&y3=0:E;                          [Exit if Zero damage]
   !!BG:H?y10;                           [Get Hero Number]
@@ -9958,7 +9984,7 @@ x1=Hero Number, x2=returns spell damage from commander, x3 Spell Number, x4=In F
 *Reduce casts of all Commanders by -1 so with no Magic Skill they cannot cast
 *Apply Commander combat buff
 !?FU(OnCombatRound)&v997=0;             [On First visible combat round]
-!!re y10/0/155;                        [Reset Temp vars before every fight for every hero]
+!!re y10/0/155;                         [Reset Temp vars before every fight for every hero]
   !!SN:W^Damage_Counter_Hero_Temp_%Y10^/0;
   !!SN:W^Commander_Kill_Counter_Temp_%Y10^/0;
   !!SN:W^Magic_Damage_Counter_Hero_Temp_%Y10^/0;
@@ -10226,7 +10252,7 @@ Close Dialouge
 !!SN:W^Prevent_Com_Cast_Flag^/1;
 
 
-!?FU(OnBeforeBattleUniversal);          [Set new Spells to cast for Commander] Test changed from BA0]
+!?FU(OnBeforeBattleUniversal);          [Set new Spells to cast for Commander]
 !!UN:C7783293/1/37;                     [Paladin Cure]
 !!UN:C7783311/1/27;                     [Hierophant Shield]
 !!UN:C7783329/1/17;                     [Temple Guardian Lightning Strike]
@@ -10448,8 +10474,9 @@ At each level up AI will choose com class if none has been selected. Each level 
 !!VRy20&y10=1:S10; !!VRy20&y10=2:S15; !!VRy20&y10=3/y11=0/y12=0:S20; !!VRy20&y10=3/y11=1/y12=0:S25; !!VRy20&y10=3/y11=1/y12=1:S30;
 !!en;
 
-!!VRx4:Sx3*3*y20:100; Test
-*!VRx4:Sx3*2*y20:100; Test
+!!VRx4:Sx3*3*y20:100;                   [To give back value with 3% speciality increase]
+*!VRx4:Sx3*2*y20:100;                   [To give back value with 2% speciality increase]
+!!VRx4&x2=13:Sx3*10*y20:100;            [Make exception 10% for Estate to show correct info in hero spec icon]
 
 
 ********************************************************************************
@@ -10684,14 +10711,14 @@ Castle's Lords
 !!SN:W^AdventurerTown_0_Skill_2_Chance^/6; [Logistics]
 !!SN:W^AdventurerTown_0_Skill_3_Chance^/6; [Scouting]
 !!SN:W^AdventurerTown_0_Skill_4_Chance^/10; [Diplomacy]
-!!SN:W^AdventurerTown_0_Skill_5_Chance^/10; [Nobility (Navigation)]
+!!SN:W^AdventurerTown_0_Skill_5_Chance^/10; [Nobility (Navigation)] 
 !!SN:W^AdventurerTown_0_Skill_6_Chance^/6; [Leadership]
 !!SN:W^AdventurerTown_0_Skill_7_Chance^/4; [Wisdom]
 !!SN:W^AdventurerTown_0_Skill_8_Chance^/2; [Mysticism]
 !!SN:W^AdventurerTown_0_Skill_9_Chance^/3; [Luck]
 !!SN:W^AdventurerTown_0_Skill_10_Chance^/4; [Ballistics]
 !!SN:W^AdventurerTown_0_Skill_11_Chance^/6; [Eagle Eye]
-!!SN:W^AdventurerTown_0_Skill_12_Chance^/0; [Necromancy]
+!!SN:W^AdventurerTown_0_Skill_12_Chance^/0; [Necromancy] 
 !!SN:W^AdventurerTown_0_Skill_13_Chance^/6; [Estates]
 !!SN:W^AdventurerTown_0_Skill_14_Chance^/2; [Fire Magic]
 !!SN:W^AdventurerTown_0_Skill_15_Chance^/3; [Air Magic]
@@ -10989,7 +11016,6 @@ Conflux's Balancers
 Here all variables should be reset before a repeated fight
 !?FU(OnBattleReplay);
 
-*!BU:R;  Disabeld because it can lead to crash thx @xericsin
 !!SN:W^This_Is_Replay_Battle^/1;
 !!SN:W^Leadership_Current_battle_round^/-1;
 !!SN:W^Leadership_Stack_had_Moral^/-1;
@@ -23537,7 +23563,7 @@ x1=Hero ID, x2 Att(1)/Def(2) Hero,
 ********************************************************************************
 !?FU(OnBattleRegeneratePhase);          [Set Spell Points and Reset Spell Points]
 
-!!FU:E;                                 [Test Disabled Mana Cost increase for Special Spells]
+!!FU:E;                                 [Disabled Mana Cost increase for Special Spells]
 !!SN:X?y1/?y2/0;                        [get who moves]
 !!VRy2:Sy1:21;                          [get side]
 !!BHy2:N?y1;                            [get owner]
@@ -31180,64 +31206,3 @@ On open hero screen set correct def cadres and skill tags
 
 
 ********************************************************************************
-
-
-Work in progress
-
-Resource  Heroes are able to upgrade their troops by clicking on the portrait
-!?CM2;
-!!FU:E;
-68 Troop Slot 1
-69 Troop Slot 2
-70 Troop Slot 3
-71 Troop Slot 4
-72 Troop Slot 5
-73 Troop Slot 6
-74 Troop Slot 7
-
-!!CM:F?v3 I?v4 S?v5 T?v6;               [where we click and click subtype]
-!!if&v4>=68/v4<=74/v3=512/v5=14;
-  !!VRy5:Sv4-68;                          [Get actualy slot number]
-  !!HE-1:N?y1;                            [Get current hero # 9 Luck]
-  !!HEy1:C0/y5/?y6/?y7;                   [Get Monsters by clicked slot]
-  !!FU&y6=-1:E;                           [Exit if no creature in that slot]
-  !!IF:M^Hero is %Y1 and Creature is %Y6 and Number is %Y7^;
-!!en;
-
-!?CM0;
-!!FU:E;
-!!CM:F?v3 I?v4 S?v5 T?v6;               [where we click and click subtype]
-!!if&v4>=2011/v4<=2023/v3=512/v5=14;
-!!FU(ACM_Upgrading_Monster_DL):P;
-  !!VRy5:Sv4-2011:2;                          [Get actualy slot number]
-  !!HE-1:N?y1;                            [Get current hero # 9 Luck]
-  !!HEy1:C0/y5/?y6/?y7;                   [Get Monsters by clicked slot]
-  !!FU&y6=-1:E;                           [Exit if no creature in that slot]
-  !!IF:M^Hero is %Y1 and Creature is %Y6 and Number is %Y7^;
-*!IF:M^Clicked Slot:%V4 and %Y5^; 2011 bis 2023
-!!en;
-
-!?FU(ACM_Upgrading_Monster_DL);
-!!DL193:N^Crt_Upg.txt^;               [Name of Dialogue text file Parse Dialogue]
-!!DL193:S1;
-
-!?DL&v998=193/v999=30722/v1000=13;       [Close Dialogue with Confirm Button Save all Settings]
-!!DL:C1;
-
-
-
-*?FU(gem_CreateERMHook);
-*!SN:Ex1/1/5934078/(gem_AfterSpellAtStackDesc);
-
-*?FU(gem_AfterSpellAtStackDesc);
-*!SN:B6911016/d/?z1;
-
-*!BH0:N?y4; Get left hero number
-
-
-*!FU(ACM_Calc_Magic_Pierce):Py4/?y74;   [Pass hero number and return magic pierce value]
-*!FU(H3_Calc_Crit_Chance_and_Damage):Py4/?y16/?y99/0; [IF 1 at the end it means to in fight 0 means only check]
-
-*!MM:M?z10;                             [Get Text that is shown]
-*!VRz12:S^%Z1    Crit Chance:{%Y16%}  Crit Damage:{%Y99%}  Magic Pierce:{%Y74}^;
-*!MM:Mz12; 
