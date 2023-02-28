@@ -1,5 +1,5 @@
 
-Advanced Classes Mod 1.085
+Advanced Classes Mod 1.087
 
 A Mod by Perry R, for Heroes of Might and Magic 3, ERA3 
 with the help of AlfWithCake, anti-victor, Daemon_n, Sandris, Berserker and Archer
@@ -65,7 +65,7 @@ Spells:
 
 Commanders:
 - disabled most of the old WoG commander features and remade them. Commanders now require at least 1 point in Magic skill to be able to cast. Spells are made much more useful, read description. All Commanders now profit from carring out actual attacks in combat, some can even increase their damage or health permanently by killing whole squads.
-- When doing your first kill in combat you can choose a commander class. Each class has different attributes.
+- When doing your first kill in combat you can choose a commander class. Each class has different attributes, that can be viewed by right-clicking the experience icon in the hero screen and the additional right click on the commander class text field.
 
 Eagle Eye:
 - Spells are now learned directly in combat and you get permanent spell power. And some more goodies are on this skill.
@@ -115,7 +115,7 @@ Answer: You dont have enough class points to get offered Master level for that s
 Answer: No. When you unlearn secondary skills, you will lose M/GM level and maybe even drop out of your current class.
 
 - Right-Click on the Kingdom Overview
-Answer: The poor Kingdom Overview will show your income including your spendings of the previous day. So keep that in mind, numbers might be negative if you spend more then you have income.
+Answer: The poor Kingdom Overview will show your income including your spendings of the previous day. So keep that in mind, numbers might be negative if you spend more then you have income. The money calculation is done at the moment of your click, so do it early in your turn.
 
 - There are many new effects on artifacts, spells and skills, how the they scale? I want to do the math!
 Answer: Nearly all new effects have a scaling of some sort. Check the information window by right-clicking the experience icon. In the bonus list you can find even more information if you right-click on the left side on the spell section. Also check out the help and readme files for skills and spells. They are up to date and formulas can be found there.
@@ -129,11 +129,14 @@ Answer: You can try, but ACM does not support it. With more than 10 skills it wi
 - I want to learn all secondary skills to Master and Grandmaster regardles of my current class!
 Answer: Check out the new game mode made by Berserker. Activate it at map start.
 
+- With Berseker option I can learn all skills to Master and Grandmaster regardless of my class okay, but can I get rid of the whole class system? I dont want to play as Hunter, Druid and other shit.
+Answer: Yes use the Berserker option in combination with the "select class" option. When you first get asked to promote to a class, choose "Never ask again", this will disable any class for this hero.
+
 - What does Magic Strength do?
 Answer: It is a new stat for mainly caster Heroes which ensures that they are realy better casters than Warrior Heroes. The power of some spells now depend on your MS and not on your Spell Power. 1 SP equals 1 MS, also several secondary skills give you MS. - Magic Strength scaling factor for big and small maps (XXL-Maps 80%, XL-Maps 85%, L-Maps 100, M-Map 110% S-Maps 120%, this ensures somewhat similar power of spells on all map sizes)
 
 - I really like the Spell Trainer option but I think the damage increase per level is to low, can that be changed?
-Answer: Yes, in the erm file just search for damage increment and change for example from 2% to 5%. Now each level up for damage spells will give you +5% damage.
+Answer: Yes, in the erm file just search for damage increment and change for example from 1% to 5%. Now each level up for damage spells will give you +5% damage.
 
 - Can I use THIS or THAT mod together with AC Mod?
 Answer: Most probably yes, just try it out. What usually happens is that skill descriptions are overwritten, but in most cases the effect will still work/apply. 
@@ -172,16 +175,17 @@ The mod is intended to be played with only 8 hero secondary skills. If you want 
 
 5. Known Bugs:
 - Wells will show incorrect amount of Spell Points recovered
-
+- perhaps some more, please report in the ERA Modding Discord server
 
 6. Credits
--Whole Heroes Community for support 
+-Whole Heroes Community for support .
 -Berserker for creating ERA, without him the mod would not be possible.
--AlfWithCake and anti-victor as team members
+-AlfWithCake and anti-victor as team members.
 -Daemon_n for testing and super translation into Russian language! Community support and designing the Difficulty Mod.
+-Archer for support and fixes and help in the chinese community.
 -Sandris for amazing pictures for class skills and Warmachine upgrades pictures.
--Sagamosa Mod for inspiration and graphics
--Archer for support and fixes
+-Sagamosa Mod for inspiration and graphics.
+
 
 
 **********************************************************************************************
