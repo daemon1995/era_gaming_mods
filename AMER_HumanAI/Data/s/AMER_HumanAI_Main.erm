@@ -13,14 +13,13 @@ ZVSE2
 **  Default settings:
 !#VRi^huAI_necromancy^:S100;                        //The percent of necromancy to emulate.
 !#VRi^huAI_demonFarm^:S(TRUE);                      //Whether or not AI sacrifices troops to raise demons after combat.
-!#VRi^huAI_lossRecovery^:S(TRUE);                   //Whether or not AI recovers most lost troops after combat with other AI.
+!#VRi^huAI_recoverLosses^:S100;                     //Whether or not AI recovers most lost troops after combat with other AI.
 !#VRi^huAI_replaceSkills^:S(TRUE);                  //Whether or not to replace AI heroes' "bad" skills with "good" ones.
 !#VRi^huAI_replaceHeroes^:S(TRUE);                  //Whether or not to replace AI's "bad" heroes with "good" ones.
 !#VRi^huAI_hireMoreHeroes^:S7;                      //Hire heroes for AI beyond usual restrictions, up to this amount. AI will reserve one "slot" for hiring leveled heroes.
 !#VRi^huAI_funnelTroops^:S(TRUE);                   //Whether or not to funnel troops from AI's low-level heroes to their two highest-level heroes.
 !#VRi^huAI_funnelTroops_whileVisible^:S(FALSE);     //If huAI_funnelTroops works while AI heroes are visible to a human player.
 !#VRi^huAI_improvedArtifactAI^:S(TRUE);             //Whether or not improved artifact AI is on: artifact funneling, combo assembling, loadout optimization.
-!#VRi^huAI_utopiaSearchDistance^:S0;                //The distance that AI's best hero will prioritize reaching a Dragon Utopia.
 !#VRi^huAI_handicap_goldPerTurn^:S0;                //Gold given to AI players on each of their turns.
 !#VRi^huAI_handicap_resources^:S0;                  //Resources given to AI players on each of their turns. 2x this amount is given as wood/ore.
 !#VRi^huAI_handicap_XP^:S0;                         //Percent of current XP added to each AI hero on their turn. Ex. if set to 100, AI will double their XP each day.
@@ -33,7 +32,7 @@ ZVSE2
 
 **  --------------------------------------------------
 **  Consts:
-!#DC(HUAI_LOW_LEVEL_CUTOFF) = 10;                  //Used to determine when best hero logic should accept a hero as a best, even if it fails to pass other criteria.
+!#DC(HUAI_LOW_LEVEL_CUTOFF) = 10;                   //Used to determine when best hero logic should accept a hero as a best, even if it fails to pass other criteria.
 **  --------------------------------------------------
 
 
@@ -65,8 +64,8 @@ ZVSE2
 **  Should be called by other mods that set settings in runtime ini, when they are done doing so.
 !?FU(huAI_LoadConfig_FromRuntime);
     !!FU(LoadIntGlobalsFromJson):P^huAI.settings.^/^huAI_^/
-      ^necromancy^/^demonFarm^/^lossRecovery^/^replaceSkills^/^replaceHeroes^/^hireMoreHeroes^/
-      ^funnelTroops^/^funnelTroops_whileVisible^/^improvedArtifactAI^/^utopiaSearchDistance^;
+      ^necromancy^/^demonFarm^/^recoverLosses^/^replaceSkills^/^replaceHeroes^/^hireMoreHeroes^/
+      ^funnelTroops^/^funnelTroops_whileVisible^/^improvedArtifactAI^;
 
     !!FU(LoadIntGlobalsFromJson):P^huAI.settings.^/^huAI_^/^handicap_goldPerTurn^/^handicap_resources^/^handicap_XP^/^handicap_townPortal^/^handicap_fly^/^handicap_manaRefill^/^handicap_neutralGrowth^;
 **  --------------------------------------------------
@@ -80,17 +79,22 @@ ZVSE2
 
     !!SN:E(readFromIni)/1/^AIRadius^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal:z);
     !!VR(newAIRadius:y):V(iniKeyVal);
-    !!UN:J4/(newAIRadius);        //Boost AI radius. Skeptical of whether or not this helps much.
+    !!UN:J4/(newAIRadius);                          //Boost AI radius. Skeptical of whether or not this helps much.
 
     !!SN:E(readFromIni)/1/^Necromancy^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_necromancy^:V(iniKeyVal);
 
     !!SN:E(readFromIni)/1/^DemonFarm^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_demonFarm^:V(iniKeyVal);
-    !!MA&i^huAI_demonFarm^=(TRUE):I(MON_PIT_FIEND)/925;        //Raise AI value of Pit Fiend, so that AI tends to bring them along more and, once upgraded, starts demon farming more consistently.
+    !!if&i^huAI_demonFarm^=(TRUE):;
+        !!MA:I(MON_PIT_FIEND)/?(aiValue:y);
+        !!VR(aiValueAdjust:y):S(aiValue):5;
+        !!VR(aiValue:y):+(aiValueAdjust);
+        !!MA:I(MON_PIT_FIEND)/(aiValue);            //Add +20% to Pit Fiend AI value, so that AI tends to bring them along more and, once upgraded, starts demon farming more consistently.
+    !!en:;
 
-    !!SN:E(readFromIni)/1/^LossRecovery^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
-    !!VRi^huAI_lossRecovery^:V(iniKeyVal);
+    !!SN:E(readFromIni)/1/^RecoverLosses^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
+    !!VRi^huAI_recoverLosses^:V(iniKeyVal);
 
     !!SN:E(readFromIni)/1/^ReplaceSkills^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_replaceSkills^:V(iniKeyVal);
@@ -109,9 +113,6 @@ ZVSE2
 
     !!SN:E(readFromIni)/1/^ImprovedArtifactAI^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_improvedArtifactAI^:V(iniKeyVal);
-
-    !!SN:E(readFromIni)/1/^UtopiaSearchDistance^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
-    !!VRi^huAI_utopiaSearchDistance^:V(iniKeyVal);
 
     !!SN:E(readFromIni)/1/^Handicap_Gold^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_handicap_goldPerTurn^:V(iniKeyVal);
@@ -136,128 +137,195 @@ ZVSE2
 **  --------------------------------------------------
 
 
+**  --------------------------------------------------
+!?FU(OnEveryDay)&i^huAI_on^=(TRUE)/i^timerIsAi^=(TRUE);     //Every day for AI
+    !!OW:C?(currentPlayer:y);
+    !!FU(huAI_OrderBestHeroes):P(currentPlayer);
+    !!FU(huAI_dailyAIBestHeroes):P(currentPlayer);          //daily trigger for other script to perform actions with best heroes.
+    
+    
+**  Daily END OF TURN trigger for other scripts to perform actions with best heroes:
+!?FU(huAI_OnEndOfTurn)&i^huAI_on^=(TRUE);
+    !!OW:C?(currentPlayer:y);
+    //!VRi^huAI_playerEndingTurn^:S(currentPlayer);         //Needed for maintaining var for previous player.
+    !!FU(huAI_dailyAIBestHeroes_EndOfTurn)&i^timerIsAi^=(TRUE):P(currentPlayer);
+**  --------------------------------------------------
+
 
 **  --------------------------------------------------
-**  Determine best heroes owned by AI each day, then throw
-**  a function for other scripts to catch and use.
-!?FU(OnEveryDay)&i^huAI_on^=(TRUE)/i^timerIsAi^=(TRUE);     //Every day for AI
+**  Determine best heroes owned by current player. Store the heroes and their worth in parallel var arrays.
+**  huAI_currentHero_1...x contains player's best(1) to worst(x) heroes.
+**  huAI_currentHero_Worth_1...x contains their "worth," which is determined by stats, level, and specialization.
+**  huAI_currentHero_Count contains the count of current player's heroes.
+!?FU(huAI_OrderBestHeroes);
+    !#VA(currentPlayer:x);
     
-    !!VRi^huAI_bestHero^:S(NO_HERO);
-    !!VRi^huAI_secondBestHero^:S(NO_HERO);      //Clear First/Second best hero vars so they can be used for the new player.
+    !!VRi^huAI_currentHero_Count^:S0;
     
-    !!OW:C?(currentPlayer:y);
     !!FU(huAI_IsBlacklistedPlayer):P(currentPlayer)/?(isPlayerBlacklisted:y);       //Get if player is blacklisted from huAI.
     !!FU&(isPlayerBlacklisted)=(TRUE):E;                                            //Exit if so.
     
-    !!OW:H(currentPlayer)/2/0;             //Get count of heroes owned by current player in v2.
+    !!OW:H(currentPlayer)/2/0;              //Get count of heroes owned by current player in v2.
     !!VR(heroCount:y):Sv2;
     
-    //!VR(heroCountStr:z):M3/(heroCount);        TEST
-    //!IF:L^heroCount: %(heroCountStr).^;        TEST
-    
-    !!FU(NewIntArray):P0/?(ownedTownTypes:y);
-    !!FU(huAI_GetOwnedTownTypes):P(currentPlayer)/?(ownedTownTypes);     //Get owned town types, this will be used to prevent choosing a "best hero" that has a creature spec we don't have a town for.
+    !!FU&(heroCount)<=0:E;                  //Exit if no heroes.
     
     //======
-    //Determine AI player's best and second-best hero:
-    !!VR(bestHero:y):S-1;
-    !!VR(secondBestHero:y):S-1;
+    //Order owned heroes by their worth:
+    !!VR(bestWorth:y):S-1;
+    !!VR(secondBestWorth:y):S-1;
     
     !!re i/1/(heroCount):;                  //iterate all heroes of current player. i=iterated hero. 1=first hero index for HE:H
         !!OW:H(currentPlayer)/2/i;          //Get id of iterated hero in v2.
         !!VR(loopHero:y):Sv2;
         !!co&(loopHero)<=(NO_HERO):;        //co if loopHero is invalid, for some reason.
-        //!HE(loopHero):B0/?(loopHeroName:z);                    TEST
-        //!IF:L^loopHero for bestHero Test: %(loopHeroName).^;   TEST
-        !!HE(loopHero):E?(loopHeroXP:y)/?(loopHeroLevel:y);     //Get loopHero XP.
+        !!FU(huAI_GetHeroWorth):P(currentPlayer)/(loopHero)/?(loopHeroWorth:y);
         
-        !!if&(bestHero)>-1:;
-            !!HE(bestHero):E?(bestXP:y);        //Get best hero XP.
-            !!FU(huAI_GetIsSpecBad):P(loopHero)/?(specIsBad:y);     //Don't consider "bad" heroes.
-            !!co&(specIsBad)=(TRUE):;           //co if this hero's spec is bad.
-            
-            !!if&(loopHeroXP)>(bestXP):;
-                !!FU(huAI_IsMonSpecUnsupported)&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF):P(loopHero)/(ownedTownTypes)/?(monSpecUnsupported:y);    //If loopHero is less than level (HUAI_LOW_LEVEL_CUTOFF), consider creature specialists invalid if there is no owned town to support them.
-                !!co&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF)/(monSpecUnsupported)=(TRUE):;       //co if unsupported.
-                !!VR(secondBestHero):S(bestHero);       //If this hero's XP is better than our old best, make the old best our second-best, and this hero becomes the new best.
-                !!VR(bestHero):S(loopHero);
-            !!el:;      //doesn't seem like elif exists in ERM.
-                !!if&(secondBestHero)>-1:;
-                    !!HE(secondBestHero):X?(secondSpecType:y);      //Get specType of second best hero.
-                    !!HE(loopHero):X?(loopSpecType:y);              //Get specType of loopHero.
-                    !!if|(secondSpecType)=1/(secondSpecType)=4:;
-                        !!if&(loopSpecType)<>1/(loopSpecType)<>4:;  //If second best hero is a creature spec, but loopHero is not, then prefer loopHero, regardless of level.
-                            !!VR(secondBestHero):S(loopHero);       //This is because many troops are funneled to bestHero, so it is hard for a creature spec to be useful for secondBest.
-                            !!co:;
-                        !!en:;
-                    !!en:;
-                    !!HE(secondBestHero):E?(secondBestXP:y);        //Check if loopHero is better than secondBestHero.
-                    !!if&(loopHeroXP)>(secondBestXP):;
-                        !!FU(huAI_IsMonSpecUnsupported)&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF):P(loopHero)/(ownedTownTypes)/?(monSpecUnsupported:y);
-                        !!co&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF)/(monSpecUnsupported)=(TRUE):;      //co if unsupported and below HUAI_LOW_LEVEL_CUTOFF level.
-                        !!VR(secondBestHero):S(loopHero);
-                    !!en:;
-                !!el:;
-                    !!FU(huAI_IsMonSpecUnsupported)&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF):P(loopHero)/(ownedTownTypes)/?(monSpecUnsupported:y);
-                    !!co&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF)/(monSpecUnsupported)=(TRUE):;          //co if unsupported.
-                    !!VR(secondBestHero):S(loopHero);   //If no secondBest yet, this hero becomes secondBest.
+        !!if&i=1:;
+            !!VRi^huAI_currentHero_%i^:S(loopHero);
+            !!VRi^huAI_currentHero_Worth_%i^:S(loopHeroWorth);
+        !!el:;
+            !!VR(didInsert:y):S(FALSE);
+            !!re j/1/i^huAI_currentHero_Count^:;
+                !!if&(loopHeroWorth)>=i^huAI_currentHero_Worth_%j^:;
+                    //insert new hero at index.
+                    !!FU(huAI_InsertCurrentHero):P(loopHero)/(loopHeroWorth)/j;
+                    !!VR(didInsert:y):S(TRUE);
+                    !!br:;                  //br because spot for new hero was found.
                 !!en:;
             !!en:;
-        !!el:;
-            !!FU(huAI_IsMonSpecUnsupported)&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF):P(loopHero)/(ownedTownTypes)/?(monSpecUnsupported:y);
-            !!co&(loopHeroLevel)<(HUAI_LOW_LEVEL_CUTOFF)/(monSpecUnsupported)=(TRUE):;                  //co if unsupported.
-            !!VR(bestHero):S(loopHero);     //If no best hero is defined yet, set this one as our best.
+            !!if&(didInsert)=(FALSE):;
+                !!VRi^huAI_currentHero_%i^:S(loopHero);
+                !!VRi^huAI_currentHero_Worth_%i^:S(loopHeroWorth);
+            !!en:;
         !!en:;
+        !!VRi^huAI_currentHero_Count^:Si;
     !!en:;
-    
-    //!HE(bestHero):O?(bestOwner:y);                     TEST
-    //!HE(secondBestHero):O?(secondBestOwner:y);         TEST
-    //!HE(bestHero):B0/?(bestHeroName:z);                TEST
-    //!HE(secondBestHero):B0/?(secondBestHeroName:z);    TEST
-    //!IF:L^bestHero: %(bestHero), %(bestHeroName). Owned by %(bestOwner)^;                 TEST
-    //!IF:L^secondBestHero: %(secondBestHero), %(secondBestHeroName). Owned by %(secondBestOwner)^;     TEST
-    !!FU&(bestHero)=(NO_HERO):E;        //Exit if no best hero was found.
-    
-    !!VRi^huAI_bestHero^:S(bestHero);           //
-    !!VRi^huAI_secondBestHero^:S(secondBestHero);     //Set these globals so script at other points during the turn can get best heroes.
-    !!FU(huAI_dailyAIBestHeroes):P(currentPlayer)/(bestHero)/(secondBestHero);    //daily trigger for other script to perform actions with best heroes.
-
-
-
-**  returns (TRUE) if the passed hero is a creature specialist, but it
-**  does not own a town which produces its specialty creature.
-!?FU(huAI_IsMonSpecUnsupported);
-    !#VA(hero:x);
-    !#VA(ownedTownTypes:x);     //An array containing all owned town types.
-    !#VA(returnBool:x);
-    
-    !!VR(returnBool):S(FALSE);  //default return false.
         
-    !!HE(hero):X?(spec:y)/?(specType:y);        //get hero spec.
-    !!if|(spec)=1/(spec)=4:;                    //If this is a creature spec.
-        !!MA:O(specType)/?(specMonTown:y);      //Get town type of creature.
-        //!IF:L^specType: %(specType), specMonTown: %(specMonTown).^;    TEST
-        !!FU(huAI_ArrayContains):P(ownedTownTypes)/(specMonTown)/?(hasSpecTown:y);      //If array of owned town types contains town type of creature.
-        !!VR(returnBool)&(hasSpecTown)=(FALSE):S(TRUE);                                 //If array did *not* have town type of creature, return (TRUE) to denote that the spec is unsupported.
-        //!HE(hero):B0/?(heroStr:z);             TEST
-        //!IF&(hasSpecTown)=(FALSE):L^Unsupported spec: %(heroStr).^;    TEST
+    TEST
+    //!IF:L^Heroes of player%(currentPlayer):^;
+    //!re i/1/i^huAI_currentHero_Count^:;
+        //!VR(testHero:y):Si^huAI_currentHero_%i^;
+        //!VR(testWorth:y):Si^huAI_currentHero_Worth_%i^;
+        //!IF:M^%i: hero%(testHero) is worth %(testWorth).^;
+    //!en:;
+    TEST
+**  --------------------------------------------------
+
+
+    
+**  --------------------------------------------------
+**  Remove heroes from the huAI_currentHero vars when they die.
+**  This is only necessary when an attacking hero loses combat,
+**  since the vars only exist for the current player.
+!?FU(OnAfterBattleUniversal)&i^huAI_on^=(TRUE);
+    !!VR(hero:y):Si^battle_hero_0^;
+    !!HE(hero):O?(owner:y);
+    !!FU&(owner)>-1:E;                          //Exit if attacker did not lose.
+    
+    !!re i/1/i^huAI_currentHero_Count^:;
+        !!co&(hero)<>i^huAI_currentHero_%i^:;   //co until we find which hero in huAI_currentHero this is.
+        
+        !!FU(huAI_RemoveCurrentHero):Pi;        //Remove data associated with the index. Subsequent hero indexes are shifted up.
+        
+        !!br:;                                  //we found it, so br.
     !!en:;
+**  --------------------------------------------------
+    
+    
+    
+**  --------------------------------------------------
+**  insert a hero into the currentHero array at (index).
+**  Heroes at subsequent indexes are shifted down to make room.
+!?FU(huAI_InsertCurrentHero);
+    !#VA(hero:x);
+    !#VA(worth:x);
+    !#VA(index:x);
+    
+    !!re i/i^huAI_currentHero_Count^/(index)/-1:;             //Loop backward to index to shift indexes down one to make room for new hero.
+        !!VR(newIndex:y):Si+1;
+        !!VRi^huAI_currentHero_%(newIndex)^:Si^huAI_currentHero_%i^;
+        !!VRi^huAI_currentHero_Worth_%(newIndex)^:Si^huAI_currentHero_Worth_%i^;
+    !!en:;
+    !!VRi^huAI_currentHero_%(index)^:S(hero);
+    !!VRi^huAI_currentHero_Worth_%(index)^:S(worth);
+    
+    !!VRi^huAI_currentHero_Count^:+1;
+    
+    
+**  remove a hero into the currentHero array at (index).
+**  Heroes at subsequent indexes are shifted up.
+!?FU(huAI_RemoveCurrentHero);
+    !#VA(index:x);
+    
+    !!VR(index):+1;                                 //Start loop from passed index+1.
+    
+    !!re i/(index)/i^huAI_currentHero_Count^:;      //Loop forward to max count, shifting indexes up.
+        !!VR(newIndex:y):Si-1;
+        !!VRi^huAI_currentHero_%(newIndex)^:Si^huAI_currentHero_%i^;
+        !!VRi^huAI_currentHero_Worth_%(newIndex)^:Si^huAI_currentHero_Worth_%i^;
+    !!en:;
+    
+    !!VRi^huAI_currentHero_Count^:-1;
+**  --------------------------------------------------
+    
+    
+    
+**  --------------------------------------------------
+**  Returns the "worth" of the passed hero for the passed player.
+**  Worth is derived from the hero's XP, base stats, and spec.
+**  We don't consider artifacts/creatures because the point is to
+**  determine which hero is best to put these on.
+!?FU(huAI_GetHeroWorth);
+    !#VA(player:x);
+    !#VA(hero:x);
+    !#VA(returnWorth:x);
+    
+    !!VR(returnWorth):S-1;
+    !!FU&(hero)<=(NO_HERO):E;                   //Exit if hero is invalid, returning -1.
+    
+    !!HE(hero):Ed/?(level:y);                   //Get hero Level.
+    //!if(level)>22:;                           //Hero level is only directly worthwhile as it helps us understand how many secondary skills the hero has. 
+        //!VR(level):S22;                       //However After level 22, the hero should have maxed SS, and therefore level is no longer worth anything.
+    //!en:;                                     //TODO: This logic needs to consider mods that modify SS investment (10 SS, ACM, etc.?).
+    
+    !!FU(huAI_GetSpecMult):P(hero)/?(specWorth:y);                  //Get a multiplier for how valuable the spec is. 
+    !!VR(specMult:e):S(specWorth):100;                              //Convert to intended float.
+    !!VR(levelValue:y):S6*(specMult);                               //Modify the value of levels by the multiplier.
+    
+    !!VR(returnWorth):S(level)*(levelValue);                        //Default return = level worth.
+    
+    //!HE(hero):F?(atk:y)/?(def:y)/?(pwr:y)/?(kno:y)/1;             //Get hero stats without arti bonuses. EDIT: Removed because this does not work for scripted artifact stats.
+    !!FU(GetHeroPrimarySkillsWithoutArts):P(hero)/?(atk:y)/?(def:y)/?(pwr:y)/?(kno:y);      //Get hero stats without arti bonuses. Works for scripted artifact bonuses.
+    !!VR(atk):*3:2;                                                 //AI plays brawls better, so attack and defense are worth more.
+    !!VR(def):*3:2;
+    !!if&(kno)>18:;                                                 //Knowledge is less necessary after getting "enough," so it is worth less after a certain point.
+        !!VR(knoAdjust:y):S(kno)-18;
+        !!VR(knoAdjust)::2;
+        !!VR(kno):-(knoAdjust);
+    !!en:;
+    !!VR(statWorth:y):S(atk)+(def)+(pwr)+(kno);
+    !!VR(returnWorth):+(statWorth);
 **  --------------------------------------------------
     
     
     
 **  --------------------------------------------------
 **  Returns if the passed player should not receive Human AI benefit.
-**  At the moment of writing this is to prevent player7 (Pink) with Tyrant option on.
+**  At the moment of writing this is to prevent Tyrant player.
 !?FU(huAI_IsBlacklistedPlayer);
     !#VA(player:x);
     !#VA(returnBool:x);
     
-    !!VR(returnBool):S(FALSE);          //Default return false.
+    !!VR(returnBool):S(FALSE);              //Default return false.
     
     !!UN:P770/?(tyrantScriptEnabled:y);     //Is Tyrant enabled.
-    !!if&(tyrantScriptEnabled)=(TRUE)/(player)=(PLAYER_PINK):;
-        !!VR(returnBool):S(TRUE);          //If Tyrant enabled and this is Pink player, return true.
+    !!if&(tyrantScriptEnabled)=(TRUE):;
+        !!if&i^es_770_tyrantPlayer^>=(PLAYER_RED)/i^es_770_tyrantPlayer^<=(PLAYER_PINK):;   //New Tyrant script uses this var instead of always using Pink.
+            !!VR(returnBool)&(player)=i^es_770_tyrantPlayer^:S(TRUE);
+        !!el
+            !!VR(returnBool)&(player)=(PLAYER_PINK):S(TRUE);                                //If the new Tyrant script var is invalid, default to checking for Pink (old Tyrant version in use?).
+        !!en:;
     !!en:;
 **  --------------------------------------------------
     
@@ -288,14 +356,14 @@ ZVSE2
     !!VR(loopPlayer:y):S(currentPlayer)-1;              //begin iterating index backward.
     !!VR(loopPlayer)&(loopPlayer)=-1:S(PLAYER_LAST);    //wrap index if negative.
     
-    !!re i/(loopPlayer)/(currentPlayer)/-1:;    //loop backward until the current player is reached again.
-        !!OW:Ii//?(isKilled:y);         //Get is player alive.
+    !!re i/(loopPlayer)/(currentPlayer)/-1:;            //loop backward until the current player is reached again.
+        !!OW:Ii//?(isKilled:y);                         //Get is player alive.
         !!if&(isKilled)=0:;
-            !!VR(returnPlayer):Si;      //If this player is alive, set it as the return value.
-            !!br:;                      //Break loop since we've found a return player.
+            !!VR(returnPlayer):Si;                      //If this player is alive, set it as the return value.
+            !!br:;                                      //Break loop since we've found a return player.
             !!FU:E;
         !!en:;
-        !!VRi&i=0:S8;        //Loop back to player 8 if we've reached 0 and still have no answer. Set to index 8 instead of 7 because the loop does -1 on the 8 immediately, making it 7.
+        !!VRi&i=0:S8;   //Loop back to player 8 if we've reached 0 and still have no answer. Set to index 8 instead of 7 because the loop does -1 on the 8 immediately, making it 7.
     !!en:;
 **  --------------------------------------------------
     
@@ -312,14 +380,12 @@ ZVSE2
     !!VR(returnSlot):S-1;
     
     !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
-        !!HE(hero):C0/i/?(loopMonType:y)/?(monCount:y);     //Get on type in slot and count.
+        !!HE(hero):C0/i/?(loopMonType:y)/?(monCount:y);                     //Get on type in slot and count.
         !!if|(loopMonType)=(monType)/(loopMonType)=(secondMonType):;        //if this slot matched either unit we wanted.
-            !!VR(returnSlot):Si;            //Set return value to the matched slot.
-            !!br:;      //break since we've found the return value.
+            !!VR(returnSlot):Si;                                            //Set return value to the matched slot.
+            !!br:;                                                          //break since we've found the return value.
         !!en:;
     !!en:;
-    //!VRz1:M3/(returnSlot);        TEST
-    //!IF:L^GetSlot: %z1^;          TEST
     
     
     
@@ -333,9 +399,9 @@ ZVSE2
     !!VR(returnCount):S0;
     
     !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
-        !!HE(hero):C0/i/?(loopMonType:y)/?(monCount:y);     //Get on type in slot and count.
+        !!HE(hero):C0/i/?(loopMonType:y)/?(monCount:y);                     //Get on type in slot and count.
         !!if&(monCount)>0:;
-            !!if|(loopMonType)=(monType)/(loopMonType)=(secondMonType):;        //if this slot matched either unit we wanted.
+            !!if|(loopMonType)=(monType)/(loopMonType)=(secondMonType):;    //if this slot matched either unit we wanted.
                 !!VR(returnCount):+(monCount);
             !!en:;
         !!en:;
@@ -359,8 +425,8 @@ ZVSE2
     
     !#VA(x:y) (y:y) (z:y) (heroX:y) (heroY:y) (heroZ:y);
     
-    !!VR(returnX):S-1;          //Default -1 to denote failure.
-    !!VR(x):S-1;                //setting x-coordinate to -1 will force to start search from scratch
+    !!VR(returnX):S-1;                          //Default -1 to denote failure.
+    !!VR(x):S-1;                                //setting x-coordinate to -1 will force to start search from scratch
     !!VR(nearestDist:y):S-1;
     
     !!HE(hero):O?(owner:y);
@@ -368,15 +434,13 @@ ZVSE2
 
     !!re i;     //infinite loop
         !!UN:U(objType)/(objSubType)/-1/(x)/(y)/(z);    //Get next object. -1=iterate forward.
-        //!IF&(x)<0:L^Found all.^;    TEST
         !!br&(x)<0:;                                    //break if nothing found
         
-        !!co&(z)<>(heroZ):;     //co if not the same aboveground/underground.
+        !!co&(z)<>(heroZ):;                             //co if not the same aboveground/underground.
         
-        //co if (ignoreCBTaken)=1 and this object has been taken.
         !!if&(ignoreCBTaken)=1:;
             !!CB(x)/(y)/(z):T?(isTaken:y);
-            !!co&(isTaken)=1:;
+            !!co&(isTaken)=1:;                          //co if (ignoreCBTaken)=1 and this object has been taken.
         !!en:;
         
         !!FU(huAI_GetDistanceToHero):P(hero)/(x)/(y)/?(distance:y);
@@ -414,16 +478,12 @@ ZVSE2
     
     !!VR(returnDistance):S-1;
     
-    //!VR(xStr:z):M3/(x);        TEST
-    //!VR(yStr:z):M3/(y);        TEST
     !!HE(hero):P?(heroX:y)/?(heroY:y)/d/d;
     !!VR(x):-(heroX);
     !!VR(x)&(x)<0:*-1;
     !!VR(y):-(heroY);
     !!VR(y)&(y)<0:*-1;
     !!VR(returnDistance):S(x)+(y);
-    //!VR(returnDistanceStr:z):M3/(returnDistance);        TEST
-    //!IF:L^returnDistance for %(xStr),%(yStr): %(returnDistanceStr)^;    TEST
 **  --------------------------------------------------
     
     
@@ -437,22 +497,48 @@ ZVSE2
     
     !#VA(x:y) (y:y) (z:y);
     
-    !!VR(x):S-1;            //setting x-coordinate to -1 will force to start search from scratch
+    !!VR(x):S-1;    //setting x-coordinate to -1 will force to start search from scratch
 
-    !!re i;     //infinite loop
+    !!re i;         //infinite loop
         !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y)/(z);      //Get next town. -1=iterate forward.
         !!br&(x)<0:;                                    //break if nothing found
         
         !!CA(x)/(y)/(z):O?(objOwner:y);
-        //!IF:L^Found town owned by %(objOwner) at [%(x),%(y),%(z)].^;        TEST
         !!co&(objOwner)<>(player):;                     //Exit if not owned by current player.
-        //!IF:L^Town is owned by loopPlayer at [%(x),%(y),%(z)].^;        TEST
         
         !!OB(x)/(y)/(z):U?(townType:y);                 //Get town subType.
-        //!IF:L^Found townType:%(townType).^;        TEST
         !!FU(Array_Push):P(returnArray)/(townType);
     !!en:;
     !!FU(Array_SortedUnique):P(returnArray);            //Remove duplicates.
+**  --------------------------------------------------
+
+
+
+**  --------------------------------------------------
+**  Returns the maximum mana of (hero), by calculating it. This needs to be changed
+**  to support mods that modify maximum mana.
+**  This is a function we should have a better solution for.
+!?FU(huAI_GetMaxMana);
+    !#VA(hero:x);
+    !#VA(returnMaxMana:x);
+    
+    !!HE(hero):Fd/d/d/?(know:y);                            //Get Knowledge
+    !!VR(returnMaxMana):S(know)*10;                         //Base mana from Knowledge.
+    
+    !!HE(hero):S(SKILL_INTELLIGENCE)/?(intel:y);            //Get Intelligence.
+    !!VR(intelBonus:e)&(intel)=(SKILL_NOT_LEARNED):S1;      //If no intelligence, no change to mana.
+    !!VR(intelBonus:e)&(intel)=(SKILL_BASIC):S1:4+1;        //If Basic Int, multiply mana by 1.25.
+    !!VR(intelBonus:e)&(intel)=(SKILL_ADVANCED):S1:2+1;     //If Advanced, multiply by 1.5.
+    !!VR(intelBonus:e)&(intel)>=(SKILL_EXPERT):S2;          //If Expert, multiply by 2.
+    
+    !!HE(hero):X?(specType:y)/?(spec:y)/d/d/d/d/d;          //Get hero specialization. If Intelligence, add +5% per level to intelligence bonus.
+    !!if&(spec)=(SKILL_INTELLIGENCE):;
+        !!HE(hero):Ed/?(heroLevel:y);
+        !!VR(specBonus:y):S(heroLevel):20+1;
+        !!VR(intelBonus):*(specBonus);
+    !!en:;
+    
+    !!VR(returnMaxMana):*(intelBonus);
 **  --------------------------------------------------
     
     
@@ -469,14 +555,10 @@ ZVSE2
     !!SN:M(array)/?(lastArrayIndex:y);      //get size of array.
     !!VR(lastArrayIndex):-1;                //index starts at zero.
     
-    //!IF:L^lastArrayIndex: %(lastArrayIndex). Checking for %(contains).^;     TEST
-
     !!re i/0/(lastArrayIndex);              //loop the array.
         !!SN:M(array)/i/?(element:y);
-        //!IF:L^looping %i: %(element)^;     TEST
         !!if&(element)=(contains):;
             !!VR(returnBool):S(TRUE);       //If the array contains the desired element, set return value and exit.
-            //!IF:L^arrayContains: true.^;     TEST
             !!FU:E;
         !!en:;
     !!en:;

@@ -1,78 +1,258 @@
 ZVSE2
 **
-**   Written by Matteo "Ameranth" T. 2022.
+**   Written by Matteo "Ameranth" T. 2023.
 **
 **  Improves AI strength by simulating how a human might consolidate/combine/equip artifacts on their best heroes.
 **  Assembles combo artifacts.
 **  Calculates and equips the "best" set of artifacts to use.
-**
-**  TODO: AI swaps in/out movement artis. Until then, AI prioritizes wearing them.
-**  TODO: Similar to above, but for swapping arts out/in when attacking a human (maybe even swapping when human attacks AI?).
+**  Swaps artifacts in/out at turn start/end.
+**  Sells excess artifacts.
+**  --------------------------
     
     
     
 **  --------------------------
-**  Each day, send artifacts from lesser heroes to main heroes.
-**  Assemble combo artis, and equip the "best" items possible.
+**  Basic triggers for artifact logic:
 !?FU(huAI_dailyAIBestHeroes)&i^huAI_improvedArtifactAI^=(TRUE);
     !#VA(owner:x);
-    !#VA(bestHero:x);
-    !#VA(secondBestHero:x);
     
-    !!OW:H(owner)/2/0;             //Get count of heroes owned by current player in v2.
-    !!VR(heroCount:y):Sv2;
+    !!VRi^huAI_Artifacts_EndOfTurn^:S(FALSE);
+    !!FU(huAI_Artifacts_Daily):P(owner);
     
-    //!IF:L^secondBest is:%(secondBestHero)^;    TEST
-    !!FU(huAI_Artifacts_Main):P(owner)/(bestHero)/(bestHero)/(heroCount);
-    !!FU(huAI_Artifacts_Main)&(secondBestHero)>(NO_HERO):P(owner)/(bestHero)/(secondBestHero)/(heroCount);
     
-!?FU(huAI_Artifacts_Main);
+    
+!?FU(huAI_dailyAIBestHeroes_EndOfTurn)&i^huAI_improvedArtifactAI^=(TRUE);
     !#VA(owner:x);
-    !#VA(bestHero:x);
-    !#VA(receivingHero:x);
-    !#VA(heroCount:x);
     
-    //!IF:L^ArtifactsMain for player%(owner)...^;        TEST
-    //!IF:L^recevingHero is %(receivingHero).^;          TEST
+    !!VRi^huAI_Artifacts_EndOfTurn^:S(TRUE);                //Use this later to equip artifacts differently at end of turn.
     
-    !!re i/1/(heroCount):;                  //iterate all heroes of current player. i=iterated hero. 1=first hero index for HE:H
-        !!OW:H(owner)/2/i;                  //Get id of iterated hero in v2.
-        !!VR(donorHero:y):Sv2;
-        //!IF:L^donorHero is %(donorHero).^;          TEST
-    
-        !!co|(donorHero)=(receivingHero)/(donorHero)=(bestHero)/(donorHero)<=(NO_HERO):;       //Don't try to use receivingHero, bestHero, or a null hero as donor.
-        
-        !!re j/(ART_SLOT_EQUIPPED_FIRST)/(ART_SLOT_LAST):;              //loop artis equipped *and* in backpack.
-            !!VRj&j=(ART_SLOT_WAR_MACHINE_FIRST):S(ART_SLOT_MISC_5);    //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
-            
-            !!FU(GetArtAtSlot):P(donorHero)/j/?(arti:y)/?(artMod:y);
-            !!co|(arti)<7/(arti)=(ART_ARTIFACT_LOCK):;           //Skip no art, scrolls, and special items. This should be the most common result *by far.*
-            
-            !!FU(huAI_IsArtiRelevant):P(arti)/j/?(isRelevant:y);
-            !!co&(isRelevant)=(FALSE):;                                 //co if arti is one that we obviously shouldn't bother with.
-            //!IF:L^arti%(arti) is relevant.^;    TEST
-            
-            //If the arti is better than the one receivingHero has equipped, send it. Else, only send if if it was a relevant combo piece:
-            !!FU(huAI_IsArtiBetterThanEquipped):P(receivingHero)/(arti)/?(isBetter:y)/?(equipSlot:y)/?(equippedArti:y)/?(equippedArtMod:y);
-            !!if&(isBetter)=(TRUE):;
-                //!IF:L^arti%(arti) is better.^;    TEST
-                !!FU(huAI_UnequipArt):P(receivingHero)/(equipSlot)/(equippedArti)/(equippedArtMod);     //Unequip old item from slot if it existed.
-                !!FU(huAI_SendArti):P(donorHero)/(receivingHero)/(arti)/(artMod);       //Send arti from donorHero to receivingHero.
-                !!co:;                                                                  //co since we're done with this arti.
-            !!el:;
-                //!IF:L^arti%(arti) is worse.^;    TEST
-                !!HE(receivingHero):A2/(arti)/?(count:y);    //Get count of arti.
-                !!co&(count)>0:;                        //co if hero already has it.
-                
-                !!FU(huAI_IsArtiRelevantComboPiece):P(receivingHero)/(arti)/?(artiCombo:y);             //Get if this is a combo piece we want, even if it isn't better than what we have equipped.
-                !!FU(huAI_SendArti)&(artiCombo)>-1:P(donorHero)/(receivingHero)/(arti)/(artMod);        //Send arti from donorHero to receivingHero if it was.
-            !!en:;
-        !!en:;
-        
+    !!re i/1/i^huAI_currentHero_Count^:;                    //Don't do arti sending again, just assemble combos/recalc equipment before ending turn.
+        !!FU(huAI_AssembleCombos):Pi^huAI_currentHero_%i^;
+        !!FU(huAI_RecalcEquipment):Pi^huAI_currentHero_%i^;
     !!en:;
     
-    !!FU(huAI_AssembleCombos):P(receivingHero);          //Try to assemble any combo artis with the items (receivingHero) has after items are sent.
-    !!FU(huAI_RecalcEquipment):P(receivingHero);         //Recalculate and equip the "best" equipment that (receivingHero) has after items are sent.
+    
+    
+!?FU(OnBeforeBattle)&i^huAI_on^=(TRUE)/i^huAI_improvedArtifactAI^=(TRUE);
+    !!FU&i^battle_aiOnly^=(TRUE):E;                                         //Exit if no human actor, because swapping equipment might become expensive if done many times. Also, the player won't notice any difference anyway.
+    
+    !!VRi^huAI_Artifacts_InCombat^:S(TRUE);
+    !!FU(huAI_RecalcEquipment)&i^battle_ai_0^=(TRUE)/i^battle_hero_0^>(NO_HERO):Pi^battle_hero_0^;     //Recalculate equipment for the AI. This helps if AI was caught wearing end-of-turn arti-swap equipment,
+    !!FU(huAI_RecalcEquipment)&i^battle_ai_1^=(TRUE)/i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^;     //which makes sense because human players are good at estimating the reach of potential attackers
+    
+!?FU(OnAfterBattleUniversal)&i^huAI_on^=(TRUE)/i^huAI_improvedArtifactAI^=(TRUE);
+    !!VRi^huAI_Artifacts_InCombat^&i^huAI_Artifacts_InCombat^=(TRUE):S(FALSE);
+**  --------------------------
+    
+    
+    
+**  --------------------------
+**  Each turn and end of turn, send artifacts from lesser heroes to main heroes.
+**  Assemble combo artis, and equip the "best" items possible.
+**  When entering combat with a human, recalc for combat-specific items.
+!?FU(huAI_Artifacts_Daily);
+    !#VA(owner:x);
+    
+    //Loop up from worst hero to best.
+    !!re i/i^huAI_currentHero_Count^/1/-1:;
+        !!VR(donorHero:y):Si^huAI_currentHero_%i^;
+        !!FU(huAI_Artifacts_SendToOtherHeroes):P(donorHero)/(FALSE);
+        !!FU(huAI_AssembleCombos):P(donorHero);          //Try to assemble any combo artis.
+        !!FU(huAI_RecalcEquipment):P(donorHero);         //Recalculate and equip the "best" equipment.
+    !!en:;
+    
+    
+!?FU(huAI_Artifacts_SendToOtherHeroes);
+    !#VA(donorHero:x);
+    !#VA(liquidate:x);
+    !#VA(returnCount:x);             //returns the number of artifacts moved/sold.
+    
+    //The parent loop should iterate from worst hero to best hero, and internal foo loops from best down to itself for sending.
+    //After internal foo is done, donor hero is allowed to assemble/recalc. Doing this means that each hero only does these once, and top heroes only do so after all have sent to them.
+    !!VR(returnCount):S0;
+    
+    !!re i/1/i^huAI_currentHero_Count^:;                                    //loop from best hero down to self. Stop at self since subsequent heroes must be "worse."
+        !!VR(receivingHero:y):Si^huAI_currentHero_%i^;
+        !!FU&(receivingHero)=(donorHero):E;                                 //Exit once looped to self.
+        
+        !!FU(huAI_GetBackpackCount):P(receivingHero)/?(bpCount:y);          //Only send artis to a hero who does not have a full backpack.
+        !!co&(bpCount)>=64:;                                                //co if backpack is full (64 slots is full).
+        
+        !!FU(huAI_GetBackpackCount):P(donorHero)/?(donorBpCount:y);         //Get donor hero bp count so we know when to stop looping backpack.
+        !!VR(donorBpLooped:y):S0;                                           //When artis looped is = arti bpcount, we know we can stop looping.
+        !!re j/(ART_SLOT_EQUIPPED_FIRST)/(ART_SLOT_LAST):;                  //loop artis equipped *and* in backpack.
+            !!VRj&j=(ART_SLOT_WAR_MACHINE_FIRST):S(ART_SLOT_MISC_5);        //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
+            !!br&j>=(ART_SLOT_BACKPACK_FIRST)/(donorBpLooped)>=(donorBpCount):;         //Break if we are looping backpack, but have already considered all artifacts in backpack.
+            
+            !!FU(GetArtAtSlot):P(donorHero)/j/?(arti:y)/?(artMod:y);
+            !!VR(donorBpLooped)&j>=(ART_SLOT_BACKPACK_FIRST)/(arti)>(NO_ART):+1;        //Increment count of backpack artis handled, so that we do not need to loop every backpack slot needlessly.
+            !!if&(arti)<7:;                                                 //Skip no art and special items.
+                !!co&(arti)<>(ART_SPELL_SCROLL):;                           //Do not skip scrolls though.
+            !!en:;
+            
+            !!FU(huAI_IsArtiRelevant):P(arti)/j/?(isRelevant:y);
+            !!co&(isRelevant)=(FALSE):;                                     //co if arti is one that we obviously shouldn't bother with.
+            
+            //If the arti is better than the one receivingHero has equipped, send it. Else, only send if if it was a relevant combo piece or swappable:
+            !!FU(huAI_IsArtiBetterThanEquipped):P(receivingHero)/(arti)/(artMod)/?(isBetter:y)/?(equipSlot:y)/?(equippedArti:y)/?(equippedArtMod:y)/?(isSwappable:y);
+            !!if&(isBetter)=(TRUE):;
+                !!FU(huAI_UnequipArt):P(receivingHero)/(equipSlot)/(equippedArti)/(equippedArtMod);     //Unequip old item from slot if it existed.
+                !!FU(huAI_SendArti):P(donorHero)/(receivingHero)/(arti)/(artMod);                       //Send arti from donorHero to receivingHero.
+                !!VR(returnCount):S+1;
+                !!FU(huAI_GetBackpackCount):P(receivingHero)/?(bpCount);                                //Check after sending an arti if the backpack is full.
+                !!br&(bpCount)>=64:;                                                                    //Break if it is.
+            !!el:;
+                !!FU(huAI_GetArtCount):P(receivingHero)/(arti)/(artMod)/?(count:y);                     //Get count of arti for hero.
+                !!co&(count)>0:;                                                                        //co if hero already has it.
+                
+                !!FU(huAI_IsArtiRelevantComboPiece):P(receivingHero)/(arti)/?(artiCombo:y);             //Get if this is a combo piece or swappable we want, even if it isn't better than what we have equipped.
+                !!if|(artiCombo)>-1/(isSwappable)=(TRUE):;
+                    !!FU(huAI_SendArti):P(donorHero)/(receivingHero)/(arti)/(artMod);                   //Send arti from donorHero to receivingHero if it was.
+                    !!VR(returnCount):S+1;
+                    !!FU(huAI_GetBackpackCount):P(receivingHero)/?(bpCount);                            //Check after sending an arti if the backpack is full.
+                    !!br&(bpCount)>=64:;                                                                //Break if it is.
+                !!el&(liquidate)=(TRUE):;
+                    !!FU(huAI_SellArti):P(donorHero)/(arti)/(artMod);                                   //If no one needed it, sell it if requested to liquidate the hero.
+                    !!VR(returnCount):S+1;
+                !!en:;
+            !!en:;
+        !!en:;
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**  Recalculate and equip the "best" artis hero has.
+!?FU(huAI_RecalcEquipment);
+    !#VA(hero:x);
+    
+    !!HE(hero):B2/?(heroClass:y);           //Get hero class.
+    !!VR(heroTown:y):S(heroClass):2;        //Divide class by 2 for town index.
+    
+    //---
+    //The first thing we must do is equip any combo artis the hero
+    //might have, because the combo locks complicate everything:
+    !!VR(doUnequip:y):S(TRUE);              //We unequip everything before equipping the first combo. Once a combo is equipped, we don't unequip.
+    
+    !!if&i^timerWeekDay^=7/i^huAI_Artifacts_EndOfTurn^=(TRUE):;     //Only consider Statue of Legion at the end of the week. If we have Statue of Legion, it is very important to equip it at this time.
+        !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_STATUE_OF_LEGION)/?(equipSuccess:y)/(doUnequip);
+        !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    !!en:;
+    
+    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ELIXIR_OF_LIFE)/?(equipSuccess:y)/(TRUE);
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);         //Do not force subsequent unequip if previous equip succeeded.
+    !!VR(hasEoL:y):S(equipSuccess);                         //We need to know if the hero has the Elixir of Life, because having it influences the priority of other combos.
+    
+    !!if&i^huAI_Artifacts_EndOfTurn^=(TRUE):;               //Only consider WW at end of turn.
+        !!HE(hero):I?(manaCurrent:y);                       //Get current mana.
+        !!FU(huAI_GetMaxMana):P(hero)/?(manaMax:y);         //Get max mana.
+        !!VR(manaRatio:e):S(manaCurrent):(manaMax);         //Percent of current vs max mana.
+        !!if&(manaRatio)<0.85:;                             //Use WW if less than 85% mana.
+            !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_WIZARDS_WELL)/?(equipSuccess:y)/(doUnequip);     //WW doesn't clash with other combos, but is only used at end of turn if missing mana and mana refill handicap is not on.
+            !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+        !!en:;
+    !!en:;
+    
+    !!FU(huAI_TryEquipFinishedCombo)&(heroTown)=(TOWN_NECROPOLIS):P(hero)/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(equipSuccess:y)/(doUnequip);     //CotUK has highest priority if this hero is Necropolis, otherwise it has none.
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ANGELIC_ALLIANCE)/?(equipSuccess:y)/(doUnequip);
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ARMAGEDDONS_BLADE)/?(equipSuccess:y)/(doUnequip);                                 //Armageddon's Blade is not a combo, but it is so powerful we treat it like one.
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo)&(hasEoL)=(FALSE):P(hero)/(ART_POWER_OF_THE_DRAGON_FATHER)/?(equipSuccess:y)/(doUnequip);       //PotDF priority is high if hero does NOT have EoL.
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_BARBARIAN_LORDS_AXE_OF_FEROCITY)/?(equipSuccess:y)/(doUnequip);
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ARMOR_OF_THE_DAMNED)/?(equipSuccess:y)/(doUnequip);
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_BOW_OF_THE_SHARPSHOOTER)/?(equipSuccess:y)/(doUnequip);
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    !!FU(huAI_TryEquipFinishedCombo)&(hasEoL)=(TRUE):P(hero)/(ART_POWER_OF_THE_DRAGON_FATHER)/?(equipSuccess:y)/(doUnequip);        //PotDF priority is low if hero DOES have EoL.
+    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+    
+    
+    //---
+    !!HE(hero):O?(owner:y);
+    !!OW:C?(currentPlayer:y);
+    //Once combo artis are equipped (if any), we need to loop the
+    //backpack to see if the hero has any artis that are better
+    //than those equipped.
+    !!FU(huAI_GetBackpackCount):P(hero)/?(bpCount:y);               //Get bp count so that we do not need to loop backpack needlessly.
+    !!VR(bpLooped:y):S0;                                            //When artis looped is = arti bpcount, we know we can stop looping.
+    !!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST):;     //loop artis in backpack.
+        !!br&(bpLooped)>=(bpCount):;
+        
+        !!FU(GetArtAtSlot):P(hero)/i/?(arti:y)/?(artMod:y);
+        !!VR(bpLooped)&(arti)>(NO_ART):+1;
+        !!if&(arti)<7:;                                 //Skip no art and special items.
+            !!co&(arti)<>(ART_SPELL_SCROLL):;           //Don't skip scrolls.
+        !!en:;
+        
+        
+        !!UN:A(arti)/4/?(isCompleteCombo:y);
+        !!co&(isCompleteCombo)>=0:;                     //Skip finished combos, these need to be equipped in a special manner above.
+        
+        !!FU(huAI_IsArtiBetterThanEquipped):P(hero)/(arti)/(artMod)/?(isBetter:y)/?(equipSlot:y)/?(equippedArti:y)/?(equippedArtMod:y)/?(isSwappable:y);
+        !!if&(isBetter)=(TRUE):;
+            !!FU(huAI_SwapArt):P(hero)/(equipSlot)/(equippedArti)/(equippedArtMod)/(arti)/(artMod);         //Swap old art for new art.
+        !!el&(owner)=(currentPlayer):;                                                                      //Do not attempt to do the following if it is not our turn, because the huAI_currentHero_... vars only exist for the current player!
+            //If this is our best hero and this arti is not better, see if
+            //secondBestHero can use it. If not, sell the arti.
+            !!FU(huAI_IsArtiRelevantComboPiece):P(hero)/(arti)/?(artiCombo:y);
+            !!if|(artiCombo)>=0/(isSwappable)=(TRUE):;
+                !!HE(hero):A2/(arti)/?(count:y);                                                            //Get count of arti.
+                !!co&(count)=1:;                                                                            //co if this is a combo piece or swappable we might want, and I only have 1 of it.
+            !!en:;
+            !!if&(hero)=i^huAI_currentHero_1^:;
+                !!FU(huAI_IsArtiBetterThanEquipped):Pi^huAI_currentHero_2^/(arti)/(artMod)/?(isBetter)/?(equipSlot)/?(equippedArti)/?(equippedArtMod)/?(isSwappable);
+                !!if&(isBetter)=(TRUE):;
+                    !!FU(huAI_UnequipArt):Pi^huAI_currentHero_2^/(equipSlot)/(equippedArti)/(equippedArtMod);           //Unequip the worse arti.
+                    !!FU(huAI_SendArti):P(hero)/i^huAI_currentHero_2^/(arti)/(artMod);                                  //Send arti to secondBestHero.
+                !!el:;
+                    !!if&(isSwappable)=(TRUE):;
+                        !!FU(huAI_SendArti):P(hero)/i^huAI_currentHero_2^/(arti)/(artMod);                              //If arti is swappable, send it even if it was worse.
+                    !!el:;
+                        !!FU(huAI_SellArti):P(hero)/(arti)/(artMod);                                                    //If it was not swappable, sell it.
+                    !!en:;
+                !!en:;
+            !!el:;
+                //If this is not our best hero, just sell the arti if we cannot use it.
+                !!FU(huAI_SellArti):P(hero)/(arti)/(artMod);
+            !!en:;
+        !!en:;
+    !!en:;
+    
+        
+**  Sell the passed (arti) for (hero), using Black Market exchange rates.
+!?FU(huAI_SellArti);
+    !#VA(hero:x);
+    !#VA(arti:x);
+    !#VA(artMod:x);
+    
+    !!UN:A(arti)/4/?(isCompleteCombo:y);
+    !!FU|(isCompleteCombo)>=0/(arti)=(ART_ARMAGEDDONS_BLADE):E;                             //Never sell complete combos or arma blade.
+    
+    !!UN:A(arti)/1/?(artiValue:y);              //Get item's value.
+    !!FU&(artiValue)<=0:E;                      //Don't sell if it isn't worth anything.
+        
+    !!FU(huAI_RemoveArtiFromhero):P(hero)/(arti)/(artMod)/1/?(removeArtiSuccess:y);         //Remove 1 of (arti) from (donorHero).
+    
+    !!if&(removeArtiSuccess)=(TRUE):;
+        !!OW:C?(player:y);                          //Get current player.
+        
+        !!VR(artiValue):*2:5;                       //Multiplier for selling arti at Black Market.
+        !!OW:R(player)/(RES_GOLD)/d(artiValue);     //Add Gold.
+        //!IF&(arti)=158:L^player%(player) sold arti%(arti) for %(artiValue) gold.^;        TEST
+    !!en:;
+**  --------------------------
     
 
 
@@ -86,10 +266,9 @@ ZVSE2
         
     !!VR(returnCombo):S-1;       //Default return -1.
     
-    //Return combo if arti is a combo piece of Angelic alliance, Cloak of the Undead King, Elixir of Life,
-    //Armor of the Damned, Power of the Dragon Father, Bow of the Sharpshooter, or Barbarian Lord's Axe of Ferocity.
+    //Return combo if arti is NOT from Titan's Thunder, Admiral's Hat, or Ring of the Magi. TODO: Admiral's Hat gets used on water maps.
     !!UN:A(arti)/5/?(returnCombo);
-    !!VR(returnCombo)&(returnCombo)<>0/(returnCombo)<>1/(returnCombo)<>2/(returnCombo)<>3/(returnCombo)<>5/(returnCombo)<>8/(returnCombo)<>12:S-1;
+    !!VR(returnCombo)|(returnCombo)=6/(returnCombo)=7/(returnCombo)=10:S-1;
     //!IF:L^Arti%(arti) belongs to combo: %(returnCombo).^;     TEST
 **  --------------------------
 
@@ -106,7 +285,7 @@ ZVSE2
     
     //!VR(returnBool)&(arti)>=0/(arti)<=6:S(FALSE);          //Spell book through first aid tent. Grail is in here too, but we shouldn't be moving that around. EDIT: Not needed because calling code checks this anyway.
     !!VR(returnBool)&(arti)>=63/(arti)<=65:S(FALSE);        //Eagle eye artis.
-    !!VR(returnBool)&(arti)>=109/(arti)<=122:S(FALSE);      //Resource artis and Legion pieces. We don't want these equipped on a fighting hero anyway.
+    //!VR(returnBool)&(arti)>=109/(arti)<=122:S(FALSE);      //Resource artis and Legion pieces. We don't want these equipped on a fighting hero anyway. EDIT: We send these now because of arti swapping.
 **  --------------------------
 
 
@@ -124,18 +303,11 @@ ZVSE2
     
     !!VR(returnBool):S(FALSE);                   //Default return false.
     
-    //!if&(arti)=(ART_BARBARIAN_LORDS_AXE_OF_FEROCITY):;                                     //This combo arti does not correctly remove with HE:A, so we need a special case to properly remove it and its combo locks.
-        //!FU(GetArtAtSlot):P(donorHero)/(ART_SLOT_RIGHT_HAND)/?(checkArt:y);
-        //!FU(UnequipArtFromSlot)&(checkArt)=(arti):P(donorHero)/(ART_SLOT_RIGHT_HAND);      //Remove the equipped arti.
-        //!VR(removeArtiSuccess:y):S(TRUE);
-    //!el:;
-        !!FU(huAI_RemoveArtiFromhero):P(donorHero)/(arti)/1/?(removeArtiSuccess:y);         //Remove 1 of (arti) from (donorHero).
-    //!en:;
+    !!FU(huAI_RemoveArtiFromhero):P(donorHero)/(arti)/(artMod)/1/?(removeArtiSuccess:y);         //Remove 1 of (arti) from (donorHero).
     !!if&(removeArtiSuccess)=(TRUE):;
         !!FU(AddArtToHero):P(receivingHero)/(arti)/(artMod);    //Add and try to equip new arti for receivingHero.
         !!VR(returnBool):S(TRUE);
     !!en:;
-    
     
     //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
     //!HE(receivingHero):B0/?(receivingHeroName:z);      TEST - Receiving hero name
@@ -147,53 +319,20 @@ ZVSE2
 
 
 **  --------------------------
-**  Remove (removeCount) (arti) from (hero).
-**  This is done by using UnequipArtFromSlot and HE:A3 to remove all of passed arti, then adding the remainder back.
-**  We *CANNOT* use HE:A- to remove artifacts because it causes issues with modded combo artis and crashes with arti153 (probably others too).
-**  Returns true if at least one arti was removed.
-!?FU(huAI_RemoveArtiFromhero);
-    !#VA(hero:x);
-    !#VA(arti:x);
-    !#VA(removeCount:x);
-    !#VA(returnBool:x);
-    
-    !!VR(returnBool):S(FALSE);              //Default return false.
-    
-    !!HE(hero):A2/(arti)/?(count:y)/?(equippedCount:y);       //Get count and equippedCount of arti for hero. Does not work for scrolls.
-    //!IF:L^hero%(hero) has %(count) of arti%(arti), %(equippedCount) equipped.^;       TEST
-    !!FU&(count)=0:E;                       //Exit if hero doesn't have any of the passed arti.
-    
-    !!VR(returnBool):S(TRUE);               //Return true since at least 1 arti is had.
-    
-    !!if&(equippedCount)>0:;
-        !!FU(huAI_UnequipAllArtis):P(hero)/(arti)/(TRUE);       //If at least one is equipped, unequip and destroy them all properly before using HE:A3 to remove the rest from backpack.
-    !!en:;
-    !!HE(hero)&(equippedCount)<(count):A3/(arti)/(count)/0;    //If some copies were not equipped, remove those that remain with HE:A3.
-    
-    !!VR(count):-(removeCount);             //Minus (removeCount) to count since this is how many we want to keep.
-    !!FU&(count)<=0:E;                      //If we shouldn't add any artis back, exit.
-    
-    !!re i/1/(count);
-        //!IF:L^Adding arti%(arti) back...^;     TEST
-        !!FU(AddArtToHero):P(hero)/(arti)/(NO_ART_MOD);     //Continue adding the arti to hero until we've restored the "extra" copies that HE:A deleted before.
-    !!en:;
-**  --------------------------
-
-
-
-**  --------------------------
 **  Get if the passed artifact is better than the artifact equipped by hero in the corresponding slot.
 **  For rings/misc, the comparison is made against the "worst" item equipped.   
 **  Also returns the item compared against, its slot, and its mod.
 !?FU(huAI_IsArtiBetterThanEquipped);
     !#VA(hero:x);
     !#VA(arti:x);
+    !#VA(artMod:x);
     !#VA(returnBool:x);
     !#VA(returnSlot:x);
     !#VA(returnArti:x);
     !#VA(returnArtMod:x);
+    !#VA(isSwappable:x);                //Denotes that the arti might be useful under different circumstances, so the hero might want to keep this even if it is not better.
     
-    !!VR(returnBool):S(FALSE);      //Default return false.
+    !!VR(returnBool):S(FALSE);          //Default return false.
     
     !!UN:A(arti)/2/?(artiSlotP2:y);     //Get what slot the arti can be equipped to.
     !!FU&(artiSlotP2)=0:E;              //Exit if this arti is backpack only. This only happens for Grail and resource arts with Backpack Artifacts script.
@@ -203,18 +342,23 @@ ZVSE2
     
     !!FU(huAI_isSlotLocked):P(hero)/(returnSlot)/?(isLocked:y);     //Get if equipped arti is a combo lock.
     !!if&(returnArti)<=(NO_ART)/(isLocked)=(FALSE):;
-        !!VR(returnBool):S(TRUE);       //If no arti equipped in the slot, return true and exit. We don't want to exit here if it's a combo lock because GetArtiValue will then prevent it from being swapped.
+        !!VR(returnBool):S(TRUE);                                   //If no arti equipped in the slot, return true and exit. We don't want to exit here if it's a combo lock because GetArtiValue will then prevent it from being swapped.
         !!FU:E;
     !!en:;
     
-    !!FU(huAI_GetArtiValueForHero):P(hero)/(arti)/(returnSlot)/(returnArtMod)/?(artiValue:y);
+    !!FU(huAI_GetArtiValueForHero):P(hero)/(arti)/(returnSlot)/(artMod)/?(artiValue:y)/?(isSwappable);              //Get value of arti in question.
     !!if&(isLocked)=(TRUE):;
         !!VR(equippedArtiValue:y):S(INT_MAX);     //If equipped arti slot was locked (via combo arti), return maximum value, so that it is never attempted to replace.
     !!el:;
-        !!FU(huAI_GetArtiValueForHero):P(hero)/(returnArti)/(returnSlot)/(returnArtMod)/?(equippedArtiValue:y);
+        !!FU(huAI_GetArtiValueForHero):P(hero)/(returnArti)/(returnSlot)/(returnArtMod)/?(equippedArtiValue:y);     //Get value of equipped arti.
     !!en:;
     
     !!if&(artiValue)>(equippedArtiValue):;
+        //Finally, check if this arti is already equipped. If it is, then stacking it has no value.
+        //We cannot do this in the body of huAI_GetArtiValueForHero because then artis we have equipped will have no value.
+        !!FU(huAI_GetArtCount):P(hero)/(arti)/(returnArtMod)//?(countArtiEQ:y);         //Get count of arti already equipped.
+        !!FU&(countArtiEQ)>0:E;                                                         //Exit if arti is already equipped (don't stack artis because many (all?) do not stack).
+        
         //!IF:L^arti%(arti) had more value than equippedArti%(returnArti), with %(artiValue) vs %(equippedArtiValue).^;       TEST
         !!VR(returnBool):S(TRUE);
     !!en:;
@@ -236,7 +380,7 @@ ZVSE2
     //If slot isn't ring or misc, return (artiSlotP2) minus 1. This re-maps the slot indexes from P2 format to AP format (except boots).
     !!if&(artiSlotP2)<>7/(artiSlotP2)<>9:;
         !!VR(returnSlot):S(artiSlotP2)-1;
-        !!VR(returnSlot)&(artiSlotP2)=8:S8;        //If the slot was boots, reset it to 8, which is also boots in AP format.
+        !!VR(returnSlot)&(artiSlotP2)=8:S8;         //If the slot was boots, reset it to 8, which is also boots in AP format.
         !!FU(GetArtAtSlot):P(hero)/(returnSlot)/?(returnArti)/?(returnArtMod);
         !!FU:E;                                     //Exit since we're done.
     !!en:;
@@ -246,7 +390,7 @@ ZVSE2
     !!VR(loopSlotStart:y):S-1;
     !!VR(loopSlotEnd:y):S-1;
     
-    !!if&(artiSlotP2)=7:;      //If it's a ring.
+    !!if&(artiSlotP2)=7:;       //If it's a ring.
         !!VR(loopSlotStart):S(ART_SLOT_RIGHT_RING);
         !!VR(loopSlotEnd):S(ART_SLOT_LEFT_RING);
     !!el:;                      //If it's misc.
@@ -254,11 +398,11 @@ ZVSE2
         !!VR(loopSlotEnd):S(ART_SLOT_MISC_5);
     !!en:;
     
-    !!VR(worstArtiValue:y):S-1;
+    !!VR(worstArtiValue:y):S99999;
     !!re i/(loopSlotStart)/(loopSlotEnd):;
-        !!VRi&i=(ART_SLOT_WAR_MACHINE_FIRST):S(ART_SLOT_MISC_5);    //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
+        !!VRi&i=(ART_SLOT_WAR_MACHINE_FIRST):S(ART_SLOT_MISC_5);                            //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
         !!FU(GetArtAtSlot):P(hero)/i/?(loopArti:y)/?(loopArtiMod:y);
-        !!FU(huAI_GetArtiValueForHero):P(hero)/(loopArti)/i/(loopArtiMod)/?(loopValue:y);     //Get arti value.
+        !!FU(huAI_GetArtiValueForHero):P(hero)/(loopArti)/i/(loopArtiMod)/?(loopValue:y);   //Get arti value.
         !!if|(loopValue)<(worstArtiValue)/(returnSlot)=-1:;
             !!VR(returnSlot):Si;
             !!VR(returnArti):S(loopArti);
@@ -286,13 +430,23 @@ ZVSE2
     !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_1^;    //Cloak of the Undead King.
     !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_2^;    //Elixir of Life.
     !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_3^;    //Armor of the Damned.
+    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_4^;    //Statue of Legion.
     !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_5^;    //Power of the Dragon Father.
     !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_8^;    //Bow of the Sharpshooter.
+    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_9^;    //Wizard's Well. We will only use this if mana refill handicap is not on.
+    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_11^;   //Cornucopia.
     !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_12^;   //Barbarian Lord's Axe of Ferocity.   Does not work with HE:A for unequip, TODO: fix this.
         
+        
+    !!FU(huAI_GetBackpackCount):P(hero)/?(bpCount:y);
+    !!VR(loopedBp:y):S0;
     !!re i/(ART_SLOT_EQUIPPED_FIRST)/(ART_SLOT_LAST):;  //loop artis equipped *and* in backpack.
+        !!br&(loopedBp)>=(bpCount)/i>=(ART_SLOT_BACKPACK_FIRST):;
+        
         !!FU(GetArtAtSlot):P(hero)/i/?(arti:y);
-        !!co|(arti)<=(NO_ART)/(arti)=(ART_ARTIFACT_LOCK):;   //co if no art in this slot. This should be the most common result *by far.*
+        !!co&(arti)<=(NO_ART):;                         //co if no art in this slot.
+        
+        !!VR(loopedBp)&i>=(ART_SLOT_BACKPACK_FIRST):+1;
         
         !!FU(huAI_IsArtiRelevantComboPiece):P(hero)/(arti)/?(artiCombo:y);
         !!co&(artiCombo)<0:;                            //co if not a combo we care about.
@@ -304,7 +458,7 @@ ZVSE2
         
         !!FU(Array_Push):Pi^huAI_cachedComboArtis_%(artiCombo)^/(arti);
         !!SN:Mi^huAI_cachedComboArtis_%(artiCombo)^/?(arraySize:y);  //get size of array.
-        !!FU(huAI_AssembleCombos_GetIsComplete):P(artiCombo)/(arraySize)/?(hasAllPieces:y);
+        !!FU(huAI_AssembleCombos_IsComplete):P(artiCombo)/(arraySize)/?(hasAllPieces:y);
         !!FU(huAI_AssembleCombos_Combine)&(hasAllPieces)=(TRUE):P(hero)/(artiCombo)/(arraySize);
     !!en:;
     
@@ -312,7 +466,7 @@ ZVSE2
     
 **  Compare size to the number of artifacts expected in an arti combo,
 **  if the size matches, return true.
-!?FU(huAI_AssembleCombos_GetIsComplete);
+!?FU(huAI_AssembleCombos_IsComplete);
     !#VA(combo:x);
     !#VA(size:x);
     !#VA(returnBool:x);
@@ -323,8 +477,11 @@ ZVSE2
     !!VR(returnBool)&(combo)=1/(size)=3:S(TRUE);        //3 pieces for CotUK.
     !!VR(returnBool)&(combo)=2/(size)=3:S(TRUE);        //3 pieces for EoF.
     !!VR(returnBool)&(combo)=3/(size)=4:S(TRUE);        //4 pieces for AotD.
+    !!VR(returnBool)&(combo)=4/(size)=5:S(TRUE);        //4 pieces for Statue of Legion.
     !!VR(returnBool)&(combo)=5/(size)=9:S(TRUE);        //9 pieces for PotDF.
     !!VR(returnBool)&(combo)=8/(size)=3:S(TRUE);        //3 pieces for BotSS.
+    !!VR(returnBool)&(combo)=9/(size)=3:S(TRUE);        //3 pieces for WW.
+    !!VR(returnBool)&(combo)=10/(size)=4:S(TRUE);       //3 pieces for Cornucopia.
     !!VR(returnBool)&(combo)=12/(size)=4:S(TRUE);       //4 pieces for BLAoF.
     
     
@@ -335,90 +492,24 @@ ZVSE2
     !#VA(combo:x);
     !#VA(arraySize:x);
     
-    !!VR(arrayLastIndex:y):S(arraySize)-1;      //index starts at zero.
+    !!VR(arrayLastIndex:y):S(arraySize)-1;                                  //index starts at zero.
         
-    !!re i/0/(arrayLastIndex):;     //loop combo pieces
+    !!re i/0/(arrayLastIndex):;                                             //loop combo pieces
         !!SN:Mi^huAI_cachedComboArtis_%(combo)^/i/?(loopedArti:y);
-        !!FU(huAI_RemoveArtiFromhero):P(hero)/(loopedArti)/1;       //Remove combo pieces from hero.
+        !!FU(huAI_RemoveArtiFromhero):P(hero)/(loopedArti)/-1/1;            //Remove combo pieces from hero.
     !!en:;
     !!VR(comboArti:y)&(combo)=0:S(ART_ANGELIC_ALLIANCE);                    //AA.
     !!VR(comboArti:y)&(combo)=1:S(ART_CLOAK_OF_THE_UNDEAD_KING);            //CotUK.
     !!VR(comboArti:y)&(combo)=2:S(ART_ELIXIR_OF_LIFE);                      //EoF.
     !!VR(comboArti:y)&(combo)=3:S(ART_ARMOR_OF_THE_DAMNED);                 //AotD.
+    !!VR(comboArti:y)&(combo)=4:S(ART_STATUE_OF_LEGION);                    //Statue of Legion.
     !!VR(comboArti:y)&(combo)=5:S(ART_POWER_OF_THE_DRAGON_FATHER);          //PotDF.
     !!VR(comboArti:y)&(combo)=8:S(ART_BOW_OF_THE_SHARPSHOOTER);             //BotSS.
+    !!VR(comboArti:y)&(combo)=9:S(ART_WIZARDS_WELL);                        //WW.
+    !!VR(comboArti:y)&(combo)=10:S(ART_CORNUCOPIA);                         //Cornucopia.
     !!VR(comboArti:y)&(combo)=12:S(ART_BARBARIAN_LORDS_AXE_OF_FEROCITY);    //BLAoF.
     
-    !!FU(AddArtToHero)P(hero)/(comboArti)/(NO_ART_MOD);         //Add the finished combo arti.
-    
-    //!HE(hero):B0/?(heroName:z);        TEST
-    //!VR(comboStr:z):M3/(combo);        TEST
-    //!IF:L^%(hero) assembled combo arti:%(combo)!^;      TEST
-**  --------------------------
-
-
-
-**  --------------------------
-**  Recalculate and equip the "best" artis hero has.
-!?FU(huAI_RecalcEquipment);
-    !#VA(hero:x);
-    
-    !!HE(hero):B2/?(heroClass:y);           //Get hero class.
-    !!VR(heroTown:y):S(heroClass):2;        //Divide class by 2 for town index.
-    
-    //---
-    //The first thing we must do is equip any combo artis the hero
-    //might have, because the combo locks complicate everything:
-    !!VR(doUnequip:y):S(TRUE);              //We unequip everything before equipping the first combo. Once a combo is equipped, we don't unequip.
-    
-    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ELIXIR_OF_LIFE)/?(equipSuccess:y)/(TRUE);
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);         //Do not force subsequent unequip if previous equip succeeded.
-    !!HE(hero):A2/(ART_ELIXIR_OF_LIFE)/?(hasEoL:y);         //We need to know if the hero has the Elixir of Life, because having it influences the priority of other combos.
-    
-    !!FU(huAI_TryEquipFinishedCombo)&(heroTown)=(TOWN_NECROPOLIS):P(hero)/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(equipSuccess:y)/(doUnequip);     //CotUK has highest priority if this hero is Necropolis, otherwise it has none.
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ANGELIC_ALLIANCE)/?(equipSuccess:y)/(doUnequip);
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    !!FU(huAI_TryEquipFinishedCombo)&(hasEoL)=(FALSE):P(hero)/(ART_POWER_OF_THE_DRAGON_FATHER)/?(equipSuccess:y)/(doUnequip);       //PotDF priority is high if hero does NOT have EoL.
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_BARBARIAN_LORDS_AXE_OF_FEROCITY)/?(equipSuccess:y)/(doUnequip);
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ARMOR_OF_THE_DAMNED)/?(equipSuccess:y)/(doUnequip);
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_BOW_OF_THE_SHARPSHOOTER)/?(equipSuccess:y)/(doUnequip);
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    !!FU(huAI_TryEquipFinishedCombo)&(hasEoL)=(TRUE):P(hero)/(ART_POWER_OF_THE_DRAGON_FATHER)/?(equipSuccess:y)/(doUnequip);        //PotDF priority is low if hero DOES have EoL.
-    !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
-    
-    //!IF:L^Searching for mundane equipment...^;     TEST
-    
-    //---
-    //Once combo artis are equipped (if any), we need to loop the
-    //backpack to see if the hero has any artis that are better
-    //than those equipped.
-    !!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST):;     //loop artis in backpack.
-        !!FU(GetArtAtSlot):P(hero)/i/?(arti:y)/?(artMod:y);
-        !!co|(arti)<7/(arti)=(ART_ARTIFACT_LOCK):;           //Skip no art, scrolls, and special items. This should be the most common result *by far.*
-        
-        !!FU(huAI_IsArtiBetterThanEquipped):P(hero)/(arti)/?(isBetter:y)/?(equipSlot:y)/?(equippedArti:y)/?(equippedArtMod:y);
-        !!if&(isBetter)=(TRUE):;
-            !!FU(huAI_UnequipArt):P(hero)/(equipSlot)/(equippedArti)/(equippedArtMod);          //Unequip the worse arti.
-            !!FU(huAI_EquipArt):P(hero)/(arti)/(artMod)/?(equipSuccess:y);                      //Equip the better arti.
-            
-            !!if&(equipSuccess)=(FALSE):;
-                //!IF:L^hero%(hero) failed to swap arti%(equippedArti) to arti%(arti).^;      TEST
-                !!FU(huAI_EquipArt):P(hero)/(equippedArti)/(equippedArtMod);                    //If we failed to equip the new arti for some reason, reequip the old one.
-            !!en:;
-            
-            //!IF&(equipSuccess)=(TRUE):L^hero%(hero) swapped arti%(equippedArti) for arti%(arti) at slot%(equipSlot)^;      TEST
-        !!en:;
-    !!en:;
+    !!FU(AddArtToHero)P(hero)/(comboArti)/(NO_ART_MOD);                     //Add the finished combo arti.
 **  --------------------------
     
     
@@ -433,26 +524,33 @@ ZVSE2
     !#VA(returnSuccess:x);
     !#VA(unequipAll:x);
     
-    !!VR(returnSuccess):S(FALSE);       //Default return false.
+    !!VR(returnSuccess):S(FALSE);           //Default return false.
+    
     
     !!HE(hero):A2/(comboArti)/?(hasArti:y)/?(isEquipped:y);
-    !!FU&(hasArti)=(FALSE):E;           //Exit if hero doesn't have the arti.
+    !!FU&(hasArti)=(FALSE):E;               //Exit if hero doesn't have the arti.
     
-    !!if&(isEquipped)=(TRUE):;
+    !!if&(isEquipped)>=(TRUE):;
         !!VR(returnSuccess):S(TRUE);    
-        //!IF:L^combo%(comboArti) already equipped.^;    TEST
-        !!FU:E;                         //Return true and exit if the arti is already equipped.
+        !!FU:E;                             //Return true and exit if the arti is already equipped.
     !!en:;
     
     !!FU:A?(numArgs:y);
     !!if&(numArgs)>=4/(unequipAll)=(TRUE):;
+        !!FU(huAI_GetBackpackCount):P(hero)/?(bpCount:y);
+        !!FU(huAI_GetEquipmentCount):P(hero)/?(eqCount:y);
+        !!VR(bpSpace:y):S64-(bpCount);
+        !!FU&(bpSpace)<(eqCount):E;         //Do not attempt this if we do not have enough space to unequip our items, as doing so would delete items.
+        
         !!FU(huAI_UnequipAllArtis):P(hero);
     !!en:;
     
-    !!FU(huAI_EquipArt):P(hero)/(comboArti)/(NO_ART_MOD)/?(equipSuccess:y);      //Try to equip the arti.
+    !!UN:A(comboArti)/2/?(artiSlotP2:y);                                                    //Get equip type.
+    !!FU(huAI_IsArtiBetter_DetermineSlot):P(hero)/(artiSlotP2)/?(returnSlot:y);             //Get slot we should equip in.
+    
+    !!FU(huAI_EquipArt):P(hero)/(returnSlot)/(comboArti)/(NO_ART_MOD)/?(equipSuccess:y);    //Try to equip the arti.
     !!if&(equipSuccess)=(TRUE):;
-        !!VR(returnSuccess):S(TRUE);    //Return true if equipping worked.
-        //!IF:L^combo%(comboArti) equipped!^;    TEST
+        !!VR(returnSuccess):S(TRUE);                                                        //Return true if equipping worked.
     !!en:;
 **  --------------------------
 
@@ -462,28 +560,55 @@ ZVSE2
 **  Unequip all non-warmachine non-spellbook artis from hero.
 **  If (arti) is passed, only that artifact will be unequipped.
 **  If (destroy) is passed and TRUE, the unequipped artifacts are lost.
+**  If (countToRemove) is passed, only that many artifacts are unequipped/removed, though this only makes sense with rings/misc.
 !?FU(huAI_UnequipAllArtis);
     !#VA(hero:x);
     !#VA(arti:x);
+    !#VA(artMod:x);
     !#VA(destroy:x);
+    !#VA(countToRemove:x);
     
     //!IF:L^Unequip All...^;     TEST
     
     !!FU:A?(numArgs:y);
     
-    !!re i/(ART_SLOT_EQUIPPED_FIRST)/(ART_SLOT_EQUIPPED_LAST):;     //loop artis equipped.
-        !!VRi&i=(ART_SLOT_WAR_MACHINE_FIRST):S(ART_SLOT_MISC_5);    //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
-            
-        !!FU(GetArtAtSlot):P(hero)/i/?(loopArti:y)/?(artMod:y);
-        !!co|(loopArti)<=(NO_ART)/(loopArti)=(ART_ARTIFACT_LOCK):;  //co if no art in this slot or a combo lock. This should be the most common result *by far.*
+    !!VR(loopSlotStart:y):S(ART_SLOT_EQUIPPED_FIRST);
+    !!VR(loopSlotEnd:y):S(ART_SLOT_EQUIPPED_LAST);
+
+    !!if&(numArgs)>=2:;
+        !!UN:A(arti)/2/?(artiSlotP2:y);         //If an arti mask was passed, we can reduce how many slots we must iterate.
+        !!VR(loopSlotStart):S(artiSlotP2)-1;    //(artiSlotP2) minus 1. This re-maps the slot indexes from P2 format to AP format (except boots). AP format is how we must iterate slots.
+        !!VR(loopSlotStart)&(artiSlotP2)=8:S8;  //If the slot was boots, reset it to 8, which is also boots in AP format.
+        !!VR(loopSlotEnd):S(loopSlotStart);     //loopSlotEnd = LoopSlotStart since there is only one of these slots on the character.
         
-        !!co&(numArgs)>=2/(loopArti)<>(arti):;                      //co if this arti doesn't match the passed mask arti.
+        //rings/misc require looping multiple slots.
+        !!if&(artiSlotP2)=7:;                   //If it's a ring.
+            !!VR(loopSlotStart):S(ART_SLOT_RIGHT_RING);
+            !!VR(loopSlotEnd):S(ART_SLOT_LEFT_RING);
+        !!el&(artiSlotP2)=9:;                   //If it's misc.
+            !!VR(loopSlotStart):S(ART_SLOT_MISC_1);
+            !!VR(loopSlotEnd):S(ART_SLOT_MISC_5);
+        !!en:;
+    !!en:;
+    
+    
+    !!re i/(loopSlotStart)/(loopSlotEnd):;     //loop artis equipped.
+        !!VRi&i=(ART_SLOT_WAR_MACHINE_FIRST):S(ART_SLOT_MISC_5);    //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
+        !!FU&(numArgs)>=4/(countToRemove)<=0:E;                     //Exit if we have removed the amount requested.
+            
+        !!FU(GetArtAtSlot):P(hero)/i/?(loopArti:y)/?(loopArtMod:y);
+        !!co|(loopArti)<=(NO_ART):;                                 //co if no art in this slot or a combo lock.
+        
+        !!if&(numArgs)>=2/(arti)>(NO_ART):;
+            !!co|(loopArti)<>(arti)/(loopArtMod)<>(artMod):;        //co if this arti doesn't match the passed mask arti or artMod, and mask arti is a valid arti.
+        !!en:;
         
         !!if&(numArgs)>=3/(destroy)=(TRUE):;
             !!FU(UnequipArtFromSlot):P(hero)/i;                     //Remove the arti.
         !!el:;
             !!FU(huAI_UnequipArt):P(hero)/i/(loopArti)/(artMod);    //Unequip the arti and add it to backpack.
         !!en:;
+        !!VR(countToRemove)&(numArgs)>=4:-1;                        //Decrement count to remove, if that arg was passed.
     !!en:;
 **  --------------------------
 
@@ -492,7 +617,7 @@ ZVSE2
 **  --------------------------
 **  Wrapper for erm framework "UnequipArtFromSlot", which adds the unequipped
 **  arti to the hero's backpack, instead of simply deleting it.
-**  Optional arg creates the passed arti, instead of checking for it.
+**  Optional arg uses/creates the passed arti, instead of checking for it.
 !?FU(huAI_UnequipArt);
     !#VA(hero:x);
     !#VA(slot:x);
@@ -500,16 +625,14 @@ ZVSE2
     !#VA(artMod:x);
     
     !!FU:A?(numArgs:y);
-    !!if&(numArgs)<3:;
+    !!if&(numArgs)<=2:;
         !!FU(GetArtAtSlot):P(hero)/(slot)/?(arti)/?(artMod);
-        //!IF:L^Unequip: hero%(hero) has arti%(arti) at slot%(slot).^;     TEST
     !!en:;
     
-    !!FU|(arti)<=(NO_ART)/(arti)=(ART_ARTIFACT_LOCK):E;      //exit if no art or art lock.
+    !!FU|(arti)<=(NO_ART):E;                        //exit if no art.
     
-    !!FU(AddArtToHero):P(hero)/(arti)/(artMod);     //Add the arti to backpack.
+    !!FU(huAI_AddArtToBackpack):P(hero)/(arti)/(artMod);
     !!FU(UnequipArtFromSlot):P(hero)/(slot);        //Remove the equipped arti.
-    //!IF:L^hero%(hero) took off arti%(arti).^;      TEST
 **  --------------------------
 
 
@@ -518,77 +641,260 @@ ZVSE2
 **  Wrapper for erm framework "EquipArtToSlot", which ensures hero
 **  has the passed arti before trying to equip it, and removes the
 **  "extra" copy that "EquipArtToSlot" creates.
+**  If (NO_ART_SLOT) is provided, (EquipArtToSlot) tries to find it automatically.
 !?FU(huAI_EquipArt);
     !#VA(hero:x);
+    !#VA(slot:x);
     !#VA(arti:x);
     !#VA(artMod:x);
     !#VA(returnSuccess:x);
     
-    !!VR(returnSuccess):S(FALSE);       //Default return false.
+    !!VR(returnSuccess):S(FALSE);               //Default return false.
     
     //!IF|(arti)<=(NO_ART)/(arti)=(ART_ARTIFACT_LOCK):L^Hero%(hero) failed to equip arti%(arti) because it is NO_ART.^;       TEST
-    !!FU|(arti)<=(NO_ART)/(arti)=(ART_ARTIFACT_LOCK):E;      //exit if no art or art lock.
+    !!FU&(arti)<=(NO_ART):E;                    //exit if no art.
     
-    !!HE(hero):A2/(arti)/?(hasArti:y);
+    !!FU(huAI_GetArtCount):P(hero)/(arti)/(artMod)/?(count:y);          //Get count of arti for hero.
     //!IF&(hasArti)=(FALSE):L^Hero%(hero) failed to equip arti%(arti) because it is not had.^;       TEST
-    !!FU&(hasArti)=(FALSE):E;           //exit if don't have the arti.
+    !!FU&(count)<=(FALSE):E;                                            //exit if don't have the arti.
     
-    !!FU(huAI_RemoveArtiFromhero):P(hero)/(arti)/1;                                         //Remove 1 of (arti) from (hero). This must be done before equipping the new art, else the equipped art is removed.
-    !!FU(EquipArtToSlot):P(hero)/(arti)/(artMod)/(NO_ART_SLOT)/?(returnSuccess);            //Try to equip the arti.
-    !!HE(hero)&(returnSuccess)=(FALSE):A(arti);                                             //If the equip was not successful, add the removed arti back. This should not be happening.
+    !!FU(huAI_RemoveArtiFromhero):P(hero)/(arti)/(artMod)/1;                                //Remove 1 of (arti) from (hero). This must be done before equipping the new art, else the equipped art is removed.
+    !!FU(EquipArtToSlot):P(hero)/(arti)/(artMod)/(slot)/?(returnSuccess);                   //Try to equip the arti.
+    !!FU(huAI_AddArtToBackpack)&(returnSuccess)=(FALSE):P(hero)/(arti)/(artMod);            //If the equip was not successful, add the removed arti back. This should not be happening.
     //!IF:L^hero%(hero) equipping arti%(arti): return%(returnSuccess).^;     TEST
+
+
+
+**  --------------------------
+**  Unequips an art, then equips a different art in the same slot.
+**  This is done such that it works even with a full backpack.
+**  Expects that hero has both artis.
+!?FU(huAI_SwapArt);
+    !#VA(hero:x);
+    !#VA(slot:x);
+    !#VA(arti:x);
+    !#VA(artMod:x);
+    !#VA(newArti:x);
+    !#VA(newArtMod:x);
+    
+    !!FU(UnequipArtFromSlot)&(arti)>(NO_ART):P(hero)/(slot);                                //Remove the equipped arti.
+    !!FU(huAI_RemoveArtiFromhero):P(hero)/(newArti)/(newArtMod)/1;                          //Remove 1 of the newArti.
+    
+    !!FU(EquipArtToSlot):P(hero)/(newArti)/(newArtMod)/(slot)/?(equipSuccess:y);            //Try to equip the newArti.
+    !!if&(equipSuccess)=(TRUE):;
+        !!FU(huAI_AddArtToBackpack)&(arti)>(NO_ART):P(hero)/(arti)/(artMod);                //If successful, add the old arti to backpack.
+    !!el:;
+        !!FU(EquipArtToSlot)&(arti)>(NO_ART):P(hero)/(arti)/(artMod)/(slot);                //If not successful, requip the old arti and add the newArti back in backpack. This should not be happening.
+        !!FU(huAI_AddArtToBackpack):P(hero)/(newArti)/(newArtMod);
+    !!en:;
 **  --------------------------
 
+
+
+**  --------------------------
+**  Wrapper for HE:A, to add an arti to *backpack*.
+**  If the passed arti is a scroll, use 1001+(artMod).
+!?FU(huAI_AddArtToBackpack);
+    !#VA(hero:x);
+    !#VA(arti:x);
+    !#VA(artMod:x);
+    !!if&(arti)=(ART_SPELL_SCROLL):;        //Use HE:A to add to backpack, but for scrolls we need to add it as 1001+artimod (thank you Daemon_n!).
+        !!VR(scroll:y):S1001+(artMod);
+        !!HE(hero):A(scroll);
+    !!el:;
+        !!HE(hero):A(arti);
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**  Remove (removeCount) (arti) from (hero).
+**  Artifacts are removed from backpack first, then equipment.
+**  We *CANNOT* use HE:A- to remove artifacts because it causes issues with modded combo artis and crashes with arti153 (probably others too).
+**  Returns true if at least one arti was removed.
+**
+**  TODO: Add artMod support for removing non-scroll backpack artifacts.
+!?FU(huAI_RemoveArtiFromhero);
+    !#VA(hero:x);
+    !#VA(arti:x);
+    !#VA(artMod:x);
+    !#VA(removeCount:x);
+    !#VA(returnBool:x);
+    
+    !!VR(returnBool):S(FALSE);                                                      //Default return false.
+    
+    !!FU(huAI_GetArtCount):P(hero)/(arti)/(artMod)/?(count:y)/?(equippedCount:y);   //Get count and equippedCount of arti for hero.
+    !!VR(unequippedCount:y):S(count)-(equippedCount);
+    !!FU&(count)=0:E;                                                               //Exit if hero doesn't have any of the passed arti.
+    
+    !!VR(returnBool):S(TRUE);                                                       //Return true since at least 1 arti is had.
+    
+    !!if&(unequippedCount)<(removeCount):;
+        !!VR(backpackRemove:y):S(unequippedCount);                                  //If we don't have enough in backpack alone, removeCount becomes the amount to remove from equip after removing all from backpack.
+        !!VR(removeCount):-(unequippedCount);
+    !!el:;
+        !!VR(backpackRemove:y):S(removeCount);                                      //Else just remove only from backpack.
+        !!VR(removeCount):S0;
+    !!en:;
+    !!if&(backpackRemove)>0:;
+        !!if&(arti)=(ART_SPELL_SCROLL):;
+            !!VR(scroll:y):S1001+(artMod);                                          //Scrolls can be referenced using 1001+spellId.
+            !!HE(hero):A3/(scroll)/(backpackRemove)/0;
+        !!el:;
+            !!HE(hero):A3/(arti)/(backpackRemove)/0;                                //Remove what we can from backpack, but we must not remove from equipped items with HE:A3!
+        !!en:;
+    !!en:;
+    
+    
+    !!FU&(removeCount)<=0:E;                                                        //Exit if we are done.
+    
+    !!if&(equippedCount)>0:;
+        !!FU(huAI_UnequipAllArtis):P(hero)/(arti)/(artMod)/(TRUE)/(removeCount);    //Unequip and destroy properly, before using HE:A3 to remove the rest from backpack.
+        !!VR(removeCount):-(equippedCount);
+        !!FU&(removeCount)=0:E;                                                     //Exit if we are done.
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**  Returns equipped and total count of (arti) for (hero). If (artMod) is provided,
+**  all artis are looped to count only (arti) with (artMod) instead. This is important
+**  for scrolls, because HE:A2 does not consider artMods.
+!?FU(huAI_GetArtCount);
+    !#VA(hero:x);
+    !#VA(arti:x);
+    !#VA(artMod:x);
+    !#VA(returnCount:x);
+    !#VA(returnEquipped:x);
+    
+    !!VR(returnCount):S0;
+    !!VR(returnEquipped):S0;
+    
+    !!if&(artMod)<0:;
+        !!HE(hero):A2/(arti)/?(returnCount)/?(returnEquipped);                          //If no artMod is passed, just use HE:A2. Does not work for scrolls.
+    !!el:;                                                                              //Else, loop artis and count if they match passed arti/artMod.
+        !!re i/(ART_SLOT_EQUIPPED_FIRST)/(ART_SLOT_EQUIPPED_LAST):;                     //loop artis equipped.
+            !!FU(GetArtAtSlot):P(hero)/i/?(loopArti:y)/?(loopArtMod:y);
+            !!VR(returnEquipped)&(loopArti)=(arti)/(loopArtMod)=(artMod):+1;
+        !!en:;
+        
+        !!FU(huAI_GetBackpackCount):P(hero)/?(bpCount:y);
+        !!VR(loopedBp:y):S0;
+        !!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST):;                     //loop artis in backpack.
+            !!br&(loopedBp)>=(bpCount):;
+            
+            !!FU(GetArtAtSlot):P(hero)/i/?(loopArti:y)/?(loopArtMod:y);
+            !!co&(loopArti)=(NO_ART):;
+            
+            !!VR(loopedBp):+1;
+            !!VR(returnCount)&(loopArti)=(arti)/(loopArtMod)=(artMod):+1;
+        !!en:;
+        
+        !!VR(returnCount):+(returnEquipped);
+    !!en:;
+**  --------------------------
+
+
+
+**  --------------------------
+**  Returns total number of artifacts in backpack.
+**  Docs say this offset is at 3D1, but it is actually 3D4!
+**  THANK YOU to Timesink for the correct offset.
+!?FU(huAI_GetBackpackCount);
+    !#VA(hero:x);
+    !#VA(returnCount:x);
+    
+    !!HE(hero):Z?(heroStruct:y);
+    !!UN:C(heroStruct)/980/(UNC_INT8)/?(returnCount);   //Offset 3D4 is offset 980, INT8 for count of artis in backpack.
+**  --------------------------
+
+
+
+**  --------------------------
+**  Returns total number of artifacts equipped.
+!?FU(huAI_GetEquipmentCount);
+    !#VA(hero:x);
+    !#VA(returnCount:x);
+    
+    !!VR(returnCount):S0;
+    !!re i/(ART_SLOT_EQUIPPED_FIRST)/(ART_SLOT_EQUIPPED_LAST):;     //loop artis equipped.
+        !!FU(GetArtAtSlot):P(hero)/i/?(loopArti:y);
+        !!VR(returnCount)&(loopArti)>(NO_ART):+1;
+    !!en:;
+**  --------------------------
+    
 
 
 **  --------------------------
 **  Return if the passed slot is locked (combo arti).
-**  This is done by attempting to equip a "dummy" item if the slot is
-**  "empty" (NO_ART). If it fails to equip, the slot is locked, else
-**  delete the dummy item.
-**  This is a *VERY* unideal solution, but I cannot find any appropriate
-**  way to query if a slot is locked or not.
+**  Use UN:C to get slot lock data from heroStruct.
+**  offset 1C6 is 14 bytes of slot lock data.
+**  THANK YOU Daemon_n for showing me heroStruct offsets!
 !?FU(huAI_isSlotLocked);
     !#VA(hero:x);
     !#VA(slot:x);
     !#VA(returnBool:x);
     
-    //Define dummy arts for each slot:
-    !#SN:W^huAI_isSlotLocked_DummyArt_0^/(ART_HELM_OF_THE_ALABASTER_UNICORN);  //Head.
-    !#SN:W^huAI_isSlotLocked_DummyArt_1^/(ART_CAPE_OF_CONJURING);              //Shoulders.
-    !#SN:W^huAI_isSlotLocked_DummyArt_2^/(ART_COLLAR_OF_CONJURING);            //Necklace.
-    !#SN:W^huAI_isSlotLocked_DummyArt_3^/(ART_CENTAUR_AXE);                    //Right hand.
-    !#SN:W^huAI_isSlotLocked_DummyArt_4^/(ART_SHIELD_OF_THE_DWARVEN_LORDS);    //Left hand.
-    !#SN:W^huAI_isSlotLocked_DummyArt_5^/(ART_BREASTPLATE_OF_PETRIFIED_WOOD);  //Torso.
-    !#SN:W^huAI_isSlotLocked_DummyArt_6^/(ART_RING_OF_CONJURING);              //Right ring.
-    !#SN:W^huAI_isSlotLocked_DummyArt_7^/(ART_RING_OF_CONJURING);              //Left ring.
-    !#SN:W^huAI_isSlotLocked_DummyArt_8^/(ART_DRAGONBONE_GREAVES);             //Feet.
-    !#SN:W^huAI_isSlotLocked_DummyArt_9^/(ART_CLOVER_OF_FORTUNE);              //Misc Slot 1.
-    !#SN:W^huAI_isSlotLocked_DummyArt_10^/(ART_CLOVER_OF_FORTUNE);             //Misc Slot 2.
-    !#SN:W^huAI_isSlotLocked_DummyArt_11^/(ART_CLOVER_OF_FORTUNE);             //Misc Slot 3.
-    !#SN:W^huAI_isSlotLocked_DummyArt_12^/(ART_CLOVER_OF_FORTUNE);             //Misc Slot 4.
-    !#SN:W^huAI_isSlotLocked_DummyArt_18^/(ART_CLOVER_OF_FORTUNE);             //Misc Slot 5.
+    !!VR(returnBool):S(FALSE);                                          //Default return false.
+    !!VR(whichByte:y):S(slot);
     
-    
-    !!VR(returnBool):S(FALSE);      //Default return false.
-    
-    !!FU(GetArtAtSlot):P(hero)/(slot)/?(equippedArti:y);
-    !!FU&(equippedArti)<>(NO_ART):E;        //Exit if there is an arti in the slot.
-    
-    !!SN:W^huAI_isSlotLocked_DummyArt_%(slot)^/?(dummyArti:y);
-    !!FU(EquipArtToSlot):P(hero)/(dummyArti)/(NO_ART_MOD)/(slot)/?(equipSuccess:y);   //Try to equip the arti.
-    
-    !!if&(equipSuccess)=(TRUE):;
-        !!FU(UnequipArtFromSlot):P(hero)/(slot);    //Remove the dummy arti if it was equipped. This is not a locked slot.
-    !!el:;
-        !!VR(returnBool):S(TRUE);                   //If the equip failed, return true. This *is* a locked slot.
+    !!if&(slot)>=(ART_SLOT_MISC_1)/(slot)<=(ART_SLOT_MISC_5):;
+        !!FU&(slot)>=(ART_SLOT_BALLISTA)/(slot)<=(ART_SLOT_SPELL_BOOK):E;   //Skip warmachines/spellbook.
+        !!VR(whichByte):S8;                                             //For misc slots, only byte 8 is used. It returns a number of misc slots locked, not which ones are locked.
+    !!el|(slot)=(ART_SLOT_RIGHT_RING)/(slot)=(ART_SLOT_LEFT_RING):;
+        !!VR(whichByte):S6;                                             //For ring slots, only byte 6 is used. It also returns a number of ring slots locked, not which one.
+    !!el&(slot)=(ART_SLOT_FEET):;
+        !!VR(whichByte):S7;                                             //Since ring locks are both stored in byte6, feet are stored in byte7.
     !!en:;
     
-    //!IF:L^slotIsLocked: slot%(slot) %(returnBool).^;     TEST
+    !!HE(hero):Z?(heroStruct:y);
+    !!VR(offset:y):S454+(whichByte)*(SIZEOF_UINT8);                     //454 is offset 1C6 from heroStruct- 14 bytes of slot locks.
+    !!UN:C(heroStruct)/(offset)/(UNC_UINT8)/?(isLocked:y);
     
+    !!VR(returnBool):S(isLocked);
+    !!FU&(isLocked)=(FALSE):E;                                          //If nothing is locked, there is no need to do anything else.
+    
+    !!FU&(whichByte)<>8/(whichByte)<>6:E;                               //There is nothing left to do if slot was not misc or ring.
+    
+    //------------Misc/Rings------------//
+    !!FU(GetArtAtSlot):P(hero)/(slot)/?(arti:y);
+    !!if&(arti)>(NO_ART):;
+        !!VR(returnBool):S(FALSE);                                      //If the slot has an arti, we know it is not locked.
+        !!FU:E;
+    !!en:;
+    
+    //If the slot does not have an artifact, we need to iterate slots to know if it locked or not.
+    !!VR(returnBool):S(TRUE);                                           //because isLocked must now be >= 1 for misc or ring, normalize return value.
+    
+    !!if&(whichByte)=8:;
+        !!VR(loopStart:y):S(ART_SLOT_MISC_5);                           //Set up loop bounds for misc.
+        !!VR(loopEnd:y):S(ART_SLOT_MISC_1);
+    !!el:;
+        !!VR(loopStart:y):S(ART_SLOT_LEFT_RING);                        //Set up loop bounds for rings.
+        !!VR(loopEnd:y):S(ART_SLOT_RIGHT_RING);
+    !!en:;
+    
+    !!re i/(loopStart)/(loopEnd)/-1:;                                   //Reverse loop misc slots up to requested slot, since locks are placed at lowest slot->up.
+        !!VRi&i=(ART_SLOT_SPELL_BOOK):S(ART_SLOT_MISC_4);               //skip if looping war machines/spellbook, because their indexes are (infuriatingly) placed between misc slot 4 and 5.
+        !!if&(isLocked)<=0:;
+            !!VR(returnBool):S(FALSE);                                  //When all locks are counted, we know the requested slot must not be locked.
+            !!br:;
+        !!en:;
+        !!FU(GetArtAtSlot):P(hero)/i/?(arti:y);                         //If (arti)=(NO_ART), it can be counted as lock.
+        !!if&(arti)<=(NO_ART):;
+            !!br&i=(slot):;                                             //When the requested slot is iterated but locks are not all counted, we know this slot is locked.
+            !!VR(isLocked):-1;
+        !!en:;
+    !!en:;
 **  --------------------------
     
     
+    
+//=========================================================================================================================================//
+//                                Logic for determining the value of an artifact, if it should be equipped:
+//=========================================================================================================================================//
     
 **  --------------------------
 **  Return the value of the passed arti, with any adjustments based on how valuable
@@ -599,17 +905,57 @@ ZVSE2
     !#VA(artiSlot:x);
     !#VA(artMod:x);
     !#VA(returnValue:x);
+    !#VA(isSwappable:x);
     
     !!VR(returnValue):S-1;              //Default return -1.
+    !!VR(isSwappable):S(FALSE);         //This can be set for specific artis to denote that the arti might be used under different circumstances, so potentially the hero should keep it even if it is low value.
     
-    !!FU|(arti)<=(NO_ART)/(arti)=(ART_ARTIFACT_LOCK):E;      //Exit if arti does not exist.
+    !!FU|(arti)<=(NO_ART):E;            //Exit if arti does not exist.
     
     !!UN:A(arti)/1/?(returnValue);      //Our base-line is the actual cost of the item.
     
+    
+    //If the arti is a combo arti (or ArmaBlade), raise its value significantly (some combos are valued lower than non-combos).
+    !!UN:A(arti)/4/?(isComboArti:y);
+    !!if|(isComboArti)>-1/(arti)=(ART_ARMAGEDDONS_BLADE):;
+        //!IF:L^arti%(arti) is a combo arti. Raising value.^;    TEST
+        !!VR(returnValue):*5;
+        !!FU:E;
+    !!en:;
+    
+    
+    //If there is >1 copy of the arti already equipped, then one of them is worth nothing (we don't want to stack artis).
+    !!FU(huAI_GetArtCount):P(hero)/(arti)/(artMod)/?(count:y)/?(countArtiEQ:y);         //Get count and equippedCount of arti for hero.
+    !!if&(countArtiEQ)>1:;
+        !!VR(returnValue):S0;
+        !!FU:E;
+    !!en:;
+    
+    
     //=====
     //Special-case arti value modifications:
-    !!if&(arti)>=(ART_EVERFLOWING_CRYSTAL_CLOAK)/(arti)<=(ART_HEAD_OF_LEGION):;
-        !!VR(returnValue)::10;          //Resource and legion artifacts should be less valuable to a main hero.
+    !!if&(arti)>=(ART_EVERFLOWING_CRYSTAL_CLOAK)/(arti)<=(ART_ENDLESS_PURSE_OF_GOLD):;
+        !!VR(returnValue)::5;          //Resource artifacts should be less valuable to a main hero.
+        !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(FALSE):S0;       //Worthless if this is not end of turn.
+        !!VR(isSwappable):S(TRUE);
+        !!UN:P726/?(backpackArtifactsEnabled:y);                        //Check if Backpack Artifacts script is enabled.
+        !!VR(returnValue)&(backpackArtifactsEnabled)=(TRUE):S0;         //Never equip resources artis if backpack artifacts script is on, since they function from the backpack.
+        !!FU:E;
+    !!en:;
+    !!if&(arti)>=(ART_LEGS_OF_LEGION)/(arti)<=(ART_HEAD_OF_LEGION):;
+        !!VR(returnValue)::15;          //Legion artifacts should be less valuable to a main hero.
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^timerWeekDay^<>7:S0;       //Worthless if this is not end of turn and 7th day of week. TODO: Only care about these if in a town.
+        !!VR(isSwappable):S(TRUE);
+        !!FU:E;
+    !!en:;
+    !!if&(arti)>=(ART_CHARM_OF_MANA)/(arti)<=(ART_MYSTIC_ORB_OF_MANA):;
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_handicap_manaRefill^=(TRUE):S0;       //Worthless if this is not end of turn or if mana recovery option is on.
+        !!VR(isSwappable):S(TRUE);
+        !!FU&(returnValue)=0:E;
+        
+        !!HE(hero):I?(manaCurrent:y);                       //Get current mana.
+        !!FU(huAI_GetMaxMana):P(hero)/?(manaMax:y);         //Get max mana.
+        !!VR(returnValue)&(manaCurrent)<(manaMax):*3;       //Mana artis are worth more iff end of turn and not at maximum mana.
         !!FU:E;
     !!en:;
     !!if&(arti)>=(ART_AMULET_OF_THE_UNDERTAKER)/(arti)<=(ART_DEAD_MANS_BOOTS):;
@@ -639,10 +985,27 @@ ZVSE2
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_SPELL_SCROLL):;
-        //!HE(hero):M=(artMod)/1;    //Check if hero already knows the scroll's spell.
-        //!VR(returnValue)&1:S0;     //If spell is known without the scroll, the scroll is useless.
-        //!IF&1:L^hero%(hero) knows spell%(artMod)^;        TEST
-        !!VR(returnValue)::4;       //Above method did not work, so just lower value of all scrolls.
+        //!IF:L^hero%(hero) looks at scroll(%(arti)/%(artMod))...^;        TEST
+        !!HE(hero):M=(artMod)/1;        //Check if hero already knows the scroll's spell.
+        !!if&1:;                        //result is true if flag 1 is set.
+            !!VR(returnValue):S0;       //If spell is known without items, the scroll is useless.
+           //!IF:L^hero%(hero) knows spell%(artMod)^;        TEST
+        !!el:;
+            !!VR(usefulTravelScroll:y):S(FALSE);
+            !!if|(artMod)=(SPELL_FLY)/(artMod)=(SPELL_DIMENSION_DOOR):;
+                !!HE(hero):A2/(ART_TOME_OF_AIR_MAGIC)//?(countEQ:y);        //Get count of arti equipped.
+                !!VR(usefulTravelScroll)&(countEQ)=0:S(TRUE);
+            !!el&(artMod)=(SPELL_TOWN_PORTAL):;
+                !!HE(hero):A2/(ART_TOME_OF_EARTH_MAGIC)//?(countEQ:y);      //Get count of arti equipped.
+                !!VR(usefulTravelScroll)&(countEQ)=0:S(TRUE);
+            !!en:;
+            !!if&(usefulTravelScroll)=(TRUE):;
+                //Travel scrolls are worth much more during your turn, but worthless at turn end or in combat. Also useless if already using Tome that gives the spell. Flagged as swappable.
+                !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(FALSE):S15000;       //Valued slightly less than an earth/air tome.
+                !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(TRUE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;
+                !!VR(isSwappable):S(TRUE);
+            !!en:;
+        !!en:;
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_TOME_OF_FIRE_MAGIC):;
@@ -653,18 +1016,20 @@ ZVSE2
         !!VR(returnValue):S5000;    //Water spells are not worth as much as others, usually.
         !!FU:E;
     !!en:;
-    !!if&(arti)=(ART_ORB_OF_INHIBITION):;
+    !!if|(arti)=(ART_ORB_OF_INHIBITION)/(arti)=(ART_RECANTERS_CLOAK):;
+        !!HE(hero):A2/(ART_ARMAGEDDONS_BLADE)//?(countEQ:y);        //Get count of arti equipped.
+        !!VR(returnValue)&(countEQ)>0:S0;                           //Do not use Inhibition/Recanter if Armageddon's Blade is equipped.
         !!HE(hero):S(SKILL_RESISTANCE)/?(skillLevel:y);             //Get level of Resistance.
-        !!VR(returnValue)&(skillLevel)>(SKILL_NOT_LEARNED):S0;      //Don't use Orb of Ihibition on a resist-stacking hero.
+        !!VR(returnValue)&(skillLevel)>(SKILL_NOT_LEARNED):S0;      //Don't use Inhibition/Recanter on a resist-stacking hero.
         !!HE(hero):S(SKILL_SORCERY)/?(skillLevel:y);                //Get level of Sorcery.
-        !!VR(returnValue)&(skillLevel)>(SKILL_NOT_LEARNED):S0;      //Don't use Orb of Ihibition on a sorcery hero.
+        !!VR(returnValue)&(skillLevel)>(SKILL_NOT_LEARNED):S0;      //Don't use Inhibition/Recanter on a sorcery hero.
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_ORB_OF_VULNERABILITY):;
-        !!HE(hero):A2/(ART_ORB_OF_INHIBITION)//?(countEQ:y);        //Get count of arti equipped.
-        !!if&(countEQ)>0:;
-            !!VR(returnValue):S0;       //Do not use Orb of Vuln if hero has Orb of Inhibition. AI generally plays brawls better than spells, so prefer to use spell-less combat.
-        !!en:;
+        !!HE(hero):A2/(ART_ARMOR_OF_THE_DAMNED)//?(countAotD:y);        //Is AotD equipped?
+        !!HE(hero):A2/(ART_ORB_OF_INHIBITION)//?(countOrb:y);           //Is Orb of Inhib equipped?
+        !!FU(returnValue)&(countAotD)>0/(countOrb)>0:E;                 //With AotD and Orb of Ihib, using orb of vuln is good. Otherwise we should not use it.
+        !!VR(returnValue):S0;                                           //Do not use Orb of Vulnerability; AI usually plays brawls better than casting and this arti is very difficult to evaluate.
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_ORB_OF_DRIVING_RAIN):;
@@ -674,7 +1039,7 @@ ZVSE2
     !!if&(arti)=(ART_ORB_OF_TEMPESTUOUS_FIRE):;
         !!UN:P726/?(remagicEnabled:y);                  //Check if ReMagic script is enabled.
         !!HE(hero):M(SPELL_ARMAGEDDON)/?(hasSpell:y);   //Check if hero knows Arma.
-        !!VR(returnValue)&(hasSpell)=(TRUE):*2;         //More valuable if hero knows Arma.
+        !!VR(returnValue)&(hasSpell)=(TRUE):*5;         //More valuable if hero knows Arma.
         !!if&(remagicEnabled)=(FALSE)/(hasSpell)=(FALSE):;
             !!VR(returnValue):S2000;                    //If reMagic not enabled and no Arma, Fire orb is worth much less.
         !!en:;
@@ -686,11 +1051,24 @@ ZVSE2
     !!en:;
     !!if&(arti)=(ART_BADGE_OF_COURAGE):;
         !!HE(hero):A2/(ART_ORB_OF_INHIBITION)//?(countEQ:y);        //Get count of arti equipped.
-        !!VR(returnValue)&(countEQ)<=0:S20000;       //Hidden mind-spell immunity makes Badge of Courage worth *much* more if spellcasting is allowed. (20000 = value of spell tome).
+        !!VR(returnValue)&(countEQ)<=0:S26000;       //Hidden mind-spell immunity makes Badge of Courage worth *much* more if spellcasting is allowed. (26000 is higher value than other misc).
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_SHACKLES_OF_WAR):;
         !!VR(returnValue):S0;               //Shackles are bad for AI because the player will just reload if they die anyway. This only hurts AI by using an arti slot and preventing retreat when they are beaten.
+        !!FU:E;
+    !!en:;
+    !!if&(arti)=(ART_VIAL_OF_DRAGON_BLOOD):;
+        //Loop through hero's mons to see if any are dragons. If there are no dragons this arti is useless.
+        !!VR(isSwappable):S(TRUE);
+        !!re (heroArmySlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
+            !!HE(hero):C0/(heroArmySlot)/?(slotMon:y)/?(slotCount:y);       //Get mon in hero army at each slot.
+            !!co&(slotMon)<=(NO_MON):;                                      //co if no mon in slot.
+            !!MA:X(slotMon)/?(isDragon:y);                                  //Get flags of mon.
+            !!VR(isDragon):&(MON_FLAG_DRAGON);                              //Isolate dragon flag.
+            !!FU&(isDragon)=(MON_FLAG_DRAGON):E;                            //If dragon was found, exit without reducing arti value.
+        !!en:;
+        !!VR(returnValue):S0;       //If loop completed no dragon was found, so set value to zero.
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_SPIRIT_OF_OPPRESSION):;
@@ -704,8 +1082,9 @@ ZVSE2
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_PENDANT_OF_DISPASSION):;
-        !!HE(hero):A2/(ART_ORB_OF_INHIBITION)//?(countEQ:y);      //Get count of arti equipped.
-        !!VR(returnValue)&(countEQ)<=0:S20000;                    //Berserk immunity is worth a *lot* if spellcasting is allowed (this makes it higher than any other arti).
+        !!HE(hero):A2/(ART_ORB_OF_INHIBITION)//?(countOoI:y);      //Get count of arti equipped.
+        !!HE(hero):A2/(ART_BADGE_OF_COURAGE)//?(countBoC:y);       //Get count of arti equipped.
+        !!VR(returnValue)&(countOoI)<=0/(countBoC)<=0:S20000;      //Berserk immunity is worth a *lot* if spellcasting is allowed and no Badge of Courage equipped (this makes it higher than any other arti).
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_NECKLACE_OF_SWIFTNESS):;
@@ -713,7 +1092,7 @@ ZVSE2
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_NECKLACE_OF_OCEAN_GUIDANCE):;
-        !!VR(returnValue)::2;               //Temporary reduction until arti swapping is implemented.
+        !!VR(returnValue):S0;               //Worth nothing until a good solution can be found. Most people do not play water maps anyway.
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_RING_OF_THE_WAYFARER):;
@@ -721,19 +1100,28 @@ ZVSE2
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_EQUESTRIANS_GLOVES):;
-        !!VR(returnValue):S6000;            //Worth more than any other ring (AI used to wear resource rings instead of these!).
+        !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(TRUE):S90000;            //Worth more than any other ring when ending turn.
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;                //Useless when starting turn or in combat.
+        !!VR(isSwappable):S(TRUE);
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_BOOTS_OF_SPEED):;
-        !!VR(returnValue):S20000;            //Worth more than any other boots.
+        !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(TRUE):S90000;            //Worth more than any other boots when ending turn.
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;                //Useless when starting turn or in combat.
+        !!VR(isSwappable):S(TRUE);
+        !!FU:E;
+    !!en:;
+    !!if&(arti)=(ART_ANGEL_WINGS):;
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(TRUE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;     //Useless when ending turn or in combat.
+        !!VR(isSwappable):S(TRUE);
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_BOOTS_OF_LEVITATION):;
-        !!VR(returnValue):S1000;            //Even on a water map, these are not very good.
+        !!VR(returnValue):S0;               //Worth nothing until a good solution can be found. Most people do not play water maps anyway.
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_SEA_CAPTAINS_HAT):;
-        !!VR(returnValue)::2;               //Temporary reduction until arti swapping is implemented.
+        !!VR(returnValue):S0;               //Worth nothing until a good solution can be found. Most people do not play water maps anyway.
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_SPELLBINDERS_HAT):;

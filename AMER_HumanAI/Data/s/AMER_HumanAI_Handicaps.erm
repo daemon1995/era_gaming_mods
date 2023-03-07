@@ -17,17 +17,17 @@ ZVSE2
 !?FU(OnEveryDay)&i^timerIsAi^=(TRUE);
     !!VR(weekDay:y):Si^timerWeekDay^;
     
-    !!OW:C?(currentPlayer:y);            //Get current player.
-    !!FU(huAI_IsBlacklistedPlayer):P(currentPlayer)/?(isPlayerBlacklisted:y);       //Get if player is blacklisted from huAI.
+    !!OW:C?(currentPlayer:y);                                           //Get current player.
+    !!FU(huAI_IsBlacklistedPlayer):P(currentPlayer)/?(isPlayerBlacklisted:y);   //Get if player is blacklisted from huAI (Probably Tyrant script).
     
     !!FU(huAI_Gold)&i^huAI_handicap_goldPerTurn^>0/(isPlayerBlacklisted)=(FALSE):P(currentPlayer);
     !!FU(huAI_Resources)&i^huAI_handicap_resources^>0/(isPlayerBlacklisted)=(FALSE):P(currentPlayer);
     
     !!FU(huAI_XP)&i^huAI_handicap_XP^>0/(isPlayerBlacklisted)=(FALSE):P(currentPlayer);
     
-    !!FU&(weekDay)<>1:E;            //Exit if not a new week- only weekly events below here.
+    !!FU&(weekDay)<>1:E;                                                //Exit if not a new week- only weekly events below here.
 
-    !!if&i^huAI_handicap_neutralGrowth^>0:;    //Only run if neutral growth setting is >0.
+    !!if&i^huAI_handicap_neutralGrowth^>0:;                             //Only run if neutral growth setting is >0.
         !!VR(humanPlayer:y):S-1;
         !!FU(huAI_GetFirstHumanIndex):P?(humanPlayer);
         !!FU(huAI_NeutralGrowth)&(currentPlayer)=(humanPlayer):P;       //Only run neutral growth once each week- on the turn of the first human player.
@@ -59,16 +59,16 @@ ZVSE2
     
     
 **  --------------------------
-**    Grant XP growth.
-**    Note that granting XP to a hero also grants rank XP to their army.
+**  Grant XP growth.
+**  Note that granting XP to a hero also grants rank XP to their army.
 !?FU(huAI_XP);
     !#VA(player:x);
     
-    !!OW:H(player)/2/0;              //Get count of heroes owned by current player in v2.
+    !!OW:H(player)/2/0;                     //Get count of heroes owned by current player in v2.
     !!VR(heroCount:y):Sv2;
     
     !!re i/1/(heroCount):;                  //iterate all heroes of current player. i=iterated hero. 1=first hero index for HE:H
-        !!OW:H(player)/2/i;          //Get id of iterated hero in v2.
+        !!OW:H(player)/2/i;                 //Get id of iterated hero in v2.
         !!VR(loopHero:y):Sv2;
         !!FU(huAI_XP_Internal):P(loopHero); 
     !!en:;
@@ -88,46 +88,55 @@ ZVSE2
 
 
 **  --------------------------
-**    Refill mana for AI heroes at end of turn.
+**  Refill mana for AI heroes at end of turn.
 !?FU(huAI_OnEndOfTurn)&i^huAI_handicap_manaRefill^=(TRUE);
     
-    !!OW:C?(player:y);                  //Get current player.
+    !!OW:C?(player:y);                                  //Get current player.
     
     !!OW:I(player)/?(isAI:y)/?(isDead:y);
-    !!FU|(isAI)=(FALSE)/(isDead)=(TRUE):E;          //Exit if player is not AI or is dead.
+    !!FU|(isAI)=(FALSE)/(isDead)=(TRUE):E;              //Exit if player is not AI or is dead.
     
-    !!OW:H(player)/2/0;                 //Get count of heroes owned by player in v2.
+    !!OW:H(player)/2/0;                                 //Get count of heroes owned by player in v2.
     !!VR(heroCount:y):Sv2;
-    !!re i/1/(heroCount):;              //iterate all heroes of player. i=iterated hero. 1=first hero index for HE:H
-        !!OW:H(player)/2/i;             //Get id of iterated hero in v2.
+    !!re i/1/(heroCount):;                              //iterate all heroes of player. i=iterated hero. 1=first hero index for HE:H
+        !!OW:H(player)/2/i;                             //Get id of iterated hero in v2.
         !!VR(loopHero:y):Sv2;
-        !!FU(huAI_ManaRefill_Internal):P(loopHero); 
+        !!HE(loopHero):I?(manaCurrent:y);               //Get current mana.
+        !!FU(huAI_GetMaxMana):P(loopHero)/?(manaMax:y);
+        
+        !!if&(manaCurrent)<(manaMax):;                  //Only change mana if current mana is less than target amount.
+            !!HE(loopHero):I(manaMax);                  //set mana to full.
+        !!en:;
     !!en:;
     
     
-!?FU(huAI_ManaRefill_Internal);
+    
+**  Restore mana to pre-battle amount if AI attacked a stack, when huAI mana setting = 2.
+!?FU(OnBeforeBattleUniversal)&-(ERM_FLAG_IS_HUMAN)/i^huAI_handicap_manaRefill^>(FALSE);
+    !!VR(defenderOwner:y):Si^battle_owner_1^;                   //Get defender owner.
+    !!if|i^battle_hero_1^<=(NO_HERO)/(defenderOwner)=-1:;       //Only do this if not fighting another hero, or the hero was neutral (it makes sense to spend mana against another player).
+        !!HEi^battle_hero_0^:I?(manaCurrent:y);                 //Get current mana.
+        !!VRi^huAI_handicap_manaBeforeCombat^:S(manaCurrent);
+    !!el:;
+        !!VRi^huAI_handicap_manaBeforeCombat^:S-1;
+    !!en:;
+        
+!?FU(huAI_BattleEnd)&i^huAI_handicap_manaRefill^>(FALSE);
     !#VA(hero:x);
+    !#VA(attackerOrDefender:x);
     
-    !!HE(hero):Fd/d/d/?(know:y);                            //Get Knowledge
-    !!HE(hero):I?(manaCurrent:y);                           //Get current mana.
-    !!VR(manaMax:y):S(know)*10;                             //Base mana from Knowledge.
-    !!HE(hero):S(SKILL_INTELLIGENCE)/?(intel:y);            //Get Intelligence.
-    !!VR(intelBonus:e)&(intel)=(SKILL_NOT_LEARNED):S1;      //If no intelligence, no change to mana.
-    !!VR(intelBonus:e)&(intel)=(SKILL_BASIC):S1:4+1;        //If Basic Int, multiply mana by 1.25.
-    !!VR(intelBonus:e)&(intel)=(SKILL_ADVANCED):S1:2+1;     //If Advanced, multiply by 1.5.
-    !!VR(intelBonus:e)&(intel)>=(SKILL_EXPERT):S2;          //If Expert, multiply by 2.
-    !!VR(manaMax):*(intelBonus);
-    !!if&(manaCurrent)<(manaMax):;                          //Only change mana if current mana is less than target amount.
-        !!HE(hero):I(manaMax);                              //set mana to full.
-        //!HE(hero):B0/?(heroStr:z);         TEST
-        //!IF:L^manaRefill %(heroStr).^;     TEST
+    !!if&(attackerOrDefender)=0/(hero)>-1:;                         //Do this only for attacker.
+        !!HE(hero):O?(owner:y);                                     //Get owner.
+        !!if&(owner)>-1/i^huAI_handicap_manaBeforeCombat^>-1:;      //Not neutral (this means the hero did not lose) and variable is valid.
+            !!HE(hero):Ii^huAI_handicap_manaBeforeCombat^;          //Restore mana.
+        !!en:;
     !!en:;
 **  --------------------------
 
 
 
 **  --------------------------
-**    Grow all neutral stacks.
+**  Grow all neutral stacks.
 !?FU(huAI_NeutralGrowth);
     !#VA(x:y) (y:y) (z:y);
     
@@ -136,7 +145,7 @@ ZVSE2
     
     !!VR(x):S-1;                //setting x-coordinate to -1 will force to start search from scratch
 
-    !!re i;     //infinite loop
+    !!re i;         //infinite loop
         !!UN:U(OBJ_MONSTER)/(ANY_OBJ)/-1/(x)/(y)/(z);       //Get next mon. -1=iterate forward.
         !!br&(x)<0:;                                        //break if nothing found
         
@@ -169,6 +178,6 @@ ZVSE2
     !!FU&(isPlayerBlacklisted)=(TRUE):E;                                    //Exit if so.
     
     !!HE-1:Ed/?(level:y);       //Get Level.
-    !!HE-1&i^huAI_handicap_townPortal^>-1/(level)>=i^huAI_handicap_townPortal^:M(SPELL_TOWN_PORTAL)/1;        //Give Town Portal if at least the defined level.
-    !!HE-1&i^huAI_handicap_fly^>-1/(level)>=i^huAI_handicap_fly^:M(SPELL_FLY)/1;        //Give Fly if at least the defined level.
+    !!HE-1&i^huAI_handicap_townPortal^>-1/(level)>=i^huAI_handicap_townPortal^:M(SPELL_TOWN_PORTAL)/1;      //Give Town Portal if at least the defined level.
+    !!HE-1&i^huAI_handicap_fly^>-1/(level)>=i^huAI_handicap_fly^:M(SPELL_FLY)/1;                            //Give Fly if at least the defined level.
 **  --------------------------
