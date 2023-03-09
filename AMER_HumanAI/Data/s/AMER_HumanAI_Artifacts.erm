@@ -147,10 +147,12 @@ ZVSE2
     !!if&i^huAI_Artifacts_EndOfTurn^=(TRUE):;               //Only consider WW at end of turn.
         !!HE(hero):I?(manaCurrent:y);                       //Get current mana.
         !!FU(huAI_GetMaxMana):P(hero)/?(manaMax:y);         //Get max mana.
-        !!VR(manaRatio:e):S(manaCurrent):(manaMax);         //Percent of current vs max mana.
-        !!if&(manaRatio)<0.85:;                             //Use WW if less than 85% mana.
-            !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_WIZARDS_WELL)/?(equipSuccess:y)/(doUnequip);     //WW doesn't clash with other combos, but is only used at end of turn if missing mana and mana refill handicap is not on.
-            !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+        !!if&(manaMax)>0:;                                  //Protect against div by zero.
+            !!VR(manaRatio:e):S(manaCurrent):(manaMax);         //Percent of current vs max mana.
+            !!if&(manaRatio)<0.85:;                         //Use WW if less than 85% mana.
+                !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_WIZARDS_WELL)/?(equipSuccess:y)/(doUnequip);     //WW doesn't clash with other combos, but is only used at end of turn if missing mana and mana refill handicap is not on.
+                !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
+            !!en:;
         !!en:;
     !!en:;
     
@@ -268,7 +270,7 @@ ZVSE2
     
     //Return combo if arti is NOT from Titan's Thunder, Admiral's Hat, or Ring of the Magi. TODO: Admiral's Hat gets used on water maps.
     !!UN:A(arti)/5/?(returnCombo);
-    !!VR(returnCombo)|(returnCombo)=6/(returnCombo)=7/(returnCombo)=10:S-1;
+    !!VR(returnCombo)|(returnCombo)=6/(returnCombo)=7/(returnCombo)=10:S-1;            //TODO: Support any combos.
     //!IF:L^Arti%(arti) belongs to combo: %(returnCombo).^;     TEST
 **  --------------------------
 
@@ -422,21 +424,6 @@ ZVSE2
     
     !!UN:P178/?(combosDisabled:y);          //Check if disable combo artifact assembly is enabled.
     !!FU&(combosDisabled)=(TRUE):E;         //Exit if it is.
-    
-    //!HE(hero):B0/?(heroName:z);        TEST
-    //!IF:L^Trying arti combos for %(heroName)...^;      TEST
-    
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_0^;    //Angelic Alliance.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_1^;    //Cloak of the Undead King.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_2^;    //Elixir of Life.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_3^;    //Armor of the Damned.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_4^;    //Statue of Legion.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_5^;    //Power of the Dragon Father.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_8^;    //Bow of the Sharpshooter.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_9^;    //Wizard's Well. We will only use this if mana refill handicap is not on.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_11^;   //Cornucopia.
-    !!FU(NewIntArray):P0/?i^huAI_cachedComboArtis_12^;   //Barbarian Lord's Axe of Ferocity.   Does not work with HE:A for unequip, TODO: fix this.
-        
         
     !!FU(huAI_GetBackpackCount):P(hero)/?(bpCount:y);
     !!VR(loopedBp:y):S0;
@@ -451,13 +438,14 @@ ZVSE2
         !!FU(huAI_IsArtiRelevantComboPiece):P(hero)/(arti)/?(artiCombo:y);
         !!co&(artiCombo)<0:;                            //co if not a combo we care about.
         
-        !!FU(huAI_ArrayContains):Pi^huAI_cachedComboArtis_%(artiCombo)^/(arti)/?(artiAlreadyCounted:y);
-        !!co&(artiAlreadyCounted)=(TRUE):;              //co if we've already found this arti on hero.
+        !!SN:Mi^huAI_cachedComboArtis_%(artiCombo)^/?(arraySize:y);
+        !!FU(NewIntArray)&(arraySize)<=-1:P0/?i^huAI_cachedComboArtis_%(artiCombo)^;        //If array for this combo was not yet initialized, do so.
         
-        //!IF:L^%(hero) has piece %(arti) for combo%(artiCombo)^;      TEST
+        !!FU(Array_IndexOf):Pi^huAI_cachedComboArtis_%(artiCombo)^/(arti)/?(arrayValueFound:y);
+        !!co&(arrayValueFound)>-1:;                     //co if we've already found this arti on hero.
         
         !!FU(Array_Push):Pi^huAI_cachedComboArtis_%(artiCombo)^/(arti);
-        !!SN:Mi^huAI_cachedComboArtis_%(artiCombo)^/?(arraySize:y);  //get size of array.
+        !!SN:Mi^huAI_cachedComboArtis_%(artiCombo)^/?(arraySize);   //get size of array.
         !!FU(huAI_AssembleCombos_IsComplete):P(artiCombo)/(arraySize)/?(hasAllPieces:y);
         !!FU(huAI_AssembleCombos_Combine)&(hasAllPieces)=(TRUE):P(hero)/(artiCombo)/(arraySize);
     !!en:;
@@ -473,16 +461,8 @@ ZVSE2
     
     !!VR(returnBool):S(FALSE);      //Default return false.
     
-    !!VR(returnBool)&(combo)=0/(size)=6:S(TRUE);        //6 pieces for AA.
-    !!VR(returnBool)&(combo)=1/(size)=3:S(TRUE);        //3 pieces for CotUK.
-    !!VR(returnBool)&(combo)=2/(size)=3:S(TRUE);        //3 pieces for EoF.
-    !!VR(returnBool)&(combo)=3/(size)=4:S(TRUE);        //4 pieces for AotD.
-    !!VR(returnBool)&(combo)=4/(size)=5:S(TRUE);        //4 pieces for Statue of Legion.
-    !!VR(returnBool)&(combo)=5/(size)=9:S(TRUE);        //9 pieces for PotDF.
-    !!VR(returnBool)&(combo)=8/(size)=3:S(TRUE);        //3 pieces for BotSS.
-    !!VR(returnBool)&(combo)=9/(size)=3:S(TRUE);        //3 pieces for WW.
-    !!VR(returnBool)&(combo)=10/(size)=4:S(TRUE);       //3 pieces for Cornucopia.
-    !!VR(returnBool)&(combo)=12/(size)=4:S(TRUE);       //4 pieces for BLAoF.
+    !!FU&i^huAI_comboArt_%(combo)_PieceCount^<1:E;      //Exit if not valid count.
+    !!VR(returnBool)&i^huAI_comboArt_%(combo)_PieceCount^=(size):S(TRUE);
     
     
     
@@ -498,18 +478,14 @@ ZVSE2
         !!SN:Mi^huAI_cachedComboArtis_%(combo)^/i/?(loopedArti:y);
         !!FU(huAI_RemoveArtiFromhero):P(hero)/(loopedArti)/-1/1;            //Remove combo pieces from hero.
     !!en:;
-    !!VR(comboArti:y)&(combo)=0:S(ART_ANGELIC_ALLIANCE);                    //AA.
-    !!VR(comboArti:y)&(combo)=1:S(ART_CLOAK_OF_THE_UNDEAD_KING);            //CotUK.
-    !!VR(comboArti:y)&(combo)=2:S(ART_ELIXIR_OF_LIFE);                      //EoF.
-    !!VR(comboArti:y)&(combo)=3:S(ART_ARMOR_OF_THE_DAMNED);                 //AotD.
-    !!VR(comboArti:y)&(combo)=4:S(ART_STATUE_OF_LEGION);                    //Statue of Legion.
-    !!VR(comboArti:y)&(combo)=5:S(ART_POWER_OF_THE_DRAGON_FATHER);          //PotDF.
-    !!VR(comboArti:y)&(combo)=8:S(ART_BOW_OF_THE_SHARPSHOOTER);             //BotSS.
-    !!VR(comboArti:y)&(combo)=9:S(ART_WIZARDS_WELL);                        //WW.
-    !!VR(comboArti:y)&(combo)=10:S(ART_CORNUCOPIA);                         //Cornucopia.
-    !!VR(comboArti:y)&(combo)=12:S(ART_BARBARIAN_LORDS_AXE_OF_FEROCITY);    //BLAoF.
     
-    !!FU(AddArtToHero)P(hero)/(comboArti)/(NO_ART_MOD);                     //Add the finished combo arti.
+    !!FU(GetMaxArtifactId):P?(maxArt:y);                                    //Search for the combo result through all arts. Should be okay since this is a very infrequently executed process.
+    !!re (loopArt:y)/7/(maxArt):;                                           //Start looping from art7 (Centaur Axe) because less than 7 is special objects.
+        !!UN:A(loopArt)/4/?(loopCombo:y);
+        !!co&(loopCombo)<>(combo);                                          //co if not the combo we are looking for.
+        
+        !!FU(AddArtToHero)P(hero)/(loopArt)/(NO_ART_MOD);                   //Add the finished combo arti.
+    !!en:;
 **  --------------------------
     
     
