@@ -7,9 +7,10 @@ ZVSE2
 
 ** Разграбленную Утопию Драконов можно перестроить в город имеющий форт и ГМ 3-го уровня за 20 дерева и 20 руды.
 ** Тип нового города определяется расой героя-строителя. ИИ при наличии ресурсов всегда перестраивает разграбленную Утопию.
+; This script used to work with AI, but not anymore. UN:I seems to have some problem on AI's turn, the new town sometimes fails to be put on the map and leads to a crash.
 
 
-!$OB(OBJ_DRAGON_UTOPIA);
+!$OB(OBJ_DRAGON_UTOPIA)&i^timerIsHuman^;
 !!UN:P757/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -88,19 +89,19 @@ ZVSE2
 !!VR(hasEnoughRes:y):S(TRUE);
 
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!FU(NewIntArray):P7/?(requiredResources:y);
+  !!FU(NewIntArray):P7/?(requiredResourcesList:y);
 
   !!if|(townType)=(TOWN_INFERNO)/(townType)=(TOWN_NECROPOLIS)/(townType)=(TOWN_CONFLUX);
-    !!SN:V(requiredResources)/0/30/20/30/15/15/15/30000;
+    !!SN:V(requiredResourcesList)/0/30/20/30/15/15/15/30000;
   !!el|(townType)=(TOWN_DUNGEON)/(townType)=(TOWN_FORTRESS);
-    !!SN:V(requiredResources)/0/30/15/30/20/15/15/30000;
+    !!SN:V(requiredResourcesList)/0/30/15/30/20/15/15/30000;
   !!el|(townType)=(TOWN_RAMPART)/(townType)=(TOWN_STRONGHOLD);
-    !!SN:V(requiredResources)/0/30/15/30/15/20/15/30000;
+    !!SN:V(requiredResourcesList)/0/30/15/30/15/20/15/30000;
   !!el|(townType)=(TOWN_CASTLE)/(townType)=(TOWN_TOWER);
-    !!SN:V(requiredResources)/0/30/15/30/15/15/20/30000;
+    !!SN:V(requiredResourcesList)/0/30/15/30/15/15/20/30000;
   !!en;
 
-  !!FU(ES_Player_CheckEnoughResources):P?(hasEnoughRes:y)/(owner)/(requiredResources);
+  !!FU(ES_Player_CheckEnoughResources):P?(hasEnoughRes:y)/(owner)/(requiredResourcesList);
 
   !!FU(NewIntArray):P16/?(mutliPicDialogItems:y);
   !!VR(monType:y):S(townType);
@@ -113,7 +114,7 @@ ZVSE2
     !!SN:M(mutliPicDialogItems)/(arrayItemInd)/i;
 
     !!VR(arrayItemInd):+1;
-    !!SN:M(requiredResources)/i/?(resQty:y);
+    !!SN:M(requiredResourcesList)/i/?(resQty:y);
     !!SN:M(mutliPicDialogItems)/(arrayItemInd)/(resQty);
   !!en;
 
@@ -131,25 +132,27 @@ ZVSE2
   !!SN:H^monname^/(monType)/1/?(storeMonName:z) H^monname^/(monType)/1/(buildingName:z);
 
   !!FU(PrepareMultiPicDialog):P(mutliPicDialogItems);
+
   ; Check if the player wants to build Dragon Town - AI will always build
   !!VR(choice:y):S(FALSE);
+
   !!if&(hasEnoughRes);
     !!IF:N(MSG_TYPE_QUESTION)/^%T(es.757.dlg2)%T(es.757.ask)^/?(choice:y);
   ; If the player does not have enough resources, show up the info without a choice
   !!el;
     !!IF:N(MSG_TYPE_MES)/^%T(es.757.dlg2)%T(es.757.notEnoughRes)^;
   !!en;
+
   ; memory patch (restore original code)
   !!SN:H^monname^/(monType)/1/(storeMonName:z);
 
   !!UN:C5199571/(UNC_UINT32)/(saveMemory1) C5199620/(UNC_UINT32)/(saveMemory2);
   !!UN:C5201083/1/(UNC_UINT32)/(saveMemory3:y) C5201132/1/(UNC_UINT32)/(saveMemory4:y);?(saveMemory3:y);
   !!FU&(choice)=(FALSE):E;
-  
 !!en;
 
 ; Reduce resources 
-!!FU(ES_Player_RemoveResources):P(owner)/(requiredResources);
+!!FU(ES_Player_RemoveResources):P(owner)/(requiredResourcesList);
 !!UN&(ERM_FLAG_IS_HUMAN):R2;
 
 ; Teleport the hero to the front of the entrance
