@@ -204,7 +204,7 @@ ZVSE2
 ; string returns to global s^result^
 ; x1 - owner id
 !#VA(owner:x);
-!!if&(owner)>=(PLAYER_FIRST)/(owner)<=(PLAYER_LAST):;  
+!!if&(owner)>=(PLAYER_FIRST)/(owner)<=(PLAYER_LAST);  
   !!VR(offset:y):S(owner) *4 +6969600; 
   !!UN:C(offset)/4/?(ptrOwnerName:y);
   !!FU(WOG_GetTextByPtr):P(ptrOwnerName);
@@ -231,16 +231,16 @@ ZVSE2
 ; get size of the map
 !!UN:X?(mapSize:y)/?(hasUnderground:y); 
 ; pass once through all cells of the map
-!!re l/0/(hasUnderground)/1:;  coord z
-  !!re k/0/(mapSize)/1/-1:;    coord y
-    !!re i/0/(mapSize)/1/-1:;  coord x
+!!re l/0/(hasUnderground)/1;  coord z
+  !!re k/0/(mapSize)/1/-1;    coord y
+    !!re i/0/(mapSize)/1/-1;  coord x
       !!OBi/k/l:T?(objType:y) U?(objSubtype:y);
       !!TRi/k/l:E?(isYellowSquare:y) P?(isPassable:y); 
       !!VR(isYellowSquare):X1;  reverse param isYellowSquare
       !!FU(WOG_OnIterateAllMapObjects):Pi/k/l/(objType)/(objSubtype)/(isYellowSquare)/(isPassable);
-    !!en:;
-  !!en:;
-!!en:;
+    !!en;
+  !!en;
+!!en;
 ; restoring the source code of the sound
 ; in the delete objects function
 !!UN:C4893167/2/(patch); 
@@ -675,16 +675,16 @@ The game may fall at any time.^;
 !!SN:E7510739/(CALLCONV_CDECL)/(dlgId);
 !!VR(ptrDlg:y):Sv1;
 
-!!if&(ptrDlg)<>(NULL):;
+!!if&(ptrDlg)<>(NULL);
   !!UN:C(ptrDlg)/(UNC_UINT32)/?(strDlg:y);
 
-  !!if&(x)>=0:;  
+  !!if&(x)>=0;  
     !!UN:C(strDlg)/32/(UNC_UINT32)/?(dlgWidth:y);
     !!VR(centerX:y):S(dlgWidth) :2;
     !!VR(x):-(centerX);
 
     ; check for out of bounds X < 0
-    !!if&(x)<0:;
+    !!if&(x)<0;
       !!VR(x):S0; 
     !!el:  
       ; check for out of bounds X > HD_X
@@ -695,16 +695,16 @@ The game may fall at any time.^;
 
     ; set x coord
     !!UN:C(strDlg)/24/(UNC_UINT32)/(x);
-  !!en:;
+  !!en;
 
 
-  !!if&(y)>=0:;  
+  !!if&(y)>=0;  
     !!UN:C(strDlg)/36/(UNC_UINT32)/?(dlgHight:y);
     !!VR(centerY:y):S(dlgHight) :2;
     !!VR(y):-(centerY);
 
     ; check for out of bounds Y < 0
-    !!if&(y)<0:;
+    !!if&(y)<0;
       !!VR(y):S0; 
     !!el:  
       ; check for out of bounds Y > HD_Y
@@ -715,9 +715,9 @@ The game may fall at any time.^;
     
     ; set y coord
     !!UN:C(strDlg)/28/(UNC_UINT32)/(y);  
-  !!en:; 
+  !!en; 
   
-!!en:;
+!!en;
 !!VRv1:S(saveV1);
 
 
@@ -891,6 +891,10 @@ The game may fall at any time.^;
   !!VRi^WOG_IsHdMod^:S(FALSE);
 !!en;
 
+; Neutral battle - currently used in Karmic Battles
+!?OB(OBJ_MONSTER);
+!!VRi^wog_isNeutralBattle^:S(TRUE); ** set to True to show that a monster stack is visited
+
 ; Creature bank battle - currently used in Enhanced War Machines
 !?OB(OBJ_CREATURE_BANK);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
@@ -916,24 +920,6 @@ The game may fall at any time.^;
 !?OB(OBJ_CREATURE_GENERATOR_4);
 !!VRi^wog_isDwellOrCBBattle^:S(TRUE);
 
-!?FU(OnAfterBattleUniversal);
-!!VRi^wog_isDwellOrCBBattle^:S(FALSE);
-!!VRi^wog_isBattleStackAction^:S(FALSE);
-!?FU(OnSetupBattlefield);
-!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21445/1/?i^wog_isCBBattle^;
-
-!?FU(WOG_OnNpcPlacesWarMachine);                                          [don't allow to summon war machines in CB]
-!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21445/1/?(isBank:y);
-!!if&(isBank);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-12/4/1;
-!!en;
-
-
-!?FU(OnAfterLoadGame);
-!!VRi^wog_isDwellOrCBBattle^:S(FALSE);
-!!VRi^wog_isCBBattle^:S(FALSE);
-
-; Battle variables
 !?FU(OnBeforeBattleUniversal);
 !!VRi^wog_isRetreated_0^:S(FALSE);        [Currently used in Metamorph]
 !!VRi^wog_isRetreated_1^:S(FALSE);
@@ -947,6 +933,10 @@ The game may fall at any time.^;
 !!BA:S?(battleType:y);
 !!VRi^wog_isSiege^&(battleType)>0:S(TRUE);
 
+!?FU(OnSetupBattlefield);
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21445/1/?i^wog_isCBBattle^;
+
+; Battle variables
 !?FU(OnBeforeBattleAction);
 !!BG:A?(action:y);
 
@@ -957,6 +947,30 @@ The game may fall at any time.^;
   !!VRi^wog_isSurrendered_0^&i^battle_acting_side^=(BATTLE_LEFT):S(TRUE);
   !!VRi^wog_isSurrendered_1^&i^battle_acting_side^=(BATTLE_RIGHT):S(TRUE);
 !!en;
+
+!?FU(OnAfterBattleUniversal);
+!!VRi^wog_isNeutralBattle^:S(FALSE);
+!!VRi^wog_isDwellOrCBBattle^:S(FALSE);
+!!VRi^wog_isCBBattle^:S(FALSE);
+
+!?FU(OnAfterLoadGame);
+!!VRi^wog_isNeutralBattle^:S(FALSE);
+!!VRi^wog_isDwellOrCBBattle^:S(FALSE);
+!!VRi^wog_isCBBattle^:S(FALSE);
+
+; **************************************************************************************************
+; War Machines
+!?FU(WOG_OnNpcPlacesWarMachine);        [don't allow to summon war machines in CB]
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21445/1/?(isBank:y);
+
+!!if&(isBank);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-12/4/1;
+!!en;
+
+; Scripts requires to be executed earlier
+; Random Heroes
+!?FU(OnAfterBattleSetup);
+!!FU(WOG_72_SetUpRandomHero)&i^battle_hero_1^=(NO_HERO):P;
 
 ; **************************************************************************************************
 ; Get the real type and subtype of a map object
@@ -1480,8 +1494,48 @@ The game may fall at any time.^;
 !!SN:E4810128/2/(cmbMgr)/(animation)/(hex)/(delay)/0;
 
 ; **************************************************************************************************
-; Get the total exp required for reaching a hero level
+; Play a SPELL animation on multiple stacks at the same time (@ feanor and Archer30)
+!?FU(WOG_PlayAnimationOnMultipleStacks);
+!#VA(animation:x);                      [Index of the animation]
+!#VA(playDamagedAnimation:x);           [Boolean. Whether to play the damaged animation]
+!#VA(stacksList:x);                     [Array of Stack numbers for animation]
 
+; Initialise array and variables
+!!FU(NewIntArray):P10/?(stacksForAnimationList:y);
+!!SN:M(stacksList)/?(size:y);
+!!VR(bits[4]:y):S(BIT_0)/(BIT_8)/(BIT_16)/(BIT_24);
+
+; Loop through the array containing stack numbers and set up the array for animation
+!!re i/0/(size)/1/-1;
+  !!SN:M(stacksList)/i/?(stack:y);
+  ; Skip animation for the last stack of each side
+  !!co|(stack)=(BATTLE_ATTACKER_STACK_LAST)/(stack)=(BATTLE_DEFENDER_STACK_LAST);
+
+  ; Fix defender stack number
+  !!VR(stack)&(stack)>(BATTLE_ATTACKER_STACK_LAST):-1;
+
+  ; Set up the array for animation
+  !!VR(slotIndex:y):S(stack) :4;
+  !!VR(bitIndex:y):S(stack) %4;
+
+  *!SN:M(stacksForAnimationList)/(slotIndex)/d|(bits[bitIndex]); [This syntax doesn't work]
+  !!SN:M(stacksForAnimationList)/(slotIndex)/?(value:y);
+  !!VR(value):|(bits[bitIndex]);
+  !!SN:M(stacksForAnimationList)/(slotIndex)/(value);
+!!en;
+
+; Get the address of the array
+!!SN:M(stacksForAnimationList)/?(arrayAddress:y)/0;
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+; first parameter - combatmanager
+; the second parameter is a pointer to an array of forty bytes: one per unit
+; third parameter - animation number
+; fourth parameter - whether to animate the damage (0 - not necessary, 1 - necessary)
+!!SN:E5925584/2/(cmbMgr)/(arrayAddress)/(animation)/(playDamagedAnimation);     [play animation]
+
+; **************************************************************************************************
+; Get the total exp required for reaching a hero level
 !?FU(WOG_GetExpRequirementOfLevel);     [by daemon_n]
 !#VA(lvl:x) (exp:x);
 

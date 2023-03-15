@@ -215,6 +215,7 @@ ZVSE2
 *************************************************************************
      Learning
 *************************************************************************
+
 !?FU(WOG_CreateERMHook);
 !!UN:P217/?y-1;                         [Check if Learning is enabled in WoGify Options]
 !!FU&y-1<>1:E;                          [Exit if it isn't]
@@ -266,115 +267,184 @@ ZVSE2
      Resistance
 *************************************************************************
 
-!?FU(OnBeforeBattle);     [Pre-battle trigger for resistance]
+; This script works in all the battles. Yet as for balance purpose, it's decided to be active only in battles against neutral creatues
+; If &i^wog_isNeutralBattle^ is taken out, this script will work with all the battles.
+; FU(OnAfterBattleSetup) seems to be the only valid timing
+!?FU(OnAfterBattleSetup)&i^wog_isNeutralBattle^;
+!!UN:P216/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!UN:P216/?y-1;     [Check if Resistance is enabled in WoGify Options]
-!!FU&y-1<>1:E;     [Exit if it isn't]
+; Initialization
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!re k/0/2;
+    !!VRi^wog_216_monData_%i_%k^:S0;
+  !!en;
+!!en;
 
-!!FU661:P;     [set flag 270 to true if a human vs. human network battle (unsupported)]
+!!VR(numDegradeUnits[2]:y):C0/0;
 
-!!BA:H0/?v900;     [get # of attacking hero]
-!!HEv900:B0/?z470;     [get name of that hero]
-!!HEv900:R2/?v911;     [get sex of that hero]
-!!VRz471&v911=0:Sz103028;     [Strings for hero sex]
-!!VRz471&v911=1:Sz103029;
-!!HEv900:O?v911;     [get hero owner]
-!!OW:Iv911/?v912;     [get AI (1) or human (0)]
-!!IF:V5/0;
-!!IF&v912=0:V5/1;     [set flag 5 if attacker is human...]
-!!BA:H1/?v911;     [get # of defending hero]
-!!HEv911&v911>=0:B0/?z-1;     [get name of that hero]
-!!VRz-1&v911>=0:+z103056;
-!!VRz-1&v911<0:Sz103057;
-!!HEv911&v911>=0:O?v912;     [get owner of defender if any]
-!!OW&v911>=0:Iv912/?v913;     [get AI/human of defender]
-!!IF&v911>=0/v913=0:V5/1;     [set flag 5 if defender is human]
+; Check if any side would be downgraded by Resistance
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!HEi^battle_hero_%i^:S(SKILL_RESISTANCE)/?(resLevel:y);
 
-!!HEv900:S26/?v901;     [get resistance skill level]
-!!VRv911:S7;
-!!FU658&v901>=(SKILL_BASIC)/-270:P0/1/7;     [call function once per skill level]
-!!VRv589:Sv911;     [remember slot changed if any]
-!!VRv911:S7;
-!!FU658&v901>=(SKILL_ADVANCED)/-270:P0/1/7;
-!!VRv588:Sv911;     [remember slot changed if any]
-!!VRv911:S7;
-!!FU658&v901>=(SKILL_EXPERT)/-270:P0/1/7;
-!!VRv587:Sv911;     [remember slot changed if any]
-!!BA&v589<7:M1/v589/?v902/?v914;     [get v902 type and v914 qty in slot]
-!!BA&v588<7:M1/v588/?v903/?v914;     [get v903 type and v914 qty in slot]
-!!BA&v587<7:M1/v587/?v904/?v914;     [get v904 type and v914 qty in slot]
-!!VRz472:Sz103030;
-!!IF&5/v589<7/v588=7:Q2/21/v902/1^%Z472^;
-!!IF&5/v588<7/v587=7:Q2/21/v902/21/v903/1^%Z472^;
-!!IF&5/v587<7:Q2/21/v902/21/v903/21/v904/1^%Z472^;
+  !!if&(resLevel)>(SKILL_NOT_LEARNED);
+    !!VR(oppSide:y):Si X(TRUE);
+    !!VR(numDegradeUnits[oppSide]):S(resLevel);
+  !!en;
+!!en;
 
-** Alexis Koz
-!!VRv911:S0;
-!!BA:H1/?v900;     [get # of attacking hero]
-!!HEv900&v900>=0:B0/?z470;     [get name of that hero]
-!!HEv900&v900>=0:R2/?v911;     [get sex of that hero]
-!!VRz471&v911=0:Sz103031;     [Strings for hero sex]
-!!VRz471&v911=1:Sz103032;
-!!HEv900&v900>=0:O?v911;     [get hero owner]
-!!OW&v900>=0:Iv911/?v912;     [get AI (1) or human (0)]
-!!IF:V5/0;
-!!IF&v900>=0/v912=0:V5/1;     [set flag 5 if attacker is human...]
-!!BA:H0/?v911;     [get # of defending hero]
-!!HEv911&v911>=0:B0/?z-2;     [get name of that hero]
-!!VRz-2&v911>=0:+z103056;
-!!VRz-2&v911<0:Sz103057;
-!!HEv911:O?v912;     [get owner of defender if any]
-!!OW:Iv912/?v913;     [get AI/human of defender]
-!!IF&v913=0:V5/1;     [set flag 5 if defender is human]
+; Exit if no one has Resistance
+!!FU&(numDegradeUnits[0])=0/(numDegradeUnits[1])=0:E;
 
-!!HEv900&v900>=0:S26/?v901;     [get resistance skill level]
-!!VRv911:S28;
-!!FU658&v900>=0/v901>=(SKILL_BASIC)/-270:P1/0/28;     [call function once per skill level]
-!!VRv489:Sv911;     [remember slot changed if any]
-!!VRv911:S28;
-!!FU658&v900>=0/v901>=(SKILL_ADVANCED)/-270:P1/0/28;
-!!VRv488:Sv911;     [remember slot changed if any]
-!!VRv911:S28;
-!!FU658&v900>=0/v901>=(SKILL_EXPERT)/-270:P1/0/28;
-!!VRv487:Sv911;     [remember slot changed if any]
-!!BA&v489<28:M0/v489/?v902/?v914;     [get v902 type and v914 qty in slot]
-!!BA&v488<28:M0/v488/?v903/?v914;     [get v903 type and v914 qty in slot]
-!!BA&v487<28:M0/v487/?v904/?v914;     [get v904 type and v914 qty in slot]
-!!VRz472:Sz103033;
-!!IF&5/v489<28/v488=28:Q2/21/v902/1^%Z472^;
-!!IF&5/v488<28/v487=28:Q2/21/v902/21/v903/1^%Z472^;
-!!IF&5/v487<28:Q2/21/v902/21/v903/21/v904/1^%Z472^;
-** Alexis Koz end
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  ; Create the array of cost difference (between the original monster and the degraded monster times number) and another array for slots in the army
+  !!FU(NewIntArray):P?(totalCostDiffList:y) P?(armySlotList:y);
+
+  ; Loop through all the troops of the side and store valid monsters' total cost
+  !!if&(numDegradeUnits[i])>0;
+    !!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+      !!BA:Mi/j/?(type:y)/?(num:y);
+
+      ; Check if the monster has a degraded monster
+      !!if&(type)>(NO_MON)/(num)>0;
+        !!FU(GetDegradedMonCandidates):P(type)/?(degradesList:y);
+        !!SN:M(degradesList)/?(size:y);
+
+        ; Check the cost difference between the degraded monster and the original one
+        !!if&(size)>0;
+          !!SN:M(degradesList)/0/?(degradeType:y);
+          !!MA:C(type)/(RES_GOLD)/?(cost:y) C(degradeType)/(RES_GOLD)/?(degradeCost:y);
+          !!VR(costDiff:y):S(cost) -(degradeCost);
+
+          ; Get the total cost difference and slot ID, store in the arrays
+          !!if&(costDiff)>0;
+            !!VR(totalCostDiff:y):S(num) *(costDiff);
+            !!VR(totalCostDiff)&(totalCostDiff)<0:S(INT_MAX); [Correct the total cost difference if it overflows]
+            !!FU(Array_Push):P(totalCostDiffList)/(totalCostDiff) P(armySlotList)/j;
+          !!en;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+
+  ; Check how many monsters are with valid degrades
+  !!SN:M(totalCostDiffList)/?(size);
+
+  !!if&(size)>0;
+    ; Fix the number of monster to be degraded
+    !!VR(numDegradeUnits[i]):F0/(size);
+
+    ; Find out the monsters with lowest cost difference
+    !!FU(Array_Clone):P(totalCostDiffList)/?(totalCostDiffListClone:y);
+    !!VR(lastInd:y):S(size) -1;
+    !!FU(Array_Sort):P(totalCostDiffListClone)/0/(lastInd);
+    !!FU(Array_Revert):P(totalCostDiffListClone)/0/(lastInd);
+    !#VA(lowestCostDiff[3]:y);
+
+    !!if&(numDegradeUnits[i])=1;
+      !!FU(Array_Pop):P(totalCostDiffListClone)/?(lowestCostDiff[0]);
+    !!el&(numDegradeUnits[i])=2;
+      !!FU(Array_Pop):P(totalCostDiffListClone)/?(lowestCostDiff[0])/?(lowestCostDiff[1]);
+    !!el&(numDegradeUnits[i])=3;
+      !!FU(Array_Pop):P(totalCostDiffListClone)/?(lowestCostDiff[0])/?(lowestCostDiff[1])/?(lowestCostDiff[2]);
+    !!en;
+
+    ; Set up new monster type
+    !!re k/0/(numDegradeUnits[i])/1/-1;
+      ; Get the array index of the lowest cost difference, in order to get the army slot
+      !!FU(Array_IndexOf):P(totalCostDiffList)/(lowestCostDiff[i])/?(index:y);
+      !!SN:M(armySlotList)/(index)/?(slot:y);
+      !!BA:Mi/(slot)/?(type)/?(num);
+
+      ; Get the degraded monster of the army slot
+      !!FU(GetDegradedMonCandidates):P(type)/?(degradesList);
+      !!SN:M(degradesList)/?(size);
+
+      !!SN:M(degradesList)/0/?(degradeType);
+
+      ; Change the monster type to the degraded one
+      !!BA:Mi/(slot)/(degradeType)/(num);
+
+      ; Store slot ID, monster type before changing, type after chagning in the variable
+      !!FU(PackUnion):P(slot)/4/(type)/14/(degradeType)/14/?i^wog_216_monData_%i_%k^;
+    !!en;
+  !!en;
+!!en;
 
 ** End of pre-battle trigger for resistance
 
 
-!?FU(OnAfterBattle);     [Post-battle trigger for resistance]
+!?FU(OnBattlefieldVisible)&i^battle_isVisible^/i^wog_isNeutralBattle^;
+!!UN:P216/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!UN:P216/?y-1;     [Check if Resistance is enabled in WoGify Options]
-!!FU&y-1<>1:E;     [Exit if it isn't]
+; Initialization
+!!FU(NewIntArray):P?(stacksList:y);
+!!VR(sideDowngraded[2]:y):C0/0;
 
-!!VRv901:Sv587;
-!!FU660&v587<7:P0/1;     [re-upgrade creatures if need be]
-!!VRv587:S7;
-!!VRv901:Sv588;
-!!FU660&v588<7:P0/1;
-!!VRv588:S7;
-!!VRv901:Sv589;
-!!FU660&v589<7:P0/1;
-!!VRv589:S7;
+; Check if there is any stack downgraded by Resistance. Add in stack ID to the array for playing animation later
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!re k/0/2;
+    !!if&i^wog_216_monData_%i_%k^>0;
+      !!FU(UnpackUnion):Pi^wog_216_monData_%i_%k^/?(slot:y)/4/?(type:y)/14/?(degradeType:y)/14;
+      !!VR(stack:y):Si *(BATTLE_DEFENDER_STACK_FIRST) +(slot);
+      !!FU(Array_Push):P(stacksList)/(stack);
 
-** Alexis Koz
-!!VRv901:Sv487;
-!!FU660&v487<28:P1/0;     [re-upgrade creatures if need be]
-!!VRv487:S28;
-!!VRv901:Sv488;
-!!FU660&v488<28:P1/0;
-!!VRv488:S28;
-!!VRv901:Sv489;
-!!FU660&v489<28:P1/0;
-!!VRv489:S28;
-** Alexis Koz
+      !!VR(sideDowngraded[i]):S(TRUE);
+    !!en;
+  !!en;
+!!en;
+
+; Exit if there was no stack downgraded
+!!FU&(sideDowngraded[0])<>(TRUE)/(sideDowngraded[1])<>(TRUE):E;
+
+; Set up text - ert legacy
+!!VRz3:S^^;
+
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!if&(sideDowngraded[i]);
+    !!VRz470:S^^;
+    !!VRz471:S^^;
+    !!VR(oppSide:y):Si X(TRUE);
+    !!HEi^battle_hero_%(oppSide)^:B0/?z470 R2/?(gender:y);
+    !!VR(index:y):S(gender) +103031;
+    !!VRz471:Sz(index);
+
+    ; Set up text depending on whether it's hero vs hero or vs neutrals
+    !!if&i^battle_hero_vs_hero^;
+      !!HEi^battle_hero_%i^:B0/?z4;
+      !!VRz-1:Sz4 +z103056;
+    !!el;
+      !!VRz-1:Sz103057;
+    !!en;
+
+    !!VRz3:+z103030;
+  !!en;
+!!en;
+
+; Play text, sound and animation
+!!MM:Sz3;
+!!SN:P^BadMrle^;
+!!FU(WOG_PlayAnimationOnMultipleStacks):P30/(FALSE)/(stacksList);
+
+** End of battle trigger for resistance
+
+
+!?FU(OnAfterBattleUniversal)&i^wog_isNeutralBattle^;
+!!UN:P216/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!re k/0/2;
+    !!if&i^wog_216_monData_%i_%k^>0;
+      !!FU(UnpackUnion):Pi^wog_216_monData_%i_%k^/?(slot:y)/4/?(type:y)/14/?(degradeType:y)/14;
+      !!BA:Mi/(slot)/?(currType:y)/?(num:y);
+
+      ; If the stack got transformed by Werewolves, it won't get transformeed back to its upgraded form
+      !!BA&(currType)=(degradeType):Mi/(slot)/(type)/?(num);
+    !!en;
+  !!en;
+!!en;
 
 ** End of post-battle trigger for resistance
 
