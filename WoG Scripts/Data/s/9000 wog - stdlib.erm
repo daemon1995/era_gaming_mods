@@ -1558,4 +1558,49 @@ The game may fall at any time.^;
 !!VR(result)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE);
 !!VR(result)&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D):S(FALSE);
 
+; **************************************************************************************************
+; Get the indexes of minimum value items from the array
+!?FU(WOG_Array_IndexOfMinimumValues);   [by Archer30]
+!#VA(list:x);                           [Id of Array to find the index of minimum values]
+!!VR(firstItem:x);                      [OUT. Up to 15 indexes of minimun values]
+
+; Check if requesting more items than size of the array
+!!SN:M(list)/?(size:y);
+!!FU:A?(numArgs:y);
+!!VR(maxIndOut:y):S(numArgs) -1;
+
+!!if&(maxIndOut)>(size);
+  !!SN:F^ShowErmError^/^WOG_Array_IndexOfMinimumValues: invalid arguments number. Expected at most %(size) arguments^;
+  !!FU:E;
+!!en;
+
+; Initialization
+!!VR(minValues[15]:y):C(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)
+  /(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)
+  /(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX);
+
+; Loop through the array
+!!re i/0/(size)/1/-1;
+  !!SN:M(list)/i/?(value:y);
+
+  ; Initialization
+  !!VR(maxValueFromMins:y):S(INT_MIN);
+  !!VR(maxIndexFromMins:y):S-1;
+
+  ; Get the max value from the min values to be output
+  !!re j/0/(numArgs)/1/-2;              [-2: -1 -@list]
+    !!if&(minValues[j])>(maxValueFromMins);
+      !!VR(maxValueFromMins):S(minValues[j]);
+      !!VR(maxIndexFromMins:y):Sj;
+    !!en;
+  !!en;
+
+  ; If the value of the array is smaller than (or equals to) the biggest number from the mins, update the output value
+  !!if&(value)<=(maxValueFromMins);
+    !!VR(minValues[maxIndexFromMins]):S(value);
+    !!VR(index:y):S(maxIndexFromMins) +(@firstItem);
+    !!VRx(index):Si;
+  !!en;
+!!en;
+
 ********************************* End of Era Project Team's Script *********************************

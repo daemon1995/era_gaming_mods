@@ -29,7 +29,7 @@ ZVSE2
 ** The other variables may be used elsewhere but will be trashed by this code.
 ** Use caution; this code may take place in the middle of another script, if a hero gains a level or a battle is provoked
 
-** Functions Used: 649-650, 653, 658-661, 666-668, 8166
+** Functions Used: 649-650, 653, 666-668, 8166
 ** Timers Used: 74
 
 ** ERM numbers: Eagle Eye: 103
@@ -319,7 +319,7 @@ ZVSE2
           ; Get the total cost difference and slot ID, store in the arrays
           !!if&(costDiff)>0;
             !!VR(totalCostDiff:y):S(num) *(costDiff);
-            !!VR(totalCostDiff)&(totalCostDiff)<0:S(INT_MAX); [Correct the total cost difference if it overflows]
+            !!VR(totalCostDiff)&(totalCostDiff)<0:S(INT_MAX) -1; [Correct the total cost difference if it overflows]
             !!FU(Array_Push):P(totalCostDiffList)/(totalCostDiff) P(armySlotList)/j;
           !!en;
         !!en;
@@ -335,18 +335,14 @@ ZVSE2
     !!VR(numDegradeUnits[i]):F0/(size);
 
     ; Find out the monsters with lowest cost difference
-    !!FU(Array_Clone):P(totalCostDiffList)/?(totalCostDiffListClone:y);
-    !!VR(lastInd:y):S(size) -1;
-    !!FU(Array_Sort):P(totalCostDiffListClone)/0/(lastInd);
-    !!FU(Array_Revert):P(totalCostDiffListClone)/0/(lastInd);
     !#VA(lowestCostDiff[3]:y);
 
     !!if&(numDegradeUnits[i])=1;
-      !!FU(Array_Pop):P(totalCostDiffListClone)/?(lowestCostDiff[0]);
+      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiff[0]);
     !!el&(numDegradeUnits[i])=2;
-      !!FU(Array_Pop):P(totalCostDiffListClone)/?(lowestCostDiff[0])/?(lowestCostDiff[1]);
+      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiff[0])/?(lowestCostDiff[1]);
     !!el&(numDegradeUnits[i])=3;
-      !!FU(Array_Pop):P(totalCostDiffListClone)/?(lowestCostDiff[0])/?(lowestCostDiff[1])/?(lowestCostDiff[2]);
+      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiff[0])/?(lowestCostDiff[1])/?(lowestCostDiff[2]);
     !!en;
 
     ; Set up new monster type
@@ -374,7 +370,7 @@ ZVSE2
 ** End of pre-battle trigger for resistance
 
 
-!?FU(OnBattlefieldVisible)&i^battle_isVisible^/i^wog_isNeutralBattle^;
+!?FU(OnBattlefieldVisible)&i^wog_isNeutralBattle^/i^battle_isVisible^;
 !!UN:P216/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -407,7 +403,7 @@ ZVSE2
     !!VRz471:S^^;
     !!VR(oppSide:y):Si X(TRUE);
     !!HEi^battle_hero_%(oppSide)^:B0/?z470 R2/?(gender:y);
-    !!VR(index:y):S(gender) +103031;
+    !!VR(index:y):S(gender) +103028;
     !!VRz471:Sz(index);
 
     ; Set up text depending on whether it's hero vs hero or vs neutrals
@@ -447,49 +443,6 @@ ZVSE2
 !!en;
 
 ** End of post-battle trigger for resistance
-
-
-!?FU658;     [Function to downgrade one defending troop stack in battle]
-
-!!VRv902:Sx2 *20 R6;     [random slot # to start search from]
-!!DO659/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1:Px1/x2/x3;     [check 7 slots for stack to downgrade]
-
-** End of function to downgrade one defending troop stack in battle
-
-
-!?FU659;     [Function to check one stack for downgrading]
-
-!!VRv912:Sv902 %7;     [get an actual slot number]
-!!BA:Mx2/v912/?v913/?v914;     [get v913 type and v914 qty in slot]
-!!VRv915:S1;     [assume creature is upgraded]
-!!VRv915&v913<0:S0;     [treat no creature as a downgraded one]
-!!VRv916:Sv913 %2;
-!!VRv915&v916=0:S0;     [even creatures are always non-upgraded]
-!!VRv915&v913>=112/v913<=117:S0;     [elementals and golems]
-!!VRv915&v913>(MON_PHOENIX):S0;     [other neutral creatures]
-!!VRv913:-1;     [get type of unupgraded version]
-!!VRv913&v913=122:S115;     [special cases for elementals]
-!!VRv913&v913=124:S113;
-!!VRv913&v913=126:S112;
-!!VRv913&v913=128:S114;
-!!BA&v911=x3/v915=1:Mx2/v912/v913/v914;     [set new downgraded type if we haven't yet]
-!!VRv911&v911=x3/v915=1:Sv912;     [note we changed a slot]
-!!VRv902:+1;     [next slot]
-
-** End of function to check one stack for downgrading
-
-
-!?FU660;     [Function to reupgrade creatures in defender's slot v901]
-
-!!BA:Mx2/v901/?v913/?v914;     [get v913 type and v914 qty in slot]
-!!VRv913:+1;     [usually this gets us upgraded version]
-!!VRv913&v913=113:S127;     [handle elementals]
-!!VRv913&v913=114:S125;
-!!VRv913&v913=115:S129;
-!!VRv913&v913=116:S123;
-!!BA&v913>0/v914>0:Mx2/v901/v913/v914;     [set the old, upgraded type, if creatures survived]
-
-** End of function to reupgrade creatures in defender's slot v901
 -------------------------------------------------------------------------
 
 
@@ -498,14 +451,16 @@ ZVSE2
 *************************************************************************
 
 !?FU(WOG_CreateERMHook)&i^wog_218_enabled^;
+!!SN:Ex1/1/5137385/(WOG_218_OnMonGetSpec); [hook for the artifacts giving mon stats]
 
-!!SN:Ex1/1/5137385/(WOG_218_OnMonGetSpec);                               [hook for the artifacts giving mon stats]
 !?FU(WOG_218_OnMonGetSpec);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(hero:y) C(hero)/26/2/?(heroId:y);
 !!HE(heroId):S(SKILL_TACTICS)/?(speedBon:y);
+
 !!if&(speedBon);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monInfo:y);
   !!UN:C(monInfo)/80/4/?s;
+
   !!if&s;
     !!UN:C(monInfo)/80/4/d(speedBon);
   !!en;
@@ -515,12 +470,3 @@ ZVSE2
 !!re i/0/i^battle_hero_vs_hero^;(end_value);
   !!HEi^battle_hero_%i^:R4/0;
 !!en;
-
-
-!?FU661;     [Function to set flag 270 if this is a human vs. human network battle]
-
-!!IF:V270/0;     [assume not a network hero battle]
-!!BA:E?y1;     [Check state of battle: y1>0 means network battle]
-!!IF&y1>0:V270/1;     [Set flag 270 to true if network battle]
-
-** End of function to set flag 270 if this is a human vs. human network battle
