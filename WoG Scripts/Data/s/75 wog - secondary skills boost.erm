@@ -335,31 +335,35 @@ ZVSE2
     !!VR(numDegradeUnits[i]):F0/(size);
 
     ; Find out the monsters with lowest cost difference
-    !#VA(lowestCostDiff[3]:y);
+    !#VA(lowestCostDiffInd[3]:y);
 
     !!if&(numDegradeUnits[i])=1;
-      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiff[0]);
+      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0]);
     !!el&(numDegradeUnits[i])=2;
-      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiff[0])/?(lowestCostDiff[1]);
+      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0])/?(lowestCostDiffInd[1]);
     !!el&(numDegradeUnits[i])=3;
-      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiff[0])/?(lowestCostDiff[1])/?(lowestCostDiff[2]);
+      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0])/?(lowestCostDiffInd[1])/?(lowestCostDiffInd[2]);
     !!en;
 
     ; Set up new monster type
     !!re k/0/(numDegradeUnits[i])/1/-1;
       ; Get the array index of the lowest cost difference, in order to get the army slot
-      !!FU(Array_IndexOf):P(totalCostDiffList)/(lowestCostDiff[i])/?(index:y);
-      !!SN:M(armySlotList)/(index)/?(slot:y);
+      !!SN:M(armySlotList)/(lowestCostDiffInd[k])/?(slot:y);
       !!BA:Mi/(slot)/?(type)/?(num);
 
       ; Get the degraded monster of the army slot
       !!FU(GetDegradedMonCandidates):P(type)/?(degradesList);
+      ; Fail safe - in some cases the size of degradesList may be 0, use the original type instead
       !!SN:M(degradesList)/?(size);
 
-      !!SN:M(degradesList)/0/?(degradeType);
+      !!if&(size)>0;
+        !!SN:M(degradesList)/0/?(degradeType);
+      !!el;
+        !!VR(degradeType):S(type);
+      !!en;
 
       ; Change the monster type to the degraded one
-      !!BA:Mi/(slot)/(degradeType)/(num);
+      !!BA:Mi/(slot)/(degradeType)/?(num);
 
       ; Store slot ID, monster type before changing, type after chagning in the variable
       !!FU(PackUnion):P(slot)/4/(type)/14/(degradeType)/14/?i^wog_216_monData_%i_%k^;
@@ -370,7 +374,7 @@ ZVSE2
 ** End of pre-battle trigger for resistance
 
 
-!?FU(OnBattlefieldVisible)&i^wog_isNeutralBattle^/i^battle_isVisible^;
+!?FU(OnBattlefieldVisible)&i^battle_isVisible^/i^wog_isNeutralBattle^;
 !!UN:P216/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -383,6 +387,7 @@ ZVSE2
   !!re k/0/2;
     !!if&i^wog_216_monData_%i_%k^>0;
       !!FU(UnpackUnion):Pi^wog_216_monData_%i_%k^/?(slot:y)/4/?(type:y)/14/?(degradeType:y)/14;
+
       !!VR(stack:y):Si *(BATTLE_DEFENDER_STACK_FIRST) +(slot);
       !!FU(Array_Push):P(stacksList)/(stack);
 
