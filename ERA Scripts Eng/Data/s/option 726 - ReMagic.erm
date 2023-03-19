@@ -76,24 +76,21 @@ ZVSE2
 !!FU&(wogOption)<>(TRUE):E;             [выход, если опция не включена]
 
 ; ~~Exit if file does not exist (not possible to check txt inside pac)~~ daemon_n found the soulution
-; BU
 !!VRz1:S^opt726.txt^;                   [полное название тектовика]
-!!SN:E5619824/(CALLCONV_THISCALL)/z1;     [TRY TO LOAD TXT FILE _DWORD *__thiscall LoadTXTFile2(const char *name)]
+!!SN:E5619824/(CALLCONV_THISCALL)/z1;   [TRY TO LOAD TXT FILE _DWORD *__thiscall LoadTXTFile2(const char *name)]
 
 !!if&v1>0;
-  !!UN:C5890966/(UNC_INT)/9597928;        [подмена ссылки на адрес переменной z1 "opt726.txt"]
-  !!SN:E5890960/1;                        [загрузка "opt726.txt" в функции загрузки "sptraits.txt"]
-  !!UN:C5890966/(UNC_INT)/6849372;        [возврат оригинальной ссылки на файл "sptraits.txt"]
+  !!UN:C5890966/(UNC_INT)/9597928;      [подмена ссылки на адрес переменной z1 "opt726.txt"]
+  !!SN:E5890960/1;                      [загрузка "opt726.txt" в функции загрузки "sptraits.txt"]
+  !!UN:C5890966/(UNC_INT)/6849372;      [возврат оригинальной ссылки на файл "sptraits.txt"]
 !!el;
   !!IF:M^Enable ERA Scripts mod or restore it^;
 !!en;
 
-
-
 !#FU(ES_726_ReplaceSpellTable):P;
 
 ** Палач дает +8 к атаке против всех существ.
-!?FU(OnAfterBattleAction);                        [После любого действия]
+!?FU(OnAfterBattleAction);              [После любого действия]
 !!UN:P726/?y1;
 !!FU&y1=0:E;                  [выход, если опция не включена]
 
@@ -107,56 +104,68 @@ ZVSE2
 !!BMx16:Fy2;                  [обновление флагов отряда]
 
 ** Палач позволяет существам добивать существо врага, у которого после атаки останется не более 20/30/40/50% здоровья.
-!?FU(OnBeforeBattleAction);                        [перед действием]
-!!UN:P726/?y1;
-!!FU&y1=0:E;                  [выход, если опция не включена]
+!?FU(OnMonsterPhysicalDamage);
+!!UN:P726/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!SN:W^ReMagic.Slayer.Stack^/-1 W^ReMagic.Slayer.Effect^/-1 W^ReMagic.Slayer.Side^/-1; [сброс значений]
-!!BG:A?y1 N?y2 Q?y6;          [y1/y2/y6 - тип действия/активный отряд/сторона]
-!!FU|y1<6/y1>7:E;             [выход, если не атака/стрельба]
+; Exit if not melee attacking or shooting
+!!UN:C42149568/(UNC_INT)/?(dmgType:y);
+!!FU&(dmgType)<>4462398/(dmgType)<>4455011:E;
 
-!!BMy2:G55/?y3/?y4;           [y3/y4 - продолжительность/сила заклинания Палач]
-!!FU&y3<1:E;                  [выход, если заклинание не действует на отряд]
+; Get the stack attacking
+!!MF:N?(defStack:y);
+!!BG:E?(targetStack:y);
 
-!!SS55:Ey4/?y5;               [y5 - эффект заклинания]
-!!BA:Hy6/?y7;                 [y7 - номер героя атакующего существа]
+!!if&(defStack)=(targetStack);
+  !!VR(atkStack:y):Si^battle_acting_stack^;
+!!el;
+  !!VR(atkStack):S(targetStack);
+!!en;
 
-!!if&y7>=0;                   [если герой есть]
-  !!HEy7:X?y11/?y12/d/d/d/d/d;[y11=3, y12=55 для специалиста по палачу]
-  !!VRy5&y11=3/y12=55:+10;    [специалист по Палачу повышает эффективность на 10]
-!!en;                         [...]
+; Check if the attacking stack has Slayer
+!!BM(atkStack):G(SPELL_SLAYER)/?(duration:y)/?(level:y);
 
-!!SN:W^ReMagic.Slayer.Stack^/y2 W^ReMagic.Slayer.Effect^/y5 W^ReMagic.Slayer.Side^/y6; [сохранение значений]
+!!if&(duration)>0;
+  ; Get the spell effect from the level of Slayer
+  !!SS(SPELL_SLAYER):E(level)/?(finishHpPercent:y);
+  !!BM(atkStack):I?(side:y);
 
-!?FU(OnMonsterPhysicalDamage);[перед нанесением урона]
-!!UN:P726/?y1;
-!!FU&y1=0:E;                  [выход, если опция не включена]
-
-!!MF:N?y1;                    [y1 - отряд, получающий урон]
-!!BG:Q?y5;                    [y5 - сторона, наносящая урон]
-!!SN:W^ReMagic.Slayer.Stack^/?y2 W^ReMagic.Slayer.Effect^/?y3 W^ReMagic.Slayer.Side^/?y4; [получение значений]
-!!FU|y1=y2/y3<0/y5<>y4:E;     [выход, если урон получает зачарованный отряд, чар нет или вражеская ответка]
-
-!!MF:F?y4;                    [y4 - получаемый урон]
-!!BMy1:H?y5 L?y6;             [y5/y6 - макс./потерянное здоровье целевого отряда до получения урона]
-!!VRy7:Sy4 :y5 +3 *y5 -y6 -y4 %y5; [y7 - % здоровье оставшееся после получения урона]
-!!VRy8:Sy7 *100 :y5;          [y8 - % здоровья оставшегося после получения урона]
-
-!!if&y8<=y3;                  [если эффективности "Палача" хватает для добивания существа]
-  !!VRy4:+y7;                 [увеличение наносимого урона]
-  !!MF:Fy4;                   [...]
-  !!BMy2:N?y9 T?y10;          [y9/y10 - численность/тип атакующих существ]
-
-  !!VRy30:Sy9 -1 B;
-  !!SN:H^monname^/y10/y30/?z2;
-  !!SN:T^es.726.slayer%y30^/?z1/^mon^/z2;
-
-  !!if&i^battle_isVisible^;
-    !!MM:Sz1;               [вывод текста в лог битвы]
-    !!SN:P^SLAYER^;         [вывод звука Палача]
-    !!BMy1:V28;             [анимация на целевом отряде]
+  ; Check if the owner of the stack is a Slayer specialist
+  !!if&i^battle_hero_%(side)^>(NO_HERO);
+    !!HEi^battle_hero_%(side)^:X?(specType:y)/?(specSubtype:y);
+    !!VR(finishHpPercent)&(specType)=3/(specSubtype)=(SPELL_SLAYER):+10;
   !!en;
-!!en; 
+
+  ; Check if the damage exceeds the total HP of the defending stack
+  !!MF:F?(damage:y);
+  !!BM(defStack):H?(hp:y) L?(lostHp:y) N?(defNum:y);
+  !!VR(totalHp:y):S(hp) *(defNum) -(lostHp);
+
+  !!if&(damage)<(totalHp);
+    ; Get the hp left after attacked
+    !!VR(hpAfterDamage:y):S(totalHp) -(damage) %(hp);
+
+    !!if&(hpAfterDamage)>0;
+      ; Get the percentage of HP left after attacked
+      !!VR(hpPercentAfterDamage:y):S(hpAfterDamage) *100 :(hp);
+
+      ; If the percentage of HP equals to or is lower than the threshold, increase damage to finish off the creature
+      !!if&(hpPercentAfterDamage)<=(finishHpPercent); [если эффективности "Палача" хватает для добивания существа]
+        !!MF:Fd(hpAfterDamage);             [увеличение наносимого урона]
+        
+        !!if&i^battle_isVisible^;
+          !!BM(atkStack):N?(atkNum:y) T?(type:y); [численность/тип атакующих существ]
+          !!VR(isPlural:y):S(atkNum) -1 B;
+          !!SN:H^monname^/(type)/(isPlural)/?z2;
+          !!SN:T^es.726.slayer%(isPlural)^/?z1/^mon^/z2;
+          !!MM:Sz1;                         [вывод текста в лог битвы]
+          !!SN:P^SLAYER^;                   [вывод звука Палача]
+          !!BM(defStack):V28;               [анимация на целевом отряде]
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
 ** Установка флага "заклинание с уроном" Огненной стене и Миному полю для отображения урона в описании
 !?FU(OnAfterErmInstructions); [перед загрузкой карты]
