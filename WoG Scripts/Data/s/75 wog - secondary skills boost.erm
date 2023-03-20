@@ -267,9 +267,9 @@ ZVSE2
      Resistance
 *************************************************************************
 
-; This script works in all the battles. Yet as for balance purpose, it's decided to be active only in battles against neutral creatues
+; This script works in all the battles. Yet as for balance purpose, it's decided to be active only in battles against neutral creatues.
 ; If &i^wog_isNeutralBattle^ is taken out, this script will work with all the battles.
-; FU(OnAfterBattleSetup) seems to be the only valid timing
+; FU(OnAfterBattleSetup) seems to be the only valid timing.
 !?FU(OnAfterBattleSetup)&i^wog_isNeutralBattle^;
 !!UN:P216/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
@@ -338,11 +338,11 @@ ZVSE2
     !#VA(lowestCostDiffInd[3]:y);
 
     !!if&(numDegradeUnits[i])=1;
-      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0]);
+      !!FU(WOG_216_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0]);
     !!el&(numDegradeUnits[i])=2;
-      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0])/?(lowestCostDiffInd[1]);
+      !!FU(WOG_216_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0])/?(lowestCostDiffInd[1]);
     !!el&(numDegradeUnits[i])=3;
-      !!FU(WOG_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0])/?(lowestCostDiffInd[1])/?(lowestCostDiffInd[2]);
+      !!FU(WOG_216_Array_IndexOfMinimumValues):P(totalCostDiffList)/?(lowestCostDiffInd[0])/?(lowestCostDiffInd[1])/?(lowestCostDiffInd[2]);
     !!en;
 
     ; Set up new monster type
@@ -404,29 +404,26 @@ ZVSE2
 
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!if&(sideDowngraded[i]);
-    !!VRz470:S^^;
-    !!VRz471:S^^;
     !!VR(oppSide:y):Si X(TRUE);
-    !!HEi^battle_hero_%(oppSide)^:B0/?z470 R2/?(gender:y);
-    !!VR(index:y):S(gender) +103028;
-    !!VRz471:Sz(index);
+    !!HEi^battle_hero_%(oppSide)^:B0/?z2 R2/?(gender:y);
 
     ; Set up text depending on whether it's hero vs hero or vs neutrals
     !!if&i^battle_hero_vs_hero^;
       !!HEi^battle_hero_%i^:B0/?z4;
-      !!VRz-1:Sz4 +z103056;
+      !!VR(endStr:z):Sz4 +^%T(wog.216.hero)^;
     !!el;
-      !!VRz-1:Sz103057;
+      !!VR(endStr):S^%T(wog.216.neutral)^;
     !!en;
 
-    !!VRz3:+z103030;
+    !!SN:T^wog.whom%(gender)^/?(whom:z);
+    !!SN:T^wog.216.msg^/?z3/^hero^/z2/^whom^/(whom)/^endStr^/(endStr);
   !!en;
 !!en;
 
 ; Play text, sound and animation
 !!MM:Sz3;
-!!SN:P^BadMrle^;
-!!FU(WOG_PlayAnimationOnMultipleStacks):P30/(FALSE)/(stacksList);
+!!SN:P^Resurect^;
+!!FU(WOG_PlayAnimationOnMultipleStacks):P57/(FALSE)/(stacksList);
 
 ** End of battle trigger for resistance
 
@@ -448,6 +445,54 @@ ZVSE2
 !!en;
 
 ** End of post-battle trigger for resistance
+
+
+; Get the indexes of minimum value items from the array
+!?FU(WOG_216_Array_IndexOfMinimumValues);
+!#VA(list:x);                           [Id of Array to find the index of minimum values]
+!!VR(firstItem:x);                      [OUT. Up to 15 indexes of minimun values]
+
+; Check if requesting more items than size of the array
+!!SN:M(list)/?(size:y);
+!!FU:A?(numArgs:y);
+!!VR(maxIndOut:y):S(numArgs) -1;
+
+!!if&(maxIndOut)>(size);
+  !!SN:F^ShowErmError^/^WOG_216_Array_IndexOfMinimumValues: invalid arguments number. Expected at most %(size) arguments^;
+  !!FU:E;
+!!en;
+
+; Initialization
+!!VR(minValues[15]:y):C(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)
+  /(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)
+  /(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX);
+
+!!VR(maxValueFromMins:y):S(INT_MAX);
+!!VR(maxIndexFromMins:y):S0;
+
+; Loop through the array
+!!re i/0/(size)/1/-1;
+  !!SN:M(list)/i/?(value:y);
+
+  ; If the value of the array is smaller than (or equals to) the biggest number from the mins, update the output value
+  !!if&(value)<=(maxValueFromMins);
+    !!VR(minValues[maxIndexFromMins]):S(value);
+    !!VR(index:y):S(maxIndexFromMins) +(@firstItem);
+    !!VRx(index):Si;
+
+    ; Update max value / index from the minimum values
+    !!VR(maxValueFromMins):S(INT_MIN);
+
+    !!re j/0/(numArgs)/1/-2;              [-2: -1 -@list]
+      !!if&(minValues[j])>(maxValueFromMins);
+        !!VR(maxValueFromMins):S(minValues[j]);
+        !!VR(maxIndexFromMins:y):Sj;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+** End of function for resistance
 -------------------------------------------------------------------------
 
 

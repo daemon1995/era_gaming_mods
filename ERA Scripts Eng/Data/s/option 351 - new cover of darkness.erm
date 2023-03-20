@@ -1,0 +1,233 @@
+ZVSE2
+; Author:   Archer30
+; Engine:   ERM 2.0+
+; Requires: ERA 3.3+, Era Erm Framework
+
+; Changes the funtionaliy of Cover of Darkness (Necropolis building and Map object) and Veil of Darkness (Darkness Dragon's ability).
+; This script uses PO:N and PO:V0 of Cover of Darkness (object type #15).
+
+
+// Disable the original functionality of Cover of Darkness (Necropolis building) and Veil of Darkness
+!?FU(OnStartOrLoad);
+; Disable Cover of Darkness (Necropolis building)
+!!UN:C5012927/(UNC_INT16)/?i^es_351_patch1^ C5012927/(UNC_INT16)/(OPCODE_NOP_2);
+; Disable Veil of Darkness ability of Darkness Dragon
+!!UN:C7685703/(UNC_INT)/?i^es_351_patch2^ C7685703/(UNC_INT)/(INT_MAX);
+!!UN:C7685961/(UNC_INT)/?i^es_351_patch3^ C7685961/(UNC_INT)/(INT_MAX);
+
+!?FU(OnGameLeave);
+; Restore Cover of Darkness (Necropolis building)
+!!UN:C5012927/(UNC_INT16)/i^es_351_patch1^;
+; Restore Veil of Darkness ability of Darkness Dragon
+!!UN:C7685703/(UNC_INT)/i^es_351_patch2^;
+!!UN:C7685961/(UNC_INT)/i^es_351_patch3^;
+
+; The Cover of Darkness reduce -1 to an intruder hero's morale when defending against a siege.
+; Set up new description via ert
+!?FU(OnGameEnter);
+*!UN:C6968556/(UNC_INT)/?(ptr:y);       [Name]
+*!SN:B(ptr)/d/z179500;
+!!UN:C6977828/(UNC_INT)/?(ptr:y);       [Desc]
+!!SN:B(ptr)/d/z179501;
+
+// Siege with Cover of Darkness (Necropolis building)
+; Set up -1 morale in town battle for the attacking hero
+!?FU(OnBeforeBattleUniversal);
+; Single UN:U call to check whether it is a battle in a town
+!!VR(x:y):Si^battle_x^ -1;
+!!VR(y:y):Si^battle_y^;
+!!VR(z:y):Si^battle_z^;
+!!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y)/(z);
+
+!!if&(x)=i^battle_x^/(y)=i^battle_y^/(z)=i^battle_z^;
+  !!CA(x)/(y)/(z):T?(type:y);
+  
+  !!if&(type)=(TOWN_NECROPOLIS);
+    ; Check if Cover of Darkness is built
+    !!CA(x)/(y)/(z):B3/17;
+    ; Reduce morale by 1
+    !!HEi^battle_hero_0^&i^battle_hero_0^>(NO_HERO)/1:R0/d-1;
+  !!en;
+!!en;
+
+// Visit Cover of Darkness (map object)
+!?OB(OBJ_COVER_OF_DARKNESS);
+; Disable Cover of Darkness
+!!OB998:S;
+
+; Set the current player as vistied once for cover (for setting extra info in hint and RMB)
+!!VRi^es_351_visitedThisGame_%i(timerOwner)^:S(TRUE);
+
+; Set the current player as visited once for this specific cover
+!!VR(playerBit:y):S1 Sd<<i^timerOwner^;
+!!PO998:V0/d(playerBit);
+
+; Check if Cover of Darkness has been visited
+!!PO998:N?(isVisited:y);
+
+!!if&(isVisited);
+  !!IF:M^%T(es.351.objVisited)^;
+  !!FU:E;
+!!en;
+
+; Check if the hero has the full effect of Cover of Darkness
+; The hero can still visit Cover of Darkness if having one day of effect left
+!!HE(CURRENT_HERO):N?(hero:y);
+
+!!if&i^es_351_coverCounter_%(hero)^>=2;
+  !!IF:M^%T(es.351.heroVisited)^;
+  !!FU:E;
+!!en;
+
+!!PO998:N(TRUE);
+!!VRi^es_351_coverCounter_%(hero)^:S2;
+!!FU(ES_351_SetHeroCoverStatus):P(hero)/(TRUE);
+!!IF:M^%T(es.351.visit)^;
+
+!?FU(ES_351_SetHeroCoverStatus);
+!#VA(hero:x);
+!#VA(isCovered:x);
+
+!!HE(hero):O?(owner:y);
+!!FU&(owner)=(NO_OWNER):E;
+
+!!OW:T(owner)/?(heroTeam:y);
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!co&i=(owner);
+
+  !!OW:Ii/?(isAi:y)/?(hasLost:y);
+
+  !!if&(hasLost)<>(TRUE);
+    !!OW:Ti/?(team:y);
+
+    !!if&(isCovered);
+      !!HO(hero):Di;
+    !!el;
+      !!HO(hero):Ei;
+    !!en;
+  !!en;
+!!en;
+
+// Reset Cover of Darkness (map object) status after battle
+!?FU(OnAfterBattleUniversal);
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!VR(hero:y):Si^battle_hero_%i^;
+
+  !!if&i^es_351_coverCounter_%(hero)^>0;
+    !!VRi^es_351_coverCounter_%(hero)^:S0;
+    !!FU(ES_351_SetHeroCoverStatus):P(hero)/(FALSE);
+  !!en;
+!!en;
+
+// Mouse hint and RMB for Cover of Darkness (map object)
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
+
+!!FU&(objType)<>(OBJ_COVER_OF_DARKNESS):E;
+
+!!FU(ES_351_GetMapObjectString):P(x)/(y)/(z)/0/?(string:z);
+!!MM:M^%(string)^;
+
+!?FU(OnAdventureMapRightMouseClick);
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(objType:y);
+!!FU&(objType)<>(OBJ_COVER_OF_DARKNESS):E;
+
+!!FU(ES_351_GetMapObjectString):P(x)/(y)/(z)/1/?(string:z);
+!!SN:H^object^/(OBJ_COVER_OF_DARKNESS)/0/^%(string)^;
+
+; Here we use the string logic of Magic Spring
+; This function works only for Cover of Darkness object
+!?FU(ES_351_GetMapObjectString);
+!#VA(x:x) (y:x) (z:x);
+!#VA(mode:x);                           [0 for hint, 1 for right-clicking]
+!#VA(result:x);                         [OUT. String index of the map object]
+
+!!OW:C?(player:y)/?(interactPlayer:y);
+
+!!SN:O?(x)/?(y)/?(z);
+
+; Check if the object has been visited by the player once
+!!PO(x)/(y)/(z):V0/?(playerBits:y);
+!!VR(playerBit:y):S1 Sd<<(interactPlayer);
+!!VR(visitedOnce:y):S(playerBits) &(playerBit);
+
+; Check if the object is visited by anyone and cannot be used at the moment
+!!PO(x)/(y)/(z):N?(isVisited:y);
+
+; Set up string
+!!if&(mode)=0;
+  !!VR(separator1:z):S^ ^;
+  !!VR(separator2:z):S^ ^;
+!!el;
+  !!VR(separator1):S^%T(es.endl)^;
+  !!VR(separator2):S^%T(es.endl)%T(es.endl)^;
+!!en;
+
+; If this type of object has been visited once by the player, add the description after the name
+!!VR(string:z):S^%T(es.351.name)^;
+!!VR(string)&i^es_351_visitedThisGame_%(interactPlayer)^:+^%(separator1)%T(es.351.desc)^;
+
+; Set up the visited info in different cases
+; Always showing not visited if this specifc object has not been visited once by the interacting player
+!!if&(visitedOnce)=(FALSE);
+  !!VR(string):+^%(separator2)%T(es.notVisited)^;
+; Show correect info of visisted if this object has been visited once before
+!!el;
+  !!if&(isVisited);
+    !!VR(string):+^%(separator2)%T(es.visited)^;
+  !!el;
+    !!VR(string):+^%(separator2)%T(es.notVisited)^;
+  !!en;
+!!en;
+
+!!VR(result):Z(string);
+
+// Daily event for Cover of Darkness (map object) and Veil of Darkness (Darkness Dragon's ability)
+!?FU(OnEveryDay)&i^timerOnce^;
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:O?(owner:y);
+
+  !!if&(owner)>(NO_OWNER);
+    ; Update the hero's status of Cover of Darkness (map object)
+    !!if&i^es_351_coverCounter_%i^>0/i^timerDay^>1;
+      !!VRi^es_351_coverCounter_%i^:-1;
+
+      !!FU(ES_351_SetHeroCoverStatus)&i^es_351_coverCounter_%i^=0:Pi/(FALSE);
+    !!en;
+
+    ; Veil of Darkness disguise the hero's army every turn
+    !!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+      !!HEi:C0/j/?(type:y)/?(num:y);
+
+      !!if&(num)>0;
+        !!FU(ES_351_CheckIfMonIsEligible):P(type)/?(result:y);
+
+        !!if&(result);
+          !!HEi:Z?(heroStruct:y);
+          !!UN:C(heroStruct)/270/(UNC_INT8)/(SKILL_EXPERT);
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Reset Cover of Darkness (map object) every Monday
+!!if&i^timerWeekday^=1;
+  !!VR(x:y):S-1;
+
+  !!re k;
+    !!UN:U(OBJ_COVER_OF_DARKNESS)/0/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+
+    !!PO(x)/(y)/(z):N(FALSE);
+  !!en;
+!!en;
+
+// Funciton to check if the targeted monster is eligible for new Veil of Darkness
+!?FU(ES_351_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_DARKNESS_DRAGON):S(TRUE);

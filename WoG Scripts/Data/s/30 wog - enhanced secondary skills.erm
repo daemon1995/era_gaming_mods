@@ -352,7 +352,6 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 ; Exit if not casting
 !!BG:A?(action:y) E?(target:y);         [get action type and target]
 
-
 !!FU&(action)<>(BATTLE_ACTION_HERO_CAST)/(action)<>(BATTLE_ACTION_MONSTER_CAST):E; [no effect if not casting]
 
 ; Check if the spell is beneficial, here we check the type of target
@@ -399,11 +398,14 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!en;
 
 ; Reduce mana (spell count) and show animation on the caster
+!!VR(oppSide:y):Si^battle_acting_side^ X1;
+
 ; For monster cast
 !!if&(action)=(BATTLE_ACTION_MONSTER_CAST);
   ; Skip the current turn
   !!BMi^battle_acting_stack^:Ed-1;      [reduce spell count by 1]
   !!BG:A(BATTLE_ACTION_WALK);           [make unit move (cancel action), possible to get morale]
+
   ; Show mana drained animation on the casting monster
   !!BMi^battle_acting_stack^&i^battle_isVisible^:V76;
 ; For hero cast
@@ -412,12 +414,11 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!BG:H?(hero:y);
 
   !!if&(hero)<>(NO_HERO);
-    !!VR(oppSide:y):Si^battle_acting_side^ X1;
-    !!HE(hero):Z?(hero);
+    !!HE(hero):Z?(heroStruct:y);
     !!VR(oppArmyOffs:y):S(oppSide) *(UNC_INT) +21700;
     !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y)  C(cmbMgr)/(oppArmyOffs)/4/?(oppArmyPtr:y) C(cmbMgr)/21440/4/?(groundType:y);
-    !!SN:E5133488/(CALLCONV_THISCALL)/(hero)/(spell)/(oppArmyPtr)/(groundType);
-    !!SN:E5084480/(CALLCONV_THISCALL)/(hero)/v1;
+    !!SN:E5133488/(CALLCONV_THISCALL)/(heroStruct)/(spell)/(oppArmyPtr)/(groundType);
+    !!SN:E5084480/(CALLCONV_THISCALL)/(heroStruct)/v1;
   !!en;
 
   ; Set to no cast and pass the turn
@@ -440,8 +441,18 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ; Show combat msg
 !!if&i^battle_isVisible^;
-  !!VRz2:Sz148004;                      [set combat message]
-  !!MM:Sz2;                             [display combat message]
+  !!HEi^battle_hero_%(oppSide)^:B0/?z2;
+
+  !!if&(action)=(BATTLE_ACTION_MONSTER_CAST);
+    !!BMi^battle_acting_stack^:T?(type:y) N?(num:y);
+    !!VR(isPlural:y):S(num) -1 B;
+    !!SN:H^monname^/(type)/(isPlural)/?z4;
+  !!el;
+    !!HE(hero):B0/?z4;
+  !!en;
+
+  !!SN:T^wog.202.battleLog^/?z3/^hero^/z2/^victim^/z4;
+  !!MM:Sz3;
 !!en;
 
 ; Return to the caster's stack turn

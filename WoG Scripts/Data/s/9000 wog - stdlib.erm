@@ -928,6 +928,7 @@ The game may fall at any time.^;
 
 ; Set up variable for siege wall battle (Must be later than OnBeforeBattleUniversal to work)
 ; Currently used in Enhanced War Machines
+; Note that in a battle vs a town without walls, i^wog_isSiege^ would be FALSE. For checking such kind of battle, use single UN:U instead (http://wforum.heroes35.net/showthread.php?tid=541&pid=125513#pid125513)
 !?FU(OnBeforeBattlefieldVisible);
 !!VRi^wog_isSiege^:S(FALSE);
 !!BA:S?(battleType:y);
@@ -966,11 +967,6 @@ The game may fall at any time.^;
 !!if&(isBank);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-12/4/1;
 !!en;
-
-; Scripts requires to be executed earlier
-; Random Heroes
-!?FU(OnAfterBattleSetup);
-!!FU(WOG_72_SetUpRandomHero)&i^battle_hero_1^=(NO_HERO):P;
 
 ; **************************************************************************************************
 ; Get the real type and subtype of a map object
@@ -1557,52 +1553,6 @@ The game may fall at any time.^;
 !!VR(result)&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS):S(FALSE);
 !!VR(result)&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE):S(FALSE);
 !!VR(result)&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D):S(FALSE);
-
-; **************************************************************************************************
-; Get the indexes of minimum value items from the array
-!?FU(WOG_Array_IndexOfMinimumValues);   [by Archer30]
-!#VA(list:x);                           [Id of Array to find the index of minimum values]
-!!VR(firstItem:x);                      [OUT. Up to 15 indexes of minimun values]
-
-; Check if requesting more items than size of the array
-!!SN:M(list)/?(size:y);
-!!FU:A?(numArgs:y);
-!!VR(maxIndOut:y):S(numArgs) -1;
-
-!!if&(maxIndOut)>(size);
-  !!SN:F^ShowErmError^/^WOG_Array_IndexOfMinimumValues: invalid arguments number. Expected at most %(size) arguments^;
-  !!FU:E;
-!!en;
-
-; Initialization
-!!VR(minValues[15]:y):C(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)
-  /(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)
-  /(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX)/(INT_MAX);
-
-!!VR(maxValueFromMins:y):S(INT_MAX);
-!!VR(maxIndexFromMins:y):S0;
-
-; Loop through the array
-!!re i/0/(size)/1/-1;
-  !!SN:M(list)/i/?(value:y);
-
-  ; If the value of the array is smaller than (or equals to) the biggest number from the mins, update the output value
-  !!if&(value)<=(maxValueFromMins);
-    !!VR(minValues[maxIndexFromMins]):S(value);
-    !!VR(index:y):S(maxIndexFromMins) +(@firstItem);
-    !!VRx(index):Si;
-
-    ; Update max value / index from the minimum values
-    !!VR(maxValueFromMins):S(INT_MIN);
-
-    !!re j/0/(numArgs)/1/-2;              [-2: -1 -@list]
-      !!if&(minValues[j])>(maxValueFromMins);
-        !!VR(maxValueFromMins):S(minValues[j]);
-        !!VR(maxIndexFromMins:y):Sj;
-      !!en;
-    !!en;
-  !!en;
-!!en;
 
 ; **************************************************************************************************
 ; Get the max primary skill value of the game
