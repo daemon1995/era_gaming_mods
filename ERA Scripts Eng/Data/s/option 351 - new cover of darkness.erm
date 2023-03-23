@@ -32,6 +32,7 @@ ZVSE2
 !!UN:C7685703/(UNC_INT)/i^es_351_patch2^;
 !!UN:C7685961/(UNC_INT)/i^es_351_patch3^;
 
+
 // Siege with Cover of Darkness (Necropolis building)
 ; The Cover of Darkness reduce -1 to an intruder hero's morale when defending against a siege.
 !?FU(OnBeforeBattleUniversal);
@@ -54,6 +55,7 @@ ZVSE2
     !!HEi^battle_hero_0^&i^battle_hero_0^>(NO_HERO)/1:R0/d-1;
   !!en;
 !!en;
+
 
 // Visit Cover of Darkness (map object)
 !?OB(OBJ_COVER_OF_DARKNESS);
@@ -117,6 +119,7 @@ ZVSE2
   !!en;
 !!en;
 
+
 // Reset Cover of Darkness (map object) status after battle
 !?FU(OnAfterBattleUniversal);
 !!UN:P351/?(wogOption:y);
@@ -130,6 +133,7 @@ ZVSE2
     !!FU(ES_351_SetHeroCoverStatus):P(hero)/(FALSE);
   !!en;
 !!en;
+
 
 // Mouse hint and RMB for Cover of Darkness (map object)
 !?FU(OnAdvMapTileHint);
@@ -201,23 +205,44 @@ ZVSE2
 
 !!VR(result):Z(string);
 
+
 // Daily event for Cover of Darkness (map object) and Veil of Darkness (Darkness Dragon's ability)
+!?FU(OnAfterErmInstructions);
+!!UN:P351/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Enable Darkness Dragon's Disguise by default
+!!VRi^es_351_disguiseEnabled^:S(TRUE);
+
 !?FU(OnEveryDay)&i^timerOnce^;
 !!UN:P351/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!HEi:O?(owner:y);
+; Check if it is actually needed to cast Disguise every turn end (only needed when there are more than two teams involving human players)
+; Loop through players
+!!if&i^es_351_disguiseEnabled^;
+  !!FU(NewIntArray):P?(humanPlayerTeams:y);
 
-  !!if&(owner)>(NO_OWNER);
-    ; Update the hero's status of Cover of Darkness (map object)
-    !!if&i^es_351_coverCounter_%i^>0/i^timerDay^>1;
-      !!VRi^es_351_coverCounter_%i^:-1;
+  !!re j/(PLAYER_FIRST)/(PLAYER_LAST);
+    !!OW:Ij/?(isAi:y)/?(hasLost:y);
 
-      !!FU(ES_351_SetHeroCoverStatus)&i^es_351_coverCounter_%i^=0:Pi/(FALSE);
+    !!if&(isAi)<>(TRUE)/(hasLost)<>(TRUE);
+      !!OW:Tj/?(team:y);
+
+      !!FU(Array_Push):P(humanPlayerTeams)/(team);
     !!en;
+  !!en;
 
-    ; Veil of Darkness disguise the hero's army every turn
+  ; Disable Darkness Dragon's Disguise if there is only one teams with of human player (or even none)
+  !!FU(Array_SortedUnique):P(humanPlayerTeams);
+  !!SN:M(humanPlayerTeams)/?(size:y);
+  !!VRi^es_351_disguiseEnabled^&(size)<=1:S(FALSE);
+!!en;
+
+; Loop through heroes
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  ; Veil of Darkness disguise the hero's army every turn
+  !!if&i^es_351_disguiseEnabled^;
     !!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
       !!HEi:C0/j/?(type:y)/?(num:y);
 
@@ -231,9 +256,16 @@ ZVSE2
       !!en;
     !!en;
   !!en;
+
+  ; Update the hero's status of Cover of Darkness (map object)
+  !!if&i^es_351_coverCounter_%i^>0;
+    !!VRi^es_351_coverCounter_%i^:-1;
+    !!FU(ES_351_SetHeroCoverStatus)&i^es_351_coverCounter_%i^=0:Pi/(FALSE);
+  !!en;
 !!en;
 
 ; Reset Cover of Darkness (map object) every Monday
+; Loop through map objects
 !!if&i^timerWeekday^=1;
   !!VR(x:y):S-1;
 
