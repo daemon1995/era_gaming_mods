@@ -1,8 +1,9 @@
-ZVSE
+ZVSE2
 
 ** Chest ERM script v1.0 - Donald X. Vaccarino
 ** Updated: Apr. 27. 2004 by Hermann the Weird
 ** Updated August 24, 2004 by Fnord to disable chest poison trap in network battles
+** Updated Mar 2023 by Archer30 to fix the behaviour of monster upgrades
 ** Requires WOG version 3.56 or later
 ** Adds functionality to a new chest subtype
 ** WoGify Name: script29.erm
@@ -194,35 +195,28 @@ ZVSE
 
 !?FU843;
 
-!!HE-1:C0/x16/?y1/?y2; [get y1 type y2 qty]
-!!MA&y1<>-1:Cy1/6/?y3; [get gold cost of base unit]
-!!VRy3:*y2; [times qty for total value now]
-!!FU844&y1<>-1:Py1; [get upgraded creature type in v609]
-!!MA&y1<>-1/v609<>-1:Cv609/6/?y4; [get gold cost of upgraded unit]
-!!VRy4:*y2; [times qty for total upgraded value]
-!!VRy4:-y3; [difference is value of upgrading]
-!!IF:V1/0; [assume this isn't the slot for us]
-!!IF&y1<>-1/v609<>-1/y4>v611/y4<=v610:V1/1; [this slot is an improvement]
-!!VRv612&1:Sx16; [use slot]
-!!VRv611&1:Sy4; [store value of upgrade]
-!!VRv613&1:Sv609; [store upgraded type]
-!!VRv614&1:Sy2; [store qty]
+!!HE(CURRENT_HERO):C0/x16/?y1/?y2; [get y1 type y2 qty]
 
-** end of function
+!!if&y1>(NO_MON)/y2>0;
+  !!MA:Cy1/6/?y3; [get gold cost of base unit]
+  !!VRy3:*y2; [times qty for total value now]
+  !!FU(GetUpgradedMonster)&y1<>-1:Py1/?y30; [get upgraded creature type]
 
+  !!if&y30>(NO_MON);
+    !!MA:Cy30/6/?y4; [get gold cost of upgraded unit]
+    !!VRy4:*y2; [times qty for total upgraded value]
+    !!VRy4:-y3; [difference is value of upgrading]
+    !!IF:V1/0; [assume this isn't the slot for us]
+    !!IF&y4>v611/y4<=v610:V1/1; [this slot is an improvement]
 
-** function to find upgraded creature # for creature x1, return in v609
-
-!?FU844;
-
-!!VRv609:Sx1 +1; [normally that's just creature type +1]
-!!VRv609&v609=113:S127; [handle elementals]
-!!VRv609&v609=114:S125;
-!!VRv609&v609=115:S129;
-!!VRv609&v609=116:S123;
-!!VRv609&v609>111/v609<>123/v609<>125/v609<>127/v609<>129/v609<>119/v609<>121/v609<>131:S-1;
-!!VRy1:Sv609 &1; [check even/odd]
-!!VRv609&v609<111/y1=0:S-1; [even monsters were already upgraded]
+    !!if&1;
+      !!VRv612:Sx16; [use slot]
+      !!VRv611:Sy4; [store value of upgrade]
+      !!VRv613:Sy30; [store upgraded type]
+      !!VRv614:Sy2; [store qty]
+    !!en;
+  !!en;
+!!en;
 
 ** end of function
 
@@ -281,4 +275,3 @@ ZVSE
 !!IF:V1/1; [flag set will mean this script exists]
 
 ** end of function
-
