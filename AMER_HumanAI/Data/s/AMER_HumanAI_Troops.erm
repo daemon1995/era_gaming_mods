@@ -15,8 +15,7 @@ ZVSE2
 !#DC(HUAI_SENDTROOPS_LOWTIER) = 2;  //The <= tier of troop that a donor hero will always keep one of after sending troops.
 **  --------------------------------------------------
 
-    
-    
+
 **  --------------------------
 **  Send troops from weaker heroes to AI's best/second-best:
 !?FU(huAI_dailyAIBestHeroes)&i^huAI_funnelTroops^=(TRUE);
@@ -38,21 +37,64 @@ ZVSE2
         !!FU(huAI_CanPlayerSee):P(loopHero)/-1/?(loopHeroVisible:y)/1;          //Get if any human player can see iterated hero.
         !!if&(loopHeroVisible)=(FALSE):;                                        //Only send troops if donor hero is not visible.
             !!VR(donorHasArmy:y):S(FALSE);                                      //Default false, this may be set to true during huAI_SendTroops.
-            !!FU(huAI_SendTroops)&(bestVisible)=(FALSE):P(loopHero)/i^huAI_currentHero_1^/?(donorHasArmy);
-            !!FU(huAI_SendTroops)&i^huAI_currentHero_2^>(NO_HERO)/(secondVisible)=(FALSE)/(loopHero)<>i^huAI_currentHero_2^/(donorHasArmy)=(TRUE):P(loopHero)/i^huAI_currentHero_2^/?(donorHasArmy);    //If also not second best and still have an army, try sending troops there as well.
+            !!FU(huAI_SendTroops)&(bestVisible)=(FALSE):P0/(loopHero)/-1/-1/-1/i^huAI_currentHero_1^/?(donorHasArmy);
+            !!FU(huAI_SendTroops)&i^huAI_currentHero_2^>(NO_HERO)/(secondVisible)=(FALSE)/(loopHero)<>i^huAI_currentHero_2^/(donorHasArmy)=(TRUE):P0/(loopHero)/-1/-1/-1/i^huAI_currentHero_2^/?(donorHasArmy);    //If also not second best and still have an army, try sending troops there as well.
             !!FU(huAI_PreventNoArmy)&(donorHasArmy)=(FALSE):P(loopHero);        //If hero has no army, provide them with 1 troop from their starting army.
         !!en:;
     !!en:;
-**  --------------------------
-
-
-
-**  --------------------------
+    
+    
 **  Grant 1 troop of slot0 from hero's starting army.
 !?FU(huAI_PreventNoArmy);
     !#VA(hero:x);
     !!HE(hero):H0/?(monType:y)//;           //Get type of troop to create.
     !!HE(hero):C2/(monType)/1/0;            //Give 1 of the troop.
+**  --------------------------
+
+
+
+**  --------------------------
+**  Whenever a best/secondBest hero visits a town during a turn, record this.
+**  At turn end we will do troop sending for visited towns.
+!?OB(OBJ_TOWN)&i^huAI_on^=(TRUE)/i^huAI_funnelTroops^=(TRUE)/i^timerIsAi^=(TRUE);
+    !!HE-1:N?(hero:y);
+    !!FU&(hero)<>i^huAI_currentHero_1^/(hero)<>i^huAI_currentHero_2^:E;         //Exit if not best or secondBest hero.
+    
+    !!VR(x:y):Sv998;
+    !!VR(y:y):Sv999;
+    !!VR(z:y):Sv1000;
+    
+    !!HE(hero):O?(heroOwner:y);
+    !!CA(x)/(y)/(z):O?(townOwner:y);
+    !!FU&(heroOwner)<>(townOwner):E;                                            //Exit if not owner of the town.
+
+    !!VRi^huAI_townVisitedCount^:+1;
+    !!VR(visitedCount:y):Si^huAI_townVisitedCount^;
+    !!CA(x)/(y)/(z):U?(townID:y);
+    !!FU&(townID)<0:E;                                                          //Exit if invalid townID.
+    
+    !!VRi^huAI_townVisited_%(visitedCount)_hero^:S(hero);                       //store hero/townID with index, so that we can loop up to visitedCount on turn end.
+    !!VRi^huAI_townVisited_%(visitedCount)_Id^:S(townID);
+    
+    //!IF:L^town visited, count:%(visitedCount).^;       TEST
+    
+    
+    
+!?FU(huAI_dailyAIBestHeroes_EndOfTurn)&i^huAI_funnelTroops^=(TRUE);
+    !#VA(owner:x);
+    
+    !!re i/1/i^huAI_townVisitedCount^:;
+        !!VR(hero:y):Si^huAI_townVisited_%i_hero^;
+        !!VR(town:y):Si^huAI_townVisited_%i_Id^;
+        
+        !!CA0/(town):P?(x:y)/?(y:y)/?(z:y);                     //Get xyz of town.
+        !!FU(huAI_SendTroops):P2/(town)/(x)/(y)/(z)/(hero);     //Try to send troops from town to hero.
+        
+        !!VRi^huAI_townVisited_%i_hero^:S0;                     //Remove vars as we finish with them.
+        !!VRi^huAI_townVisited_%i_Id^:S0;
+    !!en:;
+    
+    !!VRi^huAI_townVisitedCount^:S0;
 **  --------------------------
     
     
@@ -109,126 +151,281 @@ ZVSE2
 **  Failing that, HE:C2 is used to offer the troops to AI even if it did not match any of receivingHero's army. If receivingHero
 **  dismisses troops to accept those offered, we give the dismissed troops to donorHero, which emulates a "trade."
 !?FU(huAI_SendTroops);
-    !#VA(donorHero:x);
+    !#VA(donorType:x);                  //Same as types for EX:C. 0=heroID, 1=heroXYZ, 2=townXYZ, 3=mineXYZ, 4=garrisonXYZ.
+    !#VA(donorID:x);                    //Only needed if using armyType = 0 (heroID).
+    !#VA(x:x);                          //xyz only needed if using armyType > 0.
+    !#VA(y:x);
+    !#VA(z:x);
     !#VA(receivingHero:x);
-    !#VA(armyRemains:x);        //Set to 1 if donorHero has any army remaining after sending troops. We use this to know if we need to give the donorHero a troop to prevent 0 army.
+    !#VA(armyRemains:x);                //OUT: returns 1 if donorHero has any army remaining after sending troops. We use this to know if we need to give the donorHero a troop to prevent 0 army.
     
     !!VR(armyRemains):S(FALSE);
     
     !!re (donorSlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
         
-        !!HE(donorHero):C0/(donorSlot)/?(monType:y)/?(monCount:y);      //Get troop in donorHero's army slot.
-        !!co&(monType)=(NO_MON);                                        //co if this slot is empty.
+        !!FU(huAI_GetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/?(monType:y)/?(monCount:y)/?(donorMonXP:y);      //Get mon info in donorID's army slot.
+        !!co|(monType)<=(NO_MON)/(monCount)<=0;                         //co if this slot is empty.
         
         !!MA:L(monType)/?(monTier:y);                                   //get tier of troop
         !!if&(monTier)<=(HUAI_SENDTROOPS_LOWTIER):;
             !!VR(armyRemains):S(TRUE);                                  //We will always keep 1 of low tier troops, so we know army remains.
             !!co&(monCount)=1:;                                         //Don't send if only one troop remaining of low tier.
-            !!HE(donorHero):C0/(donorSlot)/(monType)/d-1;               //If we are sending, reduce count by 1, so that one fewer is given to receivingHero via EX:C. Afterward we will add this troop back.
-            !!EX(donorHero)/(donorSlot):E?(donorMonXP:y);               //Store donorMon's XP so we can give it back to the 1 mon we add back after donation is done.
+            !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/(monType)/-1/-1;      //If we are sending, reduce count by 1, so that one fewer is given to receivingHero via EX:C. Afterward we will add this troop back.
+            !!VR(monCount):-1;
         !!en:;
         
-        !!FU(huAI_SendTroops_Internal):P(donorHero)/(receivingHero)/(monType)/(monCount)/(donorSlot)/?(donorSuccess:y);      //Send troops from donorHero's donorSlot to receivingHero.
+        !!FU(huAI_SendTroops_Internal):P(donorType)/(donorID)/(x)/(y)/(z)/(receivingHero)/(monType)/(monCount)/(donorSlot)/?(donorSuccess:y);      //Send troops to a matching existing stack, and store receiving hero's army to potentially trade.
         !!if&(donorSuccess)=(TRUE):;
             !!if&(monTier)<=(HUAI_SENDTROOPS_LOWTIER):;
-                !!HE(donorHero):C0/(donorSlot)/(monType)/1;             //If donation is successful for low tier troop, reset donorHero count of troop to 1 (we must do this since we used EX:C to combine stacks).
-                !!EX(donorHero)/(donorSlot):E(donorMonXP);              //Give the donor stack XP back to the 1 troop.
+                !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/(monType)/1;      //If donation is successful for low tier troop, reset donorID count of troop to 1 (we must do this since we used EX:C to combine stacks).
+                !!if&(donorType)>0:;
+                    !!EX(x)/(y)/(z)/(donorSlot)/(donorType):E(donorMonXP);                          //Give the donor stack XP back to the 1 troop.
+                !!el:;
+                    !!EX(donorID)/(donorSlot):E(donorMonXP);                                        //Give the donor stack XP back to the 1 troop.
+                !!en:;
             !!en:;
-            !!co:;                                                      //co if we successfully added this stack to an existing stack.
+            !!co:;                                                                                  //co if we successfully added this stack to an existing stack.
+        !!el&(monTier)<=(HUAI_SENDTROOPS_LOWTIER):;
+            !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/(monType)/-1/1;       //If donation of low-tier troop failed, give back the one troop we removed before.
+            !!VR(monCount):+1;
         !!en:;
         
         //If we did *not* send troops to a similar stack in receivingHero's army, try to offer the troops to the AI instead, using HE:C2:
         
-        //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
-        //!HE(donorHero):O?(donorHeroOwner:y);               TEST
-        //!HE(receivingHero):O?(receivingHeroOwner:y);       TEST
-        //!SN:H^monname^/(monType)/0/?(monTypeStr:z);        TEST - Name of troop to send.
+        //!HE(donorID):B0/?(donorHeroName:z);               TEST - Donor hero name
+        //!HE(donorID):O?(donorHeroOwner:y);                TEST
+        //!HE(receivingHero):O?(receivingHeroOwner:y);      TEST
+        //!SN:H^monname^/(monType)/0/?(monTypeStr:z);       TEST - Name of troop to send.
         //!IF:L^%(donorHeroName) asking if %(receivingHeroName) wants (%(monCount)) %(monTypeStr)...^;      TEST
         
-        !!HE(receivingHero):C2/(monType)/(monCount)/0;                                      //Offer AI the troop stack. (monType) of count (monCount).
-        !!FU(huAI_HasTroop):P(receivingHero)/(monType)/?(hasTroop:y)/?(receivingSlot:y);    //(donorSuccess)=1 if hero accepted the troops. (receivingSlot)=slot the troop was placed in.
+        !!HE(receivingHero):C2/(monType)/(monCount)/0/(donorMonXP)/0;                               //Offer AI the troop stack, with XP retained.
+        !!FU(huAI_HasTroop):P(receivingHero)/(monType)/?(hasTroop:y)/?(receivingSlot:y);            //(donorSuccess)=1 if hero accepted the troops. (receivingSlot)=slot the troop was placed in.
         !!if&(hasTroop)=(FALSE):;
-            !!VR(armyRemains):S(TRUE);                      //Troop was not accepted, so we know donorHero will still have army.
-            !!co:;                                          //co if the troop was not found (not accepted)
+            !!VR(armyRemains):S(TRUE);                                                              //Troop was not accepted, so we know donorID will still have army.
+            !!co:;                                                                                  //co if the troop was not found (not accepted)
         !!en:;
         
-        //!SN:W^huAI_Troops_HeroMon_TEST_%(receivingSlot)^/?(oldMonTEST:y);     TEST
-        !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/?(oldMon:y);
-        !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/?(oldMonCount:y);     //Get old mon type and count, so we can give it to donorHero to facilitate a "trade."
-        !!VR(monCountNegation:y):S(monCount)*-1;                                //Negation of troop count, to remove army from donor.
-        !!if&(oldMon)>(NO_MON)/(oldMonCount)>0:;
-            !!HE(donorHero):C0/(donorSlot)/(oldMon)/(oldMonCount);              //If receiving hero replaced an old troop to accept, set donor hero's sent troop slot to be the receiving hero's old troop.
+        //Troop was accepted as a new stack so also send stackArts and trade replaced stack (if any):
+        !!VR(oldMon:y):Si^huAI_ReceivingHero_Mon_%(receivingSlot)^;
+        !!VR(oldMonCount:y):Si^huAI_ReceivingHero_MonCount_%(receivingSlot)^;                       //Get old mon type and count, so we can give it to donorID to facilitate a "trade."
+        !!if&(oldMon)>(NO_MON)/(oldMonCount)>0:;                                                    //If receiving hero replaced an old troop to accept, set donor's sent troop slot to be the receiving hero's old troop.
+            !!VR(oldMonXP:y):Si^huAI_ReceivingHero_MonXP_%(receivingSlot)^;
+            !!VR(oldMonArts:y):Si^huAI_ReceivingHero_MonArts_%(receivingSlot)^;
+            !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/(oldMon)/(oldMonCount)/-1/(oldMonXP);
+            !!FU(huAI_AddArtToBackpack)&(oldMonArts)>0:P(receivingHero)/(ART_WARLORDS_BANNER)/(NO_ART_MOD)/(oldMonArts);    //If receivingHero's old mon had a stack art, add it to the receivingHero instead of sending it away. Art sending logic will handle it.
             //!SN:H^monname^/(oldMon)/0/?(oldMonTypeStr:z);   TEST
             //!IF:L^%(donorHeroName)[%(donorHeroOwner)] TRADED: (%(monCount)) %(monTypeStr) for (%(oldMonCount)) %(oldMonTypeStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;       TEST
         !!el:;
-            !!HE(donorHero):C0/(donorSlot)/(monType)/d(monCountNegation);       //Else, just remove donor hero's sent troop count.
+            !!if&(monTier)<=(HUAI_SENDTROOPS_LOWTIER):;                                             //If receiving hero did not replace a troop, remove the donor's troops.
+                !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/(monType)/1;      //If it was low-tier troop, remove all but one.
+            !!el:;
+                !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorSlot)/(NO_MON)/0;       //Else, just remove donor's sent troop count.
+            !!en:;
             //!IF:L^%(donorHeroName)[%(donorHeroOwner)] sent NEW stack (%(monCount)) %(monTypeStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;    TEST
         !!en:;
-        !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/(monType);                 //Update receiving hero's army vars to the new creature type/count.
-        !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/(monCount);
+        //Not necessary to update huAI_ReceivingHero... vars here, since they are always updated by huAI_SendTroops_Internal before code reaches this block, where they are used.
     !!en:;
     
     
 !?FU(huAI_SendTroops_Internal);
 **    Send troops from donor if receiving hero has the troop, its upgrade, or its degrade.
 **    Also store the troops that receiving hero has, so that we can potentially facilitate a trade of stacks back in the parent function.
-    !#VA(donorHero:x);
+    !#VA(donorType:x);                  //Same as types for EX:C. 0=heroID, 1=heroXYZ, 2=townXYZ, 3=mineXYZ, 4=garrisonXYZ.
+    !#VA(donorID:x);                    //Only needed if using armyType = 0 (heroID).
+    !#VA(x:x);                          //xyz of donor only needed if using armyType > 0.
+    !#VA(y:x);
+    !#VA(z:x);
     !#VA(receivingHero:x);
-    !#VA(donorMonType:x);
+    !#VA(donorMon:x);
     !#VA(donorMonCount:x);
-    !#VA(donorMonArmySlot:x);
-    !#VA(donorSuccess:x);           //Returns 1 if success.
+    !#VA(donorArmySlot:x);              //0-6
+    !#VA(donorSuccess:x);               //OUT: Returns 1 if success.
         
-    !!VR(donorSuccess):S(FALSE);      //Default return failure.
+    !!VR(donorSuccess):S(FALSE);        //Default return failure.
     
     !!re (receivingSlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
     
         !!HE(receivingHero):C0/(receivingSlot)/?(existingMon:y)/?(existingMonCount:y);        //Get Receving Hero's troop in this slot. (existingMon)=receiving hero's troop. (existingMonCount=receiving hero's troop's count.
-        //!SN:W^huAI_Troops_HeroMon_TEST_%(receivingSlot)^/(existingMon);          TEST
-        !!SN:W^huAI_Troops_HeroMon_%(receivingSlot)^/(existingMon);
-        !!SN:W^huAI_Troops_HeroMonCount_%(receivingSlot)^/(existingMonCount);
         
-        !!co|(existingMon)<0/(existingMonCount)<=0:;      //co if nothing in this slot.
+        !!VRi^huAI_ReceivingHero_Mon_%(receivingSlot)^:S(existingMon);
+        !!VRi^huAI_ReceivingHero_MonCount_%(receivingSlot)^:S(existingMonCount);
+        
+        !!co|(existingMon)<0/(existingMonCount)<=0:;                            //co if nothing in this slot.
+        
+        !!EX(receivingHero)/(receivingSlot):E?(monXP:y);                        //Get stack XP.
+        !!EX(receivingHero)/(receivingSlot):R/156//?(monArtCount:y);            //Get how many Warlord's Banners are held (that's the only supported art).
+        !!VRi^huAI_ReceivingHero_MonXP_%(receivingSlot)^:S(monXP);
+        !!VRi^huAI_ReceivingHero_MonArts_%(receivingSlot)^:S(monArtCount);
         
         //Era framework function to find mon degrade mentions that is not 100% accurate,
         //and it is slow. Due to this, we use a simple but fast method to find degrade.
         //This is still not accurate, but it is efficient and good enough for this.
         //Minus 1 to troop index, then get its upgrade. If they match, degrade was found.
         !!VR(degradedMon:y):S-1;
-        !!if&(donorMonType)>0:;                                                             //Don't attempt this if it's creature index 0, else we'll error since -1 is not valid.
-            !!VR(degradedMon:y):S(donorMonType)-1;                                          //(degradedMon) might become *de*graded version of the troop passed.
-            !!FU(GetUpgradedMonster):P(degradedMon)/?(degradedMonUpgrade:y);                //Get upgrade of degraded mon.
-            !!VR(degradedMon)&(degradedMonUpgrade)<>(donorMonType):S-1;                     //If the upgrade of degraded mon is *not* the original mon, then this method of finding degrade failed.
+        !!if&(donorMon)>0:;                                                     //Don't attempt this if it's creature index 0, else we'll error since -1 is not valid.
+            !!VR(degradedMon:y):S(donorMon)-1;                                  //(degradedMon) might become *de*graded version of the troop passed.
+            !!FU(GetUpgradedMonster):P(degradedMon)/?(degradedMonUpgrade:y);    //Get upgrade of degraded mon.
+            !!VR(degradedMon)&(degradedMonUpgrade)<>(donorMon):S-1;             //If the upgrade of degraded mon is *not* the original mon, then this method of finding degrade failed.
         !!en:;
         
-        !!FU(GetUpgradedMonster):P(donorMonType)/?(upgradedMon:y);       //Get troop upgrade, if it exists.
+        !!FU(GetUpgradedMonster):P(donorMon)/?(upgradedMon:y);                  //Get troop upgrade, if it exists.
         
-        !!if|(existingMon)=(donorMonType)/(existingMon)=(degradedMon)/(existingMon)=(upgradedMon):;        //Hero has passed troop, it's degrade, or its upgrade.
-            //!SN:H^monname^/(donorMonType)/0/?(donorMonTypeStr:z);      TEST - Name of troop to send.
-            //!HE(donorHero):B0/?(donorHeroName:z);              TEST - Donor hero name
-            //!HE(receivingHero):B0/?(receivingHeroName:z);      TEST - Receiving hero name
-            //!HE(donorHero):O?(donorHeroOwner:y);               TEST
-            //!HE(receivingHero):O?(receivingHeroOwner:y);       TEST
+        !!if|(existingMon)=(donorMon)/(existingMon)=(degradedMon)/(existingMon)=(upgradedMon):;        //Hero has passed troop, it's degrade, or its upgrade.
+            
+            //!IF:M^donorMon%(donorMon), existingMon%(existingMon), degradedMon%(degradedMon), upgradedMon%(upgradedMon)^;       TEST
             !!if&(existingMon)=(degradedMon):;
-                !!EX(receivingHero)/(receivingSlot):E?(monXP:y);                                //Get XP of receiving troop stack, since upgrading the troop will delete xp (but it keeps stack arts).
-                !!HE(receivingHero):C0/(receivingSlot)/(donorMonType)/d;                        //Donor has upgraded troops, and ours are degrade, so upgrade our troops before combining stacks.
-                !!EX(receivingHero)/(receivingSlot):E(monXP);                                   //reset XP after upgrade.
-                !!EX(receivingHero)/(receivingSlot):C0/(donorHero)/(donorMonArmySlot);          //combine donor's mon into receivingHero's mon.
-                //!IF:L^%(donorHeroName)[%(donorHeroOwner)] sent UPG (%(donorMonCount)) %(donorMonTypeStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;      TEST
+                !!HE(receivingHero):P?(receivingX:y)/?(receivingY:y)/?(receivingZ:y);
+                !!FU(huAI_SetArmy):P0/(receivingHero)/(receivingX)/(receivingY)/(receivingZ)/(receivingSlot)/(donorMon)/-1;     //Donor has upgraded troops, and ours are degrade, so upgrade our troops before combining stacks.
             !!el:;
-                !!if&(existingMon)<>(donorMonType):;
-                    !!EX(donorHero)/(donorMonArmySlot):E?(monXP:y);                             //Get XP of receiving troop stack, since converting the troop will delete xp (but it keeps stack arts).
-                    !!HE(donorHero):C0/(donorMonArmySlot)/(existingMon)/d;                      //We are using receiving hero's monID, so convert donorHero's monID to that one before combining stacks.
-                    !!EX(donorHero)/(donorMonArmySlot):E(monXP);                                //reset XP after conversion.
+                !!if&(existingMon)<>(donorMon):;
+                    !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorArmySlot)/(existingMon)/-1;    //We are using receiving hero's monID, so convert donorHero's monID to that one before combining stacks.
                 !!en:;
-                !!EX(receivingHero)/(receivingSlot):C0/(donorHero)/(donorMonArmySlot);          //combine donor's mon into receivingHero's mon.
-                //!SN:H^monname^/(existingMon)/0/?(existingMonStr:z);        TEST - Name of troop to send.
-                //!IF:L^%(donorHeroName)[%(donorHeroOwner)] sent (%(donorMonCount)) %(existingMonStr) to %(receivingHeroName)[%(receivingHeroOwner)].^;      TEST
+            !!en:;
+            //!EX(receivingHero)/(receivingSlot):T?(extReceivingType:y);            TEST
+            //!EX(x)/(y)/(z)/(donorArmySlot)/(donorType):T?(extDonorType:y);        TEST
+            //!IF&(extReceivingType)<>(extDonorType):M^[hecReceivingType%(existingMon) extReceivingType%(extReceivingType)], [hecDonorType%(donorMon) extDonorType%(extDonorType)]^;           TEST
+            !!if&(donorType)>0:;
+                !!EX(receivingHero)/(receivingSlot):C(donorType)/(x)/(y)/(z)/(donorArmySlot);     //combine donor's mon into receivingHero's mon.
+            !!el:;
+                !!EX(receivingHero)/(receivingSlot):C(donorType)/(donorID)/(donorArmySlot);     //combine donor's mon into receivingHero's mon.
             !!en:;
             !!VR(donorSuccess):S(TRUE);             //Return success.
             !!FU:E;                                 //Exit since we're done with this troop.
         !!en:;
         
+    !!en:;
+**  --------------------------
+    
+    
+    
+**  --------------------------
+**  Need to use a differentiation function because EX:A and EX:T don't
+**  allow setting monType as stated in docs- they only get.
+**  Also, preserve stack XP.
+**  Testing revealed issues with coordinate-based references for heroes,
+**  as sometimes the wrong hero is returned.
+!?FU(huAI_SetArmy);
+[1, 112, 16, 18, 0, 2, 103, -1]
+    !#VA(armyType:x);       //Same as types for EX:C. 0=heroID, 1=heroXYZ, 2=townXYZ, 3=mineXYZ, 4=garrisonXYZ.
+    !#VA(armyID:x);         //Only needed if using armyType = 0 (heroID).
+    !#VA(x:x);              //xyz only needed if using armyType > 0.
+    !#VA(y:x);
+    !#VA(z:x);
+    !#VA(armySlot:x);       //0-6.
+    !#VA(monID:x);
+    !#VA(monCount:x);       //If set to -1, count is not changed.
+    !#VA(monCountAdd:x);    //Optional. If provided this is added to stack amount.
+    !#VA(setXP:x);          //Optional. If provided and > -1, monXP is set to this.
+    
+    !!FU:A?(numArgs:y);
+    
+    
+    !!if&(numArgs)>=10/(setXP)>-1:;
+    !!el:;
+        !!if&(armyType)>0:;
+            !!EX(x)/(y)/(z)/(armySlot)/(armyType):E?(monXP:y);      //Store stack XP before change.
+        !!el:;
+            !!EX(armyID)/(armySlot):E?(monXP:y);                    //Store stack XP before change.
+        !!en:;
+    !!en:;
+    
+    //Change mon at slot. Different receivers used depending on armyType:
+    !!if&(armyType)=0:;                                         //Type 0, heroes by ID.
+        !!if&(monCount)>-1:;
+            !!HE(armyID):C0/(armySlot)/(monID)/(monCount);
+        !!el:;
+            !!HE(armyID):C0/(armySlot)/(monID)/d;
+        !!en:;
+        !!HE(armyID)&(numArgs)>=9:C0/(armySlot)/(monID)/d(monCountAdd);      //Add to stack count if desired.
+    !!el&(armyType)=1:;                                         //Type 1, heroes at xyz (unstable, sometimes wrong heroes are returned with xyz references).
+        //!HE(x)/(y)/(z):O?(owner:y);                               TEST
+        //!HE(armyID):B0/?(armyIDName:z);                           TEST
+        //!HE(x)/(y)/(z):B0/?(heroName:z);                          TEST
+        //!HE(x)/(y)/(z):N?(heroByPos:y);                           TEST
+        //!HE(heroByPos):B0/?(heroByPosName:z);                     TEST
+        //!HE(x)/(y)/(z):C0/(armySlot)/?(hecMonID:y)/d;             TEST
+        //!EX(x)/(y)/(z)/(armySlot)/(armyType):T?(extMonID:y);      TEST
+        //!IF:M^%(heroName) is owned by player%(owner). %(armyIDName) was expected. heroByPos%(heroByPos) is %(heroByPosName)^;      TEST
+        //!IF&(owner)=4:M^monType before set to %(monID) he:C[%(hecMonID)], ex:T[%(extMonID)]^;      TEST
+        !!if&(monCount)>-1:;
+            !!HE(x)/(y)/(z):C0/(armySlot)/(monID)/(monCount);                   //If desired, set stack count.
+        !!el:;
+            !!HE(x)/(y)/(z):C0/(armySlot)/(monID)/d;
+        !!en:;
+        !!HE(x)/(y)/(z)&(numArgs)>=9:C0/(armySlot)/(monID)/d(monCountAdd);      //Add to stack count if desired.
+        //!HE(x)/(y)/(z):C0/(armySlot)/?(hecMonID:y)/d;             TEST
+        //!EX(x)/(y)/(z)/(armySlot)/(armyType):T?(extMonID:y);      TEST
+        //!IF&(owner)=4:M^monType after set to %(monID) he:C[%(hecMonID)], ex:T[%(extMonID)]^;      TEST
+    !!el&(armyType)=2:;                                         //Type 2, towns.
+        !!if&(monCount)>-1:;
+            !!CA(x)/(y)/(z):M2/(armySlot)/(monID)/(monCount);
+        !!el:;
+            !!CA(x)/(y)/(z):M2/(armySlot)/(monID)/d;
+        !!en:;
+        !!CA(x)/(y)/(z)&(numArgs)>=9:M2/(armySlot)/(monID)/d(monCountAdd);
+    !!el&(armyType)=3:;                                         //Type 3, mines.
+        !!if&(monCount)>-1:;
+            !!MN(x)/(y)/(z):M(armySlot)/(monID)/(monCount);
+        !!el:;
+            !!MN(x)/(y)/(z):M(armySlot)/(monID)/d;
+        !!en:;
+        !!MN(x)/(y)/(z)&(numArgs)>=9:M(armySlot)/(monID)/d(monCountAdd);
+    !!el&(armyType)=4:;                                         //Type 4, garrisons.
+        !!if&(monCount)>-1:;
+            !!GR(x)/(y)/(z):G(armySlot)/(monID)/(monCount);
+        !!el:;
+            !!GR(x)/(y)/(z):G(armySlot)/(monID)/d;
+        !!en:;
+        !!GR(x)/(y)/(z)&(numArgs)>=9:G(armySlot)/(monID)/d(monCountAdd);
+    !!en:;
+    
+    !!if&(numArgs)>=10/(setXP)>-1:;
+        !!if&(armyType)>0:;
+            !!EX(x)/(y)/(z)/(armySlot)/(armyType):E(setXP);     //set to desired XP.
+        !!el:;
+            !!EX(armyID)/(armySlot):E(setXP);                   //set to desired XP.
+        !!en:;
+    !!el:;
+        !!if&(armyType)>0:;
+            !!EX(x)/(y)/(z)/(armySlot)/(armyType):E(monXP);     //Give XP back.
+        !!el:;
+            !!EX(armyID)/(armySlot):E(monXP);                   //Give XP back.
+        !!en:;
+    !!en:;
+    
+    
+    
+**  Wrapper for army getters because EX:A is too inconsistent.
+!?FU(huAI_GetArmy);
+    !#VA(armyType:x);       //Same as types for EX:C. 0=heroID, 1=heroXYZ, 2=townXYZ, 3=mineXYZ, 4=garrisonXYZ.
+    !#VA(armyID:x);         //Only needed if using armyType = 0 (heroID).
+    !#VA(x:x);              //xyz only needed if using armyType > 0.
+    !#VA(y:x);
+    !#VA(z:x);
+    !#VA(armySlot:x);       //0-6.
+    !#VA(monID:x);          //OUT. ID of mon at slot.
+    !#VA(monCount:x);       //OUT. Count of mon at slot.
+    !#VA(monXP:x);          //OUT. Stack xp of mon at slot.
+    
+    
+    !!if&(armyType)=0:;
+        !!EX(armyID)/(armySlot):E?(monXP);
+    !!el:;
+        !!EX(x)/(y)/(z)/(armySlot)/(armyType):E?(monXP);
+    !!en:;
+    
+    
+    //Get mon data at slot. Different receivers used depending on armyType:
+    !!if&(armyType)=0:;                                         //Type 0, heroes by ID.
+        !!HE(armyID):C0/(armySlot)/?(monID)/?(monCount);
+    !!el&(armyType)=1:;                                         //Type 1, heroes at xyz (unstable, sometimes wrong heroes are returned with xyz references).
+        !!HE(x)/(y)/(z):C0/(armySlot)/?(monID)/?(monCount);
+    !!el&(armyType)=2:;                                         //Type 2, towns.
+        !!CA(x)/(y)/(z):M2/(armySlot)/?(monID)/?(monCount);
+    !!el&(armyType)=3:;                                         //Type 3, mines.
+        !!MN(x)/(y)/(z):M(armySlot)/?(monID)/?(monCount);
+    !!el&(armyType)=4:;                                         //Type 4, garrisons.
+        !!GR(x)/(y)/(z):G(armySlot)/?(monID)/?(monCount);
     !!en:;
 **  --------------------------
     

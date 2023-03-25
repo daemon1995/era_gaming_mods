@@ -11,6 +11,7 @@ ZVSE2
 !#VRi^huAI_enabled^:S(TRUE);                        //Whether or not Human AI is enabled, useful if another mod wants to toggle human AI on/off.
 
 **  Default settings:
+!#VRi^huAI_liteModeForCustomMaps^:S(TRUE);          //When enabled, the follow options are DISABLED for custom scenarios: huAI_replaceHeroes, huAI_funnelTroops, huAI_improvedArtifactAI.
 !#VRi^huAI_necromancy^:S100;                        //The percent of necromancy to emulate.
 !#VRi^huAI_demonFarm^:S(TRUE);                      //Whether or not AI sacrifices troops to raise demons after combat.
 !#VRi^huAI_recoverLosses^:S100;                     //Whether or not AI recovers most lost troops after combat with other AI.
@@ -43,6 +44,7 @@ ZVSE2
 
 !?FU(OnAfterErmInstructions);
     !!FU(huAI_LoadConfig_FromLegacyIni):P;          //Load legacy ini settings first, they will be overwritten by those in runtime ini if it exists.
+    !!FU(huAI_PostConfig):P;
 **  --------------------------------------------------
 
 
@@ -63,11 +65,13 @@ ZVSE2
 **  --------------------------------------------------
 **  Should be called by other mods that set settings in runtime ini, when they are done doing so.
 !?FU(huAI_LoadConfig_FromRuntime);
-    !!FU(LoadIntGlobalsFromJson):P^huAI.settings.^/^huAI_^/
+    !!FU(LoadIntGlobalsFromJson):P^huAI.settings.^/^huAI_^/^liteModeForCustomMaps^/
       ^necromancy^/^demonFarm^/^recoverLosses^/^replaceSkills^/^replaceHeroes^/^hireMoreHeroes^/
       ^funnelTroops^/^funnelTroops_whileVisible^/^improvedArtifactAI^;
 
     !!FU(LoadIntGlobalsFromJson):P^huAI.settings.^/^huAI_^/^handicap_goldPerTurn^/^handicap_resources^/^handicap_XP^/^handicap_townPortal^/^handicap_fly^/^handicap_manaRefill^/^handicap_neutralGrowth^;
+    
+    !!FU(huAI_PostConfig):P;
 **  --------------------------------------------------
 
 
@@ -80,6 +84,9 @@ ZVSE2
     !!SN:E(readFromIni)/1/^AIRadius^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal:z);
     !!VR(newAIRadius:y):V(iniKeyVal);
     !!UN:J4/(newAIRadius);                          //Boost AI radius. Skeptical of whether or not this helps much.
+
+    !!SN:E(readFromIni)/1/^LiteModeForCustomMaps^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
+    !!VRi^huAI_liteModeForCustomMaps^:V(iniKeyVal);
 
     !!SN:E(readFromIni)/1/^Necromancy^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_necromancy^:V(iniKeyVal);
@@ -134,6 +141,20 @@ ZVSE2
 
     !!SN:E(readFromIni)/1/^Handicap_NeutralGrowth^/^Settings^/^AMER_HumanAI.ini^/?(iniKeyVal);
     !!VRi^huAI_handicap_neutralGrowth^:V(iniKeyVal);
+**  --------------------------------------------------
+
+
+**  --------------------------------------------------
+**  Any tweaking of settings when config is reloaded.
+!?FU(huAI_PostConfig);
+    !!if&i^huAI_liteModeForCustomMaps^=(TRUE):;
+        !!FU(huAI_GetIsRandomMap):P?(isRandom:y);
+        !!if&(isRandom)=(FALSE):;
+            !!VRi^huAI_replaceHeroes^:S(FALSE);
+            !!VRi^huAI_funnelTroops^:S(FALSE);
+            !!VRi^huAI_improvedArtifactAI^:S(FALSE);
+        !!en:;
+    !!en:;
 **  --------------------------------------------------
 
 
@@ -203,13 +224,13 @@ ZVSE2
     !!en:;
         
     TEST
-    //!IF:L^Heroes of player%(currentPlayer):^;
     //!re i/1/i^huAI_currentHero_Count^:;
         //!VR(testHero:y):Si^huAI_currentHero_%i^;
+        //!HE(testHero):B0/?(heroName:z);
         //!VR(testWorth:y):Si^huAI_currentHero_Worth_%i^;
-        //!IF:M^%i: hero%(testHero) is worth %(testWorth).^;
+        //!IF:M^%i: %(heroName) is worth %(testWorth).^;
     //!en:;
-    TEST
+   TEST
 **  --------------------------------------------------
 
 
@@ -328,7 +349,21 @@ ZVSE2
         !!en:;
     !!en:;
 **  --------------------------------------------------
-    
+
+
+
+**  --------------------------------------------------
+**  All credits to ARCHER for this function.
+!?FU(huAI_GetIsRandomMap);
+    !#VA(result:x);
+
+    !!VR(result):S(FALSE);
+    !!UN:C6919480/4/?(value:y);
+    !!VR(address:y):S(value) +128980;
+    !!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
+    !!VR(result)&(value2)=114:S(TRUE);
+**  --------------------------------------------------
+
     
     
 **  --------------------------------------------------

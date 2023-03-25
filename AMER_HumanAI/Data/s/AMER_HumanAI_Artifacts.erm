@@ -36,12 +36,12 @@ ZVSE2
 !?FU(OnBeforeBattle)&i^huAI_on^=(TRUE)/i^huAI_improvedArtifactAI^=(TRUE);
     !!FU&i^battle_aiOnly^=(TRUE):E;                                         //Exit if no human actor, because swapping equipment might become expensive if done many times. Also, the player won't notice any difference anyway.
     
-    !!VRi^huAI_Artifacts_InCombat^:S(TRUE);
+    !!VRi^huAI_Artifacts_HeroBattle^:S(TRUE);
     !!FU(huAI_RecalcEquipment)&i^battle_ai_0^=(TRUE)/i^battle_hero_0^>(NO_HERO):Pi^battle_hero_0^;     //Recalculate equipment for the AI. This helps if AI was caught wearing end-of-turn arti-swap equipment,
     !!FU(huAI_RecalcEquipment)&i^battle_ai_1^=(TRUE)/i^battle_hero_1^>(NO_HERO):Pi^battle_hero_1^;     //which makes sense because human players are good at estimating the reach of potential attackers
     
 !?FU(OnAfterBattleUniversal)&i^huAI_on^=(TRUE)/i^huAI_improvedArtifactAI^=(TRUE);
-    !!VRi^huAI_Artifacts_InCombat^&i^huAI_Artifacts_InCombat^=(TRUE):S(FALSE);
+    !!VRi^huAI_Artifacts_HeroBattle^&i^huAI_Artifacts_HeroBattle^=(TRUE):S(FALSE);
 **  --------------------------
     
     
@@ -156,7 +156,7 @@ ZVSE2
         !!en:;
     !!en:;
     
-    !!FU(huAI_TryEquipFinishedCombo)&(heroTown)=(TOWN_NECROPOLIS):P(hero)/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(equipSuccess:y)/(doUnequip);     //CotUK has highest priority if this hero is Necropolis, otherwise it has none.
+    !!FU(huAI_TryEquipFinishedCombo)&(heroTown)=(TOWN_NECROPOLIS)/i^huAI_Artifacts_HeroBattle^=(FALSE):P(hero)/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(equipSuccess:y)/(doUnequip);     //CotUK has highest priority if this hero is Necropolis, when not fighting a hero battle, otherwise it has none.
     !!VR(doUnequip)&(equipSuccess)=(TRUE):S(FALSE);
     
     !!FU(huAI_TryEquipFinishedCombo):P(hero)/(ART_ANGELIC_ALLIANCE)/?(equipSuccess:y)/(doUnequip);
@@ -187,6 +187,7 @@ ZVSE2
     //Once combo artis are equipped (if any), we need to loop the
     //backpack to see if the hero has any artis that are better
     //than those equipped.
+    !!VR(warlordBanners:y):S0;                                      //As we loop, count Warlord Banners. These need to be handled specially later.
     !!FU(huAI_GetBackpackCount):P(hero)/?(bpCount:y);               //Get bp count so that we do not need to loop backpack needlessly.
     !!VR(bpLooped:y):S0;                                            //When artis looped is = arti bpcount, we know we can stop looping.
     !!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST):;     //loop artis in backpack.
@@ -198,6 +199,9 @@ ZVSE2
             !!co&(arti)<>(ART_SPELL_SCROLL):;           //Don't skip scrolls.
         !!en:;
         
+        !!if&(arti)=(ART_WARLORDS_BANNER):;
+            !!VR(warlordBanners):+1;                    //For Warlord Banners, increment count. They will be handled later. TODO: loop army and equip banners in a logical way.
+        !!en:;
         
         !!UN:A(arti)/4/?(isCompleteCombo:y);
         !!co&(isCompleteCombo)>=0:;                     //Skip finished combos, these need to be equipped in a special manner above.
@@ -222,15 +226,16 @@ ZVSE2
                     !!if&(isSwappable)=(TRUE):;
                         !!FU(huAI_SendArti):P(hero)/i^huAI_currentHero_2^/(arti)/(artMod);                              //If arti is swappable, send it even if it was worse.
                     !!el:;
-                        !!FU(huAI_SellArti):P(hero)/(arti)/(artMod);                                                    //If it was not swappable, sell it.
+                        !!FU(huAI_SellArti):P(hero)/(arti)/(artMod)/(warlordBanners);                                   //If it was not swappable, sell it.
                     !!en:;
                 !!en:;
             !!el:;
                 //If this is not our best hero, just sell the arti if we cannot use it.
-                !!FU(huAI_SellArti):P(hero)/(arti)/(artMod);
+                !!FU(huAI_SellArti):P(hero)/(arti)/(artMod)/(warlordBanners);
             !!en:;
         !!en:;
     !!en:;
+    
     
         
 **  Sell the passed (arti) for (hero), using Black Market exchange rates.
@@ -238,12 +243,20 @@ ZVSE2
     !#VA(hero:x);
     !#VA(arti:x);
     !#VA(artMod:x);
+    !#VA(warlordBannerCount:x);
     
     !!UN:A(arti)/4/?(isCompleteCombo:y);
     !!FU|(isCompleteCombo)>=0/(arti)=(ART_ARMAGEDDONS_BLADE):E;                             //Never sell complete combos or arma blade.
     
+    !!if&(arti)=(ART_WARLORDS_BANNER):;                                                     //If this is a Warlord Banner, only "sell" it if we have more than 7 (we want one for each creature in army).
+        !!FU:A?(numArgs:y);
+        !!if&(numArgs)>=4/(warlordBannerCount)<8:;
+            !!FU:E;
+        !!en:;
+    !!en:;
+    
     !!UN:A(arti)/1/?(artiValue:y);              //Get item's value.
-    !!FU&(artiValue)<=0:E;                      //Don't sell if it isn't worth anything.
+    //!FU&(artiValue)<=0:E;                      //Don't sell if it isn't worth anything. EDIT: Sell them anyway because we need to make bag space (Warlord's Banner clutter).
         
     !!FU(huAI_RemoveArtiFromhero):P(hero)/(arti)/(artMod)/1/?(removeArtiSuccess:y);         //Remove 1 of (arti) from (donorHero).
     
@@ -252,7 +265,6 @@ ZVSE2
         
         !!VR(artiValue):*2:5;                       //Multiplier for selling arti at Black Market.
         !!OW:R(player)/(RES_GOLD)/d(artiValue);     //Add Gold.
-        //!IF&(arti)=158:L^player%(player) sold arti%(arti) for %(artiValue) gold.^;        TEST
     !!en:;
 **  --------------------------
     
@@ -270,8 +282,7 @@ ZVSE2
     
     //Return combo if arti is NOT from Titan's Thunder, Admiral's Hat, or Ring of the Magi. TODO: Admiral's Hat gets used on water maps.
     !!UN:A(arti)/5/?(returnCombo);
-    !!VR(returnCombo)|(returnCombo)=6/(returnCombo)=7/(returnCombo)=10:S-1;            //TODO: Support any combos.
-    //!IF:L^Arti%(arti) belongs to combo: %(returnCombo).^;     TEST
+    !!VR(returnCombo)|(returnCombo)=6/(returnCombo)=7/(returnCombo)=10:S-1;
 **  --------------------------
 
 
@@ -337,7 +348,10 @@ ZVSE2
     !!VR(returnBool):S(FALSE);          //Default return false.
     
     !!UN:A(arti)/2/?(artiSlotP2:y);     //Get what slot the arti can be equipped to.
-    !!FU&(artiSlotP2)=0:E;              //Exit if this arti is backpack only. This only happens for Grail and resource arts with Backpack Artifacts script.
+    !!if&(artiSlotP2)=0:;
+        !!VR(isSwappable)&(arti)<>(ART_GRAIL):S(TRUE);      //Flag as "swappable" for backpack only arts, since we want to keep these in our backpack even if we don't equip them. Do not do this for Grail because its movement should be as natural as possible.
+        !!FU&(artiSlotP2)=0:E;                              //Exit if this arti is backpack only. Happens for Grail, Warlord's Banner, resource arts with Backpack Artifacts script.
+    !!en:;
     
     !!FU(huAI_IsArtiBetter_DetermineSlot):P(hero)/(artiSlotP2)/?(returnSlot)/?(returnArti)/?(returnArtMod);       //Get slot and arti we should work with (lowest value of valid slots).
     //!IF:L^Slot determined for P2Slot%(artiSlotP2): slot%(returnSlot)^;     TEST
@@ -674,10 +688,16 @@ ZVSE2
     !#VA(hero:x);
     !#VA(arti:x);
     !#VA(artMod:x);
+    !#VA(count:x);      //Optional. If passed will grant the desired count.
+    
+    !!FU:A?(numArgs:y);
+    !!VR(count)&(numArgs)<=3:S1;            //If count is not passed, init it as 1.
+    
     !!if&(arti)=(ART_SPELL_SCROLL):;        //Use HE:A to add to backpack, but for scrolls we need to add it as 1001+artimod (thank you Daemon_n!).
-        !!VR(scroll:y):S1001+(artMod);
-        !!HE(hero):A(scroll);
+        !!VR(arti):S1001+(artMod);
     !!el:;
+
+    !!re i/1/(count):;
         !!HE(hero):A(arti);
     !!en:;
 **  --------------------------
@@ -883,7 +903,7 @@ ZVSE2
     !#VA(returnValue:x);
     !#VA(isSwappable:x);
     
-    !!VR(returnValue):S-1;              //Default return -1.
+    !!VR(returnValue):S-1;              //Default return -1. Return less than this for artifacts that should never be equipped, even if nothing else is available.
     !!VR(isSwappable):S(FALSE);         //This can be set for specific artis to denote that the arti might be used under different circumstances, so potentially the hero should keep it even if it is low value.
     
     !!FU|(arti)<=(NO_ART):E;            //Exit if arti does not exist.
@@ -978,7 +998,7 @@ ZVSE2
             !!if&(usefulTravelScroll)=(TRUE):;
                 //Travel scrolls are worth much more during your turn, but worthless at turn end or in combat. Also useless if already using Tome that gives the spell. Flagged as swappable.
                 !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(FALSE):S15000;       //Valued slightly less than an earth/air tome.
-                !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(TRUE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;
+                !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(TRUE)/i^huAI_Artifacts_HeroBattle^=(TRUE):S0;
                 !!VR(isSwappable):S(TRUE);
             !!en:;
         !!en:;
@@ -1077,18 +1097,18 @@ ZVSE2
     !!en:;
     !!if&(arti)=(ART_EQUESTRIANS_GLOVES):;
         !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(TRUE):S90000;            //Worth more than any other ring when ending turn.
-        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;                //Useless when starting turn or in combat.
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_Artifacts_HeroBattle^=(TRUE):S0;                //Useless when starting turn or in combat.
         !!VR(isSwappable):S(TRUE);
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_BOOTS_OF_SPEED):;
         !!VR(returnValue)&i^huAI_Artifacts_EndOfTurn^=(TRUE):S90000;            //Worth more than any other boots when ending turn.
-        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;                //Useless when starting turn or in combat.
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(FALSE)/i^huAI_Artifacts_HeroBattle^=(TRUE):S0;                //Useless when starting turn or in combat.
         !!VR(isSwappable):S(TRUE);
         !!FU:E;
     !!en:;
     !!if&(arti)=(ART_ANGEL_WINGS):;
-        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(TRUE)/i^huAI_Artifacts_InCombat^=(TRUE):S0;     //Useless when ending turn or in combat.
+        !!VR(returnValue)|i^huAI_Artifacts_EndOfTurn^=(TRUE)/i^huAI_Artifacts_HeroBattle^=(TRUE):S0;     //Useless when ending turn or in combat.
         !!VR(isSwappable):S(TRUE);
         !!FU:E;
     !!en:;
@@ -1114,6 +1134,10 @@ ZVSE2
     !!en:;
     !!if&(arti)=(ART_DRAGON_SCALE_SHIELD):;
         !!VR(returnValue):S6500;            //Worth more than shield of the damned.
+        !!FU:E;
+    !!en:;
+    !!if&(arti)=(ART_MAGIC_WAND):;
+        !!VR(returnValue):S-2;              //Never equip this item until proper logic is written for it.
         !!FU:E;
     !!en:;
     
