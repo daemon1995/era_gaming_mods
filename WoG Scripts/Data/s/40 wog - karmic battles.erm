@@ -83,8 +83,9 @@ ZVSE2
 ** summon random stacks
 !?FU(WOG_38_SummonRandomStacks);
 !#VA(counter:x) (multiplier:x) (proposedPos:x) (posOffset:x);
+
 !!VR(num:y):S(counter:x) *(multiplier);        ** number per stack
-!!VR(num)&i^Tougher_Karmic_Battles_on^:*2; [Multiple by two if Tougher Karmic Battles is enabled]
+!!VR(num)&i^Tougher_Karmic_Battles_on^:*2;      [Multiply by two if Tougher Karmic Battles is enabled]
 
 !!VR(level:y):S(counter:x) :10 F0/13;        ** set Level
 !!VR(randomSeed:y):S(proposedPos:x) *2 -(posOffset:x) *x16 -10000000 +i^wog_38_randomSeed^;
@@ -101,7 +102,7 @@ ZVSE2
 !!MA:X(type)/?(monFlags:y);  ** Check monster Flags
 !!VR(isWide:y):S(monFlags) &(MON_FLAG_WIDE);     ** Check for 2-hex creature
 
-!!DO(WOG_38_FindValidPos)/1/200/1:P(proposedPos)/(isWide)/(randomSeed:y)/?(pos:y); ** find a position with no obstacles
+!!FU(WOG_38_FindValidPos):P(proposedPos)/(isWide)/(randomSeed:y)/?(pos:y); ** find a position with no obstacles
 
 !!BU:S(type)/(num)/(pos)/1/-1/0;
 !!VR(proposedPos):+(posOffset);          ** increase position number: (pos)
@@ -109,34 +110,36 @@ ZVSE2
 
 ** find a position with no obstacles
 !?FU(WOG_38_FindValidPos);
-!#VA(proposedPos:x) (isWide:x) (randomSeed:x) (pos:x);
+!#VA(proposedPos:x) (isWide:x) (randomSeed:x) (result:x);
 
-*!VR(pos):R0/0/7;
-!!FU(WOG_SafeRand):P0/7/(randomSeed)/?(pos);
-*!VR(pos):Sr;R0/0/7;
+!!VR(result):S(NO_STACK);
+!#VA(pos[2]:y);
+!#VA(flags[2]:y);
+!#VA(stack[2]:y);
 
-*!IF:M^%(pos) %(randomSeed)^;
-!!VR(pos):+(proposedPos);         ** (proposedPos) is offset position
-!!BU:O(pos)/?(obstFlags:y);       ** check for obstacle: (obstflags)=0 if no obstacle
-!!BU:E(pos)/?(stack:y);       ** check for monster: (stack)<0 if no monster
+!!FU(NewIntArray):P?(availPosList:y);
 
-!!if&(isWide);
-  !!VR(secPos:y):S(pos) -1;    ** check for 2-hex creature. Position
-  !!BU&(obstFlags)=0:O(secPos)/?(obstFlags);     ** check for obstacle: (obstflags)=0 if no obstacle
-  !!BU&(stack)<0:E(secPos)/?(stack);     ** check for monster: (stack)<0 if no monster
+!!re i/0/7;
+  !!VR(pos[0]):S(proposedPos) +i;
+  !!BU:O(pos[0])/?(flags[0]) E(pos[0])/?(stack[0]);
+  !!co|(flags[0])>0/(stack[0])>(NO_STACK);
+
+  !!if&(isWide);
+    !!VR(pos[1]):S(pos[0]) -1;    ** check for 2-hex creature. Position
+    !!BU:O(pos[1])/?(flags[1]) E(pos[1])/?(stack[1]);
+    !!co|(flags[1])>0/(stack[1])>(NO_STACK);
+  !!en;
+
+  !!FU(Array_Push):P(availPosList)/(pos[0]);
 !!en;
 
-!!if&x16=100;
-  !!VR(pos)&(obstFlags)>0:S(proposedPos) +8; [Alternate position 1 if others not clear]
-  !!BU:O(pos)/?(obstFlags);       ** check for obstacle: (obstflags)=0 if no obstacle
-  !!BU:E(pos)/?(stack);       ** check for monster: (stack)<0 if no monster
+!!SN:M(availPosList)/?(size:y);
 
-  !!VR(pos)&(stack)>=0:S(proposedPos) -1; [Alternate position 2 if others not clear]
-  !!BU:O(pos)/?(obstFlags);       ** check for obstacle: (obstflags)=0 if no obstacle
-  !!BU:E(pos)/?(stack);       ** check for monster: (stack)<0 if no monster
+!!if&(size)>0;
+  !!VR(lastItem:y):S(size) -1;
+  !!FU(WOG_SafeRand):P0/(lastItem)/(randomSeed)/?(random:y);
+  !!SN:M(availPosList)/(random)/?(result);
 !!en;
-
-!!VRx16&(obstFlags)=0/(stack)<0:S1000;  ** exit loop if valid position is found
 
 
 ** summon calculated stacks
