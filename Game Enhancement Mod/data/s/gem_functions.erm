@@ -361,13 +361,48 @@ ZVSE2
 
 
 
+************************************************************************
+************************************************************************
+****************************** S Y S T E M *****************************
+************************************************************************
+************************************************************************
+; Get current game random seed for VR:R and ingame rands;
+!?FU(gem_GetRandomSeed);
+!#VA(seed:x);
+!!UN:C6814692/4/?(seed);
+!?FU(gem_GetCombatSeed);
+!#VA(seed:x);
 
+!!VR(x:y):S110291 *i^battle_x^;
+!!VR(y:y):S167801 *i^battle_y^;
+!!VR(seed):S(x) +(y) +81569;
 
+!?FU(gem_SetRandomSeed);
+!#VA(newSeed:x) (oldSeed:x);
+!!UN:C6814692/4/?(oldSeed); C6814692/4/(newSeed);
+!!SN:E5294000/(CALLCONV_THISCALL)/(newSeed);
 
+;Safely generate value without changing original seed
+!?FU(gem_SafeRand);
+!#VA(min:x) (max:x) (seed:x) (result:x);
+!!FU(gem_SetRandomSeed):P?(oldSeed:y);
+!!VR(result):Rd/(seed) R0/(min)/(max) Rd/(oldSeed);
 
+!?FU(gem_GetLocalDate);
+!#VA(day:x) (month:x) (year:x);
+!#VA(systemTime[4]:y);
+!!SN:L^kernel32.dll^/?(kernel:y) A(kernel:y)/^GetLocalTime^/?(func:y) E(func)/(CALLCONV_CDECL)/?(systemTime[0]);
+!!VR(day):S(systemTime[1]) :65536;
+!!VR(month):S(systemTime[0]) :65536;
+!!VR(year):S(systemTime[0]) %65536;
 
+!?FU(gem_UnsetHookAt);
+!#VA(address:x);
+!!SN:L^EraPlugins\erm_hooker.era^/?y1;
 
-
+!!if&y1<>0;
+  !!SN:Ay1/^UnsetHook^/?y2 Ey2/(CALLCONV_STDCALL)/x1;
+!!en;
 
 
 
