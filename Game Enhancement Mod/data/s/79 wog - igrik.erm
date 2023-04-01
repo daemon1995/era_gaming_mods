@@ -289,98 +289,96 @@ ZVSE2
       !!IF:M0/4/^%z1^; Q1^%Z-2^;      !FU(gem_Buttons_Disabling)&1:P;
     !!en;
 
-
-
 ; --------------------------------------------------------------------------------------------------
 
 
 !?FU(OnAfterErmInstructions);
 !!FU(gem_GetLocalDate):P?(day:y)/?(month:y);/?y3;
+
 !!if&(day)=1/(month)=4;
-  !!VRi^gem_isFirstApril^:S(TRUE);  
+  !!IF:Q1/-1/-1/(MSG_TYPE_QUESTION)/^%T(gem.settings.foolDay)^;
+
+  !!if&1;
+    !!VRi^gem_isFirstApril^:S(TRUE);
+
+    !#VA(mons[9]:y) (upgMons[9]:y);
+    !!re i/0/8;
+      !!FU(NewIntArray):P7/?(mons[i]) P7/?(upgMons[i]);
+    !!en;
+
+    !!re l/0/6;
+      !!FU(NewIntArray):P7/?(monsArrInd:y) P7/?(upgMonsArrInd:y);
+      !!FU(Array_Fill):P(monsArrInd:y)/0/1 P(upgMonsArrInd:y)/0/1;
+      !!FU(Array_Shuffle):P(monsArrInd) P(upgMonsArrInd);
+
+      !!re t/0/(TOWN_LAST_WOG);
+        !!UN:Tt/l/0/?(mon:y) Tt/l/1/?(upgMon:y);
+        !!FU(Array_Pop):P(monsArrInd)/?m P(upgMonsArrInd)/?n;
+        !!SN:M(mons[m])/l/(mon) M(upgMons[n])/l/(upgMon);      
+      !!en;
+    !!en;
+
+    !!re l/0/6;
+      !!re t/0/(TOWN_LAST_WOG);
+        !!SN:M(mons[t])/l/?(mon) M(upgMons[t])/l/?(upgMon);
+        !!MA:O(mon)/t O(upgMon)/t U(mon)/(upgMon);
+
+        !!UN:Tt/l/0/(mon:y) Tt/l/1/(upgMon:y);
+      !!en;
+    !!en;
+
+    !!MA:X(MON_GRAND_ELF)/d~(MON_FLAG_SHOOTER);
+    !!VR(mon:y):S(MON_SKELETON);
+    !!re i/0/5;(end_value);
+      !!MA:S(mon)/2;
+      !!FU(GetUpgradedMonster):P(mon)/?(mon);
+      !!if&(mon)=(NO_MON);
+        !!br;
+      !!en;
+    !!en;
+    !!FU(GetMaxMonsterId):P?(maxMonId:y);
+    !!re i/0/(maxMonId);
+      !!MA:Xi/?f;
+      !!VRf:&(MON_FLAG_DRAGON);
+      !!if&f;
+        !!MA:Xi/d|(MON_FLAG_UNDEAD);
+      !!en;
+    !!en;
+
+
+  !!el;
+    !!VRi^gem_isFirstApril^:S(FALSE);
+  !!en;
 !!en;
 
-!?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^gem_enableTownShuffle^/i^mouse_item^>=7/i^mouse_item^<=9;
+!?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^gem_isFirstApril^/i^mouse_item^>=7/i^mouse_item^<=9;
   !!SN:P^gemRick.wav^;
 
 !?FU(gem_CreateERMHook)&i^gem_isFirstApril^;
-!!SN:Ex1/1/4445675/(gem_BeforeBattleStackInit);
-!!SN:Ex1/1/4681699/(gem_BeforeBattleSetWinner);
-!!SN:Ex1/1/7760962/(gem_BeforeSpellCostReduction);
-!!SN:Ex1/1/5905747/(gem_AfterSacrificeResurrect);
 
-!!UN:C4457342/1/1/(SPELL_FRENZY) C4457357/6/4/(SPELL_FRENZY); [unicorns casts frenzy]
-!!UN:C5127993/1/4/(MON_PEASANT);
-!!UN:C5928810/1/1/(MON_IMP);
+  *!SN:Ex1/1/4445675/(gem_BeforeBattleStackInit);
+  *!SN:Ex1/1/4681699/(gem_BeforeBattleSetWinner);
+  !!SN:Ex1/1/7760962/(gem_BeforeSpellCostReduction);
+  !!SN:Ex1/1/5905747/(gem_AfterSacrificeResurrect);
 
-!!IF:Q1/-1/-1/(MSG_TYPE_QUESTION)/^?^;
-!!if&1;
-  !!VRi^gem_enableTownShuffle^:S(TRUE);
-  !#VA(arrays[9]:y);
-  !!re i/0/(arrays[SIZE])/1/-1;
-    !!FU(NewIntArray):P14/?(arrays[i]);
+  !!UN:C4457342/1/1/(SPELL_FRENZY) C4457357/6/4/(SPELL_FRENZY); [unicorns casts frenzy]
+  !!UN:C5127993/1/4/(MON_PEASANT);
+  !!UN:C5928810/1/1/(MON_IMP);
+
+  !!UN:C4461430/1/1/2;                  [attack all around attacks own units]
+  !!UN:C4490192/1/1/(SPELL_CURSE);      [ogre mages casts curse]
+  !!UN:C5137380/-2/49449;               [defence decreases hero stats]
+
+  !!re i/0/3;                             ["leadership kappa"]
+    !!VR(offset:y):Si*4;
+    !!VR(value:y):Si*-1;
+    !!UN:C6547880/(offset)/4/(value);
   !!en;
-
-  !!FU(NewIntArray):P9/?(indexes:y);
-  !!FU(Array_Fill):P(indexes:y)/0/1;
-  !!FU(Array_Shuffle):P(indexes);
-  !!re i/0/(arrays[SIZE])/1/-1;
-    !!VR(ind:y):S0;
-    !!FU(Array_Pop):P(indexes)/?s;
-    !!re j/0/(MON_MAX_LEVEL);
-      !!re k/0/1;
-        !!UN:Ti/j/k/?(monType:y);
-        !!SN:M(arrays[s])/(ind)/(monType);      
-        !!VR(ind):+1;
-      !!en;
-    !!en;
+  !!re i/0/5;
+    !!UN:C4447553/i/1/(OPCODE_NOP_1); no more "unaffected by morale"
   !!en;
+  !!UN:C4447709/1/4/-3;
 
-  !!re i/0/(arrays[SIZE])/1/-1;
-    !!VR(ind:y):S0;
-    !!re j/0/(MON_MAX_LEVEL);
-      !!re k/0/1;
-        !!VRr:T0/0/8;
-        !!SN:M(arrays[r])/(ind)/?(monType);
-        !!UN:Ti/j/k/(monType:y);
-        !!VR(ind):+1;
-      !!en;
-    !!en;
-  !!en;
-!!en;
-
-
-!!MA:X(MON_GRAND_ELF)/d~(MON_FLAG_SHOOTER);
-!!VR(mon:y):S(MON_SKELETON);
-!!re i/0/5;(end_value);
-  !!MA:S(mon)/2;
-  !!FU(GetUpgradedMonster):P(mon)/?(mon);
-  !!if&(mon)=(NO_MON);
-    !!br;
-  !!en;
-!!en;
-!!FU(GetMaxMonsterId):P?(maxMonId:y);
-!!re i/0/(maxMonId);
-  !!MA:Xi/?f;
-  !!VRf:&(MON_FLAG_DRAGON);
-  !!if&f;
-    !!MA:Xi/d|(MON_FLAG_UNDEAD);
-  !!en;
-!!en;
-
-!!UN:C4461430/1/1/2;                  [attack all around attacks own units]
-!!UN:C4490192/1/1/(SPELL_CURSE);      [ogre mages casts curse]
-!!UN:C5137380/-2/49449;               [defence decreases hero stats]
-
-!!re i/0/3;                             ["leadership kappa"]
-  !!VR(offset:y):Si*4;
-  !!VR(value:y):Si*-1;
-  !!UN:C6547880/(offset)/4/(value);
-!!en;
-!!re i/0/5;
-  !!UN:C4447553/i/1/(OPCODE_NOP_1); no more "unaffected by morale"
-!!en;
-!!UN:C4447709/1/4/-3;
 
 !?FU(OnStackToStackDamage);
 !!BMx1:T?t;
@@ -395,9 +393,11 @@ ZVSE2
 
 !?FU(OnBeforeBattleAction)&i^gem_isFirstApril^/i^battle_human_%i(battle_acting_side)^;
 !!BG:A?(action:y);
-
 !!if&(action)=(BATTLE_ACTION_SHOOT);
+  *!VR(heroId:y):S^battle_human_%i(battle_acting_side)^;
+  !!VRr:R0/0/3;
 
+  !!FU&r:E;
   !!BG:E?(target:y);
   !!BM(target:y):I?(side:y);
   !!BMi^battle_acting_stack^:T?t;
@@ -435,45 +435,45 @@ ZVSE2
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(costReduction);
 !!en;
 
-!?FU(gem_BeforeBattleSetWinner)&i^gem_isFirstApril^;
+*?FU(gem_BeforeBattleSetWinner)&i^gem_isFirstApril^;
 
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(cmbMgr:y); C(cmbMgr)/21700/4/?(arm)
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(cmbMgr:y); C(cmbMgr)/21700/4/?(arm)
 
-!!re i/0/(BATTLE_RIGHT);
-  !!VR(armyPtrOffset:y):Si*4 +21700;
-  !!UN:C(cmbMgr:y)/(armyPtrOffset)/4/?(army:y);
-  !!re j/0/(ARMY_SLOT_LAST);
+*!re i/0/(BATTLE_RIGHT);
+  *!VR(armyPtrOffset:y):Si*4 +21700;
+  *!UN:C(cmbMgr:y)/(armyPtrOffset)/4/?(army:y);
+  *!re j/0/(ARMY_SLOT_LAST);
 
-    !!VR(offset:y):Sj *4;
-    !!VR(monToSummon:y):Si^gem_saveArmy_%i_%j^ -1;
-    !!if&(monToSummon:y)>-1;
-      !!VR(numberOffset:y):S(offset) +28;
-      !!UN:C(army)/(numberOffset)/4/?(number:y);
-      !!if&(number)>0;
-        !!UN:C(army)/(offset)/4/(monToSummon);?t;
-      !!en;
-    !!en;
-    !!SN:Wi^gem_saveArmy_%i_%j^;
-  !!en;
-!!en;
+    *!VR(offset:y):Sj *4;
+    *!VR(monToSummon:y):Si^gem_saveArmy_%i_%j^ -1;
+    *!if&(monToSummon:y)>-1;
+      *!VR(numberOffset:y):S(offset) +28;
+      *!UN:C(army)/(numberOffset)/4/?(number:y);
+      *!if&(number)>0;
+        *!UN:C(army)/(offset)/4/(monToSummon);?t;
+      *!en;
+    *!en;
+    *!SN:Wi^gem_saveArmy_%i_%j^;
+  *!en;
+*!en;
 
-!?FU(gem_BeforeBattleStackInit)&i^gem_isFirstApril^;;
-  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y); C(cmbMgr)/21445/1/?(isBank:y);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(monToSummon:y);
-  !!FU&(monToSummon)>=(MON_COMMANDER_FIRST_A)/(monToSummon)<=(MON_COMMANDER_LAST_D):E;
-  !!FU&(monToSummon)>=(MON_CATAPULT)/(monToSummon)<=(MON_ARROW_TOWERS):E;
-  !!FU(gem_GetCombatSeed):P?(seed:y);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/20/4/?(side:y) C(ebp)/24/4/?(index:y) C(ebp)/32/4/?(armySlotId:y);
-  !!VR(rng:y):S(side) *222 +(index);
-  !!VR(seed):-(rng);
-  !!FU(gem_SafeRand):P0/5/(seed:y)/?(rand:y);
-  !!if&(rand)=0;
+*?FU(gem_BeforeBattleStackInit)&i^gem_isFirstApril^;;
+  *!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y); C(cmbMgr)/21445/1/?(isBank:y);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(monToSummon:y);
+  *!FU&(monToSummon)>=(MON_COMMANDER_FIRST_A)/(monToSummon)<=(MON_COMMANDER_LAST_D):E;
+  *!FU&(monToSummon)>=(MON_CATAPULT)/(monToSummon)<=(MON_ARROW_TOWERS):E;
+  *!FU(gem_GetCombatSeed):P?(seed:y);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/20/4/?(side:y) C(ebp)/24/4/?(index:y) C(ebp)/32/4/?(armySlotId:y);
+  *!VR(rng:y):S(side) *222 +(index);
+  *!VR(seed):-(rng);
+  *!FU(gem_SafeRand):P0/6/(seed:y)/?(rand:y);
+  *!if&(rand)=0;
 
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/(MON_TROLL);
-    !!if&(armySlotId)>(NO_MON)/(armySlotId)<7;
-      !!VRi^gem_saveArmy_%(side)_%(armySlotId)^:S(monToSummon) +1;
-    !!en;
-  !!en;
+    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/(MON_TROLL);
+    *!if&(armySlotId)>(NO_MON)/(armySlotId)<7;
+      *!VRi^gem_saveArmy_%(side)_%(armySlotId)^:S(monToSummon) +1;
+    *!en;
+  *!en;
 
 !?FU(OnEveryDay)&i^gem_isFirstApril^;
 !!FU(gem_GetLocalDate):P?(day:y)/?(month:y);/?y3;
