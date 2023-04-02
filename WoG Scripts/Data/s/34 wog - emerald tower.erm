@@ -239,7 +239,7 @@ Dialogues: 3
 !!VRv6:S-1;
 
 !!if&v2>=0;
-  !!DO(WOG_44_IsNewCreatureSpecies)/1/v1240/1&v1240>0:P;
+  !!DO(WOG_44_IsNewMonsterSpecies)/1/v1240/1&v1240>0:P;
   !!IF&v1240>=12/v6<0/1000:Q4/z144014;
 !!en;
 
@@ -447,7 +447,7 @@ Dialogues: 3
 !!FU(WOG_44_ChooseSpecialAbility)&v3=10:P; [Give choice of Special Bonus]
 
 !!VRv4:S0;
-!!FU(WOG_44_PlayerPaysForBonus)&v3>1/1000:Py15;  [Ask player to pay for Bonus: v4=1 if player pays]
+!!FU(WOG_44_PayForBonus)&v3>1/1000:Py15;  [Ask player to pay for Bonus: v4=1 if player pays]
 !!VRv4&-1000/v3<>10:S(TRUE); [Set v4 to 1 if AI and not selecting special abilities]
 
 !!VRy9&v3>=2/v3<=7:Syv3; [Bonus amount: y9]
@@ -456,7 +456,7 @@ Dialogues: 3
   !!FU(WOG_44_AddBonusByCreatureType):Py9; [Add bonus to creature type if player paid for it]
 
   !!VRv1240&v6<0:+1; [Increment Changed Creature Counter if v4=1 and v6<0]
-  !!FU(WOG_44_ChangeCreatureName):P; [Change species name to reflect ability/bonus just gained]
+  !!FU(WOG_44_ChangeMonsterNames):Pv2/v3/v5; [Change species name to reflect ability/bonus just gained]
 
   !!PO998:N1; [Set hint text to "visited"]
   !!PM998:V(FALSE);
@@ -480,7 +480,7 @@ Dialogues: 3
  [Player pays for bonus in resources plus creatures]
  [v2=creature type, v3=bonus type]
 
-!?FU(WOG_44_PlayerPaysForBonus);
+!?FU(WOG_44_PayForBonus);
 
  [Determine resource type and cost: y1=resource type, y2=resource amount]
 !!VRy1&v3=2:S3;  [Attack]
@@ -763,7 +763,7 @@ Dialogues: 3
  [Check if this is a new creature species to be enchanted]
  [If new, v6=-1, if not new, set v6 to loop index number (x16)]
 
-!?FU(WOG_44_IsNewCreatureSpecies);
+!?FU(WOG_44_IsNewMonsterSpecies);
 
 !!VRy1:S1240 +x16;  [Index of v variable, holding creature numbers]
 
@@ -775,81 +775,40 @@ Dialogues: 3
 -----------------------------------------------------------------------
 
  [Change species name to reflect ability or bonus just gained]
- [v2=creature number, v3=standard bonus type, v5=special bonus type (if v3=10 or v5>0)]
  [v6=loop index number, v1240=changed creature counter]
 
-!?FU(WOG_44_ChangeCreatureName);
-!#VA(usedY[4]:y);
-!!VRy1:R0/1/4;   [y1=random number from 1 to 4]
+!?FU(WOG_44_ChangeMonsterNames);
+!#VA(mon:x) (choice:x) (specialAbility:x);
 
  [If a new species, store creature number in v(1240+v1240)]
-!!VRy4:S1240 +v1240;
-!!VRvy4&v6<0:Sv2;
+!!VR(vIndex:y):S1240 +v1240;
 
- [Set index number for singular name z variable (y2) and plural name z variable (y3)]
-!!VRy2&v6<0:Sv1240 *2;
-!!VRy2&v6>0:Sv6 *2;
-!!VRy2:+816;
-*!VRy3:Sy2 +1;
+!!if&v6<0;
+  !!VRv(vIndex):S(mon);
+  !!SN:H^monname^/(mon)/0/?(singName:z) H^monname^/(mon)/1/?(plurName:z);
+  !!VRs^wog_44_monName_0_%v1240^:S(singName);
+  !!VRs^wog_44_monName_1_%v1240^:S(plurName);
+; Get the original name if not new
+!!el;
+  !!VR(singName):Ss^wog_44_monName_0_%v1240^;
+  !!VR(plurName):Ss^wog_44_monName_1_%v1240^;
+!!en;
 
- [Store standard singular species name in z6 variable, plural in z7]
-!!FU(WOG_44_RestoreCreatureName):Pv2;   [return in z6 and z7]
  [Generate descriptor word to preface name: z5]
-!!VR(zErtIndex:y):S0;
-!!if&v3>=2/v3<=9;
-  !!VR(zErtIndex:y):Sv3 -2 *4 +y1 -1 +144054;
+!!VR(random:y):R0/1/4;
+
+; Normal stats
+!!if&(choice)<=9;
+  !!VR(zIndex:y):S(choice) -2 *4 +(random) -1 +144054;
+; Special ability (choice was 10)
+!!el;
+  !!VR(zIndex):S(specialAbility) -1 *4 +(random) -1 +144086;
 !!en;
 
-!!if&v5>0/v5<=10;
-  !!VR(zErtIndex:y):Sv5 -1 *4 +y1 -1 +144086;
-!!en;
-!!VRz5:Sz(zErtIndex:y);
+!!VR(prefix:z):Sz(zIndex);
 
-!!SN:H^monname^/v2/0/^%Z5 %Z6^;[Singular]
-!!SN:H^monname^/v2/1/^%Z5 %Z7^;[Plural]
-
-!?FU(WOG_44_RestoreCreatureName);
-!#VA(mon:x);
-
-; Initialization
-!!UN:N3/z6/(mon)/0;
-!!UN:N3/z7/(mon)/1;
-
-; Check the target creature has been modified before
-!!VR(lastIndex:y):S1240 +v1240;
-
-!!re i/1241/(lastIndex);
-
-  !!br&vi=(mon);
-!!en;
-
-; If the creature has been modified, check which prefix it has
-!!if&i<=(lastIndex);
-  !!UN:N3/z2/(mon)/0;
-
-  ; Loop through all the prefixes and see if any matches the characters with the same length from the left of the name
-  !!re (index:y)/144054/144125;
-    !!SN:Kz(index)/?(preLength:y);
-    !!FU(Substr):Pz2/0/(preLength)/?z4;
-    
-    !!br&z4=z(index);
-  !!en;
-
-  ; Remove its prefix if found
-  !!if&(index)<=144125;
-    ; Set the start of the sub string as one character right to the length of the prefix
-    !!UN:N3/z3/(mon)/1;
-    !!VR(strStart:y):S(preLength) +1;
-
-    !!SN:Kz2/?(singLength:y);
-    !!VR(singStrEnd:y):S(singLength) +1;
-    !!FU(Substr):Pz2/(strStart)/(singStrEnd)/?z6;
-
-    !!SN:Kz3/?(plurLength:y);
-    !!VR(plurStrEnd:y):S(plurLength) +1;
-    !!FU(Substr):Pz3/(strStart)/(plurStrEnd)/?z7;
-  !!en;
-!!en;
+; Change the names
+!!SN:H^monname^/(mon)/0/^%(prefix) %(singName)^ H^monname^/(mon)/1/^%(prefix) %(plurName)^;
 
 -----------------------------------------------------------------------
 
