@@ -5,7 +5,7 @@ ZVSE2
 ** with big thanks to Fnord and the team for all their advice
 **
 ** Each scriptlet is fully documented and contains a separate variables list.
-** Vars v2361-v2367 are script activity "flags" for my new scriptlets here.
+** Vars v2361-i^wog_189_enabled^ are script activity "flags" for my new scriptlets here.
 ** To enable a script, set respective var to 1 (normally done via Wogify Options).
 **
 ** Some scriptlets use my Universal Timer (which automatically runs with Wogify
@@ -14,8 +14,12 @@ ZVSE2
 
 !#VRv2370:S0;              disabled Universal Timer setup and calculations (because already done by Wogify script00.erm)
 
-!#UN:P188/?v2366;          check if (Conflux)Rampart Monster Change is enabled in WoGify Options
-!#UN:P189/?v2367;          check if Conflux(Rampart) Monster Change is enabled in WoGify Options
+; Disable Reduce Conflux Growth if Neutral Town is enabled
+!#UN:P67/?(neutralTown:y);
+!#UN&(neutralTown):P188/(FALSE);
+
+!#UN:P188/?i^wog_188_enabled^;          check if Rampart Monster Change is enabled in WoGify Options
+!#UN:P189/?i^wog_189_enabled^;          check if Conflux Monster Change is enabled in WoGify Options
 !#UN:P190/?i^wog_190_enabled^; check if First Aid Enhanced is enabled in WoGify Options
 !#UN:P191/?i^wog_191_enabled^;          check if Estates Enhanced is enabled in WoGify Options
 !#UN:P193/?i^wog_193_enabled^;          check if Warfare is enabled in WoGify Options
@@ -1041,26 +1045,65 @@ lvl 10+ and cycling
 ** BTW: how to change building cost without using \data\building.txt file?
 **
 ** USES functions FU2334, var (v2324..2327), (flag 1)
-** ONLY ACTIVE if v2366=1 or v2367=1 (wogify options 188 and 189)
+** ONLY ACTIVE if i^wog_188_enabled^=1 or i^wog_189_enabled^=1 (wogify options 188 and 189)
 
-!#UN&v2366=1:T1/6/0/134 T1/6/1/151;  replace Green->FaerieDrag, Gold->DiaDrag
-!#MA&v2366=1:C151/6/12000 O134/1;    DiaDrag 8000->12000 Gold, FaerieDrag neutral->Rampart
-!#MA&v2366=1:U26/27;                 GreenDrag still upgrades to GoldDrag at Hill Fort
+!?FU(OnAfterErmInstructions)&i^wog_188_enabled^;
+; Replace Green->FaerieDrag, Gold->DiaDrag
+!!UN:T(TOWN_RAMPART)/(MON_MAX_LEVEL)/0/(MON_FAERIE_DRAGON) T(TOWN_RAMPART)/(MON_MAX_LEVEL)/1/(MON_DIAMOND_DRAGON);
 
-!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^=1;          get town coords and change every Rampart/Conflux ONCE every monday
-!!UN&v2367=1:P67/?y-1;                 check if Neutral Town script67 is active
-!!VRv2367&y-1=1:S0;                    if so, disable reduction in Neutral "Conflux" Town
-!!UN|v2366=1/v2367=1:U98/-1/?v2324;    store how many towns there are
-!!VRv2325|v2366=1/v2367=1:S-1;         set index to -1 for new quick UN:U search
-!!DO2334/1/v2324/1|v2366=1/v2367=1:P;  call Rampart/Conflux mod loop
+; Adjust prices
+!!MA:C(MON_DIAMOND_DRAGON)/(RES_GOLD)/?(diaGold:y) C(MON_FAERIE_DRAGON)/(RES_GOLD)/?(faerieGold:y);
+!!VR(diaGold):F(faerieGold)/(INT_MAX);
+!!MA:C(MON_DIAMOND_DRAGON)/(RES_GOLD)/(diaGold);
 
-!?FU2334;                            each Rampart/Conflux with Castle gets one lvl 7 creature less
-!!IF:V1/0;                             init flag 1
-!!UN:U98/-1/-1/2325;                   get coordinates (v2325..2327) (uses new quick UN:U index -1 instead of x16)
-!!OBv2325/v2326/v2327:U?y1;            check town type (1=Rampart, 8=Conflux)
-!!CAv2325/v2326/v2327:B3/9;            check if Castle built in that town
-!!VRy1&-1:S-10;                        forget about that town if no Castle
-!!CAv2325/v2326/v2327&y1=1/v2366=1:M1/6/d-1/d-1; subtract one lvl 7 if OK and Rampart options active
-!!CAv2325/v2326/v2327&y1=8/v2367=1:M1/6/d-1/d-1; subtract one lvl 7 if OK and Conflux options active
+!!MA:C(MON_DIAMOND_DRAGON)/(RES_CRYSTAL)/?(diaCrystal:y);
+!!VR(diaCrystal):F5/(INT_MAX);
+!!MA:C(MON_DIAMOND_DRAGON)/(RES_CRYSTAL)/(diaCrystal);
+
+!!MA:C(MON_FAERIE_DRAGON)/(RES_GEMS)/?(faerieGems:y) C(MON_FAERIE_DRAGON)/(RES_GEMS)/0;
+!!VR(faerieGems):F0/(diaCrystal);
+!!MA:C(MON_FAERIE_DRAGON)/(RES_CRYSTAL)/(faerieGems);
+
+; FaerieDrag neutral->Rampart
+!!MA:O(MON_FAERIE_DRAGON)/(TOWN_RAMPART);
+
+; GreenDrag still upgrades to GoldDrag at Hill Fort
+!!MA:U(MON_GREEN_DRAGON)/(MON_GOLD_DRAGON);
+
+; Exchange Diamond Dragon and Faerie Dragon if Enhanced Monster is not enabled
+!!MA&i^wog_50_enabled^<>(TRUE):U(MON_DIAMOND_DRAGON)/(MON_FAERIE_DRAGON);
+
+; Exchange Diamond Dragon and Faerie Dragon in town if Upgraded Dragon Cliff is built
+!?FU(OnDetermineMonInfoDlgUpgrade)&i^wog_50_enabled^<>(TRUE);
+!#VA(monType:x) (upgType:x) (town:x) (hero:x);
+
+!!if&(monType)=(MON_DIAMOND_DRAGON);
+  !!CA0/(town):T?(townType:y);
+
+  !!if&(townType)=(TOWN_RAMPART);
+    !!CA0/(town):B3/43;
+    !!VR(upgType)&1:S(MON_FAERIE_DRAGON);
+  !!en;
+!!en;
+
+!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerOnce^; 
+; Loop though all the towns and give one extra Phoenix to towns with Castle Built
+!!VR(x:y):S-1;
+
+!!re i;
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
+  ; Check the town type and if Castle is built, add one extra if castle is built
+  !!CA(x)/(y)/(z):T?(townType:y) B3/9;
+
+  !!if&1;
+    !!if&(townType)=(TOWN_CONFLUX)/i^wog_189_enabled^;
+      !!CA(x)/(y)/(z):M1/6/d/d-1;
+    !!el&(townType)=(TOWN_RAMPART)/i^wog_188_enabled^;
+      !!CA(x)/(y)/(z):M1/6/d/d-1;
+    !!en;
+  !!en;
+!!en;
 
 **================ END OF SCRIPT ==================**
