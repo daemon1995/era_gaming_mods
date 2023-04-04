@@ -12,18 +12,24 @@ ZVSE2
 !#UN:C4599192/2/12523;
 !#UN:C4599194/4/2425393296;
 
+// Fix AI value overflow
+; Archer30: This hook makes the AI turn much longer and results in crashes
 !?FU(gem_CreateERMHook);
-!!SN:Ex1/1/4499810/(gem_ARMY_OnGetAiValue);
+*!SN:Ex1/1/4499810/(gem_ARMY_OnGetAiValue);
 
 !?FU(gem_ARMY_OnGetAiValue);&i^timerOwner^=7;
+!!FU(GetMaxMonsterId):P?(lastMon:y);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(armyPtr:y);
 !!VR(numOffset:y):S28;
 !!VR(result:y):S0;
+
 !!if&(armyPtr);
+
   !!re i/0/(ARMY_SLOT_LAST);
     !!VR(offset:y):Si *(SIZEOF_INT);
     !!UN:C(armyPtr)/(offset)/4/?t;
-    !!if&t>(NO_MON)/t<=(MON_LAST_WOG);
+
+    !!if&t>(NO_MON)/t<=(lastMon);
       !!MA:It/?(aiValue:y);
       !!VR(offset):+28;
       !!UN:C(armyPtr)/(offset)/4/?(num:y);
@@ -33,7 +39,7 @@ ZVSE2
       !!VR(result):+(value:y);
 
       !!if&(result)<(saveResult);
-        !!VR(result):S1000000000;(INT32_MAX);
+        !!VR(result):S2000000000;(INT32_MAX);
         !!br;
       !!en;
     !!en;
