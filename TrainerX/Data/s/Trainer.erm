@@ -17,32 +17,37 @@ ZVSE2
 
 !!VR(preventDefault):S(TRUE);
 
+; Alt+F2 for the current player's hero
 !!if&i^key_alt^;
-  !!OW:C?(currPlayer:y);
-  !!FU(trainer_SelectHeroByPlayer):P(currPlayer)/(FALSE)/(FALSE);
-  !!FU(trainer_MainDialog)&i^trainer_hero^>(NO_HERO):P;
+  !!OW:C?(currPlayer:y)/?i^trainer_player^;
+  !!FU(trainer_SelectHeroByPlayer):Pi^trainer_player^/(FALSE)/(FALSE);
+  !!FU(trainer_MainDialog):P;
 !!el;
   !!FU(trainer_SelectHeroMain):P;
 !!en;
 
 !?FU(trainer_SelectHeroMain);
-!!VRi^trainer_hero^:S(NO_HERO);         [initialise hero ID]
+*!VRi^trainer_hero^:S(NO_HERO);
+!!VRi^trainer_player^:S(NO_PLAYER);
+
 !!SN:T^trainer.titleMain^/?z6 T^trainer.legendMain^/?z7;
 !!IF:D55/6/7/0/0/0/0/0;
 !!IF:E1/55;
 !!VRz1:H1;                              [**check if text entered, flag 1=1 if yes]
 !!FU&v1<0:E;                            [Exit on Esc but don't exit when nothing input]
 
-!!VRs^trainer_input^:Sz1;
-!!FU(trainer_SelectHeroByInput)&1:P?(isWrongName:y);
-!!FU&(isWrongName):E;
+!!if&1;
+  !!VRs^trainer_input^:Sz1;
+  !!FU(trainer_SelectHeroByInput):P;
+!!el;
+  !!OW:C?(currPlayer:y)/?i^trainer_player^;
+  !!FU(trainer_SelectHeroByPlayer):Pi^trainer_player^/(FALSE)/(FALSE);
+!!en;
 
-!!OW&i^trainer_hero^=(NO_HERO):C?(currPlayer:y);
-!!FU(trainer_SelectHeroByPlayer)&i^trainer_hero^=(NO_HERO):P(currPlayer)/(FALSE)/(FALSE);
-!!FU(trainer_MainDialog)&i^trainer_hero^>(NO_HERO):P;
+!!FU(trainer_MainDialog):P;
 
 !?FU(trainer_SelectHeroByInput);
-!#VA(isWrongName:x);
+!!VRi^trainer_hero^:S(NO_HERO);
 
 !!VRz1:Ss^trainer_input^;
 !!FU(trainer_CheckIfZ1FirstCharIsNum):P?(result:y);
@@ -73,7 +78,6 @@ ZVSE2
     !!VRi^trainer_hero^:Si;
   !!el;
     !!IF:M^%T(trainer.wrongName)^;
-    !!VR(isWrongName):S(TRUE);
   !!en;
 !!en;
 
@@ -97,6 +101,7 @@ ZVSE2
 !#VA(isOSMain:x);                       [mode for Object Scanner main]
 !#VA(isOSTelpt:x);                      [mode for Object Scanner teleportation]
 
+!!VRi^trainer_hero^:S(NO_HERO);
 !!OW:A(player)/?(hero:y);               [check active hero of the player]
 
 ; Get the active hero if available
@@ -112,8 +117,9 @@ ZVSE2
     ; If not on the map...in towns maybe? excluding OS teleporation - serious bugs if teleporting a hero from a town
     !!if&(isOSTelpt);
       !!IF:M^%T(trainer.objTelptNoHero)^;
+
+    ; Search for heroes in towns if not teleporting feature
     !!el;
-      ; Search for heroes in towns if not teleporting feature
       !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
         !!HEi:O?(owner:y);
         !!VRi^trainer_hero^&(player)=(owner):Si;
@@ -122,20 +128,27 @@ ZVSE2
       !!en;
 
       ; Show msg if no hero, excluding OS main second search
-      !!IF&i>(HERO_LAST_WOG)/(isOSMain)=(FALSE):M^%T(trainer.noHero)^;
+      *!IF&i>(HERO_LAST_WOG)/(isOSMain)=(FALSE):M^%T(trainer.noHero)^;
     !!en;
   !!en;
 !!en;
 
 ; Show Trainer main dialogue
 !?FU(trainer_MainDialog);
+!!VRi^trainer_dialogEnabled^:S(TRUE);   [flag for trainer interface]
+
 !!VR(hero:y):Si^trainer_hero^;          [Set trainer hero number]
-!!HE(hero):B0/?z1;                      [Export name to z1 - z dependency hasn't been removed]
-!!VRs^trainer_heroName^:Sz1;            [Set trainer hero string]
-!!HE(hero):O?i^trainer_player^;         [Set trainer player number]
-!!FU(trainer_SetPlayerStr):Pi^trainer_player^; [Set trainer player string]
+
+!!if&(hero)>(NO_HERO);
+  !!HE(hero):B0/?z1;                    [Export name to z1 - z dependency hasn't been removed]
+  !!VRs^trainer_heroName^:Sz1;          [s, Set trainer hero string]
+!!en;
+
+!!VR(player:y):Si^trainer_player^;
+!!FU(trainer_SetPlayerStr):P(player); [Set trainer player string]
+
 !!VRi^trainer_spellBookAsked^:S(FALSE); [Initialise the variable of asking whether the hero wants to have a spell book on learning spells]
-!!UN:P36/?i^mithril_on^;                [Check mithril enhancement]
+
 !!FU(trainer_GetMaxPrimarySkillValue):P?i^trainer_maxPrimSkillValue^; [check if prima.dll is enabled]
 
 ; Get the max page of Monster and Artifact table
@@ -149,20 +162,29 @@ ZVSE2
 !!DL(TRAINER_MAIN_DLG):N^trainer.txt^;
 !!FU&-1:E;
 
-*!FU(trainer_SetDlgColour):P(TRAINER_MAIN_DLG)/i^trainer_player^; [set dialogue colour - disable for now]
+*!FU(trainer_SetDlgColour):P(TRAINER_MAIN_DLG)/(player); [set dialogue colour - disable for now]
 
-!!VRi^trainer_dialogEnabled^:S(TRUE);   [flag for trainer interface]
+!!VRz30:S^^;                            [BE VERY CAREFUL! Always avoid z30 to z35 in other places of this script - need DL mouse hovering trigger to fix]
 
-!!if&i^mithril_on^=(FALSE);               [Archer - hide mithril if disabled]
-  !!DL(TRAINER_MAIN_DLG):A113/(DLG_CMD_SET_DEF_FRAME)/0;      [113 - another item for mithril]
-  !!VRz30:S^^;                          [BE VERY CAREFUL! Always avoid z30 to z32 in other places of this script - need DL mouse hovering trigger to fix]
-  !!DL(TRAINER_MAIN_DLG):H(TRAINER_MITHRIL_AREA)/z30; [DL:H doesn't work on ^^]
+; Hide Reveal Map button and resources numberif there is no player
+!!if&(player)=(NO_PLAYER);
+  !!DL(TRAINER_MAIN_DLG):E29/0;
+
+  !!re i/21/27;
+    !!DL(TRAINER_MAIN_DLG):Hi/z30;
+  !!en;
 !!en;
 
+; Hide Mithril if Mithril is not enabled
+!!UN:P36/?i^mithril_on^;                [Check mithril enhancement]
+!!DL(TRAINER_MAIN_DLG)&i^mithril_on^=(FALSE):A113/(DLG_CMD_SET_DEF_FRAME)/0;      [113 - another item for mithril]
+
+!!DL(TRAINER_MAIN_DLG)|(player)=(NO_PLAYER)/i^mithril_on^=(FALSE):H(TRAINER_MITHRIL_AREA)/z30; [DL:H doesn't work on ^^]
+
+; Hide henchmen buttons
 !!UN:P49/?(henchOn:y);
 
 !!if&(henchOn)=(FALSE);                 [hide henchman button if disabled or the slot is empty]
-
   !!re i/228/234;
     !!DL(TRAINER_MAIN_DLG):Ei/0;
   !!en;
@@ -170,30 +192,56 @@ ZVSE2
   !!DL(TRAINER_MAIN_DLG):E(TRAINER_BTN_HENCH)/0;
 !!en;
 
+; Disable commander button if needed
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(cmdOff:y);
+
+!!if&(cmdOff);
+  !!DL(TRAINER_MAIN_DLG):E111/0;
+!!en;
+
+; Disable stack exp buttons if needed
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpOn:y);
+
+!!if&(stackExpOn)<>(TRUE);
+  !!re i/154/160;
+    !!DL(TRAINER_MAIN_DLG):Ei/0;
+  !!en;
+!!en;
+
+; Set up skill text for ACM if enabeld
 !!if&i^Advanced_Classes_Mod_Active^;    [Is there a trigger for DL mouse hovering?]
   !!SN:T^trainer.acm.ss5^/?z31 T^trainer.acm.ss19^/?z32;
   !!DL(TRAINER_MAIN_DLG):H60/z31;       [item of nobility (navigation)]
   !!DL(TRAINER_MAIN_DLG):H74/z32;       [item of warfare (tactics)]
 !!en;
 
-!!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
-!!VRi^trainer_heroLv^:S(lv);
+!!FU(trainer_UpdateAllTheDialogs):P(hero)/(player);
 
-!!FU(trainer_RefeshHeroArmy):P(hero); hero army
-!!FU(trainer_UpdateMonTable):Pi^trainer_monTablePage^;
+!!DL(TRAINER_MAIN_DLG):S1;
+!!UN:R1 R2;                             [Redraw screen after DL is closed - Thanks to daemon_n!]
 
-!!FU(trainer_GetHeroPortrait):P(hero)/1/1; [export hero's large portrait to z1]
-!!DL(TRAINER_MAIN_DLG):A99/(DLG_CMD_SET_PCX)/z1;
-
-!!VR(player:y):Si^trainer_player^;
-!!FU(trainer_UpdateResources):P(player);[Check resources including mithril]
-!!FU(trainer_UpdateDlgsOnLevelUp):P(hero);
+!?FU(trainer_UpdateAllTheDialogs);
+!#VA(hero:x) (player:x);
 
 !!FU(trainer_CreateSpellArrays):P;
 !!FU(trainer_UpdateSpellTable):Pi^trainer_spellTablePage^/(hero);
 
-!!DL(TRAINER_MAIN_DLG):S1;
-!!UN:R1 R2;                             [Redraw screen after DL is closed - Thanks to daemon_n!]
+!!FU(trainer_UpdateMonTable):Pi^trainer_monTablePage^;
+
+!!if&(hero)>(NO_HERO);
+  !!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
+  !!VRi^trainer_heroLv^:S(lv);
+
+  !!FU(trainer_UpdateHeroArmy):P(hero); hero army
+
+  !!FU(trainer_GetHeroPortrait):P(hero)/1/1; [export the hero's large portrait to z1]
+  !!DL(TRAINER_MAIN_DLG):A99/(DLG_CMD_SET_PCX)/z1;
+
+  ; Update a bunch of dialogues, including artifact table
+  !!FU(trainer_UpdateDlgsOnLevelUp):P(hero);
+!!en;
+
+!!FU(trainer_UpdateResources):P(player); [Check resources including mithril]
 
 !?FU(trainer_GetTablePages);
 !!FU(GetMaxMonsterId):P?(lastMon:y);
@@ -352,8 +400,13 @@ ZVSE2
 *!SN:D;
 
 ; Show Hero Screen
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=99/i^mouse_action^=(MOUSE_RMB_PRESSED);
-!!SN:E5118576/3/i^trainer_hero^/1/1/1;  [5th parameter - the type of dialogue]
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=99/i^trainer_hero^>(NO_HERO);
+!!if&i^mouse_action^=(MOUSE_RMB_PRESSED);
+  !!SN:E5118576/3/i^trainer_hero^/1/1/1;  [5th parameter - the type of dialogue]
+!!el&i^mouse_action^=(MOUSE_LMB_PRESSED);
+  !!SN:E5118576/3/i^trainer_hero^/1/1/0;
+  !!FU(trainer_UpdateAllTheDialogs):Pi^trainer_hero^/i^trainer_player^;
+!!en;
 
 ; Show guide/info/help of Trainer
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=9;
@@ -371,6 +424,7 @@ ZVSE2
 **************************** SPELLS ************************************
 ; Dynamic spell panel depedning on the schools of spells in mods
 !?FU(trainer_CreateSpellArrays);
+!!SN:Mi^trainer_airSpells^ Mi^trainer_fireSpells^ Mi^trainer_waterSpells^ Mi^trainer_earthSpells^;
 !!FU(NewIntArray):P?i^trainer_airSpells^/(M_TEMP) P?i^trainer_fireSpells^/(M_TEMP) P?i^trainer_waterSpells^/(M_TEMP) P?i^trainer_earthSpells^/(M_TEMP);
 
 !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
@@ -422,7 +476,8 @@ ZVSE2
 
 ; Update the table of spells
 !?FU(trainer_UpdateSpellTable);
-!#VA(page:x) (hero:x);
+!#VA(page:x);
+!#VA(hero:x);                           [possible to be NO_HERO, in this case, set spellLearned to FALSE]
 
 !!if&(page)=0;
   !!VR(spellArray:y):Si^trainer_airSpells^;
@@ -441,12 +496,16 @@ ZVSE2
   !!VR(item:y):S(arrayIndex) +36;
   !!VR(cadre:y):S(spell) +1;
 
-  !!HE(hero):M=(spell)/1;
+  !!VR(spellLearned:y):S(FALSE);
 
-  !!if&1;
-    !!VR(spellLearned:y):S(TRUE);
-  !!el;
-    !!VR(spellLearned):S(FALSE);
+  !!if&(hero)>(NO_HERO);
+    !!HE(hero):M=(spell)/1;
+
+    !!if&1;
+      !!VR(spellLearned):S(TRUE);
+    !!el;
+      !!VR(spellLearned):S(FALSE);
+    !!en;
   !!en;
 
   !!VR(highlight:y):S(arrayIndex) +196;
@@ -478,7 +537,7 @@ ZVSE2
 !!FU(trainer_UpdateSpellTable):Pi^trainer_spellTablePage^/i^trainer_hero^;
 
 ; Learn or forget a spell by left-clicking
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=196/i^mouse_item^<=213/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=196/i^mouse_item^<=213/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!VR(page:y):Si^trainer_spellTablePage^;
 !!VR(index:y):Si^mouse_item^ -196;
@@ -680,7 +739,8 @@ ZVSE2
   !!FU(trainer_SetSecSkillCadre):Pi/(ssLv)/(ssItem)/(ssHighlight); [Update secondary skill for each of the itmes]
 !!en;
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=55/i^mouse_item^<=82/i^mouse_action^=(MOUSE_LMB_PRESSED);
+; Ask to change the secondary skill level
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=55/i^mouse_item^<=82/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!VR(ss:y):Si^mouse_item^ -55;
 !!HE(hero):S(ss)/?(ssLv:y);
@@ -801,10 +861,11 @@ ZVSE2
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=55/i^mouse_item^<=82/i^mouse_action^=(MOUSE_RMB_PRESSED);
 !!VR(ss:y):Si^mouse_item^ -55;
-!!HEi^trainer_hero^:S(ss)/?(ssLv:y);
-!!VR(ssLv):F0/3;                        [restrain ss lv - not comparible with ss level greater than expert]
+!!VR(ssLv:y):S(SKILL_NOT_LEARNED);
+!!HEi^trainer_hero^&i^trainer_hero^>(NO_HERO):S(ss)/?(ssLv:y);
+!!VR(ssLv):F(SKILL_NOT_LEARNED)/(SKILL_EXPERT); [restrain ss lv - not comparible with ss level greater than expert]
 !!SN:H^secskill^/(ss)/(ssLv)/?(ssDesc:z);
-!!VR(ssLv):F1/3;                        [restrain ss lv - pic subtype donesn't work with not learn lv]
+!!VR(ssLv):F(SKILL_BASIC)/(SKILL_EXPERT);[restrain ss lv - pic subtype donesn't work with not learn lv]
 !!VR(picSubtype:y):S(ss) *3 +(ssLv) +2;
 !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(MSG_TYPE_POPUP)^%(ssDesc)^;
 
@@ -857,9 +918,9 @@ ZVSE2
 !?FU(trainer_UpdateResources);
 !#VA(player:x);
 
-; Set all the resources to the current values for non-neutral player
-!!if&(player)>(NO_PLAYER);
-  !!re i/(RES_FIRST)/(RES_LAST_WOG);
+!!re i/(RES_FIRST)/(RES_LAST_WOG);
+  ; Set all the resources to the current values for the hero's owner
+  !!if&(player)>(NO_PLAYER);
     !!OW:R(player)/i/?(qty:y);
     !!VRz1:M3/(qty);                    [Convert int to str]
 
@@ -870,23 +931,19 @@ ZVSE2
       !!VRz1&i^mithril_on^<>(TRUE):S^^;   [Hide mithril if not enabled]
       !!DL(TRAINER_MAIN_DLG):A(TRAINER_MITHRIL_AREA)/(DLG_CMD_SET_TEXT)/z1;
     !!en;
-  !!en;
-; Set all the values to 0 for neutral player
-!!el;
-  !!re i/(RES_FIRST)/(RES_LAST_WOG);
-    !!VRz1:S^0^;
-
+  ; Disable resouurces bar if the hero has no owner
+  !!el;
     !!if&i<>(RES_MITHRIL);
-      !!VR(item):Si +21;
-      !!DL(TRAINER_MAIN_DLG):A(item)/(DLG_CMD_SET_TEXT)/z1;
+      !!VR(item:y):Si +21;
+      !!DL(TRAINER_MAIN_DLG):Ei/0;
     !!el;
-      !!VRz1&i^mithril_on^<>(TRUE):S^^;
-      !!DL(TRAINER_MAIN_DLG):A(TRAINER_MITHRIL_AREA)/(DLG_CMD_SET_TEXT)/z1;
+      !!DL(TRAINER_MAIN_DLG):E(TRAINER_MITHRIL_AREA)/0;
     !!en;
   !!en;
 !!en;
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_LMB_PRESSED);
+; Give resources
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_player^>(NO_PLAYER);
 !!VR(resArea:y):S0;
 !!VR(resArea)&i^mouse_item^>=21/i^mouse_item^<=27:S1;
 !!VR(resArea)&i^mithril_on^/i^mouse_item^=(TRAINER_MITHRIL_AREA):S2;
@@ -894,7 +951,7 @@ ZVSE2
 
 !!VR(player:y):Si^trainer_player^;
 
-!!if&(player)<0;
+!!if&(player)<=(NO_PLAYER);
   !!IF:M^%T(trainer.resNoPlayer)^;
   !!FU:E;
 !!en;
@@ -955,7 +1012,7 @@ ZVSE2
   !!SN:P^gold01.wav^;
 !!en;
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED); [RMB info]
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^trainer_player^>(NO_PLAYER); [RMB info]
 !!VR(flag:y):S(FALSE);
 
 !!if&i^mouse_item^>=21/i^mouse_item^<=27;
@@ -985,8 +1042,8 @@ ZVSE2
 
 !!DL(TRAINER_MAIN_DLG):A147/(DLG_CMD_SET_TEXT)/^%(level)^;
 
-; Reset hero level, primary skills (without artifacts) and secondary skills
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=1/i^mouse_action^=(MOUSE_LMB_PRESSED);
+; Reset hero level
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=1/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!VRz3:Ss^trainer_heroName^;
 
@@ -1025,7 +1082,7 @@ ZVSE2
 !!en;
 
 ; set hero level by entering number
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=147/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=147/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(lv:y):Si^trainer_herolv^;
 !!VR(playSound:y):S(TRUE);
 
@@ -1058,7 +1115,7 @@ ZVSE2
 !!en;
 
 ; set hero level by arrows
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=300/i^mouse_item^<=301/i^mouse_action^=(MOUSE_LMB_RELEASED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=300/i^mouse_item^<=301/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(lv:y):Si^trainer_herolv^;
 
 !!if&i^mouse_item^=300;
@@ -1074,7 +1131,7 @@ ZVSE2
 !!FU(trainer_UpdateHeroLevel):P(lvFixed);
 !!VRi^trainer_heroLv^:S(lvFixed);
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!FU&i^mouse_item^<>1/i^mouse_item^<>147:E;;
 
 !!HEi^trainer_hero^:E?(exp:y)/?(lv:y)/(TRUE);
@@ -1085,7 +1142,7 @@ ZVSE2
 
 ********************* Primary Skills *************************
 ; Added support with Prima.dll
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=220/i^mouse_item^<=227/i^mouse_action^=(MOUSE_LMB_RELEASED); [buttons adding primary skills]
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=220/i^mouse_item^<=227/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO); [buttons adding primary skills]
 !!VR(item:y):Si^mouse_item^;
 !!VR(hero:y):Si^trainer_hero^;
 !!VR(psCap:y):Si^trainer_maxPrimSkillValue^;
@@ -1177,7 +1234,7 @@ ZVSE2
 !!DL(TRAINER_MAIN_DLG):A141/(DLG_CMD_SET_TEXT)/z16 A142/(DLG_CMD_SET_TEXT)/z17 A143/(DLG_CMD_SET_TEXT)/z18 A144/(DLG_CMD_SET_TEXT)/z19;
 
 ; Show the hero's primary skills without artifact on right-clicking
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(flag:y):S(FALSE);
 
 !!if&i^mouse_item^>=15/i^mouse_item^<=18;
@@ -1214,7 +1271,7 @@ ZVSE2
 !!VR(psPicType:y):S(psType) +31;
 !!IF:Q1/(psPicType)/(psValue)/(MSG_TYPE_POPUP)^%(basicPs)^;
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(flag:y):S(FALSE);                  [get clicked location]
 
 !!if&i^mouse_item^>=15/i^mouse_item^<=18;
@@ -1306,20 +1363,23 @@ ZVSE2
 
 ************************ HERO ARMY ****************************
 ; Add new creatures from the table to the hero's army
-!?FU(trainer_RefeshHeroArmy);
+!?FU(trainer_UpdateHeroArmy);
 !#VA(hero:x);
 
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpOn:y); [check if stack exp enabled]
 !!UN:P49/?(henchOn:y);
 
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-  !!HE(hero):C0/i/?(mon:y)/?(qty:y)/?(exp:y);
-  !!VR(monCad:y):Si +100;               [get mon cadre ID]
-  !!VR(hintCad:y):Si +161;              [get hint text ID]
-  !!VR(swordCad:y):Si +400;             [get ID of swords item]
-  !!VR(henchCad:y):Si +228;             [get ID of henchman button]
+  !!VR(mon:y):S(NO_MON);
 
-  !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpOn:y); [check if stack exp enabled]
-  !!DL(TRAINER_MAIN_DLG)&(stackExpOn)=(FALSE):A(swordCad)/(DLG_CMD_SET_DEF_FRAME)/0;
+  !!HE(hero)&(hero)>(NO_HERO):C0/i/?(mon)/?(qty:y)/?(exp:y);
+
+  !!VR(monCad:y):Si +100;               [get mon cadre ID]
+  !!VR(armyHint:y):Si +161;             [get army hint text ID]
+
+  !!VR(swordCad:y):Si +400;             [get ID of swords item]
+  !!VR(rankHint:y):Si +154;             [get rank hint text ID]
+  !!VR(henchCad:y):Si +228;             [get ID of henchman button]
 
   !!if&(mon)<=(NO_MON);
     !!DL(TRAINER_MAIN_DLG):A(monCad)/(DLG_CMD_SET_DEF_FRAME)/1;
@@ -1328,32 +1388,39 @@ ZVSE2
     !!DL(TRAINER_MAIN_DLG)&(henchOn):E(henchCad)/0;
 
     !!VRz30:S^^;
-    !!DL(TRAINER_MAIN_DLG):A(hintCad)/(DLG_CMD_SET_TEXT)/z30;
+    !!DL(TRAINER_MAIN_DLG):A(armyHint)/(DLG_CMD_SET_TEXT)/z30;
 
-    !!DL(TRAINER_MAIN_DLG):H(monCad)/z30;
-    !!DL(TRAINER_MAIN_DLG):H(hintCad)/z30;[DL:H doesn't work on ^^]
+    !!DL(TRAINER_MAIN_DLG):H(monCad)/z30;[DL:H doesn't work on ^^]
+    !!DL(TRAINER_MAIN_DLG):H(armyHint)/z30;
+
     !!DL(TRAINER_MAIN_DLG):H(swordCad)/z30;
+
+    !!DL(TRAINER_MAIN_DLG):H(rankHint)/z30;
+    !!DL(TRAINER_MAIN_DLG):E(henchCad)/0;
   !!el;
     !!VR(monCadInd:y):S(mon) +2;
     !!DL(TRAINER_MAIN_DLG):A(monCad)/(DLG_CMD_SET_DEF_FRAME)/(monCadInd);
 
     !!VRz3:M3/(qty);
-    !!DL(TRAINER_MAIN_DLG):A(hintCad)/(DLG_CMD_SET_TEXT)/z3;
-
-    !!MA:L(mon)/?(monLv:y);               [Monster level]
-    !!VR(monLv):+1;                       [Add 1 to monster level]
-    !!FU(trainer_GetMonRankWithExp):P(mon)/(exp)/?(rank:y);
-    !!FU(trainer_UpdateRank):P(rank)/(swordCad);
+    !!DL(TRAINER_MAIN_DLG):A(armyHint)/(DLG_CMD_SET_TEXT)/z3;
 
     !!SN:T^trainer.hintMonQty^/?z34;
     !!DL(TRAINER_MAIN_DLG):H(monCad)/z34;
-    !!DL(TRAINER_MAIN_DLG):H(hintCad)/z34;
+    !!DL(TRAINER_MAIN_DLG):H(armyHint)/z34;
+
     !!DL(TRAINER_MAIN_DLG):H(swordCad)/z34;
+
+    !!SN:T^trainer.hintRank^/?z35;
+    !!DL(TRAINER_MAIN_DLG):H(rankHint)/z35;
+
+    !!if&(stackExpOn);
+      !!FU(trainer_GetMonRankWithExp):P(mon)/(exp)/?(rank:y);
+      !!FU(trainer_UpdateRank):P(rank)/(swordCad);
+    !!en;
 
     !!DL(TRAINER_MAIN_DLG)&(henchOn):E(henchCad)/1;
   !!en;
 !!en;
-
 
 ; Monster Table
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=8/i^mouse_action^=(MOUSE_LMB_RELEASED); [browse towns/right button]
@@ -1496,13 +1563,13 @@ ZVSE2
   !!en;
 !!en;
 
-; Right-click to Show info of the creature
+; Right-click to Show info of the monster
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=83/i^mouse_item^<=98/i^mouse_action^=(MOUSE_RMB_PRESSED);
 !!FU(trainer_GetMonsterFromTable):Pi^trainer_monTablePage^/i^mouse_item^/?(mon:y);
 !!FU(trainer_ShowMonDlgRecruiting)&(mon)>(NO_MON):P(mon)/(TRUE);
 
-; Click to transfer creatures from the table to the hero's army
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>82/i^mouse_item^<99/i^mouse_action^=(MOUSE_LMB_PRESSED);
+; Click to give monsters from the table to the hero's army
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>82/i^mouse_item^<99/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!FU(trainer_GetMonsterFromTable):Pi^trainer_monTablePage^/i^mouse_item^/?(mon:y);
 !!FU&(mon)<=(NO_MON):E;
 
@@ -1599,7 +1666,7 @@ ZVSE2
 !!en;
 
 !!if|(mon)<(MON_CATAPULT)/(mon)>(MON_AMMO_CART);
-  !!FU(trainer_RefeshHeroArmy):P(hero);              [Update hero army]
+  !!FU(trainer_UpdateHeroArmy):P(hero);              [Update hero army]
   !!SN&(playSound):P^button.wav^;
 !!el&(playSound);
   !!FU(trainer_PlayArtSound):P;
@@ -1644,7 +1711,7 @@ ZVSE2
 !!if&(rank)>=10;
   !!DL(TRAINER_MAIN_DLG):A(swordCad)/(DLG_CMD_SET_DEF_FRAME)/1/0; set
 !!el;
-  !!DL(TRAINER_MAIN_DLG):A(swordCad)/(DLG_CMD_SET_DEF_FRAME)/0/0;                    [Archer - remove sword if lower than Ace]
+  !!DL(TRAINER_MAIN_DLG):A(swordCad)/(DLG_CMD_SET_DEF_FRAME)/0/0;                    [remove sword if lower than Ace]
 !!en;
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=124/i^mouse_action^=(MOUSE_LMB_RELEASED); [custom monsters]
@@ -1664,7 +1731,7 @@ ZVSE2
 
 !!if&(result)/(mon)>=(MON_FIRST)/(mon)<=(lastMon);
   !!FU(trainer_AddMonInputQty):P(mon);
-  !!FU(trainer_RefeshHeroArmy):P(hero);   [Update hero army]
+  !!FU(trainer_UpdateHeroArmy):P(hero);   [Update hero army]
   !!FU:E;
 !!en;
 
@@ -1678,7 +1745,7 @@ ZVSE2
 
 !!if&i<=(lastMon);
   !!FU(trainer_AddMonInputQty):Pi;
-  !!FU(trainer_RefeshHeroArmy):P(hero);   [Update hero army]
+  !!FU(trainer_UpdateHeroArmy):P(hero);   [Update hero army]
 !!el;
   !!IF:M^%T(trainer.noMon)^;
 !!en;
@@ -1704,23 +1771,27 @@ ZVSE2
 ; 526-540 artifacts graphics
 ; 426-440 artifacts cadres
 !?FU(trainer_UpdateArtTable);
-!#VA(page:x) (hero:x);
+!#VA(page:x);
+!#VA(hero:x);                           [possible to be NO_HERO, in this case, set owned to 0]
 
 !!re (item:y)/526/540;
   !!FU(trainer_GetArtifactFromTable):P(page)/(item)/?(art:y);
   !!DL(TRAINER_MAIN_DLG):A(item)/(DLG_CMD_SET_DEF_FRAME)/(art);
 
   !!VR(highlight:y):S(item) -100;
+  !!VR(owned:y):S0;
 
-  ; Check if the hero has the artifact if the artifact is not scroll
-  !!if&(art)<>(ART_SPELL_SCROLL);
-    !!HE(hero):A2/(art)/?(owned:y)/?(equipped:y);
-  !!el;
-    ; Check if the hero has the actual scroll if the artifact is scroll
-    !!re (scroll:y)/1001/1070;
-      !!HE(hero):A2/(scroll)/?(owned)/?(equipped);
+  !!if&(hero)>(NO_HERO);
+    ; Check if the hero has the artifact if the artifact is not scroll
+    !!if&(art)<>(ART_SPELL_SCROLL);
+      !!HE(hero):A2/(art)/?(owned:y)/?(equipped:y);
+    !!el;
+      ; Check if the hero has the actual scroll if the artifact is scroll
+      !!re (scroll:y)/1001/1070;
+        !!HE(hero):A2/(scroll)/?(owned)/?(equipped);
 
-      !!br&(owned)>0;
+        !!br&(owned)>0;
+      !!en;
     !!en;
   !!en;
 
@@ -1790,7 +1861,7 @@ ZVSE2
 !!VRi^trainer_artTablePage^:S(pageNew);
 
 ; Click to give artifacts to the hero
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=426/i^mouse_item^<=440/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=426/i^mouse_item^<=440/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(item:y):Si^mouse_item^ +100;
 !!FU(trainer_GetArtifactFromTable):Pi^trainer_artTablePage^/(item)/?(art:y);
 !!FU&(art)=(ART_ARTIFACT_LOCK):E;       [Exit if the artifact exceed the limit]
@@ -2022,7 +2093,7 @@ ZVSE2
 
 ******************** Give movement, mana and reveal map ********************
 ; Movement
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=31/i^mouse_action^=(MOUSE_LMB_RELEASED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=31/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!HE(hero):W?(movement:y)/(TRUE);
 
@@ -2060,7 +2131,7 @@ ZVSE2
 !!en;
 
 ; Show current movement points
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=30/i^mouse_item^<=31/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=30/i^mouse_item^<=31/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!HE(hero):W?(movement:y)/(TRUE);
 !!SN:T^trainer.currMovement^/?(currMoveStr:z)/^hero^/s^trainer_heroName^ T^trainer.movePoints^/?(movePoints:z)/^movement^/(movement);
@@ -2069,7 +2140,7 @@ ZVSE2
 !!SN:H^art^/(ART_BOOTS_OF_SPEED)/0/^%(artName)^; [restore the name of artifact]
 
 ; Mana
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=33/i^mouse_action^=(MOUSE_LMB_RELEASED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=33/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!HE(hero):I?(mana:y)/(TRUE);
 
@@ -2106,7 +2177,7 @@ ZVSE2
 !!en;
 
 ; Show current mana
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=32/i^mouse_item^<=33/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=32/i^mouse_item^<=33/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!HE(hero):I?(mana:y)/(TRUE);
 !!SN:T^trainer.currMana^/?(currManaStr:z)/^hero^/s^trainer_heroName^;
@@ -2117,10 +2188,10 @@ ZVSE2
 !!VR(player:y):Si^trainer_player^;
 !!SN:H^art^/(ART_SPYGLASS)/0/?(artName:z) H^art^/(ART_SPYGLASS)/0/^^;        [spyglass name is empty]
 
-!!if&(player)=(NO_PLAYER);
-  !!IF:M^%T(trainer.revealNoPlayer)^;
-  !!FU:E;
-!!en;
+*!if&(player)=(NO_PLAYER);
+  *!IF:M^%T(trainer.revealNoPlayer)^;
+  *!FU:E;
+*!en;
 
 !!UN:X?(size:y)/?(hasTwoLv:y); get map size
 
@@ -2153,22 +2224,12 @@ ZVSE2
 
 ******************* Give any rank to the creatures **************************
 ; Stack experience
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>153/i^mouse_item^<161/i^mouse_action^=(MOUSE_LMB_RELEASED);
-!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpOn:y); [Check if stack exp enabled]
-
-!!if&(stackExpOn)=(FALSE);
-  !!IF:M^%T(trainer.rankOff)^;
-  !!FU:E;
-!!en;
-
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>153/i^mouse_item^<161/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!VR(slot:y):Si^mouse_item^ -154;       [Get hero slot]
 !!HE(hero):C0/(slot)/?(mon:y)/?(qty:y)/?(stackExp:y);
 
-!!if&(mon)<=(NO_MON);
-  !!IF:M^%T(trainer.rankNoArmy)^;
-  !!FU:E;
-!!en;
+!!FU&(mon)<=(NO_MON):E;
 
 !!FU(trainer_GetMonRankWithExp):P(mon)/(stackExp)/?(rank:y);
 
@@ -2211,8 +2272,8 @@ ZVSE2
 **************************** End experience ********************************
 
 ************************ Change creature quantity **************************
-; Manage the quantity of creatures in the hero's army
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_LMB_PRESSED);
+; Manage the quantity of monsters in the hero's army
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(monArea:y):S(FALSE);
 
 !!if&i^mouse_item^>=161/i^mouse_item^<=167;
@@ -2234,8 +2295,6 @@ ZVSE2
 !!el&(monArea)=3;
   !!VR(slot):Si^mouse_item^ -400;
 !!en;
-
-!!VR(hintCad:y):S(slot) +161;           [get hint ID]
 
 !!HE(hero):C0/(slot)/?(mon:y)/?(qty:y)/?(exp:y)/2;
 !!FU|(mon)<=(NO_MON)/(qty)=0:E;         [exit if no creatures]
@@ -2264,7 +2323,7 @@ ZVSE2
   !!VRz1:H1; **check if text entered, flag 1=1 if yes
   !!FU|-1/v1<0:E;  exit if nothing entered
 
-  !!VR(input:y):Vz1 F0/(INT_MAX);                    [restrain value]
+  !!VR(input:y):Vz1 F0/(INT_MAX);       [restrain value]
 
   !!if&(input)<=0;
     !!HE(hero):C0/(slot)/(NO_MON)/0;    [remove stack]
@@ -2276,32 +2335,35 @@ ZVSE2
 !!en;
 
 !!HE(hero):C0/(slot)/?(mon:y)/?(qtyNew:y)/?(exp:y)/2;
+!!VR(armyHint:y):S(slot) +161;          [get hint ID]
 
 !!if&(qty)<>(qtyNew);
   !!if&(qtyNew)<=0;
+    !!VRz30:S^^;
+
     !!VR(monCad:y):S(slot) +100;
-    !!DL(TRAINER_MAIN_DLG):A(monCad:y)/(DLG_CMD_SET_DEF_FRAME)/1;                 [set transparent cadre if no mon]
+    !!DL(TRAINER_MAIN_DLG):A(monCad:y)/(DLG_CMD_SET_DEF_FRAME)/1 H(monCad)/z30; [set transparent cadre if no mon]
 
     !!VR(henchCad:y):S(slot) +228;
     !!DL(TRAINER_MAIN_DLG):E(henchCad)/0;
 
     !!VR(swordCad:y):S(slot) +400;
-    !!DL(TRAINER_MAIN_DLG):A(swordCad)/(DLG_CMD_SET_DEF_FRAME)/0;
+    !!DL(TRAINER_MAIN_DLG):A(swordCad)/(DLG_CMD_SET_DEF_FRAME)/0 H(swordCad)/z30;
 
-    !!VRz30:S^^;
-    !!DL(TRAINER_MAIN_DLG):A(hintCad)/(DLG_CMD_SET_TEXT)/z30 H(monCad)/z30 H(hintCad)/z30 H(swordCad)/z30;
+    !!DL(TRAINER_MAIN_DLG):A(armyHint)/(DLG_CMD_SET_TEXT)/z30 H(armyHint)/z30;
+
+    !!VR(rankHint:y):S(slot) +154;
+    !!DL(TRAINER_MAIN_DLG):H(rankHint)/z30;
   !!el;
-    !!VR(monCadInd:y):S(mon) +2;        [get monster cadre index]
-
     !!VRz3:M3/(qtyNew);
-    !!DL(TRAINER_MAIN_DLG):A(hintCad)/(DLG_CMD_SET_TEXT)/z3;
+    !!DL(TRAINER_MAIN_DLG):A(armyHint)/(DLG_CMD_SET_TEXT)/z3;
   !!en;
 
   !!SN&(playSound):P^button.wav^;
 !!en;
 
 ; Show creature info by right-clicking on the hero's army slots
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(flag:y):S(FALSE);
 
 !!if&i^mouse_item^>=161/i^mouse_item^<=167;
@@ -2328,17 +2390,13 @@ ZVSE2
 
 ***************************** Commanders ****************************
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=111;
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=111/i^trainer_hero^>(NO_HERO);
 ; Exit if not left released or right pressed
 !!FU&i^mouse_action^<>(MOUSE_LMB_RELEASED)/i^mouse_action^<>(MOUSE_RMB_PRESSED):E;
 
-; Exit the function if commander option is off (1)
+; Exit if commander is not enabled - required for RMB event
 !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(cmdOff:y);
-
-!!if&(cmdOff);
-  !!IF:M^%T(trainer.cmdOff)^;
-  !!FU:E;
-!!en;
+!!FU&(cmdOff):E;
 
 !!DL(TRAINER_CMD_DLG):N^trainer.txt^;
 !!FU&-1:E;
@@ -2734,13 +2792,13 @@ ZVSE2
 
 **** Henchmen ****
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=(TRAINER_BTN_HENCH)/i^mouse_action^=(MOUSE_LMB_RELEASED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=(TRAINER_BTN_HENCH)/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(firstLevelMons[9]:y):C(MON_PIKEMAN)/(MON_CENTAUR)/(MON_GREMLIN)/(MON_IMP)/(MON_SKELETON)/(MON_TROGLODYTE)/(MON_GOBLIN)/(MON_GNOLL)/(MON_PIXIE);
 
 !!VR(hero:y):Si^trainer_hero^;
 !!IF:W(hero);
 
-!!if&w118>(NO_MON)/w119<>(TRUE);        [revive henchman if there was a one and perished]
+!!if&w118>(NO_MON)/w119<>(TRUE);        [revive the henchman if there was a one and perished]
   !!VRw119:S(TRUE);
   !!IF:M^%T(trainer.henchRevived)^;
 !!el&w118<=(NO_MON);                    [give henchamn if there was none]
@@ -2943,15 +3001,14 @@ ZVSE2
 
     !!en;
 
-    !!FU(trainer_RefeshHeroArmy):Pi^trainer_hero^;              [Update hero army]
+    !!FU(trainer_UpdateHeroArmy):Pi^trainer_hero^;              [Update hero army]
     !!FU:E;
   !!en;
 
   //resources
   !!if&i^trainer_dlg_item^>=21/i^trainer_dlg_item^<=27|i^trainer_dlg_item^=114; 
 
-    !!if&i^trainer_player^<0;
-      !!IF:M^%T(trainer.resNoPlayer)^;
+    !!if&i^trainer_player^=(NO_PLAYER);
       !!FU:E;
     !!en;
 
@@ -3206,10 +3263,12 @@ ZVSE2
 ; If clicked on a hero, enter trainer main interface with that hero
 !!if&(obj)=(OBJ_HERO);                
   !!HE(x)/(y)/(z):N?i^trainer_hero^;
+  !!HEi^trainer_hero^:O?i^trainer_player^;
   !!FU(trainer_MainDialog):P;
 ; If clicked on an object wtth owner, enter search for possible hero to enter trainer interface
 !!el|(obj)=(OBJ_TOWN)/(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4)/(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE)/(obj)=(OBJ_GARRISON)/(obj)=(OBJ_SHIPYARD);
-  !!VRi^trainer_hero^:S(NO_HERO);     [initialise hero ID]
+  ; Get the owner of the object
+  !!VRi^trainer_player^:S(NO_PLAYER);
 
   !!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):O?(owner:y);
   !!DW(x)/(y)/(z)|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4):O?(owner);
@@ -3218,21 +3277,14 @@ ZVSE2
   !!SY(x)/(y)/(z)&(obj)=(OBJ_SHIPYARD):O?(owner);
 
   ; Look for hero of the object onwer, activate main interface if matches
-  !!FU(trainer_SelectHeroByPlayer)&i^trainer_hero^=(NO_HERO)/(owner)>(NO_PLAYER):P(owner)/1/0; 
-  !!FU(trainer_MainDialog)&i^trainer_hero^>(NO_HERO)/(owner)>(NO_PLAYER):P;
+  !!if&(owner)>(NO_PLAYER);
+    !!VRi^trainer_player^:S(owner);
+    !!FU(trainer_SelectHeroByPlayer):P(owner)/(TRUE)/(FALSE);
+    !!FU(trainer_MainDialog):P;
 
   ; Pops up main dialogue for asking a name or ID of a hero if the object has no owner
-  !!FU(trainer_SelectHeroMain)&i^trainer_hero^=(NO_HERO)/(owner)=(NO_PLAYER):P; 
-
-  ; Pops up msg if the owner of the obejct has no hero
-  !!if&i^trainer_hero^=(NO_HERO)/(owner)>(NO_PLAYER); 
-    !!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):N?(objName:z);
-    !!SN|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4):T^trainer.dwelling^/?(objName);      
-    !!SN|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE):T^trainer.mine^/?(objName);
-    !!SN&(obj)=(OBJ_GARRISON):T^trainer.garrison^/?(objName);
-    !!SN&(obj)=(OBJ_SHIPYARD):T^trainer.shipyard^/?(objName);
-    !!SN:T^trainer.objMainNoHero^/?(objMainNoHero:z)/^object^/(objName);
-    !!IF:M^%(objMainNoHero)^;
+  !!el;
+    !!FU(trainer_SelectHeroMain):P;
   !!en;
 !!el;
   ; If the right clicked object is not a hero/town/dwelling/mine/shipyard, show dialogue
@@ -3261,18 +3313,24 @@ ZVSE2
 !!FU&v1<0:E;
 !!VRs^trainer_input^:Sz1;
 
-!!FU(trainer_SelectHeroByInput)&1:P?(isWrongName:y);
-!!FU&(isWrongName):E;
+!!if&1;
+  !!FU(trainer_SelectHeroByInput):P;
 
 ; Get a hero of current player if nothing was input
-!!if&i^trainer_hero^=(NO_HERO);
-  !!OW:C?(player:y);
-  !!FU(trainer_SelectHeroByPlayer):P(player)/0/1;
+!!el;
+  !!OW:C?(currPlayer:y)/?(interactPlayer:y);
+  !!FU(trainer_SelectHeroByPlayer):P(interactPlayer)/(FALSE)/(TRUE);
 !!en;
 
 !!if&i^trainer_hero^>(NO_HERO);
-  !!HEi^trainer_hero^:P(x)/(y)/(z);
-  !!UN:R1;                            [UN:R1 doesn't Update hero list now?]
+  !!HEi^trainer_hero^:O?(owner:y) P?(heroX:y)/?(heroY:y)/?(heroZ:y);
+
+  !!if&(owner)>(NO_OWNER)/(heroX)>-1/(heroY)>-1/(heroZ)>-1;
+    !!HEi^trainer_hero^:P(x)/(y)/(z);
+    !!UN:R1;                            [UN:R1 doesn't Update hero list now?]
+  !!el;
+    !!IF:M^%T(trainer.objTelptInvalidHero)^;
+  !!en;
 !!en;
 
 // Change owner
