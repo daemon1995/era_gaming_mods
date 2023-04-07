@@ -26,27 +26,28 @@ ZVSE2
   !!br&(hasLost);
 !!en;
 
-!!VRi^wog_72_randHeroActive^&i<=(PLAYER_LAST):S(TRUE);
+!!if&i<=(PLAYER_LAST);
+  !!VRi^wog_72_randHeroActive^:S(TRUE);
 
-; Check if it is lucky enough to encounter the neutral hero or else
-!!VR(random:y):R0/0/3;                  [25% chance]
-!!VR(random)&i^Random_Neutral_Hero^:S0; [Always generate a neutral hero if Always Random Hero is enabled]
+  ; Check if it is lucky enough to encounter the neutral hero or else
+  !!VR(random:y):R0/0/3;                  [25% chance]
+  !!VR(random)&i^Random_Neutral_Hero^:S0; [Always generate a neutral hero if Always Random Hero is enabled]
 
-; Get an available random hero and generate on the battlefield if lucky enough
-!!if&(random)=0;
-  !!FU(WOG_GetRandomUnoccupiedHero):P?(randHero:y);
+  ; Get an available random hero and generate on the battlefield if lucky enough
+  !!if&(random)=0;
+    !!FU(WOG_GetRandomUnoccupiedHero):P?(randHero:y);
 
-  !!if&(randHero)>(NO_HERO);
-    !!BA:H1/(randHero);
-    !!FU(WOG_72_SetRandomHeroOwner):P(randHero); [Get an ideal owner for the random hero]
+    !!if&(randHero)>(NO_HERO);
+      !!BA:H1/(randHero);
+      !!HE(randHero):Oi;
+      !!VRi^wog_72_randHero^:S(randHero);
+    !!el;
+      !!VRi^wog_72_randHeroActive^:S(FALSE);
+    !!en;
   !!el;
     !!VRi^wog_72_randHeroActive^:S(FALSE);
   !!en;
-!!el;
-  !!VRi^wog_72_randHeroActive^:S(FALSE);
 !!en;
-
-!!VRi^wog_72_randHero^:S(randHero);
 
 // Store neutral stacks in global vars (in order to return them on battle replay)
 // The timing is late for the compatibility with battle replay
@@ -60,60 +61,9 @@ ZVSE2
   !!BA:M1/i/i^wog_72_replayType_%i^/i^wog_72_replayNum_%i^;
 !!en;
 
-// Prevent neutral hero from escaping
-!?FU(OnBeforeBattleAction)&i^wog_72_randHeroActive^/i^battle_current_side^=(BATTLE_RIGHT);
-!!BG:A?(actionType:y);
-
-!!if&(actionType)=(BATTLE_ACTION_RETREAT);
-  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatMgr:y);
-  !!SN:E4334448/(CALLCONV_THISCALL)/(combatMgr)/(BATTLE_RIGHT);
-!!en;
-
 // Reset variables
 !?FU(OnAfterBattleUniversal)&i^wog_72_randHeroActive^;
 !!VRi^wog_72_randHeroActive^:S(FALSE);
 
 !?FU(OnAfterLoadGame)&i^wog_72_randHeroActive^;
 !!VRi^wog_72_randHeroActive^:S(FALSE);
-
-// Function for setting an owner for the random hero (for compatibility with HD Mod 5.2 R95+)
-// Fighting a hero with no owner will prevent entering quick combat
-!?FU(WOG_72_SetRandomHeroOwner);
-!#VA(hero:x);
-
-; Look for a player that isn't in the game
-!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-  !!OW:Ii/?(isAi:y)/?(hasLost:y);
-
-  !!br&(hasLost);
-!!en;
-
-!!if&i<=(PLAYER_LAST);
-  !!HE(hero):Oi;
-!!el;
-  ; Look for an enemy AI player if the game has all 8 players
-  !!OW:T(CURRENT_PLAYER)/?(currTeam:y);
-
-  !!re j/(PLAYER_FIRST)/(PLAYER_LAST);
-    !!OW:Ij/?(isAi:y);
-    !!OW:Tj/?(team:y);
-
-    !!br&(isAi)/(currTeam)<>(team);
-  !!en;
-
-  !!if&j<=(PLAYER_LAST);
-    !!HE(hero):Oj;
-  !!el;
-    ; Just look for a player differs with current
-    !!OW:C?(currPlayer:y);
-
-    !!re k/(PLAYER_FIRST)/(PLAYER_LAST);
-
-      !!if&k<>(currPlayer);
-        !!HE(hero):Ok;
-
-        !!br;
-      !!en;
-    !!en;
-  !!en;
-!!en;
