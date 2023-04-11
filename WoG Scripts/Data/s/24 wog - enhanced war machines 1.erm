@@ -7,7 +7,7 @@ ZVSE2
 * Updated by Archer30 and daemon_n on Feb 2023
 
 *War Machine script 0.9 by Overlord
-*Reserved: TM41, v591, v2000-v2074, FU903-FU927, w81-83
+*Reserved: TM41, v591, v2000-v2073, FU903-FU927, w81-83
 *Temporary: z1-z4
 *
 *ballista "base on ballista level" upgrades in towns
@@ -23,73 +23,54 @@ ZVSE2
 *increases hit, with ballistics: shoot ability with 2,4 or 8 shoots
 *
 
-; To-do:
-; Fix disabling Catapult not working (siege and non-siege)
-; Recreate the whole battle functions
-
-
-************************ before action combat screen ***************************
 
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Check if script is enabled]
 
-; Fix stack becomes catapult and vice versa
-; There should not be more than one catapult on one side of the battlefield, otherwise the script would break
-!?FU(OnSetupBattlefield_Quit)&i^wog_54_enabled^;
-!!VRi^wog_54_catapult_0^:S(NO_STACK);
-!!VRi^wog_54_catapult_1^:S(NO_STACK);
+!?FU(OnAfterErmInstructions)&i^wog_54_enabled^;
+  !!SN:H^monname^/(MON_CATAPULT)/0/?(single:z) H^monname^/(MON_CATAPULT)/1/?(plural:z);
+  !!SN:H^monname^/(MON_NOT_USED_2)/0/(single) H^monname^/(MON_NOT_USED_2)/1/(plural);
 
-!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
-  !!BMi:T?(type:y);
+  ; Set up flags for Catapult in non-siege
+  !!MA:X(MON_NOT_USED_2)/132201 F(MON_NOT_USED_2)/650 C(MON_NOT_USED_2)/(RES_GOLD)/1000; [set NU2 flags {catapult flags (132197) + shooter (4)}    NU2 Fight Value 650  ]
+  !!MA:A(MON_NOT_USED_2)/10 D(MON_NOT_USED_2)/10 P(MON_NOT_USED_2)/500 N(MON_NOT_USED_2)/2; [NU2 Attack 10 NU2 Defense 10 NU2 HP 500  NU2 Shots 2]
 
-  !!if&(type)=(MON_CATAPULT)/i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
-    !!BMi:I?(side:y);
-    !!VRi^wog_54_catapult_%(side)^:Si;
+  ; creature descriptions
+  !!SN:H^monname^/(MON_CATAPULT)/2/?(desc:z);
+  !!VR(desc):+^%T(wog.54.desc)^;
+  !!SN:H^monname^/(MON_CATAPULT)/2/(desc);
+
+  ; Stack exp abilities
+  !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y); [check if creature experience is enabled]
+
+  !!if&(stackExp);
+    !!EA(MON_NOT_USED_2):F102/105/?(availSlot:y); [NU2 (catapult) - get bonus line index]
+    !!EA(MON_NOT_USED_2):B(availSlot)/1/102/105/1/1/1/1/1/1/1/1/1/1/1; [set Shoot Adjacent]
   !!en;
+
+************************ before action combat screen ***************************
+
+; Catapult - skip turn when enemy is nearby
+; Need this as Catapult (#124) cannot shoot and cannot melee when enemy adjacent, it is useless to defend
+; Archer30: This does not work for unknown reason
+!?FU(OnBattleStackObtainsTurn)&i^wog_54_enabled^;
+!#VA(stackSide:x) (stackInd:x);
+
+!!BMi^battle_current_stack^:T?(monType:y);
+
+!!if&(monType)=(MON_NOT_USED_2);
+  ; Check if shooting is possible for the catapult
+  !!BMi^battle_current_stack^:Z?(stackPtr:y);
+  !!SN:E4466192/(CALLCONV_THISCALL)/(stackPtr)/0;
+  !!BG&v1=(FALSE):A(BATTLE_ACTION_SKIP);
 !!en;
-
-!!SN:H^monname^/(MON_CATAPULT)/0/?s^wog_54_catapultName_0^;
-!!SN:H^monname^/(MON_CATAPULT)/1/?s^wog_54_catapultName_1^;
-
-!!SN:H^monname^/(MON_MAGOG)/0/?s^wog_54_magogName_0^;
-!!SN:H^monname^/(MON_MAGOG)/1/?s^wog_54_magogName_1^;
 
 !?FU(OnBeforeBattleAction)&i^wog_54_enabled^; get before action
 !!BG:E?(targetStack:y) H?(actingHero:y) A?(actionType:y);
 
 !!BMi^battle_acting_stack^:T?(type:y) I?(side:y) N?(num:y);
 
-!!FU(WOG_54_FixeMonsterInfo):P(targetStack) Pi^battle_acting_stack^;
-
-; Catapult
-!!if|i^battle_acting_stack^=i^wog_54_catapult_0^/i^battle_acting_stack^=i^wog_54_catapult_1^;
-  !!if&i^wog_isSiege^<>(TRUE)/i^wog_isDwellOrCBBattle^<>(TRUE);
-    !!FU(WOG_54_CatapultFirstStage)&(type)=(MON_CATAPULT):P(actionType); catapult first stage
-    !!FU(WOG_54_CatapultSecondStage)&(type)=(MON_MAGOG)/i^wog_54_catapultActivity^=1:P1/(actionType)/(actingHero)/(num); catapult second stage
-  !!en;
-!!en;
-
 ; Ballista
-!!FU(WOG_54_Ballista)&(type)=(MON_BALLISTA)/(actionType)=7:P0/(targetStack); ballista
-
-!?FU(WOG_54_CatapultSecondStage)&i^wog_54_enabled^; catapult action * magog *
-!#VA(mode:x) (actionType:x) (actingHero:x) (num:x);
-
-* 1
-!!if&(mode)=1;
-  !!if&(actionType)<>(BATTLE_ACTION_SHOOT);
-    !!BMi^battle_acting_stack^:T(MON_CATAPULT);
-  !!el;
-    !!VRi^wog_54_catapultActivity^:S3;
-    !!VRv2054:Si^battle_acting_stack^;
-  !!en;
-
-  !!FU906:P(MON_CATAPULT)/(actingHero)/(num)/i^battle_acting_stack^; [For catapult, we use the catapult stack data, different from First Aid Tent (target stack data)]
-* 2
-!!el;
-  !!BMv2054:T(MON_CATAPULT);
-  !!VRi^wog_54_catapultActivity^:S0;
-  !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_magogName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_magogName_1^; restore magog
-!!en;
+!!FU(WOG_54_Ballista)&(type)=(MON_BALLISTA)/(actionType)=(BATTLE_ACTION_SHOOT):P0/(targetStack); ballista
 
 !?FU(WOG_54_Ballista)&i^wog_54_enabled^;
 !#VA(mode:x) (targetStack:x);
@@ -120,35 +101,35 @@ ZVSE2
   !!SN:D;
 !!en;
 
-!?FU(WOG_54_CatapultFirstStage)&i^wog_54_enabled^; check catapults avaiabitity
-!#VA(action:x); 
-
-!!BMi^battle_acting_stack^:U3/?(shots:y);
-!!FU&(shots)<=0:E; exit if no shots
-
-!!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_catapultName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_catapultName_1^;
-
-!!BMi^battle_acting_stack^:T(MON_MAGOG); change to magog
-
-!!BG:A(BATTLE_ACTION_CANCEL); cancel action
-!!VRi^wog_54_catapultActivity^:S1; set activity to 1
-
 ************************* after action combat screen ***************************
 
+; Ballista
 !?FU(OnBattleActionEnd)&i^wog_54_enabled^; get after action
 !!FU(WOG_54_Ballista)&v2053=2:P1;
-!!FU(WOG_54_CatapultSecondStage)&i^wog_54_catapultActivity^=3:P2;
 
-************************* MOUSE HOVER combat screen ****************************
+; Catapult
+!?FU(WOG_OnAfterShoot);
+!#VA(atkStack:x) (defStack:x);
 
-!?FU(OnBattleMouseHint)&i^mouse_battleHex^>=1/i^mouse_battleHex^<=185;
-!!BU:Ei^mouse_battleHex^/?(stack:y); check monster position
-!!FU&(stack)=(NO_STACK):E; exit if no monster
+!!BM(atkStack):T?(type:y);
 
-!!BM(stack):N?(num:y);
-!!FU&(num)<=0:E;
+!!if&(type)=(MON_NOT_USED_2);
+  ; Exit if the attacking (possible with Fire Shield) or defending stack is killed
+  !!BM(atkStack):N?(atkNum:y);
+  !!BM(defStack):N?(defNum:y);
+  !!FU|(atkNum)<=0/(defNum)<=0:E;
 
-!!FU(WOG_54_FixeMonsterInfo):P(stack);
+  ; Exit if the targeted stack cannot receive the spell
+  !!BM(atkStack):I?(atkSide:y);
+  !!FU(WOG_Battle_CanStackReceiveSpell):P(defStack)/(SPELL_FIREBALL)/(atkSide)/?(canReceive:y);
+  !!FU&(canReceive)=(FALSE):E;
+
+  ; Cast the spell
+  !!BM(defStack):P?(defPos:y);
+
+  !!HEi^battle_hero_%(atkSide)^:S(SKILL_BALLISTICS)/?(ballisticsLv:y);
+  !!BM(atkStack):C(SPELL_FIREBALL)/(defPos)/(ballisticsLv)/3/(FALSE);
+!!en;
 
 ************************* MOUSE CLICK combat screen ****************************
 
@@ -161,11 +142,6 @@ ZVSE2
 
 !!BMy1:T?y2 I?y3 L?y5 H?y6 N?y7 B?y9; y2 = monster , y3 = hero side
 !!BHy3:N?y4; get hero number
-
-; Catapult
-!!if|y1=i^wog_54_catapult_0^/y1=i^wog_54_catapult_1^;
-  !!FU(WOG_54_CatapultSecondStage)&y2=(MON_MAGOG)/i^wog_54_catapultActivity^=1:P1/y1/0/y3/y4/y7; catapult view
-!!en;
 
 !!BMi^battle_current_stack^:T?(currType:y);
 
@@ -232,25 +208,42 @@ ZVSE2
 ; Multiplayer support
 !?FU(OnBeforeBattleBeforeDataSend)&i^wog_54_enabled^;
 !!IP:Di^battle_owner_1^ Wi^battle_hero_0^/81/83;
-!!IP:V2000/2074;                        [Legacy.Used for checking whether a town's war mchine has been bought in a day]
+!!IP:V2048/2073;
 
+; store enabler
 !?FU(OnBeforeBattleUniversal)&i^wog_54_enabled^;
-!!FU915:P0/0 P1/0; store enabler
+!!FU(WOG_54_DisableOrRestoreWarMachines):P0/0 P1/0; 
 
+; set machines attributes
+!?FU(OnSetupBattlefield)&i^wog_54_enabled^;
+; Initialise catapult variables
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!VRi^wog_54_catapult_%i^:S(NO_STACK);
+!!en;
+
+!!FU(WOG_54_PlaceCatapult)&i^wog_isSiege^<>(TRUE)/i^wog_isCBBattle^<>(TRUE):P(BATTLE_LEFT) P(BATTLE_RIGHT);
+
+!!FU(WOG_54_SetUpWarMachinesHP):P;
+
+; Set Mana for Ammo Cart
 !?FU(OnBattleRound)&i^wog_54_enabled^/i^battle_round^>0; set mana for ammo cart
-!!DO907/0/41/1:P1;
+!!DO(WOG_54_SetManaForAmmoCart)/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST)/1:P1;
 
-!?FU(OnSetupBattlefield)&i^wog_54_enabled^; set machines attributes
-!!FU(WOG_54_SummonBallistaInNonSiege)&i^wog_isSiege^<>(TRUE):P0/119 P1/135; call if no siege battle
-!!FU(WOG_54_ChangeWarMachineStats):P;
+; Change catapult ID to 124 - Must be after Tactics Phase due to HD mod compatibility
+!?FU(OnAfterTacticsPhase)&i^wog_54_enabled^;
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!BMi^wog_54_catapult_%i^&i^wog_54_catapult_%i^>(NO_STACK):T(MON_NOT_USED_2);
+!!en;
 
-!?FU(OnAfterBattleUniversal)&i^wog_54_enabled^; after battle check & re-set enabler
-!!FU912:P1/0 P1/1;
-!!FU915:P0/1 P1/1;
+; After battle check & re-set enabler
+!?FU(OnAfterBattleUniversal)&i^wog_54_enabled^; 
+!!FU(WOG_54_ManageWarMachines):P1/0 P1/1;
+!!FU(WOG_54_DisableOrRestoreWarMachines):P0/1 P1/1;
 !!VRv2048:C0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0; v2048-v2063
 !!VRv2064:C0/0/0/0/0/0/0/0/0/0; v2064 - v2073
 
-!?FU907&i^wog_54_enabled^;
+; Functions
+!?FU(WOG_54_SetManaForAmmoCart)&i^wog_54_enabled^;
 !!BMx16:T?y1 I?y2;
 !!FU&y1<>(MON_AMMO_CART):E; exit
 
@@ -261,11 +254,12 @@ ZVSE2
 !!VRy8:S2066 +y2; get current side index
 !!VRy9:Svy8 *10; get knowledge power * 10
 !!FU&y7=>y9:E; exit if spell already enough
+
 !!VRy6:+y7; set additioanl spell
 !!VRy6&y6>y9:Sy9; set max if y6 > y9
 !!HEy3:Iy6/1;
 
-!?FU(WOG_54_ChangeWarMachineStats);
+!?FU(WOG_54_SetUpWarMachinesHP);
 !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
   !!BMi:T?(type:y) N?(num:y);
 
@@ -296,43 +290,49 @@ ZVSE2
   !!en;
 !!en;
 
-!?FU(WOG_54_SummonBallistaInNonSiege)&i^wog_54_enabled^;
-!#VA(side:x) (pos:x);
+; Restrain the quantities of First Aid Tents and Ballistas to max of 2 (1 from War Machine artifact, the other from Commander)
+!?FU(WOG_54_PlaceCatapult);
+!#VA(side:x);
 
-* place real catapults *
-!!BA:H(side)/?(hero:y);
-!!FU&(hero)<=(NO_HERO):E; exit if no hero found
+!!if&i^battle_hero_%(side)^>(NO_HERO);
+  !!HEi^battle_hero_%(side)^:S(SKILL_BALLISTICS)/?(ballisticsLv:y);
 
-!!HE(hero):S(SKILL_BALLISTICS)/?(ballisticsLv:y); get ballistics secondary skills
-!!FU912:P6/(pos)/(side)/1;
+  !!if&(ballisticsLv)>(SKILL_NOT_LEARNED);
+    !!if&(side)=(BATTLE_LEFT);
+      !!VR(catPos:y):S119;
+    !!el;
+      !!VR(catPos):S135;
+    !!en;
 
-!!if&(ballisticsLv)>(SKILL_NOT_LEARNED)/v1=0; [v1 from FU912?]
-  !!BU:S(MON_CATAPULT)/1/(pos)/(side)/-1/0;
+    !!BU:S(MON_CATAPULT)/1/(catPos)/(side)/-1/(FALSE); [add catapults]
+    !!BU:E(catPos)/?(catStack:y);
 
-  ; Set up data for the summoned Ballista
-  !!BU:E(pos)/?(stack:y);
+    !!if&(catStack)>(NO_STACK);
+      !!BM(catStack):T?(type:y);
 
-  !!if&(stack)>(NO_STACK);
-    !!BM(stack):T?(type:y);
+      !!if&(type)=(MON_CATAPULT);
+        ; Store stack number to be used later after Tactic Phase
+        !!VRi^wog_54_catapult_%(side)^:S(catStack);
+        ; Set up basic stats except for monster type as setting here would conflict with HD fast troop placements
+        !!BM(catStack):U1/5 U2/200 B1;
 
-    !!if&(type)=(MON_CATAPULT);
-      !!BM(stack):Fd~(MON_FLAG_SIEGE_WEAPON) U2/200;
+        !!VR(shots:y)&(ballisticsLv)=(SKILL_BASIC):S2;
+        !!VR(shots)&(ballisticsLv)=(SKILL_ADVANCED):S4;
+        !!VR(shots)&(ballisticsLv)>=3:S8;
 
-      !!VR(shots:y)&(ballisticsLv)=(SKILL_BASIC):S2;
-      !!VR(shots)&(ballisticsLv)=(SKILL_ADVANCED):S4;
-      !!VR(shots)&(ballisticsLv)>=3:S8;
-
-      !!BM(stack):U3/(shots);
+        !!BM(catStack):U3/(shots);
+      !!en;
     !!en;
   !!en;
 !!en;
 
-!?FU915&i^wog_54_enabled^;
+!?FU(WOG_54_DisableOrRestoreWarMachines)&i^wog_54_enabled^;
 !!BA:Hx1/?y1;
 !!FU&y1<0:E;
+
 !!HEy1&x1=0/x2=0:A2/4/d/?v2060 A2/5/d/?v2061 A2/6/d/?v2062 Fd/d/d/?v2066 S10/?v2070 Ed/?v2072/1;
 !!HEy1&x1=1/x2=0:A2/4/d/?v2063 A2/5/d/?v2064 A2/6/d/?v2065 Fd/d/d/?v2067 S10/?v2071 Ed/?v2073/1;
-!!FU912:P6/y1/4/2 P6/y1/5/3 P6/y1/6/4; call enabler
+!!FU(WOG_54_ManageWarMachines):P6/y1/4/2 P6/y1/5/3 P6/y1/6/4; call enabler
 !!HEy1&v2=1/x2=0:A-4;
 !!HEy1&v3=1/x2=0:A-5;
 !!HEy1&v4=1/x2=0:A-6;
@@ -438,26 +438,20 @@ ZVSE2
 
 ****************************** Adventure Map ***********************************
 
-!?FU(OnEveryDay)&i^wog_54_enabled^;
-!!VRv2000:C0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0; v2000-v2015
-!!VRv2016:C0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0; v2016-v2031
-!!VRv2032:C0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0; v2032-v2047
-
-!?OB98&-1000/i^wog_54_enabled^; town - ai check only
+!?OB(OBJ_TOWN)&-1000/i^wog_54_enabled^; town - ai check only
 !!HE(CURRENT_HERO):N?v2048;
-!!FU912:P1/v2048;
+!!FU(WOG_54_ManageWarMachines):P1/v2048;
 
-!?OB106&i^wog_54_enabled^; war machine factory, entrance!
+!?OB(OBJ_WAR_MACHINE_FACTORY)&i^wog_54_enabled^; war machine factory, entrance!
 !!HE(CURRENT_HERO):N?v2048;
-!!UN:A4/10/0 A4/9/0 A5/10/0 A5/9/0 A6/10/0 A6/9/0; restore desc
-!!FU912:P2/v2048;
+!!FU(WOG_54_ManageWarMachines):P2/v2048;
 
 !?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^wog_54_enabled^;
-!#VA(usedY[17]:y);
+!#VA(usedY[20]:y);
 
 ; Exit if no visiting hero
-!!CA(CURRENT_TOWN):H1/?(heroVisitor:y);
-!!FU&(heroVisitor)=(NO_HERO):E;
+!!CA(CURRENT_TOWN):H1/?(hero:y);
+!!FU&(hero)=(NO_HERO):E;
 
 ; Exit if it was not clicked on the Blacksmith
 !!CA(CURRENT_TOWN):T?(townType:y) U?(townId:y); get town type
@@ -484,10 +478,10 @@ ZVSE2
 !!VR(warMachineMon)&(warMachineArt)=(ART_AMMO_CART):S(MON_AMMO_CART);
 !!VR(warMachineMon)&(warMachineArt)=(ART_FIRST_AID_TENT):S(MON_FIRST_AID_TENT);
 
-!!IF:W(heroVisitor); set W var for hero
+!!IF:W(hero); set W var for hero
 !!VRy5:S(warMachineMon) -65;
 !!VRy6:Swy5 +1; get w-var for type, add 1 top skip 0
-!!HE(heroVisitor):A2/(warMachineArt)/d/?y1 B0/?z3 Ed/?y9/1 O?y10; hero level y9
+!!HE(hero):A2/(warMachineArt)/d/?y1 B0/?z3 Ed/?y9/1 O?y10; hero level y9
 
 !!if&y1=0;
   !!VRwy5:S0; set w-var to 0
@@ -500,15 +494,17 @@ ZVSE2
 
 ; Now the script starts
 !!CM:R0; Disable standard reaction
+!!FU(WOG_54_UpgradeWarMachine):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/y5/y6/y9;
 
-!!VRy16:S2000 +(townId); get towns number store in v2000 + townnumber
-!!VRy17:Svy16; get number from vy16
+!?FU(WOG_54_UpgradeWarMachine);
+!#VA(townType:x) (item:x) (hero:x) (warMachineArt:x) (warMachineMon:x) (index:x) (machineLevel:x) (heroLevel:x);
 
 !!OW:Ry10/(RES_GOLD)/?y11; get gold from player
+!!VRy6:S(machineLevel);
 !!VRy8:Sy6 +1; next level
 !!UN:N2/1/(townType)/(item) N3/2/(warMachineMon)/0; get ballista name & object name
 
-!!FU913:P(warMachineArt)/(heroVisitor)/y8; get stats
+!!FU(WOG_54_GetWarMachineStats):P(warMachineArt)/(hero)/y8; get stats
 
 ; Change artifact name and description
 ; Using z5/z6 is necessary for the ert variable conversion
@@ -517,111 +513,107 @@ ZVSE2
 !!SN:H^art^/(warMachineArt)/0/?z30 H^art^/(warMachineArt)/1/?z31;
 !!SN:H^art^/(warMachineArt)/0/z5 H^art^/(warMachineArt)/1/z6;
 
-!!MA:C(warMachineMon)/(RES_GOLD)/?y7; y7 = gold cost
-!!VRy7::5 *y8; gold cost is level * machine / 5
-!!VRy15:S(MSG_TYPE_QUESTION); set to choices
+!!MA:C(warMachineMon)/(RES_GOLD)/?y31; y31 = gold cost
+!!VRy7:Sy31 *y8 :5; gold cost is level * machine / 5
+
+!!VR(msgType:y):S(MSG_TYPE_QUESTION); set to choices
+!!VRz4:S^^;
+
+!!VRy9:S(heroLevel);
+!!VR(msgType)|y11<y7/y9<y8:S(MSG_TYPE_MES); set to message with no choice
 !!VRz4&y11<y7:Sz154017;                 [Not enough money]
 !!VRz4&y9<y8:Sz154018;                  [Level is too low]
-!!VRz4&y17>0:Sz154019;                  [Usable once per day]
-!!VRy15|y11<y7/y9<y8/y17>0:S(MSG_TYPE_MES); set to message with no choice
-!!VRz4&y15=(MSG_TYPE_QUESTION):S^^;
 
 !!IF:V1/0;
-!!IF:Q1/(PIC_TYPE_ART)/(warMachineArt)/(PIC_TYPE_MONEY)/y7/y15/z154020;
+!!IF:Q1/(PIC_TYPE_ART)/(warMachineArt)/(PIC_TYPE_MONEY)/y7/(msgType)/z154020;
 !!SN:H^art^/(warMachineArt)/0/z30 H^art^/(warMachineArt)/1/z31;
 !!FU&-1:E; stop function
 
-!!OW:Ry10/(RES_GOLD)/d-y7; new money
-!!VRwy5:+1; add level to W var for machine
+!!VRy30:Sy11 -y7;
+!!OW:Ry10/(RES_GOLD)/y30; new money
+!!VRw(index):+1; add level to W var for machine
 
-!!VRvy16:+1; add for use only 1 time/castle/day
+; Check if it is eligible for the next level
+!!VRy7:Sy31 *y8 :5;
+!!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8:P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel);
 
 !?FU(OnHeroScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside hero screen
-!!FU911&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_item^/0/i^mouse_hero_0^/1/i^mouse_flags^;/v2051/v2052;
-!!FU914&i^mouse_item^=19/i^mouse_flags^=512:Pi^mouse_hero_0^/0;
-
+!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_hero_0^/0;
 
 !?FU(OnHeroesMeetScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside trade screen
-!!FU911&i^mouse_item^>39/i^mouse_item^<44:Pi^mouse_item^/0/i^mouse_hero_0^/i^mouse_flags^/1;
-!!FU911&i^mouse_item^>58/i^mouse_item^<63:Pi^mouse_item^/0/i^mouse_hero_1^/i^mouse_flags^/1;
-!!FU914&i^mouse_item^=44:Pi^mouse_hero_0^/1;
-!!FU914&i^mouse_item^=63:Pi^mouse_hero_1^/1;
+!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>39/i^mouse_item^<44:Pi^mouse_hero_0^/1;
+!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>58/i^mouse_item^<63:Pi^mouse_hero_1^/1;
 
-!?FU911&i^wog_54_enabled^;
-!#VA(clickedSlot:x) (warMachine:x) (heroId:x) (mouseFlagHeroSwap:x) (mouseFlagHero:x);  (idk3:x) (idk4:x);
+!?FU(WOG_ShowWarMachineInfo)&i^wog_54_enabled^;
+!#VA(heroId:x) (mode:x);
+!#VA(usedY[10]:y);
 
+!!VR(clickedSlot:y):Si^mouse_item^;
 !!VR(clickedSlot)&(clickedSlot)>58:-44; trade right hero fix
 !!VR(clickedSlot)&(clickedSlot)>39:-25; trade left hero fix
 !!VR(clickedSlot)&(clickedSlot)=15:S(MON_BALLISTA);
 !!VR(clickedSlot)&(clickedSlot)=16:S(MON_AMMO_CART);
 !!VR(clickedSlot)&(clickedSlot)=17:S(MON_FIRST_AID_TENT);
 !!VR(clickedSlot)&(clickedSlot)=18:S(MON_CATAPULT);
-!!VR(warMachine)&(clickedSlot)=(MON_CATAPULT):S(ART_CATAPULT);
+!!VR(warMachine:y)&(clickedSlot)=(MON_CATAPULT):S(ART_CATAPULT);
 !!VR(warMachine)&(clickedSlot)=(MON_BALLISTA):S(ART_BALLISTA);
 !!VR(warMachine)&(clickedSlot)=(MON_AMMO_CART):S(ART_AMMO_CART);
 !!VR(warMachine)&(clickedSlot)=(MON_FIRST_AID_TENT):S(ART_FIRST_AID_TENT);
-!!HE(heroId):A2/(warMachine)/d/?(wmAmount:y) S(SKILL_BALLISTICS)/?(skilLvl:y) B0/?z7 R2/?(heroSex:y);
+!!HE(heroId):A2/(warMachine)/d/?(wmAmount:y) S(SKILL_BALLISTICS)/?(skilLvl:y) B0/?z7 R2/?(gender:y);
 
 !!FU&(wmAmount)=0:E; exit if no found
 
 !!CM:R0;
 
 !!IF:W(heroId); set W var for hero
-!!VRy5:S(clickedSlot) -65;
-!!VRy6:Swy5 +1;
+!!VR(index:y):S(clickedSlot) -65;
+!!VRy6:Sw(index) +1;
 
-!!FU913&(mouseFlagHero)>0:P(warMachine)/(heroId)/y6; get stats
+!!FU(WOG_54_GetWarMachineStats)&i^mouse_action^=(MOUSE_RMB_PRESSED):P(warMachine)/(heroId)/y6; get stats
 *
-!!VRz1&(warMachine)=(ART_CATAPULT)/(skilLvl)=0:Sz154021;
-!!VRz1&(warMachine)=(ART_CATAPULT)/(skilLvl)=1:Sz154022;
-!!VRz1&(warMachine)=(ART_CATAPULT)/(skilLvl)=2:Sz154023;
-!!VRz1&(warMachine)=(ART_CATAPULT)/(skilLvl)=3:Sz154024;
+!!if&(warMachine)=(ART_CATAPULT);
+  !!VRz1&(skilLvl)=0:Sz154021;
+  !!VRz1&(skilLvl)=1:Sz154022;
+  !!VRz1&(skilLvl)=2:Sz154023;
+  !!VRz1&(skilLvl)=3:Sz154024;
+!!en;
+
 !!VRz1&(warMachine)=(ART_BALLISTA):Sz154025;
 !!VRz1&(warMachine)=(ART_AMMO_CART):Sz154026;
 !!VRz1&(warMachine)=(ART_FIRST_AID_TENT):Sz154027;
-!!VRz6:S^^;
-!!UN:A(warMachine)/9/6;
+
 !!VRz2&(warMachine)=3:Sz154028;
 !!VRz2&(warMachine)=4:Sz154029;
 
 !!VRz2&(warMachine)=5:Sz154030;
 
 !!VRz2&(warMachine)=6:Sz154031;
-!!VRz2&x4=0:Sz154032;
-!!IF&(mouseFlagHero)>(NO_MOUSE_FLAGS):Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_MES)^%Z1
+
+!!IF&i^mouse_action^=(MOUSE_RMB_PRESSED):Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_POPUP)^%Z1
 
 %Z2^;
-!!if&(mouseFlagHero)=(NO_MOUSE_FLAGS);
-  !!FU912:P6/x3/x2/1;
+
+!!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
+  !!FU(WOG_54_ManageWarMachines):P6/(heroId)/(warMachine)/1;
   !!VRz4&v1=0:Sz154033;
   !!VRz4&v1=1:Sz154034;
   !!VRz5&v1=0:Sz154035;
   !!VRz5&v1=1:Sz154036;
 !!en;
 
-!!UN:Ax2/10/0;
-!!VRz8&(heroSex)=0:Sz154037;
-!!VRz8&(heroSex)=1:Sz154038;
-!!IF&x5=0:Q1/8/x2/(MSG_TYPE_QUESTION)/z154039;
+!!SN:T^wog.whose%(gender)^/?z8;
 
-!!FU912&(mouseFlagHero)=(NO_MOUSE_FLAGS)/1:P7/x3/x2/v1;
-!!FU&(mouseFlagHero)<>(NO_MOUSE_FLAGS):E; exit if not x5
-!!FU&-1:E; exit if choosed no
-
-!!VRz2&x2=3:Sz154040;
-!!VRz2&x2=4:Sz154041;
-!!VRz2&x2=5:Sz154042;
-!!VRz2&x2=6:Sz154043;
-!!VRz4&x5=0/v1=1:Sz154044;
-!!VRz4&x5=0/v1=0:Sz154045;
-!!IF:Q1/8/(warMachine)/(MSG_TYPE_MES)/z154046;
+!!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
+  !!IF:Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_QUESTION)/z154039;
+  !!FU(WOG_54_ManageWarMachines)&i^mouse_action^=(MOUSE_LMB_PRESSED)/1:P7/(heroId)/(warMachine)/v1;
+!!en;
 
 ********************************* Functions ************************************
 
-!?FU912&i^wog_54_enabled^;
-* Ai get's upgrades - x1 = 1 *
+!?FU(WOG_54_ManageWarMachines)&i^wog_54_enabled^;
 !!IF&x1>0/x1<4:Wx2;
 !!HEx2&x1>0/x1<4:A2/4/d/?y1 A2/5/d/?y2 A2/6/d/?y3 Ed/?y4/1; y1-Ballista,y2=Ammo Cart,y3=Aid Tent,y4=hero level
+* Ai get's upgrades - x1 = 1 *
 !!VRw81&x1=1/y1>0/w81<y4:+1; add 1 level ballista
 !!VRw82&x1=1/y3>0/w82<y4:+1; add 1 level first aid
 !!VRw83&x1=1/y2>0/w83<y4:+1; add 1 level ammo cart
@@ -637,10 +629,6 @@ ZVSE2
 * get quantity of spells *
 !!HEx2&x1=4:Mx16/?y1;
 !!VRvx3&x1=4/y1=1:+1;
-* get spells
-!!HEx2&x1=5:Mx16/?y1;
-!!VRvx3&x1=5/y1=1:Sx16;
-!!VRx3&x1=5/y1=1:+1;
 * get enabler
 !!VRy1&x1=6:S2000 +x2;
 !!VRy2&x1=6:Svy1; ** get hero ** y2 = get number
@@ -664,10 +652,11 @@ ZVSE2
 !!VRvy1&x1=7/x4=0:+y3;
 !!VRvy1&x1=7/x4=1:-y3;
 
-!#DO912/0/155/1&i^wog_54_enabled^:P3;
+!#DO912/(HERO_FIRST)/(HERO_LAST_WOG)/1&i^wog_54_enabled^:P3;
+
 ************************** Get Z-var for warmachines ***************************
 
-!?FU913&i^wog_54_enabled^;
+!?FU(WOG_54_GetWarMachineStats)&i^wog_54_enabled^;
 !#VA(art:x) (heroId:x) (nextLv:x);
 !#VA(usedY[10]:y);
 
@@ -728,44 +717,4 @@ ZVSE2
   !!VRy7:S(skilLv) +(nextLv) *20 +80; artillery + level * 20, +80
 
   !!VRz5:Sz154054;
-!!en;
-
-******************************** Spell Book ************************************
-
-!?FU914&i^wog_54_enabled^;
-!!HEx1:A2/1000/d/?y1 B0/?z3;
-!!FU&y1=0:E;
-!!CM:R0;
-!!VRv1:S0;
-!!DO912/0/69/1:P4/x1/1;
-!!VRz2&v1=0:Sz154055;
-!!VRz2&v1>3:Sz154056;
-!!VRz2&v1=70:Sz154057;
-!!UN:A0/9/2;
-!!VRz1&x2=0:Sz154058;
-!!VRz1&x2=1:Sz154059;
-!!IF&v1=0|v1>3:Q1/8/0/4^%Z1^;
-!!DO912/0/69/1&v1>0/v1<4:P5/x1/2;
-!!VRz2:S^^;
-!!VRz2&v1>1:Sz154060;
-!!VRz1:Sz154061;
-!!IF&v1=1:Q1/9/v2/4^%Z1^;
-!!IF&v1=2:Q1/9/v2/9/v3/4^%Z1^;
-!!IF&v1=3:Q1/9/v2/9/v3/9/v4/4^%Z1^;
-!!UN:A0/9/0 A0/9/10;
-
-**** Fix monster info for the given stack on the battlefield ****
-
-!?FU(WOG_54_FixeMonsterInfo);
-!#VA(stack:x);
-
-!!FU|(stack)<(BATTLE_STACK_FIRST)/(stack)>(BATTLE_STACK_LAST):E;
-
-!!BM(stack):T?(type:y);
-!!FU&(type)<>(MON_MAGOG):E;
-
-!!if|(stack)=i^wog_54_catapult_0^/(stack)=i^wog_54_catapult_1^;
-  !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_catapultName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_catapultName_1^;
-!!el;
-  !!SN:H^monname^/(MON_MAGOG)/0/s^wog_54_magogName_0^ H^monname^/(MON_MAGOG)/1/s^wog_54_magogName_1^;
 !!en;

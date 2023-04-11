@@ -86,6 +86,7 @@ ZVSE2
 
 !?FU(ES_776_StoreAndChangeMagicSchoolLvl);
 !#VA(heroId:x) (value:x);
+
 !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
   !!HE(heroId):Si/?i^es_776_%i_lvl^;
   !!VR(newLevel:y):Si^es_776_%i_lvl^ -(value) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
@@ -94,46 +95,54 @@ ZVSE2
 
 !?FU(ES_776_RestoreMagicSchoolLvl);
 !#VA(heroId:x);
+
 !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
   !!HE(heroId):Si/i^es_776_%i_lvl^;
-  !!SN:Wi^es_776_%i_lvl^;
+  !!VRi^es_776_%i_lvl^:S0;
 !!en;
 
 !?FU(ES_776_Hero_GetSuppressionPower);
 !#VA(heroId:x) (result:x);
+
 !!VR(result):S(NULL);
 !!HE(heroId):X?(spec:y)/?(specSkill:y) S(SKILL_EAGLE_EYE)/?(result);
 !!VR(result)&(spec)=0/(specSkill)=(SKILL_EAGLE_EYE):+1;
+
 !!re i/(ART_BIRD_OF_PERCEPTION)/(ART_EMBLEM_OF_COGNIZANCE);
   !!HE(heroId):A2/i/?y99/?(isEquipped:y);
   !!VR(result)&(isEquipped):+1;
 !!en;
+
 !!VR(result)&(isEquipped):+1;          [+2 for last art]
 
 !?FU(OnSetupBattlefield)&i^battle_hero_vs_hero^;
 !!UN:P776/?(isEnabled:y);
 !!FU&(isEnabled:y)=0:E;
+
 !#VA(suppLvls[2]:y);
 
-!!re i/0/(BATTLE_RIGHT);
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!FU(ES_776_Hero_GetSuppressionPower):Pi^battle_hero_%i^/?(suppLvls[i]);
 !!en;
+
 !!if&(suppLvls[0])<>(suppLvls[1]);
-  !!VRi^es_776_need_to_restore_skills^:S(BATTLE_RIGHT) +1;
   !!VR(valueToDecrease:y):S(suppLvls[0]) -(suppLvls[1]);
+
   !!if&(valueToDecrease:y)>0;
     !!VR(side:y):S(BATTLE_RIGHT);
   !!el;
     !!VR(valueToDecrease):*-1;
-    !!VR(side:y):S(BATTLE_LEFT);
+    !!VR(side):S(BATTLE_LEFT);
   !!en;
+
   !!FU(ES_776_StoreAndChangeMagicSchoolLvl):Pi^battle_hero_%(side)^/(valueToDecrease:y);
   !!VRi^es_776_need_to_restore_skills^:S(side) +1;
 !!en;
 
 !?FU(OnAfterBattleAction)&i^es_776_need_to_restore_skills^;
-!!BU:C?y1;                    [y1=1, если бой закончен]
-!!FU&y1=0:E;                  [выход, если бой не закончен]
+!!BU:C?(battleIsEnded:y);               [если бой закончен]
+!!FU&(battleIsEnded)<>(TRUE):E;         [выход, если бой не закончен]
+
 !!VR(side:y):Si^es_776_need_to_restore_skills^ -1;
 !!FU(ES_776_RestoreMagicSchoolLvl):Pi^battle_hero_%(side)^;
 

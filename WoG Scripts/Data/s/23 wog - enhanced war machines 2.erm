@@ -45,7 +45,7 @@ ZVSE2
   !!SN:H^monname^/(MON_NOT_USED_2)/0/(single) H^monname^/(MON_NOT_USED_2)/1/(plural);
 
   ; Set up flags for Catapult in non-siege
-  !!MA:X(MON_NOT_USED_2)/132201 M(MON_NOT_USED_2)/650 C(MON_NOT_USED_2)/(RES_GOLD)/1; [set NU2 flags {catapult flags (132197) + shooter (4)}    NU2 Fight Value 650  ]
+  !!MA:X(MON_NOT_USED_2)/132201 F(MON_NOT_USED_2)/650 C(MON_NOT_USED_2)/(RES_GOLD)/1000; [set NU2 flags {catapult flags (132197) + shooter (4)}    NU2 Fight Value 650  ]
   !!MA:A(MON_NOT_USED_2)/10 D(MON_NOT_USED_2)/10 P(MON_NOT_USED_2)/250 N(MON_NOT_USED_2)/24; [NU2 Attack 10 NU2 Defense 10 NU2 HP 250  NU2 Shots 24]
 
   ; creature descriptions
@@ -56,26 +56,14 @@ ZVSE2
   !!UN:P(WOG_OPT_ENHANCED_MONSTERS)/?(enhancedMon:y); [Check if Enhanced Monsters is enabled in WoGify Options]
 
   !!if&(stackExp);
-    !!EA(MON_NOT_USED_2):O(MON_CATAPULT);
-
     !!if&(enhancedMon);
-      !!EA(MON_NOT_USED_2):F0/?(availSlot:y); [NU2 (catapult) - get bonus line index]
+      !!EA(MON_NOT_USED_2):F105/?(availSlot:y); [NU2 (catapult) - get bonus line index]
       !!EA(MON_NOT_USED_2):B(availSlot)/1/105/61/1/1/1/1/1/1/1/1/1/1/1; [set no range penalty]
       !!EA(MON_NOT_USED_2):F98/?(availSlot); [NU2 (catapult) - get bonus line index]
       !!EA(MON_NOT_USED_2):B(availSlot)/1/98/61/50/50/50/50/50/50/50/50/50/50/50; [set ignore defense to 50%]
-    !!en; 
+    !!en;
   !!en;
 
-
-
-!?FU(WOG_OnNpcPlacesWarMachine)&i^wog_55_enabled^;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-16/4/?(tentsAmount:y);
-!!if&i^wog_isCBBattle^;
-  !!UN:C(ebp)/-12/4/1; //don't allow to summon in CB
-!!el;
-  !!VR(tentsAmount):S1;
-  !!UN:C(ebp)/-16/4/(tentsAmount);
-!!en;
 !?FU(OnGameEnter)&i^wog_55_enabled^;
 ; Set up new commander descriptions for Hierophant and Ogre Leader since they provide only one additional War Machine now
 !!SN:E7827723/(CALLCONV_CDECL)/20/1/42338084;
@@ -83,34 +71,30 @@ ZVSE2
 !!SN:E7827723/(CALLCONV_CDECL)/25/1/42338084;
 !!SN:Bv1/d/z155009;
 
+; Set up Catapult in non-siege and non-CB battles
+!?FU(OnSetupBattlefield)&i^wog_55_enabled^;
+; Initialise catapult variables
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!VRi^wog_55_catapult_%i^:S(NO_STACK);
+!!en;
 
-!?FU(OnSetupBattlefield)&i^wog_55_enabled^;;
-  ; Initialise catapult variables
-  !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
-    !!VRi^wog_55_catapult_%i^:S(NO_STACK);
-  !!en;
+!!FU(WOG_55_PlaceCatapult)&i^wog_isSiege^<>(TRUE)/i^wog_isCBBattle^<>(TRUE):P(BATTLE_LEFT) P(BATTLE_RIGHT);
 
-  ; Set up Catapult in non-siege and non-CB battles
-  !!if&i^wog_isSiege^<>(TRUE)/i^wog_isCBBattle^<>(TRUE);
-    !!FU(WOG_55_PlaceCatapult):P(BATTLE_LEFT);
-    !!FU(WOG_55_PlaceCatapult)&i^battle_hero_1^>(NO_HERO):P(BATTLE_RIGHT);
-  !!en;
-
-  ; Restrain the quantities of First Aid Tents and Ballistas to max of 2 (1 from War Machine artifact, the other from Commander)
- // replaced into hook by super daemon_n
+; Restrain the quantities of First Aid Tents and Ballistas to max of 2 (1 from War Machine artifact, the other from Commander)
 !?FU(WOG_55_PlaceCatapult);
 !#VA(side:x);
+  
+!!if&i^battle_hero_%(side)^>(NO_HERO);
+  !!HEi^battle_hero_%(side)^:S(SKILL_BALLISTICS)/?(ballisticsLv:y);
 
-  !!HEi^battle_hero_%(side)^:S(SKILL_BALLISTICS)/?(skillBall:y);
-
-  !!if&(skillBall)>(SKILL_NOT_LEARNED);
+  !!if&(ballisticsLv)>(SKILL_NOT_LEARNED);
     !!if&(side)=(BATTLE_LEFT);
       !!VR(catPos:y):S119;
     !!el;
       !!VR(catPos):S135;
     !!en;
 
-    !!BU:S(MON_CATAPULT)/(skillBall)/(catPos)/(side)/-1/(FALSE); [add catapults]
+    !!BU:S(MON_CATAPULT)/(ballisticsLv)/(catPos)/(side)/-1/(FALSE); [add catapults]
     !!BU:E(catPos)/?(catStack:y);
 
     !!if&(catStack)>(NO_STACK);
@@ -122,13 +106,14 @@ ZVSE2
         ; Set up basic stats except for monster type as setting here would conflict with HD fast troop placements
         !!HEi^battle_hero_%(side)^:F?(att:y)/?(def:y)/d/d;
         !!VR(maxDamage:y):S(att) +(def) +10;
-        !!BM(catStack):U1/5 U2/(maxDamage) H250 B(skillBall);
+        !!BM(catStack):U1/5 U2/(maxDamage) H250 B(ballisticsLv);
       !!en;
     !!en;
   !!en;
+!!en;
 
-; Change catapult ID to 124
-!?FU(OnSetupBattlefield_Quit)&i^wog_55_enabled^;
+; Change catapult ID to 124 - Must be after Tactics Phase due to HD mod compatibility
+!?FU(OnAfterTacticsPhase)&i^wog_55_enabled^;
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!BMi^wog_55_catapult_%i^&i^wog_55_catapult_%i^>(NO_STACK):T(MON_NOT_USED_2);
 !!en;
@@ -164,14 +149,14 @@ ZVSE2
     !!en;
   !!en;
 
-  ; Catapult - skip turn when enemy is nearby (Do we really need this?)
+  ; Catapult - skip turn when enemy is nearby
+  ; Need this as Catapult (#124) cannot shoot and cannot melee when enemy adjacent, it is useless to defend
+  ; Archer30: This does not work for unknown reason
   !!if&(monType)=(MON_NOT_USED_2);
-
-    !!FU(WOG_55_SkipCatapultsTurn):P(stackSide)/?(isOccupied:y);
-
-    !!if&(isOccupied);
-      !!BG:A(BATTLE_ACTION_SKIP);
-    !!en;
+    ; Check if shooting is possible for the catapult
+    !!BMi^battle_current_stack^:Z?(stackPtr:y);
+    !!SN:E4466192/(CALLCONV_THISCALL)/(stackPtr)/0;
+    !!BG&v1=(FALSE):A(BATTLE_ACTION_SKIP);
   !!en;
 
 !?FU(WOG_55_BattleFunc_CheckForDamagedStacks);
@@ -196,28 +181,6 @@ ZVSE2
       !!en;
     !!en;
   !!en;
-
-!?FU(WOG_55_SkipCatapultsTurn);
-!#VA(side:x) (occupied:x);
-
-!!VR(occupied):S0;
-!!VR(mult:y):S13 *(side); +8;
-
-!!re i/103/137/17;
-  !!re j/0/1;
-    !!VR(hex:y):Si +j +(mult);
-    !!BU:E(hex)/?(stack:y);
-
-    !!if&(stack)>(NO_STACK);
-      !!BM(stack):I?(stackSide:y);
-      
-      !!if&(stackSide)<>(side);
-        !!VR(occupied):S(TRUE);
-        !!FU:E;
-      !!en;
-    !!en;
-  !!en;
-!!en;
 
 ; Critical hit for Catapult in non-siege and non-CB battles
 ** start of pre-damage trigger
@@ -258,7 +221,7 @@ ZVSE2
     !!HE(CURRENT_HERO):A2/(ART_AMMO_CART)/d/?(isEquipped:y); [if on land check if hero has ammo cart]
     !!HE(CURRENT_HERO)&(isEquipped):Wd10/1; [if on land add 10 movement if hero has ammo cart/add movement point without redraw screen]
   !!en;
-  ** end of movement trigger
+** end of movement trigger
 
 
 **** Start of First Aid Tents healing ****
