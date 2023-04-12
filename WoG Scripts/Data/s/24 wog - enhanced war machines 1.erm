@@ -41,35 +41,16 @@ ZVSE2
 
   ; Stack exp abilities
   !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y); [check if creature experience is enabled]
-
-  !!if&(stackExp);
-    !!EA(MON_NOT_USED_2):F102/105/?(availSlot:y); [NU2 (catapult) - get bonus line index]
-    !!EA(MON_NOT_USED_2):B(availSlot)/1/102/105/1/1/1/1/1/1/1/1/1/1/1; [set Shoot Adjacent]
-  !!en;
+  !!EA(MON_NOT_USED_2)&(stackExp):O(MON_CATAPULT);
 
 ************************ before action combat screen ***************************
 
-; Catapult - skip turn when enemy is nearby
-; Need this as Catapult (#124) cannot shoot and cannot melee when enemy adjacent, it is useless to defend
-; Archer30: This does not work for unknown reason
-!?FU(OnBattleStackObtainsTurn)&i^wog_54_enabled^;
-!#VA(stackSide:x) (stackInd:x);
-
-!!BMi^battle_current_stack^:T?(monType:y);
-
-!!if&(monType)=(MON_NOT_USED_2);
-  ; Check if shooting is possible for the catapult
-  !!BMi^battle_current_stack^:Z?(stackPtr:y);
-  !!SN:E4466192/(CALLCONV_THISCALL)/(stackPtr)/0;
-  !!BG&v1=(FALSE):A(BATTLE_ACTION_SKIP);
-!!en;
-
+; Ballista
 !?FU(OnBeforeBattleAction)&i^wog_54_enabled^; get before action
 !!BG:E?(targetStack:y) H?(actingHero:y) A?(actionType:y);
 
 !!BMi^battle_acting_stack^:T?(type:y) I?(side:y) N?(num:y);
 
-; Ballista
 !!FU(WOG_54_Ballista)&(type)=(MON_BALLISTA)/(actionType)=(BATTLE_ACTION_SHOOT):P0/(targetStack); ballista
 
 !?FU(WOG_54_Ballista)&i^wog_54_enabled^;
@@ -221,6 +202,9 @@ ZVSE2
   !!VRi^wog_54_catapult_%i^:S(NO_STACK);
 !!en;
 
+; Restore the memory value for Arrow Tower Shoot Adjacent
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
+
 !!FU(WOG_54_PlaceCatapult)&i^wog_isSiege^<>(TRUE)/i^wog_isCBBattle^<>(TRUE):P(BATTLE_LEFT) P(BATTLE_RIGHT);
 
 !!FU(WOG_54_SetUpWarMachinesHP):P;
@@ -241,6 +225,9 @@ ZVSE2
 !!FU(WOG_54_DisableOrRestoreWarMachines):P0/1 P1/1;
 !!VRv2048:C0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0; v2048-v2063
 !!VRv2064:C0/0/0/0/0/0/0/0/0/0; v2064 - v2073
+
+; Restore the memory value for Arrow Tower Shoot Adjacent
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
 
 ; Functions
 !?FU(WOG_54_SetManaForAmmoCart)&i^wog_54_enabled^;
@@ -321,6 +308,9 @@ ZVSE2
         !!VR(shots)&(ballisticsLv)>=3:S8;
 
         !!BM(catStack):U3/(shots);
+
+        ; Change the memory value of Arrow Tower to Catapult in order to have it shoot adjacent
+        !!UN:C4466213/(UNC_INT)/(MON_NOT_USED_2);
       !!en;
     !!en;
   !!en;

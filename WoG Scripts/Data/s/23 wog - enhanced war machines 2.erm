@@ -56,6 +56,8 @@ ZVSE2
   !!UN:P(WOG_OPT_ENHANCED_MONSTERS)/?(enhancedMon:y); [Check if Enhanced Monsters is enabled in WoGify Options]
 
   !!if&(stackExp);
+    !!EA(MON_NOT_USED_2):O(MON_CATAPULT);
+    
     !!if&(enhancedMon);
       !!EA(MON_NOT_USED_2):F105/?(availSlot:y); [NU2 (catapult) - get bonus line index]
       !!EA(MON_NOT_USED_2):B(availSlot)/1/105/61/1/1/1/1/1/1/1/1/1/1/1; [set no range penalty]
@@ -77,6 +79,9 @@ ZVSE2
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!VRi^wog_55_catapult_%i^:S(NO_STACK);
 !!en;
+
+; Restore the memory value for Arrow Tower Shoot Adjacent
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
 
 !!FU(WOG_55_PlaceCatapult)&i^wog_isSiege^<>(TRUE)/i^wog_isCBBattle^<>(TRUE):P(BATTLE_LEFT) P(BATTLE_RIGHT);
 
@@ -107,6 +112,9 @@ ZVSE2
         !!HEi^battle_hero_%(side)^:F?(att:y)/?(def:y)/d/d;
         !!VR(maxDamage:y):S(att) +(def) +10;
         !!BM(catStack):U1/5 U2/(maxDamage) H250 B(ballisticsLv);
+
+        ; Change the memory value of Arrow Tower to Catapult in order to have it shoot adjacent
+        !!UN:C4466213/(UNC_INT)/(MON_NOT_USED_2);
       !!en;
     !!en;
   !!en;
@@ -117,6 +125,10 @@ ZVSE2
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!BMi^wog_55_catapult_%i^&i^wog_55_catapult_%i^>(NO_STACK):T(MON_NOT_USED_2);
 !!en;
+
+!?FU(OnAfterBattleUniversal)&i^wog_55_enabled^;
+; Restore the memory value for Arrow Tower Shoot Adjacent
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
 
 -------------------------- B E F O R E   S T A C K    T U R N --------------------------
 !?FU(OnBattleStackObtainsTurn)&i^wog_55_enabled^;
@@ -147,16 +159,6 @@ ZVSE2
         !!VRi^WOG_55_Battle_HealPower^:+(healPower);
       !!en;
     !!en;
-  !!en;
-
-  ; Catapult - skip turn when enemy is nearby
-  ; Need this as Catapult (#124) cannot shoot and cannot melee when enemy adjacent, it is useless to defend
-  ; Archer30: This does not work for unknown reason
-  !!if&(monType)=(MON_NOT_USED_2);
-    ; Check if shooting is possible for the catapult
-    !!BMi^battle_current_stack^:Z?(stackPtr:y);
-    !!SN:E4466192/(CALLCONV_THISCALL)/(stackPtr)/0;
-    !!BG&v1=(FALSE):A(BATTLE_ACTION_SKIP);
   !!en;
 
 !?FU(WOG_55_BattleFunc_CheckForDamagedStacks);
