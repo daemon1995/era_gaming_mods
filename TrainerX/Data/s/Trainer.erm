@@ -161,8 +161,8 @@ ZVSE2
 !!VRi^trainer_artTablePage^:S0;
 !!VRi^trainer_spellTablePage^:S0;
 
+; Set up dialogue structure
 !!DL(TRAINER_MAIN_DLG):N^trainer.txt^;
-!!FU&-1:E;
 
 *!FU(trainer_SetDlgColour):P(TRAINER_MAIN_DLG)/(player); [set dialogue colour - disable for now]
 
@@ -191,23 +191,28 @@ ZVSE2
     !!DL(TRAINER_MAIN_DLG):Ei/0;
   !!en;
 
-  !!DL(TRAINER_MAIN_DLG):E(TRAINER_BTN_HENCH)/0;
+  !!DL(TRAINER_MAIN_DLG):E(TRAINER_HENCH_BTN)/0;
 !!en;
 
-; Disable commander button if needed
+; Hide commander button
 !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(cmdOff:y);
 
 !!if&(cmdOff);
   !!DL(TRAINER_MAIN_DLG):E111/0;
 !!en;
 
-; Disable stack exp buttons if needed
+; Hide stack exp buttons
 !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpOn:y);
 
 !!if&(stackExpOn)<>(TRUE);
   !!re i/154/160;
     !!DL(TRAINER_MAIN_DLG):Ei/0;
   !!en;
+!!en;
+
+; Hide Second Henchmen button if the mod is not enabled
+!!if&i^sechen_on^<>(TRUE);
+  !!DL(TRAINER_MAIN_DLG):E(TRAINER_SECHEN_BTN)/0;
 !!en;
 
 ; Set up skill text for ACM if enabeld
@@ -813,7 +818,7 @@ ZVSE2
   !!en;
 
   !!if&i^Advanced_Classes_Mod_Active^;
-    !!SN:T^trainer.acm.master^/?z8 T^trainer.acm.grandMaster^/?z9;
+    !!SN:T^acm.class_level_4^/?z8 T^acm.class_level_5^/?z9;
     !!IF:G1/1/(defaultChoice)/2/3/4/5/6/8/9/7;
     !!FU(IntLog2):Pv1/?(choice);
     !!FU&(choice)=6:E;
@@ -1228,10 +1233,10 @@ ZVSE2
 !!VRz18&(pwr)=(psCap):S^{~green}%(pwr){~}^;
 !!VRz19&(knl)=(psCap):S^{~green}%(knl){~}^;
 
-!!VRz16|(atk)<0/(atk)>(psCap):S^{~red}%(atk){~}^; [invalid values]
-!!VRz17|(def)<0/(def)>(psCap):S^{~red}%(def){~}^;
-!!VRz18|(pwr)<1/(pwr)>(psCap):S^{~red}%(pwr){~}^;
-!!VRz19|(knl)<1/(knl)>(psCap):S^{~red}%(knl){~}^;
+!!VRz16|(atk)<0/(atk)>(psCap):S^{~r}%(atk){~}^; [invalid values]
+!!VRz17|(def)<0/(def)>(psCap):S^{~r}%(def){~}^;
+!!VRz18|(pwr)<1/(pwr)>(psCap):S^{~r}%(pwr){~}^;
+!!VRz19|(knl)<1/(knl)>(psCap):S^{~r}%(knl){~}^;
 
 !!DL(TRAINER_MAIN_DLG):A141/(DLG_CMD_SET_TEXT)/z16 A142/(DLG_CMD_SET_TEXT)/z17 A143/(DLG_CMD_SET_TEXT)/z18 A144/(DLG_CMD_SET_TEXT)/z19;
 
@@ -2400,6 +2405,7 @@ ZVSE2
 !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(cmdOff:y);
 !!FU&(cmdOff):E;
 
+; Set up dialogue structure
 !!DL(TRAINER_CMD_DLG):N^trainer.txt^;
 !!FU&-1:E;
 
@@ -2409,6 +2415,8 @@ ZVSE2
 !!if&(isDead);                          [new syntax works?]
   !!CO(cmd):D0;
   !!IF:M^%T(trainer.cmdRevived)^;
+
+  !!FU&i^mouse_action^=(MOUSE_RMB_PRESSED):E;
 !!en;
 
 !!CO(cmd):E?(isRecruited:y);            [recruit a commander if there is none]
@@ -2417,6 +2425,8 @@ ZVSE2
   !!CO(cmd):E1;
   !!SN:T^trainer.cmdNew^/?z3/^hero^/s^trainer_heroName^;
   !!IF:M^%z3^;
+
+  !!FU&i^mouse_action^=(MOUSE_RMB_PRESSED):E;
 !!en;
 
 !!FU(trainer_UpdateCommanderPrimSkills):P(cmd);
@@ -2710,8 +2720,10 @@ ZVSE2
 !!DL(TRAINER_CMD_DLG):C1;
 
 ; Show commander screen
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=28/i^mouse_action^=(MOUSE_RMB_PRESSED);
-!!FU(trainer_ShowCommanderScreen):Pi^trainer_hero^/0/1/?(isDead:y);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=28;
+!!if|i^mouse_action^=(MOUSE_RMB_PRESSED)/i^mouse_action^=(MOUSE_LMB_PRESSED);
+  !!FU(trainer_ShowCommanderScreen):Pi^trainer_hero^/0/1/?(isDead:y);
+!!en;
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^>=122/i^mouse_item^<=123/i^mouse_action^=(MOUSE_LMB_PRESSED);
 !!VR(lv:y):Vz33;
@@ -2794,7 +2806,7 @@ ZVSE2
 
 **** Henchmen ****
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=(TRAINER_BTN_HENCH)/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=(TRAINER_HENCH_BTN)/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(firstLevelMons[9]:y):C(MON_PIKEMAN)/(MON_CENTAUR)/(MON_GREMLIN)/(MON_IMP)/(MON_SKELETON)/(MON_TROGLODYTE)/(MON_GOBLIN)/(MON_GNOLL)/(MON_PIXIE);
 
 !!VR(hero:y):Si^trainer_hero^;
@@ -2842,7 +2854,275 @@ ZVSE2
 
 **** End Henchmen ****
 
-// daemon_n's tricks
+**** Second Henchmen ****
+
+; Note: This script occupies z40 to z101! Should not change them from all the actions in the dialogue
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=(TRAINER_SECHEN_BTN)/i^trainer_hero^>(NO_HERO);
+
+; Exit if not left released or right pressed
+!!FU&i^mouse_action^<>(MOUSE_LMB_RELEASED)/i^mouse_action^<>(MOUSE_RMB_PRESSED):E;
+
+; Exit if second henchmen is not enabled - required for RMB event
+!!FU&i^sechen_on^<>(TRUE):E;
+
+; Exit if the hero belongs to AI - Currently setting AI second henchmen is not supported
+!!OW:Ii^trainer_player^/?(isAi:y);
+
+!!if&(isAi);
+  !!IF:M^%T(trainer.sechen.ai)^;
+  !!FU:E;
+!!en;
+
+; Set up dialogue structure
+!!DL(TRAINER_SECHEN_DLG):N^trainer.txt^;
+
+!!VR(hero:y):Si^trainer_hero^;
+!!IF:W(hero);
+
+!!if&w161>(NO_MON)/w163>(NO_MON)/w162<>(TRUE); [revive the henchman if there was a one and perished]
+  !!VRw162:S(TRUE);
+  !!IF:M^%T(trainer.henchRevived)^;
+
+  !!FU&i^mouse_action^=(MOUSE_RMB_PRESSED):E;
+!!el|w161<=(NO_MON)/w163<=(NO_MON);     [give henchamn if there was none]
+  !!FU(sechen_ResetHench):P(hero);
+  !!HE(hero):B2/?(class:y);
+  !!VR(town:y):S(class) :2;
+  !!UN:T(town)/6/0/?w161;
+  !!VRw161&(town)=(TOWN_CONFLUX):S(MON_FIREBIRD);
+  !!VRw163:Sw161;
+  !!VRw162:S(TRUE);
+  !!SN:T^trainer.henchNew^/?z3/^hero^/s^trainer_heroName^;
+  !!IF:Q1/(PIC_TYPE_MONSTER)/w161/(MSG_TYPE_MES)^%z3^;
+
+  !!FU&i^mouse_action^=(MOUSE_RMB_PRESSED):E;
+!!en;
+
+!!FU(trainer_SetUpSecHenchUIStrings):P;
+!!FU(trainer_UpdateSecHenchLevel):P(hero);
+!!FU(trainer_UpdateSechenchAsmMon):P(hero);
+!!FU(trainer_UpdateSecHenchAbilities):P(hero);
+
+!!if&i^mouse_action^=(MOUSE_LMB_RELEASED);
+  !!DL(TRAINER_SECHEN_DLG):S1;
+!!el&i^mouse_action^=(MOUSE_RMB_PRESSED);
+  !!FU(DL_ShowPopup):P(TRAINER_SECHEN_DLG);
+!!en;
+
+!?FU(trainer_SetUpSecHenchUIStrings);
+; Main
+!!DL(TRAINER_SECHEN_DLG):A200/(DLG_CMD_SET_TEXT)/^%T(trainer.sechen.title)^;
+!!DL(TRAINER_SECHEN_DLG):A201/(DLG_CMD_SET_TEXT)/^%T(sechen.str.normAbility)^;
+!!VR(string:z):S^%T(sechen.str.expAbility)^ +^%T(trainer.sechen.upTo8)^;
+!!DL(TRAINER_SECHEN_DLG):A202/(DLG_CMD_SET_TEXT)/^%(string)^;
+
+; Assimilation Monster
+!!DL(TRAINER_SECHEN_DLG):A206/(DLG_CMD_SET_TEXT)^%T(trainer.sechen.asmMon)^;
+
+; Abilities
+!!re i/0/30;
+  !!VR(item:y):Si +101;
+  !!SN:T^sechen.str.normAbility_%i^/?(name:z);
+  !!DL(TRAINER_SECHEN_DLG):A(item)/(DLG_CMD_SET_TEXT)/^%(name)^;
+  !!VR(index:y):Si +40;
+  !!SN:T^sechen.str.normAbilityDesc_%i^/?z(index);
+  !!DL(TRAINER_SECHEN_DLG):H(item)/z(index);
+  !!VR(item):-100;
+  !!DL(TRAINER_SECHEN_DLG):H(item)/z(index);
+!!en;
+
+!!re i/0/30;
+  !!VR(item:y):Si +132;
+  !!SN:T^sechen.str.expAbility_%i^/?(name);
+
+  !!VR(name)&i>=29:S^{~r}%(name)%T(trainer.sechen.hiddenAbility){~}^;
+
+  !!DL(TRAINER_SECHEN_DLG):A(item)/(DLG_CMD_SET_TEXT)/^%(name)^;
+  !!VR(index):Si +71;
+  !!SN:T^sechen.str.expAbilityDesc_%i^/?z(index);
+  !!DL(TRAINER_SECHEN_DLG):H(item)/z(index);
+  !!VR(item):-100;
+  !!DL(TRAINER_SECHEN_DLG):H(item)/z(index);
+!!en;
+
+!?FU(trainer_UpdateSechenchAsmMon);
+!#VA(hero:x);
+
+!!IF:W(hero);
+!!VR(cadre:y):Sw163 +2;
+!!DL(TRAINER_SECHEN_DLG):A205/(DLG_CMD_SET_DEF_FRAME)/(cadre);
+
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^=30722/i^mouse_action^=(MOUSE_LMB_RELEASED);
+!!VR(hero:y):Si^trainer_hero^;
+!!FU(sechen_GetLearnedAbilityCount):P(hero)/0/?(normAbilityCount:y);
+!!FU(sechen_GetLearnedAbilityCount):P(hero)/1/?(expAbilityCount:y);
+!!FU(sechen_RemoveAbundantAbilities):P(hero);
+!!FU(sechen_GetLearnedAbilityCount):P(hero)/0/?(newNormAbilityCount:y);
+!!FU(sechen_GetLearnedAbilityCount):P(hero)/1/?(newExpAbilityCount:y);
+
+!!if|(normAbilityCount)<>(newNormAbilityCount)/(expAbilityCount)<>(newExpAbilityCount);
+  !!FU(trainer_UpdateSecHenchAbilities):P(hero);
+  !!IF:M^%T(trainer.sechen.fixedAbilities)^;
+!!el;
+  !!DL(TRAINER_SECHEN_DLG):C1;
+!!en;
+
+!?FU(trainer_UpdateSecHenchLevel);
+!#VA(hero:x);
+
+!!IF:W(hero);
+!!FU(sechen_GetHenchLevel):P(hero)/?(level:y);
+!!DL(TRAINER_SECHEN_DLG):A204/(DLG_CMD_SET_TEXT)/^%(level)^;
+
+!?FU(trainer_UpdateSecHenchAbilities);
+!#VA(hero:x);
+
+!!IF:W(hero);
+
+; Set up normal ability cadres
+!!re i/0/30;
+  !!SN:Mi^sechen_abilityList_0^/i/?(abilityBit:y);
+  !!VR(hasAbility:y):Sw164 &(abilityBit) B;
+  !!VR(item:y):Si +1;
+  !!DL(TRAINER_SECHEN_DLG):A(item)/(DLG_CMD_SET_DEF_FRAME)/(hasAbility);
+!!en;
+
+; Set up stack exp ability cadres
+!!re i/0/30;
+  !!SN:Mi^sechen_abilityList_0^/i/?(abilityBit);
+  !!VR(hasAbility):Sw165 &(abilityBit) B;
+  !!VR(item):Si +32;
+  !!DL(TRAINER_SECHEN_DLG):A(item)/(DLG_CMD_SET_DEF_FRAME)/(hasAbility);
+!!en;
+
+; Change ability status
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^>=1/i^mouse_item^<=62/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!!IF:Wi^trainer_hero^;
+
+!!if&i^mouse_item^<=31;
+  !!VR(abilityType:y):S0;
+  !!VR(abilityIndex:y):Si^mouse_item^ -1;
+!!el;
+  !!VR(abilityType:y):S1;
+  !!VR(abilityIndex:y):Si^mouse_item^ -32;
+!!en;
+
+!!VR(wIndex:y):S164 +(abilityType);
+!!SN:Mi^sechen_abilityList_0^/(abilityIndex)/?(abilityBit:y);
+!!VR(hasAbility:y):Sw(wIndex) &(abilityBit);
+
+!!SN:P^button^;
+
+!!if&(hasAbility);
+  !!VRw(wIndex):Sd~(abilityBit);
+  !!DL(TRAINER_SECHEN_DLG):Ai^mouse_item^/(DLG_CMD_SET_DEF_FRAME)/0;
+!!el;
+  !!VRw(wIndex):Sd|(abilityBit);
+  !!DL(TRAINER_SECHEN_DLG):Ai^mouse_item^/(DLG_CMD_SET_DEF_FRAME)/1;
+!!en;
+
+; Customise the level of the second henchman
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^>=203/i^mouse_item^<=204/i^mouse_action^=(MOUSE_LMB_PRESSED);
+; Set the max level allowed via TrainerX to 100
+!!VR(maxLv:y):S(TRAINER_SECHEN_LEVEL_CAP);
+
+!!SN:T^trainer.sechen.lvTitle^/?z6;
+!!SN:T^trainer.sechen.lvLegend^/?z7/^maxLv^/(maxLv);
+!!IF:D55/6/7/0/0/0/0/0;
+!!IF:E1/55;
+!!VRz1:H1; **check if text entered, flag 1=1 if yes
+!!FU|-1/v1<0:E;                     [end function if nothing input or cancel]
+
+!!VR(hero:y):Si^trainer_hero^;
+!!IF:W(hero);
+!!FU(sechen_GetHenchLevel):P(hero)/?(lv:y);
+!!VR(input:y):Vz1 F1/(maxLv);
+
+!!if&(input)<>(lv);
+  ; Set up new second henchman level if a level other than the current one has been input
+  !!FU(sechen_GetLevelMinExp):P(input)/?w160;
+  !!FU(sechen_GetHenchLevel):P(hero)/?(lvNew:y);
+  !!FU(trainer_UpdateSecHenchLevel):P(hero);
+
+  ; Adapt the form of the henchman
+  !!FU(sechen_GetMonOfStageWithHero):Pw161/(hero)/?w161;
+
+  ; Execute level up events (disable for now)
+  *!if&(input)>(lv);
+    ; Check for every level up and see if it is eligible to learn a new ability
+    *!re i/(lv)/(lvNew)/1/-1;
+      *!VR(lvNext:y):Si +1;
+      *!FU(sechen_ManageLearnNewAbility):P(hero)/i/(lvNext);
+      *!FU(sechen_ManageHenchUpgrade):P(hero)/i/(lvNext);
+    *!en;
+  *!en;
+!!en;
+
+; Change Assimilation Monster 
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^>=205/i^mouse_item^<=206/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!!FU(GetMaxMonsterId):P?(lastMon:y);
+!!SN:T^sechen.str.otherHenchTitle^/?z6/^lastMon^/(lastMon);
+!!SN:T^trainer.sechen.asmMonLegend^/?z7;
+!!IF:D55/6/7/0/0/0/0/0;
+!!IF:E1/55;
+!!VRz1:H1; **check if text entered, flag 1=1 if yes
+!!FU|-1/v1<0:E;                     [end function if nothing input or cancel]
+
+!!IF:Wi^trainer_hero^;
+!!VR(input:y):Vz1 F(MON_FIRST)/(lastMon);
+!!FU(sechen_GetValidMon):P(input)/?w163;
+
+!!FU(trainer_UpdateSechenchAsmMon):Pi^trainer_hero^;
+
+; Show Second Henchman Screen
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^=200;
+!!if|i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+  !!FU(sechen_ShowHenchDlg):Pi^trainer_hero^/(FALSE);
+!!en;
+
+; Show Second Henchmen Exp
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^>=203/i^mouse_item^<=204/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!IF:Wi^trainer_hero^;
+!!VR(exp:y):Sw160;
+!!FU(sechen_GetHenchLevel):Pi^trainer_hero^/?(level:y);
+!!SN:T^trainer.heroLvDesc^/?(sechenLvDesc:z)/^lv^/(level);
+!!IF:Q1/(PIC_TYPE_EXPERIENCE)/(exp)/(MSG_TYPE_POPUP)^%(sechenLvDesc)^;
+
+; Show Assimilation Monster Screen
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^>=205/i^mouse_item^<=206/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!IF:Wi^trainer_hero^;
+!!FU(trainer_ShowMonDlgRecruiting):Pw163/(TRUE);
+
+; Show ability descriptions
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_item^>=101/i^mouse_item^<=162/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!if&i^mouse_item^<=131;
+  !!VR(abilityIndex:y):Si^mouse_item^ -101;
+  !!VR(abilityTypeStr:z):S^norm^;
+!!el;
+  !!VR(abilityIndex):Si^mouse_item^ -132;
+  !!VR(abilityTypeStr):S^exp^;
+!!en;
+
+!!SN:T^sechen.str.%(abilityTypeStr)Ability_%(abilityIndex)^/?(abilityName:z);
+!!SN:T^sechen.str.%(abilityTypeStr)AbilityDesc_%(abilityIndex)^/?(abilityDesc:z);
+
+!!VR(msg:z):S^{%(abilityName)}
+
+%(abilityDesc)^;
+!!IF:M0/(MSG_TYPE_POPUP)/^%(msg)^;
+
+; Show ability tutorial
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!if&i^mouse_item^=201;
+  !!IF:M^%T(sechen.str.tutNormAbilitiesDetails)^;
+!!el&i^mouse_item^=202;
+  !!IF:M^%T(sechen.str.tutExpAbilitiesDetails)^;
+!!en;
+
+**** End Second Henchmen ****
+
+
+// daemon_n's mousewheel events
 !?FU(OnStartOrLoad);
   !!SN:L^EraPlugins\erm_hooker.era^/?y1;
 

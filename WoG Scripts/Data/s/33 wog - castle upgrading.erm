@@ -379,36 +379,40 @@ ZVSE2
 
 ; configure message
 ; Disable the requirement of special resouces but add in special resource requirements - Archer
-; The special resources would be Mithril when applicable. If negative, it would be the rare resource required for the level 7 creature plus Wood and Ore
-*!IF:N(PIC_TYPE_RES_WOOD)/(needRes)/
-      (PIC_TYPE_RES_MERCURY)/(needRes)/
-      (PIC_TYPE_RES_ORE)/(needRes)/
-      (PIC_TYPE_RES_SULFUR)/(needRes)/
-      (PIC_TYPE_RES_CRYSTAL)/(needRes)/
-      (PIC_TYPE_RES_GEMS)/(needRes)/
-      (PIC_TYPE_RES_GOLD)/(needGold)/
-      (NO_PIC_TYPE)/(NULL);
+; The special resources would be Mithril when applicable. If mithril is not enabled, it would be the rare resource required for the level 7 creature plus Wood and Ore
 !!CA(CURRENT_TOWN):T?(townType:y);
 !!FU(WOG_45_GetTownSpecialResource):P(townType)/?(specResId:y);
 !!VR(typeSpecResPicId:y):S(specResId);
 
-; Requires Wood and Ore if Mithril is not enabled
+; Set up the price
+!!VR(needRareRes[4]:y):C0/0/0/0;
+
 !!if&(specResId)=(RES_MITHRIL);
   !!VR(extRes1PicId:y):S(NO_PIC_TYPE);
   !!VR(extRes2PicId:y):S(NO_PIC_TYPE);
-  !!VR(extNeedRes:y):S(NULL);
+  !!VR(needNormRes:y):S(NULL);
   !!VR(needMithril:y):S(needRes);
 !!el;
   !!VR(extRes1PicId):S(RES_WOOD);
   !!VR(extRes2PicId):S(RES_ORE);
-  !!VR(extNeedRes:y):S(needRes);
+  !!VR(needNormRes:y):S(needRes);
   !!VR(needMithril:y):S(NULL);
+
+  !!if&(specResId)=(RES_MERCURY);
+    !!VR(needRareRes[0]):S(needRes);
+  !!el&(specResId)=(RES_SULFUR);
+    !!VR(needRareRes[1]):S(needRes);
+  !!el&(specResId)=(RES_CRYSTAL);
+    !!VR(needRareRes[2]):S(needRes);
+  !!el&(specResId)=(RES_GEMS);
+    !!VR(needRareRes[3]):S(needRes);
+  !!en;
 !!en;
 
 !!IF:N(PIC_TYPE_RES_GOLD)/(needGold)/
       (typeSpecResPicId)/(needRes)/
-      (extRes1PicId)/(extNeedRes)/
-      (extRes2PicId)/(extNeedRes)/
+      (extRes1PicId)/(needNormRes)/
+      (extRes2PicId)/(needNormRes)/
       (NO_PIC_TYPE)/(NULL)/
       (NO_PIC_TYPE)/(NULL)/
       (NO_PIC_TYPE)/(NULL)/
@@ -429,8 +433,7 @@ ZVSE2
   !!VR(msgDlgType):S(MSG_TYPE_MES);
 !!el;
   ; Change the requirement of resouces - Archer
-  *!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needRes)/(needGold);
-  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needMithril);
+  !!FU(WOG_Player_CheckEnoughResources):P?(boolHasResources:y)/(ownerId)/(needNormRes)/(needRareRes[0])/(needNormRes)/(needRareRes[1])/(needRareRes[2])/(needRareRes[3])/(needGold)/(needMithril);
 
   ; Additional check for town special resource if not mithril (put it here since it is easier to write than FU:P)
   !!if&(boolHasResources)/(specResId)<>(RES_MITHRIL);
@@ -455,10 +458,10 @@ ZVSE2
 !!FU&(result)<>(TRUE):E;
 
 ; remove player resources
-!!FU(WOG_Player_RemoveResources):P(ownerId)/(extNeedRes)/(NULL)/(extNeedRes)/(NULL)/(NULL)/(NULL)/(needGold)/(needMithril);
+!!FU(WOG_Player_RemoveResources):P(ownerId)/(needNormRes)/(needRareRes[0])/(needNormRes)/(needRareRes[1])/(needRareRes[2])/(needRareRes[3])/(needGold)/(needMithril);
 
 ; add gold bonus to this town
-!!SN:M(WOG_OPT_CASTLE_UPGRADING)/(prtGoldBonusItem)/d+(WOG_45_GOLDBONUS);
+!!SN:M(WOG_OPT_CASTLE_UPGRADING)/(prtGoldBonusItem)/d(WOG_45_GOLDBONUS);
 
 ; set what was already built today
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrAlreadyBuilt)/(TRUE);
@@ -466,6 +469,7 @@ ZVSE2
 ; disable standard action
 !!CM:R0;
 !!UN:R(REDRAW_TOWN_SCREEN);
+!!UN:R2;
 
 ; Play sound
 !!SN:P^buildtwn^;
