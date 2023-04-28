@@ -4905,13 +4905,15 @@ w   Spell Immunity  119
 
 !?FU(OnStartOrLoad);                 
 !!SN:L^EraPlugins\erm_hooker.era^/?y1;  
+!!FU&y1=0:E;
+
 !!SN:Ay1/^SetHook^/?y2;                
 !!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Stack_Rebalance);
 
 ****************************************************************************************************
 
 *Illithid and Alhoon cast Hypnotize with attacks by Archer30
-; The max target health to be Hypothized is the same as Fangarm's ability from HotA (20 + 25*(Illithird count))
+; The max target health to be Hypotized is the same as Fangarm's ability from HotA (20 + 25*(Illithird count))
 ; If the requirements of casting Hypnotize are met, it will be cast with 100% chance.
 ; The following script won't be executed in TUM Reborn as it has been included
 
@@ -4926,27 +4928,33 @@ w   Spell Immunity  119
   !!FU(tum_CheckIfMonCanHypnotize):P(atkMon)/?(canCastHypnotize:y);
 
   !!if&(canCastHypnotize);
-    !!BM(atkStack):I?(atkSide:y);
-    ; Check the defender's immunity to Hynothize
-    !!FU(tum_CheckIfStackCanBeHypnotized):P(defStack)/(SPELL_HYPNOTIZE)/(atkSide)/?(acceptSpell:y);
+    ; Check if the target monster is hypnotized
+    !!BM(defStack):G(SPELL_HYPNOTIZE)/?(duration:y)/?(level:y);
 
-    !!if&(acceptSpell);
-      ; Check if the total HP of the defender is lower than 20 + 25*(attacker count)
-      ; Attacker's power
-      !!BM(atkStack):N?(atkNum:y);
-      !!VR(maxHypnotizeHp:y):S25 *(atkNum) +20;
-      ; Defender's total Hp
-      !!BM(defStack):H?(hp:y) L?(lostHp:y);
-      !!VR(totlaHp:y):S(hp) *(defNum) -(lostHp);
-      ; Cast if condition meet
-      !!if&(maxHypnotizeHp)>=(totlaHp);
-        !!BM(defStack):P?(pos:y);
-        !!BM(atkStack):C(SPELL_HYPNOTIZE)/(pos)/(SKILL_EXPERT)/3/(TRUE);
+    !!if&(duration)<=0;
+      !!BM(atkStack):I?(atkSide:y) G(SPELL_HYPNOTIZE)/?(duration)/?(level);
+      !!VR(atkStack)&(duration)>0:X(TRUE);
+      ; Check the defender's immunity to Hypnothize
+      !!FU(tum_CheckIfStackCanBeHypnotized):P(defStack)/(SPELL_HYPNOTIZE)/(atkSide)/?(acceptSpell:y);
 
-        ; Remove Attack Twice and retailiations temporarily for the victim and restore later
-        !!BM(defStack):F?(flags:y) Fd~(MON_FLAG_ATTACKS_TWICE) R?(retals:y) R0;
-        !!VR(hasAttackTwice:y):S(flags) &(MON_FLAG_ATTACKS_TWICE) B;
-        !!FU(PackUnion):P(defStack)/8/(retals)/16/(hasAttackTwice)/7/1/1/?i^tum_hypnotize_stackData^;
+      !!if&(acceptSpell);
+        ; Check if the total HP of the defender is lower than 20 + 25*(attacker count)
+        ; Attacker's power
+        !!BM(atkStack):N?(atkNum:y);
+        !!VR(maxHypnotizeHp:y):S25 *(atkNum) +20;
+        ; Defender's total Hp
+        !!BM(defStack):H?(hp:y) L?(lostHp:y);
+        !!VR(totlaHp:y):S(hp) *(defNum) -(lostHp);
+        ; Cast if condition meet
+        !!if&(maxHypnotizeHp)>=(totlaHp);
+          !!BM(defStack):P?(pos:y);
+          !!BM(atkStack):C(SPELL_HYPNOTIZE)/(pos)/(SKILL_EXPERT)/3/(TRUE);
+
+          ; Remove Attack Twice and retailiations temporarily for the victim and restore later
+          !!BM(defStack):F?(flags:y) Fd~(MON_FLAG_ATTACKS_TWICE) R?(retals:y) R0;
+          !!VR(hasAttackTwice:y):S(flags) &(MON_FLAG_ATTACKS_TWICE) B;
+          !!FU(PackUnion):P(defStack)/8/(retals)/16/(hasAttackTwice)/7/1/1/?i^tum_hypnotize_stackData^;
+        !!en;
       !!en;
     !!en;
   !!en;
