@@ -89,7 +89,7 @@ ZVSE2
 !!FU(WOG_54_Ballista)&v2053=2:P1;
 
 ; Catapult
-!?FU(WOG_OnAfterShoot);
+!?FU(WOG_OnAfterShoot)&i^wog_54_enabled^;
 !#VA(atkStack:x) (defStack:x);
 
 !!BM(atkStack):T?(type:y);
@@ -114,38 +114,34 @@ ZVSE2
 
 ************************* MOUSE CLICK combat screen ****************************
 
-!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^wog_54_enabled^;
-!#VA(usedY[10]:y);
-
-!!BU:Ei^mouse_battleHex^/?y1; check monster position
-!!FU&y1=(NO_STACK):E; exit if no monster
-!!FU&y1=i^battle_current_stack^:E;
-
-!!BMy1:T?y2 I?y3 L?y5 H?y6 N?y7 B?y9; y2 = monster , y3 = hero side
-!!BHy3:N?y4; get hero number
-
-!!BMi^battle_current_stack^:T?(currType:y);
-
-; First Aid Tent
-!!if&(currType)=(MON_FIRST_AID_TENT)/i^wog_54_Battle_HealPower^>0;
-  !!FU(WOG_54_FirstAidTentHeals)|y2<(MON_CATAPULT)/y2>(MON_ARROW_TOWERS):P0/y1;
-!!en;
-
 ; Change cursor to healable when a target is not full comparing with its initial status
 !?FU(OnBattleMouseHint)&i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^wog_54_enabled^;
 !!BU:Ei^mouse_battleHex^/?(targetStack:y); check monster position
 !!FU&(targetStack)=(NO_STACK):E; exit if no monster
 !!FU&(targetStack)=i^battle_current_stack^:E;
 
-!!BM(targetStack):T?(targetType:y);
+!!BM(targetStack):T?(targetType:y) I?(stackSide:y);
 !!BMi^battle_current_stack^:T?(currType:y);
 
-!!if&(currType)=(MON_FIRST_AID_TENT);
+!!if&(currType)=(MON_FIRST_AID_TENT)/(targetType)<>(MON_NOT_USED_2)/(stackSide)=i^battle_current_side^;
   !!if|(targetType)<(MON_CATAPULT)/(targetType)>(MON_ARROW_TOWERS);
     !!BM(targetStack):L?(lostHp:y) N?(num:y) B?(startNum:y);
 
     !!UN|(lostHp)>0/(num)<(startNum):R5/2/17;
   !!en;
+!!en;
+
+!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^wog_54_enabled^;
+!!BU:Ei^mouse_battleHex^/?(targetStack:y); check monster position
+!!FU&(targetStack)=(NO_STACK):E; exit if no monster
+!!FU&(targetStack)=i^battle_current_stack^:E;
+
+!!BM(targetStack):T?(targetType:y) I?(stackSide:y);
+!!BMi^battle_current_stack^:T?(currType:y);
+
+; First Aid Tent
+!!if&(currType)=(MON_FIRST_AID_TENT)/(targetType)<>(MON_NOT_USED_2)/(stackSide)=i^battle_current_side^/^wog_54_Battle_HealPower^>0;
+  !!FU(WOG_54_FirstAidTentHeals)|y2<(MON_CATAPULT)/y2>(MON_ARROW_TOWERS):P0/y1;
 !!en;
 
 !?FU(WOG_54_FirstAidTentHeals);

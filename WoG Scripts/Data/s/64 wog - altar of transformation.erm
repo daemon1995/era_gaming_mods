@@ -44,39 +44,53 @@ ZVSE2
 ** Each Transformation Altar on the map can only be visited once per week.
 
 
-Flags Used in this Script: 1,209-211
-Variables Used in this Script: v1, x16, z451-z453
-Function Variables Used in this Script: x1-x5, x16, y-1, y-2
+Variables Used in this Script: v1, z451-z453
+Function Variables Used in this Script: x1-x5, y-1, y-2
 
-Variables that MUST be preserved outside this script: z451-z453
 
-[Check version of ERM to see if it's current enough]
-[Display warning message if it isn't]
+// Hint for mouse hovering
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
 
-!?FU(WOG_14_Initialization);
- [Check if script is enabled: v1]
-!!UN:P14/?(altarOn:y);
+!!UN:P14/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
- [Set up right-click hint text for Altar objects]
-; Note: The right-click text does not put multi-player games into consideration - we don't use AoT in MP, right?
+!!FU|(objType)<>(OBJ_NEW_WOG_OBJECTS)/(objSubtype)<>20:E;
 
-!!if&(altarOn);
-  !!VRz451:Sz114001;
-  !!VRz452:Sz114002;
-  !!VRz453:Sz114003;
-  !!HT(OBJ_NEW_WOG_OBJECTS)/20:P0/451;
-  !!HT(OBJ_NEW_WOG_OBJECTS)/20:P1/452;
-  !!HT(OBJ_NEW_WOG_OBJECTS)/20:P2/453;
-!!en;
+!!SN:O?(x)/?(y)/?(z);
+!!PO(x)/(y)/(z):N?(isVisited:y);
+; Check if the object has been visited by the interacting player at least once
+!!OW:C?(player:y)/?(interactPlayer:y);
+!!PM(x)/(y)/(z):P(interactPlayer)/?(visitedOnce:y);
 
-!#FU(WOG_14_Initialization):P;
+!!FU(WOG_GetMapObjectString):P^%T(wog.14.objName)^/(visitedOnce)/(isVisited)/0/?(string:z);
+
+!!MM:M^%(string)^;
+
+// Right-clicking dialogue
+!?FU(OnAdventureMapRightMouseClick);
+!!UN:P14/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y);
+!!FU|(objType)<>(OBJ_NEW_WOG_OBJECTS)/(objSubtype)<>20:E;
+
+!!SN:O?(x)/?(y)/?(z);
+!!PO(x)/(y)/(z):N?(isVisited:y);
+; Check if the object has been visited by the interacting player at least once
+!!OW:C?(player:y)/?(interactPlayer:y);
+!!PM(x)/(y)/(z):P(interactPlayer)/?(visitedOnce:y);
+
+!!FU(WOG_GetMapObjectString):P^%T(wog.14.objName)^/(visitedOnce)/(isVisited)/1/?(string:z);
+
+!!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/20/^%(string)^;
 
 ----------------------------------------------------------------------------------------
 
 ; Start of function to reset all Altar of Transformation right-click text
 ; This function also sets PM commands to attract AI to Altar objects
-; This function also resets the Alter's control word to allow visiting
-!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerOnce^; [Timer triggers on day 1 each week]
+!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1/i^timerOnce^; [Timer triggers on day 1 each week]
 !!UN:P14/?(altarOn:y); [Check if script is enabled: y-1]
 !!FU&(altarOn)<>(TRUE):E; [Exit if script isn't enabled]
 
@@ -86,11 +100,8 @@ Variables that MUST be preserved outside this script: z451-z453
   !!UN:U(OBJ_NEW_WOG_OBJECTS)/20/-1/(x)/(y:y)/(z:y);
   !!br&(x)<0;
 
-  ; Reset Altar text unless Altar hasn't yet been visited
-  ; The N number is also used to determine if the Altar may be visited
-  !!PO(x)/(y)/(z):N?(value:y);
-  !!PO(x)/(y)/(z)&(value)>0:N2;         [Set to "not visited" if an altar has been visited once]
-  ; Set Altar to attract AI
+  !!PO(x)/(y)/(z):N0;                   [Set PO:N to 0 to reset hint text]
+
   !!PM(x)/(y)/(z):V(TRUE);
 !!en;
 
@@ -101,109 +112,193 @@ Variables that MUST be preserved outside this script: z451-z453
 ** v1 - answer for radioboxes
 ** y-19 : current number of spell points
 ** y-20 - y-26: invested spell points
-** y1 : chance to get what you want
-** y2 : selected town type
+** (investedMana) : chance to get what you want
+** (townType) : selected town type
 
-!!UN:P14/?y1; [Check if script is enabled: y1]
-!!FU&y1=0:E; [Exit if script isn't enabled]
+!!UN:P14/?(wogOption:y); [Check if script is enabled: y1]
+!!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
 
-!!VRv1:S0;
+!!HE(CURRENT_HERO):O?(owner:y);
+!!PM998:P(owner)/(TRUE);
 
-!!PO998:N?y90;  // get current PO:N value to y-90;
+!!PO998:N?(value:y);  // get current PO:N value to y-90;
 
-!!if&y90=1;
-  !!IF&1000:M1/z114005; // show message that already visited
+!!if&(value);
+  !!IF&(ERM_FLAG_IS_HUMAN):M1/z114005; // show message that already visited
   !!FU:E; // Exit function if altar has been visited yet
 !!en;
 
-; Set Altar right-click text to show it has not been visited this week
-!!PO998:N2;
+; Get the available monster types to be converted of the hero
+!!MA:F(MON_DARKNESS_DRAGON)/?(darknessDragonFv:y);
 
-!!IF:V209/0 V210/0 V211/0;  [Sets flags 209, 210 and 211 to false]
+!!FU(NewIntArray):P?(availMonList:y);
 
- [Ask if hero wishes to visit the altar and how much of his mana he want to invest, return in v1]
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HE(CURRENT_HERO):C0/i/?(type:y)/?(num:y);
 
-!!HE(CURRENT_HERO):I?y19; // get number of spell points
-!!VRy19:F0/(BITS_15_MASK);             [Fix hero's mana in case it is negative]
-!!HE(CURRENT_HERO):Iy19;
+  !!if&(type)>(NO_MON)/(num)>0;
+    ; Skip if the creature is a God's Representative or a Ghost
+    !!co&(type)>=(MON_EMISSARY_OF_WAR)/(type)<=(MON_EMISSARY_OF_LORE)|(type)=(MON_GHOST);
 
-!!VRy-20:Sy19 F0/100; // set y-20 to act. spell points but max. to 100
-!!VRy-21:Sy-20 *3 :4; 
-!!VRy-22:Sy-20 *2 :3; 
-!!VRy-23:Sy-20 :2; 
-!!VRy-24:Sy-20 :3;
-!!VRy-25:Sy-20 *3 :4; 
-!!VRy-26:Sy-20 :10;
+    ; Skip if the creature is stonger than Darkness Dragon (the strongest Level 8 unit)
+    !!MA:F(type)/?(fv:y);
 
-!!if&1000;
+    !!co&(fv)>(darknessDragonFv);
+
+    !!FU(Array_Push):P(availMonList)/(type);
+  !!en;
+!!en;
+
+!!FU(Array_SortedUnique):P(availMonList);
+!!SN:M(availMonList)/?(size:y);
+
+// Manage human behaviours
+!!if&(ERM_FLAG_IS_HUMAN);
+  ; Show tutorial for human player
   !!IF:M1/z114004;
+
+  ; Exit if there is no creature available to be converted (no creature at all or just OP)
+  !!if&(size)=0;
+    !!IF:M^%T(wog.14.noMon)^;
+    !!FU:E;
+  !!en;
+
+  ; Organise array for IF:N
+  !!FU(NewIntArray):P?(monPicsList:y);
+
+  !!re i/0/(size)/1/-1;
+    !!SN:M(availMonList)/i/?(type);
+    !!FU(Array_Push):P(monPicsList)/(PIC_TYPE_MONSTER)/(type);
+  !!en;
+
+  !!FU(PrepareMultiPicDialog):P(monPicsList);
+  !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(wog.14.chooseMon)^/?(choice:y);
+  !!FU&(choice)=-1:E;
+
+  !!SN:M(availMonList)/(choice)/?(chosenMon:y);
+
+  ; Ask if hero wishes to visit the altar and how much of his mana he want to invest, return in v1
+  !!VRv1:S0;
+  !!HE(CURRENT_HERO):I?(mana:y)/1; // get number of spell points
+  !!VR(mana):F0/(BITS_15_MASK);             [Fix hero's mana in case it is negative]
+  !!HE(CURRENT_HERO):I(mana);
+
+  !!VRy-20:S(mana) F0/100; // set y-20 to act. spell points but max. to 100
+  !!VRy-21:Sy-20 *3 :4; 
+  !!VRy-22:Sy-20 *2 :3; 
+  !!VRy-23:Sy-20 :2; 
+  !!VRy-24:Sy-20 :3;
+  !!VRy-25:Sy-20 *3 :4; 
+  !!VRy-26:Sy-20 :10;
 
   !!if&y-20=100;
     !!IF:G1/1/256/114013/114034/114035/114036/114037/114038/114039/114040/114021/114022;
   !!el;
     !!IF:G1/1/256/114013/114014/114015/114016/114017/114018/114019/114020/114021/114022;
   !!en;
-!!en;
 
-!!FU&v1=256:E; // exit if No Transformation is selected
+  !!VR(investedMana:y)&v1=1:Sy-20; // 100 SP or max Mana
+  !!VR(investedMana)&v1=2:Sy-21; 
+  !!VR(investedMana)&v1=4:Sy-22; 
+  !!VR(investedMana)&v1=8:Sy-23; 
+  !!VR(investedMana)&v1=16:Sy-24; 
+  !!VR(investedMana)&v1=32:Sy-25;
+  !!VR(investedMana)&v1=64:Sy-26; 
+  !!VR(investedMana)&v1=128:S0; // invested mana = chance
 
-!!VRy1&v1=1:Sy-20; // 100 SP or max Mana
-!!VRy1&v1=2:Sy-21; 
-!!VRy1&v1=4:Sy-22; 
-!!VRy1&v1=8:Sy-23; 
-!!VRy1&v1=16:Sy-24; 
-!!VRy1&v1=32:Sy-25;
-!!VRy1&v1=64:Sy-26; 
-!!VRy1&v1=128:S0; // invested mana = chance
+  !!FU&v1=256:E; // exit if No Transformation is selected
 
-!!VRy98:Sy19 -y1; // get new mana (total - invested)
+  ; decrease mana of visiting hero if he is no AI
+  !!HE(CURRENT_HERO):Id-(investedMana);
 
-!!if&1000;
-  !!HE(CURRENT_HERO):Iy98; // decrease mana of visiting hero if he is no AI
-!!el;
-  !!VRy1:S100; // AI has a 100 % chance to convert without mana costs
-!!en;
+  ; ask for the town type you want
+  !!if&(investedMana)>0;
+    !!re i/(TOWN_FIRST)/(TOWN_LAST_WOG);
+      !!VR(index:y):Si +4;
+      !!FU(WOG_Town_GetName):Pi/?z(index);
+    !!en;
 
-** ask for the town type you want
+    !!IF:G1/1/1/114033/4/5/6/7/8/9/10/11/12/13/114022;
+    !!FU(IntLog2):Pv1/?(townType:y);
 
-!!if&1000;
-  !!IF&y1>0:G1/1/1/114033/114023/114024/114025/114026/114027/114028/114029/114030/114031/114032/114022;
-  !!FU(IntLog2):Pv1/?y2;
-
-  ; Set neutral town
-  !!if&y2=9;
-    !!VRy2:S(NO_TOWN);
-  !!el&y2>=10;
-    !!FU:E; // exit if No Transformation is selected
+    ; Set neutral town
+    !!if&(townType)=9;
+      !!VR(townType):S(NO_TOWN);
+    ; exit if No Transformation is selected
+    !!el&(townType)>=10;
+      !!FU:E;
+    !!en;
   !!en;
-; set town to hero's native town if AI visits
+
+// Manage AI behaviours
 !!el;
-  !!HE(CURRENT_HERO):B2/?y99;          [Get type of hero of AI]
-  !!VRy2:Sy99 :2;
+  !!OB998:S;                            [disable pyramid feature]
+
+  !!VR(chosenMon):S(NO_MON);
+
+  !!if&(size)>0;
+    !!MA:F(MON_BLOOD_DRAGON)/?(bloodDragonFv:y);
+
+    ; AI has a 100 % chance to convert without mana costs
+    !!VR(investedMana):S100; 
+    ; set town to hero's native town if AI visits
+    !!HE(CURRENT_HERO):B2/?(heroType:y);          [Get type of hero of AI]
+    !!VR(townType):S(heroType) :2;
+
+    ; Get the best creature to be converted
+    ; Currenlty we select with this criteria: not belongs to the town of the hero/highest total fight value/not stronger than Blood Dragon
+    !!VR(hightestTotalFv:y):S0;
+
+    !!re j/0/(size)/1/-1;
+      !!SN:M(availMonList)/j/?(availMon:y);
+      ; Check if the fight value is bigger than Blood Dragon
+      !!MA:F(availMon)/?(fv:y);
+      !!co&(fv)>(bloodDragonFv);
+
+      ; Check if the town type is the same as the hero's town type
+      !!MA:O(availMon)/?(monTownType:y);
+      !!co&(monTownType)=(townType);
+
+      ; Calculate the total fight value of the given monster
+      !!VR(totalNum:y):S0;
+
+      !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+        !!HE(CURRENT_HERO):C0/i/?(type)/?(num);
+
+        !!if(type)=(availMon)/(num)>0;
+          !!VR(totalNum:y):+(num);
+        !!en;
+      !!en;
+
+      !!VR(totalFv:y):S(totalNum) *(fv);
+
+      ; Set if the total fight value is bigger than the current one
+      !!if&(totalFv)>(hightestTotalFv);
+        !!VR(hightestTotalFv):S(totalFv);
+
+        !!VR(chosenMon):S(availMon);
+      !!en;
+    !!en;
+  !!en;
 !!en;
 
-; Set Altar right-click text to show it has been visited this week
-; This value also determines if the Altar may be visited or not
-!!PO998:N1;
-
-!!DO(WOG_14_CheckMonRoutine)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1:Py2/y1; // call transform-routine for each slot
+; Convert the chosen monster
+!!FU(WOG_14_ConvertMonsters)&(chosenMon)>(NO_MON):P(townType)/(investedMana)/(chosenMon);
 
  [If hero visits altar, display this message]
-!!if&1000;
+!!if&(ERM_FLAG_IS_HUMAN);
   !!SN:D;
   !!SN:P^TELPTOUT^; // make teleport sound
 
   !!VRz3:Sz114006 +z114007;
-  ; Show msg about not being transformed if appropriate
-  !!VRz3|209/210/211:+^
 
-^ +z114041;
   ; Check if pictures exists
   !!VRz2:S^..\data\s\pic\script14.jpg^;
   !!UN:J8/2/2; [Check if file z2 is present in Data\s folder: Flag 1=0 if file missing]
+  !!SN:T^wog.14.objName^/?z1;
 
   !!if&1;
-    !!IF:D7/3/0/0/2/0/0/0/114012/0/0/0/0/0/0/0; [Set up custom dialogue box]
+    !!IF:D7/3/0/0/2/0/0/0/1/0/0/0/0/0/0/0; [Set up custom dialogue box]
     !!IF:F7/0/0/0/0/0; [Disable Cancel button]
     !!IF:E1/7; [Display Custom Dialogue]
   !!el;
@@ -211,76 +306,57 @@ Variables that MUST be preserved outside this script: z451-z453
   !!en;
 !!en;
 
+; Set Altar right-click text to show it has been visited this week
+; This value also determines if the Altar may be visited or not
+!!PO998:N1;
 !!PM998:V(FALSE);  [Set Altar to tell AI it has been visited this week]
 
 ----------------------------------------------------------------------------------------
 
- [Start of function to convert each creature stack to new town type (x1)]
-!?FU(WOG_14_CheckMonRoutine);
-!#VA(townDesired:x) (chance:x);
-
- [Stores monster type found in hero's slot x16 in variable (mon), number in (qty)]
-!!HE(CURRENT_HERO):C0/x16/?(mon:y)/?(qty:y);
-!!FU&(mon)<0:E; // exit if slot is empty
-
-!!MA:L(mon)/?(level:y); // Store creature's level in (level)
-
- [Set correct level for higher-level creatures]
-!!if&(level)>=6;
-  !!MA:F(mon)/?(fv:y) F(MON_BLOOD_DRAGON)/?(fvBloodDragon:y) F(MON_DARKNESS_DRAGON)/?(fvDarknessDragon:y);
-  ; Set to level 8 if the creature is stronger than Blood Dragon
-  !!if&(fv)>=(fvBloodDragon)/(fv)<=(fvDarknessDragon);
-    !!VR(level):S7;
-  ; If creature is more powerful than Darkness Dragon, set flag 209 to true
-  !!el&(fv)>(fvDarknessDragon);
-    !!VR(level):S99;
-    !!IF:V209/(TRUE);
-  !!en;
-!!en;
-
-; If creature is a God's Representative (level 12), set flag 211 to true
-!!if&(mon)>=(MON_EMISSARY_OF_WAR)/(mon)<=(MON_EMISSARY_OF_LORE);
-  !!VR(level):S99; [Emissaries]
-  !!IF:V211/(TRUE);
-; If creature is a ghost
-!!el&(mon)=(MON_GHOST);
-  !!VR(level):S99; // do not convert ghosts
-  !!IF:V210/(TRUE);
-!!en;
-
- [Convert the creature]
-!!FU(WOG_14_ConvertMon)&(level)<=7:P(mon)/(level)/(qty)/x16/(townDesired)/(chance); // give old type / level / number / slot / new town type / chance to convert correct
-
-----------------------------------------------------------------------------------------
-
  [Start of function to convert level 7 or lower creatures]
-!?FU(WOG_14_ConvertMon);
-!#VA(mon:x) (level:x) (qty:x) (slot:x) (townDesired:x) (chance:x);
+!?FU(WOG_14_ConvertMonsters);
+!#VA(townType:x) (chance:x) (chosenMon:x);
 
-; Get real new town
-!!VR(random:y):R0/0/100; // random 0-100
+; Set the level for the chosen monster
+!!MA:L(chosenMon)/?(level:y);
 
-; Set to wanted new town type; set it to the random if odds are bad
-!!if&(random)<=(chance);
-  !!VR(townNew:y):S(townDesired);
-!!el;
-  !!VR(townRandom:y):R0/(NO_TOWN)/(TOWN_LAST_WOG);
-  !!VR(townNew):S(townRandom);
+!!if&(level)>=6;
+  !!MA:F(chosenMon)/?(fv:y) F(MON_BLOOD_DRAGON)/?(bloodDragonFv:y);
+
+  ; Set to level 8 if the creature is stronger than Blood Dragon
+  !!VR(level)&(fv)>=(bloodDragonFv):S7;
 !!en;
 
-!!MA:O(mon)/?(town:y);
+; Loop through the army slots and convert the chosen monster
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HE(CURRENT_HERO):C0/i/?(type:y)/?(num:y);
 
-!!if&(townNew)>=(TOWN_FIRST)/(townNew)<=(TOWN_LAST_WOG);
-  !!if&(level)<7;
-    !!UN:T(townNew)/(level)/(FALSE)/?(monNew:y); // get new monster type (town, Lvl, upgr) (if no neutral creature and Level 1-7)
-  !!el;
-    !!VR(monNew):S(townNew) +(MON_SUPREME_ARCHANGEL);  // L8-Units (town typ + 150)
+  !!if&(type)=(chosenMon)/(num)>0;
+    ; Get new town type for the conversion
+    !!VR(random:y):R0/0/100; // random 0-100
+
+    ; Set to desirable new town type; set it to the random if odds are bad
+    !!if&(random)<=(chance);
+      !!VR(newTownType:y):S(townType);
+    !!el;
+      !!VR(random:y):R0/(NO_TOWN)/(TOWN_LAST_WOG);
+      !!VR(newTownType):S(random);
+    !!en;
+  
+    ; Get teh actual monster to convert to
+    !!if&(newTownType)>=(TOWN_FIRST)/(newTownType)<=(TOWN_LAST_WOG);
+      !!if&(level)<7;
+        !!UN:T(newTownType)/(level)/(FALSE)/?(newType:y); // get new monster type (town, Lvl, upgr) (if no neutral creature and Level 1-7)
+      !!el;
+        !!VR(newType):S(newTownType) +(MON_SUPREME_ARCHANGEL);  // L8-Units (town typ + 150)
+      !!en;
+    !!el;
+      !!FU(WOG_14_GetNeutralMon):P(type)/(level)/(FALSE)/?(newType); // If town type is Neutral, calculate creature
+    !!en;
+
+    !!HE(CURRENT_HERO):C0/i/(newType)/(num); // change creatures in the targeted slot to new type, reset the experience
   !!en;
-!!el;
-  !!FU(WOG_14_GetNeutralMon):P(mon)/(level)/(FALSE)/?(monNew); // If town type is Neutral, calculate creature
 !!en;
-
-!!HE(CURRENT_HERO):C0/(slot)/(monNew)/d/0/3; // change creatures in the targeted slot to new type, don't change their quantity and experience
 
 ----------------------------------------------------------------------------------------
 

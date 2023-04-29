@@ -33,7 +33,7 @@ ZVSE2
 
 ------------------------------------------------------------------------
 
-Permanent Variables: z818-z841, v1240-v1252, v1270-v1271
+Permanent Variables: z818-z841, v1241-v1252, v1270-v1271
 Temporary Variables: v1-v7, v360-v369, z1-z9, z480-z490
 Temporary Flags: 1-5
 Functions: Only named functions
@@ -41,20 +41,6 @@ Dialogues: 3
 
 -----------------------------------------------------------------------
 
-
-// Initialization
-!?FU(WOG_44_Initialization);
- [Setup]
-!!UN:P(WOG_OPT_EMERALD_TOWER)/?(wogOption:y); [Check if script is enabled]
-
- [Bit table, also in Adventure Cave, Map Rules and Monster Mutterings]
-!!if&(wogOption);
-  !!VRv550:C1/2/4/8/16/32/64/128/256/512;
-  !!UN:B0/1; [Enable Mithril]
-  !!VRv1240:S0; [Initialize changed species counter to 0]
-!!en;
-
-!#FU(WOG_44_Initialization):P;
 
 // Hint for mouse hovering
 !?FU(OnAdvMapTileHint);
@@ -98,17 +84,10 @@ Dialogues: 3
 
  [Timer resets the Emerald Towers' non-visited status each month]
 
-!?FU(OnEveryDay)&i^timerMonthDay^=1/i^timerDay^>1;
+!?FU(OnEveryDay)&i^timerMonthDay^=1/i^timerDay^>1/i^timerOnce^;
 !!UN:P(WOG_OPT_EMERALD_TOWER)/?(emerOn:y); [Check if script is enabled]
 !!FU&(emerOn)<>(TRUE):E;                [Exit if script isn't enabled]
 
-!!FU(WOG_44_ResetObjectStatus):P;        [Loop through all Emerald Towers]
-
------------------------------------------------------------------------
-
- [Reset non-visited status for each Emerald Tower]
-
-!?FU(WOG_44_ResetObjectStatus);
 !!VR(x:y):S-1;
 
 !!re i;
@@ -116,10 +95,6 @@ Dialogues: 3
   !!br&(x)<0;
 
   !!PO(x)/(y)/(z):N0;                   [Set PO:N to 0 to reset hint text]
-
-  !!re (player:y)/(PLAYER_FIRST)/(PLAYER_LAST); [reset AI visits]
-    !!PM(x)/(y)/(z):P(player)/(FALSE);
-  !!en;
 
   !!PM(x)/(y)/(z):V(TRUE);
 !!en;
@@ -146,9 +121,8 @@ Dialogues: 3
 !!IF:V5/0;
 
  [Store current player in v2 and convert to player bit number]
-!!OW:C?v2;
-!!VRv2:+550;
-!!VRv2:Svv2;
+!!OW:C?y31;
+!!VRv2:S1 Sd<<y31;
 
  [Check if current AI player has already gotten an improved creature]
  [v3=v2 if AI has already gotten an improved creature]
@@ -171,7 +145,7 @@ Dialogues: 3
 !!VRz9&2/y-2<7:Sz144004;
 !!IF&y-2<7/1000:V2/0; [Set flag 2 to false if human player doesn't have at least 7 gems]
 
-!!OW&2/1000:R-1/5/d-7; [Remove seven gems from human player's total]
+!!OW&2/1000:R-1/(RES_GEMS)/d-7; [Remove seven gems from human player's total]
 !!UN&2/1000:R2;                         [refresh after gems are taken - Archer]
 !!VRz1:Sz144005;
 !!VRz-1:Sz144006;
@@ -234,16 +208,16 @@ Dialogues: 3
   !!VRv2:S-1; [Set v2 to -1 if it's the monster of the week]
 !!en;
 
-  [Check if this is a new creature (if it is and if v1240>12, set v2 to -1)]
+  [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set v2 to -1)]
   [If this is a new creature, set v6 to -1, if not new, set v6 to loop index number]
 !!VRv6:S-1;
 
 !!if&v2>=0;
-  !!DO(WOG_44_IsNewMonsterSpecies)/1/v1240/1&v1240>0:P;
-  !!IF&v1240>=12/v6<0/1000:Q4/z144014;
+  !!DO(WOG_44_IsNewMonsterSpecies)/1/i^wog_44_speciesCounter^/1&i^wog_44_speciesCounter^>0:P;
+  !!IF&i^wog_44_speciesCounter^>=12/v6<0/1000:Q4/z144014;
 !!en;
 
-!!VRv2&v1240>=12/v6<0:S-1; [Set v2 to -1 if v1240 = 12 and creature isn't new]
+!!VRv2&i^wog_44_speciesCounter^>=12/v6<0:S-1; [Set v2 to -1 if i^wog_44_speciesCounter^ = 12 and creature isn't new]
 
 !!FU(WOG_44_ChooseImprovementType)&v2>=0:P; [Display improvement options]
 
@@ -254,13 +228,13 @@ Dialogues: 3
   !!if&4/-5;
     !!if&v1270=0;
       !!IF:Q1/5/6/1/z144015;
-      !!OW:R-1/5/d6; [Give back 6 gems if nothing bought]
+      !!OW:R-1/(RES_GEMS)/d6; [Give back 6 gems if nothing bought]
       !!IF:V5/1; [Set Flag 5 to True]
 
      [If player bought "24 shots" and nothing else]
     !!el&v1270=100;
       !!IF:Q1/5/6/1/z144016;
-      !!OW:R-1/5/d6; [Give back 6 gems if only "24 shots" bought]
+      !!OW:R-1/(RES_GEMS)/d6; [Give back 6 gems if only "24 shots" bought]
       !!IF:V5/1; [Set Flag 5 to True]
     !!en;
   !!en;
@@ -455,7 +429,7 @@ Dialogues: 3
 !!if&v4;
   !!FU(WOG_44_AddBonusByCreatureType):Py9; [Add bonus to creature type if player paid for it]
 
-  !!VRv1240&v6<0:+1; [Increment Changed Creature Counter if v4=1 and v6<0]
+  !!VRi^wog_44_speciesCounter^&v6<0:+1; [Increment Changed Creature Counter if v4=1 and v6<0]
   !!FU(WOG_44_ChangeMonsterNames):Pv2/v3/v5; [Change species name to reflect ability/bonus just gained]
 
   !!PO998:N1; [Set hint text to "visited"]
@@ -472,8 +446,8 @@ Dialogues: 3
 !!en;
 
 !!OW:C?y11;        [Store current player in y11]
-!!VRy12:S550 +y11; [y12 is index for v variable with bit number for current player]
-!!VRv1271&-1000/v3>0:+vy12; [Add AI player number to v1271 so it won't get another bonus]
+!!VRy12:S1 Sd<<y11;[y12 is bit number for current player]
+!!VRv1271&-1000/v3>0:+y12; [Add AI player number to v1271 so it won't get another bonus]
 
 -----------------------------------------------------------------------
 
@@ -775,23 +749,23 @@ Dialogues: 3
 -----------------------------------------------------------------------
 
  [Change species name to reflect ability or bonus just gained]
- [v6=loop index number, v1240=changed creature counter]
+ [v6=loop index number, i^wog_44_speciesCounter^=changed creature counter]
 
 !?FU(WOG_44_ChangeMonsterNames);
 !#VA(mon:x) (choice:x) (specialAbility:x);
 
- [If a new species, store creature number in v(1240+v1240)]
-!!VR(vIndex:y):S1240 +v1240;
+ [If a new species, store creature number in v(1240+i^wog_44_speciesCounter^)]
+!!VR(vIndex:y):S1240 +i^wog_44_speciesCounter^;
 
 !!if&v6<0;
   !!VRv(vIndex):S(mon);
   !!SN:H^monname^/(mon)/0/?(singName:z) H^monname^/(mon)/1/?(plurName:z);
-  !!VRs^wog_44_monName_0_%v1240^:S(singName);
-  !!VRs^wog_44_monName_1_%v1240^:S(plurName);
+  !!VRs^wog_44_monName_0_%i(wog_44_speciesCounter)^:S(singName);
+  !!VRs^wog_44_monName_1_%i(wog_44_speciesCounter)^:S(plurName);
 ; Get the original name if not new
 !!el;
-  !!VR(singName):Ss^wog_44_monName_0_%v1240^;
-  !!VR(plurName):Ss^wog_44_monName_1_%v1240^;
+  !!VR(singName):Ss^wog_44_monName_0_%i(wog_44_speciesCounter)^;
+  !!VR(plurName):Ss^wog_44_monName_1_%i(wog_44_speciesCounter)^;
 !!en;
 
  [Generate descriptor word to preface name: z5]
