@@ -2056,7 +2056,7 @@ When clicking on System Icon at Adventure Map run options again
 !!en;
 
 
-!!SN:W^Double_Neutral_Stacks^/?y1;
+!!SN:W^Double_Neutral_Stacks^/?y1; 
 !!if&y1=1;
 !!UN:U54/-1/?y2;                        [Number of monsters on the map: y2]
 !!VRv1:S-1;
@@ -2107,7 +2107,7 @@ When clicking on System Icon at Adventure Map run options again
 !!DO(Diff_Funtion_86)/1/y2/1:P;
 !!SN:W^Map_Monster_Upgrade_Count^/0;    [Reset Count to zero]
 !!SN:W^Double_Neutral_Stacks^/0;        [Disable so it does not run every monday]
-
+!!SN:W^Double_Neutral_Stacks_Map_Start^/1; [Activate the flag for later use]
 
 ********************************************************************************
 !?FU(Diff_Funtion_86);
@@ -2775,6 +2775,7 @@ AI player gets Stronger Commander in battle depending on game difficutly
 !!VRy14:Sx1:250 +y9 +5R20;              [Min Damage HP_Value +Hero Level*10]
 !!VRy15:Sx1:150 +y9 +31R45;             [Max Damage]
 
+!!VRy13:F1/(INT_MAX);                   [prevent overflow]
 !!BMx16:Hy13 Ay10 Dy11 Sy12 U1/y14 U2/y15 U3/0 E0; [Give Stats and Set casts and shots to zero]
 
 !!VRy40:S30R3;                          [Add 1 Advanced Elemental Protection]
@@ -3286,26 +3287,30 @@ Increase the available troops to buy in castles of AI
     !!if&y21>=0/y22>0;
       !!MA:Ly21/?y30;                   [Get level of Monster]
       !!SN:W^Additionals_troops^/?y9;   [Get new value in y1]
-      *!SN:W^Double_Neutral_Stacks^/?y20;
-      !!VRy10&y9=0:S20;                 [None]
+      !!SN:W^Double_Neutral_Stacks_Map_Start^/?y20;
+      !!VRy10&y9=0:S25;                 [None]
       !!VRy10&y9=1:S30;                 [Easy]
-      !!VRy10&y9=2:S40;                 [Normal]
-      !!VRy10&y9=3:S80;                 [Hard]
-      !!VRy10&y9=4:S150;                 [Extreme]
-      !!VRy10&y9=5:S200;                 [Insane]
-      !!VRy10&y20=1:+100;                [Add additional +100 troops of double stack size was enabled]
+      !!VRy10&y9=2:S50;                 [Normal]
+      !!VRy10&y9=3:S75;                 [Hard]
+      !!VRy10&y9=4:S100;                [Extreme]
+      !!VRy10&y9=5:S125;                [Insane]
+      !!VRy10&y20=1:+100;               [Add additional 100 troops of double stack size was enabled]
       !!HEy1&y21>=0/y22>0/y22<100/y30<3:C0/i/y21/dy10; [Add creatures to Hero Army]
     !!en;
   !!en;
   !!en;
 !!en;
 
-!!VRy30&y9=0:S10; !!VRy31&y9=0:S10; !!VRy32&y9=0:S5;
-!!VRy30&y9=1:S20; !!VRy31&y9=1:S15; !!VRy32&y9=1:S6;
-!!VRy30&y9=2:S30; !!VRy31&y9=2:S20; !!VRy32&y9=2:S7;
-!!VRy30&y9=3:S40; !!VRy31&y9=3:S25; !!VRy32&y9=3:S8;
-!!VRy30&y9=4:S50; !!VRy31&y9=4:S30; !!VRy32&y9=4:S9;
-!!VRy30&y9=5:S60; !!VRy31&y9=5:S35; !!VRy32&y9=5:S10;
+!!VRy30&y9=0:S15; !!VRy31&y9=0:S15; !!VRy32&y9=0:S5; [increase the available growth for level 1 to 3 in town for the AI to hire]
+!!VRy30&y9=1:S25; !!VRy31&y9=1:S25; !!VRy32&y9=1:S6;
+!!VRy30&y9=2:S40; !!VRy31&y9=2:S30; !!VRy32&y9=2:S10;
+!!VRy30&y9=3:S60; !!VRy31&y9=3:S40; !!VRy32&y9=3:S15;
+!!VRy30&y9=4:S70; !!VRy31&y9=4:S50; !!VRy32&y9=4:S20;
+!!VRy30&y9=5:S80; !!VRy31&y9=5:S60; !!VRy32&y9=5:S25;
+!!if&y20=1;                             [If double stack size option is active increase the available growth in town for the AI to hire]
+!!VRy30:+25; !!VRy31:+25; !!VRy32:+25;  [+ growth]
+!!en;
+
 
 !!UN:U98/-1/?y2;                        [Get the Number of total Towns on the map in y2]
 !!VRv1:S-1;                             [Search Index]
@@ -4905,8 +4910,7 @@ w   Spell Immunity  119
 
 !?FU(OnStartOrLoad);                 
 !!SN:L^EraPlugins\erm_hooker.era^/?y1;  
-!!FU&y1=0:E;
-
+!!FU&y1=0:E;	
 !!SN:Ay1/^SetHook^/?y2;                
 !!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Stack_Rebalance);
 
@@ -4929,6 +4933,7 @@ w   Spell Immunity  119
 
   !!if&(canCastHypnotize);
     ; Check if the target monster is hypnotized
+												
     !!BM(defStack):G(SPELL_HYPNOTIZE)/?(duration:y)/?(level:y);
 
     !!if&(duration)<=0;
@@ -4936,6 +4941,13 @@ w   Spell Immunity  119
       !!VR(atkStack)&(duration)>0:X(TRUE);
       ; Check the defender's immunity to Hypnothize
       !!FU(tum_CheckIfStackCanBeHypnotized):P(defStack)/(SPELL_HYPNOTIZE)/(atkSide)/?(acceptSpell:y);
+						   
+										   
+												
+							  
+									   
+								 
+																		
 
       !!if&(acceptSpell);
         ; Check if the total HP of the defender is lower than 20 + 25*(attacker count)
