@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.038 ******************
+                 ************** version: 1.039 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -67,6 +67,12 @@ You can conduct the priority order for equipping by reading the code. The lower 
 Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
 Changelog:
+1.039
+- increased AI hero amry starting size depending on selected neutral stack size and double stack size option. This should reduce the possibility that the AI is stuck in its staring zone
+- AI will no longer fight commanders in creature banks
+- temporary changed priority to make Stack Exp rebalance option and changed creature configs for TUM active
+- small adjustments
+
 1.0381
 - Stack Exp Rebalance option Illithids and Alhoons casts Hypnothize with attacks by Archer 
 - removed ACM saved variables
