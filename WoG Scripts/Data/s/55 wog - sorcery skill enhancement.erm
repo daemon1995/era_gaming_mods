@@ -47,14 +47,9 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 !!UN:P23/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 !!SN:E(address)/1/4383575/(WOG_AI_OnSelectTartgetToMove);
-!!SN:E(address)/1/6229606/(WOG_OnUniversityShow);  
 
-!?FU(WOG_OnUniversityShow)&i^WOG_23_university_visit^;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(dlg:y);
-  !!SN:E6245264/(CALLCONV_THISCALL)/(dlg:y); 
 
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6229627;
+
 -----------------------------------------------------------------------------------------
 ; Initialization
 !?FU(WOG_23_Initialization);
@@ -83,6 +78,13 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
     !!en;
   !!en;
 
+!?FU(WOG_23_GetObjectToSetAsVisited);
+!#VA(objType:x) (result:x);
+!!VR(result):S(FALSE);
+!!if&(objType)=>88/(objType)<=90|(objType)=(OBJ_WITCH_HUT)/(objType)=(OBJ_TREE_OF_KNOWLEDGE)/(objType)=(OBJ_CREATURE_BANK)/(objType)=(OBJ_CRYPT) 
+    /(objType)=(OBJ_DRAGON_UTOPIA)/(objType)=(OBJ_DERELICT_SHIP)/(objType)=(OBJ_SHIPWRECK)/(objType)=(OBJ_UNIVERSITY);
+  !!VR(result):S(TRUE);
+!!en;
 
 !?FU(WOG_AI_OnSelectTartgetToMove);
   *!FU:E;
@@ -96,25 +98,20 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
       !!HE(heroId):S(SKILL_SORCERY)/?(sorceryLevel:y);
 
       !!if&(sorceryLevel);
-
         !!UN:C(ebp)/-116/4/?(xyz:y);
         !!FU(WOG_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(xyz);
-        *!OB(x)/(y)/(z):T?t;
         !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y) C(ebp)/-12/4/?t;
-
-        !!if&t=>88/t<=90|t=(OBJ_WITCH_HUT)/t=(OBJ_TREE_OF_KNOWLEDGE); [Shrine/ Witch Hut/Tree of kn]
+        !!FU(WOG_23_GetObjectToSetAsVisited):Pt/?(setAsVisited:y);
+        !!if&(setAsVisited);
           !!HE(heroId):P?(hX:y)/?(hY:y)/?(hZ:y) O?(heroOwner:y);
-          !!FU&(hZ)<>(z);
-          *!IF:M^%(x) %(hX) %(y) %(hY) %t^;
-        *!IF:L^%(heroId:y) %(ebx) %t %(x) %(y) %(z)^;
-
+          !!FU&(hZ)<>(z):E;
           !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(heroId)/(sorceryLevel)/?(result:y);
-          !!FU(WOG_AdvMgr_SetObjectAsVisited)&(result):P(x)/(y)/(z)/(heroOwner);
-
+          !!if&(result);
+            !!FU(WOG_AdvMgr_SetObjectAsVisited):P(x)/(y)/(z)/(heroOwner);
+          !!en;
         !!el|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_LEARNING_STONE)/t=(OBJ_STAR_AXIS)/t=(OBJ_WINDMILL)/t=(OBJ_WATER_WHEEL)/t=(OBJ_GARDEN_OF_REVELATION);
           !!HE(heroId):P?(hX:y)/?(hY:y)/?(hZ:y);
-          !!FU&(hZ)<>(z);
-
+          !!FU&(hZ)<>(z):E;
           !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(heroId)/(sorceryLevel)/?(result:y);
           !!if&(result)/(sorceryLevel)>2;
             !!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
@@ -141,7 +138,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
   !!UN:P23/?(sorceryOn:y);
   !!OW:A(CURRENT_PLAYER)/?(activeHero:y);
 
-  !!if&(activeHero)<>(NO_HERO)/(sorceryOn);[If Sorcery script is enabled, call Function 5000]
+  !!if&(activeHero)<>(NO_HERO);/(sorceryOn);[If Sorcery script is enabled, call Function 5000]
     !!CM:P?(x:y)/?(y:y)/?(z:y);
     !!HE(activeHero):S(SKILL_SORCERY)/?(sorceryLevel:y) P?(hX:y)/?(hY:y)/?(hZ:y);
     !!FU&(x)=(hX)/(y)=(hY)|(z)<>(hZ)/(sorceryLevel)<1:E;
@@ -163,8 +160,13 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
    
   !!IF:V3/0;[Set Flag 3 to false]
   !!if&(objType)>0/(objType)<>(OBJ_HERO);
+    !!FU(WOG_23_GetObjectToSetAsVisited):P(objType)/?(setAsVisited:y);
+    !!if&(setAsVisited);
+      !!HE(heroId):O?(heroOwner:y);
+      !!FU(WOG_AdvMgr_SetObjectAsVisited):P(x)/(y)/(z)/(heroOwner);
+
     //Guarded Object Section
-    !!if|(objType)=(OBJ_ARTIFACT)/(objType)=(OBJ_RESOURCE)/(objType)=(OBJ_SPELL_SCROLL);
+    !!el|(objType)=(OBJ_ARTIFACT)/(objType)=(OBJ_RESOURCE)/(objType)=(OBJ_SPELL_SCROLL);
       !!if&(objType)=(OBJ_ARTIFACT);
         !!FU5036:P(objSubtype);
         !!VR(msg:z):S^{%z2}^;
@@ -215,11 +217,6 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 
     !!el&(objType)=(OBJ_SCHOLAR);
       !!FU5002:P(x)/(y)/(z)/(heroId); [Scholar]
-
-    !!el&(objType)=>88/(objType)<=90|(objType)=(OBJ_WITCH_HUT)/(objType)=(OBJ_TREE_OF_KNOWLEDGE); [Shrine/ Witch Hut/Tree of kn]
-      !!HE(heroId):O?(heroOwner:y);
-      !!FU(WOG_AdvMgr_SetObjectAsVisited):P(x)/(y)/(z)/(heroOwner);
-
     !!el&(objType)=(OBJ_CAMPFIRE);
       !!FR(x)/(y)/(z):B?(resource:y)/?(value:y);           [Store campfire bonus type (y1) and value (y2)]
       !!FU(WOG_GetObjectName):P(objType)/?(objName:z);
@@ -229,13 +226,6 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 
     !!el&(objType)=63/(objSubtype)=0;
       !!FU5016:P(x)/(y)/(z)/(heroId);     [Pyramid]
-
-    !!el&(objType)=(OBJ_UNIVERSITY);
-      *!FU(WOG_23_ShowUniversityDlg):P(x)/(y)/(z)/(heroId); [University]
-      !!VRi^WOG_23_university_visit^:S(TRUE);
-      !!FU(WOG_AdvMgr_HeroEnterObject):P(x)/(y)/(z)/(heroId)/d/1;
-      !!CM:R0;
-      !!VRi^WOG_23_university_visit^:S(FALSE);
 
     !!el&(objType)=(OBJ_SHIPWRECK_SURVIVOR);
       !!FU5036:P(cWord);                  [Lookup artifact class - z2]
@@ -327,6 +317,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
     !!en;
   !!en;
 -----------------------------------------------------------------------------------------
+
 !?FU(WOG_23_CalculateStoneExperience);
 !#VA(heroId:x) (exp:x);
   !!HE(heroId):Z?(hero:y);
@@ -560,64 +551,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
   !!IF&y1=2:Q1/36/1000/8/y2/4/z123073;  [Display hint text for 1000 gold plus artifact]
   !!CM:R0;
 -----------------------------------------------------------------------------------------
-!?FU(WOG_23_ShowUniversityDlg);         [Start of Function 5023 - Display skills offered by University]
-!#VA(x:x) (y:x) (z:x) (heroId:x);
-!#VA(skills[4]:y);
-*!FU(WOG_AdvMgr_HeroEnterObject):P;
 
-!!FU:E;
-  !!URx1/x2/x3:S?(skills[0])/?(skills[1])/?(skills[2])/?(skills[3]);
-  !!UN:P36/?(isEnabled:y);
-  !!VRz-1:S^^;
-
-  !!if&(isEnabled);                     [an Advanced University (upgraded by Mithril)]
-    !!POx1/x2/x3:N?y7;
-    !!VRz-1&y7=2:Sz123075+^ ^;
-  !!en;
-
-  !!VRz10:Sz-1 +z123074 +^%T(wog.endl)^;
-
-  !!UN:C6806764/4/?(heroSetupTablePtr:y);
-  !!HE(heroId):B2/?(heroClass:y);
-  !!VR(address:y):S(heroClass) *64 +24 +(heroSetupTablePtr);
-  !#VA(picId[4]:y) (oldNames[4]:z);
-  !#VA(names:z);
-
-  !!re i/0/3;
-    !!VR(picId[i]):S(skills[i]) *3 +3;
-    !!SN:H^secskill^/(skills[i])/0/?(oldNames[i]);
-    !!SN:K(oldNames[i])/0/?(char:z);
-    !!if&(char)=^{^;
-      !!SN:K(oldNames[i])/?(length:y);
-      !!VR(length):-1;
-      !!VR(names):M1/(oldNames[i])/1/(length);
-    !!el;
-      !!VR(names):S(oldNames[i]);
-    !!en;
-
-    !!HE(heroId):S(skills[i])/?(learned:y);
-    !!if&(learned);
-      !!VR(names):S^{~yellow}%(names)}^;
-    !!el;
-      !!UN:C(address)/(skills[i])/(UNC_INT8)/?(canLearn:y);
-      !!if&(canLearn);
-        !!VR(names):S^{~green}%(names)} ^;
-      !!el;
-        !!VR(names):S^{~Red}%(names)} ^;
-      !!en;
-    !!en;
-    !!SN:H^secskill^/(skills[i])/0/(names);
-    !!VRz10:+^ %(names)^;
-  !!en;
-
-  !!IF:N(PIC_TYPE_SEC_SKILL)/(picId[0])/(PIC_TYPE_SEC_SKILL)/(picId[1])/(PIC_TYPE_SEC_SKILL)/(picId[2])/(PIC_TYPE_SEC_SKILL)/(picId[3]);
-  !!IF:N(MSG_TYPE_POPUP)/z10;
-
-  !!re i/0/3;                           [restore skill names]
-    !!SN:H^secskill^/(skills[i])/0/(oldNames[i]);
-  !!en;
-
-  !!CM:R0;
 -----------------------------------------------------------------------------------------
 !?FU(WOG_23_CalculateResourceBonus);
 !#VA(resType:x) (heroId:x) (sorceryLevel:x) (bonus:x);
