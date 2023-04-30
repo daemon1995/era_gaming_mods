@@ -424,6 +424,11 @@ ZVSE2
 
 ****************************** Adventure Map ***********************************
 
+!?FU(OnEveryDay)&i^timerOnce^/i^timerDay^>1/i^wog_54_enabled^;
+!!re i/(MAP_TOWN_FIRST)/(MAP_TOWN_LAST);
+  !!VRi^wog_54_upgradeCounter_%i^:S0;
+!!en;
+
 !?OB(OBJ_TOWN)&-1000/i^wog_54_enabled^; town - ai check only
 !!HE(CURRENT_HERO):N?v2048;
 !!FU(WOG_54_ManageWarMachines):P1/v2048;
@@ -465,12 +470,12 @@ ZVSE2
 !!VR(warMachineMon)&(warMachineArt)=(ART_FIRST_AID_TENT):S(MON_FIRST_AID_TENT);
 
 !!IF:W(hero); set W var for hero
-!!VRy5:S(warMachineMon) -65;
-!!VRy6:Swy5 +1; get w-var for type, add 1 top skip 0
-!!HE(hero):A2/(warMachineArt)/d/?y1 B0/?z3 Ed/?y9/1 O?y10; hero level y9
+!!VR(index:y):S(warMachineMon) -65;
+!!VR(machineLevel:y):Sw(index) +1; get w-var for type, add 1 top skip 0
+!!HE(hero):A2/(warMachineArt)/d/?(equipped:y) Ed/?(heroLevel:y)/1 O?(owner:y); hero level y9
 
-!!if&y1=0;
-  !!VRwy5:S0; set w-var to 0
+!!if&(equipped)=0;
+  !!VRw(index):S0; set w-var to 0
   !!FU:E; stop if not found
 !!en;
 
@@ -480,12 +485,14 @@ ZVSE2
 
 ; Now the script starts
 !!CM:R0; Disable standard reaction
-!!FU(WOG_54_UpgradeWarMachine):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/y5/y6/y9;
+!!FU(WOG_54_UpgradeWarMachine):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/(machineLevel)/(heroLevel)/(owner)/(townId);
 
 !?FU(WOG_54_UpgradeWarMachine);
-!#VA(townType:x) (item:x) (hero:x) (warMachineArt:x) (warMachineMon:x) (index:x) (machineLevel:x) (heroLevel:x);
+!#VA(townType:x) (item:x) (hero:x) (warMachineArt:x) (warMachineMon:x) (index:x) (machineLevel:x) (heroLevel:x) (owner:x) (townId:x);
 
-!!OW:Ry10/(RES_GOLD)/?y11; get gold from player
+!!HE(hero):B0/?z3;
+
+!!OW:R(owner)/(RES_GOLD)/?y11; get gold from player
 !!VRy6:S(machineLevel);
 !!VRy8:Sy6 +1; next level
 !!UN:N2/1/(townType)/(item) N3/2/(warMachineMon)/0; get ballista name & object name
@@ -506,9 +513,14 @@ ZVSE2
 !!VRz4:S^^;
 
 !!VRy9:S(heroLevel);
-!!VR(msgType)|y11<y7/y9<y8:S(MSG_TYPE_MES); set to message with no choice
-!!VRz4&y11<y7:Sz154017;                 [Not enough money]
-!!VRz4&y9<y8:Sz154018;                  [Level is too low]
+
+!!if|y11<y7/y9<y8/i^wog_54_upgradeCounter_%(townId)^>=3;
+  !!VR(msgType):S(MSG_TYPE_MES); set to message with no choice
+  !!VRz4&y11<y7:Sz154017;                 [Not enough money]
+  !!VRz4&y9<y8:Sz154018;                  [Level is too low]
+
+  !!SN&i^wog_54_upgradeCounter_%(townId)^>=3:T^wog.54.soldOut^/?z4; [Sold out]
+!!en;
 
 !!IF:V1/0;
 !!IF:Q1/(PIC_TYPE_ART)/(warMachineArt)/(PIC_TYPE_MONEY)/y7/(msgType)/z154020;
@@ -516,12 +528,14 @@ ZVSE2
 !!FU&-1:E; stop function
 
 !!VRy30:Sy11 -y7;
-!!OW:Ry10/(RES_GOLD)/y30; new money
-!!VRw(index):+1; add level to W var for machine
+!!OW:R(owner)/(RES_GOLD)/y30;           [new money]
+!!UN:R4/(CURRENT_TOWN);
+!!VRw(index):+1;                        [add level to W var for machine]
+!!VRi^wog_54_upgradeCounter_%(townId)^:+1; [add 1 to the upgrade counter of the town]
 
 ; Check if it is eligible for the next level
 !!VRy7:Sy31 *y8 :5;
-!!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8:P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel);
+!!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8/i^wog_54_upgradeCounter_%(townId)^<3:P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel)/(owner)/(townId);
 
 !?FU(OnHeroScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside hero screen
 !!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_hero_0^/0;
