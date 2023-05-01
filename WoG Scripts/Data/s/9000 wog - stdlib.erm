@@ -1559,6 +1559,37 @@ The game may fall at any time.^;
 !!en;
 
 ; **************************************************************************************************
+; Show new WoG Object (Pyramid) String
+!?FU(WOG_ShowNewWoGObjectInfo);         [by Archer30]
+!#VA(wogOptIndex:x);                    [WoG option number]
+!#VA(objSubtype:x);                     [Object subype]
+!#VA(mode:x);                           [0 for hint, 1 for right-clicking]
+!#VA(x:x);                              [Optional. For hint mode only. The X coord. of the hovering object]
+!#VA(y:x);                              [Optional. For hint mode only. The Y coord. of the hovering object]
+!#VA(z:x);                              [Optional. For hint mode only. The Z coord. of the hovering object]          
+
+!!UN:P(wogOptIndex)/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!CM&(mode)=1:P?(x)/?(y)/?(z);
+!!OB(x)/(y)/(z):T?(visitType:y) U?(visitSubtype:y);
+!!FU|(visitType)<>(OBJ_NEW_WOG_OBJECTS)/(visitSubtype)<>(objSubtype):E;
+
+!!SN:O?(x)/?(y)/?(z);
+!!PO(x)/(y)/(z):N?(isVisited:y);
+; Check if the object has been visited by the interacting player at least once
+!!OW:C?(player:y)/?(interactPlayer:y);
+!!PM(x)/(y)/(z):P(interactPlayer)/?(visitedOnce:y);
+
+!!SN:T^wog.%(wogOptIndex).objName^/?(objName:z);
+!!FU(WOG_GetMapObjectString):P(objName)/(visitedOnce)/(isVisited)/(mode)/?(string:z);
+
+!!if&(mode)=0;
+  !!MM:M^%(string)^;
+!!el;
+  !!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/^%(string)^;
+!!en;
+
 ; Set up string of map object to be displayed as hint or RMB dialog
 !?FU(WOG_GetMapObjectString);           [by Archer30]
 !#VA(nameInd:x);                        [String index of the name of the object]
@@ -1584,5 +1615,23 @@ The game may fall at any time.^;
 !!en;
 
 !!VR(result):Z(string);
+
+; Reset new WoG object for revisiting
+!?FU(WOG_ResetNewWoGObject);            [by Archer30]
+!#VA(wogOptIndex:x);                    [WoG option number]
+!#VA(objSubtype:x);                     [Object subype]
+
+!!UN:P(wogOptIndex)/?(wogOption:y); [Check if Summoning Stones is enabled in WoGify Options]
+!!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
+
+!!VR(x:y):S-1;
+
+!!re i;
+  !!UN:U(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
+  !!PO(x)/(y)/(z):N0;                   [Set PO:N to 0 for this Stone Ring]
+  !!PM(x)/(y)/(z):V(TRUE);              [Reset to tell AI it can visit]
+!!en;
 
 ********************************* End of Era Project Team's Script *********************************

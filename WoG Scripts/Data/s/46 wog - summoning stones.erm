@@ -21,65 +21,46 @@ ZVSE2
 ** will still have used the gold to pay for them.
 
 
-Variables: v1-9, v234, 247, v360-370, v998-1000, v1211, z1-4, z480-494
+Variables: v2-9, v234, 247, v360-370, v998-1000, z1-4, z480-494
 All variables may be reused except z493 and z494 which store the hint text.
-Flags: 1,2,4, 57 ("Monster Mutterings" flag)
+Flags: 1,2,4
 Functions: 5219-5229
-Timers: 98
 Local Variables: x1-3, x16, y1-7
 
 ----------------------------------------------------------------------------------------
 
-!#UN:P32/?v1; [Check if Summoning Stones is enabled in WoGify Options]
+// Hint for mouse hovering
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x) (objType:x) (objSubtype:x);
 
- [Set hint text for Stone Rings]
-!#VRz493&v1=1:Sz132001;
-!#VRz494&v1=1:Sz132002;
-!#HT63/21&v1=1:P0/493;
-!#HT63/21&v1=1:P1/494;
+!!FU(WOG_ShowNewWoGObjectInfo):P32/21/0/(x)/(y)/(z);
 
- [Set up timer 98 to reset hint text every day]
-!#TM98&v1=1:S1/999/1/255;
-
----------------------------------------------------------------------------------
-
- [Timer 98 sets PO:N number of each Stone Ring to 0 to reset hint text every day]
-!?TM98;
-
-!!UN:P32/?y-1; [Check if Summoning Stones is enabled in WoGify Options: y-1]
-!!FU&y-1<>1:E; [Exit if script isn't enabled]
-
- [Get number of Stone Rings on map - store in v1]
-!!UN:U63/21/?v1;
-
- [Cycle through all Stone Rings and set PO:N to 0 - Function 5224]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5224/1/v1/1&v1>0:P;
+// Right-clicking dialogue
+!?FU(OnAdventureMapRightMouseClick);
+!!FU(WOG_ShowNewWoGObjectInfo):P32/21/1;
 
 ---------------------------------------------------------------------------------
 
- [Post-visit trigger to restore "Monster Mutterings" Flag]
-!$OB63/21;
-
-!!UN:P32/?y-1; [Check if Summoning Stones is enabled in WoGify Options: y-1]
-!!FU&y-1<>1:E; [Exit if script isn't enabled]
-
- [If v1211 is set to 99, restore Flag 57 to True]
-!!IF&v1211=99:V57/1;
+ [Sets PO:N and PM:V number of each Stone Ring to 0 to reset hint text every day]
+!?FU(OnEveryDay)&i^timerOnce^/i^timerDay^>1;
+!!FU(WOG_ResetNewWoGObject):P32/21;
 
 ---------------------------------------------------------------------------------
 
  [Stone Ring object is trigger]
-!?OB63/21;
+!?OB(OBJ_NEW_WOG_OBJECTS)/21;
 
 !!UN:P32/?y-1; [Check if Summoning Stones is enabled in WoGify Options: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
 
- [Check if "Monster Mutterings" script is active (Flag 57 set to True)]
- [If so, set v1211 to 99 and set Flag 57 to False, otherwise set v1211 to 0]
-!!VRv1211&57:S99;
-!!VRv1211&-57:S0;
-!!IF:V57/0;
+ [Fix AI behaviours]
+!!if&-(ERM_FLAG_IS_HUMAN);
+  !!OB998:S;                            [disable pyramid feature]
+  !!PM998:V(FALSE);
+!!en;
+
+!!HE(CURRENT_HERO):O?y30;
+!!PM998:Py30/(TRUE);
 
  [Clear flag 2]
 !!IF:V2/0;
@@ -91,14 +72,11 @@ Local Variables: x1-3, x16, y1-7
 !!IF&1000/v7=1:M1/z132003;
 !!VRv4:S999;
 
- [Check current player - store in v1]
-!!OW:C?v1;
-
  [Count number of towns - store in v2 - count number owned by player - store in v3]
 !!UN:U98/-1/?v2;
 !!VRv3:S0;
 !!VRv4:S-1; [Initialize v4 to -1 to work with new faster UN:U syntax]
-!!DO5219/1/v2/1&v2>0/v7=0:Pv1;
+!!DO5219/1/v2/1&v2>0/v7=0:Py30;
 
  [If no towns owned, display message]
 !!IF&1000/v3=0/v7=0:M1/z132004;
@@ -113,23 +91,25 @@ Local Variables: x1-3, x16, y1-7
 !!VRv4&-2:S999;
 
  [If player wishes to summon troops, call Function 5220]
-!!FU5220&v3>0/2/v7=0:Pv1/v2/v3;
+!!FU5220&v3>0/2/v7=0:Py30/v2/v3;
 
  [Ask if player wants to buy troops or use garrison troops]
  [unless v4=999 ("no thanks" option)]
-!!VRz1:Sz132006;
-!!VRz2:Sz132007;
-!!VRz3:Sz132008;
-!!VRz4:Sz132009;
-!!UN:A116/9/z1;
-!!UN:A116/10/z2;
-!!UN:A122/9/z3;
-!!UN:A122/10/z4;
-!!IF&1000/v4<>999:Q2/8/116/8/122/7/z132010;
-!!UN:A116/9/0;
-!!UN:A116/10/0;
-!!UN:A122/9/0;
-!!UN:A122/10/0;
+!!if&(ERM_FLAG_IS_HUMAN)/v4<>999;
+  !!VRz1:Sz132006;
+  !!VRz2:Sz132007;
+  !!VRz3:Sz132008;
+  !!VRz4:Sz132009;
+  !!UN:A116/9/z1;
+  !!UN:A116/10/z2;
+  !!UN:A122/9/z3;
+  !!UN:A122/10/z4;
+  !!IF:Q2/8/116/8/122/7/z132010;
+  !!UN:A116/9/0;
+  !!UN:A116/10/0;
+  !!UN:A122/9/0;
+  !!UN:A122/10/0;
+!!en;
 
  [If AI, set Flag 2 to True unless already visited today or no towns]
 !!IF&-1000/v3>0/v7=0:V2/1;
@@ -293,17 +273,19 @@ Local Variables: x1-3, x16, y1-7
 !!VRv7&y2>0:Sy2;
 
  [Determine the monster type (v6) and store the monster name in z2]
-!!UN&y3>=0:Tx1/x16/y3/?v6;
-!!UN&y3>=0/v7=1:N3/2/v6/0;
-!!UN&y3>=0/v7>1:N3/2/v6/1;
+!!if&y3>=0;
+  !!UN:Tx1/x16/y3/?v6;
+  !!UN&v7=1:N3/2/v6/0;
+  !!UN&v7>1:N3/2/v6/1;
+!!en;
 
  [Check how much gold the troops cost and store in v8]
 !!MA:Cv6/6/?v8;
 !!VRv8:Sv8 *v7;
 
  [Check how many of other resources the troops cost]
- [Store type in v1 and amount in v9. Store string in z3]
-!!VRv1:S-1;
+ [Store type in i^wog_32_specialRes^ and amount in v9. Store string in z3]
+!!VRi^wog_32_specialRes^:S-1;
 !!VRv9:S0;
 !!DO5225/0/5/1&y3>=0:P;
 !!VRv9:*v7;
@@ -312,7 +294,7 @@ Local Variables: x1-3, x16, y1-7
  [appropriate text or to a null string if no troops of this level]
 !!VRy5:S480 +x16;
 !!VRzy5&y3>=0:Sz132026+^ %V7 %Z2 ^+z132027+^ %V8 ^+z132028;
-!!VRzy5&y3>=0/v1>=0:+z132025+^%V9 ^+z3;
+!!VRzy5&y3>=0/i^wog_32_specialRes^>=0:+z132025+^%V9 ^+z3;
 !!VRzy5&y3>=0:+ ^.^;
 !!VRzy5&y3<0:S^^;
 
@@ -321,22 +303,8 @@ Local Variables: x1-3, x16, y1-7
 
 ---------------------------------------------------------------------------------
 
- [Set PO:N to 0 for each Stone Ring]
-!?FU5224;
-
- [Get location of next Stone Ring - store in v2/v3/v4]
-!!UN:U63/21/-1/2;
-
- [Set PO:N to 0 for this Stone Ring]
-!!PO2:N0;
-
- [Reset Stone Ring to tell AI it can visit]
-!!PM2:V1;
-
----------------------------------------------------------------------------------
-
  [Check how many of other resources the troops cost]
- [Store type in v1 and amount in v9. x16=resource type being checked]
+ [Store type in i^wog_32_specialRes^ and amount in v9. x16=resource type being checked]
  [Store resource type string in z3]
 !?FU5225;
 
@@ -346,18 +314,18 @@ Local Variables: x1-3, x16, y1-7
  [Store total gems in y1 (v7 is number of creatures)]
 !!VRy1:Sv9 *v7;
 
- [Store type in v1]
-!!VRv1&v1<0/v9>0:Sx16;
+ [Store type in i^wog_32_specialRes^]
+!!VRi^wog_32_specialRes^&i^wog_32_specialRes^<0/v9>0:Sx16;
 
  [Store resource type string in z3]
-!!VRz3&v1=0:Sz132029;
-!!VRz3&v1=1:Sz132030;
-!!VRz3&v1=2:Sz132031;
-!!VRz3&v1=3:Sz132032;
-!!VRz3&v1=4:Sz132033;
-!!VRz3&v1=4/y1=1:Sz132034;
-!!VRz3&v1=5:Sz132035;
-!!VRz3&v1=5/y1=1:Sz132036;
+!!VRz3&i^wog_32_specialRes^=0:Sz132029;
+!!VRz3&i^wog_32_specialRes^=1:Sz132030;
+!!VRz3&i^wog_32_specialRes^=2:Sz132031;
+!!VRz3&i^wog_32_specialRes^=3:Sz132032;
+!!VRz3&i^wog_32_specialRes^=4:Sz132033;
+!!VRz3&i^wog_32_specialRes^=4/y1=1:Sz132034;
+!!VRz3&i^wog_32_specialRes^=5:Sz132035;
+!!VRz3&i^wog_32_specialRes^=5/y1=1:Sz132036;
 
 ---------------------------------------------------------------------------------
 
@@ -366,10 +334,10 @@ Local Variables: x1-3, x16, y1-7
 !?FU5226;
 
  [Check how much gold player has - store in y1]
-!!OW:R-1/6/?y1;
+!!OW:R-1/(RES_GOLD)/?y1;
 
  [If creatures require an extra resource, check how much player has - store in y2]
-!!OW&v1>=0:R-1/v1/?y2;
+!!OW&i^wog_32_specialRes^>=0:R-1/i^wog_32_specialRes^/?y2;
 
  [Clear Flag 4]
 !!IF:V4/0;
@@ -379,11 +347,11 @@ Local Variables: x1-3, x16, y1-7
 
  [If player has enough gold but creatures require an extra resource,]
  [check if player has enough - set Flag 4 to True if yes, to False if no]
-!!IF&4/v1>=0/y2>=v9:V4/1;
-!!IF&4/v1>=0/y2<v9:V4/0;
+!!IF&4/i^wog_32_specialRes^>=0/y2>=v9:V4/1;
+!!IF&4/i^wog_32_specialRes^>=0/y2<v9:V4/0;
 
  [If player doesn't have enough gold and/or resources, display this]
-!!IF&1000/-4:Q2/6/v8/v1/v9/1/z132037;
+!!IF&1000/-4:Q2/6/v8/i^wog_32_specialRes^/v9/1/z132037;
 
  [Reduce number of troops available in town to 0 for level recruited]
  [Town type=v4, level=x1]
@@ -396,14 +364,13 @@ Local Variables: x1-3, x16, y1-7
 !!VRy1:Sy1 -v8;
 !!VRy2:Sy2 -v9;
 !!OW&4:R-1/6/y1;
-!!OW&4/v1>=0:R-1/v1/y2;
+!!OW&4/i^wog_32_specialRes^>=0:R-1/i^wog_32_specialRes^/y2;
 
  [Set hint text to "visited"]
 !!PO998&4:N1;
 
  [Set Stone Ring to tell AI its been visited this week]
-!!VRy3:Sv999 -1;
-!!PMv998/y3/v1000&4:V0;
+!!PM998&4:V0;
 
  [Set Flag 2 to true before ending function]
 !!IF:V2/1;
@@ -459,8 +426,7 @@ Local Variables: x1-3, x16, y1-7
 !!PO998&y2>=0:N1;
 
  [Set Stone Ring to AI its been visited this week]
-!!VRy3:Sv999 -1;
-!!PMv998/y3/v1000&y2>=0:V0;
+!!PM998&y2>=0:V0;
 
 ---------------------------------------------------------------------------------
 
@@ -514,8 +480,8 @@ Local Variables: x1-3, x16, y1-7
 !!VRv8:Sv8 *v7;
 
  [Check how many of other resources the troops cost]
- [Store type in v1 and amount in v9.]
-!!VRv1:S-1;
+ [Store type in i^wog_32_specialRes^ and amount in v9.]
+!!VRi^wog_32_specialRes^:S-1;
 !!VRv9:S0;
 !!DO5225/0/5/1&y3>=0:P;
 !!VRv9:*v7;
@@ -529,7 +495,7 @@ Local Variables: x1-3, x16, y1-7
 !!OW:R-1/6/?y7;
 
  [If creatures require an extra resource, check how much AI has - store in y8]
-!!OW&v1>=0:R-1/v1/?y8;
+!!OW&i^wog_32_specialRes^>=0:R-1/i^wog_32_specialRes^/?y8;
 
  [Clear Flag 4]
 !!IF:V4/0;
@@ -539,8 +505,8 @@ Local Variables: x1-3, x16, y1-7
 
  [If AI has enough gold but creatures require an extra resource,]
  [check if AI has enough - set Flag 4 to True if yes, to False if no]
-!!IF&4/v1>=0/y8>=v9:V4/1;
-!!IF&4/v1>=0/y8<v9:V4/0;
+!!IF&4/i^wog_32_specialRes^>=0/y8>=v9:V4/1;
+!!IF&4/i^wog_32_specialRes^>=0/y8<v9:V4/0;
 
  [Reduce number of troops available in town to 0 for level recruited]
  [Town type=v4, level=y6]
@@ -553,14 +519,13 @@ Local Variables: x1-3, x16, y1-7
 !!VRy10:Sy7 -v8;
 !!VRy11:Sy8 -v9;
 !!OW&4:R-1/6/y10;
-!!OW&4/v1>=0:R-1/v1/y11;
+!!OW&4/i^wog_32_specialRes^>=0:R-1/i^wog_32_specialRes^/y11;
 
  [Set hint text to "visited"]
 !!PO998&4:N1;
 
  [Set Stone Ring to AI its been visited this week]
-!!VRy9:Sv999 -1;
-!!PMv998/y9/v1000&4:V0;
+!!PM998&4:V0;
 
  [If AI bought creatures, set x16 to 999 to exit loop]
 !!VRx16&4:S999;
