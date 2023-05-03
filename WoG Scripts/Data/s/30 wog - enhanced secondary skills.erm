@@ -201,25 +201,26 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 
 ** start of movement trigger
-!?FU(OnHeroMove)|i^wog_208_enabled^/i^wog_212_enabled^;                        [continue if navigation or scouting enabled]
-!!HE-1:N?v7020 O?y-2;                          [get #, owner of hero]
-!!OW:C?y-3 Iy-3/?y-4 Gy-3/?y-5;                [get current player]
-!!FU&y-2<>y-3:E;                               [exit if not current player's hero]
-!!FU&y-4=0/y-5=0:E;
-!!HEv7020:P?v7023/?v7024/?v7025;               [get hero's position]
-!!TR7023:T?y-5/d/d/d/d/d/d/d;                  [get terrain type]
+!?FU(OnHeroMove)&i^wog_212_enabled^;                        [continue if scouting enabled]
+!!HE(CURRENT_HERO):N?(hero:y) O?(owner:y);                          [get #, owner of hero]
+!!FU&(owner)<>i^timerOwner^:E;                               [exit if not current player's hero]
 
-!!IF:Wv7020;                                   [enable hero variable]
-!!VRw4&i^wog_208_enabled^/y-5<>8:S0;                      [reset w4 if not on water - if enabled]
-!!HEv7020&i^wog_208_enabled^/y-5=8:S5/?w4;                [get hero's navagation skill level if on water - if enabled]
+!!OW:Ii^timerOwner^/?(isAi:y) Gi^timerOwner^/?(isInteracting:y);                [get current player]
+!!FU&(isAi)<>(TRUE)/(isInteracting)=0:E;
 
-!!HEv7020&i^wog_212_enabled^/y-5<>8:S3/?y-1;              [get hero's scouting skill level if on land]
-!!FU7023&i^wog_212_enabled^/y-5<>8/y-1>0:Py-1;            [do scouting function - if enabled]
+!!HE(hero):P?(x:y)/?(y:y)/?(z:y);               [get hero's position]
+!!TR(x)/(y)/(z):T?(terrainType:y)/d/d/d/d/d/d/d;                  [get terrain type]
+
+!!if&i^wog_212_enabled^/(terrainType)<>8;
+  !!HE(hero):S(SKILL_SCOUTING)/?(skillLevel:y);              [get hero's scouting skill level if on land]
+  !!FU(WOG_ExecuteScoutingEvents)&(skillLevel)>(SKILL_NOT_LEARNED):P(skillLevel)/(hero);            [do scouting function - if enabled]
+!!en;
 ** end of movement trigger
 
 
 !?FU(WOG_OnHeroMove);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(activeHeroPtr:y);
+
 !!if&(activeHeroPtr)=0;
   !!SN:X?y99/0;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4721255;
@@ -284,10 +285,13 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 ** start of battlefield start trigger
 !?FU(WOG_BattleStack_InitParams)&i^battle_hero_%x2^<>(NO_HERO)/i^wog_208_enabled^;                               [continue if luck or navigation enabled]
 !#VA(stackId:x) (side:x);
+
 !!HEi^battle_hero_%i^:R7/?(bits:y);
 !!VR(bits):&(BIT_18);                                                                         [if hero is on boat]
+
 !!if&(bits);
   !!HEi^battle_hero_%(side)^:S(SKILL_NAVIGATION)/?(skillLevel:y);
+
   !!if&(skillLevel);
     !!BM(stackId):Ad(skillLevel:y) Dd(skillLevel:y);
   !!en;
@@ -535,7 +539,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
   !!if&(owner)<>(NO_OWNER);
     !!HEi^battle_hero_0^A2/6/?(has:y)/?(equipped:y); [see if attacking hero has a First Aid Tent]
-    !!FU(WOG_204_FirstAidAfterBattle)&(equipped)>0:P1; [handle first aid tent for attacker]
+    !!FU(WOG_204_FirstAidAfterBattle)&(equipped)>0:P(BATTLE_LEFT); [handle first aid tent for attacker]
   !!en;
 
   !!if&i^battle_hero_1^>(NO_HERO);
@@ -543,7 +547,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
     !!if&(owner)<>(NO_OWNER);
       !!HEi^battle_hero_1^:A2/6/?(has)/?(equipped); [see if defending hero has a First Aid Tent]
-      !!FU(WOG_204_FirstAidAfterBattle)&(equipped)>0:P2; [handle first aid tent for defender]
+      !!FU(WOG_204_FirstAidAfterBattle)&(equipped)>0:P(BATTLE_RIGHT); [handle first aid tent for defender]
     !!en;
   !!en;
 !!en;
@@ -660,30 +664,27 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ** function to handle first aid tent
 !?FU(WOG_204_FirstAidAfterBattle);                 y1= HP   y2=slot y9= first aid
-!#VA(index:x);
+!#VA(side:x);
 
-!!VRy30:Sx1 -1;                                     [Legacy]
-!!VRv7020:Si^battle_hero_%y30^;
-
-!!HEv7020:A2/5/?y7/?y8 E?y3/?y4/1 S27/?y9;          [check for Ammo Cart, get hero's level, first aid level]
+!!HEi^battle_hero_%(side)^:A2/5/?y7/?y8 E?y3/?y4/1 S27/?y9;          [check for Ammo Cart, get hero's level, first aid level]
 !!VRy5:S1;                                          [set multiplier to 1]
 !!VRy5&y8>0:+1;                                     [ammo cart bonus]
 !!VRy5&y9>0:+y9;                                    [first aid bonus]
-!!VRy1:S0 +1 T49 +y4 *y5;                           [first aid tent heal: (1-50 + hero level) x bonus multiplier]
+!!VRy1:S0 +1 R49 +y4 *y5;                           [first aid tent heal: (1-50 + hero level) x bonus multiplier]
 !!VRy2:R0/0/6;                                      [random slot # to start search from]
 !!VRv2:S7;                                          [7 = slot not found]
-!!DO7003/0/6/1:Px1/y1/y2;                           [heal next slot with >= 1 monster killed]
+!!DO7003/0/6/1:P(side)/y1/y2;                       [heal next slot with >= 1 monster killed]
 ** end of function
 
 
 ** function to find slot where at least 1 cr was lost
-!?FU7003;           x1=filter x2=hp healed  x3=slot
+!?FU7003;           x1=side x2=hp healed  x3=slot
 
 !!VRy4:Sx3 %7;                                      [get an actual slot number]
-!!BA&x1=1:M0/y4/?y5/?y6;                            [get y5 type and y6 qty in slot y3 :attacker]
-!!BA&x1=2:M1/y4/?y5/?y6;                            [get y5 type and y6 qty in slot y3 :defender]
-!!VRy1&x1=1:S7040 +y4;                              [get variable # of previous qty :attacker]
-!!VRy1&x1=2:S7047 +y4;                              [get variable # of previous qty :defender]
+!!BA&x1=(BATTLE_LEFT):M0/y4/?y5/?y6;                            [get y5 type and y6 qty in slot y3 :attacker]
+!!BA&x1=(BATTLE_RIGHT):M1/y4/?y5/?y6;                            [get y5 type and y6 qty in slot y3 :defender]
+!!VRy1&x1=(BATTLE_LEFT):S7040 +y4;                              [get variable # of previous qty :attacker]
+!!VRy1&x1=(BATTLE_RIGHT):S7047 +y4;                              [get variable # of previous qty :defender]
 !!VRy7:Svy1;                                        [get previous qty]
 !!VRy7:-y6;                                         [subtract current qty to get qty lost]
 
@@ -694,17 +695,19 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ** function to heal a stack
 !?FU7004;
+!#VA(side:x);
+
 !!FU&x5<0:E;                                        [exit if invalid value]
 
-!!HEv7020:B0/?z1 O?y30;                             [get hero's name]
+!!HEi^battle_hero_%(side)^:B0/?z1 O?y30;                             [get hero's name]
 !!MA:Px5/?y8;                                       [get hit points of monster x5 into y8]
 !!FU&y8<1:E;                                        [exit if invalid value]
 
 !!VRy5:Sx2;                                         [# of hit points to heal]
 !!VRy5::y8;                                         [divided by monster hit points, rounded down, equals # to save]
 !!VRy5&y5>x7:Sx7;                                   [can't save more than qty that died]
-!!BA&x1=1/y5>0:M0/x4/?x5/dy5;                       [restore y5 creatures attacker]
-!!BA&x1=2/y5>0:M1/x4/?x5/dy5;                       [restore y5 creatures defender]
+!!BA&x1=(BATTLE_LEFT)/y5>0:M0/x4/?x5/dy5;                       [restore y5 creatures attacker]
+!!BA&x1=(BATTLE_RIGHT)/y5>0:M1/x4/?x5/dy5;                       [restore y5 creatures defender]
 
 !!OW:C?y31/?y32;
 
@@ -713,7 +716,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!IF&y5>1:Q2/(PIC_TYPE_MONSTER)/x5/1/z148008;
 !!en;
 
-!!UN:R1;                                            [redraw screen to show revived creatures]
+!!SN:D;                                            [redraw screen to show revived creatures]
 !!VRv2&y5>0:Sx4;                                    [note that we healed a stack if we did]
 ** end of function
 
@@ -898,82 +901,94 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 
 ** function for scouting       x1=scouting
-!?FU7023;
+!?FU(WOG_ExecuteScoutingEvents);
+!#VA(skillLevel:x) (hero:x);
+
 !!VRy4:S0;                                    [set to 0]
 !!VRy4&x1=1:R1199;                            [set random roll to 1.0% (12/1200)]
 !!VRy4&x1=2:R799;                             [set random roll to 1.5% (12/800)]
 !!VRy4&x1=3:R599;                             [set random roll to 2.0% (12/600)]
 !!FU&y4>12:E;
-*!HEv7020:O?v7021;                            [get hero's owner]
-!!HEv7020:B0/?z700;                           [get hero's name]
-!!HEv7020:R2/?y1;                             [get hero's sex]
+
+!!HE(hero):B0/?z700;                           [get hero's name]
+!!HE(hero):R2/?y1;                             [get hero's sex]
+!!HE(hero)&y4>=10:P?v7023/?v7024/?v7025;
+
 !!VRz701&y1=0:Sz148017;
 !!VRz701&y1=1:Sz148018;
 !!VRz702&y1=0:Sz148019;
 !!VRz702&y1=1:Sz148020;
 !!VRz703&y1=0:Sz148021;
 !!VRz703&y1=1:Sz148022;
-!!VRy3:S11 +x1;                               [set scouting picture]
-!!IF&1000/y4=1:Q2/20/y3/1/z148023;
-!!IF&1000/y4=1:Q2/35/20/1^^;
-!!HEv7020&y4=1:Id+20;                         [give 20 spell points]
-!!IF&1000/y4=2:Q2/20/y3/1/z148024;
-!!VRr&y4=2:S1 R24 *100;                       [random 1 to 25 x 100]
-!!IF&1000/y4=2:Q2/6/r/1^^;
-!!OW&y4=2:Ri^timerOwner^/6/dr;                        [give gold]
-!!IF&1000/y4=3:Q2/20/y3/1/z148025;
-!!VRs&y4=3:S0 R5;                             [random resource 0 to 5]
-!!VRr&y4=3:S1 R2;                             [random quantity 1 to 3]
-!!VRr&y4=3/s=0:*2;                            [double for wood]
-!!VRr&y4=3/s=2:*2;                            [double for ore]
-!!IF&1000/y4=3:Q2/s/r/1^^;
-!!OW&y4=3:Ri^timerOwner^/s/dr;                        [give the resources]
-!!IF&1000/y4=4:Q2/20/y3/1/z148026;
-!!VRs&y4=4:S0 R5;                             [random resource 0 to 5]
-!!VRr&y4=4:S4 R2;                             [random quantity 4 to 6]
-!!VRr&y4=4/s=0:*2;                            [double for wood]
-!!VRr&y4=4/s=2:*2;                            [double for ore]
-!!IF&1000/y4=4:Q2/s/r/1^^;
-!!OW&y4=4:Ri^timerOwner^/s/dr;                        [give resources]
-!!UN&y4=4:R2;                                 [redraw resources bar]
-!!FU(WOG_212_GetRandMonAndNames)&y4=5:P?s;                            [call function 7019 to pick monster]
-!!MA&y4=5:Gs/?r;                              [get 1 weeks production]
-!!IF&1000/y4=5/r=1:Q2/20/y3/1/z148027;
-!!IF&1000/y4=5/r>1:Q2/20/y3/1/z148028;
-!!HEv7020&1000/y4=5:Cs/r/-1/0/-1/0/-1/0/-1/0/-1/0/-1/0;  [give creatures]
-!!HEv7020&-1000/y4=5:C2/s/r/0;                [offer AI creatures]
-!!IF&1000/y4=6:Q2/20/y3/1/z148029;
-!!IF&1000/y4=6:Q2/14/1/1^^;
-!!HEv7020&y4=6:R0/d1;                         [+1 morale]
-!!IF&1000/y4=7:Q2/20/y3/1/z148030;
-!!IF&1000/y4=7:Q2/11/1/1^^;
-!!HEv7020&y4=7:R1/d1;                         [+1 luck]
-!!IF&1000/y4=8:Q2/20/y3/1/z148031;
-!!HEv7020&y4=8:E?y5/?y6/1;                     [get hero's level]
-!!VRr&y4=8:Sy6 T20 *50;                        [(level + 0-20) x 50]
-!!IF&1000/y4=8:Q2/17/r/1^^;
-!!HEv7020&y4=8:Edr;                            [give experience]
-!!IF&1000/y4=9:Q2/20/y3/1/z148032;
-!!HEv7020&y4=9:Wd+400;                         [increase movement]
-!!IF&1000/y4=10:Q2/20/y3/1/z148033;
-!!VRr&y4=10:S3 *x1 +16;                        [area]
-!!UN&y4=10:Sv7023/v7024/v7025/i^timerOwner^/r; [reveal area]
-!!FU(WOG_212_GetRandMonAndNames)&y4=11:P?s;    [call function 7019 to pick monster]
-!!MA&y4=11:Vs/?r;                              [get AdvMapL]
-!!IF&1000/y4=11:Q2/20/y3/1/z148034;
-!!IF&1000/y4=11:Q2/21/s/2/z148035;
-!!HEv7020&2/y4=11:Tv7023/v7024/v7025/s/r O?o;  [fight monsters]
-!!FU(WOG_212_GetRandMonAndNames)&y4=12:P?s;    [call function 7019 to pick monster]
-!!MA&y4=12:Hs/?r;                              [get AdvMapH]
-!!IF&1000/y4=12:Q2/20/y3/1/z148036;
-!!IF&1000/y4=12:Q2/21/s/2/z148037;
-!!HEv7020&2/y4=12:Tv7023/v7024/v7025/s/r O?o;  [fight monsters]
-!!if&o=(NO_OWNER);
-  !!HEv7020:P?y1/?y2/?y3 Z?y4;
-  !!UN:Cy4/7/1/y1 Cy4/9/1/y1 Cy4/10/1/y3;
+
+!!VRy3:S11 +(skillLevel);                  [set scouting picture]
+
+!!if&y4=1;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_SPELL_POINTS)/20/(MSG_TYPE_MES)/z148023;
+  !!HE(hero):Id+20;                        [give 20 spell points]
+!!el&y4=2;
+  !!VRr:S1 R24 *100;                       [random 1 to 25 x 100]
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_RES_GOLD)/r/(MSG_TYPE_MES)/z148024;
+  !!OW:Ri^timerOwner^/(RES_GOLD)/dr;       [give gold]
+!!el&y4=3;
+  !!VRs:S0 R5;                             [random resource 0 to 5]
+  !!VRr:S1 R2;                             [random quantity 1 to 3]
+  !!VRr&s=0:*2;                            [double for wood]
+  !!VRr&s=2:*2;                            [double for ore]
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/s/r/(MSG_TYPE_MES)/z148025;
+  !!OW:Ri^timerOwner^/s/dr;                        [give the resources]
+!!el&y4=4;
+  !!VRs:S0 R5;                             [random resource 0 to 5]
+  !!VRr:S4 R2;                             [random quantity 4 to 6]
+  !!VRr&s=0:*2;                            [double for wood]
+  !!VRr&s=2:*2;                            [double for ore]
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/s/r/(MSG_TYPE_MES)/z148026;
+  !!OW:Ri^timerOwner^/s/dr;                [give resources]
+!!el&y4=5;
+  !!FU(WOG_212_GetRandMonAndNames):P?s;    [call function to pick monster]
+  !!MA:Gs/?r;                              [get 1 weeks production]
+  !!IF&1000/r=1:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MONSTER)/s/(MSG_TYPE_MES)/z148027;
+  !!IF&1000/r>1:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MONSTER)/s/(MSG_TYPE_MES)/z148028;
+  !!HE(hero)&1000:Cs/r/-1/0/-1/0/-1/0/-1/0/-1/0/-1/0;  [give creatures]
+  !!HE(hero)&-1000:C2/s/r/0;                [offer AI creatures]
+!!el&y4=6;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MORALE_FIRST)/1/(MSG_TYPE_MES)/z148029;
+  !!HE(hero):R0/d1;                         [+1 morale]
+!!el&y4=7;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_LUCK_FIRST)/1/(MSG_TYPE_MES)/z148030;
+  !!HE(hero):R1/d1;                         [+1 luck]
+!!el&y4=8;
+  !!HE(hero):E?y5/?y6/1;                    [get hero's level]
+  !!VRr:Sy6 R20 *50;                        [(level + 0-20) x 50]
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_EXPERIENCE)/r/(MSG_TYPE_MES)/z148031;
+  !!HE(hero):Edr;                           [give experience]
+!!el&y4=9;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(MSG_TYPE_MES)/z148032;
+  !!HE(hero):Wd+400;                        [increase movement]
+!!el&y4=10;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(MSG_TYPE_MES)/z148033;
+  !!VRr:S3 *x1 +16;                         [area]
+  !!UN:Sv7023/v7024/v7025/i^timerOwner^/r;  [reveal area]
+!!el&y4=11;
+  !!FU(WOG_212_GetRandMonAndNames):P?s;     [call function to pick monster]
+  !!MA:Vs/?r;                               [get AdvMapL]
+  !!VRz30:Sz148034 +z148035;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MONSTER)/s/(MSG_TYPE_MES)/z30;
+  !!HE(hero)&2:Tv7023/v7024/v7025/s/r;      [fight monsters]
+!!el&y4=12;
+  !!FU(WOG_212_GetRandMonAndNames):P?s;     [call function to pick monster]
+  !!MA:Hs/?r;                               [get AdvMapH]
+  !!VRz30:Sz148036 +z148037;
+  !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MONSTER)/s/(MSG_TYPE_MES)/z30;
+  !!HE(hero)&2:Tv7023/v7024/v7025/s/r;      [fight monsters]
 !!en;
 
-!!SN:D;                                       [redraw screen]
+!!if&y4>=2/y4<=4;                           [redraw resources bar]
+  !!UN:R2;
+!!el;
+  !!SN:D;                                   [redraw screen]
+!!en;
+
 ** end of function
 
 

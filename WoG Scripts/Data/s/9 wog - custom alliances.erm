@@ -5,16 +5,14 @@ ZVSE2
 **  WoGify Name: script69.erm
 **  Updated: May 15, 2004
 
-Variables: v1-10, v13, v777, z1-9, z1000
-All variables may be reused except z1000 which stores set of teams.
+Variables: v1-10, v13, v777, z1-9
 Flags: 1,2
-Functions: 20690-20701
-Timers: 11
+Functions: (WOG_69_GetTeams)-20701
 Local Variables: x1-7, x16, y-1, y-2
 
 ********************************************************************************
-!?FU20690;  [start]
-!#VA(arrayId:x);
+!?FU(WOG_69_GetTeams);  [start]
+
 ** Select Default or Custom alliances **
 !!UN:A125/9/?y-1; [remember left artifact name]
 !!UN:A125/10/?y-2; [remember left artifact description]
@@ -34,74 +32,77 @@ Local Variables: x1-7, x16, y-1, y-2
 !!UN:A125/10/y-2;
 !!UN:A110/9/y-3;
 !!UN:A110/10/y-4;
-!!VRz1000:Sz169000; [set default teams]
+!!VRs^wog_69_teams^:Sz169000; [set default teams]
 !!FU&2:E;
-!!DO20697/1/1/1:P; [ask for teams if custom]
-!!VRz1000:S^^; [clear teams]
-!!DO20699/0/7/1:P; [fill z1000 with new teams set]
+
+!!FU(WOG_69_AskForTeams):P; [ask for teams if custom]
+!!VRs^wog_69_teams^:S^^; [clear teams]
+!!DO20699/0/7/1:P; [fill s^wog_69_teams^ with new teams set]
 !!UN:X?y1/?y2; [y1=map size, y2=1 if there's an underground]
 !!VRy3:Sy1 :2; [Half of map size to get center of map: y3]
 !!UN:Hy3/y3/0/-1/y1; [replace entire shroud]
 !!UN&y2=1:Hy3/y3/1/-1/y1; [replace entire shroud, underground if there is one]
-!!FU(NewIntArray):P8/-1/?(arrayId:x)/(M_STORED);i^wog_69_alliances_array_id^;
-!!re i/0/(PLAYER_LAST);
-  !!OW:Ti/?t;
-  !!SN:M(arrayId:x)/i/t;
-!!en;
-
 
 ********************************************************************************
-!?FU20700&x1; [set teams by z1000]
-!#VA(arrayId:x);
-!!re i/0/(PLAYER_LAST);
-  !!SN:M(arrayId:x)/i/?t;
-  !!OW:Ti/t;
+!?FU(WOG_69_SetTeams); [set teams by s^wog_69_teams^]
+!!VRs^wog_69_teams^:Uz169000;
+!!FU&1:E;
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!VRz1:M1/s^wog_69_teams^/i/1;
+  !!VRy-1:Vz1;
+  !!OW:Ti/y-1;
 !!en;
 
-
-
 ********************************************************************************
-!?FU20699; [set z1000 as teams set]
+!?FU20699; [set s^wog_69_teams^ as teams set]
 !!OW:Tx16/?y-1;
-!!VRz1000:+^%Y-1^;
-********************************************************************************
-!?FU20698;  [update teams message]
-!#VA(x:x) (playerId:x);
-!!VRx1:+1;
-!!VRz1000:Uz169005;
-!!VRz1000&-1:+^
-^+z169005+^: ^;
-!!VRz1000&1:+^, ^;
-!!FU(WOG_GameMgr_GetPlayer_Name):P(playerId)/?(playerName:z);
-!!VRz1000:+(playerName);
-!!OW:I(playerId)/?y-1;
-!!VRz1000&y-1=1:+z169014;
-!!VRz1000&y-1=0:+z169015;
+!!VRs^wog_69_teams^:+^%Y-1^;
 
 ********************************************************************************
-!?FU20697;
+!?FU(WOG_69_UpdateTeamMessage);  [update teams message]
+!!VRx1:+1;                              [for z169005]
+!!VRs^wog_69_teams^:Uz169005;
+!!VRs^wog_69_teams^&-1:+^
+^+z169005+^: ^;
+!!VRs^wog_69_teams^&1:+^, ^;
+!!VRs^wog_69_teams^&x2=1:+z169006;
+!!VRs^wog_69_teams^&x2=2:+z169007;
+!!VRs^wog_69_teams^&x2=3:+z169008;
+!!VRs^wog_69_teams^&x2=4:+z169009;
+!!VRs^wog_69_teams^&x2=5:+z169010;
+!!VRs^wog_69_teams^&x2=6:+z169011;
+!!VRs^wog_69_teams^&x2=7:+z169012;
+!!VRs^wog_69_teams^&x2=8:+z169013;
+!!OW:Ix16/?y-1;
+!!VRs^wog_69_teams^&y-1=1:+z169014;
+!!VRs^wog_69_teams^&y-1=0:+z169015;
+
+********************************************************************************
+!?FU(WOG_69_AskForTeams);
 ** Count number of players **
 !!VRv10:S0; [set no players alive v10=0]
-!!DO20691/0/7/1:P; [increment by turned on and prepare messages for select]
+!!DO(WOG_69_CheckIfColoursInTheGame)/0/7/1:P; [increment by turned on and prepare messages for select]
 !!VRz9:Sz169016;
 !!IF:G1/777/1/9/1/2/3/4/5/6/7/8; [v777 = result]
 !!VRv9&v777=1:Sv10; [Free for all]
-!!DO20692/2/7/1&v777>2:P2/4/8/16/32/64/128; [v9 = number of alliances selected]
+!!DO(WOG_69_GetNumberOfAlliancesSelected)/2/7/1&v777>2:P2/4/8/16/32/64/128; [v9 = number of alliances selected]
 !!VRv13:Sv9; [store N_of_Teams]
-!!VRz1000:S^^; [clear teams text]
-!!DO20693/1/v13/1:P; [set teams]
-!!VRz1000:+z169017;
-!!IF:Q2^%Z1000^;
+!!VRs^wog_69_teams^:S^^; [clear teams text]
+!!DO(WOG_69_ChoosePlayersToCurrentTeam)/1/v13/1:P; [set teams]
+!!VRs^wog_69_teams^:+z169017;
+!!IF:Q2^%s(wog_69_teams)^;
 !!VRx16&-2:S0;
 
 ********************************************************************************
-!?FU20696;  [set team_number for selected colors]
+!?FU(WOG_69_SetTeamForSelectedColours);  [set team_number for selected colors]
 !!VRy-1:Sx16+1;
 !!VRy-2:Sv777&xy-1;
 !!FU&y-2=0:E; [exit if not selected]
+
 !!VRvy-1:Sv13-v9;
 !!OW:Tx16/vy-1;
-!!FU20698:Pvy-1/x16;  [update teams message]
+!!FU(WOG_69_UpdateTeamMessage):Pvy-1/y-1;  [update teams message]
 !!VRv10:-1;
 
 ********************************************************************************
@@ -109,39 +110,49 @@ Local Variables: x1-7, x16, y-1, y-2
 !!VRy-1:Sx16+1;
 !!VRzy-1&vy-1<>10:S^^; [disable if part of any team]
 !!FU&vy-1<>10:E;
-!!FU(WOG_GameMgr_GetPlayer_Name):Px16/?zy-1;
+
+!!VRzy-1&y-1=1:Sz169006;
+!!VRzy-1&y-1=2:Sz169007;
+!!VRzy-1&y-1=3:Sz169008;
+!!VRzy-1&y-1=4:Sz169009;
+!!VRzy-1&y-1=5:Sz169010;
+!!VRzy-1&y-1=6:Sz169011;
+!!VRzy-1&y-1=7:Sz169012;
+!!VRzy-1&y-1=8:Sz169013;
 
 ********************************************************************************
 !?FU20694;   [if N_of_teams = 1 or N_of_teams = N_of_players (remain after last select)]
 !!VRy-1:Sx16+1;
 !!FU&vy-1<>10:E; [exit if part of any team]
+
 !!VRvy-1:Sv13-v9;
 !!OW:Tx16/vy-1;
 !!VRv9&v9>1:-1;
 !!VRv10:-1;
-!!FU20698:Pvy-1/x16;y-1;  [update teams message]
+!!FU(WOG_69_UpdateTeamMessage):Pvy-1/y-1;  [update teams message]
 
 ********************************************************************************
-!?FU20693; [choose players to current team]
+!?FU(WOG_69_ChoosePlayersToCurrentTeam); [choose players to current team]
 !!VRv9&v9>v10:Sv10;
 !!DO20694/0/7/1&v9=v10|v9<2:P; [auto set last teams]
 !!VRx16&v9=v10|v9<2:Sv13; [end loop]
 !!FU&v9=v10|v9<2:E; [exit after auto_set]
+
 !!DO20695/0/7/1:P;
 !!VRy-1:Sv13-v9+1;
 !!VRz9:Sz169018;
 !!IF:G0/777/0/9/1/2/3/4/5/6/7/8;
-!!DO20696/0/7/1&v777>0:P1/2/4/8/16/32/64/128; [set team_number for selected colors]
+!!DO(WOG_69_SetTeamForSelectedColours)/0/7/1&v777>0:P1/2/4/8/16/32/64/128; [set team_number for selected colors]
 !!VRv9&v777>0:-1;
 !!VRx16&v777=0:-1; [try again]
 
 ********************************************************************************
-!?FU20692; [get number of alliances selected]
+!?FU(WOG_69_GetNumberOfAlliancesSelected); [get number of alliances selected]
 !!VRy-1:Sv777&xx16;
 !!VRv9&y-1>0:Sx16;
 
 ********************************************************************************
-!?FU20691; [Check if color's in the game - decrement v10 if turned off]
+!?FU(WOG_69_CheckIfColoursInTheGame); [Check if color's in the game - decrement v10 if turned off]
 !!OW:Ix16/d/?y-2;
 !!VRv10&y-2=0:+1; [increment if alive]
 !!VRy-1:Sx16+1; [player number 1 to 8]
@@ -153,25 +164,25 @@ Local Variables: x1-7, x16, y-1, y-2
 !!VRvy-1&y-2=1:S0;
 
 ********************************************************************************
-!?PI;
-!!UN:P69/?y-1;
-!!FU&y-1=0:E;
-!!FU20690:P?i^wog_69_alliances_array_id^; [set teams by z1000]
-!!FU(WOG_69_SetAlliances):Pi^wog_69_alliances_array_id^;
-!?FU(WOG_69_SetAlliances);
-!#VA(arrayId:x);
-!!FU20700:P(arrayId:x) D(arrayId:x); [set teams by z1000]
+!?FU(OnAfterErmInstructions);
+!!UN:P69/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!FU(WOG_69_GetTeams):P; [set teams by s^wog_69_teams^]
+!!FU(WOG_69_SetTeams):P; [set teams by s^wog_69_teams^]
+!!VRi^wog_69_isStartGame^:S(TRUE);
 
 ********************************************************************************
-*?GM0;
-*!FU20700:P; [set teams by z1000]
+!?FU(OnGameEnter);
+!!UN:P69/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-********************************************************************************
-*?TM11;
-!?FU(OnGameEnter)&i^wog_69_alliances_array_id^;
-!!FU(WOG_69_SetAlliances):Pi^wog_69_alliances_array_id^;
-
-*!FU20700:P; [set teams by z1000]
+; Skip setting team if it is the first time entering game
+!!if&i^wog_69_isStartGame^;
+  !!VRi^wog_69_isStartGame^:S(FALSE);
+!!el;
+  !!FU(WOG_69_SetTeams):P; [set teams by s^wog_69_teams^]
+!!en;
 
 ********************************************************************************
 *#TM11:S1/999/1/255; [timer day one for all players]
