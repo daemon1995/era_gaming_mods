@@ -70,7 +70,7 @@ ZVSE2
 Flags Used in this Script: 1, 2, 56, 170-172, 205, 412
 v Variables used: v1-v7, v166-v200, v205, v361-v367, v372-v373, v1200-v1210
 z Variables used: z190-z199, z495
-Functions used: FU(WOG_20P_ManageDietyOfFire)-FU184, FU5301-FU5310, FU8000
+Functions used: FU5301-FU5310, FU8000
 ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 --------------------------------------------------------------------------------------
@@ -134,7 +134,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!VRv189:Sc; [Set day check to current day]
 
  [Function 181 checks if Diety of Fire is built and if so, makes it Week of the Imp]
-!!FU(WOG_20P_ManageDietyOfFire):P;      [This is excuted twice every week, why?]
+!!FU(WOG_20_ManageDietyOfFire):P;
 
 !!VRz190:S^^;  [Initialize z190 to a null string]
 
@@ -179,8 +179,8 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
  [Sets up "Week of" monster with appropriate text]
 !!if&-172;
-  !!UN:N3/197/v180/0; [Lookup monster name - singular]
-  !!UN:N3/198/v180/1; [Lookup monster name - plural]
+  !!SN:H^monname^/v180/0/?z197; [Lookup monster name - singular]
+  !!SN:H^monname^/v180/1/?z198; [Lookup monster name - plural]
 !!en;
 
  [Set up "Week of" dialog box text string]
@@ -193,7 +193,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!en;
 
  [If week is "Week of Resources", set up special text]
-!!FU183&v180<0/v180<>-100/-171:P;
+!!FU(WOG_20_SetUpWeekOfResourcesText)&v180<0/v180<>-100/-171:P;
 
 !!UN:K1/1 K2/199 M1; [Change "Week of" text and disable possible "Month of" results]
 
@@ -248,10 +248,13 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!FU(WOG_20_SetActualTypeOfWeek):P;
 
  [Function 181 checks if Diety of Fire is built and if so, makes it Week of the Imp]
-!!FU(WOG_20P_ManageDietyOfFire):P;
+!!FU(WOG_20_ManageDietyOfFire):P;
 
  [Store "Week of" monster's default values in v181-v187 unless it's Week of Resources]
-!!MA&v180>=0:Av180/?v181 Dv180/?v182 Sv180/?v183 Pv180/?v184 Mv180/?v185 Ev180/?v186 Gv180/?v187;
+!!if&v180>=0;
+  !!MA:Av180/?v181 Dv180/?v182 Pv180/?v184 Mv180/?v185 Ev180/?v186 Gv180/?v187;
+  !!MA&v180>0:Sv180/?v183;
+!!en;
 
 ---------------------------------------------------------------------------------------
 
@@ -259,7 +262,11 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
  [Restore previous "Week of" monsters default values unless 1st monster week]
  [or if previous week was a Week of Resources]
-!!MA&170/v178>8:Av170/v171 Dv170/v172 Sv170/v173 Pv170/v174 Mv170/v175 Ev170/v176;
+!!if&170/v178>8;
+  !!MA:Av170/v171 Dv170/v172 Pv170/v174 Mv170/v175 Ev170/v176;
+  !!MA&v173>0:Sv170/v173;
+!!en;
+
 !!IF:V170/1; [Flag is set to indicate no longer first monster week]
 
 !!IF&172:V170/0; [If week is Week of Resources, reset "1st week flag" for next week]
@@ -454,30 +461,32 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 --------------------------------------------------------------------------------------
 
 >>[Function 181 checks if Deity of Fire is built, and if so, makes it Week of the Imp]
-!?FU(WOG_20P_ManageDietyOfFire);
-
-!!UN:U98/3/?y1; [Count Infernos]
+!?FU(WOG_20_ManageDietyOfFire);
 !!IF:V171/0;
-!!VRv198:S-1; [Initialize v198 to -1 so that UN:U will work correctly]
-!!DO182/1/y1/1&y1>0:P; [Check all Infernos for Grail - if Flag 171 is set, there's a Grail]
 
-!!VRv180&171:S42; [If Deity of Fire present, set it to Week of Imp]
+; loop through all towns
+!!VR(x:y):S-1;
+
+!!re i;
+  !!UN:U(OBJ_TOWN)/(TOWN_INFERNO)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
+  ; break the loop if Inferno with grail found
+  !!CA(x)/(y)/(z):B3/26;
+
+  !!if&1;
+    !!IF:V171/1;
+    !!br;
+  !!en;
+!!en;
+
+!!VRv180&171:S(MON_IMP); [If Deity of Fire present, set it to Week of Imp]
 !!IF&171:V172/0;  [If Deity of Fire present, set Week of Resource flag to false]
 
 --------------------------------------------------------------------------------------
 
->>[Function 182 checks each Inferno to see if Diety of Fire is built]
-  [and set sets Flag 171 if it is]
-!?FU182;
-
-!!UN:U98/3/-1/198;  [store location of Inferno in v198-v200]
-!!CA198:B3/26; [set Flag 1 if Grail found]
-!!IF&1:V171/1; [set Flag 171 if Grail found]
-
---------------------------------------------------------------------------------------
-
 >>[If week is "Week of Resources", set up special text]
-!?FU183;
+!?FU(WOG_20_SetUpWeekOfResourcesText);
 
 !!VRz199&v180=-1:Sz120009; [Wood]
 !!VRz199&v180=-2:Sz120010; [Mercury]
@@ -494,40 +503,29 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !?FU(OnEveryDay)&i^timerWeek^>=2/56/v205<0/v205<>-100;
 
 !!VRv169:S0; [Initialize v169 to 0]
+!!VR(resOfWeek:y):Sv205 *-1 -1; [Get resource type]
 
-!!OW:C?y-1;           [Get current player - store in y-1]
-!!VRy-2:Sv205 *-1 -1; [Get resource type - store in y-2]
+; loop through all the mines
+!!VR(x:y):S-1;
 
-!!UN:U53/y-2/?y-3;    [Count number of mines of bonus type - store in y-3]
-!!UN:U53/7/?y-4;     [Count number of abandoned mines - store in y-4]
+!!re i;
+  !!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
 
- [Count number of mines of bonus type owned by current player]
-!!VRv166:S-1; [Initialize v166 to -1 so UN:U will work correctly]
-!!DO184/1/y-3/1&y-3>0:Py-1/y-2/y-2;
+  !!MN(x)/(y)/(z):O?(owner:y)/1 R?(res:y)/1;
 
- [Count number of abandoned mines of bonus type owned by current player]
-!!VRv166:S-1; [Initialize v166 to -1 so UN:U will work correctly]
-!!DO184/1/y-4/1&y-4>0:Py-1/7/y-2;
+  !!if&(owner)=i^timerOwner^/(res)=(resOfWeek);
+    !!VRv169:+1;
+  !!en;
+!!en;
 
  [Calculate and give bonus resources]
 !!if&v169>0;
-  !!VRv169&y-2=0:Sv169 *2;     [Wood x 2]
-  !!VRv169&y-2=2:Sv169 *2;     [Ore x 2]
-  !!VRv169&y-2=6:Sv169 *1000;  [Gold x 1000]
+  !!VRv169&(resOfWeek)=0:Sv169 *2;     [Wood x 2]
+  !!VRv169&(resOfWeek)=2:Sv169 *2;     [Ore x 2]
+  !!VRv169&(resOfWeek)=6:Sv169 *1000;  [Gold x 1000]
+  !!OW:Ri^timerOwner^/(resOfWeek)/dv169;
 !!en;
-
-!!OW:Ry-1/y-2/dv169;
-
---------------------------------------------------------------------------------------
-
->>[Count number of mines of bonus type owned by current player]
-!?FU184;
-
-!!UN:U53/x2/-1/166;           [Get coordinates of each mine - v166/v167/v168]
-!!MNv166/v167/v168:O?y1/1 R?y2/1;  [Get owner of mine (y1) and resource type (y2)]
-
- [v169 counts # of mines of bonus type belonging to current player]
-!!VRv169&y1=x1/y2=x3:+1;
 
 --------------------------------------------------------------------------------------
 

@@ -38,7 +38,7 @@ ZVSE2
 
 !!if&1;
   !!VRs^trainer_input^:Sz1;
-  !!FU(trainer_SelectHeroByInput):P;
+  !!FU(trainer_SelectHeroByInput):Pz1;
 !!el;
   !!OW:C?(currPlayer:y)/?i^trainer_player^;
   !!FU(trainer_SelectHeroByPlayer):Pi^trainer_player^/(FALSE)/(FALSE);
@@ -47,9 +47,11 @@ ZVSE2
 !!FU(trainer_MainDialog):P;
 
 !?FU(trainer_SelectHeroByInput);
+!#VA(input:x);
+
 !!VRi^trainer_hero^:S(NO_HERO);
 
-!!VRz1:Ss^trainer_input^;
+!!VRz1:Sz(input);
 !!FU(trainer_CheckIfZ1FirstCharIsNum):P?(result:y);
 !!VR(hero:y)&(result):Vz1;
 
@@ -326,33 +328,36 @@ ZVSE2
 !!FU(GetTextFileString):P^plcolors^/(player)/?s^trainer_player^;
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=30722/i^mouse_action^=(MOUSE_LMB_RELEASED);      [close trainer]
-!!VR(hero:y):Si^trainer_hero^;
-!!VR(lvNew:y):Si^trainer_heroLv^;
-!!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
 !!VR(hasLeveledUp:y):S(FALSE);
 
-; If the level of the heroe was changed (via trainer), level up the part below Level 74 and change only the level number for the part above 74
-!!if&(lvNew)>(lv);
-  !!VR(lvFixed:y):S(lvNew) F1/(TRAINER_LEVEL_CAP_LEGIT);
+!!if&i^trainer_hero^>(NO_HERO);
+  !!VR(hero:y):Si^trainer_hero^;
+  !!VR(lvNew:y):Si^trainer_heroLv^;
+  !!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
 
-  ; Manage level below 74
-  !!if&(lvFixed)>(lv);
-    !!FU(trainer_GetExpRequirementOfLevel):P(lvFixed)/?(expFixed:y);
-    !!HE(hero):E(expFixed);
-    !!VR(hasLeveledUp):S(TRUE);
+  ; If the level of the heroe was changed (via trainer), level up the part below Level 74 and change only the level number for the part above 74
+  !!if&(lvNew)>(lv);
+    !!VR(lvFixed:y):S(lvNew) F1/(TRAINER_LEVEL_CAP_LEGIT);
+
+    ; Manage level below 74
+    !!if&(lvFixed)>(lv);
+      !!FU(trainer_GetExpRequirementOfLevel):P(lvFixed)/?(expFixed:y);
+      !!HE(hero):E(expFixed);
+      !!VR(hasLeveledUp):S(TRUE);
+    !!en;
+
+    ; Manage levels above 74
+    !!if&(lvNew)>(lvFixed);
+      !!FU(trainer_GetExpRequirementOfLevel):P(lvNew)/?(expNew:y);
+      !!HE(hero):E(expNew)/(lvNew)/(TRUE);
+    !!en;
   !!en;
 
-  ; Manage levels above 74
-  !!if&(lvNew)>(lvFixed);
-    !!FU(trainer_GetExpRequirementOfLevel):P(lvNew)/?(expNew:y);
-    !!HE(hero):E(expNew)/(lvNew)/(TRUE);
-  !!en;
+  ; Keep the Trainer Interface if the hero has leveled up upon clicking checkmark, otherwise close the dialogue
+  !!FU(trainer_UpdateDlgsOnLevelUp)&(hasLeveledUp):P(hero);
 !!en;
 
-; Keep the Trainer Interface if the hero has leveled up upon clicking checkmark, otherwise close the dialogue
-!!if&(hasLeveledUp);
-  !!FU(trainer_UpdateDlgsOnLevelUp):P(hero);
-!!el;
+!!if&(hasLeveledUp)=(FALSE);
   !!DL(TRAINER_MAIN_DLG):C1;
   !!VRi^trainer_dialogEnabled^:S(FALSE);[flag for trainer interface]
 !!en;
@@ -3596,10 +3601,9 @@ ZVSE2
 !!IF:E1/55;
 !!VRz1:H1; **check if text entered, flag 1=1 if yes
 !!FU&v1<0:E;
-!!VRs^trainer_input^:Sz1;
 
 !!if&1;
-  !!FU(trainer_SelectHeroByInput):P;
+  !!FU(trainer_SelectHeroByInput):Pz1;
 
 ; Get a hero of current player if nothing was input
 !!el;

@@ -76,9 +76,6 @@ Dialogues: 3
 !!HE(CURRENT_HERO):O?y30;
 !!PM998:Py30/(TRUE);
 
- [Initialize Flag 5 to False]
-!!IF:V5/0;
-
  [Store current player in v2 and convert to player bit number]
 !!OW:C?y31;
 !!VRv2:S1 Sd<<y31;
@@ -99,196 +96,129 @@ Dialogues: 3
 !!IF&1000:Q2/5/7/2/z144003;
 !!IF&-1000:V2/1; [Set flag 2 to true for AI]
 
-!!OW&2:R-1/5/?y-2; [Player's current gem total: y-2]
-!!VRz9:S^^;
-!!VRz9&2/y-2<7:Sz144004;
-!!IF&y-2<7/1000:V2/0; [Set flag 2 to false if human player doesn't have at least 7 gems]
+!!if&2;
+  !!OW:R(CURRENT_PLAYER)/(RES_GEMS)/?y-2; [Player's current gem total: y-2]
+  !!VRz9:S^^;
+  !!VRz9&y-2<7:Sz144004;
+  !!IF&y-2<7/1000:V2/0; [Set flag 2 to false if human player doesn't have at least 7 gems]
 
-!!OW&2/1000:R-1/(RES_GEMS)/d-7; [Remove seven gems from human player's total]
-!!UN&2/1000:R2;                         [refresh after gems are taken - Archer]
-!!VRz1:Sz144005;
-!!VRz-1:Sz144006;
-!!VRz2:S^..\data\s\pic\emerald.bmp^;
-!!VRz3:Sz144007;
-!!UN:J8/2/2; [Check if image file exists: Flag 1=True if yes]
-!!IF&1000/1:D3/1/0/0/2/0/0/0/3/0/0/0/0/0/0/0;
-!!IF:F3/0/0/0/0/0; [Remove cancel button]
+  !!if&2;
+    !!if&(ERM_FLAG_IS_HUMAN);
+      !!OW:R(CURRENT_PLAYER)/(RES_GEMS)/d-7; [Remove seven gems from human player's total]
+      !!UN:R2;                         [refresh after gems are taken - Archer]
 
-!!if&2/1000;
-  !!IF&1:E1/3; [Display dialogue box]
-  !!IF&-1:M^%Z-1^; [Display alternative standard dialogue if image file is missing]
+      !!VRz2:S^emerald.pcx^;  [File and path name for Mithril Price List image: z1]
+      !!SN:F^PcxPngExists^/z2; [Check if Mithril Price List image is there: v1=True if yes]
+
+      !!if&v1;
+        !!VRz1:Sz144005;
+        !!VRz3:Sz144007;
+        !!IF:D3/1/0/0/2/0/0/0/3/0/0/0/0/0/0/0;
+        !!IF:F3/0/0/0/0/0; [Remove cancel button]
+        !!IF:E1/3; [Display dialogue box]
+      !!el;
+        !!VRz-1:Sz144006;
+        !!IF:M^%Z-1^; [Display alternative standard dialogue if image file is missing]
+      !!en;
+    !!en;
+
+     [Initialize Flag 5 to False for the event of returning gems]
+    !!IF:V5/0;
+    !!FU(WOG_44_ChooseSpeciesMain):P; [Choose species to improve]
+  !!en;
 !!en;
 
-!!FU(WOG_44_ChooseSpeciesMain)&2:P; [Choose species to improve]
-
+; Show the exiting msg if rejected to make an appointment
 !!IF&-2/1000:M1/z144008;
 
 -----------------------------------------------------------------------
 
 !?FU(WOG_44_ChooseSpeciesMain);
-
-  [Build a listing of different creature types in hero's army (v360-v366), v1=total number]
-  [Store creature names in z480-z486 - skip this if AI]
-!!FU(WOG_44_StoreUniqueCreatureID)&1000:P;
-
-!!VRz1:Sz144009;
-!!VRz2:Sz144010;
-!!VRv367:S0; [Initialize v367 to 0]
-!!IF&v1>0/1000:G1/367/128/1/480/481/482/483/484/485/486/2/0/0/0/0;
-
-!!IF&v1=0/1000:M1/z144011;
-
- [Determine which box was checked - store result (creature number) in v2]
-!!VRv2:S0;
-!!VRv2&v367=1:Sv360;
-!!VRv2&v367=2:Sv361;
-!!VRv2&v367=4:Sv362;
-!!VRv2&v367=8:Sv363;
-!!VRv2&v367=16:Sv364;
-!!VRv2&v367=32:Sv365;
-!!VRv2&v367=64:Sv366;
-!!VRv2&v367=128:S-1;
-
-!!DO(WOG_44_AIChooseCreatureBonus)/0/6/1&-1000:P; [Choose creature for AI to buy a bonus for: v2]
-
 !!IF:V4/1; [Set flag 4 to true]
-!!IF&v2=-1/1000:Q4/z144012;
 
- [Check for "Week of Monsters" script activated and if it's the monster of the week.]
- [Flag 56 will be true if script is active, v170 is monster of the week]
-!!if&v2>=0;
-  !!UN:N3/3/v2/0; [Store monster name (singular) in z3]
-  !!UN:N3/4/v2/1; [Store monster name (plural) in z4]
-!!en;
+; Get the available monster types to be converted of the hero
+!!FU(NewIntArray):P?(availMonList:y);
 
-!!if&56/v170>=0/v170=v2;
-  !!IF&1000:Q4/21/v2/1/z144013;
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HE(CURRENT_HERO):C0/i/?(type:y)/?(num:y);
 
-  !!VRv2:S-1; [Set v2 to -1 if it's the monster of the week]
-!!en;
-
-  [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set v2 to -1)]
-  [If this is a new creature, set v6 to -1, if not new, set v6 to loop index number]
-!!VRv6:S-1;
-
-!!if&v2>=0;
-  !!DO(WOG_44_IsNewMonsterSpecies)/1/i^wog_44_speciesCounter^/1&i^wog_44_speciesCounter^>0:P;
-  !!IF&i^wog_44_speciesCounter^>=12/v6<0/1000:Q4/z144014;
-!!en;
-
-!!VRv2&i^wog_44_speciesCounter^>=12/v6<0:S-1; [Set v2 to -1 if i^wog_44_speciesCounter^ = 12 and creature isn't new]
-
-!!FU(WOG_44_ChooseImprovementType)&v2>=0:P; [Display improvement options]
-
-!!if&1000;
-  !!FU(WOG_44_ChooseSpeciesMain)&v2=-1/-4:P; [Choose another species to improve]
-
-   [If player didn't buy a bonus]
-  !!if&4/-5;
-    !!if&v1270=0;
-      !!IF:Q1/5/6/1/z144015;
-      !!OW:R-1/(RES_GEMS)/d6; [Give back 6 gems if nothing bought]
-      !!IF:V5/1; [Set Flag 5 to True]
-
-     [If player bought "24 shots" and nothing else]
-    !!el&v1270=100;
-      !!IF:Q1/5/6/1/z144016;
-      !!OW:R-1/(RES_GEMS)/d6; [Give back 6 gems if only "24 shots" bought]
-      !!IF:V5/1; [Set Flag 5 to True]
-    !!en;
+  !!if&(type)>(NO_MON)/(num)>0;
+    !!FU(Array_Push):P(availMonList)/(type);
   !!en;
 !!en;
 
------------------------------------------------------------------------
+!!FU(Array_SortedUnique):P(availMonList);
+!!SN:M(availMonList)/?(size:y);
 
- [Store unique creature numbers in v360-v366 (-1 equals no creature)]
- [v1=number of unique creature numbers in hero's army]
+!!if&(size)=0;
+  !!IF&(ERM_FLAG_IS_HUMAN):M1/z144011;
+!!el;
+  !!if&(ERM_FLAG_IS_HUMAN);
+    !!VRv2:S(NO_MON);
 
-!?FU(WOG_44_StoreUniqueCreatureID);
+    ; Organise array for IF:N
+    !!FU(NewIntArray):P?(monPicsList:y);
 
-!!VRv1:S0;
-!!VRv360:C-1/-1/-1/-1/-1/-1/-1;
-!!VRz480:S^^;
-!!VRz481:S^^;
-!!VRz482:S^^;
-!!VRz483:S^^;
-!!VRz484:S^^;
-!!VRz485:S^^;
-!!VRz486:S^^;
+    !!re i/0/(size)/1/-1;
+      !!SN:M(availMonList)/i/?(type);
+      !!FU(Array_Push):P(monPicsList)/(PIC_TYPE_MONSTER)/(type);
+    !!en;
 
-!!HE-1:C0/0/?y1/?y2;   [Slot 0]
-!!VRv1&y2>0:+1;
-!!VRv360&y2>0:Sy1;
-!!UN&y2>0:N3/480/y1/1;
+    !!FU(PrepareMultiPicDialog):P(monPicsList);
+    !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z144009/?(choice:y);
 
-!!HE-1:C0/1/?y1/?y2;   [Slot 1]
-!!VRy4:S0;
-!!VRy4&v1=1/y1=v360:S99;
-!!VRv1&y2>0/y4<>99:+1;
-!!VRy3&y2>0/y4<>99:S359 +v1;
-!!VRy5&y2>0/y4<>99:S479 +v1;
-!!UN&y2>0/y4<>99:N3/y5/y1/1;
-!!VRvy3&y2>0/y4<>99:Sy1;
+    !!SN&(choice)>-1:M(availMonList)/(choice)/?v2;
+  !!el;
+    !!DO(WOG_44_AIChooseCreatureBonus)/0/6/1:P; [Choose creature for AI to buy a bonus for: v2]
+  !!en;
+  
+  !!IF&v2=(NO_MON)/(ERM_FLAG_IS_HUMAN):Q4/z144012;
 
-!!HE-1:C0/2/?y1/?y2;   [Slot 2]
-!!VRy4:S0;
-!!VRy4&v1>=1/y1=v360:S99;
-!!VRy4&v1=2/y1=v361:S99;
-!!VRv1&y2>0/y4<>99:+1;
-!!VRy3&y2>0/y4<>99:S359 +v1;
-!!VRy5&y2>0/y4<>99:S479 +v1;
-!!UN&y2>0/y4<>99:N3/y5/y1/1;
-!!VRvy3&y2>0/y4<>99:Sy1;
+   [Check for "Week of Monsters" script activated and if it's the monster of the week.]
+   [Flag 56 will be true if script is active, v170 is monster of the week]
+  !!if&v2>(NO_MON);
+    !!SN:H^monname^/v2/0/?z3;             [Store monster name (singular) in z3]
+    !!SN:H^monname^/v2/1/?z4;             [Store monster name (plural) in z4]
+  !!en;
 
-!!HE-1:C0/3/?y1/?y2;   [Slot 3]
-!!VRy4:S0;
-!!VRy4&v1>=1/y1=v360:S99;
-!!VRy4&v1>=2/y1=v361:S99;
-!!VRy4&v1=3/y1=v362:S99;
-!!VRv1&y2>0/y4<>99:+1;
-!!VRy3&y2>0/y4<>99:S359 +v1;
-!!VRy5&y2>0/y4<>99:S479 +v1;
-!!UN&y2>0/y4<>99:N3/y5/y1/1;
-!!VRvy3&y2>0/y4<>99:Sy1;
+  !!if&56/v170>(NO_MON)/v170=v2;
+    !!IF&(ERM_FLAG_IS_HUMAN):Q4/(PIC_TYPE_MONSTER)/v2/(MSG_TYPE_QUESTION)/z144013;
 
-!!HE-1:C0/4/?y1/?y2;   [Slot 4]
-!!VRy4:S0;
-!!VRy4&v1>=1/y1=v360:S99;
-!!VRy4&v1>=2/y1=v361:S99;
-!!VRy4&v1>=3/y1=v362:S99;
-!!VRy4&v1=4/y1=v363:S99;
-!!VRv1&y2>0/y4<>99:+1;
-!!VRy3&y2>0/y4<>99:S359 +v1;
-!!VRy5&y2>0/y4<>99:S479 +v1;
-!!UN&y2>0/y4<>99:N3/y5/y1/1;
-!!VRvy3&y2>0/y4<>99:Sy1;
+    !!VRv2:S(NO_MON); [Set v2 to -1 if it's the monster of the week]
+  !!en;
 
-!!HE-1:C0/5/?y1/?y2;   [Slot 5]
-!!VRy4:S0;
-!!VRy4&v1>=1/y1=v360:S99;
-!!VRy4&v1>=2/y1=v361:S99;
-!!VRy4&v1>=3/y1=v362:S99;
-!!VRy4&v1>=4/y1=v363:S99;
-!!VRy4&v1=5/y1=v364:S99;
-!!VRv1&y2>0/y4<>99:+1;
-!!VRy3&y2>0/y4<>99:S359 +v1;
-!!VRy5&y2>0/y4<>99:S479 +v1;
-!!UN&y2>0/y4<>99:N3/y5/y1/1;
-!!VRvy3&y2>0/y4<>99:Sy1;
+    [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set v2 to -1)]
+    [If this is a new creature, set v6 to -1, if not new, set v6 to loop index number]
+  !!VRv6:S-1;
 
-!!HE-1:C0/6/?y1/?y2;   [Slot 6]
-!!VRy4:S0;
-!!VRy4&v1>=1/y1=v360:S99;
-!!VRy4&v1>=2/y1=v361:S99;
-!!VRy4&v1>=3/y1=v362:S99;
-!!VRy4&v1>=4/y1=v363:S99;
-!!VRy4&v1>=5/y1=v364:S99;
-!!VRy4&v1=6/y1=v365:S99;
-!!VRv1&y2>0/y4<>99:+1;
-!!VRy3&y2>0/y4<>99:S359 +v1;
-!!VRy5&y2>0/y4<>99:S479 +v1;
-!!UN&y2>0/y4<>99:N3/y5/y1/1;
-!!VRvy3&y2>0/y4<>99:Sy1;
+  !!if&v2>(NO_MON);
+    !!DO(WOG_44_IsNewMonsterSpecies)/1/i^wog_44_speciesCounter^/1&i^wog_44_speciesCounter^>0:P;
+    !!IF&i^wog_44_speciesCounter^>=12/v6<0/(ERM_FLAG_IS_HUMAN):Q4/z144014;
+  !!en;
+
+  !!VRv2&i^wog_44_speciesCounter^>=12/v6<0:S(NO_MON); [Set v2 to -1 if i^wog_44_speciesCounter^ = 12 and creature isn't new]
+
+  !!if&v2>(NO_MON);
+    !!FU(WOG_44_ChooseImprovementType):P; [Display improvement options]
+  !!el;
+    !!FU(WOG_44_ChooseSpeciesMain)&-4/(ERM_FLAG_IS_HUMAN):P; [Choose another species to improve]
+  !!en;
+!!en;
+
+; Give back some gems if the Wizard did not help
+!!if&(ERM_FLAG_IS_HUMAN)/4/-5;
+  ; Give back 6 gems if nothing bought
+  !!if&v1270=0;
+    !!IF:Q1/(PIC_TYPE_RES_GEMS)/6/(MSG_TYPE_MES)/z144015;
+
+  ; If player bought "24 shots" and nothing else
+  !!el&v1270=100;
+    !!IF:Q1/(PIC_TYPE_RES_GEMS)/6/(MSG_TYPE_MES)/z144016;
+  !!en;
+
+  !!IF:V5/1; [Set Flag 5 to True]
+  !!OW:R(CURRENT_PLAYER)/(RES_GEMS)/d6; [Give back 6 gems if nothing bought or only "24 shots" bought]
+!!en;
 
 -----------------------------------------------------------------------
 
@@ -296,7 +226,7 @@ Dialogues: 3
 
 !?FU(WOG_44_ChooseImprovementType);
 
-!!UN:N3/3/v2/0;
+!!SN:H^monname^/v2/0/?z3;
 
 !!VRy2:S5; [+5 Attack bonus: y2]
 
@@ -347,7 +277,7 @@ Dialogues: 3
 !!VRz484:Sz144023;
 !!VRz485:Sz144024;
 !!VRz486:S^^; [Initialize shots text to null string: z486]
-!!UN:P900/?y13; [Check if Stack Experience is enabled: y13=1 if yes]
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?y13; [Check if Stack Experience is enabled: y13=1 if yes]
 !!EAv2:F0/?y16; [Check next empty line for creature: y16]
 !!EAv2:F102/83/?y17; [Check if stack can gain Shooting ability from stack experience: y17]
 !!VRy14&y16<>y17/y8<24/y13=1:S99; [Set y14 to 99 if creature can gain Shooting ability and <24 shots: y14]
@@ -484,7 +414,7 @@ Dialogues: 3
 !!if&3;
   !!VRv7:S0;
   !!DO(WOG_44_CheckIfHeroHasEnoughCreature)/0/6/1:P; [See if hero has enough creatures of the type to be enchanted]
-  !!UN:N3/4/v2/1;
+  !!SN:H^monname^/v2/1/?z4;
 
   !!if&v7>=y7;
     !!DO(WOG_44_RemoveCreatures)/0/6/1:Py7; [Remove the creatures (if enough)]
