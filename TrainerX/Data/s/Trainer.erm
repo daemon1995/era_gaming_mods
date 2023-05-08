@@ -2870,11 +2870,17 @@ ZVSE2
 ; Exit if second henchmen is not enabled - required for RMB event
 !!FU&i^sechen_on^<>(TRUE):E;
 
+; Exit if second henchmen is outdated
+!!if&i^sechen_version^<0;
+  !!IF:Q1/(PIC_TYPE_MORALE_NEGATIVE)/-1/(MSG_TYPE_MES)/^%T(trainer.sechen.outOfDate)^;
+  !!FU:E;
+!!en;
+
 ; Exit if the hero belongs to AI - Currently setting AI second henchmen is not supported
 !!OW:Ii^trainer_player^/?(isAi:y);
 
 !!if&(isAi);
-  !!IF:M^%T(trainer.sechen.ai)^;
+  !!IF:Q1/(PIC_TYPE_LUCK_NEGATIVE)/-1/(MSG_TYPE_MES)/^%T(trainer.sechen.ai)^;
   !!FU:E;
 !!en;
 
@@ -2884,17 +2890,21 @@ ZVSE2
 !!VR(hero:y):Si^trainer_hero^;
 !!IF:W(hero);
 
-!!if&w161>(NO_MON)/w163>(NO_MON)/w162<>(TRUE); [revive the henchman if there was a one and perished]
+!!if&w161>(NO_MON)/w163>(NO_MON)/w162<>(TRUE); [revive the henchman if there was one and perished]
   !!VRw162:S(TRUE);
   !!IF:M^%T(trainer.henchRevived)^;
 
   !!FU&i^mouse_action^=(MOUSE_RMB_PRESSED):E;
 !!el|w161<=(NO_MON)/w163<=(NO_MON);     [give henchamn if there was none]
-  !!FU(sechen_ResetHench):P(hero);
-  !!HE(hero):B2/?(class:y);
-  !!VR(town:y):S(class) :2;
-  !!UN:T(town)/6/0/?w161;
-  !!VRw161&(town)=(TOWN_CONFLUX):S(MON_FIREBIRD);
+  ; If both hencheman and asm monster are missing, set the hencheman first
+  !!if&w161<=(NO_MON)/w163<=(NO_MON);
+    !!FU(sechen_ResetHench):P(hero);
+    !!HE(hero):B2/?(class:y);
+    !!VR(town:y):S(class) :2;
+    !!UN:T(town)/6/0/?w161;
+    !!VRw161&(town)=(TOWN_CONFLUX):S(MON_FIREBIRD);
+  !!en;
+
   !!VRw163:Sw161;
   !!VRw162:S(TRUE);
   !!SN:T^trainer.henchNew^/?z3/^hero^/s^trainer_heroName^;
@@ -3120,11 +3130,13 @@ ZVSE2
 !!IF:M0/(MSG_TYPE_POPUP)/^%(msg)^;
 
 ; Show ability tutorial
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG)/i^mouse_action^=(MOUSE_RMB_PRESSED);
-!!if&i^mouse_item^=201;
-  !!IF:M^%T(sechen.str.tutNormAbilitiesDetails)^;
-!!el&i^mouse_item^=202;
-  !!IF:M^%T(sechen.str.tutExpAbilitiesDetails)^;
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_SECHEN_DLG);
+!!if|i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+  !!if&i^mouse_item^=201;
+    !!IF:M^%T(sechen.str.tutNormAbilitiesDetails)^;
+  !!el&i^mouse_item^=202;
+    !!IF:M^%T(sechen.str.tutExpAbilitiesDetails)^;
+  !!en;
 !!en;
 
 **** End Second Henchmen ****

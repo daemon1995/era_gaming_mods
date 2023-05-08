@@ -12,7 +12,7 @@ ZVSE2
 
 ** You can generate a specific cave through ERM by initializing its PO values
 ** in a timer numbered higher than 90, on day one. You can set these values easily
-** by calling functions 767 and 769 (or the hard way through PO).
+** by calling functions 767 or the hard way through PO.
 
 ** Caves 0, 1, 2 are stored in PO:H, PO:T, PO:S, low 7 bits
 ** Cave 3 is stored with its low 4 bits in PO:N, the next 3 bits the hi bits of PO:S, PO:T, PO:H
@@ -170,7 +170,7 @@ ZVSE2
 
 !!if&1000;
   !!OB998:S; [disable object so UN:L command will work]
-  !!FU768:P601/998; [read split cave bits in v601]
+  !!FU(WOG_30_ReadSplitCaveBits):P601/998; [read split cave bits in v601]
   !!VRv601:&3; [just look at split cave type]
 
   !!VRz326:Sz130014;
@@ -213,7 +213,7 @@ ZVSE2
 !!PM601:V0; [tell AI not to come here]
 !!DO770/0/3/1:P; [randomize cave bits]
 !!VRy1:R0/0/3; [random split cave value, monster not killed]
-!!FU769:Py1/601; [store it]
+!!PO601:Oy1; [store it]
 
 ** end of function
 
@@ -246,7 +246,7 @@ ZVSE2
 !?FU732;
 
 !!VRy1:Sv998 %4;                        [use x mod 4 as split cave type]
-!!FU768:P609/998;                       [read split cave values]
+!!FU(WOG_30_ReadSplitCaveBits):P609/998;                       [read split cave values]
 !!VRy1&y1=1/v609>=4:S0;                 [then treat monster cave as empty cave]
 
 [initial foray into the cave]
@@ -266,11 +266,11 @@ ZVSE2
 !!en;
 
 !!HE(CURRENT_HERO):O?y3;                [check owner in y3 to see if hero died]
-!!VRv609:|4;                            [set split-cave-monster-killed bit]
 
 !!if&v602=0/y1=1;
-  !!if&y3<>-1;
-    !!FU769:Pv609/998;                  [store modified bits if monster and it's beaten]
+  !!if&y3>(NO_OWNER);
+    !!VRv609:|4;                        [set split-cave-monster-killed bit]
+    !!PO998:Ov609;                      [store modified bits if monster and it's beaten]
   !!el;
     !!VRv602:S1;                        [treat dead hero as not searching]
   !!en;
@@ -1352,20 +1352,11 @@ ZVSE2
 
 ** function to read split cave bits into vx1, location x2
 
-!?FU768;
+!?FU(WOG_30_ReadSplitCaveBits);
 !!POx2:O?vx1; [reads bits from PO:O nybble]
 !!VRvx1:&7; [just 3 meaningful bits]
 !!VRy1:Svx1;
 !d!IF:M^ Get x2=%X2, x1=%X1, v[x1]=%Y1^;
-
-** end of function
-
-
-** function to set split cave bits to x1, location x2
-
-!?FU769;
-!d!IF:M^Set x2=%X2, x1=%X1^;
-!!POx2:Ox1; [set PO:O nybble]
 
 ** end of function
 
@@ -1556,7 +1547,7 @@ ZVSE2
 
 !!VRv611:S0; [assume no occupants]
 !!VRv614:S0; [assume no hermits]
-!!FU768:P612/998; [read split cave bits into v612]
+!!FU(WOG_30_ReadSplitCaveBits):P612/998; [read split cave bits into v612]
 !!VRv612:&3; [just look at number of additional caves, 0-3]
 !!DO781/0/3/1:Pv612; [check each cave's living occupants]
 
