@@ -71,7 +71,7 @@ Changelog:
 - fixed incorrect primary stat bonus for AI on Extreme and Insane setting. Thanks to Orc for testing.
 
 1.039
-- increased AI hero amry starting size depending on selected neutral stack size and double stack size option. This should reduce the possibility that the AI is stuck in its staring zone
+- increased AI hero amry starting size depending on selected neutral stack size and double stack size option. This should reduce the possibility that the AI is stuck in its starting zone
 - AI will no longer fight commanders in creature banks
 - temporary changed priority to make Stack Exp rebalance option and changed creature configs for TUM active
 - small adjustments

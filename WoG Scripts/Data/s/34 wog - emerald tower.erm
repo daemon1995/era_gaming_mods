@@ -153,8 +153,9 @@ Dialogues: 3
 !!if&(size)=0;
   !!IF&(ERM_FLAG_IS_HUMAN):M1/z144011;
 !!el;
+  ; Choose a creature for human
   !!if&(ERM_FLAG_IS_HUMAN);
-    !!VRv2:S(NO_MON);
+    !!VR(mon:y):S(NO_MON);
 
     ; Organise array for IF:N
     !!FU(NewIntArray):P?(monPicsList:y);
@@ -167,39 +168,41 @@ Dialogues: 3
     !!FU(PrepareMultiPicDialog):P(monPicsList);
     !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z144009/?(choice:y);
 
-    !!SN&(choice)>-1:M(availMonList)/(choice)/?v2;
+    !!SN&(choice)>-1:M(availMonList)/(choice)/?(mon);
+
+  ; Choose creature for AI to buy a bonus for: (mon)
   !!el;
-    !!DO(WOG_44_AIChooseCreatureBonus)/0/6/1:P; [Choose creature for AI to buy a bonus for: v2]
+    !!FU(WOG_44_ChooseAIMonsterToEnhance):P?(mon);
   !!en;
   
-  !!IF&v2=(NO_MON)/(ERM_FLAG_IS_HUMAN):Q4/z144012;
+  !!IF&(mon)=(NO_MON)/(ERM_FLAG_IS_HUMAN):Q4/z144012;
 
    [Check for "Week of Monsters" script activated and if it's the monster of the week.]
    [Flag 56 will be true if script is active, v170 is monster of the week]
-  !!if&v2>(NO_MON);
-    !!SN:H^monname^/v2/0/?z3;             [Store monster name (singular) in z3]
-    !!SN:H^monname^/v2/1/?z4;             [Store monster name (plural) in z4]
+  !!if&(mon)>(NO_MON);
+    !!SN:H^monname^/(mon)/0/?z3;             [Store monster name (singular) in z3]
+    !!SN:H^monname^/(mon)/1/?z4;             [Store monster name (plural) in z4]
   !!en;
 
-  !!if&56/v170>(NO_MON)/v170=v2;
-    !!IF&(ERM_FLAG_IS_HUMAN):Q4/(PIC_TYPE_MONSTER)/v2/(MSG_TYPE_QUESTION)/z144013;
+  !!if&56/v170>(NO_MON)/v170=(mon);
+    !!IF&(ERM_FLAG_IS_HUMAN):Q4/(PIC_TYPE_MONSTER)/(mon)/(MSG_TYPE_QUESTION)/z144013;
 
-    !!VRv2:S(NO_MON); [Set v2 to -1 if it's the monster of the week]
+    !!VR(mon):S(NO_MON); [Set (mon) to -1 if it's the monster of the week]
   !!en;
 
-    [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set v2 to -1)]
+    [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set (mon) to -1)]
     [If this is a new creature, set v6 to -1, if not new, set v6 to loop index number]
   !!VRv6:S-1;
 
-  !!if&v2>(NO_MON);
-    !!DO(WOG_44_IsNewMonsterSpecies)/1/i^wog_44_speciesCounter^/1&i^wog_44_speciesCounter^>0:P;
+  !!if&(mon)>(NO_MON);
+    !!DO(WOG_44_IsNewMonsterSpecies)/1/i^wog_44_speciesCounter^/1&i^wog_44_speciesCounter^>0:P(mon);
     !!IF&i^wog_44_speciesCounter^>=12/v6<0/(ERM_FLAG_IS_HUMAN):Q4/z144014;
   !!en;
 
-  !!VRv2&i^wog_44_speciesCounter^>=12/v6<0:S(NO_MON); [Set v2 to -1 if i^wog_44_speciesCounter^ = 12 and creature isn't new]
+  !!VR(mon)&i^wog_44_speciesCounter^>=12/v6<0:S(NO_MON); [Set (mon) to -1 if i^wog_44_speciesCounter^ = 12 and creature isn't new]
 
-  !!if&v2>(NO_MON);
-    !!FU(WOG_44_ChooseImprovementType):P; [Display improvement options]
+  !!if&(mon)>(NO_MON);
+    !!FU(WOG_44_ChooseImprovementType):P(mon); [Display improvement options]
   !!el;
     !!FU(WOG_44_ChooseSpeciesMain)&-4/(ERM_FLAG_IS_HUMAN):P; [Choose another species to improve]
   !!en;
@@ -225,34 +228,35 @@ Dialogues: 3
  [Choose the type of improvement]
 
 !?FU(WOG_44_ChooseImprovementType);
+!#VA(mon:x);
 
-!!SN:H^monname^/v2/0/?z3;
+!!SN:H^monname^/(mon)/0/?z3;
 
 !!VRy2:S5; [+5 Attack bonus: y2]
 
 !!VRy3:S5; [+5 Defense bonus: y3]
 
-!!MA:Ev2/?y1; [Calculate 25% Damage bonus: y4]
+!!MA:E(mon)/?y1; [Calculate 25% Damage bonus: y4]
 !!VRy4:Sy1 :4;
 !!VRy4&y4=0:S1;
 
-!!MA:Pv2/?y1; [Calculate 25% Health bonus: y5]
+!!MA:P(mon)/?y1; [Calculate 25% Health bonus: y5]
 !!VRy5:Sy1 :4;
 !!VRy5&y5=0:S1;
 
-!!MA:Sv2/?y1; [Calculate 25% Speed bonus: y6]
+!!MA:S(mon)/?y1; [Calculate 25% Speed bonus: y6]
 !!VRy6:Sy1 :4;
 !!VRy6&y6=0:S1;
 
-!!MA:Gv2/?y1; [Calculate 50% Growth bonus: y7]
+!!MA:G(mon)/?y1; [Calculate 50% Growth bonus: y7]
 !!VRy7:Sy1 :2;
 !!VRy7&y7=0:S1;
 
-!!MA:Nv2/?y8; [Determine number of shots: y8]
+!!MA:N(mon)/?y8; [Determine number of shots: y8]
 
 ; Calculate the price for increasing spells according to creature level and the number of current spells
-!!MA:Bv2/?y10; [Determine number of spell castings: y10]
-!!MA:Lv2/?y30;
+!!MA:B(mon)/?y10; [Determine number of spell castings: y10]
+!!MA:L(mon)/?y30;
 
 !!if&y10>0/y10<=12;
   !!if&y30<=3;
@@ -278,10 +282,10 @@ Dialogues: 3
 !!VRz485:Sz144024;
 !!VRz486:S^^; [Initialize shots text to null string: z486]
 !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?y13; [Check if Stack Experience is enabled: y13=1 if yes]
-!!EAv2:F0/?y16; [Check next empty line for creature: y16]
-!!EAv2:F102/83/?y17; [Check if stack can gain Shooting ability from stack experience: y17]
+!!EA(mon):F0/?y16; [Check next empty line for creature: y16]
+!!EA(mon):F102/83/?y17; [Check if stack can gain Shooting ability from stack experience: y17]
 !!VRy14&y16<>y17/y8<24/y13=1:S99; [Set y14 to 99 if creature can gain Shooting ability and <24 shots: y14]
-!!VRz486&y8>0/y8<24/v2<>14/v2<>15|y14=99:Sz144025;
+!!VRz486&y8>0/y8<24/(mon)<>14/(mon)<>15|y14=99:Sz144025;
 !!VRz487&y10>0/y15>0:Sz144026;
 !!VRz487|y10<1/y10>12:S^^;
 !!VRz488:Sz144027;
@@ -307,19 +311,23 @@ Dialogues: 3
 !!en;
 
 !!VRv5:S0;
-!!FU(WOG_44_ChooseSpecialAbility)&v3=10:P; [Give choice of Special Bonus]
+!!FU(WOG_44_ChooseSpecialAbility)&v3=10:P(mon)/?v5; [Give choice of Special Bonus] - The choice returns in v5
 
-!!VRv4:S0;
-!!FU(WOG_44_PayForBonus)&v3>1/1000:Py15;  [Ask player to pay for Bonus: v4=1 if player pays]
-!!VRv4&-1000/v3<>10:S(TRUE); [Set v4 to 1 if AI and not selecting special abilities]
-
-!!VRy9&v3>=2/v3<=7:Syv3; [Bonus amount: y9]
+!!VRv4:S(FALSE);
+!!FU(WOG_44_PayForBonus)&v3>1/1000:P(mon)/y15;  [Ask player to pay for Bonus: v4=1 if player pays]
+!!VRv4&-1000:S(TRUE); [Set v4 to 1 if AI]
 
 !!if&v4;
-  !!FU(WOG_44_AddBonusByCreatureType):Py9; [Add bonus to creature type if player paid for it]
+  !!if&v3>=2/v3<=7;
+    !!VRy9:Syv3; [Bonus amount: y9]
+    !!FU(WOG_44_AddBonusByCreatureType):P(mon)/y9; [Add bonus to creature type if player paid for it]
+
+  !!el&v3=10/v5>=1/v5<=10;
+    !!FU(WOG_44_AddSpecialAbility):P(mon)/v5; [Special]
+  !!en;
 
   !!VRi^wog_44_speciesCounter^&v6<0:+1; [Increment Changed Creature Counter if v4=1 and v6<0]
-  !!FU(WOG_44_ChangeMonsterNames):Pv2/v3/v5; [Change species name to reflect ability/bonus just gained]
+  !!FU(WOG_44_ChangeMonsterNames):P(mon)/v3/v5; [Change species name to reflect ability/bonus just gained]
 
   !!PO998:N1; [Set hint text to "visited"]
   !!PM998:V(FALSE);
@@ -332,18 +340,20 @@ Dialogues: 3
     !!VRv3&v3>1/v4=0:S-1; [Set v3 to -1 if player can't pay but doesn't leave]
     !!FU(WOG_44_ChooseSpeciesMain)&v3=-1:P; [Choose another species to improve]
   !!en;
-!!en;
 
-!!OW:C?y11;        [Store current player in y11]
-!!VRy12:S1 Sd<<y11;[y12 is bit number for current player]
-!!VRv1271&-1000/v3>0:+y12; [Add AI player number to v1271 so it won't get another bonus]
+; Add AI player number to v1271 so it won't get another bonus
+!!el&-1000/v3>0;
+  !!VRy12:S1 Sd<<i^timerOwner^;[y12 is bit number for current player]
+  !!VRv1271:+y12;
+!!en;
 
 -----------------------------------------------------------------------
 
  [Player pays for bonus in resources plus creatures]
- [v2=creature type, v3=bonus type]
+ [(mon)=creature type, v3=bonus type]
 
 !?FU(WOG_44_PayForBonus);
+!#VA(mon:x) (cost:x);
 
  [Determine resource type and cost: y1=resource type, y2=resource amount]
 !!VRy1&v3=2:S3;  [Attack]
@@ -368,7 +378,7 @@ Dialogues: 3
 !!VRy2&v3=8:S1000;
 !!VRz1&v3=8:Sz144035;
 !!VRy1&v3=9:S7;  [Spells]
-!!VRy2&v3=9:Sx1;
+!!VRy2&v3=9:S(cost);
 !!VRz1&v3=9:Sz144036;
 !!VRy1&v3=10:S7;  [Special]
 !!VRy2&v3=10/v5=1:S20;  [Flying]
@@ -389,7 +399,7 @@ Dialogues: 3
 !!IF&y2>y3/1000:Q4/y1/y2/(MSG_TYPE_QUESTION)/z144037;
 
  [Calculate number of creatures that must be left: y7]
-!!MA:Gv2/?y6; [Growth of creature: y6]
+!!MA:G(mon)/?y6; [Growth of creature: y6]
 !!VRy10:Sy6 :2; [50% of growth (rounded down): y10]
 !!VRy7:Sy6 +y10; [150% of growth (rounded down): y7]
 
@@ -403,7 +413,7 @@ Dialogues: 3
 
 !!IF:V3/0;
 !!VRy5:S65536 *y7; [Set number text for creature picture]
-!!VRy5:+v2; [Set number text for creature picture]
+!!VRy5:+(mon); [Set number text for creature picture]
 
 !!if&y3>=y2;
   !!IF&1000:Q3/(PIC_TYPE_MONSTER)/y5/(MSG_TYPE_QUESTION)/z144039;
@@ -413,11 +423,11 @@ Dialogues: 3
 
 !!if&3;
   !!VRv7:S0;
-  !!DO(WOG_44_CheckIfHeroHasEnoughCreature)/0/6/1:P; [See if hero has enough creatures of the type to be enchanted]
-  !!SN:H^monname^/v2/1/?z4;
+  !!DO(WOG_44_CheckIfHeroHasEnoughCreature)/0/6/1:P(mon); [See if hero has enough creatures of the type to be enchanted]
+  !!SN:H^monname^/(mon)/1/?z4;
 
   !!if&v7>=y7;
-    !!DO(WOG_44_RemoveCreatures)/0/6/1:Py7; [Remove the creatures (if enough)]
+    !!DO(WOG_44_RemoveCreatures)/0/6/1:P(mon)/y7; [Remove the creatures (if enough)]
     !!IF&1000:Q1/21/y5/y1/y2/1/z144041;
 
     !!VRy4:Sy3 -y2; [y4 = player's new amount of resource after payment]
@@ -440,43 +450,44 @@ Dialogues: 3
 -----------------------------------------------------------------------
 
  [Check if hero has enough creatures of specified type for "payment"]
- [v2=creature type, x16=slot number]
- [At end of loop, v7=total creatures of type v2 in hero's army]
+ [(mon)=creature type, x16=slot number]
+ [At end of loop, v7=total creatures of type (mon) in hero's army]
 
 !?FU(WOG_44_CheckIfHeroHasEnoughCreature);
+!#VA(mon:x);
 
 !!HE(CURRENT_HERO):C0/x16/?y1/?y2; [y1=type, y2=number]
-!!VRv7&y1=v2/y2>0:+y2; [Add number of creatures of right type in slot to v7 total]
+!!VRv7&y1=(mon)/y2>0:+y2; [Add number of creatures of right type in slot to v7 total]
 
 -----------------------------------------------------------------------
 
  [Add bonus to creature type]
- [v2=creature type, v3=bonus type, x1=bonus amount]
+ [(mon)=creature type, v3=bonus type, x1=bonus amount]
 
 !?FU(WOG_44_AddBonusByCreatureType);
+!#VA(mon:x) (bonusAmount:x);
 
-!!MA&v3=2:Av2/dx1; [Attack bonus]
-!!MA&v3=3:Dv2/dx1; [Defense bonus]
-!!MA&v3=4:Ev2/dx1; [Damage high bonus]
-!!MA&v3=4:Mv2/dx1; [Damage low bonus]
-!!MA&v3=5:Pv2/dx1; [Health bonus]
-!!MA&v3=6:Sv2/dx1; [Speed bonus]
-!!MA&v3=7:Gv2/dx1; [Growth bonus]
-!!MA&v3=8:Nv2/24;  [Shots bonus]
-!!MA&v3=9:Bv2/d1;  [Spell casting bonus]
-
-!!FU(WOG_44_AddSpesialAbility)&v3=10:P; [Special]
+!!MA&v3=2:A(mon)/d(bonusAmount); [Attack bonus]
+!!MA&v3=3:D(mon)/d(bonusAmount); [Defense bonus]
+!!MA&v3=4:E(mon)/d(bonusAmount); [Damage high bonus]
+!!MA&v3=4:M(mon)/d(bonusAmount); [Damage low bonus]
+!!MA&v3=5:P(mon)/d(bonusAmount); [Health bonus]
+!!MA&v3=6:S(mon)/d(bonusAmount); [Speed bonus]
+!!MA&v3=7:G(mon)/d(bonusAmount); [Growth bonus]
+!!MA&v3=8:N(mon)/24;  [Shots bonus]
+!!MA&v3=9:B(mon)/d1;  [Spell casting bonus]
 
 -----------------------------------------------------------------------
 
- [Choose Special Ability: v2=creature number]
+ [Choose Special Ability: (mon)=creature number]
 
 !?FU(WOG_44_ChooseSpecialAbility);
+!#VA(mon:x) (specialAbility:x);
 
 !!VRz480:S^^; !!VRz481:S^^; !!VRz482:S^^; !!VRz483:S^^; !!VRz484:S^^;
 !!VRz485:S^^; !!VRz486:S^^; !!VRz487:S^^; !!VRz488:S^^; !!VRz489:S^^; !!VRz490:S^^;
 
-!!MA:Xv2/?v369; [Existing special abilities of monster v2: v369]
+!!MA:X(mon)/?v369; [Existing special abilities of monster (mon): v369]
 
 !!if&-1000;
   !!VRy3:S1 R9; [If AI, set y3 to random number from 1..10]
@@ -485,7 +496,7 @@ Dialogues: 3
 !!en;
 
 ; Check if monster has the ability to teleport
-!!FU(WOG_44_CheckIfMonCanTeleport):Pv2/?y33;
+!!FU(WOG_44_CheckIfMonCanTeleport):P(mon)/?y33;
 
 ; Show Fly ability only when monster hasn't got teleportation
 !!if&y33<>(TRUE);
@@ -523,7 +534,7 @@ Dialogues: 3
 !!FU(Array_Push)&-1000/y1=(FALSE):Py30/5;
 
 ; Check if the monster has the ability to drain life or attract dead souls
-!!FU(WOG_44_CheckIfMonDrainsLife):Pv2/?y32;
+!!FU(WOG_44_CheckIfMonDrainsLife):P(mon)/?y32;
 
 ; Show Attact all Around only if hasn't got this ability
 !!if&y32<>(TRUE);
@@ -579,47 +590,46 @@ Dialogues: 3
 
 !!IF&1000:G1/368/1024/1/480/481/482/483/484/485/486/487/488/489/2/0;
 
- [Determine which box was checked - store result in v5]
-!!VRv5:S0;
-!!VRv5&v368=1:S1;
-!!VRv5&v368=2:S2;
-!!VRv5&v368=4:S3;
-!!VRv5&v368=8:S4;
-!!VRv5&v368=16:S5;
-!!VRv5&v368=32:S6;
-!!VRv5&v368=64:S7;
-!!VRv5&v368=128:S8;
-!!VRv5&v368=256:S9;
-!!VRv5&v368=512:S10;
-!!VRv5&v368=1024:S-1;
+ [Determine which box was checked - store result in (specialAbility)]
+!!VR(specialAbility):S0;
+!!VR(specialAbility)&v368=1:S1;
+!!VR(specialAbility)&v368=2:S2;
+!!VR(specialAbility)&v368=4:S3;
+!!VR(specialAbility)&v368=8:S4;
+!!VR(specialAbility)&v368=16:S5;
+!!VR(specialAbility)&v368=32:S6;
+!!VR(specialAbility)&v368=64:S7;
+!!VR(specialAbility)&v368=128:S8;
+!!VR(specialAbility)&v368=256:S9;
+!!VR(specialAbility)&v368=512:S10;
+!!VR(specialAbility)&v368=1024:S-1;
 
-!!VRv5&-1000:Sy4; [For AI, set v5 to special ability selected]
+!!VR(specialAbility)&-1000:Sy4; [For AI, set (specialAbility) to special ability selected]
 
-!!VRv3&v5=-1:S-1; [If player changes his or her mind, set v3 to -1]
+!!VRv3&(specialAbility)=-1:S-1; [If player changes his or her mind, set v3 to -1]
 
 -----------------------------------------------------------------------
 
- [Add Special Ability: v2=creature number, v5=bonus number]
+ [Add Special Ability: (mon)=creature number, v5=bonus number]
 
-!?FU(WOG_44_AddSpesialAbility)&v5>=1/v5<=10;
+!?FU(WOG_44_AddSpecialAbility);
+!#VA(mon:x) (specialAbility:x);
 
-!!VRy2&v5=1:S(MON_FLAG_FLYER);          [Flying: y2]
-!!VRy2&v5=2:S(MON_FLAG_WIDE_ATTACK);    [Extended Attack: y2]
+!!VR(abilityBit:y)&(specialAbility)=1:S(MON_FLAG_FLYER);          [Flying]
+!!VR(abilityBit)&(specialAbility)=2:S(MON_FLAG_WIDE_ATTACK);    [Extended Attack]
 
-!!VRy2&v5=3:S(MON_FLAG_UNDEAD) +(MON_FLAG_NO_MORALE) +(MON_FLAG_ALIVE); [Undead: y2]
-!!VRy2&v5=4:S(MON_FLAG_NO_MORALE);      [Unaffected by Morale: y2]
+!!VR(abilityBit)&(specialAbility)=3:S(MON_FLAG_UNDEAD) +(MON_FLAG_NO_MORALE); [Undead]
+!!VR(abilityBit)&(specialAbility)=4:S(MON_FLAG_NO_MORALE);      [Unaffected by Morale]
 
-!!VRy2&v5=5:S(MON_FLAG_ATTACKS_TWICE);  [Two Attacks: y2]
-!!VRy2&v5=6:S(MON_FLAG_ATTACKS_ALL_AROUND); [Attack All Adjacent: y2]
-!!VRy2&v5=7:S(MON_FLAG_NO_RETALIATION);   [No Retaliation: y2]
-!!VRy2&v5=8:S(MON_FLAG_MIND_IMMUNITY);  [Immunity to Mind Spells: y2]
-!!VRy2&v5=9:S(MON_FLAG_FIRE_IMMUNITY);  [Immunity to Fire Spells: y2]
-!!VRy2&v5=10:S(MON_FLAG_NO_MELEE_PENALTY); [No Close Combat Penalty: y2]
+!!VR(abilityBit)&(specialAbility)=5:S(MON_FLAG_ATTACKS_TWICE);  [Two Attacks]
+!!VR(abilityBit)&(specialAbility)=6:S(MON_FLAG_ATTACKS_ALL_AROUND); [Attack All Adjacent]
+!!VR(abilityBit)&(specialAbility)=7:S(MON_FLAG_NO_RETALIATION);   [No Retaliation]
+!!VR(abilityBit)&(specialAbility)=8:S(MON_FLAG_MIND_IMMUNITY);  [Immunity to Mind Spells]
+!!VR(abilityBit)&(specialAbility)=9:S(MON_FLAG_FIRE_IMMUNITY);  [Immunity to Fire Spells]
+!!VR(abilityBit)&(specialAbility)=10:S(MON_FLAG_NO_MELEE_PENALTY); [No Close Combat Penalty]
 
-!!MA:Xv2/?y1; [Read Creature Flags: y1]
-!!VRy1:|y2; [OR Creature Flags (y1) with Special Ability bit (y2): y1]
-!!VRy1&v5=3:-(MON_FLAG_ALIVE);
-!!MA:Xv2/y1; [Set updated Creature Flags: y1]
+!!MA:X(mon)/d|(abilityBit);
+!!MA&(specialAbility)=3:X(mon)/d|(abilityBit) X(mon)/d~(MON_FLAG_ALIVE);
 
 -----------------------------------------------------------------------
 
@@ -627,10 +637,11 @@ Dialogues: 3
  [If new, v6=-1, if not new, set v6 to loop index number (x16)]
 
 !?FU(WOG_44_IsNewMonsterSpecies);
+!#VA(mon:x);
 
 !!VRy1:S1240 +x16;  [Index of v variable, holding creature numbers]
 
-!!if&vy1=v2;
+!!if&vy1=(mon);
   !!VRv6:Sx16; [If not new, set v6 to loop index number (x16)]
   !!VRx16:S99; [If not new, exit loop]
 !!en;
@@ -676,40 +687,72 @@ Dialogues: 3
 -----------------------------------------------------------------------
 
  [Remove creatures of specified type from hero's army for "payment"]
- [v2=creature type, x1=number of creatures needed, x16=slot number]
+ [(mon)=creature type, x1=number of creatures needed, x16=slot number]
 
 !?FU(WOG_44_RemoveCreatures);
+!#VA(mon:x) (qty:x);
 
 !!HE(CURRENT_HERO):C0/x16/?y1/?y2; [y1=type, y2=number]
 
-!!if&y1=v2;
-  !!if&y2>0/y2<=x1;
+!!if&y1=(mon);
+  !!if&y2>0/y2<=(qty);
     !!HE(CURRENT_HERO):C0/x16/-1/0; [Remove entire stack if less than or equal to # needed]
-    !!VRy4:Sx1 -y2; [Reduce x1 (y4) by amount in stack]
+    !!VRy4:S(qty) -y2; [Reduce (qty) (y4) by amount in stack]
   !!en;
 
-  !!if&y2>x1;
-    !!VRy3:Sx1 *-1; [Store negative value of x1 in y3]
-    !!HE(CURRENT_HERO):C0/x16/d/dy3/0/3; [Remove x1 (y3) troops from stack if more than # needed without changing exp.]
-    !!VRy4:S0; [Reduce x1 (y4) to 0]
+  !!if&y2>(qty);
+    !!VRy3:S(qty) *-1; [Store negative value of (qty) in y3]
+    !!HE(CURRENT_HERO):C0/x16/d/dy3/0/3; [Remove (qty) (y3) troops from stack if more than # needed without changing exp.]
+    !!VRy4:S0; [Reduce (qty) (y4) to 0]
   !!en;
 
-  !!VRx1&y2>0:Sy4; [Set x1 to y4]
+  !!VR(qty)&y2>0:Sy4; [Set (qty) to y4]
 !!en;
 
 -----------------------------------------------------------------------
 
  [Select a creature type for AI to buy a bonus for]
- [based on highest AI value of a given stack: v2]
+ [based on highest AI value of a given stack: (mon)]
 
-!?FU(WOG_44_AIChooseCreatureBonus);
+!?FU(WOG_44_ChooseAIMonsterToEnhance);
+!#VA(mon:x);
 
-!!HE(CURRENT_HERO):C0/x16/?y1/?y2;   [Slot x16: y1=creature type, y2=number of creatures]
-!!VRy3:S0; [Initialize y3 to 0]
-!!MA&y1>=0/y2>0:Iy1/?y3; [AI value for creature type y1: y3]
-!!VRy4&y3>0:Sy3 *y2; [Total AI value for stack: y4]
-!!VRv2&y4>x1:Sy1; [Creature type with highest AI value: v2]
-!!VRx1&y4>x1:Sy4; [Highest AI value: x1]
+!!VR(mon):S(NO_MON);
+
+; Set up two arrays for the type and number of creatures of the hero's army
+!!FU(NewIntArray):P?(typeList:y) P?(numberList:y);
+
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HE(CURRENT_HERO):C0/i/?(type:y)/?(num:y);
+
+  !!if&(type)>(NO_MON)/(num)>0;
+    !!FU(Array_IndexOf):P(typeList)/(type)/?(index:y);
+
+    !!if&(index)=-1;
+      !!FU(Array_Push):P(typeList)/(type) P(numberList)/(num);
+    !!el;
+      !!SN:M(numberList)/(index)/d(num);
+    !!en;
+  !!en;
+!!en;
+
+; Get the max total AI value creature of the hero's army
+!!SN:M(typeList)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(maxAIValue:y):S0;
+
+  !!re i/0/(size)/1/-1;
+    !!SN:M(typeList)/i/?(type) M(numberList)/i/?(num);
+    !!MA:I(type)/?(aiValue:y);
+    !!VR(totalAIValue:y):S(aiValue) *(num);
+
+    !!if&(totalAIValue)>(maxAIValue);
+      !!VR(mon):S(type);
+      !!VR(maxAIValue):S(totalAIValue);
+    !!en;
+  !!en;
+!!en;
 
 -----------------------------------------------------------------------
 
