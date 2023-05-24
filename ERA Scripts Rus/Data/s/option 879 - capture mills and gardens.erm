@@ -104,7 +104,7 @@ ZVSE2
   !!UN:P879/?(wogOption:y);               [провер€ем включена ли опци€]
   !!FU&(wogOption)<>(TRUE):E;
 
-  !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer)/?(activeHero:y);
+  !!OW:C?(player:y)/?(interactPlayer:y) A(interactPlayer)/?(activeHero:y);
 
   !!if&(activeHero)<>(NO_HERO);
     !!HE(activeHero):P?(x:y)/?(y:y)/?(z:y);
@@ -127,14 +127,13 @@ ZVSE2
     !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
     !!VR(rmbStr):+^%T(es.endl)%(ownerStr)^;
 
-    ; Check who's clicking
-    !!OW:C?(player:y)/?(interactPlayer:y);  [текущий игрок]
     !!VR(res:y):S(NO_PIC_TYPE);
     !!VR(num:y):S(NO_PIC_TYPE);
 
     ; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
     !!if&(owner)=(interactPlayer);
       !!PO(x)/(y)/(z):V0/?(res:y) V1/?(num:y); [тип и количество принесенных ресурсов, если объект свой]
+
       !!if&(num)=0;
         !!VR(res:y):S(NO_PIC_TYPE);
         !!VR(num:y):S(NO_PIC_TYPE);
@@ -143,6 +142,7 @@ ZVSE2
         !!VR(rmbStr):+(txt);
       !!en;
     !!en;
+
     !!IF:Q2/(PIC_TYPE_FLAG)/(owner)/(res)/(num)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "чужой"]
   !!en;
 
@@ -165,6 +165,11 @@ ZVSE2
   !!en;
 
   !!PO(x)/(y)/(z):O?(owner:y);
+
+  ; Correct owner if the owner has been removed from the game
+  !!OW:I(owner)/?(isAi:y)/?(hasLost:y);
+  !!PO(x)/(y)/(z)&(hasLost):O(NO_OWNER);
+
   !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(newHint:z);
 
   !!if&(owner)>(NO_OWNER);
@@ -214,7 +219,11 @@ ZVSE2
 
   !!PO(x)/(y)/(z):O?(owner:y);                                [get obj owner]
 
-  !!if&(owner)<>(NO_OWNER);                                   [if there is one]
+  ; Correct owner if the owner has been removed from the game
+  !!OW:I(owner)/?(isAi:y)/?(hasLost:y);
+  !!PO(x)/(y)/(z)&(hasLost):O(NO_OWNER);
+
+  !!if&(owner)>(NO_OWNER);                                    [if there is one]
     !!SN:V(liveArr)/(owner)/?(isAlive:y);                     [check if lives]
 
     !!if&(isAlive);

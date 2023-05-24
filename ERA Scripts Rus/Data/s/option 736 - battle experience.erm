@@ -20,60 +20,71 @@ ZVSE2
 ** Призываемые существа опыта не получают. Убийство Клона опыта не дает.
 
 
-!?FU(OnAfterBattleUniversal);           // после окончания битвы
-!!UN:P736/?y1;
-!!SN&y1<>0:W^opt736.restorexp^/0; // сброс флага переигрываемой битвы, если опция включена
+; Turn off battle exp option at the start of the game if stack exp is off
+!?FU(OnAfterErmInstructions);
+!!UN:P736/?(battleExp:y) P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y);
 
-!?FU(OnSetupBattlefield)&1000;          // перед нетеоретической битвой
-!!UN:P736/?y1 P900/?y2;
-!!FU|y1=0/y2=0:E; // выход если хоть одна опций 736 и 900 не включена
+!!if&(battleExp)/(stackExp)=(FALSE);
+  !!UN:P736/(FALSE);
+!!en;
 
-!!SN:W^opt736.restorexp^/?r W^opt736.restorexp^/1; // r=1, если битва переигрывается
-!_!IF:M^ReBattle=%Vr^;
-!!SN:W^opt736.bm.1^/-1;
-!!SN:W^opt736.bm.2^/-1; // инициализация флагов
-!!BA:H0/?y1 H1/?y2 S?y3 P?y7/?y8/?y9;   // y1/2 - герои, y3>0 для осадной битвы, y7-y9 - координаты битвы
+; Store stack exp
+!?FU(OnBeforeBattleUniversal)&(ERM_FLAG_IS_HUMAN);
+!!UN:P736/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!re i/0/6; 
-  !!SN:W^opt736.0.%Vi^/0;
-  !!SN:W^opt736.1.%Vi^/0;               // обнуление массива опыта существ
-  !!HEy1:C0/i/d/?y20;                   // y20 - кол-во сущест в i-м отряде атакующего
-  !!SN&r=1:W^opt736.r0.%Vi^/?y30;
-  !!EXy1/i&y20>0/r=1:Ey30;              // восстановление опыта отряда для переигрываемой битвы
-  !!EXy1/i&y20>0:E?y10;                 // y10 - опыт отряда атакующего, если есть существа
-  !!SN&y20>0:W^opt736.0.%Vi^/y10;       // сохранение опыта отряда атакующего, если есть существа
-  !!SN&y20>0/r=0:W^opt736.r0.%Vi^/y10;  // сохранение опыта отряда атакующего для переигрываемой битвы
+!!BA:S?(siegeType:y);                   [для осадной битвы]
 
-  !!if&y2>=0;                           // если есть герой-защитник
-    !!HEy2:C0/i/d/?y20;                 // y20 - кол-во сущест в i-м отряде защищающегося
-    !!SN&r=1:W^opt736.r1.%Vi^/?y30;
-    !!EXy2/i&y20>0/r=1:Ey30;            // восстановление опыта отряда для переигрываемой битвы    
-    !!EXy2/i&y20>0:E?y10;               // y10 - опыт отряда защищающегося, если есть существа
-    !!SN&y20>0:W^opt736.1.%Vi^/y10;     // сохранение опыта отряда защищающегося, если есть существа
-    !!SN&y20>0/r=0:W^opt736.r1.%Vi^/y10;// сохранение опыта отряда защищающегося для переигрываемой битвы
-  !!en; 
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST); 
+  !!SN:W^opt736.0.%i^/0;
+  !!SN:W^opt736.1.%i^/0;                [обнуление массива опыта существ]
+  
+  ; Attacking hero
+  !!HEi^battle_hero_0^:C0/i/d/?(num:y); [кол-во сущест в i-м отряде атакующего]
+  !!EXi^battle_hero_0^/i&(num)>0:E?i^opt736.0.%i^ E?i^opt736.r0.%i^; [сохранение опыта отряда атакующего, если есть существа]
 
-  !!if&y2<0/y3>0;                       // если осадная битва без героя-защитника 
-    !!CAy7/y8/y9:M2/i/d/?y20;           // y20 - кол-во сущест в i-м отряде гарнизона
-    !!SN&r=1:W^opt736.r1.%Vi^/?y30;
-    !!EXy7/y8/y9/i&y20>0/r=1:Ey30;      // восстановление опыта отряда для переигрываемой битвы    
-    !!EXy7/y8/y9/i&y20>0:E?y10;         // y10 - опыт отряда гарнизона, если есть существа
-    !!SN&y20>0:W^opt736.1.%Vi^/y10;     // сохранение опыта отряда гарнизона, если есть существа
-    !!SN&y20>0/r=0:W^opt736.r1.%Vi^/y10;// сохранение опыта отряда гарнизона для переигрываемой битвы
-  !!en; 
-!!en;  
+  ; Defending hero
+  !!if&i^battle_hero_1^>=0;             [если есть герой-защитник]
+    !!HEi^battle_hero_1^:C0/i/d/?(num); [кол-во сущест в i-м отряде защищающегося]
+    !!EXi^battle_hero_1^/i&(num)>0:E?i^opt736.1.%i^ E?i^opt736.r1.%i^; [сохранение опыта отряда защищающегося, если есть существа]
+  ; Defending garrison (in siege)
+  !!el&i^battle_hero_1^<0/(siegeType)>0;[если осадная битва без героя-защитника]
+    !!CAi^battle_x^/i^battle_y^/i^battle_z^:M2/i/d/?(num); [кол-во сущест в i-м отряде гарнизона]
+    !!EXi^battle_x^/i^battle_y^/i^battle_z^/i&(num)>0:E?i^opt736.1.%i^ E?i^opt736.r1.%i^; [сохранение опыта отряда гарнизона, если есть существа]
+  !!en;
+!!en;
 
-!!if&r=1;                               // если битва переигрывается
-  !!re i/0/41;                          // восстановление опыта существам на поле боя при переигрывани битвы
-    !!VRs:Si :21;
-    !!BMi:O?h N?n;                      // s/h - сторона отряда (0/1) / номер слота в армии / численность отряда
-    !!co&n<1;                           // пропуск пустого отряда
-    !!co&h=-1;                          // skip if not a creature from the hero's army
+; Restore stack exp on battle replay
+!?FU(OnBattleReplay);
+!!UN:P736/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-    !!SN:W^opt736.r%Vs.%Vi^/?j;         // j - сохраненный опыт отряда
-    !!VRo:Si *-1 -1;                    // o номер отряда для EA
-    !!EAo:Ej/2/d/d;                     // восстановление опыта отряда
-  !!en; 
+!!BA:S?(siegeType:y);                   [для осадной битвы]
+
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST); 
+  ; Attacking hero
+  !!HEi^battle_hero_0^:C0/i/d/?(num:y); [кол-во сущест в i-м отряде атакующего]
+  !!EXi^battle_hero_0^/i&(num)>0:Ei^opt736.r0.%i^; [восстановление опыта отряда для переигрываемой битвы]
+
+  ; Defending hero
+  !!if&i^battle_hero_1^>(NO_HERO);      [если есть герой-защитник]
+    !!HEi^battle_hero_1^:C0/i/d/?(num); [кол-во сущест в i-м отряде защищающегося]
+    !!EXi^battle_hero_1^/i&(num)>0:Ei^opt736.r1.%i^; [восстановление опыта отряда для переигрываемой битвы]
+  ; Defending garrison (in siege)
+  !!el&i^battle_hero_1^=(NO_HERO)/(siegeType)>0; [если осадная битва без героя-защитника]
+    !!CAi^battle_x^/i^battle_y^/i^battle_z^:M2/i/d/?(num); [кол-во сущест в i-м отряде гарнизона]
+    !!EXi^battle_x^/i^battle_y^/i^battle_z^/i&(num)>0:Ei^opt736.r1.%i^; [восстановление опыта отряда для переигрываемой битвы]
+  !!en;
+!!en;
+
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST); [восстановление опыта существам на поле боя при переигрывани битвы]
+  !!BMi:O?(armySlot:y) N?(num:y);       [номер слота в армии / численность отряда]
+
+  !!if&(num)>0/(armySlot)>=(ARMY_SLOT_FIRST);
+    !!BMi:I?(side:y);
+    !!VR(eaStack:y):Si *-1 -1;          [номер отряда для EA]
+    !!EA(eaStack):Ei^opt736.r%(side).%(armySlot)^/2/d/d; [восстановление опыта отряда]
+  !!en;
 !!en; 
 
 !?FU(OnBeforeBattleAction)&1000; [для нетеоретической битвы]
