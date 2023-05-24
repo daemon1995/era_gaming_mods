@@ -11,7 +11,7 @@ ZVSE2
 
   !!if&v1/i^mouse_item^=v1;
     !!VRi^sss_CurrentPage^:+1;
-    !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+    !!FU(sss_SwitchPage):Pi^sss_CurrentPage^;
     !!FU(sss_DoNotRefreshHeroScreenTwice):P;
   !!en;
 
@@ -19,80 +19,52 @@ ZVSE2
 
   !!if&v1/i^mouse_item^=v1;
     !!VRi^sss_CurrentPage^:-1;
-    !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+    !!FU(sss_SwitchPage):Pi^sss_CurrentPage^;
     !!FU(sss_DoNotRefreshHeroScreenTwice):P;
   !!en;
 
 
 !?FU(OnOpenHeroScreen);
-!!HEx1:O?(owner:y);
-  *!FU(sss_StorePlayerHeroesData):P(owner);
+  !!HEx1:O?(owner:y);
   !!VRi^sss_CurrentPage^:S1;
-  !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+  !!FU(sss_SwitchPage):Pi^sss_CurrentPage^;
 
-*?FU(sss_StorePlayerHeroesData);
-  *#VA(playerID:x);
-  *!OW:H(playerID)/1;
-  *!re i/2/v1/1/1;
-      *!HEvi:S?i^sss_hero_%vi^;
-  *!en;
 
 !?FU(OnPreHeroScreen)&i^sss_do_not_update_screen^=(FALSE);
-!!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+!!FU(sss_SwitchPage):Pi^sss_CurrentPage^;
 
 !?FU(OnPostHeroScreen)&i^sss_do_not_update_screen^=(FALSE);   
-!!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+!!FU(sss_SwitchPage):Pi^sss_CurrentPage^;
 
 !?FU(OnCloseHeroScreen);
   !!HEx1:O?(owner:y);
-  *!FU(sss_RestorePlayerHeroesData):P(owner);
+  !!FU(sss_FixPlayerHeroesData):P(owner);
   !!VRi^sss_CurrentPage^:S0;
 
-*?FU(sss_RestorePlayerHeroesData);
-  *#VA(playerID:x);
-  *!OW:H(playerID)/1;
+!?FU(sss_FixPlayerHeroesData);
+  !#VA(playerID:x);
 
-  *!re i/2/v1/1/1;
-      *!HEvi:Si^sss_hero_%vi^;
-      *!SN:W^sss_hero_%vi^;
-  *!en;
+  !!UN:C4881872/(UNC_INT8)/?(secSkillLimit:y);
+  !!OW:H(playerID)/1;
+
+  !!re i/2/v1/1/1;
+    !!FU(sss_SetUpSSArray):Pvi/?(skillsList:y)/?(skills:y);
+    !!VR(skills):F0/(secSkillLimit);
+    !!HEvi:S(skills);
+  !!en;
 
 
 !?FU(OnKeyPressed_HeroScreen)&i^key^=(KEY_PRIOR)|i^key^=(KEY_NEXT);
   !!VRi^sss_CurrentPage^&i^key^=(KEY_PRIOR):-1;
   !!VRi^sss_CurrentPage^&i^key^=(KEY_NEXT):+1;
-  !!FU(sss_SwithPage):Pi^sss_CurrentPage^;
+  !!FU(sss_SwitchPage):Pi^sss_CurrentPage^;
 
   !!FU(sss_DoNotRefreshHeroScreenTwice):P;
 
-!?FU(sss_SwithPage);                // отображение x1 страницы втор.навыков в экране героя
+!?FU(sss_SwitchPage);                // отображение x1 страницы втор.навыков в экране героя
 !#VA(page:x);
-  *!HE-1:Z?(hero:y);
-  *!UN:C(hero)/257/4/?(storedSkills:y);
-  *!VR(heroSkillsToShowPtr:y):S(hero) +229;
 
-  !!FU(NewIntArray):P?(skillsList:y);
-  !!UN:P193/?(warfare:y);
-  !!VR(warfarePlaced:y):S(FALSE);
-  !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST):;
-    !!HE-1:Si/?(learned:y);
-
-    !!if&(learned);
-      !!if|i=(SKILL_BALLISTICS)/i=(SKILL_ARTILLERY)/i=(SKILL_FIRST_AID);
-        !!if&(warfare);
-          !!if&(warfarePlaced:y)=(FALSE);
-            !!VR(warfarePlaced:y):S(TRUE);
-            !!IF:W-1;
-            !!FU(Array_Push):P(skillsList)/w48;
-          !!en;
-          !!co;
-        !!en;
-      !!en;
-
-      !!FU(Array_Push):P(skillsList)/i;
-    !!en;
-  !!en;
-  !!SN:M(skillsList)/?(skills:y);
+  !!FU(sss_SetUpSSArray):P(CURRENT_HERO)/?(skillsList:y)/?(skills:y);
   !!FU&(skills)=0:E;
 
   !!UN:C7620583/1/?(maxToShow:y);                    // y6 - максимальное количество втор.навыков отображаемых в окне героя
@@ -114,14 +86,44 @@ ZVSE2
   !!VR(lastSkill)&(lastSkill)>(skills):S(skills) %(maxToShow) +(startSkill);
   !!VR(skillsToShow:y):S(lastSkill) -(startSkill);
 
-  !!HE-1:S(skillsToShow);
+  !!HE(CURRENT_HERO):S(skillsToShow);
 
   !!re i/(startSkill)/(lastSkill)/1/-1;
     !!SN:M(skillsList)/i/?(skill:y);
     !!VR(slot:y):Si -(startSkill) +1;
-    !!HE-1:S(slot)/(skill)/1;
+    !!HE(CURRENT_HERO):S(slot)/(skill)/1;
   !!en;
+
   *!UN:C(hero)/257/4/(storedSkills);
+
+!?FU(sss_SetUpSSArray);
+!#VA(hero:x) (skillsList:x) (skills:x);
+
+  !!FU(NewIntArray):P?(skillsList);
+  !!UN:P193/?(warfare:y);
+  !!VR(warfarePlaced:y):S(FALSE);
+  !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+    !!HE(hero):Si/?(learned:y);
+
+    !!if&(learned);
+      !!if|i=(SKILL_BALLISTICS)/i=(SKILL_ARTILLERY)/i=(SKILL_FIRST_AID);
+        !!if&(warfare);
+          !!if&(warfarePlaced:y)=(FALSE);
+            !!VR(warfarePlaced:y):S(TRUE);
+            !!IF:W(hero);
+            !!FU(Array_Push):P(skillsList)/w48;
+          !!en;
+
+          !!co;
+        !!en;
+      !!en;
+
+      !!FU(Array_Push):P(skillsList)/i;
+    !!en;
+  !!en;
+
+  !!SN:M(skillsList)/?(skills);
+  !!SN:F^ExtendArrayLifetime^/(skillsList);
 
 !?FU(sss_DoNotRefreshHeroScreenTwice);
 !!VRi^sss_do_not_update_screen^:S(TRUE);

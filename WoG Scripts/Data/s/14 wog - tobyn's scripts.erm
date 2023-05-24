@@ -5,7 +5,7 @@ ZVSE2
 ** with big thanks to Fnord and the team for all their advice
 **
 ** Each scriptlet is fully documented and contains a separate variables list.
-** Vars v2361-i^wog_189_enabled^ are script activity "flags" for my new scriptlets here.
+** Vars v2368-v2369 are script activity "flags" for my new scriptlets here.
 ** To enable a script, set respective var to 1 (normally done via Wogify Options).
 **
 ** Some scriptlets use my Universal Timer (which automatically runs with Wogify
@@ -23,7 +23,7 @@ ZVSE2
 !#UN:P190/?i^wog_190_enabled^; check if First Aid Enhanced is enabled in WoGify Options
 !#UN:P191/?i^wog_191_enabled^;          check if Estates Enhanced is enabled in WoGify Options
 !#UN:P193/?i^wog_193_enabled^;          check if Warfare is enabled in WoGify Options
-!#UN:P194/?v2361;          check if Advanced Witch Huts are enabled in WoGify Options
+!#UN:P194/?i^wog_194_enabled^;          check if Advanced Witch Huts are enabled in WoGify Options
 
 !#UN:P203/?v2368;          check if Estates I (script48.erm, Arstahd) is enabled
 !#UN:P36/?v2369;           check if Mithril (script36.erm, Anders) is enabled
@@ -37,7 +37,7 @@ ZVSE2
 
 ; Warfare
 ; INIT SKILL NAMES (leaves descriptions unchanged)
-!!if&i^wog_193_enabled^=1;
+!!if&i^wog_193_enabled^;
   !!SN:Ex1/1/5121389/(WOG_Hero_SSkillSet);                                    [set new skill value by game native way]
   !!SN:Ex1/1/5121366/(WOG_Hero_SSkillAdd);                                    [add new skill value by game native way]
 
@@ -81,56 +81,88 @@ ZVSE2
 **   witch "offer" to hide that skill for 10 Mithril. If rejected,
 **   either do nothing or call full wrath (= unlearn that skill)
 **
-** USES function FU2335, vars v2328-v2330
-** ONLY ACTIVE if v2361=1 (wogify option 194)
+** ONLY ACTIVE if i^wog_194_enabled^=1 (wogify option 194)
 
 
-!?OB113&v2361=1;           any Witch Hut visited
-!!WHv998/v999/v1000:S?v2328; get Witch Hut skill
-!!HE-1:Sv2328/?v2329;        get hero skill expertise
-!!OBv998/v999/v1000:M-1/1/0; disable next std msg of this Witch Hut
+!?OB(OBJ_WITCH_HUT)&i^wog_194_enabled^;           any Witch Hut visited
+; Disable standard object interaction
+!!OB998:S;
 
-!$OB113&v2361=1;           post-visit trigger for any Witch Hut
-!!UN:N4/z-1/v2328;           using built-in skill name lookup
-!!HE-1:Sv2328/?v2330;        get hero skill expertise after visit
-!!HE-1&v2329=0/v2330>0:Sv2328/0; reset hero skill expertise if different
-!!FU2335&v2330>0:P;          call dialogue function if different
-!!IF&v2330=0/1000:M1/z164000; msg if not given (= no free skill slot)
+!!WH998:S?(secSkill:y); get Witch Hut skill
+!!HE(CURRENT_HERO):S(secSkill)/?(level:y);        get hero skill expertise
 
-!?FU2335;                  dialogue function
-!!IF:V1/0;                   init flag 1
-!!WHv998/v999/v1000:S?y1;    get Witch Hut skill
-!!HE-1:Sy1/?y2;              get hero expertise with this skill
-!!OW:R-1/6/?y3;              get owner's gold
-!!VRy4:Sy1*3;                (calculations for display skill pic)
-!!VRy4:+2+y2;                 .
-!!VRy4&y2<2:+1;               .
-!!VRy5|y1=10/y1=20/y1=27:S1; set y5=1 if one of the Warfare skills
-!!VRy5&i^wog_193_enabled^=0:S0;           set y5=0 if Warfare inactive
+; Execute the learning function if the hero has learned the given skill before
+!!if&(level)>(SKILL_NOT_LEARNED);
+  !!FU(WOG_194_LearnOrForgetSkill):P;
+; Check for more info if the hero has not learned the given skill before
+!!el;
+  !!UN:C4881872/(UNC_INT8)/?(secSkillLimit:y);
+  *!HE(CURRENT_HERO):S?(number:y);      [HE:S should also be correct if everything's right, but seems it isn't]
+  !!FU(WOG_CalcNumberOfSecSkills):P(CURRENT_HERO)/?(number:y);
 
-!!HE-1&y2=0/y3<500/-1000:Sy1/1; AI gets basic if not enough gold
-!!HE-1&y2<2/y3>499/-1000:Sy1/2; AI gets advanced if enough gold
-!!OW&y3>499/-1000:R-1/6/d-500;  AI pays 500 gold if advanced
+  ; Excute the learning function if the hero can still learn a new skill
+  !!if&(number)<(secSkillLimit);
+    !!FU(WOG_194_LearnOrForgetSkill):P;
+  ; Show msg if the hero cannot learn any new skill
+  !!el&(ERM_FLAG_IS_HUMAN);
+    !!SN:H^secskill^/(secSkill)/(SKILL_NOT_LEARNED)/?z-1; using built-in skill name lookup
+    !!IF:M1/z164000; msg if not given (= no free skill slot)
+  !!en;
+!!en;
 
-!!IF&y2>1/1000:Q1/20/y4/2/z164001;     msg if already adv or expert
+!?FU(WOG_194_LearnOrForgetSkill);                  dialogue function
+!!WH998:S?(secSkill:y);    get Witch Hut skill
+!!HE(CURRENT_HERO):S(secSkill)/?(level:y);              get hero expertise with this skill
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?(gold:y);              get owner's gold
+!!VR(picSubtype:y):S(secSkill)*3 +2 +(level);                (calculations for display skill pic)    .
+!!VR(picSubtype)&(level)<=(SKILL_BASIC):+1;               .
 
-!!HE-1&y2>1/-1/1000/y5=0:Sy1/0; remove adv/exp skill at player's choice (AI never forgets) and end function (because y2 gladly not actualized)
-!!HE-1&y2>1/-1/1000/i^wog_193_enabled^=1/y5=1:S10/0 S20/0 S27/0; unlearn all three Warfare skills if appropriate and end fct
+!!VR(isWarfare:y)|(secSkill)=(SKILL_BALLISTICS)/(secSkill)=(SKILL_ARTILLERY)/(secSkill)=(SKILL_FIRST_AID):S(TRUE); set (isWarfare)=1 if one of the Warfare skills
+!!VR(isWarfare)&i^wog_193_enabled^=0:S(FALSE);           set (isWarfare)=0 if Warfare inactive
 
-!!IF&y2>1/-1/1000:M1/z164002;          msg if "unlearn"
+; For AI
+!!if&-(ERM_FLAG_IS_HUMAN);
+  !!if&(level)=(SKILL_NOT_LEARNED)/(gold)<500;
+    !!HE(CURRENT_HERO):S(secSkill)/(SKILL_BASIC); AI gets basic if not enough gold
+  !!el&(level)<=(SKILL_BASIC)/(gold)>499;
+    !!HE(CURRENT_HERO):S(secSkill)/(SKILL_ADVANCED); AI gets advanced if enough gold
+    !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-500;  AI pays 500 gold if advanced
+  !!en;
+; For Human
+!!el;
+  ; Offer to forget the skill if already advanced
+  !!if&(level)>=(SKILL_ADVANCED);
+    !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(MSG_TYPE_QUESTION)/z164001;     msg if already adv or expert
 
-!!IF&y2=0/1000:Q1/20/y4/2/z164003; std msg if no skill
-!!HE-1&y2=0/1:Sy1/1;         set skill to basic if agreed to learn
-!!VRy4&y2=0/1:+1;            (inc display pic)
-!!VRy2&y2=0/1:S1;            set skill expertise var to basic
-!!IF:V1/0;                   reset flag 1
+    !!if&-1;
+      !!HE(CURRENT_HERO)&(isWarfare)=(FALSE):S(secSkill)/0; remove adv/exp skill at player's choice (AI never forgets) and end function (because (level) gladly not actualized)
+      !!HE(CURRENT_HERO)&i^wog_193_enabled^=1/(isWarfare):S(SKILL_BALLISTICS)/(SKILL_NOT_LEARNED) S(SKILL_ARTILLERY)/(SKILL_NOT_LEARNED) S(SKILL_FIRST_AID)/(SKILL_NOT_LEARNED); unlearn all three Warfare skills if appropriate and end fct
 
-!!IF&y2=1/y3<3000/1000:Q1/20/y4/6/3000/1/z164004; msg if bas and not enough gold
-!!IF&y2=1/y3>2999/1000:Q1/20/y4/6/3000/2/z164005; msg if bas and enough gold (offer to advance)
-!!OW&y2=1/1:R-1/6/d-3000;    pay 3000 gold if agreed
-!!HE-1&y2=1/1:Sy1/2;         set skill to advanced then
-!!IF:W-1;                    set hero var reference to current hero
-!!VRw48&y2=1/y5=1/i^wog_193_enabled^=1:Sy1; set hero var w48 (Warfare) to appropriate Warfare skill
+      !!IF:M(MSG_TYPE_MES)/z164002;          msg if "unlearn"
+    !!en;
+  ; Offer to learn the skill if the hero has none or basic level of the skill
+  !!el;
+    !!if&(level)=(SKILL_NOT_LEARNED);
+      !!IF:Q1/20/(picSubtype)/(MSG_TYPE_QUESTION)/z164003; std msg if no skill
+
+      !!if&1;
+        !!HE(CURRENT_HERO):S(secSkill)/1;         set skill to basic if agreed to learn
+        !!VR(picSubtype):+1;            (inc display pic)
+        !!VR(level):S1;            set skill expertise var to basic
+      !!en;
+    !!en;
+
+    !!if&(level)=(SKILL_BASIC);
+      !!IF&(gold)<3000:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(PIC_TYPE_RES_GOLD)/3000/(MSG_TYPE_MES)/z164004; msg if bas and not enough gold
+      !!IF&(gold)>2999:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(PIC_TYPE_RES_GOLD)/3000/(MSG_TYPE_QUESTION)/z164005; msg if bas and enough gold (offer to advance)
+
+      !!if&1;
+        !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-3000;    pay 3000 gold if agreed
+        !!HE(CURRENT_HERO):S(secSkill)/(SKILL_ADVANCED);         set skill to advanced then
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
 ******************************************************************************************
 
