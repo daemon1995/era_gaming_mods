@@ -720,6 +720,7 @@ lvl 10+ and cycling
 !?FU(WOG_Hero_SSkillAdd);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(skillId:y);
   !!if|(skillId)=(SKILL_BALLISTICS)/(skillId)=(SKILL_ARTILLERY)/(skillId)=(SKILL_FIRST_AID);
+
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/?(eax:y); C(edx)/4/?(value:y);
     !!if&(eax);
       !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(hero:y) C(hero)/26/4/?(heroId:y)  C(ebp)/12/4/?(value:y);
@@ -747,7 +748,7 @@ lvl 10+ and cycling
   !!UN:C(heroSkillsToShowPtr)/(skills[i])/1/0;
 !!en;
 *!IF:M^WOG_193_SetSkillToShow^;
-!?FU(WOG_ERM_Hero_BeforeSkillAffection);
+!?FU(WOG_ERM_Hero_BeforeSkillAffection)&i^wog_193_HE_S_do_not_affect^=(FALSE);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-84/4/?(skillId:y);
 !!if|(skillId)=(SKILL_BALLISTICS)/(skillId)=(SKILL_ARTILLERY)/(skillId)=(SKILL_FIRST_AID);
   !!VRi^wog_193_HE_S_Affection^:S(skillId);
@@ -930,18 +931,22 @@ lvl 10+ and cycling
 
   GET WARFARE MAIN SKILL AND EXPERTISE
 !?FU(WOG_193_GetWarfareMaxSkillLvl);
-!#VA(heroId:x) (result:x);
+!#VA(heroId:x) (result:x) (ssNumber:x);
 !#VA(levels[3]:y);
 
 !!VR(result):S0;
+!!VR(ssNumber):S0;
 !!HE(heroId):Z?(hero:y);
 !!VR(heroSkillsValuesPtr:y):S(hero) +201;
 !!UN:C(heroSkillsValuesPtr)/(SKILL_BALLISTICS)/1/?(levels[0]);
 !!UN:C(heroSkillsValuesPtr)/(SKILL_FIRST_AID)/1/?(levels[1]);
 !!UN:C(heroSkillsValuesPtr)/(SKILL_ARTILLERY)/1/?(levels[2]);
 !!re i/0/(levels[SIZE])/1/-1;
-  !!if&(levels[i])>(result);
-    !!VR(result):S(levels[i]);
+  !!if&(levels[i]);
+    !!VR(ssNumber):+1;
+    !!if&(levels[i])>(result);
+      !!VR(result):S(levels[i]);
+    !!en;
   !!en;
 !!en;
 
@@ -1055,11 +1060,20 @@ lvl 10+ and cycling
 !?FU(OnAfterErmInstructions)&i^wog_193_enabled^=1;
 
 !!re i/0/(HERO_LAST_WOG);
-  !!FU(WOG_193_GetWarfareMaxSkillLvl):Pi/?(level:y);
-  !!IF:Wi;                    set w var reference to current hero
+  !!FU(WOG_193_GetWarfareMaxSkillLvl):Pi/?(level:y)/?(ssNumber:y);
+
+  !!IF:Wi;                                                                        [set w var reference to current hero]
   !!if&(level:y);
     !!VRw48:S(SKILL_ARTILLERY);
-    !!FU(WOG_193_UpdateWarfareLevel):Pi/w48;            update Warfare skill levels and displayed skill  
+
+    !!if&(ssNumber)>1;                                                            [if hero has several wf ss from start we need handle that]
+      !!VRi^wog_193_HE_S_do_not_affect^:S(TRUE); 
+      !!HEi:S(SKILL_BALLISTICS)/0 S(SKILL_FIRST_AID)/0 S(SKILL_ARTILLERY)/(level);
+      !!VRi^wog_193_HE_S_do_not_affect^:S(FALSE); 
+    !!en;
+
+    !!FU(WOG_193_UpdateWarfareLevel):Pi/w48;                                      [update Warfare skill levels and displayed skill]
+
   !!el;
     !!VRw48:S0;
   !!en;
