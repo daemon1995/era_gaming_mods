@@ -69,15 +69,45 @@ ZVSE2
 !#FU(hench_CheckGameLang):P;
 !#FU(hench_LoadGlobalConfig):P;
 
+; Store banner type if both campaign carry over and free banner is enabled
+!?FU(OnWinGame)&i^hench_enabled^/i^hench_campaignTransfer^/i^hench_bannerFree^;
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+!!VR(filePath:z):S^Runtime/henchmen.ini^;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!if&i^hench_banner_%i^>0;
+    !!FU(WriteIniInts):P(filePath)/^banner^/^%i^/i^hench_banner_%i^;
+  !!en;
+!!en;
+
+!!FU(SaveIni):P(filePath);
+
 !?FU(OnTransferHero)&i^hench_enabled^/i^hench_campaignTransfer^;
 !#VA(hero:x);
 
 !!VRi^hench_transferred_%(hero)^:S(TRUE);[Mark for henchman initialization]
 
+!!VR(filePath:z):S^Runtime/henchmen.ini^;
+!!FU(ReadIniInts):P(filePath)/^banner^/^%(hero)^/?i^hench_banner_%(hero)^/0;
+!!VR(value:y):Si^hench_banner_%(hero)^;
+
+; Remove ini OnAfterErmInstructions as there is no OnTransferHero on the victory of the the last zone of a campaign
+!?FU(OnAfterErmInstructions);
+!!VR(filePath:z):S^Runtime/henchmen.ini^;
+!!FU(FileExists):P(filePath)/?(result:y);
+
+!!if&(result);
+  !!FU(ClearIniCache):P(filePath);
+  !!FU(DeleteFile):P(filePath)/?(result);
+!!en;
+
 ; Initialise variables
-!?FU(OnAfterErmInstructions)&i^hench_enabled^;
+!?FU(OnAfterErmInited)&i^hench_enabled^;
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!VRi^hench_banner_%i^:S-1;           [Enhanced - Set Warlord's Banner to none]
+  ; Note that this must be executed later than enhanced henchmen config.erm (Difficulty Mod)
+  !!VRi^hench_banner_%i^&i^hench_bannerFree^<>(TRUE):S-1; [Enhanced - Set Warlord's Banner to none, unless Free Banner is enabled]
 
   ; Skip initialization if the henchman is from the previous scenario
   !!if&i^hench_transferred_%i^;
@@ -108,16 +138,16 @@ ZVSE2
   !!IF:W(hero);
 
   ; Choose a henchmen if did not have one
-  !!if&w118=(NO_MON);
+  !!if&w118<=(NO_MON);
     !!if&(canInteract)/(isEligible);
       !!FU(hench_ChooseHench):P(hero);  [Offer to choose a henchman]
       !!UN:R3/(CURRENT_HERO);
     !!el;
       !!IF:Mz149009;
     !!en;
-  !!en;
 
-  !!if&w118>(NO_MON);
+  ; Show up henchmen dialog if the henchman is available
+  !!el&w118>(NO_MON);
     ; Configure banner if holding a banner and put on the henchmen icon
     !!UN:C6916824/4/?(holdingArt:y);  [Enhanced - Put Warlord's Banner to the henchman's area to equip it]
 
