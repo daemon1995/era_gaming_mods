@@ -143,6 +143,8 @@ Dialogues: 3
   !!HE(CURRENT_HERO):C0/i/?(type:y)/?(num:y);
 
   !!if&(type)>(NO_MON)/(num)>0;
+    !!co&(type)>=(MON_EMISSARY_OF_WAR)/(type)<=(MON_EMISSARY_OF_LORE); [Emissaries are not affected]
+
     !!FU(Array_Push):P(availMonList)/(type);
   !!en;
 !!en;
@@ -191,15 +193,30 @@ Dialogues: 3
   !!en;
 
     [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set (mon) to -1)]
-    [If this is a new creature, set v6 to -1, if not new, set v6 to loop index number]
-  !!VRv6:S-1;
-
   !!if&(mon)>(NO_MON);
-    !!DO(WOG_44_IsNewMonsterSpecies)/1/i^wog_44_speciesCounter^/1&i^wog_44_speciesCounter^>0:P(mon);
-    !!IF&i^wog_44_speciesCounter^>=12/v6<0/(ERM_FLAG_IS_HUMAN):Q4/z144014;
-  !!en;
+    ; Check if the monster is a new species
+    !!VRi^wog_44_isNewSpecies^:S(TRUE);
 
-  !!VR(mon)&i^wog_44_speciesCounter^>=12/v6<0:S(NO_MON); [Set (mon) to -1 if i^wog_44_speciesCounter^ = 12 and creature isn't new]
+    !!if&i^wog_44_speciesCounter^>0;
+      !!VR(maxIndex:y):S1240 +i^wog_44_speciesCounter^;
+
+      !!re i/1241/(maxIndex);
+        !!br&vi=(mon);
+      !!en;
+
+      !!VRi^wog_44_isNewSpecies^&i<=(maxIndex):S(FALSE);
+    !!en;
+
+    ; Set the monster to NO_MON if the monster is new and there are already 12 monsters enhanced
+    !!if&i^wog_44_speciesCounter^>=12/i^wog_44_isNewSpecies^;
+      !!VR(mon):S(NO_MON);
+
+      !!if&(ERM_FLAG_IS_HUMAN);
+        !!VRv1240:Si^wog_44_speciesCounter^; [Legacy]
+        !!IF:Q4/z144014;
+      !!en;
+    !!en;
+  !!en;
 
   !!if&(mon)>(NO_MON);
     !!FU(WOG_44_ChooseImprovementType):P(mon); [Display improvement options]
@@ -326,7 +343,7 @@ Dialogues: 3
     !!FU(WOG_44_AddSpecialAbility):P(mon)/v5; [Special]
   !!en;
 
-  !!VRi^wog_44_speciesCounter^&v6<0:+1; [Increment Changed Creature Counter if v4=1 and v6<0]
+  !!VRi^wog_44_speciesCounter^&i^wog_44_isNewSpecies^:+1; [Increment Changed Creature Counter if v4=1 and is new species]
   !!FU(WOG_44_ChangeMonsterNames):P(mon)/v3/v5; [Change species name to reflect ability/bonus just gained]
 
   !!PO998:N1; [Set hint text to "visited"]
@@ -633,23 +650,8 @@ Dialogues: 3
 
 -----------------------------------------------------------------------
 
- [Check if this is a new creature species to be enchanted]
- [If new, v6=-1, if not new, set v6 to loop index number (x16)]
-
-!?FU(WOG_44_IsNewMonsterSpecies);
-!#VA(mon:x);
-
-!!VRy1:S1240 +x16;  [Index of v variable, holding creature numbers]
-
-!!if&vy1=(mon);
-  !!VRv6:Sx16; [If not new, set v6 to loop index number (x16)]
-  !!VRx16:S99; [If not new, exit loop]
-!!en;
-
------------------------------------------------------------------------
-
  [Change species name to reflect ability or bonus just gained]
- [v6=loop index number, i^wog_44_speciesCounter^=changed creature counter]
+ [i^wog_44_speciesCounter^=changed creature counter]
 
 !?FU(WOG_44_ChangeMonsterNames);
 !#VA(mon:x) (choice:x) (specialAbility:x);
@@ -657,15 +659,22 @@ Dialogues: 3
  [If a new species, store creature number in v(1240+i^wog_44_speciesCounter^)]
 !!VR(vIndex:y):S1240 +i^wog_44_speciesCounter^;
 
-!!if&v6<0;
+; Store the original creature name if the creature is new
+!!if&i^wog_44_isNewSpecies^;
   !!VRv(vIndex):S(mon);
   !!SN:H^monname^/(mon)/0/?(singName:z) H^monname^/(mon)/1/?(plurName:z);
   !!VRs^wog_44_monName_0_%i(wog_44_speciesCounter)^:S(singName);
   !!VRs^wog_44_monName_1_%i(wog_44_speciesCounter)^:S(plurName);
 ; Get the original name if not new
 !!el;
-  !!VR(singName):Ss^wog_44_monName_0_%i(wog_44_speciesCounter)^;
-  !!VR(plurName):Ss^wog_44_monName_1_%i(wog_44_speciesCounter)^;
+  !!re i/1241/(vIndex);
+    !!br&(mon)=vi;
+  !!en;
+
+  !!VR(index:y):Si -1240;
+
+  !!VR(singName):Ss^wog_44_monName_0_%(index)^;
+  !!VR(plurName):Ss^wog_44_monName_1_%(index)^;
 !!en;
 
  [Generate descriptor word to preface name: z5]
