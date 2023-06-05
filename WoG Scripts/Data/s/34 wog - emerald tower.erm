@@ -652,6 +652,7 @@ Dialogues: 3
 
  [Change species name to reflect ability or bonus just gained]
  [i^wog_44_speciesCounter^=changed creature counter]
+; Note that this script assumes there is no other script that changes monsters' names/descriptions in the mid game. If there is, this script can produce problems
 
 !?FU(WOG_44_ChangeMonsterNames);
 !#VA(mon:x) (choice:x) (specialAbility:x);
@@ -663,15 +664,17 @@ Dialogues: 3
 !!if&i^wog_44_isNewSpecies^;
   !!VRv(vIndex):S(mon);
   !!SN:H^monname^/(mon)/0/?(singName:z) H^monname^/(mon)/1/?(plurName:z);
-  !!VRs^wog_44_monName_0_%i(wog_44_speciesCounter)^:S(singName);
-  !!VRs^wog_44_monName_1_%i(wog_44_speciesCounter)^:S(plurName);
+
+  !!VR(index:y):Si^wog_44_speciesCounter^;
+  !!VRs^wog_44_monName_0_%(index)^:S(singName);
+  !!VRs^wog_44_monName_1_%(index)^:S(plurName);
 ; Get the original name if not new
 !!el;
   !!re i/1241/(vIndex);
     !!br&(mon)=vi;
   !!en;
 
-  !!VR(index:y):Si -1240;
+  !!VR(index):Si -1240;
 
   !!VR(singName):Ss^wog_44_monName_0_%(index)^;
   !!VR(plurName):Ss^wog_44_monName_1_%(index)^;
@@ -692,6 +695,30 @@ Dialogues: 3
 
 ; Change the names
 !!SN:H^monname^/(mon)/0/^%(prefix) %(singName)^ H^monname^/(mon)/1/^%(prefix) %(plurName)^;
+
+; Change the description if new ability added in
+; Normal stats descriptions are not added as they require complicated string management
+!!if&(choice)=10;
+  ; Get the description of the monster
+  ; Note that the string here might be too long, we use s^^ instead of z vars
+  !!SN:H^monname^/(mon)/2/?s^wog_44_temp^;
+
+  ; If it is the first time the monster gain special ability from Emerald Tower
+  !!if&i^wog_44_specAbilityGained_%(index)^=(FALSE);
+    ; Set up specialy ability variable
+    !!VRi^wog_44_specAbilityGained_%(index)^:S(TRUE);
+    ; Set up the leading text of the new description
+    !!SN:Ks^wog_44_temp^/?(length:y);
+    !!VRs^wog_44_temp^&(length)>0:+^%T(wog.endl)%T(wog.endl)^; [Might want to remove one new line if the creature descrption space is not enough]
+    !!VRs^wog_44_temp^:+^{%T(wog.44.objName)}%T(wog.colon)^;
+  !!en;
+
+  ; Add in new ability text
+  !!SN:T^wog.44.ability_%(specialAbility)^/?(abilityText:z);
+  !!VRs^wog_44_temp^:+^%(abilityText)%T(wog.period)^;
+  !!SN:H^monname^/(mon)/2/s^wog_44_temp^;
+  !!VRs^wog_44_temp^:S^^;
+!!en;
 
 -----------------------------------------------------------------------
 
