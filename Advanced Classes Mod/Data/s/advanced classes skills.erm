@@ -3136,13 +3136,16 @@ Creature speed   Base movement
 !!if&x4=16;                             [16=  Teach Spell]
   !!HEx1:A2/0/d/?y15;                   [Check for Spell Book]
   !!FU&y15=0:E;                         [Exit if no Spell Book]
-  !!FU$spell$:P1/4/0/0/1/1/6/7/8/9;     [Function to generate a random level 1-4 spell which skips banned spells]
-  !!HEx1:S7/?y14;                       [7 Wisdom]
-  !!SSy-99:L?y5;                        [Spell Level]
+
+  !!FU(acm_GenerateRandomSpell):P1/4/x1/?y-99; [Function to generate a random level 1-4 spell which skips banned spells]
+
   !!if&y-99>=0/y-99<=69;                [Valid Spell]
+    !!HEx1:S7/?y14;                     [7 Wisdom]
+    !!SSy-99:L?y5;                      [Spell Level]
     !!FU&y5=5/y14<3:E;                  [Exit if Wisdom level not high enough]
     !!FU&y5=4/y14<2:E;
     !!FU&y5=3/y14<1:E;
+
     !!IF&999:Q2/20/y3/9/y-99/1/z199151;
     !!HEx1:My-99/1;                     [Give Spell]
   !!en;
@@ -3168,6 +3171,34 @@ Creature speed   Base movement
 !!en;
 
 !!UN:R1;                                [redraw hero screen]
+
+*** Generate Random Spell Number by Archer30 ***
+
+!?FU(acm_GenerateRandomSpell);
+!#VA(minLevel:x) (maxLevel:x) (hero:x) (spell:x);
+
+!!VR(spell):S(NO_SPELL);
+!!FU(NewIntArray):P?(spellList:y);
+
+!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
+  !!HE(hero):M=i/1;
+
+  !!if&-1;
+    !!SSi:L?(level:y);
+
+    !!if&(level)>=(minLevel)/(level)<=(maxLevel);
+      !!UN:J0/i/?(isDisabled:y);
+      !!FU(Array_Push)&(isDisabled)<>(TRUE):P(spellList)/i;
+    !!en;
+  !!en;
+!!en;
+
+!!SN:M(spellList)/?(size:y);
+
+!!if&(size)>0;
+  !!VR(random:y):R0/1/(size) -1;
+  !!SN:M(spellList)/(random)/?(spell);
+!!en;
 
 
 !?FU(OnAfterBattleUniversal)&999;
@@ -27185,13 +27216,16 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!if&x4>=15/x4<=15;                     [Spell Reward]
   !!HEx1:A2/0/d/?y15;                   [Check for Spell Book]
   !!FU&y15=0:E;                         [Exit if no Spell Book]
-  !!FU$spell$:P1/4/0/0/1/1/6/7/8/9;     [Function to generate a random level 1-4 spell which skips banned spells]
-  !!HEx1:S7/?y14;                       [7 Wisdom]
-  !!SSy-99:L?y5;                        [Spell Level]
+
+  !!FU(acm_GenerateRandomSpell):P1/4/x1/?y-99; [Function to generate a random level 1-4 spell which skips banned spells]
+
   !!if&y-99>=0/y-99<=69;                [Valid Spell]
+    !!HEx1:S7/?y14;                     [7 Wisdom]
+    !!SSy-99:L?y5;                      [Spell Level]
     !!FU&y5=5/y14<3:E;                  [Exit if Wisdom level not high enough]
     !!FU&y5=4/y14<2:E;
     !!FU&y5=3/y14<1:E;
+
     !!SN:T^AC_Warmachine.Goblin_Support_Spell_0^/?z20;
     !!SN:T^AC_Warmachine.Goblin_Support_Spell_1^/?z21;
     !!DL122:A4/3/z20/1;                 [Set text to text fields]
@@ -30042,7 +30076,7 @@ the amount of res and treasure chests
  [Check if Enhanced Estate resource bonus display is disabled]
 !!OW:C?y10; [Current player: y10]
 !!VRy10:+1; [Add 1 to y10]
-!!FU$bit$:Py10; [Convert to bit number: y-100]
+!!FU(acm_CalculateBitValue):Py10/?y-100; [Convert to bit number: y-100]
 !!VRy11:Sv3320; [Set y11 to v3320]
 !!VRy11:&y-100; [Check if message is disabled for current player: y11]
 !!FU&y11=y-100/-410:E; [Exit Function if message is disabled for current player unless Mithril]
@@ -30054,6 +30088,20 @@ the amount of res and treasure chests
 
  [If resource is mithril, display this instead]
 !!IF&1000/410:Q1/y6/y1/1/z198780;
+
+
+*** Calculate bit value by Archer30 ***
+
+!?FU(acm_CalculateBitValue);
+!#VA(powerPlusOne:x) (result:x);
+
+!!if&(powerPlusOne)<=0;
+  !!VR(result):S(powerPlusOne) F-1/0;
+!!el;
+  !!VR(power:y):S(powerPlusOne) -1;
+  !!VR(result):S1 Sd<<(power);
+!!en;
+
 -----------------------------------------------------------------------------------------
  [Treasure Chest object trigger - Enhance gold/experience value]
 !?OB101;
