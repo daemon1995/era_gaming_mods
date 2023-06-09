@@ -1,5 +1,6 @@
 ZVSE2
 ; Author:   Berserker aka EtherniDee
+; Edited by Archer30
 ; Engine:   ERM 2.0+
 ; Requires: ERA 3.3+, Era Erm Framework
 
@@ -158,7 +159,7 @@ ZVSE2
 !!FU(mix_RegisterRegularMonsterRange):P(MON_FIRE_MESSENGER)/(MON_SANTA_GREMLIN);
 !!FU(mix_RegisterRegularMonsterRange):P(MON_SYLVAN_CENTAUR)/(MON_DRACOLICH);
 
-!?FU(OnAdventureMapRightMouseClick)&i^key_ctrl^<>(TRUE)/i^key_shift^<>(TRUE)/i^key_alt^<>(TRUE);
+!?FU(OnAdventureMapRightMouseClick)&i^key_ctrl^<>(TRUE)/i^key_shift^<>(TRUE)/i^key_alt^<>(TRUE); [Edited by Archer30]
 !!CM:P?(x:y)/?(y:y)/?(z:y) A?(screenX:y)/?(screenY:y);
 !!OB(x)/(y)/(z):T?(objType:y);
 !!FU&(objType)<>(OBJ_MONSTER):E;
@@ -635,7 +636,9 @@ ZVSE2
 !!VR(aggression):+i^mix_neutralsAggressionModifier^ F(ADV_MON_AGGRESSION_MIN)/(ADV_MON_AGGRESSION_MAX);
 !!MO998:R(aggression)/1;
 
-!!MO998&i^mix_neutralsNeverEscape^<>(FALSE):U(TRUE);
+!!if&i^mix_neutralsNeverEscape^/i^mix_isLeftTroops_%v998_%v999_%v1000^=(FALSE); [Edited by Archer30]
+  !!MO998:U(TRUE);
+!!en;
 
 !?FU(OnBeforeBattleUniversal);
 !!VRi^mix_isMixedNeutralsBattle^:S(FALSE);
@@ -1641,3 +1644,35 @@ ZVSE2
 !!SN:V(neutrals)/0/?(monTypes[0])/?(monNums[0])/?(monTypes[1])/?(monNums[1])/?(monTypes[2])/?(monNums[2]);
 
 !!IF:M^%(monTypes[0])/%(monNums[0]) %(monTypes[1])/%(monNums[1]) %(monTypes[2])/%(monNums[2])^;
+
+; ========================== Fix leaving troops abuse ==========================
+; Author: Archer30 and Hawaiing
+; If a hero leaves troops on the map by the wog option "Troops can be left by ctrl + right-clicking", usually the troops left should be dimissed if the hero didn't want them to rejoin the army.
+; However, with the option i^mix_neutralsNeverEscape^, these troops will fight the hero instead. This can create huge advantage with commander artifacts (bonuses based on the number of fight won).
+; This hook here set a flag whenever a stack of troops are left on the map. These troops would keep their original behaviour when their offer to rejoin was rejected even when i^mix_neutralsNeverEscape^ is enabled.
+!?FU(OnGameEnter);
+!!SN:L^erm_hooker.era^/?(hooker:y);
+!!FU&(hooker)=0:E;
+
+!!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
+!!FU(mix_CreateERMHook):P(hookingFuncAddress);
+
+!?FU(mix_CreateERMHook);
+!#VA(address:x);
+
+!!SN:E(address)/1/7696432/(mix_HOOK_LeaveTroopsMainFunc);
+
+!?FU(mix_HOOK_LeaveTroopsMainFunc);
+!#VA(address:x);
+
+!!UN:C(address)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ptr:y);
+!!UN:C(ptr)/(STRUCT_HOOK_CONTEXT_ESP)/(UNC_INT16)/?(x:y);
+!!UN:C(ptr)/(STRUCT_HOOK_CONTEXT_EBX)/(UNC_INT16)/?(y:y);
+!!UN:C(ptr)/(STRUCT_HOOK_CONTEXT_EDX)/(UNC_INT8)/?(z:y);
+!!VRi^mix_isLeftTroops_%(x)_%(y)_%(z)^:S(TRUE);
+
+; Reset variable if the monster stack left on the map is removed after visiting.
+; Note that if the monster stack left on the map is removed by scripts, the position will be remained invalid for i^mix_neutralsNeverEscape^
+!$OB(OBJ_MONSTER);
+!!OB998:T?(type:y);
+!!VRi^mix_isLeftTroops_%v998_%v999_%v1000^&(type)<>(OBJ_MONSTER):S(FALSE);
