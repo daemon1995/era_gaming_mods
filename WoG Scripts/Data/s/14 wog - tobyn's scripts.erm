@@ -85,9 +85,16 @@ ZVSE2
 
 
 !?OB(OBJ_WITCH_HUT)&i^wog_194_enabled^;           any Witch Hut visited
-; Disable standard object interaction
-!!OB998:S;
+; Disable standard object interaction - if human
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!OB998:S;
+; Enable standard object interaction - if AI
+!!el;
+  !!OB998:R;
+!!en;
 
+; Manage human behaviours
+!?OB(OBJ_WITCH_HUT)&i^wog_194_enabled^/(ERM_FLAG_IS_HUMAN);
 !!WH998:S?(secSkill:y); get Witch Hut skill
 !!HE(CURRENT_HERO):S(secSkill)/?(level:y);        get hero skill expertise
 
@@ -120,48 +127,48 @@ ZVSE2
 !!VR(isWarfare:y)|(secSkill)=(SKILL_BALLISTICS)/(secSkill)=(SKILL_ARTILLERY)/(secSkill)=(SKILL_FIRST_AID):S(TRUE); set (isWarfare)=1 if one of the Warfare skills
 !!VR(isWarfare)&i^wog_193_enabled^=0:S(FALSE);           set (isWarfare)=0 if Warfare inactive
 
-; For AI
-!!if&-(ERM_FLAG_IS_HUMAN);
-  !!if&(level)=(SKILL_NOT_LEARNED)/(gold)<500;
-    !!HE(CURRENT_HERO):S(secSkill)/(SKILL_BASIC); AI gets basic if not enough gold
-  !!el&(level)<=(SKILL_BASIC)/(gold)>499;
-    !!HE(CURRENT_HERO):S(secSkill)/(SKILL_ADVANCED); AI gets advanced if enough gold
-    !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-500;  AI pays 500 gold if advanced
+; Offer to forget the skill if already advanced
+!!if&(level)>=(SKILL_ADVANCED);
+  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(MSG_TYPE_QUESTION)/z164001;     msg if already adv or expert
+
+  !!if&-1;
+    !!HE(CURRENT_HERO)&(isWarfare)=(FALSE):S(secSkill)/0; remove adv/exp skill at player's choice (AI never forgets) and end function (because (level) gladly not actualized)
+    !!HE(CURRENT_HERO)&i^wog_193_enabled^=1/(isWarfare):S(SKILL_BALLISTICS)/(SKILL_NOT_LEARNED) S(SKILL_ARTILLERY)/(SKILL_NOT_LEARNED) S(SKILL_FIRST_AID)/(SKILL_NOT_LEARNED); unlearn all three Warfare skills if appropriate and end fct
+
+    !!IF:M(MSG_TYPE_MES)/z164002;          msg if "unlearn"
   !!en;
-; For Human
+; Offer to learn the skill if the hero has none or basic level of the skill
 !!el;
-  ; Offer to forget the skill if already advanced
-  !!if&(level)>=(SKILL_ADVANCED);
-    !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(MSG_TYPE_QUESTION)/z164001;     msg if already adv or expert
+  !!if&(level)=(SKILL_NOT_LEARNED);
+    !!IF:Q1/20/(picSubtype)/(MSG_TYPE_QUESTION)/z164003; std msg if no skill
 
-    !!if&-1;
-      !!HE(CURRENT_HERO)&(isWarfare)=(FALSE):S(secSkill)/0; remove adv/exp skill at player's choice (AI never forgets) and end function (because (level) gladly not actualized)
-      !!HE(CURRENT_HERO)&i^wog_193_enabled^=1/(isWarfare):S(SKILL_BALLISTICS)/(SKILL_NOT_LEARNED) S(SKILL_ARTILLERY)/(SKILL_NOT_LEARNED) S(SKILL_FIRST_AID)/(SKILL_NOT_LEARNED); unlearn all three Warfare skills if appropriate and end fct
-
-      !!IF:M(MSG_TYPE_MES)/z164002;          msg if "unlearn"
-    !!en;
-  ; Offer to learn the skill if the hero has none or basic level of the skill
-  !!el;
-    !!if&(level)=(SKILL_NOT_LEARNED);
-      !!IF:Q1/20/(picSubtype)/(MSG_TYPE_QUESTION)/z164003; std msg if no skill
-
-      !!if&1;
-        !!HE(CURRENT_HERO):S(secSkill)/1;         set skill to basic if agreed to learn
-        !!VR(picSubtype):+1;            (inc display pic)
-        !!VR(level):S1;            set skill expertise var to basic
-      !!en;
-    !!en;
-
-    !!if&(level)=(SKILL_BASIC);
-      !!IF&(gold)<3000:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(PIC_TYPE_RES_GOLD)/3000/(MSG_TYPE_MES)/z164004; msg if bas and not enough gold
-      !!IF&(gold)>2999:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(PIC_TYPE_RES_GOLD)/3000/(MSG_TYPE_QUESTION)/z164005; msg if bas and enough gold (offer to advance)
-
-      !!if&1;
-        !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-3000;    pay 3000 gold if agreed
-        !!HE(CURRENT_HERO):S(secSkill)/(SKILL_ADVANCED);         set skill to advanced then
-      !!en;
+    !!if&1;
+      !!HE(CURRENT_HERO):S(secSkill)/1;         set skill to basic if agreed to learn
+      !!VR(picSubtype):+1;            (inc display pic)
+      !!VR(level):S1;            set skill expertise var to basic
     !!en;
   !!en;
+
+  !!if&(level)=(SKILL_BASIC);
+    !!IF&(gold)<3000:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(PIC_TYPE_RES_GOLD)/3000/(MSG_TYPE_MES)/z164004; msg if bas and not enough gold
+    !!IF&(gold)>2999:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(PIC_TYPE_RES_GOLD)/3000/(MSG_TYPE_QUESTION)/z164005; msg if bas and enough gold (offer to advance)
+
+    !!if&1;
+      !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-3000;    pay 3000 gold if agreed
+      !!HE(CURRENT_HERO):S(secSkill)/(SKILL_ADVANCED);         set skill to advanced then
+    !!en;
+  !!en;
+!!en;
+
+; AI behaviours
+!$OB(OBJ_WITCH_HUT)&i^wog_194_enabled^/-(ERM_FLAG_IS_HUMAN);
+!!WH998:S?(secSkill:y); get Witch Hut skill
+!!HE(CURRENT_HERO):S(secSkill)/?(level:y);        get hero skill expertise
+!!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?(gold:y);              get owner's gold
+
+!!if&(level)<=(SKILL_BASIC)/(gold)>499;
+  !!HE(CURRENT_HERO):S(secSkill)/(SKILL_ADVANCED); AI gets advanced if enough gold
+  !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d-500;  AI pays 500 gold if advanced
 !!en;
 
 ******************************************************************************************

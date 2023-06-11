@@ -88,7 +88,6 @@ ZVSE2
 
 ; Initialization
 !!VRi^hench_stack_%(side)^:S(NO_STACK);
-!!VRi^heroExpBefore_%(side)^:S0;        [Get heros' exp before the battle in order to calculate how many exp was earned after battle]
 
 !!VR(hero:y):Si^battle_hero_%(side)^;
 
@@ -110,9 +109,6 @@ ZVSE2
 !?FU(hench_GetHenchPosition);
 !#VA(side:x) (mon:x) (position:x);
 
-!!MA:X(mon)/?(monFlags:y);
-!!VR(isDoubleWide:y):S(monFlags) &(MON_FLAG_WIDE);
-
 !!if&(side)=(BATTLE_LEFT);
   ; Check whether the battle happens in a creature bank to decide the position for placeing henchman
   !!BU:E2/?(stackPos2:y);
@@ -125,6 +121,8 @@ ZVSE2
 !!el;
   ; Check whether the battle is a siege and the henchman is double wide, move to right if positive
   !!BA:S?(battleType:y);
+  !!MA:X(mon)/?(monFlags:y);
+  !!VR(isDoubleWide:y):S(monFlags) &(MON_FLAG_WIDE);
 
   !!if&(battleType)>0/(isDoubleWide)<>0;
     !!VR(proposedPos):S31;
@@ -157,42 +155,16 @@ ZVSE2
 !?FU(hench_ManageHenchStats);
 !#VA(stack:x) (side:x) (hero:x);
 
-!!BM(stack):T?(mon:y);
-!!FU&(mon)<=(NO_MON):E;
+; Get the henchmen's level details
+!!FU(hench_GetHenchLevelDetails):P(hero)/?i^hench_level_%(side)^/?(henchExp:y)/?(lvRate:y)/?(bonusExp:y);
 
-!!FU(hench_GetHenchExpPerLevel):P(mon);
-!!VR(expPerLv:y):Si^hench_expPerLevel^;
-!!IF:W(hero);
-!!HE(hero):E?(heroExp:y)/?(heroLv:y)/(TRUE);
-
-!!VR(dailyHenchExp:y):Si^timerDay^ -1;
-!!VR(henchExp:y):S(heroLv) -1 *10 +(dailyHenchExp) +w117;
-
-!!VRi^hench_level_0^&(side)=(BATTLE_LEFT):S(henchExp) :(expPerLv) +1; [level of attacker's henchman]
-!!VRi^hench_level_1^&(side)=(BATTLE_RIGHT):S(henchExp) :(expPerLv) +1; [level of defender's henchman]
-
-!!MA:S(mon)/?(monSpeed:y);
-!!VR(speedFactor1:y):S(henchExp) :50 +100;
-!!VR(speedFactor2:y):S(henchExp) :1000;
-!!VR(bonusSpeed:y):S(monSpeed) +(speedFactor2) *(speedFactor1) :100 -(monSpeed);
-!!BM(stack):Sd(bonusSpeed);
-
-!!VR(dmgHpFactor:y):S(henchExp) *100 :(expPerLv) +100;
-!!BM(stack):U1/d1 U1/?(minDmg:y) U2/d2 U2/?(maxDmg:y);
-!!VR(minDmg):*(dmgHpFactor) :100;
-!!VR(maxDmg):*(dmgHpFactor) :100;
-!!BM(stack):U1/(minDmg) U2/(maxDmg);
-!!BM(stack):H?(hp:y);
-!!VR(hpNew:y):S(hp) *(dmgHpFactor) :100 + 50;
-!!BM(stack):H(hpNew);
-
-!!VR(aDFactor1:y):S(henchExp) :25 +100;
-!!VR(aDFactor2:y):S(henchExp) :250;
-!!MA:A(mon)/?(atk:y) D(mon)/?(def:y);
-!!VR(atkBonus:y):S(atk) +(aDFactor2) *(aDFactor1) :100 -(atk);
-!!VR(defBonus:y):S(def) +(aDFactor2) *(aDFactor1) :100 -(def);
+; Set up henchmen stats
+!!FU(hench_GetHenchAdditionalStats):P(hero)/(henchExp)/(lvRate)/?(atkBonus:y)/?(defBonus:y)/?(minDmgBonus:y)/?(maxDmgBonus:y)/?(hpBonus:y)/?(spdBonus:y);
 !!BM(stack):Ad(atkBonus) Dd(defBonus);
+!!BM(stack):U1/d(minDmgBonus) U2/d(maxDmgBonus) Hd(hpBonus);
+!!BM(stack):Sd(spdBonus);
 
+; Misc
 !!BM(stack):N1 B1;
 !!BM(stack):M(SPELL_DISGUISE)/1000/(SKILL_NOT_LEARNED);
 !!FU(hench_ManageHenchShooterFlag):P(stack);
@@ -211,10 +183,34 @@ ZVSE2
   !!FU&(atkTactic)<(defTactic)/(side)=(BATTLE_LEFT):E;
   !!FU&(atkTactic)>(defTactic)/(side)=(BATTLE_RIGHT):E;
 
-  !!VR(bonusSpeed)&(atkTactic)>(defTactic)/(side)=(BATTLE_LEFT):S(atkTactic) -(defTactic);
-  !!VR(bonusSpeed)&(atkTactic)<(defTactic)/(side)=(BATTLE_RIGHT):S(defTactic) -(atkTactic);
-  !!BM(stack):Sd(bonusSpeed);
+  !!VR(tacSpdBonus:y)&(atkTactic)>(defTactic)/(side)=(BATTLE_LEFT):S(atkTactic) -(defTactic);
+  !!VR(tacSpdBonus)&(atkTactic)<(defTactic)/(side)=(BATTLE_RIGHT):S(defTactic) -(atkTactic);
+  !!BM(stack):Sd(tacSpdBonus);
 !!en;
+
+!?FU(hench_GetHenchAdditionalStats);
+!#VA(hero:x) (henchExp:x) (lvRate:x) (atkBonus:x) (defBonus:x) (minDmgBonus:x) (maxDmgBonus:x) (hpBonus:x) (spdBonus:x);
+
+!!IF:W(hero);
+!!VR(mon:y):Sw118;
+
+!!MA:A(mon)/?(atk:y) D(mon)/?(def:y);
+!!VR(aDFactor1:y):S(henchExp) :25 +100;
+!!VR(aDFactor2:y):S(henchExp) :250;
+!!VR(atkBonus):S(atk) +(aDFactor2) *(aDFactor1) :100 -(atk);
+!!VR(defBonus):S(def) +(aDFactor2) *(aDFactor1) :100 -(def);
+
+!!VR(dmgHpFactor:y):S(henchExp) *100 :(lvRate) +100;
+!!MA:M(mon)/?(minDmg:y) E(mon)/?(maxDmg:y);
+!!VR(minDmgBonus):S(minDmg) +1 *(dmgHpFactor) :100 -(minDmg);
+!!VR(maxDmgBonus):S(maxDmg) +2 *(dmgHpFactor) :100 -(maxDmg);
+!!MA:P(mon)/?(hp:y);
+!!VR(hpBonus):S(hp) *(dmgHpFactor) :100 + 50 -(hp);
+
+!!MA:S(mon)/?(spd:y);
+!!VR(speedFactor1:y):S(henchExp) :50 +100;
+!!VR(speedFactor2:y):S(henchExp) :1000;
+!!VR(spdBonus):S(spd) +(speedFactor2) *(speedFactor1) :100 -(spd);
 
 !?FU(hench_ChooseHench);
 !#VA(hero:x) (choice:x);
@@ -264,9 +260,26 @@ ZVSE2
   !!SN:H^monname^/(mon)/0/?z(zIndex);
 !!en;
 
+; Get the exp details of the henchman
+!?FU(hench_GetHenchLevelDetails);
+!#VA(hero:x) (henchLv:x) (henchExp:x) (lvRate:x) (bonusExp:x);
+
+!!IF:W(hero);
+; Level Rate
+!!FU(hench_GetHenchLevelRate):Pw118/?(lvRate);
+
+!!VR(dailyExp:y):Si^timerDay^ -1;
+!!HE(hero):E?(heroExp:y)/?(heroLv:y)/(TRUE);
+; Bonus Exp
+!!VR(bonusExp):S(heroLv) -1 *10 +(dailyExp);
+; Hench Exp
+!!VR(henchExp):Sw117 +(bonusExp);
+; Hench level
+!!VR(henchLv):S(henchExp) :(lvRate) +1;
+
 ; Calculate exp of each henchman level by fight value
-!?FU(hench_GetHenchExpPerLevel);
-!#VA(mon:x);
+!?FU(hench_GetHenchLevelRate);
+!#VA(mon:x) (lvRate:x);
 
 !!MA:F(mon)/?(value:y);
 
@@ -276,49 +289,31 @@ ZVSE2
   !!VR(value)&(ai)<13:S650;
 !!en;
 
-!!VRi^hench_expPerLevel^:S(value) *8 :100 F3/(INT_MAX);
+!!VR(lvRate):S(value) *8 :100 F3/(INT_MAX);
 
 !?FU(hench_ShowHenchInfo);
 !#VA(hero:x) (canInteract:x) (isEligible:x);
 
 !!IF:W(hero);
 !!VRz1:S^^;
+
 !!VRz1&w119<>(TRUE):+z149005 +^
 ^;
-!!FU(hench_GetHenchExpPerLevel)&w118>(NO_MON):Pw118;
 
-!!HE(hero):E?y1/?y2/1;
-!!VRy2:-1 *10 +i^timerDay^ -1;
-!!VRy11:Sw117 +y2;
-!!VRy99:Sy11 *100 :i^hench_expPerLevel^ + 100;
-!!VRy3:Sy11 :i^hench_expPerLevel^ +1;
+; Get Henchmen level details
+!!FU(hench_GetHenchLevelDetails):P(hero)/?y3/?y11/?v7215/?y2;
+; Next Level
+!!VRy4:Sy11 %v7215 -v7215 *-1;
 
-!!if&w118>(NO_MON);
-  !!VRy4:Sy11 %i^hench_expPerLevel^ -i^hench_expPerLevel^ *-1;
-  !!MA:Aw118/?y5;
-  !!VRy60:Sy11 :25 +100;
-  !!VRy61:Sy11 :250;
-  !!VRy5:+y61 *y60 :100;
+!!FU(hench_GetHenchAdditionalStats):P(hero)/y11/v7215/?y30/?y31/?y33/?y34/?y32/?y35;
+!!MA:Aw118/?y5 Dw118/?y6 Mw118/?y8 Ew118/?y9 Pw118/?y7 Sw118/?y10;
+!!VRy5:+y30;
+!!VRy6:+y31;
+!!VRy8:+y33;
+!!VRy9:+y34;
+!!VRy7:+y32;
+!!VRy10:+y35;
 
-  !!MA:Dw118/?y6;
-  !!VRy60:Sy11 :25+100;
-  !!VRy61:Sy11 :250;
-  !!VRy6:+y61 *y60 :100;
-
-  !!MA:Pw118/?y1;
-  !!VRy7:Sy1 *y99 :100 +50;+10
-  !!MA:Mw118/?y1;
-  !!VRy8:Sy1+1 *y99 :100;
-  !!MA:Ew118/?y1;
-  !!VRy9:Sy1+2 *y99 :100;
-
-  !!MA:Sw118/?y10;
-  !!VRy60:Sy11:50+100;
-  !!VRy61:Sy11:1000;
-  !!VRy10:+y61 *y60:100;
-!!en;
-
-!!VRv7215:Si^hench_expPerLevel^;        [Legacy]
 !!VRz2:Sz149006;
 
 !!if&(canInteract)/(isEligible);        [Allow selection only when hero is with an owner/on interacting player's turn and there is a candidate of henchmen available]
@@ -342,11 +337,10 @@ ZVSE2
 !#VA(hero:x);
 
 !!IF:W(hero);
-!!FU(hench_GetHenchExpPerLevel)&w118>(NO_MON):Pw118;           [get exp of each henchman level i^hench_expPerLevel^]
-!!HE(hero):E?y6/?y7/(TRUE);
-!!VRy9:Si^timerDay^ -1;
-!!VRy10:Sy7 -1 *10 +w117 +y9;
-!!VRy3:Sy10 :i^hench_expPerLevel^ +1;
+
+; Get the level of the henchman
+!!FU(hench_GetHenchLevelDetails):P(hero)/?y3/?y30/?y31/?y32;
+
 !!MA:Cw118/(RES_GOLD)/?y8;
 !!VRy4:Sy8 *y3 :5;
 !!IF:Q2/(PIC_TYPE_MONSTER)/w118/(MSG_TYPE_QUESTION)/z149007;
@@ -544,8 +538,9 @@ ZVSE2
   !!if&i^hench_stack_0^>=0;
     !!BMi^hench_stack_0^:P?(henchmanPosition:y) F?i;
     !!VRi:&(MON_FLAG_WIDE);
-      !!if&i>0;
-        !!VR(wideHenchmanPosition:y):S(henchmanPosition)+1;
+
+    !!if&i>0;
+      !!VR(wideHenchmanPosition:y):S(henchmanPosition)+1;
 
       !!if|(mousePosition)=(henchmanPosition)/(mousePosition)=(wideHenchmanPosition);
         !!FU(hench_ShowHenchHint):P(BATTLE_LEFT);
