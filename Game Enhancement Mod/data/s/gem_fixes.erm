@@ -710,15 +710,13 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
   !!en;
 
 
-
-; Archer30's hacks
-
+// Fix occasionally a neutral stack with invalid quantity is put on the map. These stacks would be removed from the map here.
+// by Archer30
 !?FU(OnEveryDay)&i^timerOnce^;
 ; 904 - Disable Erm error report
 ; 905 - Option for checking whethere there was an error report generated
 !!UN:P904/(TRUE) P905/(FALSE);
 
-// Fix occasionally a neutral stack with invalid quantity is put on the map. These stacks would be removed from the map here.
 !!VR(x:y):S-1;
 
 !!re i;
@@ -738,6 +736,7 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 
 
 // Fix a bug where the hero could fight himself/herself with spacebar pressing when flying over the entrance of an enemy's town.
+// by Archer30
 !?FU(OnKeyPressed_AdvMap)&i^key^=(KEY_SPACE);
 !#VA(key:x) (preventDefault:x);
 
@@ -771,6 +770,76 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
 
   ; Reset option 904 in any case
   !!UN:P904/(FALSE);
+!!en;
+
+
+// Fix occasionally a player can have more towns than the other playes (seems only happens on map size > XL)
+// by Archer30
+!?FU(OnAfterErmInstructions);
+; Check if the map is a random map
+!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+!!UN:C(gameMgr)/128980/(UNC_INT8)/?(value:y);              [(value2)=114 -> random map]
+!!FU&(value)<>114:E;
+
+; Get the fewest town number among all the players and see if it requires a fix
+!!VR(fewestTown:y):S(UNC_INT);
+!!VR(requireFix:y):S(FALSE);
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!OW:Ii/?(isAi:y)/?(hasLost:y);
+
+  !!if&(hasLost)<>(TRUE);
+    !!OW:Wi/?(towns:y);
+
+    !!if&(fewestTown)>(towns);
+      !!VR(fewestTown):S(towns);
+      !!VR(requireFix)&(fewestTown)<>(UNC_INT):S(TRUE);
+    !!en;
+  !!en;
+!!en;
+
+!!if&(requireFix);
+  !!UN:C7398121/(UNC_INT8)/?(patch:y) C7398121/(UNC_INT8)/235; [Hawaiing's memory patch for disabling screen of CA:O]
+  !!UN:P904/(TRUE) P905/(FALSE);
+
+  !!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+    !!OW:Wi/?(towns);
+
+    !!if&(towns)>(fewestTown);
+      !!VR(townsToBeRemoved:y):S(towns) -(fewestTown);
+      ; Create an array to store the towns to be removed from a player - this is required as when we are removing towns, the resutls of OW:W (getting the towns from the list) would be changed!
+      !!FU(NewIntArray):P?(townsRemovalList:y);
+
+      !!re j/0/(towns)/1/-1;
+        !!OW:Wi/j/?(townId:y);
+
+        ; Check if a hero is at the entrance of the town
+        !!CA0/(townId):P?(x:y)/?(y:y)/?(z:y);
+        !!HE(x)/(y)/(z):O?(owner:y)/1;
+        !!UN:P905/?(hasError:y);
+
+        ; Push the town to the array if there is no visiting hero
+        !!if&(hasError);
+          !!UN:P905/(FALSE);
+          !!FU(Array_Push):P(townsRemovalList)/(townId);
+
+          !!VR(townsToBeRemoved):-1;
+          !!br&(townsToBeRemoved)=0;
+        !!en;
+      !!en;
+
+      ; Loop through the array to remove towns
+      !!SN:M(townsRemovalList)/?(size:y);
+
+      !!re k/0/(size)/1/-1;
+        !!SN:M(townsRemovalList)/k/?(townId);
+        !!CA0/(townId):O(NO_OWNER);
+      !!en;
+    !!en;
+  !!en;
+
+  !!UN:C7398121/(UNC_INT8)/(patch);
+  !!UN:P904/(FALSE) P905/(FALSE);
 !!en;
 
 
