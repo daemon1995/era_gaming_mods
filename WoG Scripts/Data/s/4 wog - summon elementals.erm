@@ -4,9 +4,9 @@ ZVSE2
 ; Engine:   ERM 2.0+
 ; Requires: ERA 3.3+, Era Erm Framework
 
-; Summon elementals with 10 times the usual spell cost on adventure map, once every turn for every hero
+; Summon elementals with 10 times the usual spell cost on adventure map, once every week for every hero
 ; AI will summon with the same costs if they learned an expert summon spell
-; w84 - cast Summon Elementals this turn
+; w84 - cast Summon Elementals this week
 
 
 // Initialization. Now all the summoning spells are also considered as adv spells
@@ -18,17 +18,17 @@ ZVSE2
 !!en;
 
 ; Set up monsters for summon spells
-; Customise here if you wish
+; Customise here if you want
 !!VRi^wog_74_mon_%(SPELL_AIR_ELEMENTAL)^:S(MON_AIR_ELEMENTAL);
 !!VRi^wog_74_mon_%(SPELL_EARTH_ELEMENTAL)^:S(MON_EARTH_ELEMENTAL);
 !!VRi^wog_74_mon_%(SPELL_WATER_ELEMENTAL)^:S(MON_WATER_ELEMENTAL);
 !!VRi^wog_74_mon_%(SPELL_FIRE_ELEMENTAL)^:S(MON_FIRE_ELEMENTAL);
 
 // Reset all the cast flag for all heroes every day
-!?FU(OnEveryDay)&i^timerOnce^/i^wog_74_enabled^;
+!?FU(OnEveryDay)&i^timerOnce^/i^timerWeekday^=1/i^wog_74_enabled^;
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
   !!IF:Wi;
-  !!VRw84:S(FALSE);
+  !!VRw84:S0;
 !!en;
 
 // Multiple spell points costs for summoning spells
@@ -62,9 +62,9 @@ ZVSE2
 
 !!if&(spell)>=(SPELL_FIRE_ELEMENTAL)/(spell)<=(SPELL_AIR_ELEMENTAL);
   !!IF:W(hero);
-  ; Pop up msg if the hero has cast Summon Elementals this turn
+  ; Pop up msg if the hero has cast Summon Elementals this week
   !!if&w84;
-    !!FU(GetTextFileString):P^genrltxt^/126/?(string:z);
+    !!IF:M^%T(wog.74.msg)^;
   ; Summon elementals for the hero if hasn't cast
   !!el;
     !!SN:P^SUMNELM^;                    [play sound before executing HE:C2 in case the army is full]
@@ -95,7 +95,7 @@ ZVSE2
 !!HE(hero):Id-(cost);
 ; Mark the summoning spell as cast
 !!IF:W(hero);
-!!VRw84:S(TRUE);
+!!VRw84:+1;
 
 !?FU(WOG_74_GetRealSpellLevel);
 !#VA(hero:x) (spell:x) (terrain:x) (level:x);
@@ -133,9 +133,11 @@ ZVSE2
 !!VR(qty):S(pwr) *(multiplier);
 
 // Summon elementals for AI heroes on every turn end
-!?FU(WOG_EndOfTurn)&i^timerDay^>1/i^wog_74_enabled^;
+!?FU(WOG_EndOfTurn)&i^wog_74_enabled^;
 !!re (hero:y)/(HERO_FIRST)/(HERO_LAST_WOG);
   !!HE(hero):P?(x:y)/?(y:y)/?(z:y);
+  !!co&(x)=-1/(y)=-1/(z)=-1;
+
   !!TR(x)/(y)/(z):G?(terrain:y);
   !!co&(terrain)=21;                    [Cursed Ground]
 
@@ -145,57 +147,61 @@ ZVSE2
   !!OW:I(owner)/?(isAi:y);
   !!co&(isAi)<>(TRUE);
 
-  !!VR(castFire:y):S(FALSE);
-  !!VR(castEarth:y):S(FALSE);
-  !!VR(castWater:y):S(FALSE);
-  !!VR(castAir:y):S(FALSE);
+  ; Next if summoned elementals this week
+  !!IF:W(hero);
+  !!co&w84;
+
+  !!VR(elemType[4]:y):Ci^wog_74_mon_%(SPELL_EARTH_ELEMENTAL)^/i^wog_74_mon_%(SPELL_FIRE_ELEMENTAL)^/i^wog_74_mon_%(SPELL_WATER_ELEMENTAL)^/i^wog_74_mon_%(SPELL_AIR_ELEMENTAL)^;
+  !!VR(elemSpell[4]:y):C(SPELL_EARTH_ELEMENTAL)/(SPELL_FIRE_ELEMENTAL)/(SPELL_WATER_ELEMENTAL)/(SPELL_AIR_ELEMENTAL);
+  !!VR(elemSpellLvl[4]:y):C-1/-1/-1/-1;
+  !!VR(elemSecSkill[4]:y):C(SKILL_EARTH_MAGIC)/(SKILL_FIRE_MAGIC)/(SKILL_WATER_MAGIC)/(SKILL_AIR_MAGIC);
+  !!VR(elemHasSlot[4]:y):C(FALSE)/(FALSE)/(FALSE)/(FALSE);
 
   ; Check if the hero learned and has enough mana to cast a summon spell
   !!HE(hero):I?(mana:y)/1;
+  !!VR(canSummonAtLeastOne:y):S(FALSE);
 
-  !!re (spell:y)/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL);
-    !!FU(WOG_74_CheckIfAbleToSummon):P(hero)/(terrain)/(mana)/(spell)/?(canCast:y);
+  !!re i/0/3;
+    !!FU(WOG_74_CheckIfAbleToSummon):P(hero)/(terrain)/(mana)/(elemSpell[i])/?(canCast:y);
 
     !!if&(canCast);
-      !!VR(castFire)&(spell)=(SPELL_FIRE_ELEMENTAL):S(TRUE);
-      !!VR(castEarth)&(spell)=(SPELL_EARTH_ELEMENTAL):S(TRUE);
-      !!VR(castWater)&(spell)=(SPELL_WATER_ELEMENTAL):S(TRUE);
-      !!VR(castAir)&(spell)=(SPELL_AIR_ELEMENTAL):S(TRUE);
+      !!HE(hero):S(elemSecSkill[i])/?(elemSpellLvl[i]);
+      !!VR(canSummonAtLeastOne):S(TRUE);
     !!en;
   !!en;
 
-  ; Create the array for available summon spells with all considerations
-  !!FU(NewIntArray):P?(availSpells:y);
+  ; Next if it is not possible to summon any elemental
+  !!co&(canSummonAtLeastOne)<>(TRUE);
 
   ; Check if the hero has an available slot
   !!re (slot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
     !!HE(hero):C0/(slot)/?(mon:y)/?(qty:y);
 
-    !!if|(mon)=(NO_MON)/(qty)=0;
-      !!FU(Array_Push)&(castFire):P(availSpells)/(SPELL_FIRE_ELEMENTAL);
-      !!FU(Array_Push)&(castEarth):P(availSpells)/(SPELL_EARTH_ELEMENTAL);
-      !!FU(Array_Push)&(castWater):P(availSpells)/(SPELL_WATER_ELEMENTAL);
-      !!FU(Array_Push)&(castAir):P(availSpells)/(SPELL_AIR_ELEMENTAL);
-    !!el&(castFire)/(mon)=i^wog_74_mon_%(SPELL_FIRE_ELEMENTAL)^;
-      !!FU(Array_Push):P(availSpells)/(SPELL_FIRE_ELEMENTAL);
-    !!el&(castEarth)/(mon)=i^wog_74_mon_%(SPELL_EARTH_ELEMENTAL)^;
-      !!FU(Array_Push):P(availSpells)/(SPELL_EARTH_ELEMENTAL);
-    !!el&(castWater)/(mon)=i^wog_74_mon_%(SPELL_WATER_ELEMENTAL)^;
-      !!FU(Array_Push):P(availSpells)/(SPELL_WATER_ELEMENTAL);
-    !!el&(castAir)/(mon)=i^wog_74_mon_%(SPELL_AIR_ELEMENTAL)^;
-      !!FU(Array_Push):P(availSpells)/(SPELL_EARTH_ELEMENTAL);
+    !!re i/0/3;
+      !!VR(elemHasSlot[i])|(mon)=(NO_MON)/(mon)=(elemType[i]):S(TRUE);
+    !!en;
+
+    !!br&(mon)=(NO_MON);
+  !!en;
+
+  ; Determie which spell to cast (if there are multiple)
+  ; Priority: Earth, Fire, Water, Air
+  !!VR(spell:y):S(NO_SPELL);
+  !!VR(spellLvl:y):S(SKILL_NOT_LEARNED);
+
+  !!re i/0/3;
+    !!VR(elemSpellLvl[i])&(elemHasSlot[i])=(FALSE):S-1;
+
+    !!if&(elemSpellLvl[i])>(spellLvl);
+      !!VR(spell):S(elemSpell[i]);
+      !!VR(spellLvl):S(elemSpellLvl);
     !!en;
   !!en;
 
-  !!SN:M(availSpells)/?(size:y);
-
-  ; Summon elementals for the AI hero if slot available
-  !!if&(size)>0;
-    !!VR(maxIndex:y):S(size) -1;
-    !!VR(random:y):R0/0/(maxIndex);
-    !!SN:M(availSpells)/(random)/?(spell);
-
+  ; Summon elementals for the AI hero if spell available
+  !!if&(spell)>(NO_SPELL);
     !!FU(WOG_74_SummonElementals):P(hero)/(spell)/(terrain)/(TRUE);
+    !!VRw84:+1;
   !!en;
 !!en;
 
