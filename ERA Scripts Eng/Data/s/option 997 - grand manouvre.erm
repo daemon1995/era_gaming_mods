@@ -7,14 +7,43 @@ ZVSE2
 **                 [Algor] вынос текстов в ert-файл
 ** Options       : 997
 
+; Grand Elves' upgrades (also  Sylvan Centaurs if Sylvan Centaur Creation option is enabled) are able to move 1 hex and shoot 1 arrow in the same turn.
+; This script assumes Grand Elves and all the creatures works on this script have both shooting and double strike flag. If any is missing, the logic of the scirpt may be broken
+
 
 // Initialization
-!?FU(OnBeforeBattleUniversal);
+!?FU(OnAfterErmInstructions);
+!!UN:P997/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Set up new description
+!!SN:H^monname^/(MON_GRAND_ELF)/2/?(desc:z);
+!!SN:H^monname^/(MON_GRAND_ELF)/2/^%(desc)%T(es.997.desc)^;
+
+; Check if Sylvan Centaur creation is enabled
+!!UN:P9/?(sylvanCentaurCreation:y);
+
+!!if&(sylvanCentaurCreation);
+  !!VRi^es_997_upgElf^:S(MON_SYLVAN_CENTAUR);
+  !!SN:H^monname^/(MON_SYLVAN_CENTAUR)/2/?(desc:z);
+  !!SN:H^monname^/(MON_SYLVAN_CENTAUR)/2/^%(desc)%T(es.997.desc)^;
+; Check if Grand Elf has any upgrade
+!!el;
+  !!MA:U(MON_GRAND_ELF)/?(upgElf:y);
+
+  !!if&(upgElf)=(MON_SYLVAN_CENTAUR);
+    !!VRi^es_997_upgElf^:S(MON_SYLVAN_CENTAUR);
+    !!SN:H^monname^/(upgElf)/2/?(desc:z);
+    !!SN:H^monname^/(upgElf)/2/^%(desc)%T(es.997.desc)^;
+  !!en;
+!!en;
+
+!?FU(OnSetupBattlefield);
 ; Initialise variable - This must to be executed regardless of the option
 !!VRi^es_997_elfPos^:S-1;
 
 // Store the Elf's target position if he has attacks twice and shooting
-!?FU(OnBattleScreenMouseClick)&i^battle_isVisible^/i^es_997_elfPos^=-1;
+!?FU(OnBattleScreenMouseClick)&i^battle_isVisible^/i^es_997_elfPos^>=-1; [cannot be -2]
 !!UN:P997/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -28,10 +57,12 @@ ZVSE2
 
 !!if&(result);
   !!BMi^battle_current_stack^:F?(monflags:y);
-  !!VR(canShoot:y):S(monflags) &(MON_FLAG_SHOOTER);
   !!VR(attacksTwice:y):S(monflags) &(MON_FLAG_ATTACKS_TWICE);
+  !!VR(isShooter:y):S(monflags) &(MON_FLAG_SHOOTER); [compatiblity with some weird scripts]
 
-  !!VRi^es_997_elfPos^&(canShoot)/(attacksTwice):S(clickedHex);
+  !!if&(attacksTwice)/(isShooter);
+    !!VRi^es_997_elfPos^:S(clickedHex);
+  !!en;
 !!en;
 
 // Reset the morale to zero to the Elf to prevent morale proc in his first move of one hex
@@ -40,10 +71,26 @@ ZVSE2
 
 !!if&(action)=(BATTLE_ACTION_WALK);
   !!BMi^battle_acting_stack^:P?(currPos:y);
-  !!FU(ES_CalcDistanceBetweenHexes):P(currPos)/i^es_997_elfPos^/?(distance:y);
+  !!VR(distance[2]:y):C0/0;
+  ; Get the distance between the clicked position and the acting stack
+  !!FU(ES_CalcDistanceBetweenHexes):P(currPos)/i^es_997_elfPos^/?(distance[0]);
+
+  ; Manage wide monster - this may be improved later
+  !!BMi^battle_acting_stack^:F?(monflags:y);
+  !!VR(isWide:y):S(monflags) &(MON_FLAG_WIDE);
+
+  !!if&(isWide);
+    !!if&i^battle_acting_side^=(BATTLE_LEFT);
+      !!VR(secPos:y):S(currPos) +1;
+    !!el;
+      !!VR(secPos):S(currPos) -1;
+    !!en;
+
+    !!FU(ES_CalcDistanceBetweenHexes):P(secPos)/i^es_997_elfPos^/?(distance[1]);
+  !!en;
 
   ; Store the current morale and reset it to 0
-  !!if&(distance)=1;
+  !!if|(distance[0])=1/(distance[1])=1;
     !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ATTACKS_TWICE) G212/?i^es_997_elfMorale^/d G212/0/d;
   ; Set position to -1 if the Elf walked for more than one hex or did another action than walking
   !!el;
@@ -63,16 +110,18 @@ ZVSE2
 ; Set position to -2 in order to restore the attacks twice flag
 !!VRi^es_997_elfPos^:S-2;
 
-// Give back attack twice to the Elf
+// Give back attack twice to the Elf at the end of the second attack
 !?FU(OnBattleActionEnd)&i^es_997_elfPos^=-2;
 !!BMi^battle_acting_stack^:Fd|(MON_FLAG_ATTACKS_TWICE);
 !!VRi^es_997_elfPos^:S-1;
 
 // Funciton to check if the targeted monster is eligible for grand marouvre
+; If Sylvan Centaur happens to be relaterd to Grand Elf, gives it the same ability
 !?FU(ES_997_CheckIfMonIsEligible);
 !#VA(mon:x) (result:x);
 
 !!VR(result):S(FALSE);
 !!VR(result)&(mon)=(MON_GRAND_ELF):S(TRUE);
+!!VR(result)&(mon)=i^es_997_upgElf^:S(TRUE);
 
 ** end
