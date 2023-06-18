@@ -54,10 +54,11 @@ ZVSE2
 ** Ring of Life                                                            {Treasure}
 ** Vial of Lifeblood                                                       {Treasure}
 !?FU(WOG_CreateERMHook)&i^wog_71_enabled^;
-!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplo);    [hooks for the artifacts decreasing mon gression]
-!!SN:Ex1/1/4879648/(WOG_71_OnMonsterAttackDiplo);
+!!SN:Ex1/1/4288964/(WOG_71_OnMonsterClickDiplomacy); [hooks for the artifacts decreasing mon gression]
+!!SN:Ex1/1/4879500/(WOG_71_OnMonsterAttackDiplomacy);
+!!SN:Ex1/1/4355710/(WOG_71_OnGetArmyDiplomacyValue);
 
-!!SN:Ex1/1/5137385/(WOG_71_OnMonGetSpec);                               [hook for the artifacts giving mon stats]
+!!SN:Ex1/1/5137385/(WOG_71_OnMonGetSpec);[hook for the artifacts giving mon stats]
 
 ** All artifacts function for the AI if worn.
 
@@ -423,16 +424,39 @@ ZVSE2
   !!VR(result)&(equipped):+1;
 !!en;
 
-!!VR(result)&(result)=3:+1;
-
-!?FU(WOG_71_OnMonsterAttackDiplo);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(activeHeroId:y);
-!!FU&(activeHeroId)=(NO_HERO):E;
-!!FU(WOG_71_GetDiploBonus):P(activeHeroId:y)/?(result:y);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d(result);
-
-!?FU(WOG_71_OnMonsterClickDiplo);
+; Diplomacy artifacts
+!?FU(WOG_71_OnMonsterClickDiplomacy);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(activeHeroId:y);
 !!FU&(activeHeroId)=(NO_HERO):E;
+
 !!FU(WOG_71_GetDiploBonus):P(activeHeroId:y)/?(result:y);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/d(result);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(diplo:y);
+!!VR(diplo):+(result) F0/3;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/(diplo);
+
+!?FU(WOG_71_OnMonsterAttackDiplomacy);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(activeHeroId:y);
+!!FU&(activeHeroId)=(NO_HERO):E;
+
+!!FU(WOG_71_GetDiploBonus):P(activeHeroId:y)/?(result:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(diplo:y);
+!!VR(diplo):+(result) F0/3;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/(diplo);
+
+!?FU(WOG_71_OnGetArmyDiplomacyValue);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!FU(WOG_71_GetDiploBonus):P(heroId)/?(result:y);
+
+; Multiply the army's diplomacy value by 3 times if having all three diplomacy artifacts
+!!if&(result)>=3;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(value:y);
+
+  !!if&(value)<0;
+    !!VR(value):S(INT_MAX);
+  !!el;
+    !!VR(value):*3;
+    !!VR(value)&(value)<0:S(INT_MAX);
+  !!en;
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(value);
+!!en;

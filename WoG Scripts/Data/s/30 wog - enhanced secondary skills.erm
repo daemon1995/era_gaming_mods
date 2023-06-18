@@ -511,22 +511,32 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 // Additional resistance for the resistance artifacts combo
 !?FU(OnDwarfMagicResistance)&i^wog_210_enabled^;
-; Exit if the targeted stack does not belong to a hero
 !!MR:N?(stack:y);
 !!BM(stack):I?(side:y);
-!!FU&i^battle_hero_%(side)^=(NO_HERO):E;
 
-; Exit if the owner of the stack does not own all 3 resistance artifacts
-!!re i/(ART_GARNITURE_OF_INTERFERENCE)/(ART_BOOTS_OF_POLARITY);
-  !!HEi^battle_hero_%(side)^:A2/i/?(has:y)/?(equipped:y);
+!!if&i^battle_hero_%(side)^>(NO_HERO);
+  !!re i/(ART_GARNITURE_OF_INTERFERENCE)/(ART_BOOTS_OF_POLARITY);
+    !!HEi^battle_hero_%(side)^:A2/i/?(has:y)/?(equipped:y);
 
-  !!FU&(equipped)=0:E;
+    !!br&(equipped)=0:E;
+  !!en;
+
+  ; Increase spell immunity by 20
+  !!if&i>(ART_BOOTS_OF_POLARITY);
+    !!MR:F?(resist:y);
+
+    !!if&(resist)<100;
+      ; Skip if it is the owner of the stack casting spells
+      !!if&(side)=i^battle_current_side^;
+        !!BG:A?(action:y);
+        !!FU|(action)=(BATTLE_ACTION_HERO_CAST)/(action)=(BATTLE_ACTION_MONSTER_CAST):E;
+      !!en;
+
+      !!VR(resist):+20 F0/100;
+      !!MR:F(resist);
+    !!en;
+  !!en;
 !!en;
-
-; Increase spell immunity by 20
-!!MR:F?(resist:y);
-!!VR(resist):+20 F0/100;
-!!MR:F(resist);
 
 
 ** start of battle end trigger
@@ -880,7 +890,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!VRy6&y1>0/y3>0:+5;                          [Bird of Perception +5]
 !!VRy6&y1>0/y4>0:+10;                         [Stoic Watchman +10]
 !!VRy6&y1>0/y5>0:+15;                         [Emblem of Cognizance +15]
-!!VRy6&y1>0/y3>0/y4>0/y5>0:+30;               [All three +30]
+!!VRy6&y1>0/y3>0/y4>0/y5>0:+20;               [All three +20]
 !!VRv7018&y1>0/x2=0:Sy6;                      [set for attacker]
 !!VRv7019&y1>0/x2=1:Sy6;                      [set for defender]
 ** end of function
@@ -993,42 +1003,10 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
     !!SN:D;                                   [redraw screen]
   !!en;
 !!en;
-
 ** end of function
 
 
-** function to check for combo artifacts
-!?FU7007;   x1= switch
-
-!!HE-1&x1=1:A2/63/?y1/?y2 A2/64/?y1/?y3 A2/65/?y1/?y4;  [see if hero has Bird of Perception, Stoic Watchman, Emblem of Cognizance]
-!!HE-1&x1=2:A2/57/?y1/?y2 A2/58/?y1/?y3 A2/59/?y1/?y4;  [see if hero has Garniture of Interference, Surcoat of Counterpoise, Boots of Polarity]
-
-!!IF&1000/x1=1/y2>0/y3>0/y4>0:Q2/8/63/8/64/8/65/1/z148038;
-!!IF&1000/x1=2/y2>0/y3>0/y4>0:Q2/8/57/8/58/8/59/1/z148039;
-** end of function
-
-
-**  object trigger - post visit - Bird of Perception
-!$OB5/63&i^wog_202_enabled^;
-!!FU7007:P1;
-**  object trigger - post visit - Stoic Watchman
-!$OB5/64&i^wog_202_enabled^;
-!!FU7007:P1;
-**  object trigger - post visit - Emblem of Cognizance
-!$OB5/65&i^wog_202_enabled^;
-!!FU7007:P1;
-
-**  object trigger - post visit - Garniture of Interference
-!$OB5/57&i^wog_202_enabled^;
-!!FU7007:P2;
-**  object trigger - post visit - Surcoat of Counterpoise
-!$OB5/58&i^wog_202_enabled^;
-!!FU7007:P2;
-**  object trigger - post visit - Boots of Polarity
-!$OB5/59&i^wog_202_enabled^;
-!!FU7007:P2;
-
-
+** trigger for Pathfinding
 !?FU(WOG_OnGetMovementPointsByMonsterSpeed);
 !#VA(address:x);
 
