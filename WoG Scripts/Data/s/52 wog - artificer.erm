@@ -127,33 +127,65 @@ ZVSE2
 !!VRv4118:S2048;
 
 ** questions of artificer **
-!!UN:P36/?v1;  [Check if Mithril script is enabled: v1]
-!!IF&1000/v160=1/v1=1:G1/4118/2048/z126001/z126034/z126035/z126036/z126037/z126047///////z126038;
-!!IF&1000/v160=2/v1=1:G1/4118/2048/z126002/z126034/z126035/z126036/z126037/z126047///////z126038;
-!!IF&1000/v160=1/v1=0:G1/4118/2048/z126001/z126034/z126035/z126036/z126037////////z126038;
-!!IF&1000/v160=2/v1=0:G1/4118/2048/z126002/z126034/z126035/z126036/z126037////////z126038;
-!!IF&1000/v160=3:M1/z126012;
-!!FU&v4118=2048:E; it should exit here when return, but it runs once more (?)[not for me, with this version--JV]
+; If Mithril is enabled, show the dialogue for exchanging resources, otherwise hide it
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!if|v160=1/v160=2;
+    !!UN:P36/?v1;                       [Check if Mithril script is enabled: v1]
+    !!VRz2&v160=1:Sz126001;
+    !!VRz2&v160=2:Sz126002;
 
-!!if&v4118=16;
-  !!IF:Q1/7/0/6/0/1/z126048;
-  !!FU177:P;
+    !!if&v1;
+      !!IF:G1/4118/2048/z2/z126034/z126035/z126036/z126037/z126047///////z126038;
+    !!el;
+      !!IF:G1/4118/2048/z2/z126034/z126035/z126036/z126037////////z126038;
+    !!en;
+
+    !!FU&v4118=2048:E; it should exit here when return, but it runs once more (?)[not for me, with this version--JV]
+
+    !!if&v4118=16;
+      !!FU177:P;
+    !!en;
+  !!el&v160=3;
+    !!IF:M1/z126012;
+  !!en;
+** AI = Upgrade **
+!!el;
+  !!VRv4118:S1;
 !!en;
 
-** AI = Upgrade **
-!!VRv4118&-1000:S1;
-!!FU166:P1;                  [call needed function]
+!!FU166:P1;                             [call needed function]
 
 !?FU177;
-!!IF:V1/0;
-!!VRv44:S0;
-!!DO8800/40/44/1:P;
-!!IF&v44=5:M1/z126049; ^You have no artifacts in your backpack, so unless there's something you want to unequip, I guess we won't be doing business today. No hard feelings though - come back anytime!^;
+!!VR(counter:y):S0;
+!!FU(NewIntArray):P?(slotList:y) P?(picList:y);
+
+!!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST);
+  !!HE(CURRENT_HERO):A1/?(art:y)/i;
+
+  !!if&1;
+    !!VR(counter):+1;
+    !!FU(Array_Push):P(slotList)/i P(picList)/(PIC_TYPE_ART)/(art);
+  !!en;
+
+  !!br&(counter)=8;                     [max for 8 artifacts]
+!!en;
+
+!!if&(counter)=0;
+  !!IF:M1/z126049; ^You have no artifacts in your backpack, so unless there's something you want to unequip, I guess we won't be doing business today. No hard feelings though - come back anytime!^
+!!el;
+  !!FU(PrepareMultiPicDialog):P(picList);
+  !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z126048/?(choice:y);
+
+  !!if&(choice)>-1;
+    !!SN:M(slotList)/(choice)/?(slot:y);
+    !!FU8800:P(slot);
+  !!en;
+!!en;
 
 !?FU8800;
-!!VRy1:Sx16-21;
-!!HE(CURRENT_HERO):A1/?y2/y1;
-!!VRv44|y2<1/y2>1000:+1; increase v44 if no artifact found in backpack slot
+!#VA(slot:x);
+
+!!HE(CURRENT_HERO):A1/?y2/x1;
 !!FU|y2<1/y2>=1000:E;
 
 !!HE(CURRENT_HERO):A2/y2/?y3/?y4;
@@ -1398,13 +1430,13 @@ ZVSE2
 !!UN&x2=6:N0/4/49;   [get name of Badge of Courage]
 !!UN&x2=6:N0/5/50;   [get name of Crest of Valor]
 !!UN&x2=6:N0/6/51;   [get name of Glyph of Gallantry]
-!!VRz32&x2=6:S^%Z1, %Z2, %Z3, %Z4...^;
+!!VRz32&x2=6:S^%Z1%T(wog.comma)%Z2%T(wog.comma)%Z3%T(wog.comma)%Z4...^;
 
 !!UN&x3=4:N0/1/79;   [get name of Orb of the Firmament]
 !!UN&x3=4:N0/2/80;   [get name of Orb of Silt]
 !!UN&x3=4:N0/3/81;   [get name of Orb of Tempestuous Fire]
 !!UN&x3=4:N0/4/82;   [get name of Orb of Driving Rain]
-!!VRz33&x3=4:S^%Z1, %Z2, %Z3, %Z4^;
+!!VRz33&x3=4:S^%Z1%T(wog.comma)%Z2%T(wog.comma)%Z3%T(wog.comma)%Z4^;
 
 !!VRv4119:S0;            [v4119 = quantity of upgradeable groups of artifacts]
 !!VRv4119&x1>=2:+1;

@@ -33,7 +33,7 @@ ZVSE2
 
 ------------------------------------------------------------------------
 
-Permanent Variables: z818-z841, v1241-v1252, v1270-v1271
+Permanent Variables: z818-z841, v1241-v1252, v1270
 Temporary Variables: v1-v7, v360-v369, z1-z9, z480-z490
 Temporary Flags: 1-5
 Functions: Only named functions
@@ -76,22 +76,16 @@ Dialogues: 3
 !!HE(CURRENT_HERO):O?y30;
 !!PM998:Py30/(TRUE);
 
- [Store current player in v2 and convert to player bit number]
-!!OW:C?y31;
-!!VRv2:S1 Sd<<y31;
-
- [Check if current AI player has already gotten an improved creature]
- [v3=v2 if AI has already gotten an improved creature]
-!!VRv3:Sv1271 &v2;
-
-!!VRv1270:S0; [Initialize bonus bought variable to 0]
-!!PO998:N?v1; [Check if tower has been visited this month: v1=1 if visited]
-
-!!IF&v1=1/1000:M1/z144002;
-
  [Exit trigger if Tower has already been visited this]
  [month or AI has already gotten an improved creature]
-!!FU|v1=1/v2=v3:E;
+!!PO998:N?v1; [Check if tower has been visited this month: v1=1 if visited]
+
+!!if&v1=1;
+  !!IF&(ERM_FLAG_IS_HUMAN):M1/z144002;
+  !!FU:E;
+!!en;
+
+!!VRv1270:S0; [Initialize bonus bought variable to 0]
 
 !!IF&1000:Q2/5/7/2/z144003;
 !!IF&-1000:V2/1; [Set flag 2 to true for AI]
@@ -275,6 +269,8 @@ Dialogues: 3
 !!MA:B(mon)/?y10; [Determine number of spell castings: y10]
 !!MA:L(mon)/?y30;
 
+!!VRy15:S0;
+
 !!if&y10>0/y10<=12;
   !!if&y30<=3;
     !!VRy15:S6 -y10 F2/5;               [level 4 or lower]
@@ -285,56 +281,55 @@ Dialogues: 3
   !!el;
     !!VRy15:S21 -y10 F15/20;            [level 7]
   !!en;
-!!el;
-  !!VRy15:S0;
 !!en;
 
-!!VRz1:Sz144017;
-!!VRz2:Sz144018;
-!!VRz480:Sz144019;
-!!VRz481:Sz144020;
-!!VRz482:Sz144021;
-!!VRz483:Sz144022;
-!!VRz484:Sz144023;
-!!VRz485:Sz144024;
-!!VRz486:S^^; [Initialize shots text to null string: z486]
+; 24 shots
+!!VRz2:S^^; [Initialize shots text to null string: z2]
 !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?y13; [Check if Stack Experience is enabled: y13=1 if yes]
 !!EA(mon):F0/?y16; [Check next empty line for creature: y16]
 !!EA(mon):F102/83/?y17; [Check if stack can gain Shooting ability from stack experience: y17]
 !!VRy14&y16<>y17/y8<24/y13=1:S99; [Set y14 to 99 if creature can gain Shooting ability and <24 shots: y14]
-!!VRz486&y8>0/y8<24/(mon)<>14/(mon)<>15|y14=99:Sz144025;
-!!VRz487&y10>0/y15>0:Sz144026;
-!!VRz487|y10<1/y10>12:S^^;
-!!VRz488:Sz144027;
+!!VRz2&y8>0/y8<24/(mon)<>14/(mon)<>15|y14=99:Sz144025;
 
-!!IF&1000:G1/368/512/1/480/481/482/483/484/485/486/487/488/2/0/0;
+; +1 spell casting
+!!VRz3:S^^;
+!!VRz3&y10>0/y10<=12:Sz144026;
 
- [Determine which box was checked (bonus type) - store result in v3]
-!!VRv3:S0;
-!!VRv3&v368=1:S2;
-!!VRv3&v368=2:S3;
-!!VRv3&v368=4:S4;
-!!VRv3&v368=8:S5;
-!!VRv3&v368=16:S6;
-!!VRv3&v368=32:S7;
-!!VRv3&v368=64:S8;                      [special ability for AI]
-!!VRv3&v368=128:S9;
-!!VRv3&v368=256:S10;                    [special ability]
-!!VRv3&v368=512:S-1;
+; A new special ability
+!!VRz4:S^^;
+!!UN:P36/?y31;                          [Check if Mithril is enabled]
+!!FU(WOG_44_GetSpecialAbilityDetails):P(mon)/?y32; [Check if there is at least one special ability available, also set up strings]
+!!SN:My32/?y33;
+!!VRz4&y31/y33:Sz144027;
 
-!!if&-1000;
-  !!VRv3:S2 R6; [For AI, set v3 to random number from 2..8]
-  !!VRv3&v3=8:S10; [For AI, if v3=8, set it to 10]
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!IF:G1/368/512/144017/144019/144020/144021/144022/144023/144024/2/3/4/144018/0/0;
+
+   [Determine which box was checked (bonus type) - store result in v3]
+  !!FU(IntLog2):Pv368/?v3;
+  !!VRv3:+2;
+  !!VRv3&v3>10:S-1;
+!!el;
+  ; If Mithril is enabled and there is at least one special ability available
+  !!if&y31/y33;
+    !!VRv3:R0/2/10; [For AI, set v3 to random number from 2..10]
+    !!VRv3|v3=8/v3=9:S10; [For AI, if v3=8 or 9, set it to 10 (special ability)]
+  ; If Mithirl is not enabled or no special ability left
+  !!el;
+    !!VRv3:R0/2/7;
+  !!en;
 !!en;
 
 !!VRv5:S0;
-!!FU(WOG_44_ChooseSpecialAbility)&v3=10:P(mon)/?v5; [Give choice of Special Bonus] - The choice returns in v5
+!!FU(WOG_44_ChooseSpecialAbility)&v3=10:P(mon)/y32/?v5; [Give choice of Special Bonus] - The choice returns in v5
 
-!!VRv4:S(FALSE);
-!!FU(WOG_44_PayForBonus)&v3>1/1000:P(mon)/y15;  [Ask player to pay for Bonus: v4=1 if player pays]
-!!VRv4&-1000:S(TRUE); [Set v4 to 1 if AI]
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!FU(WOG_44_PayForBonus)&v3>1:P(mon)/y15/?y34;  [Ask player to pay for Bonus: y34=1 if player pays]
+!!el;
+  !!VRy34:S(TRUE); [Set y34 to 1 if AI]
+!!en;
 
-!!if&v4;
+!!if&y34;
   !!if&v3>=2/v3<=7;
     !!VRy9:Syv3; [Bonus amount: y9]
     !!FU(WOG_44_AddBonusByCreatureType):P(mon)/y9; [Add bonus to creature type if player paid for it]
@@ -343,25 +338,20 @@ Dialogues: 3
     !!FU(WOG_44_AddSpecialAbility):P(mon)/v5; [Special]
   !!en;
 
-  !!VRi^wog_44_speciesCounter^&i^wog_44_isNewSpecies^:+1; [Increment Changed Creature Counter if v4=1 and is new species]
-  !!FU(WOG_44_ChangeMonsterNames):P(mon)/v3/v5; [Change species name to reflect ability/bonus just gained]
+  !!VRi^wog_44_speciesCounter^&i^wog_44_isNewSpecies^:+1; [Increment Changed Creature Counter if y34=1 and is new species]
+  !!FU(WOG_44_ChangeMonsterNamesAndDesc):P(mon)/v3/v5; [Change species name to reflect ability/bonus just gained]
 
   !!PO998:N1; [Set hint text to "visited"]
   !!PM998:V(FALSE);
 !!en;
 
-!!if&1000;
+!!if&(ERM_FLAG_IS_HUMAN);
   !!IF&v3=-1:Q4/z144028;
 
   !!if&-4;
-    !!VRv3&v3>1/v4=0:S-1; [Set v3 to -1 if player can't pay but doesn't leave]
+    !!VRv3&v3>=2/y34=(FALSE):S-1; [Set v3 to -1 if player can't pay but doesn't leave]
     !!FU(WOG_44_ChooseSpeciesMain)&v3=-1:P; [Choose another species to improve]
   !!en;
-
-; Add AI player number to v1271 so it won't get another bonus
-!!el&-1000/v3>0;
-  !!VRy12:S1 Sd<<i^timerOwner^;[y12 is bit number for current player]
-  !!VRv1271:+y12;
 !!en;
 
 -----------------------------------------------------------------------
@@ -370,7 +360,9 @@ Dialogues: 3
  [(mon)=creature type, v3=bonus type]
 
 !?FU(WOG_44_PayForBonus);
-!#VA(mon:x) (cost:x);
+!#VA(mon:x) (spellCost:x) (paidCost:x);
+
+!!VR(paidCost):S(FALSE);
 
  [Determine resource type and cost: y1=resource type, y2=resource amount]
 !!VRy1&v3=2:S3;  [Attack]
@@ -395,7 +387,7 @@ Dialogues: 3
 !!VRy2&v3=8:S1000;
 !!VRz1&v3=8:Sz144035;
 !!VRy1&v3=9:S7;  [Spells]
-!!VRy2&v3=9:S(cost);
+!!VRy2&v3=9:S(spellCost);
 !!VRz1&v3=9:Sz144036;
 !!VRy1&v3=10:S7;  [Special]
 !!VRy2&v3=10/v5=1:S20;  [Flying]
@@ -420,6 +412,8 @@ Dialogues: 3
 !!VRy10:Sy6 :2; [50% of growth (rounded down): y10]
 !!VRy7:Sy6 +y10; [150% of growth (rounded down): y7]
 
+!!SN:H^monname^/(mon)/0/?z3 H^monname^/(mon)/1/?z4;
+
 !!if&y7=1;
   !!VRz8:Sz3; [One]
   !!VRz9:Sz144038; [One]
@@ -441,7 +435,6 @@ Dialogues: 3
 !!if&3;
   !!VRv7:S0;
   !!DO(WOG_44_CheckIfHeroHasEnoughCreature)/0/6/1:P(mon); [See if hero has enough creatures of the type to be enchanted]
-  !!SN:H^monname^/(mon)/1/?z4;
 
   !!if&v7>=y7;
     !!DO(WOG_44_RemoveCreatures)/0/6/1:P(mon)/y7; [Remove the creatures (if enough)]
@@ -450,17 +443,15 @@ Dialogues: 3
     !!VRy4:Sy3 -y2; [y4 = player's new amount of resource after payment]
     !!OW:R(CURRENT_PLAYER)/y1/y4; [Set player's resource amount to y4]
 
-    !!VRv4:S(TRUE); [Set v4 to 1 to indicate the bonus should be given]
-  !!el&1000;
-    !!IF:Q4/21/y5/2/z144040;  [If not enough creatures, display this]
-  !!en;
-!!en;
+    !!if&v3<>8;
+      !!VRv1270:+1; [Increment v1270 to indicate at least one bonus bought this visit]
+    !!el&v1270=0;
+      !!VRv1270:S100; [Set v1270 to 100 to indicate "24 shots" was bought]
+    !!en;
 
-!!if&v4;
-  !!if&v3<>8;
-    !!VRv1270:+1; [Increment v1270 to indicate at least one bonus bought this visit]
-  !!el&v1270=0;
-    !!VRv1270:S100; [Set v1270 to 100 to indicate "24 shots" was bought]
+    !!VR(paidCost):S(TRUE);
+  !!el;
+    !!IF&(ERM_FLAG_IS_HUMAN):Q4/21/y5/2/z144040;  [If not enough creatures, display this]
   !!en;
 !!en;
 
@@ -499,18 +490,51 @@ Dialogues: 3
  [Choose Special Ability: (mon)=creature number]
 
 !?FU(WOG_44_ChooseSpecialAbility);
-!#VA(mon:x) (specialAbility:x);
+!#VA(mon:x) (abilityList:x) (specialAbility:x);
 
-!!VRz480:S^^; !!VRz481:S^^; !!VRz482:S^^; !!VRz483:S^^; !!VRz484:S^^;
-!!VRz485:S^^; !!VRz486:S^^; !!VRz487:S^^; !!VRz488:S^^; !!VRz489:S^^; !!VRz490:S^^;
+!!SN:M(abilityList)/?(numAbilities:y);
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!if&(numAbilities)=0;
+    !!VR(specialAbility):S-1;
+  !!el;
+    !!IF:G1/368/1024/144052/480/481/482/483/484/485/486/487/488/489/144053/0;
+
+     [Determine which box was checked - store result in (specialAbility)]
+    !!FU(IntLog2):Pv368/?(specialAbility);
+    !!VR(specialAbility):+1;
+    !!VR(specialAbility)&(specialAbility)>10:S-1;
+  !!en;
+!!el;
+  !!if&(numAbilities)=0;
+    !!VR(specialAbility):S0;            [if the targeted creature has learned all the special abilities]
+  !!el;                  
+    !!FU(Array_Shuffle):P(abilityList); [if there is any special abiltiy the targeted creature has not yet learned]
+    !!SN:M(abilityList)/0/?(specialAbility); [shuffle the array and get the first element]
+  !!en;
+!!en;
+
+!!if&(specialAbility)=-1;
+  !!if&(ERM_FLAG_IS_HUMAN);
+    !!VRv3:S-1;                         [If player changes his or her mind, set v3 to -1]
+  !!el;
+    !!VRv3:R0/2/7;                      [Fix AI's choice on special ability if nothing to enhance]
+  !!en;
+!!en;
+
+-----------------------------------------------------------------------
+
+!?FU(WOG_44_GetSpecialAbilityDetails);
+!#VA(mon:x) (abilityList:x);
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz480:S^^; !!VRz481:S^^; !!VRz482:S^^; !!VRz483:S^^; !!VRz484:S^^;
+  !!VRz485:S^^; !!VRz486:S^^; !!VRz487:S^^; !!VRz488:S^^; !!VRz489:S^^; !!VRz490:S^^;
+!!en;
 
 !!MA:X(mon)/?v369; [Existing special abilities of monster (mon): v369]
 
-!!if&-1000;
-  !!VRy3:S1 R9; [If AI, set y3 to random number from 1..10]
-  !!VRy4:S-1; [If AI, initialize y4 to -1]
-  !!FU(NewIntArray):P?y30;
-!!en;
+!!FU(NewIntArray):P?(abilityList);
 
 ; Check if monster has the ability to teleport
 !!FU(WOG_44_CheckIfMonCanTeleport):P(mon)/?y33;
@@ -519,36 +543,56 @@ Dialogues: 3
 !!if&y33<>(TRUE);
   !!VRy1:Sv369; [Fly]
   !!VRy1:&(MON_FLAG_FLYER);
-  !!VRz480&y1=0:Sz144042;
-  !!VRz480&y1=(MON_FLAG_FLYER):S^^;
-  !!FU(Array_Push)&-1000/y1=(FALSE):Py30/1;
+
+  !!if&(ERM_FLAG_IS_HUMAN);
+    !!VRz480&y1=0:Sz144042;
+    !!VRz480&y1=(MON_FLAG_FLYER):S^^;
+  !!en;
+
+  !!FU(Array_Push)&y1=(FALSE):P(abilityList)/1;
 !!en;
 
 !!VRy1:Sv369; [Extended Attack]
 !!VRy1:&(MON_FLAG_WIDE_ATTACK);
 !!VRy5:Sv369; [Check for Attack All Adjacent]
 !!VRy5:&(MON_FLAG_ATTACKS_ALL_AROUND);
-!!VRz481&y1=0/y5=0:Sz144043;
-!!VRz481|y1=(MON_FLAG_WIDE_ATTACK)/y5=(MON_FLAG_ATTACKS_ALL_AROUND):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE)/y5=(FALSE):Py30/2;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz481&y1=0/y5=0:Sz144043;
+  !!VRz481|y1=(MON_FLAG_WIDE_ATTACK)/y5=(MON_FLAG_ATTACKS_ALL_AROUND):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE)/y5=(FALSE):P(abilityList)/2;
 
 !!VRy1:Sv369; [Undead]
 !!VRy1:&(MON_FLAG_UNDEAD);
-!!VRz482&y1=0:Sz144044;
-!!VRz482&y1=(MON_FLAG_UNDEAD):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE):Py30/3;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz482&y1=0:Sz144044;
+  !!VRz482&y1=(MON_FLAG_UNDEAD):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE):P(abilityList)/3;
 
 !!VRy1:Sv369; [No Morale]
 !!VRy1:&(MON_FLAG_NO_MORALE);
-!!VRz483&y1=0:Sz144045;
-!!VRz483&y1=(MON_FLAG_NO_MORALE):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE):Py30/4;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz483&y1=0:Sz144045;
+  !!VRz483&y1=(MON_FLAG_NO_MORALE):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE):P(abilityList)/4;
 
 !!VRy1:Sv369; [Two Attacks]
 !!VRy1:&(MON_FLAG_ATTACKS_TWICE);
-!!VRz484&y1=0:Sz144046;
-!!VRz484&y1=(MON_FLAG_ATTACKS_TWICE):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE):Py30/5;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz484&y1=0:Sz144046;
+  !!VRz484&y1=(MON_FLAG_ATTACKS_TWICE):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE):P(abilityList)/5;
 
 ; Check if the monster has the ability to drain life or attract dead souls
 !!FU(WOG_44_CheckIfMonDrainsLife):P(mon)/?y32;
@@ -559,71 +603,58 @@ Dialogues: 3
   !!VRy1:&(MON_FLAG_ATTACKS_ALL_AROUND);
   !!VRy5:Sv369; [Check for Extended Attack]
   !!VRy5:&(MON_FLAG_WIDE_ATTACK);
-  !!VRz485&y1=0/y5=0:Sz144047;
-  !!VRz485|y1=(MON_FLAG_ATTACKS_ALL_AROUND)/y5=(MON_FLAG_WIDE_ATTACK):S^^;
-  !!FU(Array_Push)&-1000/y1=(FALSE)/y5=(FALSE):Py30/6;
+
+  !!if&(ERM_FLAG_IS_HUMAN);
+    !!VRz485&y1=0/y5=0:Sz144047;
+    !!VRz485|y1=(MON_FLAG_ATTACKS_ALL_AROUND)/y5=(MON_FLAG_WIDE_ATTACK):S^^;
+  !!en;
+
+  !!FU(Array_Push)&y1=(FALSE)/y5=(FALSE):P(abilityList)/6;
 !!en;
 
 !!VRy1:Sv369; [No Retaliation]
 !!VRy1:&(MON_FLAG_NO_RETALIATION);
-!!VRz486&y1=0:Sz144048;
-!!VRz486&y1=(MON_FLAG_NO_RETALIATION):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE):Py30/7;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz486&y1=0:Sz144048;
+  !!VRz486&y1=(MON_FLAG_NO_RETALIATION):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE):P(abilityList)/7;
 
 !!VRy1:Sv369; [Immune to Mind Spells]
 !!VRy1:&(MON_FLAG_MIND_IMMUNITY);
-!!VRz487&y1=0:Sz144049;
-!!VRz487&y1=(MON_FLAG_MIND_IMMUNITY):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE):Py30/8;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz487&y1=0:Sz144049;
+  !!VRz487&y1=(MON_FLAG_MIND_IMMUNITY):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE):P(abilityList)/8;
 
 !!VRy1:Sv369; [Immune to Fire Spells]
 !!VRy1:&(MON_FLAG_FIRE_IMMUNITY);
-!!VRz488&y1=0:Sz144050;
-!!VRz488&y1=(MON_FLAG_FIRE_IMMUNITY):S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE):Py30/9;
+
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz488&y1=0:Sz144050;
+  !!VRz488&y1=(MON_FLAG_FIRE_IMMUNITY):S^^;
+!!en;
+
+!!FU(Array_Push)&y1=(FALSE):P(abilityList)/9;
 
 !!VRy1:Sv369; [No Close Combat Penalty]
 !!VRy2:Sv369;
 !!VRy1:&(MON_FLAG_NO_MELEE_PENALTY); (Check No Close Combat Penalty)
 !!VRy2:&(MON_FLAG_SHOOTER);    (Check Shooter)
-!!VRz489&y1=0/y2=(MON_FLAG_SHOOTER):Sz144051;
-!!VRz489|y1=(MON_FLAG_NO_MELEE_PENALTY)/y2=0:S^^;
-!!FU(Array_Push)&-1000/y1=(FALSE)/y2=(MON_FLAG_SHOOTER):Py30/10;
 
-!!if&-1000;
-  !!SN:My30/?y31;                       [check the size of the array]
-
-  !!if&y31=0;
-    !!VRv4:S0;                          [v4 = 0 if the targeted creature has learned all the special abilities]
-  !!el;
-    !!VRv4:S1;                          [v4 = 1 if there is any special abiltiy the targeted creature has not yet learned]
-    !!FU(Array_Shuffle):Py30;           [shuffle the array and get the first element]
-    !!SN:My30/0/?y4;
-  !!en;
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VRz489&y1=0/y2=(MON_FLAG_SHOOTER):Sz144051;
+  !!VRz489|y1=(MON_FLAG_NO_MELEE_PENALTY)/y2=0:S^^;
 !!en;
 
-!!VRz1:Sz144052;
-!!VRz2:Sz144053;
+!!FU(Array_Push)&y1=(FALSE)/y2=(MON_FLAG_SHOOTER):P(abilityList)/10;
 
-!!IF&1000:G1/368/1024/1/480/481/482/483/484/485/486/487/488/489/2/0;
-
- [Determine which box was checked - store result in (specialAbility)]
-!!VR(specialAbility):S0;
-!!VR(specialAbility)&v368=1:S1;
-!!VR(specialAbility)&v368=2:S2;
-!!VR(specialAbility)&v368=4:S3;
-!!VR(specialAbility)&v368=8:S4;
-!!VR(specialAbility)&v368=16:S5;
-!!VR(specialAbility)&v368=32:S6;
-!!VR(specialAbility)&v368=64:S7;
-!!VR(specialAbility)&v368=128:S8;
-!!VR(specialAbility)&v368=256:S9;
-!!VR(specialAbility)&v368=512:S10;
-!!VR(specialAbility)&v368=1024:S-1;
-
-!!VR(specialAbility)&-1000:Sy4; [For AI, set (specialAbility) to special ability selected]
-
-!!VRv3&(specialAbility)=-1:S-1; [If player changes his or her mind, set v3 to -1]
+!!SN:F^ExtendArrayLifetime^/(abilityList);
 
 -----------------------------------------------------------------------
 
@@ -654,7 +685,7 @@ Dialogues: 3
  [i^wog_44_speciesCounter^=changed creature counter]
 ; Note that this script assumes there is no other script that changes monsters' names/descriptions in the mid game. If there is, this script can produce problems
 
-!?FU(WOG_44_ChangeMonsterNames);
+!?FU(WOG_44_ChangeMonsterNamesAndDesc);
 !#VA(mon:x) (choice:x) (specialAbility:x);
 
  [If a new species, store creature number in v(1240+i^wog_44_speciesCounter^)]
