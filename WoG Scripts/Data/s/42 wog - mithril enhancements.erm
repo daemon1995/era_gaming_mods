@@ -2,7 +2,7 @@ ZVSE2
 
 Mithril Enhancements Script v1.4 by Anders Jonsson
 Updated September 14, 2004
-Updated Oct 2022 by Archer30 and daemon_n
+Updated Jun 2023 by Archer30 and daemon_n
 
 Minor updates by Timothy Pulver and QQD
 Mithril Display Scripts by Timothy Pulver
@@ -86,7 +86,7 @@ Flags:
 172, 410, 870-875
 
 Functions:
-FU(WOG_101_CheckMapRule), FU(WOG_36_UpgradeDwelling)-FU8189
+FU(WOG_101_CheckMapRule), FU(WOG_36_UpgradeDwelling_1)-FU8189
 
 Sets up PO:N numbers at University, Mine, Water Wheel and Windmill
 entrance squares. Do not use this with another script that might do the same
@@ -194,78 +194,102 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Adventure map Objects ***
 !?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=37;
-  !!UN:P36/?v1;              (Check if Mithril Enhancements script is enabled: v1)
-  !!FU&v1=0:E;               (If script is disabled or not player's turn, exit trigger)
+  !!UN:P36/?(wogOption:y);              [Check if Mithril Enhancements script is enabled]
+  !!FU&(wogOption)<>(TRUE):E;           [If script is disabled or not player's turn, exit trigger]
 
-  !!CM:P?v4/?v5/?v6 P?y1/?y2/?y3;         (Get location: v4/v5/v6)
-  !!SN:O?y1/?y2/?y3;
-  *!if&y1=v1/y2=v2/y3=v3;
-    
-  *!en;
-  !!TRv4/v5/v6:E?y-20;       (Check for yellow trigger square: y-20)
-  !!FU&y-20:E;
+  !!CM:P?v4/?v5/?v6;                    [Get location: v4/v5/v6]
 
-  !!OBv4/v5/v6:T?v1;         (Get type of object)
-  !!OBv4/v5/v6:U?v2;         (Get Subtype)
+  !!TR4:E?(isNotYellow:y);              [Check for yellow trigger square: y-20]
+  !!FU&(isNotYellow):E;
 
-  !!IF:V9/0;                 (special abort if Flag 9 is True)
-  !!IF&v1<>43/v1<>45/v1<>88/v1<>89/v1<>90/v1<>109/v1<>112/v1<>113/v1<>104:V9/1;  (Don't do checks if not Monolith entrance, University, Shrine, Windmill, Water Wheel or Witch Hut)
+  !!VR(isHero:y):S(FALSE);
+  !!OB4:T?(type:y);                     [Get type of object]
 
-  !!if&-9;
-    !!OBv4/v5/v6:C?y-32;   (get control word of object)
-    !!VRy-31:Sy-32;        (copy to y-31 for checking later)
-    !!OW:C?y-30;           (get current player: y-30)
-    !!VRy-30:+550;
-    !!VRy-30:Svy-30;
-    !!VRy-30:*32;          (Set to bit value for checking Control Word)
-    !!VRy-32:|y-30;        (Try to "or" with current player's bit)
-    !!IF&y-32<>y-31:V9/1;  (Check if not same, then abort)
+  ; If there is a hero on the coordinate we clicked, check the real object type by hiding the hero temporarily.
+  !!if&(type)=(OBJ_HERO);
+    !!VR(isHero):S(TRUE);
+    !!FU(WOG_AdvMgr_HideHero):Pv4/v5/v6;
+    !!OB4:T?(type);
   !!en;
 
-  !!IF|v1=43/v1=45/v1=109/v1=112/v1=104:V9/0;   (Override above if University, Monolith, Water Wheel or Windmill)
+  ; Exit if the type of object cannot be enhanced by Mithril
+  !!if&(type)<>(OBJ_MINE)/(type)<>(OBJ_TOWN)/(type)<>(OBJ_CREATURE_GENERATOR_1)/(type)<>(OBJ_CREATURE_GENERATOR_4)/(type)<>(OBJ_SHIPYARD)/
+    (type)<>(OBJ_WINDMILL)/(type)<>(OBJ_WITCH_HUT)/(type)<>(OBJ_WATER_WHEEL)/(type)<>(OBJ_MONOLITH_ONE_WAY_ENTRANCE)/(type)<>(OBJ_MONOLITH_TWO_WAY)/(type)<>(OBJ_UNIVERSITY)/
+    (type)<>(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(type)<>(OBJ_SHRINE_OF_MAGIC_GESTURE)/(type)<>(OBJ_SHRINE_OF_MAGIC_THOUGHT);
+    !!FU(WOG_AdvMgr_ShowHero)&(isHero):Pv4/v5/v6;
+    !!FU:E;
+  !!en;
 
-  !!OW&-9:A-1/?y-21;           (Check which hero is selected)
-  !!IF&y-21=-1:V9/1;           (special abort if no hero selected)
-  !!HEy-21&-9:P?y-4/?y-5/?y-6; (Get Hero Location- for Shrine or Witch Hut)
-
-  !!IF&-9/y-6<>v6:V9/1; (check if on same level)
-  !!VRy-10&-9:Sv4;
-  !!VRy-10&-9:-1;
-  !!VRy-11&-9:Sv4;
-  !!VRy-11&-9:+1;
-  !!VRy-13&-9:Sv5;
-  !!VRy-13&-9:+1;
-  !!IF&-9/y-4<>v4/y-4<>y-10/y-4<>y-11:V9/1;
-  !!IF&-9/y-5<>v5/y-5<>y-13:V9/1; (check if location is within range)
+  ; Set up variables
+  !!OB4:U?(subtype:y);                  [Get Subtype]
+  !!OB4:C?(controlWord:y);
+  !!FU(WOG_AdvMgr_ShowHero)&(isHero):Pv4/v5/v6;
 
   !!IF:V3/0;
-  !!OW:Cd/?(clickedPlayer:y) R(clickedPlayer)/(RES_MITHRIL)/?(mithrilBefore:y);
-  !!FU(WOG_36_UpgradeDwelling)&v1=(OBJ_CREATURE_GENERATOR_1):P;                [(Normal Creature Generator)]
-  !!FU8171&v1=(OBJ_CREATURE_GENERATOR_4)/v2=0:P;                               [(Conflux dwelling)]
-  !!FU(WOG_36_UpgradeMine)&v1=(OBJ_MINE):P;                                    [(Mine)]
-  !!FU8183&v1=(OBJ_SHIPYARD):P;                                                [(Shipyard)]
-  !!FU8176&v1=(OBJ_TOWN):P;                                                    [(Town)]
+  !!OW:Ri^timerOwner^/(RES_MITHRIL)/?(mithrilBefore:y);
 
-  !!if&-9;
-    !!FU8185&v1=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/(CURRENT_HERO);
-    !!FU8185&v1=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO);                      [(Monolith (with instruction on which type and what hero))]
-    
-    !!if|v1=(OBJ_SHRINE_OF_MAGIC_INCANTATION)/v1=(OBJ_SHRINE_OF_MAGIC_GESTURE)/v1=(OBJ_SHRINE_OF_MAGIC_THOUGHT);
-      !!VR(lvl:y):Sv1 - (OBJ_SHRINE_OF_MAGIC_INCANTATION) +1;
-      !!FU(WOG_36_UpgradeShrines):P(lvl:y);
+  ; For object with owner requirement
+  !!if|(type)=(OBJ_MINE)/(type)=(OBJ_TOWN)/(type)=(OBJ_CREATURE_GENERATOR_1)/(type)=(OBJ_CREATURE_GENERATOR_4)/(type)=(OBJ_SHIPYARD);
+    !!FU(WOG_36_UpgradeMine)&(type)=(OBJ_MINE):P; [Mine]
+    !!FU(WOG_36_UpgradeTown)&(type)=(OBJ_TOWN):P; [Town]
+    !!FU(WOG_36_UpgradeDwelling_1)&(type)=(OBJ_CREATURE_GENERATOR_1):P; [Normal Creature Generator]
+    !!FU(WOG_36_UpgradeDwelling_2)&(type)=(OBJ_CREATURE_GENERATOR_4)/(subtype)=0:P; [Conflux dwelling]
+    !!FU(WOG_36_UpgradeShipyard)&(type)=(OBJ_SHIPYARD):P; [Shipyard]
+  ; For object with distance requirement
+  !!el;
+    ; Check if any hero owned by the current player near the object
+    !!if|(type)=(OBJ_WINDMILL)/(type)=(OBJ_WITCH_HUT)/(type)=(OBJ_WATER_WHEEL)/(type)=(OBJ_MONOLITH_ONE_WAY_ENTRANCE)/(type)=(OBJ_MONOLITH_TWO_WAY)/(type)=(OBJ_UNIVERSITY)/
+      (type)=(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(type)=(OBJ_SHRINE_OF_MAGIC_GESTURE)/(type)=(OBJ_SHRINE_OF_MAGIC_THOUGHT);
+
+      !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+        !!HEi:O?(owner:y);
+
+        !!if&(owner)=i^timerOwner^;
+          !!HEi:P?(x:y)/?(y:y)/?(z:y);
+
+          !!if&(z)=v6;
+            !!VR(offsetX:y):S(x) -v4;
+            !!VR(offsetY:y):S(y) -v5;
+
+            !!br&(offsetX)>=-1/(offsetX)<=1/(offsetY)>=-1/(offsetY)<=1;
+          !!en;
+        !!en;
+      !!en;
+
+      !!FU&i>(HERO_LAST_WOG):E;
     !!en;
 
-    !!FU(WOG_36_UpgradeWaterWheel)&v1=(OBJ_WATER_WHEEL):P;                     [(Water Wheel)]
-    !!FU(WOG_36_UpgradeWindmill)&v1=(OBJ_WINDMILL):P;                          [(Windmill)]
-    !!FU8177&v1=(OBJ_WITCH_HUT):P;                                             [(Witch Hut)]
-    !!FU8187&v1=(OBJ_UNIVERSITY):P;                                            [(University)]
+    ; For Witch Huts and Shrines, check if the object has been visited once by the current player
+    ; Note: Only Shrines and Witch Huts are required - coz for these two objects, it's possible to make them worse by using Mithril
+    !!if|(type)=(OBJ_WITCH_HUT)/(type)=(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(type)=(OBJ_SHRINE_OF_MAGIC_GESTURE)/(type)=(OBJ_SHRINE_OF_MAGIC_THOUGHT);
+      !!VR(controlWordOrig:y):S(controlWord); [copy for checking later]
+      !!VR(playerBit:y):S1 Sd<<i^timerOwner^ *32; [Set to bit value for checking Control Word]
+      !!VR(controlWord):|(playerBit);   [Try to "or" with current player's bit]
+      !!FU&(controlWord)<>(controlWordOrig):E; [Check if not same, then abort]
+    !!en;
+
+    ; Objects
+    !!FU(WOG_36_UpgradeWindmill)&(type)=(OBJ_WINDMILL):P; [Windmill]
+    !!FU(WOG_36_UpgradeWaterWheel)&(type)=(OBJ_WATER_WHEEL):P; [Water Wheel]
+
+    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/(CURRENT_HERO);
+    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO); [Monolith (with instruction on which type and what hero]
+
+    !!FU(WOG_36_UpgradeUniversity)&(type)=(OBJ_UNIVERSITY):P; [University]
+
+    !!FU(WOG_36_ChangeWitchHutSkill)&(type)=(OBJ_WITCH_HUT):P; [Witch Hut]
+
+    !!if|(type)=(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(type)=(OBJ_SHRINE_OF_MAGIC_GESTURE)/(type)=(OBJ_SHRINE_OF_MAGIC_THOUGHT);
+      !!VR(lvl:y):S(type) - (OBJ_SHRINE_OF_MAGIC_INCANTATION) +1;
+      !!FU(WOG_36_ChangeShrineSpell):P(lvl:y);
+    !!en;
   !!en;
 
-  !!OW:R(clickedPlayer)/(RES_MITHRIL)/?(mithrilAfter:y);
-  !!UN&(mithrilAfter)<>(mithrilBefore):R2;                                     [addon by daemon_n for plugin;]
+  !!OW:Ri^timerOwner^/(RES_MITHRIL)/?(mithrilAfter:y);
+  !!UN&(mithrilAfter)<>(mithrilBefore):R2; [addon by daemon_n for plugin]
 
 *** Upgrade Dwelling ***
-!?FU(WOG_36_UpgradeDwelling);
+!?FU(WOG_36_UpgradeDwelling_1);
 !!DW4:O?y1;       (check who owns dwelling)
 !!FU&y1=(NO_OWNER):E; (abort if unowned)
 
@@ -331,10 +355,11 @@ entrance squares. Do not use this with another script that might do the same
 !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-y6;               (take Mithril)
 !!DW4:M0/y8/d; (Upgrade dwelling if conflux)
 
-!?FU8171;
+!?FU(WOG_36_UpgradeDwelling_2);
 !!VRy1:S-1;
 !!DW4:O?y1;       (check who owns dwelling)
 !!FU&y1=-1:E;
+
 !!OW:Ty1/?y21;       (Check team)
 !!OW:C?y2;           (check current player)
 !!OW:Ty2/?y22;       (Check team)
@@ -495,19 +520,20 @@ entrance squares. Do not use this with another script that might do the same
 !!VRv6:Sv71 -1; (value for frequency of replacing)
 
 *** Mystical Gardens ***
-!!UN:U55/-1/?v5;                (Get number of Mystical Gardens on the map)
-!!UN&v5<>0:U55/-1/1/7;
-!!DO8180/1/v5/1&9/-872/873/v5>0:P55;(Cycle through all Gardens)
+; May produce Mithril
+!!UN:U(OBJ_MYSTICAL_GARDEN)/-1/?v5;                (Get number of Mystical Gardens on the map)
+!!UN&v5<>0:U(OBJ_MYSTICAL_GARDEN)/-1/1/7;
+!!DO8180/1/v5/1&9/-872/873/v5>0:P(OBJ_MYSTICAL_GARDEN);(Cycle through all Gardens)
 
 *** Water Weels ***
-!!UN:U109/-1/?v5;                (Get number of Water Weels on the map)
-!!UN&v5<>0:U109/-1/1/7;
-!!DO8180/1/v5/1&2/9/-872/v5>0:P109;(Cycle through all Weels)
+!!UN:U(OBJ_WATER_WHEEL)/-1/?v5;                (Get number of Water Weels on the map)
+!!UN&v5<>0:U(OBJ_WATER_WHEEL)/-1/1/7;
+!!DO8180/1/v5/1&2/9/-872/v5>0:P(OBJ_WATER_WHEEL);(Cycle through all Weels)
 
 *** Windmills ***
-!!UN:U112/-1/?v5;                (Get number of Windmills on the map)
-!!UN&v5<>0:U112/-1/1/7;
-!!DO8180/1/v5/1&9/-872/v5>0:P112;(Cycle through all Windmills)
+!!UN:U(OBJ_WINDMILL)/-1/?v5;                (Get number of Windmills on the map)
+!!UN&v5<>0:U(OBJ_WINDMILL)/-1/1/7;
+!!DO8180/1/v5/1&9/-872/v5>0:P(OBJ_WINDMILL);(Cycle through all Windmills)
 !!VRy-20:Sc0;
 !!VRy-20:%7;          (get day of week)
 !!IF&y-20=1:V872/1;   (Flag that marks that Windmills, Water Wheels and Mystical Gardens have been set up. Also for mines if that rule is in effect)
@@ -518,16 +544,27 @@ entrance squares. Do not use this with another script that might do the same
 !!UN&x16>1:Ux1/-1/-1/7;           (get location in v7, v8 and v9)
 
 !!VRy2:S0 Rv6;               (Random number to see if to replace normal resource)
-!!GD7&x1=55:B?y7;            (Get if it is gold or resource)
-!!GD7&x1=55/y7=7:B5;         (resource is normally Gems)
-!!GD7&x1=55/873/y2=v6:B7;
-!!GD7&x1=55/873/y2=v6:T1;    (In one in ten, resource is Mithril)
+
+!!if&x1=(OBJ_MYSTICAL_GARDEN);
+  !!GD7:B?y7;            (Get if it is gold or resource)
+  !!GD7&y7=7:B5;         (resource is normally Gems)
+
+  !!if&873/y2=v6;
+    !!GD7:B7;
+    !!GD7:T1;    (In one in ten, resource is Mithril)
+  !!en;
+!!en;
+
 !!POv7/v8/v9:N?y1;           (Get PO number at position)
 !!IF&y1<>2/y1<>3:V1/1;       (abort if wrong number)
 !!POv7/v8/v9&y1=3:N2;        (reset hint text)
-!!ML7&x1=112/873/y2=v6:B7/d; (One in ten contains Mithril)
-!!ML7&-1/x1=112:Bd/d*2;      (Windmill now contains new value)
-!!WM7&-1/x1=109:Bd*2;        (Water Wheel now contains new value)
+
+!!if&x1=(OBJ_WINDMILL);
+  !!ML7&873/y2=v6:B7/d; (One in ten contains Mithril)
+  !!ML7&-1:Bd/d*2;      (Windmill now contains new value)
+!!en;
+
+!!WM7&-1/x1=(OBJ_WATER_WHEEL):Bd*2;        (Water Wheel now contains new value)
 
 
 !?FU8178;
@@ -566,9 +603,7 @@ entrance squares. Do not use this with another script that might do the same
 
 
 *** Upgrade Shrines ***
-
-
-!?FU(WOG_36_UpgradeShrines);
+!?FU(WOG_36_ChangeShrineSpell);
 !#VA(shrineLvl:x) (usedY[2]:y);
 
 !!OW:R-1/(RES_MITHRIL)/?(resNumber:y);  (Get amount of mithril)
@@ -594,7 +629,7 @@ entrance squares. Do not use this with another script that might do the same
 !!en;
 
 *** Castles ***
-!?FU8176;
+!?FU(WOG_36_UpgradeTown);
 !!CAv4/v5/v6:O?y1;    (Check owner of castle)
 !!OW:C?y2;            (check current player)
 !!FU&y1<>y2:E;
@@ -641,7 +676,7 @@ entrance squares. Do not use this with another script that might do the same
 
 
 *** Witch Hut ***
-!?FU8177;
+!?FU(WOG_36_ChangeWitchHutSkill);
 !#VA(usedY[6]:y);
 !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y2;        (Get amount of mithril)
 !!FU&y2<2:E;       (Check if enough Mithril)
@@ -663,8 +698,6 @@ entrance squares. Do not use this with another script that might do the same
 !!SN:M(skills)/?(size:y);
 
 !!if&(size);
-
-
   !!UN:N4/z1/(currentSkill:y);     (Get skill name)
   !!CM:R0;           (disable standard popup)
   !!VR(currentSkill):*3 +3;
@@ -681,14 +714,6 @@ entrance squares. Do not use this with another script that might do the same
     !!WHv4/v5/v6:S(newSkill:y); (Set skill)
   !!en;
 !!en;
-
-
-
-
-
-
-
-
 
 
 *** Water Wheel ***
@@ -721,17 +746,17 @@ entrance squares. Do not use this with another script that might do the same
 !!POv4/v5/v6&y5=0:N3;(setup so it's upgraded(and visited hint text))
 
 *** Setup hint text for visted windmills and water wheels ***
-!?OB112;
+!?OB(OBJ_WINDMILL);
 !!UN:P36/?y-2;
 !!POv998/v999/v1000&y-2=1:N?y-1;
 !!POv998/v999/v1000&y-1=2/y-2=1:N3; (For Hint text)
 
-!?OB109;
+!?OB(OBJ_WATER_WHEEL);
 !!UN:P36/?y-2;
 !!POv998/v999/v1000&y-2=1:N?y-1;
 !!POv998/v999/v1000&y-1=2/y-2=1:N3; (For Hint text)
 
-!?FU8183;              (Shipyard)
+!?FU(WOG_36_UpgradeShipyard);              (Shipyard)
 !!VRy1:Sv4;
 !!VRy1:-1;             (Setup location where Lighthouse will be placed)
 !!TRy1/v5/v6:E?y2;
@@ -751,7 +776,7 @@ entrance squares. Do not use this with another script that might do the same
 
 
 *** Monoliths ***
-!?FU8185;
+!?FU(WOG_36_CheckMonolithExit);
 !!OW:R-1/7/?y2;    (Get amount of mithril)
 !!FU&y2<1:E;   (Check if enough Mithril)
 !!VRz1&x1=1:Sz136047;
@@ -777,7 +802,7 @@ entrance squares. Do not use this with another script that might do the same
 !!UN:Lv3/v4/v5/1500; (Center view for 1.5s - Archer)
 
 *** University ***
-!?FU8187;
+!?FU(WOG_36_UpgradeUniversity);
 !!IF:V1/0; (Init flag)
 !!VRy9:S4;                  (init Mithril Cost for upgrading to Advanced Universities)
 !!OW:R-1/7/?y7;             (get owner Mithril)
