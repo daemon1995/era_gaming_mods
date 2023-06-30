@@ -12,6 +12,12 @@ ZVSE2
 !#UN:C4599192/2/12523;
 !#UN:C4599194/4/2425393296;
 
+// Enable combination artifacts and 5th misc slot for RoE/AB maps
+!?FU(OnGameEnter);
+!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+!!UN:C(gameMgr)/128664/(UNC_INT)/?(mapType:y);
+!!UN&(mapType)<2:C(gameMgr)/128664/(UNC_INT)/2;
+
 // Divide all the AI values by 15 in order to prevent negative values after gathering massive amount of troops
 // by Archer30
 !?FU(OnAfterErmInstructions);
@@ -306,18 +312,29 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 !!en;
 
 ** War Machines Cost 1 gold when surrend
-!?FU(OnSetupBattlefield);
-  !!UN:P73/?(isEnabled:y);                       [check if option is enabled]
+; Note: It's required to use 3 triggers as the battle may not be triggered (BA:D1), also there is battle replay
+!?FU(OnBeforeBattleUniversal);
+  !!UN:P73/?(isEnabled:y);              [check if option is enabled]
 
   !!if&(isEnabled)=(FALSE);
     !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
-      !!MA:Ci/(RES_GOLD)/?i^gem_%i_machine_cost^ Ci/(RES_GOLD)/1;
+      !!MA:Ci/(RES_GOLD)/?i^gem_%i_machine_cost^;
     !!en;
   !!en;
-!?FU(OnAfterBattleUniversal);
-!!UN:P73/?(isEnabled:y);                       [check if option is enabled]
-!!if&(isEnabled)=(FALSE);
 
+!?FU(OnSetupBattlefield);
+  !!UN:P73/?(isEnabled:y);              [check if option is enabled]
+
+  !!if&(isEnabled)=(FALSE);
+    !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
+      !!MA:Ci/(RES_GOLD)/1;
+    !!en;
+  !!en;
+
+!?FU(OnAfterBattleUniversal);
+!!UN:P73/?(isEnabled:y);                [check if option is enabled]
+
+!!if&(isEnabled)=(FALSE);
   !!re i/(MON_CATAPULT)/(MON_AMMO_CART);
     !!MA:Ci/(RES_GOLD)/i^gem_%i_machine_cost^;
     !!VRi^gem_%i_machine_cost^:S(NULL);
@@ -800,76 +817,6 @@ witch huts - set all Sec Skills fix (not SKILL_NAVIGATION/ not SKILL_NECROMANCY)
   ; Reset option 904 in any case
   !!UN:P904/(FALSE);
 !!en;
-
-
-// Fix occasionally a player can have more towns than the other playes (seems only happens on map size > XL)
-// by Archer30
-*?FU(OnAfterErmInstructions);
-; Check if the map is a random map
-*!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
-*!UN:C(gameMgr)/128980/(UNC_INT8)/?(value:y);              [(value2)=114 -> random map]
-*!FU&(value)<>114:E;
-
-; Get the fewest town number among all the players and see if it requires a fix
-*!VR(fewestTown:y):S(UNC_INT);
-*!VR(requireFix:y):S(FALSE);
-
-*!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-  *!OW:Ii/?(isAi:y)/?(hasLost:y);
-
-  *!if&(hasLost)<>(TRUE);
-    *!OW:Wi/?(towns:y);
-
-    *!if&(fewestTown)>(towns);
-      *!VR(fewestTown):S(towns);
-      *!VR(requireFix)&(fewestTown)<>(UNC_INT):S(TRUE);
-    *!en;
-  *!en;
-*!en;
-
-*!if&(requireFix);
-  *!UN:C7398121/(UNC_INT8)/?(patch:y) C7398121/(UNC_INT8)/235; [Hawaiing's memory patch for disabling screen of CA:O]
-  *!UN:P904/(TRUE) P905/(FALSE);
-
-  *!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-    *!OW:Wi/?(towns);
-
-    *!if&(towns)>(fewestTown);
-      *!VR(townsToBeRemoved:y):S(towns) -(fewestTown);
-      ; Create an array to store the towns to be removed from a player - this is required as when we are removing towns, the resutls of OW:W (getting the towns from the list) would be changed!
-      *!FU(NewIntArray):P?(townsRemovalList:y);
-
-      *!re j/0/(towns)/1/-1;
-        *!OW:Wi/j/?(townId:y);
-
-        ; Check if a hero is at the entrance of the town
-        *!CA0/(townId):P?(x:y)/?(y:y)/?(z:y);
-        *!HE(x)/(y)/(z):N?(hero:y);
-        *!UN:P905/?(hasError:y);
-
-        ; Push the town to the array if there is no visiting hero
-        *!if&(hasError);
-          *!UN:P905/(FALSE);
-          *!FU(Array_Push):P(townsRemovalList)/(townId);
-
-          *!VR(townsToBeRemoved):-1;
-          *!br&(townsToBeRemoved)=0;
-        *!en;
-      *!en;
-
-      ; Loop through the array to remove towns
-      *!SN:M(townsRemovalList)/?(size:y);
-
-      *!re k/0/(size)/1/-1;
-        *!SN:M(townsRemovalList)/k/?(townId);
-        *!CA0/(townId):O(NO_OWNER);
-      *!en;
-    *!en;
-  *!en;
-
-  *!UN:C7398121/(UNC_INT8)/(patch);
-  *!UN:P904/(FALSE) P905/(FALSE);
-*!en;
 
 
 ** Fix of the heroes and towns reordering

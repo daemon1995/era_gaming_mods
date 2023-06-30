@@ -1184,13 +1184,19 @@ The game may fall at any time.^;
 
 !?FU(WOG_SetupMultiPlayerDlg);
 !#VA(text:x) (neutral:x) (chosenPicture:x) (chosenPlayer:x);
+!#VA(playerType:x);                     [Optional. -1 for Enemy, 0 for any, 1 for friendly]
+
 ; инициализируем главные переменные
+!!FU:A?(numArgs:y);
+!!VR(playerType)&(numArgs)<5:S0;
 
 !!FU(NewIntArray):P16/(NO_PIC_TYPE)/?(flags:y);; инициализируем массивы дефолнтными значениями    ; заносим в массив тип картинки
 
 !!FU(WOG_GameMgr_GetPlayer_Me):P?(mePlayerId:y);
+!!OW:T(mePlayerId)/?(myTeam:y);
 
 !!VRf:S0;
+
 !!if&(neutral);
   !!SN:M(flags)/0/(PIC_TYPE_FLAG);
   !!SN:M(flags)/1/8;
@@ -1203,7 +1209,15 @@ The game may fall at any time.^;
 
   ; если игрок жив, и это не Я 
   !!if&(isDie)<>(TRUE)/i<>(mePlayerId);
+    ; Check the player's team if needed
+    !!if&(playerType)<>0;
+      !!OW:Ti/?(playerTeam:y);
 
+      !!co&(playerType)=-1/(playerTeam)=(myTeam);
+      !!co&(playerType)=1/(playerTeam)<>(myTeam);
+    !!en;
+
+    ; Set up array
     !!SN:M(flags)/f/(PIC_TYPE_FLAG);
     !!VRf:+1;
     !!SN:M(flags)/f/i;
@@ -1225,6 +1239,7 @@ The game may fall at any time.^;
 !!FU(PrepareMultiPicDialog):P(flags);
 ; показать сообщение 
 !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z(text)/?(chosenPicture);
+
 !!if&(chosenPicture)=-1;; выходим, если нажата ОТМЕНА
   !!VR(chosenPlayer):S(mePlayerId);
 !!el;
@@ -1234,6 +1249,7 @@ The game may fall at any time.^;
     !!VR(chosenPlayer):S(NO_PLAYER);
   !!en;
 !!en;
+
 ; патч памяти (возвращаем оригинальное название)
 !!UN:C(ptrNeutralPlayerNamePtr)/(UNC_UINT32)/(saveMemory:y);
 
@@ -1662,6 +1678,19 @@ The game may fall at any time.^;
 
     !!VR(number):+1;
   !!en;
+!!en;
+
+; **************************************************************************************************
+; Get the number of available wandering monster slots
+!?FU(WOG_GetNumberOfAvailWanderingMonsters); [by Archer30]
+!#VA(result:x);
+
+!!VR(result):S0;
+
+; Check how many wandering monster slot is available. Max = 48.
+!!re (wm:y)/1/48;
+  !!MW(wm):E?(wmExisted:y);
+  !!VR(result)&(wmExisted)<>(TRUE):+1;
 !!en;
 
 ********************************* End of Era Project Team's Script *********************************

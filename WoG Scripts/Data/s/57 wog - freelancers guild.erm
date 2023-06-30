@@ -29,7 +29,7 @@ ZVSE2
 ** And of course, you'll also need to put one or more "Freelancer's Guilds" on
 ** your map for the heroes to visit. Happy hero hunting! :-)
 
-Variables: z1-z5, v213-247, v249, v250-257,z210-z231
+Variables: z1-z5, v213-247, v249, v250-257, z210-z231
 Flags: 49-51
 Functions: 1400-1409
 Dialogues: 30-32
@@ -89,11 +89,19 @@ Dialogues: 30-32
 !!VR(entranceX:y):Sv998 -1;
 !!OB(entranceX)/v999/v1000:T?(objType:y);
 
- [If player chooses "hire freelancers", call Function 1400 unless a monster's already there]
+ [If player chooses "hire freelancers", call Function 1400 unless a monster's already there or the map is full of wandering monsters]
 !!if&-2;
   !!if&(objType)<>(OBJ_MONSTER);
-    !!FU1400:P;
+    ; Check if there are more than enough wandering monsters on the map
+    !!FU(WOG_GetNumberOfAvailWanderingMonsters):P?(availWM:y);
 
+    !!if&(availWM)>0;
+      !!FU1400:P;
+    ; If the map has too many wandering monsters, display this
+    !!el;
+      !!IF:M1/z121006;
+      !!OB998:S;
+    !!en;
    [If player chooses "hire freelancers" but a monster's already present, display this]
    [and disable object]
   !!el;
@@ -113,7 +121,8 @@ Dialogues: 30-32
  [Disable object's standard game function]
 !!OB998:S;
 
-; Check if there is at least another player in the game
+; Check if there is at least another player in another team in the game
+!!OW:Ti^timerOwner^/?(currTeam:y);
 !!VR(hasAnotherPlayer:y):S(FALSE);
 
 !!re i/(PLAYER_FIRST)/(PLAYER_LAST);
@@ -121,7 +130,11 @@ Dialogues: 30-32
 
   !!OW:Ii/?(isAi:y)/?(hasLost:y);
 
-  !!br&(hasLost)<>(TRUE);
+  !!if&(hasLost)<>(TRUE);
+    !!OW:Ti/?(playerTeam:y);
+
+    !!br&(playerTeam)<>(currTeam);
+  !!en;
 !!en;
 
 !!VR(hasAnotherPlayer)&i<=(PLAYER_LAST):S(TRUE);
@@ -328,114 +341,115 @@ Dialogues: 30-32
 
  [Check if z1 has an empty string (no input) - check result stored in Flag 49]
 !!VRz1:H49;
+!!VR(inputIsValid:y):S(FALSE);
+!!VR(inputIsValid)&49/v1<>-1:S(TRUE);
 
- [Set v214 to -1 and y1 to 0]
+ [Set v214 to -1 and (owner) to 0]
 !!VRv214:S(NO_HERO);
-!!VRy1:S0;
+!!VR(owner:y):S(NO_OWNER);
 
- [Find hero name entered and make sure it's valid]
-!!DO1404/(HERO_FIRST)/(HERO_LAST_WOG)/1:P; [return hero ID to v214]
+!!if&(inputIsValid);
+  ; Check is input is a valid hero number
+  !!FU(WOG_CheckIfZ1FirstCharIsNum):P?(isNum:y);
+  !!VRv214&(isNum):Vz1;
+  !!VRv214|v214<(NO_HERO)/v214>(HERO_LAST_WOG):S(NO_HERO);
+
+  ; Get the hero's name if it is a valid hero number
+  !!if&v214>(NO_HERO);
+    !!HEv214:B0/?z218;
+  ; If input is not a valid hero number, check if it is a hero's name
+  !!el;
+    !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+      !!HEi:B0/?z218;
+
+      !!br&z218=z1;
+    !!en;
+
+    !!VRv214&i<=(HERO_LAST_WOG):Si;
+  !!en;
+!!en;
 
  [See if hero is on map]
-!!HEv214&v214<>-1:O?y1;
+!!if&v214>(NO_HERO);
+  !!HEv214:O?(owner);
 
- [Set word for singular or plural]
-!!if&v223>1;
-  !!VRz3:Sz121024;
-!!el;
-  !!VRz3:Sz121025;
-!!en;
+  !!if&(owner)>(NO_OWNER);
+    !!OW:T(owner)/?(heroTeam:y);
 
- [See if hero is the same faction as current hero]
-!!HE-1:O?y3 N?y4;
+     [See if hero is the same team as current hero]
+    !!OW:Ti^timerOwner^/?(currTeam:y);
+    !!HE(CURRENT_HERO):N?(currHero:y);
 
-!!if&v214<>-1;
-  !!IF&y1=y3/v214<>y4:M1/z121026;
-  !!IF&v214=y4:M1/z121027;
-  !!IF&y1=y3:V49/0;
-!!en;
+    !!if&(currTeam)=(heroTeam);
+       [Set word for singular or plural]
+      !!if&v223>1;
+        !!VRz3:Sz121024;
+      !!el;
+        !!VRz3:Sz121025;
+      !!en;
 
- [If hero isn't on map, display the following and set Flag 49 to false and v214 to -1]
-!!if&y1=-1;
-  !!IF:M1/z121028;
-  !!IF:V49/0;
-  !!VRv214:S-1;
-!!en;
+      !!if&(currHero)=v214;
+        !!IF:M1/z121027;
+      !!el;
+        !!IF:M1/z121026;
+      !!en;
 
- [Set word for singular or plural]
-!!if&v223>1;
-  !!VRz2:Sz121029;
-  !!VRz3:Sz121031;
-!!el;
-  !!VRz2:Sz121030;
-  !!VRz3:Sz121032;
-!!en;
+      !!VR(inputIsValid):S(FALSE);
+    !!el;
+       [Set word for singular or plural]
+      !!if&v223>1;
+        !!VRz2:Sz121036;
+      !!el;
+        !!VRz2:Sz121037;
+      !!en;
 
+       [If hero is valid and is on the map, display this and call Function 1407 to set up]
+       [wandering monster]
+      !!HEv214:R2/?(gender:y);
+      !!SN:T^wog.whom%(gender)^/?z231;
+      !!IF:M1/z121040;
+      !!FU1407:P1/v214;
+    !!en;
+
+   [If hero isn't on map, display the following and set (inputIsValid) to false and v214 to -1]
+  !!el;
+    !!IF:M1/z121028;
+    !!VR(inputIsValid):S(FALSE);
+    !!VRv214:S(NO_HERO);
+  !!en;
  [If hero name isn't a valid hero, display this message unless no name was entered]
  [Function 1403 - Call again if player entered an invalid hero name]
-!!if&v214=(NO_HERO)/49;
+!!el&(inputIsValid);
+   [Set word for singular or plural]
+  !!if&v223>1;
+    !!VRz2:Sz121029;
+    !!VRz3:Sz121031;
+  !!el;
+    !!VRz2:Sz121030;
+    !!VRz3:Sz121032;
+  !!en;
+
   !!IF:M1/z121033;
   !!FU1403:P;
   !!FU:E;
 !!en;
 
+ [If player decides to cancel service, display this and restore creatures to list]
  [Set Flag 3]
 !!IF:V3/1;
 
  [If nothing was entered or cancel was clicked, display this]
-!!IF&-49:Q3/z121034;
+!!IF&(inputIsValid)<>(TRUE):Q3/z121034;
 
- [If player decides to cancel service, display this and restore creatures to list]
 !!if&-3;
   !!IF:Q1/(PIC_TYPE_RES_GOLD)/v224/(MSG_TYPE_MES)/z121035;
   !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/dv224;
   !!VRv221:+1;
   !!VRvv249:Sv233;
-!!en;
-
- [Set word for singular or plural]
-!!if&v223>1;
-  !!VRz2:Sz121036;
-!!el;
-  !!VRz2:Sz121037;
-!!en;
-
- [If hero is valid and is on the map, display this and call Function 1407 to set up]
- [wandering monster]
-!!HEv214&v214<>-1:R2/?y2;
-
-!!if&v213<>-1;
-  !!VRz231&y2=0:Sz121038;
-  !!VRz231&y2=1:Sz121039;
-!!en;
-
-!!if&49/v214<>(NO_HERO);
-  !!IF:M1/z121040;
-  !!FU1407:P1/v214;
-!!en;
-
  [Function 1406 - asks again if player wants to hunt down a specific hero or]
  [an entire faction]
-!!FU1406&-49/3:P;
-
-----------------------------------------------------------------------------------------
-
- [Start of Function 1404 - find hero name entered]
- [If valid, stores hero number in v214]
-!?FU1404;
-
- [Looks up name of hero number x16 (loop) and stores it in variable z217]
-!!HEx16:B0/?z217;
-
- [Sets v214 to x16 if hero name entered by player (z1) is the same as hero name
-  for hero number x16 (loop)]
-!!if&z1=z217;
-  !!VRv214:Sx16;
-
- [Sets z218 to true hero name (proper capitalisation, etc.) if a hero name
-  match is found]
-  !!VRz218:Sz217;
-  !!VRx16:S999;
+!!el;
+  !!FU1406&(inputIsValid)<>(TRUE):P;
 !!en;
 
 ----------------------------------------------------------------------------------------
@@ -443,7 +457,6 @@ Dialogues: 30-32
  [Start of Function 1405 - player can choose from a list of factions (colours) the]
  [one that the hired creatures should attack]
 !?FU1405;
-!#VA(usedY[10]:y);
 
  [Display dialogue box to choose faction (colour) to go after]
  [Set up variables for single or plural words]
@@ -455,7 +468,7 @@ Dialogues: 30-32
   !!VRz4:Sz121044;
 !!en;
 
-!!FU(WOG_SetupMultiPlayerDlg):Pz121045/(FALSE)/?(chosenPicture:y)/?(chosenPlayer:y);
+!!FU(WOG_SetupMultiPlayerDlg):Pz121045/(FALSE)/?(chosenPicture:y)/?(chosenPlayer:y)/-1;
 !!VR(chosenPlayer)&(chosenPlayer)=i^timerOwner^:S(NO_PLAYER);
 
  [Store player colour text of colour chosen in z1]
@@ -541,13 +554,6 @@ Dialogues: 30-32
 !#VA(type:x);                           [1 for hero, 2 for faction]
 !#VA(subtype:x);                        [hero ID or faction ID]
 
-!!IF:M^%(subtype)^;
-
- [Store current hero colour in y5]
- [Store hero colour plus 1 in y6 so player numbers will go from 1 to 9]
-!!HE(CURRENT_HERO):O?y5;
-!!VRy6:Sy5 +1;
-
  [Set up extended dialogue box number 32]
 !!VRz229:Sz121069;
 
@@ -565,58 +571,37 @@ Dialogues: 30-32
 !!IF:E1/32;
 
  [Determine location for wandering monster to appear - object location with x = x - 1]
-!!VRy1:Sv998-1;
+!!VR(monX:y):Sv998 -1;
 
  [Place new monster]
-!!UN:Iy1/v999/v1000/(OBJ_MONSTER)/v222;
+!!UN:I(monX)/v999/v1000/(OBJ_MONSTER)/v222;
 
  [Set wandering monster numbers, hostility rating, set to grow and message text]
-!!MOy1/v999/v1000:Gv223 R1 U1 O0 Mz1;
+!!MO(monX)/v999/v1000:Gv223 R1 U1 O0;
+!!VRz1:H49;
+!!MO(monX)/v999/v1000&v1<>-1/49:Mz1;
 
  [Convert monster to wandering monster]
-!!MW:My1/v999/v1000/?y2;
+!!MW:M(monX)/v999/v1000/?(wanderMon:y);
 
 ; Note: Be very careful with MW:A - they don't work as described in Erm Help!
 ; If you set the last parametre to 2, the monster will chase the hirer instead, reason is yet to be found.
- [If search requested for specific hero, set monsters to attack hero]
+ [Store current hero colour in y5]
+ [Store hero colour plus 1 in y6 so player numbers will go from 1 to 9]
+!!VR(ownerPlusOne:y):Si^timerOwner^ +1;
+
+ [If search requested for specific hero, set monsters to attack hero] - will be set to chase the faction when arrives
 !!if&(type)=1;
-  !!MWy2:A2/(subtype)/y6/0 A3/1/0/0/1/0/0;
+  !!MW(wanderMon):A2/(subtype)/(ownerPlusOne)/0 A3/1/0/0/1/0/0;
 
  [If search requested for an entire faction, set monsters to find faction]
 !!el;
-  !!MWy2:A2/(subtype)/y6/0 A3/0/0/0/0/0/1;
+  !!MW(wanderMon):A2/(subtype)/(ownerPlusOne)/0 A3/0/0/0/0/0/1;
 !!en;
 
  [Set search radius]
-!!UN:X?y3/?y4;
-!!MWy2:A4/y3;
-
-----------------------------------------------------------------------------------------
-
- [Start of Function 1408 - sets up colours available for dialogue box]
-!?FU1408;
-
- [Current player - store in y1]
-!!OW:C?y1;
-
- [Check if colour's in the game - store in y2]
-!!OW:Ix16/d/?y2;
-
- [Store index for v variable index in y3]
-!!VRy3:Sx16 +250;
-
- [Set v variable index (at y3) to 0 if same colour as hiring player or if not in game]
-!!VRvy3|x16=y1/y2=1:S0;
-
- [Decrement counter by 1 for each faction not present]
-!!VRv232&vy3=0:-1;
-
- [If no factions are present besides hiring faction, display this message]
- [and set v213 to an automatic "No thanks" response]
-!!if&v232=0;
-  !!IF:M1/z121072;
-  !!VRv213:S256;
-!!en;
+!!UN:X?(size:y)/?(hasUnderground:y);
+!!MW(wanderMon):A4/(size);
 
 ---------------------------------------------------------------------------------------
 
@@ -637,6 +622,12 @@ Dialogues: 30-32
  [Set monsters to chase faction - y-2]
 !!MWv997:A2/y-2/d/d A3/0/0/0/0/0/1;
 
+; Show text when monster attacks - if the target belongs to a human player
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!MO998:M?z1;
+  !!IF:M^%z1^;
+!!en;
+
 ---------------------------------------------------------------------------------------
 
  [Start of trigger for when a hero attacks a monster -- check if it's a WM]
@@ -647,12 +638,32 @@ Dialogues: 30-32
  [Check if it's a wandering monster: v1=WM # (so >0 if it's a WM)]
 !!MW:Cv998/v999/v1000/?(mwId:y);
 
- [If v1 > 0, check WM's "y destination" and see if it's greater than 0]
+ [If (mwId) > 0, check WM's "y destination" and see if it's greater than 0]
 !!if&(mwId)>0;
-  !!MW(mwId):A2/d/?(destination:y)/d;
+  !!MW(mwId):A2/?(subtype:y)/?(hiredPlayerPlusOne:y)/d;
 
- [If v1 > 0 and v2 > 0, it means it's a wandering monster sent out by a player]
-  !!FU1409&(destination)>0:P(mwId)/(destination);
+ [If (mwId) > 0 and (hiredPlayerPlusOne) > 0, it means it's a wandering monster sent out by a player]
+  !!if&(hiredPlayerPlusOne)>0;
+    !!MW(mwId):A3/d/d/d/d/d/?(chasingType:y)/d;
+
+    ; If chasing a hero, check if the hero is on the map
+    !!if&(chasingType)=0;
+      !!HE(subtype):P?(x:y)/?(y:y)/?(z:y);
+
+      ; Exit function if the hero is not on the map (the wandering monster would hunt for any hero nearby right now)
+      !!FU&(x)=-1/(y)=-1/(z)=-1:E;
+    ; If chasing a player, check if the player is alive
+    !!el&(chasingType)=1;
+      !!OW:I(subtype)/?(isAi:y)/?(hasLost:y);
+
+      ; Exit funtion if the player has lost (the wandering monster becomes inactive)
+      !!FU&(hasLost):E;
+    !!en;
+
+    ; Set the monster to flee if it is a betrayal
+    !!VR(hiredPlayer:y):S(hiredPlayerPlusOne) -1;
+    !!FU1409:P(mwId)/(hiredPlayer);
+  !!en;
 !!en;
 
 ---------------------------------------------------------------------------------------
@@ -660,16 +671,16 @@ Dialogues: 30-32
  [Start of attacking a Freelancer's Guild wandering monster]
  [x1=wandering monster #, x2=player colour+1]
 !?FU1409;
-!#VA(mwId:x) (destination:x);
+!#VA(mwId:x) (hiredPlayer:x);
 
- [Get colour of hero who attacked]
-!!HE(CURRENT_HERO):O?(owner:y);
+ [Get player team that sent the WM]
+!!OW:T(hiredPlayer)/?(hiredTeam:y);
 
- [Subtract one from x1 to get player colour that sent the WM]
-!!VR(targetPlayer:y):S(destination) -1;
+ [Get team of hero who attacked]
+!!OW:Ti^timerOwner^/?(ownerTeam:y);
 
- [If attacking player is the same one that hired the WM, it gives a message and leaves]
-!!if&(owner)=(targetPlayer);
+ [If attacking player is in the same team that hired the WM, it gives a message and leaves]
+!!if&(ownerTeam)=(hiredTeam);
    [Get type of monster]
   !!OB998:U?(type:y);
 
