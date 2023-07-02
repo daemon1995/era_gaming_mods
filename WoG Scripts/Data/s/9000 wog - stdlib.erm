@@ -374,6 +374,7 @@ ZVSE2
 
 
 ; Note: There is a similar functions FU(WOG_ShowNewWoGObjectInfo) in this file
+; SN:H is replaced with IF:M as SN:H overrides the hint of the hero (should display hero when the hero and object are on the same tile)
 !?FU(WOG_NewWogObjects_GetVisitedText);
 !#VA(x:x) (y:x) (z:x) (optionId:x) (isRmc:x) (result:x);
 
@@ -386,6 +387,7 @@ ZVSE2
 !!PM(x)/(y)/(z):V?(notVisited:y) P(interactPlayer)/?(visitedOnce:y);
 
 !!SN:T^wog.%(optionId).objName^/?(objName:z);
+
 !!if&(visitedOnce)<>(TRUE);
   !!VR(str:z):S^%(objName)^;
 !!el;
@@ -400,11 +402,26 @@ ZVSE2
     !!VR(str):S^%(objName)%T(wog.notVisited)^;
   !!en;
 !!en;
+
 !!VR(result):Z(str);
 
 !?FU(WOG_NewWogObjects_SetHint);
 !#VA(x:x) (y:x) (z:x) (objSubtype:x) (optionId:x);
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
 !!OB(x)/(y)/(z):T?(objType:y) U?s;
+
 !!if&(objType)=(OBJ_NEW_WOG_OBJECTS)/s=(objSubtype);
   !!FU(WOG_NewWogObjects_GetVisitedText):P(x:x)/(y:x)/(z:x)/(optionId)/(FALSE)/?(str:z);
   !!MM:M^%(str)^;
@@ -413,10 +430,25 @@ ZVSE2
 !?FU(WOG_NewWogObjects_SetPopUp);
 !#VA(x:x) (y:x) (z:x) (objSubtype:x) (optionId:x);
 
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
 !!OB(x)/(y)/(z):T?(objType:y) U?s;
+
 !!if&(objType)=(OBJ_NEW_WOG_OBJECTS)/s=(objSubtype);
   !!FU(WOG_NewWogObjects_GetVisitedText):P(x:x)/(y:x)/(z:x)/(optionId)/(TRUE)/?(str:z);
-  !!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/^%(str)^;
+  *!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/^%(str)^;
+  !!CM:R0;
+  !!IF:M0/(MSG_TYPE_POPUP)/^%(str)^;
 !!en;
 
 
@@ -1581,7 +1613,6 @@ The game may fall at any time.^;
 !?FU(WOG_ShowNewWoGObjectInfo);         [by Archer30]
 !#VA(wogOptIndex:x);                    [WoG option number]
 !#VA(objSubtype:x);                     [Object subype]
-!#VA(mode:x);                           [0 for hint, 1 for right-clicking]
 !#VA(x:x);                              [Optional. For hint mode only. The X coord. of the hovering object]
 !#VA(y:x);                              [Optional. For hint mode only. The Y coord. of the hovering object]
 !#VA(z:x);                              [Optional. For hint mode only. The Z coord. of the hovering object]          
@@ -1589,7 +1620,23 @@ The game may fall at any time.^;
 !!UN:P(wogOptIndex)/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
+!!VR(mode:y):S0;
+!!FU:A?(numArgs:y);
+!!VR(mode)&(numArgs)<5:S1;
 !!CM&(mode)=1:P?(x)/?(y)/?(z);
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
 !!OB(x)/(y)/(z):T?(visitType:y) U?(visitSubtype:y);
 !!FU|(visitType)<>(OBJ_NEW_WOG_OBJECTS)/(visitSubtype)<>(objSubtype):E;
 
@@ -1605,7 +1652,9 @@ The game may fall at any time.^;
 !!if&(mode)=0;
   !!MM:M^%(string)^;
 !!el;
-  !!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/^%(string)^;
+  *!SN:H^object^/(OBJ_NEW_WOG_OBJECTS)/(objSubtype)/^%(string)^;
+  !!CM:R0;
+  !!IF:M0/(MSG_TYPE_POPUP)/^%(string)^;
 !!en;
 
 ; Set up string of map object to be displayed as hint or RMB dialog

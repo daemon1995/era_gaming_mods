@@ -3,6 +3,7 @@ ZVSE2
 ** Commander Witch Huts ERM script v1.0 - Donald X. Vaccarino
 ** Updated: Oct. 25. 2003 by Hermann the Weird
 ** Updated: July 03. 2004 by Tobyn [only added correct Magic Resistance bonus when increasing Magic Power skill]
+** Rewritten by Archer30 on Jul 2023
 ** Requires WOG version 3.58 or later
 ** Makes Witch Huts give out commander skills
 
@@ -38,10 +39,9 @@ ZVSE2
 
 ** To use this code, put it into a Global Event, set to never happen.
 
-** Variables Used: v600-v627, z326, w40
+** Variables Used: v600-v627, w40
 ** w40 may not be modified elsewhere!
 ** The other variables may be used elsewhere, but get trashed by this code.
-** Functions Used: 6300-6304
 
 
 ** initialization
@@ -60,31 +60,96 @@ ZVSE2
 
 ** Witch Hut object trigger
 
-!?OB(OBJ_WITCH_HUT);
+!$OB(OBJ_WITCH_HUT);
 !!UN:P66/?(wogOption:y);                [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
 !!CO(CURRENT_HERO):D?(isDead:y) E?(isAllowed:y);
-!!FU6300&(isDead)<>(TRUE)/(isAllowed):P;[handle witch hut if alive enabled commander]
+
+!!if&(isDead)<>(TRUE)/(isAllowed);[handle witch hut if alive enabled commander]
+  !!FU(WOG_66_CheckCommanderAbilityType):Pv998/v999/v1000/?(secSkill:y)/?(code:y)/?(isStatBonus:y);
+
+  !!if&(isStatBonus)=(FALSE);
+    !!FU(WOG_66_HandleSpecialAbility):P(secSkill)/(code); [handle special ability bonus]
+  !!el;
+    !!FU(WOG_66_HandleStatBonus):P(secSkill)/(code); [handle +stat bonus]
+  !!en;
+!!en;
 
 ** end of object trigger
 
 
-** function to handle witch hut for commanders
+** Adv Map Tile Hint trigger
+; Be aware not to change the hint when the hero is visting (above) the witch hut!
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
 
-!?FU6300;
+!!UN:P66/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(tileX)/(tileY)/(tileZ):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
+; Exit if the object type in the game is not Witch Hut (if hero is visiting, the object type would be hero)
+!!OB(tileX)/(tileY)/(tileZ):T?(nativeObjType:y);
+!!FU&(nativeObjType)<>(OBJ_WITCH_HUT):E;
+
+; Check if the Witch Hut has been visited by the interacting player
+!!OW:C?(currPlayer:y)/?(interactPlayer:y);
+!!OB(tileX)/(tileY)/(tileZ):C?(controlWord:y);
+!!VR(controlWordOrig:y):S(controlWord); [copy for checking later]
+!!VR(playerBit:y):S1 Sd<<(interactPlayer) *32; [Set to bit value for checking Control Word]
+!!VR(controlWord):|(playerBit);   [Try to "or" with current player's bit]
+!!FU&(controlWord)<>(controlWordOrig):E; [Check if not same, then abort]
+
+; Set up additional hint if the Witch Hut has been visiting by the interacting player
+!!FU(WOG_66_CheckCommanderAbilityType):P(tileX)/(tileY)/(tileZ)/?(secSkill:y)/?(code:y)/?(isStatBonus:y);
+
+!!if&(isStatBonus)=(FALSE);
+  !!SN:T^wog.66.spec%(secSkill)^/?(bonus:z);
+!!el;
+  !!SN:T^wog.66.stat%(code)^/?(bonus);
+!!en;
+
+; Add in additional text
+; Note that here we do not change the original hint as it might have compatibility impact to some languages
+!!MM:M?(origHint:z);
+!!MM:M^%(origHint) / (%T(wog.66.commander)%(bonus))^;
+
+** end of Adv Map Tile Hint trigger
+
+
+** function to check the type of commander ability given
+
+!?FU(WOG_66_CheckCommanderAbilityType);
+!#VA(x:x) (y:x) (z:x) (secSkill:x);
+!#VA(code:x);
+!#VA(isStatBonus:x);
 
 !!VRv600:C100/16/8192/105/103/101/512/104/102/256; [table of effects]
 !!VRv610:C100/103/4096/105/128/16384/105/1024/104/64;    [100-105 are +stat, 0 is special estates]
 !!VRv620:C8/101/4/32/102/2/1/2048;                   [others are bit values of special abilities]
 
-!!WH998:S?y1; [get skill for this hut]
-!!VRy2:S600 +y1; [get variable address]
-!!VRy3:Svy2; [now y3 is code for what to do]
-!!VRy4:S(FALSE);
-!!VRy4&y3>=100/y3<=105:S(TRUE); [flag for if it's a +stat bonus]
-!!FU6301&y4=(FALSE)/y3>0:Py1/y3; [handle special ability bonus]
-!!FU6302&y4=(TRUE):Py1/y3; [handle +stat bonus]
+!!WH(x)/(y)/(z):S?(secSkill); [get skill for this hut]
+!!VR(index:y):S600 +(secSkill); [get variable address]
+!!VR(code):Sv(index); [now (code) is code for what to do]
+!!VR(isStatBonus):S(FALSE);
+
+!!if&(code)>=100/(code)<=105;
+  !!VR(isStatBonus):S(TRUE); [flag for if it's a +stat bonus]
+  !!VR(code):-100;
+!!en;
 
 ** end of function
 
@@ -92,84 +157,99 @@ ZVSE2
 ** function to handle giving special ability
 ** x1 = skill, x2 = ability bit value
 
-!?FU6301;
+!?FU(WOG_66_HandleSpecialAbility);
+!#VA(secSkill:x) (abilityBit:x);
+!#VA(usedY[10]:y);
 
-!!VRz326&x1=1:Sz166000;
-!!VRz326&x1=2:Sz166001;
-!!VRz326&x1=6:Sz166002;
-!!VRz326&x1=9:Sz166003;
-!!VRz326&x1=12:Sz166004;
-!!VRz326&x1=14:Sz166005;
-!!VRz326&x1=15:Sz166006;
-!!VRz326&x1=17:Sz166007;
-!!VRz326&x1=19:Sz166008;
-!!VRz326&x1=20:Sz166009;
-!!VRz326&x1=22:Sz166010;
-!!VRz326&x1=23:Sz166011;
-!!VRz326&x1=25:Sz166012;
-!!VRz326&x1=26:Sz166013;
-!!VRz326&x1=27:Sz166014;
+!!CO(CURRENT_HERO):B0/?(abilityFlag:y);  [get bonuses]
+!!VR(learnedAbility:y):S(abilityFlag) &(abilityBit); [check for bit already set]
+!!FU&(learnedAbility):E;
 
-!!CO(CURRENT_HERO):B0/?y1;  [get bonuses]
-!!VRy2:Sy1 &x2; [check for bit already set]
+!!CO(CURRENT_HERO):B0/d|(abilityBit);   [set bonuses]
 
-!!VRz1:Sz166015;
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!if&(secSkill)=(SKILL_ARCHERY);      [marksmanship]
+    !!VR(skillIcon:y):S80;
+  !!el&(secSkill)=(SKILL_LOGISTICS);    [jousting]
+    !!VR(skillIcon):S98;
+  !!el&(secSkill)=(SKILL_LEADERSHIP);   [swordsmanship]
+    !!VR(skillIcon):S90;
+  !!el&(secSkill)=(SKILL_LUCK);         [blocking]
+    !!VR(skillIcon):S88;
+  !!el&(secSkill)=(SKILL_NECROMANCY);   [staring]
+    !!VR(skillIcon):S96;
+  !!el&(secSkill)=(SKILL_FIRE_MAGIC);   [fire eating]
+    !!VR(skillIcon):S86;
+  !!el&(secSkill)=(SKILL_AIR_MAGIC);    [flying]
+    !!VR(skillIcon):S100;
+  !!el&(secSkill)=(SKILL_EARTH_MAGIC);  [stunning]
+    !!VR(skillIcon):S92;
+  !!el&(secSkill)=(SKILL_TACTICS);      [whirling attacks]
+    !!VR(skillIcon):S84;
+  !!el&(secSkill)=(SKILL_ARTILLERY);    [hitting and running]
+    !!VR(skillIcon):S78;
+  !!el&(secSkill)=(SKILL_OFFENCE);      [bone crushing]
+    !!VR(skillIcon):S76;
+  !!el&(secSkill)=(SKILL_ARMORER);      [revenge]
+    !!VR(skillIcon):S82;
+  !!el&(secSkill)=(SKILL_SORCERY);      [making scary faces]
+    !!VR(skillIcon):S74;
+  !!el&(secSkill)=(SKILL_RESISTANCE);   [pressure points]
+    !!VR(skillIcon):S72;
+  !!el&(secSkill)=(SKILL_FIRST_AID);    [healing]
+    !!VR(skillIcon):S94;
+  !!en;
 
-!!VRz2&x1=1:S^../data/zvs/lib1.res/_AT_SP_0.bmp^;
-!!VRz2&x1=2:S^../data/zvs/lib1.res/_DM_SP_0.bmp^;
-!!VRz2&x1=6:S^../data/zvs/lib1.res/_AT_HP_0.bmp^;
-!!VRz2&x1=9:S^../data/zvs/lib1.res/_DF_SP_0.bmp^;
-!!VRz2&x1=12:S^../data/zvs/lib1.res/_DM_MP_0.bmp^;
-!!VRz2&x1=14:S^../data/zvs/lib1.res/_HP_MP_0.bmp^;
-!!VRz2&x1=15:S^../data/zvs/lib1.res/_MP_SP_0.bmp^;
-!!VRz2&x1=17:S^../data/zvs/lib1.res/_DF_MP_0.bmp^;
-!!VRz2&x1=19:S^../data/zvs/lib1.res/_DF_DM_0.bmp^;
-!!VRz2&x1=20:S^../data/zvs/lib1.res/_AT_MP_0.bmp^;
-!!VRz2&x1=22:S^../data/zvs/lib1.res/_AT_DM_0.bmp^;
-!!VRz2&x1=23:S^../data/zvs/lib1.res/_DF_HP_0.bmp^;
-!!VRz2&x1=25:S^../data/zvs/lib1.res/_DM_HP_0.bmp^;
-!!VRz2&x1=26:S^../data/zvs/lib1.res/_AT_DF_0.bmp^;
-!!VRz2&x1=27:S^../data/zvs/lib1.res/_HP_SP_0.bmp^;
+  !!SN:T^wog.66.spec%(secSkill)^/?(bonus:z);
 
-!!if&1000/y2=0;
-  !!IF:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
-  !!IF:F10/0/0/0/0/0;     [Disable cancel button]
-  !!IF:E1/10;     [Display message box]
+  !!if|(secSkill)=(SKILL_NECROMANCY)/(secSkill)=(SKILL_FIRE_MAGIC);
+    !!UN:P51/?(enhancedCommander:y);
+    !!SN&(enhancedCommander):T^wog.66.spec%(secSkill)a^/?(bonus);
+  !!en;
+
+  !!SN:T^wog.66.msg^/?(msg:z)/^bonus^/(bonus);
+
+  ; Note that using "block" parametre here does not produce better results
+  !!IF:M^%(msg)
+
+
+
+{~>dlg_npc2.def:0:%(skillIcon)}
+
+^;
 !!en;
-
-!!VRy2:Sy1 |x2; [logical-or our bonus]
-!!CO(CURRENT_HERO):B0/y2; [set bonuses]
 
 ** end of function
 
 
 ** function to handle giving +stat
-** x1 = skill, x2 = stat + 100
+** x1 = skill, x2 = stat
 
-!?FU6302;
+!?FU(WOG_66_HandleStatBonus);
+!#VA(secSkill:x) (stat:x);
+!#VA(usedY[40]:y);
 
-!!VRx2:-100; [get stat number]
-!!CO(CURRENT_HERO):Sx2/?y1; [get current skill level]
+!!CO(CURRENT_HERO):S(stat)/?(skillLevel:y); [get current basic skill level]
 
-; Exit if the current skill has already reached Grand Master level
-!!if&y1>=5;
+; Exit if the current basic skill has already reached Grand Master level
+!!if&(skillLevel)>=5;
   !!FU:E;
 ; Check if learning the new basic skill could result in exceeding skills limit
-!!el&y1=0;
+!!el&(skillLevel)=0;
   ; Get the skills limit
-  !!UN:C7770979/(UNC_INT8)/?y30;
+  !!UN:C7770979/(UNC_INT8)/?(skillLimit:y);
 
-  ; Get the quanity of existing skills learned
-  !!VRy31:S0;
+  ; Get the quanity of skills learned
+  !!VR(counter:y):S0;
 
   !!re i/0/5;
-    !!CO(CURRENT_HERO):Si/?y32;
+    !!CO(CURRENT_HERO):Si/?(learnedSkillLevel:y);
 
-    !!VRy31&y32>0:+1;
+    !!VR(counter)&(learnedSkillLevel)>0:+1;
   !!en;
 
   ; Exit if skills limit has been reached
-  !!FU&y31=y30:E;
+  !!FU&(counter)>=(skillLimit):E;
 !!en;
 
 !!IF:W(CURRENT_HERO); [refer to current hero's w variables]
@@ -178,42 +258,32 @@ ZVSE2
 !!VRv610:C1024/2048/4096/16384/32768/65536/131072/262144/524288/1048576;
 !!VRv620:C2097152/4194304/8388608/16777216/33554432/67108864/134217728/268435456;
 
-!!VRy2:S600 +x1; [get address of bit value]
-!!VRy3:Svy2; [get bit value]
-!!VRy4:Sw40 &y3; [look at just our bit of w40]
+!!VR(index:y):S600 +(secSkill); [get address of bit value]
+!!VR(bit:y):Sv(index); [get bit value]
+!!VR(hasVisited:y):Sw40 &(bit); [look at just our bit of w40]
+!!FU&(hasVisited):E;
 
-!!if&y4=0;
-  ; give one extra skill level
-  !!CO(CURRENT_HERO):Sx2/d1;
+; give one extra skill level
+!!VR(skillLevel):+1;
+!!CO(CURRENT_HERO):S(stat)/(skillLevel);
 
-  ; Increase Magic Resistance along with Magic Power, doesn't work automatically
-  !!if&x2=4;
-    !!CO(CURRENT_HERO):S6/?y5;
-    !!CO(CURRENT_HERO)&y5<5:S6/d1;
-  !!en;
+; Increase Magic Resistance along with Magic Power, doesn't work automatically
+!!CO(CURRENT_HERO)&(stat)=4:S6/(skillLevel);
 
-  !!VRw40:|y3; [remember so we don't give it again later]
-!!en;
+!!VRw40:|(bit); [remember so we don't give it again later]
 
-!!VRz326&x2=0:Sz166016;
-!!VRz326&x2=1:Sz166017;
-!!VRz326&x2=2:Sz166018;
-!!VRz326&x2=3:Sz166019;
-!!VRz326&x2=4:Sz166020;
-!!VRz326&x2=5:Sz166021;
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VR(skillIcon:y):S(stat) *6 +(skillLevel);
+  !!SN:T^wog.66.stat%(stat)^/?(bonus:z) T^wog.66.msg^/?(msg:z)/^bonus^/(bonus);
 
-!!VRz1:Sz166022;
-!!VRz2&x2=0:S^../data/zvs/lib1.res/_AT4.bmp^;
-!!VRz2&x2=1:S^../data/zvs/lib1.res/_DF4.bmp^;
-!!VRz2&x2=2:S^../data/zvs/lib1.res/_HP4.bmp^;
-!!VRz2&x2=3:S^../data/zvs/lib1.res/_DM4.bmp^;
-!!VRz2&x2=4:S^../data/zvs/lib1.res/_MP4.bmp^;
-!!VRz2&x2=5:S^../data/zvs/lib1.res/_SP4.bmp^;
+  ; Note that using "block" parametre here does not produce better results
+  !!IF:M^%(msg)
 
-!!if&1000/y4=0;
-  !!IF:D10/z1/0/0/z2/0/0/0/326/0/0/0/0/0/0/0;     [Set up message box]
-  !!IF:F10/0/0/0/0/0;     [Disable cancel button]
-  !!IF:E1/10;     [Display message box]
+
+
+{~>dlg_npc2.def:0:%(skillIcon)}
+
+^;
 !!en;
 
 ** end of function
