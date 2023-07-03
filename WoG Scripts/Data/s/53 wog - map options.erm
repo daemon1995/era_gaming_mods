@@ -470,7 +470,8 @@ Dialogue Box numbers used: 17
  [Adventure Map right-click trigger]
 !?CM0;
 !!UN:P25/?y-1; [See if script is enabled: y-1]
-!!FU|y-1<>1/-999:E; [Exit if script isn't enabled or not your turn]
+!!FU&y-1<>1:E; [Exit if script isn't enabled]
+
 !!IF:V3/0 V4/0; [Initialize Flags 3 & 4 to False]
 !!CM:I?v1; [Area clicked: v1]
 !!IF&v1=7:V3/1; [Set Flag 3 to True if hero movement button is right-clicked]
@@ -878,7 +879,7 @@ Dialogue Box numbers used: 17
 
  [Set extra upgrades for Hill Forts or with Universal Creature Upgrades active]
 
-!?FU(WOG_173_Initialization);
+!?FU(WOG_173_SetExtraUpgrades);
 !!UN:P173/?(wogOption:y); [Check if Extended Creature Upgrades is enabled]
 !!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
 
@@ -925,7 +926,7 @@ Dialogue Box numbers used: 17
 
 !!MA:U(MON_HELL_STEED)/(MON_NIGHTMARE); [Hell Steeds to Nightmares] *Neutral*
 
-!#FU(WOG_173_Initialization):P;
+!#FU(WOG_173_SetExtraUpgrades):P;
 
  [The following can only be upgraded at Hill Forts]
  [Hill Fort is trigger]
@@ -958,7 +959,182 @@ Dialogue Box numbers used: 17
  [End of Extended Creature Upgrades]
 
 
+********************************************************************************
+   Display Hidden Skills
+********************************************************************************
+
+ [To view all skills (text list), Left-Click on the Experience icon]
+
+Temporary Variables: v1-v4, z1-z3
+Functions: FU14802-FU14806
+
+ [Hero screen trigger]
+!?CM2;
+!!UN:P182/?y-1; [Check if script is enabled: y-1]
+!!FU&y-1<>1:E; [Exit if script isn't enabled]
+!!CM:I?v1 S?v2 F?v4; [Location clicked: v1 (119=Experience Icon), Type of click: v2 (12=left), Flags: v4]
+
+!!FU|v1<>119/v2<>12/v4>4:E; [Exit if Experience icon isn't left-clicked]
+
+!!VRv3&v4=1:S0; [Initialize v3 to 0 for skill shifting: v3]
+
+!!DO14804/1/8/1&v4=1:P; [Shift displayed skills, part 1 (store skills)]
+!!DO14805/1/v3/1&v4=1/v3>1:P; [Shift displayed skills, part 2 (remove skills)]
+!!DO14806/1/v3/1&v4=1/v3>1:P; [Shift displayed skills, part 3 (redisplay skills)]
+!!UN&v4=1/v3>1:R3/-1; [Redraw hero screen]
+
+!!VRv3&v4=4:S1; [Initialize v3 to 1 for skill swapping: v3]
+!!DO14803/0/27/1&v4=4:P; [Skill display swapping: hidden skills with displayed skills]
+!!IF&v4=4/y-60=0:M1/z125021;
+!!CM&v4>0:R0; [Cancel normal click message]
+
+!!FU&v4>0:E; [Exit if Experience icon shift or ctrl-clicked (Hidden skill display swapping)]
+
+ [Initialize z1, z4, v3 and y-1..y-27]
+!!VRv3:S0;
+!!HE-1:B0/?z3; [Hero's name: z3]
+!!VRz1:Sz125022;
+!!VRz4:S^^;
+
+!!DO14802/0/27/1:P; [Loop through all skills and add hidden skills to z1 list]
+
+ [Prepare dialogue for display of hidden skills]
+!!VRy-29&v3>=9/v3<=16:S2; [Total number of skill pages: y-29]
+!!VRy-29&v3>=17/v3<=24:S3; [Total number of skill pages: y-29]
+!!VRy-29&v3>=25:S4; [Total number of skill pages: y-29]
+!!IF&v3>=1:Ny-31/y-1/y-32/y-2/y-33/y-3/y-34/y-4/y-35/y-5/y-36/y-6/y-37/y-7/y-38/y-8;
+!!VRz4&v3<=8:S^%Z1^;
+!!VRz4&v3>=9:Sz125023;
+!!IF&v3>=1:N^%Z4^; [Display 1-8 hidden skill pictures]
+!!IF&v3>=9:Ny-39/y-9/y-40/y-10/y-41/y-11/y-42/y-12/y-43/y-13/y-44/y-14/y-45/y-15/y-46/y-16;
+!!VRz4&v3>=9:Sz125024;
+!!IF&v3>=9:N^%Z4^; [Display 9-16 hidden skill pictures]
+!!IF&v3>=17:Ny-47/y-17/y-48/y-18/y-49/y-19/y-50/y-20/y-51/y-21/y-52/y-22/y-53/y-23/y-54/y-24;
+!!VRz4&v3>=17:Sz125025;
+!!IF&v3>=17:N^%Z4^; [Display 17-24 hidden skill pictures]
+!!IF&v3>=25:Ny-55/y-25/y-56/y-26/y-57/y-27/y-58/y-28;
+!!VRz4&v3>=25:Sz125026;
+!!IF&v3>=25:N^%Z4^; [Display 25-28 hidden skill pictures]
+
+!!IF&v3=0:M1/z125027; [If no skills hidden skills, display this string]
+!!CM:R0; [Disable standard mouse click message]
+
 ------------------------------------------------------------------------------------------------------------------
+
+ [Loop through all skills and store hidden skill picture numbers to y- variables]
+
+!?FU14802;
+!!HE-1:Sx16/?y1; [Skill Level in skill x16: y1]
+!!HE-1:S?y2/x16/1; [Show slot for skill x16: y2 (0=not shown)]
+!!VRv3&y1>0/y2=0:+1; [Increment v3 skill counter]
+!!VRy3&y1>0/y2=0:Sv3 *-1; [Negative of skill counter: y3]
+!!VRy7&y1>0/y2=0:Sy3 -30; [Negative of skill counter -30: y7]
+
+ [Store hidden skill number in yy3 (y-1..y-28)]
+!!VRy5:Sx16 +1 *-1; [-1..-28: y5]
+!!VRy6:Sy5 -30; [-31..-58: y6]
+!!VRyy5:S-1; [Initialize y-1..y-28 to -1]
+!!VRyy6:S-1; [Initialize y-31..y-58 to -1]
+!!VRy4&y1>0/y2=0:Sx16 +1 *3 +y1 -1; [Calculate skill picture number: y4]
+!!VRyy3&y1>0/y2=0:Sy4; [Store hidden skill picture number]
+!!VRyy7&y1>0/y2=0:S20; [Store 20 for each hidden skill]
+
+------------------------------------------------------------------------------------------------------------------
+
+ [Loop through all skills and allow hidden skills to be swapped with non-hidden]
+
+!?FU14803;
+!!HE-1:Sx16/?y1; [Skill Level in skill x16: y1 (0=no skill)]
+!!HE-1:S?y2/x16/1; [Check display slot for skill x16: y2 (0=not shown)]
+!!FU|y1=0/y2<>0/v3>8:E; [Exit if not a hidden skill or if v3>8]
+
+!!UN:P193/?y11; [See if Warfare Option is enabled: y11=1 if yes]
+!!VRy12:S0; [Initialize y12 to 0]
+!!VRy19:S0; [Initialize y19 to 0]
+!!VRy12|x16=10/x16=20/x16=27:S1; [Set y12 to 1 if this hidden skill is a Warfare Skill]
+!!HE-1:S10/?y13; [Skill Level in Ballistics: y13 (0=no skill)]
+!!HE-1:S?y14/10/1; [Check display slot for Ballistics: y14 (0=not shown)]
+!!VRy19&y13>0/y14>0:S1; [Set y19 to 1 if Ballistics skill know and shown: y19]
+!!HE-1:S20/?y15; [Skill Level in Artillery: y15 (0=no skill)]
+!!HE-1:S?y16/20/1; [Check display slot for Artillery: y16 (0=not shown)]
+!!VRy19&y15>0/y16>0:S1; [Set y19 to 1 if Artillery skill know and shown: y19]
+!!HE-1:S27/?y17; [Skill Level in First Aid: y17 (0=no skill)]
+!!HE-1:S?y18/27/1; [Check display slot for First Aid: y18 (0=not shown)]
+!!VRy19&y17>0/y18>0:S1; [Set y19 to 1 if First Aid skill know and shown: y19]
+!!VRy12|y11=0/y19=0:S0; [Reset y12 if Warfare not enabled, or no non-hidden Warfare Skill known]
+!!FU&y12=1:E; [Exit if Hidden skill is a Warfare skill and another is known and shown]
+
+!!VRy-60:S1; [Set y-60 to 1 if any hidden skill found: y-60]
+!!VRy4:Sx16 +1 *3 +y1 -1; [Calculate hidden skill picture number: y4]
+
+!!HE-1:S?y8; [Check number of displayed skills: y8]
+!!VRy9|y8=0/y8=8:Sv3; [If 0 or 8 skills are displayed, used v3 for display slot: y9]
+!!VRy9&y8>0/y8<8:Sy8 +1; [If more than 0 but fewer than 8 skills, use number displayed +1: y9]
+
+!!HE-1:Sy9/?y5/1; [Skill number of skill in display slot #y9 (1..8): y5]
+!!VRy6:S0; [Initialize y6 to 0]
+!!HE-1&y5>=0:Sy5/?y6; [Hero's Skill Level of skill in slot v3: y6]
+
+!!VRy7&y6>0:Sy5 +1 *3 +y6 -1; [Calculate displayed skill picture number: y7]
+
+!!UN:N4/-1/x16; [Skill name of Hidden skill: z-1]
+!!UN&y6>0:N4/-2/y5; [Skill name of Display skill: z-2]
+
+!!IF:V2/0 V3/0; [Initialize Flags 2 and 3 to False]
+
+!!IF&y6>0:Q2/20/y4/20/y7/2/z125028;
+
+!!HE-1&2:Sv3/x16/1; [Set hidden skill to display slot v3]
+
+!!IF&y6<1:Q3/20/y4/2/z125029;
+
+!!HE-1&3:Sx16/0; [Remove hidden skill]
+!!HE-1&3:Sx16/y1; [Give hidden skill]
+
+!!FU&-2/-3:E; [If no change, exit]
+
+!!UN:R3/-1; [Redraw hero screen]
+!!VRv3&y9=v3:+1; [Increment v3 display slot counter if y9=v3: v3]
+
+------------------------------------------------------------------------------------------------------------------
+
+ [Loop through all displayed skills and store their number and level]
+
+!?FU14804;
+!!HE-1:Sx16/?y1/1; [Skill number of skill in display slot #x16 (1..8): y1]
+!!FU&y1<0:E; [Skip if no skill there]
+!!HE-1:Sy1/?y2; [Hero's Skill Level of skill in slot y1: y2]
+
+!!VRv3:+1; [Increment v3]
+!!VRy3:S70 +v3 *-1; [Index: Store skill number in y-71..y-78]
+!!VRyy3:Sy1; [Store skill number: yy3]
+!!VRy4:S80 +v3 *-1; [Index: Store skill level in y-81..y-88]
+!!VRyy4:Sy2; [Store skill level: yy4]
+
+------------------------------------------------------------------------------------------------------------------
+
+ [Remove all displayed skills]
+
+!?FU14805;
+!!VRy1:S70 +x16 *-1; [Index for stored skill number in y-71..y-78: y1]
+!!HE-1:Syy1/0; [Delete skill: yy1]
+
+------------------------------------------------------------------------------------------------------------------
+
+ [Redisplay redordered skills]
+
+!?FU14806;
+!!VRy1&x16=1:S70 +v3 *-1; [Index for last skill number: y1]
+!!VRy2&x16=1:S80 +v3 *-1; [Index for last skill level: y2]
+
+!!VRy1&x16>1:S70 +x16 -1 *-1; [Index for next skill number: y1]
+!!VRy2&x16>1:S80 +x16 -1 *-1; [Index for next skill level: y2]
+
+!!HE-1:Syy1/yy2; [Give skill to hero]
+
+------------------------------------------------------------------------------------------------------------------
+
+ [End of Display Hidden Skills]
 
 
 ********************************************************************************
@@ -970,8 +1146,9 @@ Dialogue Box numbers used: 17
 
  [Adventure Map right-click trigger]
 !?CM0;
-*!UN:P179/?y-1; [Check if script is enabled: y-1]
-*!FU&y-1<>1:E; [Exit if script isn't enabled]
+!!UN:P179/?y-1; [Check if script is enabled: y-1]
+!!FU&y-1<>1:E; [Exit if script isn't enabled]
+
 !!IF:V4/0; [Initialize Flag 4 to False]
 !!CM:I?v1; [Area clicked: v1]
 !!IF&v1>=25/v1<=29:V4/1; [Set Flag 4 to True if a hero mana bar is right-clicked]
