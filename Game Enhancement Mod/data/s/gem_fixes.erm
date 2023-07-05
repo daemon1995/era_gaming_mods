@@ -8,9 +8,15 @@ ZVSE2
 ************************************************************************
 ************************************************************************
 
-// disable tactics message before tactics - 0x462D98 JMP SHORT 0x462DCA
+// Disable tactics message before tactics - 0x462D98 JMP SHORT 0x462DCA
 !#UN:C4599192/2/12523;
 !#UN:C4599194/4/2425393296;
+
+// Fix Angel's Morale display
+// by Hawaiing
+!?FU(OnGameEnter);
+!!UN:C7735887/4/2425393296;
+!!UN:C7735891/1/144;
 
 // Enable combination artifacts and 5th misc slot for RoE/AB maps
 !?FU(OnGameEnter);
@@ -600,8 +606,8 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
 ; Check if the stack has fire immunity
 !!BM(stack):F?(flags:y);
-!!VR(isFireImmune:y):S(flags) &(MON_FLAG_FIRE_IMMUNITY) B;
-!!FU&(isFireImmune)=0:E;
+!!VR(isFireImmune:y):S(flags) &(MON_FLAG_FIRE_IMMUNITY);
+!!FU&(isFireImmune)=(FALSE):E;
 
 ; Jump if the target has fire immunity
 !!SN:X?(var:y)/0;
@@ -664,13 +670,17 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!en;
 
 
-// Bad Fix: Fix final damage on the battlefield overflow
+// Bad Fix: Fix final damage on the battlefield overflowing or becoming 0
 // by Archer30
 ; Ideally this script needs to be executed as late as possible to ensure overflow doesn't happen, like in a script with "-1000" as the prefix of filename
 !?FU(OnMonsterPhysicalDamage_Quit);
 !!MF:F?(damage:y);
-!!MF&(damage)<0:F(INT_MAX);
 
+!!if&(damage)<0;
+  !!MF:F(INT_MAX);
+!!el&(damage)=0;
+  !!MF:F1;
+!!en;
 
 ************************************************************************
 ************************************************************************
@@ -680,28 +690,28 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 fill refugees by mons to evade pikeman creatures there
 !?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
 
-    !!FU(GetMaxMonsterId):P?(lastMon:y);
-    !!UN:P200/?(isRefugeeSync:y);
-    !!if&(lastMon)=(MON_DRACOLICH)/(isRefugeeSync)<>(TRUE);
+  !!FU(GetMaxMonsterId):P?(lastMon:y);
+  !!UN:P200/?(isRefugeeSync:y);
+  !!if&(lastMon)=(MON_DRACOLICH)/(isRefugeeSync)<>(TRUE);
 
-      !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(campsAmount:y);
-      !!if&(campsAmount);
-        !!re i/1/(campsAmount);
-          !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/i/2;
-          !!FU(gem_GetRandomMon):P?(mon:y)/5/(MON_AZURE_DRAGON)/(MON_RUST_DRAGON)/(MON_FAERIE_DRAGON)/(MON_CRYSTAL_DRAGON)/(MON_DRACOLICH);
-          !!MA:G(mon)/?(growth:y);
-          !!OB2:T?(objType:y);
-          !!if&(objType)=(OBJ_HERO);
-            !!HEv2/v3/v4:N?(heroId:y);
-            !!FU(gem_AdvMgr_HideHero):P(heroId:y);
-          !!en;
-          !!OB2:U(mon) C(growth);
-          !!if&(objType)=(OBJ_HERO);
-            !!FU(gem_AdvMgr_ShowHero):P(heroId:y);
-          !!en;
+    !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(campsAmount:y);
+    !!if&(campsAmount);
+      !!re i/1/(campsAmount);
+        !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/i/2;
+        !!FU(gem_GetRandomMon):P?(mon:y)/5/(MON_AZURE_DRAGON)/(MON_RUST_DRAGON)/(MON_FAERIE_DRAGON)/(MON_CRYSTAL_DRAGON)/(MON_DRACOLICH);
+        !!MA:G(mon)/?(growth:y);
+        !!OB2:T?(objType:y);
+        !!if&(objType)=(OBJ_HERO);
+          !!HEv2/v3/v4:N?(heroId:y);
+          !!FU(gem_AdvMgr_HideHero):P(heroId:y);
+        !!en;
+        !!OB2:U(mon) C(growth);
+        !!if&(objType)=(OBJ_HERO);
+          !!FU(gem_AdvMgr_ShowHero):P(heroId:y);
         !!en;
       !!en;
     !!en;
+  !!en;
 
 !?FU(gem_OnAfterArtSpellCasting);
 !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
