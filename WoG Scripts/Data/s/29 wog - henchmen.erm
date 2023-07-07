@@ -27,7 +27,7 @@ ZVSE2
 
 !!if&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^key_ctrl^=(FALSE);
   !!VR(canInteract:y):S(FALSE);
-  !!HE(hero):O?(owner:y);               [Get owner of the hero in order to decide whether to offer to choose a henchman in FU(hench_ShowHenchInfo)]
+  !!HE(hero):O?(owner:y);               [Get the owner of the hero in order to decide whether to offer to choose a henchman in FU(hench_ShowHenchDlg)]
   !!VR(canInteract)&999/(owner)>(NO_PLAYER):S(TRUE);
   !!FU(hench_CheckIfHenchIsEligible):P(hero)/?(isEligible:y);
   !!IF:W(hero);
@@ -40,10 +40,10 @@ ZVSE2
     !!el;
       !!IF:Mz149009;
     !!en;
-    
+
   ; Show up henchmen dialog if the henchman is available
   !!el;
-    !!FU(hench_ShowHenchInfo):P(hero)/(canInteract)/(isEligible); [Show hero's henchman main dialogue if henchman is available]
+    !!FU(hench_ShowHenchDlg):P(hero)/(canInteract)/(isEligible); [Show hero's henchman main dialogue if henchman is available]
   !!en;
 !!el&i^mouse_action^=(MOUSE_RMB_PRESSED);
   !!IF:Mz149000;
@@ -69,9 +69,18 @@ ZVSE2
 !!en;
 
 // Manage henchmen variables before the battle
+; Ask to get a henchman for the attacking human player
 !?FU(OnBeforeBattle)&i^hench_enabled^;
-; Ask to get a henchman for attacking human player or give one to the hero
 !!FU(hench_AskToChooseAHench)&i^battle_hero_0^>(NO_HERO)/i^battle_ai_0^<>(TRUE):Pi^battle_hero_0^;
+
+; Set up AI henchmen
+; Compatibility with Random Hero option - Checking OW:I is enough as we set a temp owner for the random hero
+!?FU(OnAfterBattleSetup)&i^hench_enabled^;
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!HEi^battle_hero_%i^:O?(owner:y);
+  !!OW:I(owner)/?(isAi:y);
+  !!FU(hench_ChooseAiHench)&(isAi):Pi^battle_hero_%i^/i;
+!!en;
 
 !?FU(OnBeforeBattleBeforeDataSend)&i^hench_enabled^;
 ; Pass through henchman variables in PVP battles
@@ -80,8 +89,7 @@ ZVSE2
 
 // Set up henchmen on the battlefield
 !?FU(OnSetupBattlefield)&i^hench_enabled^;
-!!FU(hench_SetUpHenchStack):P(BATTLE_LEFT);
-!!FU(hench_SetUpHenchStack):P(BATTLE_RIGHT);
+!!FU(hench_SetUpHenchStack):P(BATTLE_LEFT) P(BATTLE_RIGHT);
 
 !?FU(hench_SetUpHenchStack);
 !#VA(side:x);
@@ -92,9 +100,6 @@ ZVSE2
 !!VR(hero:y):Si^battle_hero_%(side)^;
 
 !!if&(hero)>(NO_HERO);
-  !!HE(hero):O?(owner:y);
-  !!OW:I(owner)/?(isAi:y);
-  !!FU(hench_ChooseAiHench)&(isAi):P(hero)/(side); [compatibility with Random Hero option - Checking OW:I is enough as we set a temp owner for the random hero]
   !!IF:W(hero);
 
   ; Place the henchman stack
@@ -102,7 +107,7 @@ ZVSE2
     !!FU(hench_GetHenchPosition):P(side)/w118/?(henchPos:y);
     !!BU:Sw118/1/(henchPos)/(side)/-1/(FALSE); [Place]
     !!BU:E(henchPos)/?i^hench_stack_%(side)^; [Store stack id]
-    !!FU(hench_ManageHenchStats):Pi^hench_stack_%(side)^/(side)/(hero); [Manage stats]
+    !!FU(hench_ManageHenchStats)&i^hench_stack_%(side)^>(NO_STACK):Pi^hench_stack_%(side)^/(side)/(hero); [Manage stats]
   !!en;
 !!en;
 
@@ -135,8 +140,7 @@ ZVSE2
 
 // Fix exessive henchman quantity/Manage Dead or Alive
 !?FU(OnAfterBattleAction)&i^hench_enabled^;
-!!FU(hench_ManageDeadOrAlive):Pi^hench_stack_0^/(BATTLE_LEFT);
-!!FU(hench_ManageDeadOrAlive):Pi^hench_stack_1^/(BATTLE_RIGHT);
+!!FU(hench_ManageDeadOrAlive):Pi^hench_stack_0^/(BATTLE_LEFT) Pi^hench_stack_1^/(BATTLE_RIGHT);
 
 !?FU(hench_ManageDeadOrAlive);
 !#VA(stack:x) (side:x);
@@ -148,6 +152,8 @@ ZVSE2
     !!BM(stack):K100000000;    [prevent resurrecting henchman in battle]
     !!FU(hench_ManageHenchLiving):P(side)/(FALSE);
   !!el&(qty)>1;
+    ; Restrain the quantity to 2 (for henchmen with Attract dead souls ability)
+    !!BM(stack)&(qty)>2:N2;
     !!FU(hench_ManageHenchLiving):P(side)/(TRUE);
   !!en;
 !!en;
@@ -291,7 +297,7 @@ ZVSE2
 
 !!VR(lvRate):S(value) *8 :100 F3/(INT_MAX);
 
-!?FU(hench_ShowHenchInfo);
+!?FU(hench_ShowHenchDlg);
 !#VA(hero:x) (canInteract:x) (isEligible:x);
 
 !!IF:W(hero);
@@ -433,7 +439,6 @@ ZVSE2
   !!en;
 !!en;
 
-!!IF(hero):W(hero);
 !!VRw118:S(henchMon);
 !!VRw119:S(TRUE);
 
@@ -475,7 +480,16 @@ ZVSE2
 !#VA(hero:x);
 
 !!IF:W(hero);
-!!VRw117&w118>(NO_MON)/w119:+6 R4;
+!!HE(hero):O?(owner:y);
+!!OW:I(owner)/?(isAi:y);
+
+; Exit the function if no henchman or the henchman is killed
+; AI will always get exp for the henchman
+!!if&(isAi)<>(TRUE);
+  !!FU|w118<=(NO_MON)/w119=(FALSE):E;
+!!en;
+
+!!VRw117:+6 R4;
 
 ; Remove the shooting flag if the henchman can shoot but with no ammo (centaurs)
 !?FU(hench_ManageHenchShooterFlag);
@@ -585,5 +599,23 @@ ZVSE2
 !?FU(OnAfterCommanderResurrect)&-(ERM_FLAG_IS_HUMAN);
 !!IF:W(CURRENT_HERO);
 !!VRw119&w118>(NO_MON):S(TRUE);
+
+// Check the info of the henchman on the battlefield
+!?FU(OnBattleScreenMouseClick)&i^key_ctrl^/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185;
+!!BU:Ei^mouse_battleHex^/?(stack:y);
+
+!!if&(stack)>(NO_STACK);
+  ; Check the info of the second henchman on ctrl-right-clicking on the stack
+  !!if&i^mouse_action^=(MOUSE_RMB_PRESSED);
+    !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+      !!br&(stack)=i^hench_stack_%i^;
+    !!en;
+
+    !!FU&i>(BATTLE_RIGHT):E;
+
+    !!CM:R0;
+    !!FU(hench_ShowHenchDlg):Pi^battle_hero_%i^/(FALSE)/(FALSE);
+  !!en;
+!!en;
 
 *** end script ***
