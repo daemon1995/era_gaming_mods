@@ -303,6 +303,8 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 --------------------------------------------------------------------------------------
 
 >>[Gets number for new "Week of" monster and stores in v180]
+; v170 - monster of this week
+; v180 - monster of the next week
 !?FU(WOG_20_SetActualTypeOfWeek);
 
 !!VRv180:S-100;  [Initialize new monster number to -100]
@@ -328,9 +330,11 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 !!VRy9&v372=8:S1; [If random monster week, choose random monster: y9=1]
 
+!!MA:F(MON_AZURE_DRAGON)/?y32;          [Monster of the week cannot be stronger than Azure - for mod compatibility]
+
  [Random # for "Week of" monster, excluding "not used", Emissaries, Commanders if v372=8]
 !!if|v372=8/y9=1;
-  !!FU(WOG_20_GetRandomMonWithExclusion):Pv170/y4/?v180;
+  !!FU(WOG_20_GetMonsterOfNextWeek):Pv170/y4/?v180/y32; [v170/y4 - monsters of the last week?]
 ; Random resource week if v372=9
 !!el&v372=9;
   !!VRv180:R0/-7/-1; [Random number for resource week]
@@ -344,7 +348,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!VRy10:Sy6 :2; [Half of current week]
 !!VRy10&y10<1:S1;
 
-!!if&v180>=0;
+!!if&v180>(NO_MON);
   !!MA:Lv180/?y7; [Store monster level (0-6) in y7]
   !!VRy7:+1;      [set y7 to "true" monster level (1-7)]
 !!en;
@@ -381,7 +385,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 !!VRy12:Sc; [Set y12 to current day]
 
-!!FU5303&y8=1/y6>1/y6>=y11/y12<>v1210:P; [Place wandering monster stacks or resources]
+!!FU(WOG_20_PlaceMonstersOrResources)&y8=1/y6>1/y6>=y11/y12<>v1210:P; [Place wandering monster stacks or resources]
 
  [Store v170 in y13 for purposes of changing Refugee Camps]
  [If week 1, set it to a level 1 creature]
@@ -399,8 +403,11 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!UN:P200/?y19; [Check if Refugee Camp synchronization is enabled: y19]
 !!FU(WOG_20_SyncRefugeeMonster)&y19=1/y13>=0/v170<>(MON_CATAPULT)/v170<>(MON_BALLISTA)/v170<>(MON_FIRST_AID_TENT)/v170<>(MON_AMMO_CART):Py13;
 
-!?FU(WOG_20_GetRandomMonWithExclusion);
-!#VA(excludeMon1:x) (excludeMon2:x) (mon:x);
+!?FU(WOG_20_GetMonsterOfNextWeek);
+!#VA(excludeMon1:x) (excludeMon2:x) (mon:x) (maxFv:x);
+
+!!FU:A?(numArgs:y);
+!!VR(maxFv)&(numArgs)<4:S(INT_MAX);
 
 !!VR(mon):S(NO_MON);
 !!FU(GetMaxMonsterId):P?(lastMon:y);
@@ -411,6 +418,9 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
   !!co&i=(MON_ARROW_TOWERS);            [War Machines are valid except for Arrow Towers!]
   !!co&i>=(MON_EMISSARY_OF_WAR)/i<=(MON_EMISSARY_OF_LORE);
   !!co&i>=(MON_COMMANDER_FIRST_A)/i<=(MON_COMMANDER_LAST_D);
+
+  !!MA:Fi/?(fv:y);
+  !!co&(fv)>(maxFv);
 
   !!FU(Array_Push):P(validMons)/i;
 !!en;
@@ -536,7 +546,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 --------------------------------------------------------------------------------------
 
 >>[Place some wandering monster stacks or random resources]
-!?FU5303;
+!?FU(WOG_20_PlaceMonstersOrResources);
 
  [Set v1210 to current day]
 !!VRv1210:Sc;
@@ -550,8 +560,8 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!VRy6&y6<0/y6<>-100:*-1 -1;
 
  [Set y7 to object number 54 for a monster and 79 for a resource]
-!!VRy7:S54;
-!!VRy7&v170<0/v170<>-100:S79;
+!!VRy7:S(OBJ_MONSTER);
+!!VRy7&v170<0/v170<>-100:S(OBJ_RESOURCE);
 
  [Set y8 to number of monsters or resources appearing (resources = number x 2)]
 !!VRy8:S0;
@@ -577,8 +587,8 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
   !!VRy10:Sy3 :2; [Half of enhanced base value (rounded down)]
   !!VRy10&y10<1:S1; [Make sure y10 is at least 1]
   !!VRy5:Sy10 *y4; [Half enhanced base value x number of weeks]
-  !!MA:Fv170/?y30 F(MON_BLOOD_DRAGON)/?y31; [Get the fight values of the creature and Blood Dragon]
-  !!VRy5&y30>=y31::2; [Halve the number if it's a OP monster (fight value >= Blood Dragon)]
+  *!MA:Fv170/?y30 F(MON_BLOOD_DRAGON)/?y31; [Get the fight values of the creature and Blood Dragon - disabled as level 8 won't be put on the map anyway]
+  *!VRy5&y30>=y31::2; [Halve the number if it's a OP monster (fight value >= Blood Dragon)]
   !!VRy5&y3<1:S1; [Make sure y5 is at least 1]
 !!en;
 
@@ -604,7 +614,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
  [Place monsters/resources on upper level]
 
-!!DO5304/1/y8/1:Py9/0/y5/y6/y7/y8/y3;
+!!DO(WOG_20_PlaceMonstersOrResourcesOnLevel)/1/y8/1:Py9/0/y5/y6/y7/y8/y3;
 
  [exit if the map has no underground]
 !!FU&y2<>(TRUE):E;
@@ -623,7 +633,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 !!VRv4:S0;
 
  [Place monsters/resources on lower level if it exists]
-!!DO5304/1/y8/1:Py9/1/y5/y6/y7/y8/y3;
+!!DO(WOG_20_PlaceMonstersOrResourcesOnLevel)/1/y8/1:Py9/1/y5/y6/y7/y8/y3;
 
 --------------------------------------------------------------------------------------
 
@@ -633,7 +643,7 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
   [x4=resource type, x5=object type: monster(54) or resource (79), x6=# of stacks to place]
   [x7=enhanced monster growth value, x16=function loop number]
 
-!?FU5304;
+!?FU(WOG_20_PlaceMonstersOrResourcesOnLevel);
 !!VRy10:S0 Rx1; [Random x value]
 !!VRy11:S0 Rx1; [Random y value]
 !!TRy10/y11/x2:T?y1/d/d/d/d/d/d/d; [Check terrain type]
