@@ -73,15 +73,6 @@ ZVSE2
 !?FU(OnBeforeBattle)&i^hench_enabled^;
 !!FU(hench_AskToChooseAHench)&i^battle_hero_0^>(NO_HERO)/i^battle_ai_0^<>(TRUE):Pi^battle_hero_0^;
 
-; Set up AI henchmen
-; Compatibility with Random Hero option - Checking OW:I is enough as we set a temp owner for the random hero
-!?FU(OnAfterBattleSetup)&i^hench_enabled^;
-!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
-  !!HEi^battle_hero_%i^:O?(owner:y);
-  !!OW:I(owner)/?(isAi:y);
-  !!FU(hench_ChooseAiHench)&(isAi):Pi^battle_hero_%i^/i;
-!!en;
-
 !?FU(OnBeforeBattleBeforeDataSend)&i^hench_enabled^;
 ; Pass through henchman variables in PVP battles
 !!BA:H0/?(atkHero:y);
@@ -101,6 +92,12 @@ ZVSE2
 
 !!if&(hero)>(NO_HERO);
   !!IF:W(hero);
+
+  ; Set up AI henchmen
+  ; Compatibility with Random Hero option - Checking OW:I is enough as we set a temp owner for the random hero
+  !!HE(hero):O?(owner:y);
+  !!OW:I(owner)/?(isAi:y);
+  !!FU(hench_ChooseAiHench)&(isAi):P(hero)/(side);
 
   ; Place the henchman stack
   !!if&w118>(NO_MON)/w119;
@@ -153,7 +150,7 @@ ZVSE2
     !!FU(hench_ManageHenchLiving):P(side)/(FALSE);
   !!el&(qty)>1;
     ; Restrain the quantity to 2 (for henchmen with Attract dead souls ability)
-    !!BM(stack)&(qty)>2:N2;
+    !!BM(stack)&(qty)>2:N2 L0;
     !!FU(hench_ManageHenchLiving):P(side)/(TRUE);
   !!en;
 !!en;
@@ -489,7 +486,11 @@ ZVSE2
   !!FU|w118<=(NO_MON)/w119=(FALSE):E;
 !!en;
 
-!!VRw117:+6 R4;
+!!VR(battleExpGain:y):R0/6/10;
+
+!!VR(battleExpGain)&(isAi):*6 :5;       [AI bonus: 120% of exp obtained]
+
+!!VRw117:+(battleExpGain);              [total exp]
 
 ; Remove the shooting flag if the henchman can shoot but with no ammo (centaurs)
 !?FU(hench_ManageHenchShooterFlag);

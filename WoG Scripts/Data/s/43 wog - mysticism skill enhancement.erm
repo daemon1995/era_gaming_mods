@@ -23,6 +23,11 @@ v1-v10
 Flags:
 (1-10), 56, 172, 412 (flag 56 for checking whether Week of Monsters is enabled)
 
+
+; Set up global var for additional spell points regeneration
+!#UN:P35/?(wogOption:y);
+!#VRi^wog_35_extraManaRegenEnabled^&(wogOption):S(TRUE);
+
 *************
 *** Basic ***
 *************
@@ -37,38 +42,39 @@ Flags:
   !!en;
 !!en;
 
-!!DO(WOG_35_LoopAllHeroes_AddSpellPoints)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P;
+; Loop through all the heroes to show Week of Monsters info and add extra spell points
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:O?y1 S(SKILL_MYSTICISM)/?y2; (Check hero owner and level of Mysticism)
+  !!co|y1=(NO_OWNER)/y2<=(SKILL_NOT_LEARNED);   (Next if not the same)
 
-!?FU(WOG_35_LoopAllHeroes_AddSpellPoints);
-; x16 - hero id
-!!HEx16:O?y1 S8/?y2; (Check hero owner and level of Mysticism)
-!!FU|y1=-1/y2<1:E;   (Abort if not the same)
+  ; Set up variables for showing week of monsters info
+  !!OW:Iy1/?y4;        (owner is AI?)
+  !!FU(WOG_35_GetHeroID_KnowWeekOfMonster)&56/i^timerWeekday^=2/y4=0:Pi/y1; (Week of Monsters script is enabled, on tuesday and not AI)
 
-!!OW:Iy1/?y4;        (owner is AI?)
-!!VRy3:Sc0 %7;       (Get day of week)
-!!FU(WOG_35_GetHeroID_KnowWeekOfMonstre)&56/y3=2/y4=0:Px16/y1; (Week of Monsters script is enabled, on tuesday and not AI)
+  ; Add additional spell points
+  !!if&i^wog_35_extraManaRegenEnabled^;
+    !!FU(WOG_Hero_GetFullSpellPoints):Pi/?y3;
+    !!HEi:I?y5/1;      (get current spell points)
+    !!co&y5>=y3;       (next if current spell points >= maximum)
 
-!!FU(WOG_Hero_GetFullSpellPoints):Px16/?y3;
-!!HEx16:I?y5/1;      (get current spell points)
-!!FU&y5>=y3:E;       (exit if current spell points >= maximum)
+    !!VRy6:Sy3 *y2 :20 -1 -y2; (Spell points are mysticism level/10 of normal, -level of mysticism -1, for normal regeneration)
+    !!HEi:X?y8/?y9/d/d/d/d/d;
 
-!!VRy6:Sy3 *y2 :20 -1 -y2; (Spell points are mysticism level/10 of normal, -level of mysticism -1, for normal regeneration)
-!!HEx16:X?y8/?y9/d/d/d/d/d;
+    !!if&y8=0/y9=8; (if Hero is a spec Mysticism)
+      !!HEi:Ed/?y11/1;
+      !!VRy10:Sy3 *y11 :207; (spec mysticism: +0.5% for lvl of max SP hero)
+      !!VRy6:+y10;
+    !!en;
 
-!!if&y8=0/y9=8; (if Hero is a spec Mysticism)
-  !!HEx16:Ed/?y11/1;
-  !!VRy10:Sy3 *y11 :207; (spec mysticism: +0.5% for lvl of max SP hero)
-  !!VRy6:+y10;
+    !!VRy6&y4=1:*2;      (double bonus for AI)
+    !!VRy5:+y6;          (add current spell points)
+    !!VRy5&y5<1:S1;      (check for negative SP)
+    !!VRy5&y5>y3:Sy3;    (check for add SP > max)
+    !!HEi:Iy5/1;       (set hero spell points)
+  !!en;
 !!en;
 
-!!VRy6&y4=1:*2;      (double bonus for AI)
-!!VRy5:+y6;          (add current spell points)
-!!VRy5&y5<1:S1;      (check for negative SP)
-!!VRy5&y5>y3:Sy3;    (check for add SP > max)
-!!HEx16:Iy5/1;       (set hero spell points)
-
-
-!?FU(WOG_35_GetHeroID_KnowWeekOfMonstre);
+!?FU(WOG_35_GetHeroID_KnowWeekOfMonster);
 ; x1 - hero id
 ; x2 - player color
 !!SN:W^wog_35_HeroID_%X2^/?y1; (check player hero id)
