@@ -58,27 +58,6 @@ ZVSE2
 ** end of initialization
 
 
-** Witch Hut object trigger
-
-!$OB(OBJ_WITCH_HUT);
-!!UN:P66/?(wogOption:y);                [Check for WoG option]
-!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
-
-!!CO(CURRENT_HERO):D?(isDead:y) E?(isAllowed:y);
-
-!!if&(isDead)<>(TRUE)/(isAllowed);[handle witch hut if alive enabled commander]
-  !!FU(WOG_66_CheckCommanderAbilityType):Pv998/v999/v1000/?(secSkill:y)/?(code:y)/?(mode:y);
-
-  !!if&(mode)=0;
-    !!FU(WOG_66_HandleSpecialAbility):P(secSkill)/(code); [handle special ability bonus]
-  !!el;
-    !!FU(WOG_66_HandleStatBonus):P(secSkill)/(code); [handle +stat bonus]
-  !!en;
-!!en;
-
-** end of object trigger
-
-
 ** Adv Map Tile Hint trigger
 ; Be aware not to change the hint when the hero is visting (above) the witch hut!
 !?FU(OnAdvMapTileHint);
@@ -89,32 +68,13 @@ ZVSE2
 !!UN:P66/?(wogOption:y);                [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
-; Exit if the location has been occupied by a hero
-!!UN:P904/(TRUE) P905/(FALSE);
-!!HE(tileX)/(tileY)/(tileZ):E?(exp:y);
-!!UN:P905/?(hasError:y);
-!!UN:P904/(FALSE);
+!!FU(WOG_66_CheckIfNewHintIsEligible):P(tileX)/(tileY)/(tileZ)/?(result:y);
+!!FU&(result)<>(TRUE):E;
 
-!!if&(hasError);
-  !!UN:P905/(FALSE);
-!!el;
-  !!FU:E;
-!!en;
-
-; Exit if the object type in the game is not Witch Hut (if hero is visiting, the object type would be hero)
-!!OB(tileX)/(tileY)/(tileZ):T?(nativeObjType:y);
-!!FU&(nativeObjType)<>(OBJ_WITCH_HUT):E;
-
-; Check if the Witch Hut has been visited by the interacting player
-!!OW:C?(currPlayer:y)/?(interactPlayer:y);
-!!OB(tileX)/(tileY)/(tileZ):C?(controlWord:y);
-!!VR(controlWordOrig:y):S(controlWord); [copy for checking later]
-!!VR(playerBit:y):S1 Sd<<(interactPlayer) *32; [Set to bit value for checking Control Word]
-!!VR(controlWord):|(playerBit);         [Try to "or" with current player's bit]
-!!FU&(controlWord)<>(controlWordOrig):E;[Check if not same, then abort]
-
-; Set up additional hint if the Witch Hut has been visiting by the interacting player
+; Set up additional hint if the basic checks have passed
+; Exit if the secondary skill is banned
 !!FU(WOG_66_CheckCommanderAbilityType):P(tileX)/(tileY)/(tileZ)/?(secSkill:y)/?(code:y)/?(mode:y);
+!!FU&(secSkill)=-1:E;
 
 !!if&(mode)=0;
   !!SN:T^wog.66.spec%(secSkill)^/?(bonus:z);
@@ -130,6 +90,128 @@ ZVSE2
 ** end of Adv Map Tile Hint trigger
 
 
+** Adv Map right click trigger
+
+!?FU(OnAdventureMapRightMouseClick)&i^wog_36_mithrilDlg_on^<>(TRUE); [Trigger only when Mithril dialogue is not active]
+!!UN:P66/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
+
+!!FU(WOG_66_CheckIfNewHintIsEligible):Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/?(result:y);
+!!FU&(result)<>(TRUE):E;
+
+; Set up additional hint if the basic checks have passed
+; Exit if the secondary skill is banned
+!!FU(WOG_66_CheckCommanderAbilityType):Pi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/?(secSkill:y)/?(code:y)/?(mode:y);
+!!FU&(secSkill)=-1:E;
+
+!!CM:R0;
+
+; Set up text according to whether there is an active hero/the hero has learned the skill offered by the witch hut
+!!OW:C?(currPlayer:y)/?(interactPlayer:y);
+!!OW:A(interactPlayer)/?(activeHero:y);
+
+!!if&(mode)=0;
+  !!FU(WOG_66_GetSkillDetails):P0/(secSkill)/(FALSE)/?(skillIcon:y)/?(bonus:z);
+!!el;
+  !!VR(skillLevel:y):S0;
+  !!CO(activeHero)&(activeHero)>(NO_HERO):S(code)/?(skillLevel);
+  !!VR(skillLevel):+1 %6;
+  !!FU(WOG_66_GetSkillDetails):P1/(code)/(skillLevel)/?(skillIcon)/?(bonus:z);
+!!en;
+
+!!FU(GetTextFileString):P^objnames^/(OBJ_WITCH_HUT)/?(witchHutName:z);
+!!SN:H^secskill^/(secSkill)/(SKILL_NOT_LEARNED)/?(secSkillName:z);
+!!SN:T^wog.learn^/?(learnStr:z)/^skill^/(secSkillName);
+!!VR(secSkillIcon:y):S(secSkill) *3 +3;
+!!VR(learnStr):+^
+
+{~>Secskill.def:0:%(secSkillIcon)}^;
+
+!!if&(activeHero)>(NO_HERO);
+  !!HE(activeHero):S(secSkill)/?(secSkillLevel:y);
+
+  !!if&(secSkillLevel)>(SKILL_NOT_LEARNED);
+    !!VR(learnStr):+^%T(wog.endl)%T(wog.endl)%T(wog.alreadyLearned)^;
+  !!el;
+    !!VR(learnStr):+^%T(wog.endl)^;     [Add an extra new line at the end if no active hero/the hero has not learned]
+  !!en;
+!!el;
+  !!VR(learnStr):+^%T(wog.endl)^;
+!!en;
+
+!!IF:M0/(MSG_TYPE_POPUP)/^%(witchHutName)
+%(learnStr)
+
+
+
+{~>dlg_npc2.def:0:%(skillIcon)}
+
+
+(%T(wog.66.commander)%(bonus))
+^;
+
+** end of Adv Map right click trigger
+
+
+** Witch Hut object trigger
+
+!$OB(OBJ_WITCH_HUT);
+!!UN:P66/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
+
+!!CO(CURRENT_HERO):D?(isDead:y) E?(isAllowed:y);
+
+!!if&(isDead)<>(TRUE)/(isAllowed);[handle witch hut if alive enabled commander]
+  ; Exit if the secondary skill is banned
+  !!FU(WOG_66_CheckCommanderAbilityType):Pv998/v999/v1000/?(secSkill:y)/?(code:y)/?(mode:y);
+  !!FU&(secSkill)=-1:E;
+
+  !!if&(mode)=0;
+    !!FU(WOG_66_HandleSpecialAbility):P(secSkill)/(code); [handle special ability bonus]
+  !!el;
+    !!FU(WOG_66_HandleStatBonus):P(secSkill)/(code); [handle +stat bonus]
+  !!en;
+!!en;
+
+** end of object trigger
+
+
+** function to check if new hint should be added
+
+!?FU(WOG_66_CheckIfNewHintIsEligible);
+!#VA(tileX:x) (tileY:x) (tileZ:x) (result:x);
+
+!!VR(result):S(FALSE);
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(tileX)/(tileY)/(tileZ):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
+; Exit if the object type in the game is not Witch Hut
+!!OB(tileX)/(tileY)/(tileZ):T?(nativeObjType:y);
+!!FU&(nativeObjType)<>(OBJ_WITCH_HUT):E;
+
+; Check if the Witch Hut has been visited by the interacting player
+!!OW:C?(currPlayer:y)/?(interactPlayer:y);
+!!OB(tileX)/(tileY)/(tileZ):C?(controlWord:y);
+!!VR(controlWordOrig:y):S(controlWord); [copy for checking later]
+!!VR(playerBit:y):S1 Sd<<(interactPlayer) *32; [Set to bit value for checking Control Word]
+!!VR(controlWord):|(playerBit);         [Try to "or" with current player's bit]
+!!FU&(controlWord)<>(controlWordOrig):E;[Check if not same, then abort]
+
+!!VR(result):S(TRUE);
+
+** end of function
+
+
 ** function to check the type of commander ability given
 
 !?FU(WOG_66_CheckCommanderAbilityType);
@@ -137,11 +219,16 @@ ZVSE2
 !#VA(code:x);
 !#VA(mode:x);
 
+!!VR(secSkill):S-1;
+
 !!VRv600:C100/16/8192/105/103/101/512/104/102/256; [table of effects]
 !!VRv610:C100/103/4096/105/128/16384/105/1024/104/64; [100-105 are +stat, 0 is special estates]
 !!VRv620:C8/101/4/32/102/2/1/2048;      [others are bit values of special abilities]
 
+; Exit if the secondary skill is banned
 !!WH(x)/(y)/(z):S?(secSkill);           [get skill for this hut]
+!!FU&(secSkill)=-1:E;
+
 !!VR(index:y):S600 +(secSkill);         [get variable address]
 !!VR(code):Sv(index);                   [now (code) is code for what to do]
 !!VR(mode):S(FALSE);
@@ -159,7 +246,6 @@ ZVSE2
 
 !?FU(WOG_66_HandleSpecialAbility);
 !#VA(secSkill:x) (abilityBit:x);
-!#VA(usedY[10]:y);
 
 !!CO(CURRENT_HERO):B0/?(abilityFlag:y);  [get bonuses]
 !!VR(learnedAbility:y):S(abilityFlag) &(abilityBit); [check for bit already set]
@@ -168,45 +254,7 @@ ZVSE2
 !!CO(CURRENT_HERO):B0/d|(abilityBit);   [set bonuses]
 
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!if&(secSkill)=(SKILL_ARCHERY);      [marksmanship]
-    !!VR(skillIcon:y):S80;
-  !!el&(secSkill)=(SKILL_LOGISTICS);    [jousting]
-    !!VR(skillIcon):S98;
-  !!el&(secSkill)=(SKILL_LEADERSHIP);   [swordsmanship]
-    !!VR(skillIcon):S90;
-  !!el&(secSkill)=(SKILL_LUCK);         [blocking]
-    !!VR(skillIcon):S88;
-  !!el&(secSkill)=(SKILL_NECROMANCY);   [staring]
-    !!VR(skillIcon):S96;
-  !!el&(secSkill)=(SKILL_FIRE_MAGIC);   [fire eating]
-    !!VR(skillIcon):S86;
-  !!el&(secSkill)=(SKILL_AIR_MAGIC);    [flying]
-    !!VR(skillIcon):S100;
-  !!el&(secSkill)=(SKILL_EARTH_MAGIC);  [stunning]
-    !!VR(skillIcon):S92;
-  !!el&(secSkill)=(SKILL_TACTICS);      [whirling attacks]
-    !!VR(skillIcon):S84;
-  !!el&(secSkill)=(SKILL_ARTILLERY);    [hitting and running]
-    !!VR(skillIcon):S78;
-  !!el&(secSkill)=(SKILL_OFFENCE);      [bone crushing]
-    !!VR(skillIcon):S76;
-  !!el&(secSkill)=(SKILL_ARMORER);      [revenge]
-    !!VR(skillIcon):S82;
-  !!el&(secSkill)=(SKILL_SORCERY);      [making scary faces]
-    !!VR(skillIcon):S74;
-  !!el&(secSkill)=(SKILL_RESISTANCE);   [pressure points]
-    !!VR(skillIcon):S72;
-  !!el&(secSkill)=(SKILL_FIRST_AID);    [healing]
-    !!VR(skillIcon):S94;
-  !!en;
-
-  !!SN:T^wog.66.spec%(secSkill)^/?(bonus:z);
-
-  !!if|(secSkill)=(SKILL_NECROMANCY)/(secSkill)=(SKILL_FIRE_MAGIC);
-    !!UN:P51/?(enhancedCommander:y);
-    !!SN&(enhancedCommander):T^wog.66.spec%(secSkill)a^/?(bonus);
-  !!en;
-
+  !!FU(WOG_66_GetSkillDetails):P0/(secSkill)/(FALSE)/?(skillIcon:y)/?(bonus:z);
   !!SN:T^wog.66.msg^/?(msg:z)/^bonus^/(bonus);
 
   ; Note that using "block" parametre here does not produce better results
@@ -273,8 +321,8 @@ ZVSE2
 !!VRw40:|(bit);                         [remember so we don't give it again later]
 
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!VR(skillIcon:y):S(stat) *6 +(skillLevel);
-  !!SN:T^wog.66.stat%(stat)^/?(bonus:z) T^wog.66.msg^/?(msg:z)/^bonus^/(bonus);
+  !!FU(WOG_66_GetSkillDetails):P1/(stat)/(skillLevel)/?(skillIcon:y)/?(bonus:z);  
+  !!SN:T^wog.66.msg^/?(msg:z)/^bonus^/(bonus);
 
   ; Note that using "block" parametre here does not produce better results
   !!IF:M^%(msg)
@@ -285,5 +333,63 @@ ZVSE2
 
 ^;
 !!en;
+
+** end of function
+
+
+** function to get skill icon index and name
+
+!?FU(WOG_66_GetSkillDetails);
+!#VA(mode:x);                           [mode: 0 for extra skills, 1 for primary skills]
+!#VA(skill:x);                          [type of skill]
+!#VA(skillLevel:x);                     [Optional. Skill level, for mode 1 only]
+!#VA(skillIcon:x);                      [Out. Skill icon index]
+!#VA(skillNamePtr:x);                   [Out. Skill name pointer]
+
+!!if&(mode)=0;
+  !!if&(skill)=(SKILL_ARCHERY);         [marksmanship]
+    !!VR(skillIcon):S80;
+  !!el&(skill)=(SKILL_LOGISTICS);       [jousting]
+    !!VR(skillIcon):S98;
+  !!el&(skill)=(SKILL_LEADERSHIP);      [swordsmanship]
+    !!VR(skillIcon):S90;
+  !!el&(skill)=(SKILL_LUCK);            [blocking]
+    !!VR(skillIcon):S88;
+  !!el&(skill)=(SKILL_NECROMANCY);      [staring]
+    !!VR(skillIcon):S96;
+  !!el&(skill)=(SKILL_FIRE_MAGIC);      [fire eating]
+    !!VR(skillIcon):S86;
+  !!el&(skill)=(SKILL_AIR_MAGIC);       [flying]
+    !!VR(skillIcon):S100;
+  !!el&(skill)=(SKILL_EARTH_MAGIC);     [stunning]
+    !!VR(skillIcon):S92;
+  !!el&(skill)=(SKILL_TACTICS);         [whirling attacks]
+    !!VR(skillIcon):S84;
+  !!el&(skill)=(SKILL_ARTILLERY);       [hitting and running]
+    !!VR(skillIcon):S78;
+  !!el&(skill)=(SKILL_OFFENCE);         [bone crushing]
+    !!VR(skillIcon):S76;
+  !!el&(skill)=(SKILL_ARMORER);         [revenge]
+    !!VR(skillIcon):S82;
+  !!el&(skill)=(SKILL_SORCERY);         [making scary faces]
+    !!VR(skillIcon):S74;
+  !!el&(skill)=(SKILL_RESISTANCE);      [pressure points]
+    !!VR(skillIcon):S72;
+  !!el&(skill)=(SKILL_FIRST_AID);       [healing]
+    !!VR(skillIcon):S94;
+  !!en;
+
+  !!SN:T^wog.66.spec%(skill)^/?(skillName:z);
+
+  !!if|(skill)=(SKILL_NECROMANCY)/(skill)=(SKILL_FIRE_MAGIC);
+    !!UN:P51/?(enhancedCommander:y);
+    !!SN&(enhancedCommander):T^wog.66.spec%(skill)a^/?(skillName);
+  !!en;
+!!el;
+  !!VR(skillIcon):S(skill) *6 +(skillLevel);
+  !!SN:T^wog.66.stat%(skill)^/?(skillName);
+!!en;
+
+!!VR(skillNamePtr):Z(skillName);
 
 ** end of function

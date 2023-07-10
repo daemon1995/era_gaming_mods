@@ -5,14 +5,11 @@ ZVSE2
 ** with big thanks to Fnord and the team for all their advice
 **
 ** Each scriptlet is fully documented and contains a separate variables list.
-** Var v2369 are script activity "flags" for my new scriptlets here.
+** Var i^wog_36_enabled^ are script activity "flags" for my new scriptlets here.
 ** To enable a script, set respective var to 1 (normally done via Wogify Options).
 **
-** Some scriptlets use my Universal Timer (which automatically runs with Wogify
-** script00.erm). If you want to use them without wogify, e.g. by copying the code,
-** enable UniTimer by setting v2370 to 1 in the following line (change S0 to S1 there).
+** Updated on Jul 2023 by Archer30 and daemon_n
 
-!#VRv2370:S0;              disabled Universal Timer setup and calculations (because already done by Wogify script00.erm)
 
 ; Disable Reduce Conflux Growth if Neutral Town is enabled
 !#UN:P67/?(neutralTown:y);
@@ -26,7 +23,7 @@ ZVSE2
 !#UN:P194/?i^wog_194_enabled^;          check if Advanced Witch Huts are enabled in WoGify Options
 
 !#UN:P203/?i^wog_203_enabled^;          check if Estates I (script48.erm, Arstahd) is enabled
-!#UN:P36/?v2369;           check if Mithril (script36.erm, Anders) is enabled
+!#UN:P36/?i^wog_36_enabled^;           check if Mithril (script36.erm, Anders) is enabled
 
 
 ; Hooks
@@ -85,7 +82,7 @@ ZVSE2
 ** ONLY ACTIVE if i^wog_194_enabled^=1 (wogify option 194)
 
 
-!?OB(OBJ_WITCH_HUT)&i^wog_194_enabled^/(ERM_FLAG_IS_HUMAN);
+!?OB(OBJ_WITCH_HUT)&i^wog_194_enabled^;
 ; Enable standard object interaction - if AI
 !!if&-(ERM_FLAG_IS_HUMAN);
   !!OB998:R;
@@ -98,7 +95,10 @@ ZVSE2
 ; Set the Witch Hut as visited for the player
 !!FU(WOG_AdvMgr_SetObjectAsVisited):Pv998/v999/v1000/i^timerOwner^;
 
+; Exit if the secondary skill is banned
 !!WH998:S?(secSkill:y); get Witch Hut skill
+!!FU&(secSkill)=-1:E;
+
 !!HE(CURRENT_HERO):S(secSkill)/?(level:y);        get hero skill expertise
 
 ; Execute the learning function if the hero has learned the given skill before
@@ -168,7 +168,10 @@ ZVSE2
 
 ; AI behaviours
 !$OB(OBJ_WITCH_HUT)&i^wog_194_enabled^/-(ERM_FLAG_IS_HUMAN);
+; Exit if the secondary skill is banned
 !!WH998:S?(secSkill:y); get Witch Hut skill
+!!FU&(secSkill)=-1:E;
+
 !!HE(CURRENT_HERO):S(secSkill)/?(level:y);        get hero skill expertise
 !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/?(gold:y);              get owner's gold
 
@@ -209,7 +212,7 @@ ZVSE2
 ** - or once the "choose from many pictures" dialogue is available, use it to
 **   replace the successive msgboxes for resource selection
 **
-** USES hero var w47 (resource choice), var v2369 (Mithril)
+** USES hero var w47 (resource choice)
 **      FU2342-FU2344
 ** calls library fcts FU(WOG_Hero_GetLuckLevel) (luck), FU(WOG_GetSkillInfoByClick) (skill click)
 ** uses flag 236, uses v2333 (modifier for ExpEst gold/day), v2334 (lvl 10 msg status)
@@ -319,7 +322,6 @@ ZVSE2
 
 !?FU(OnEveryDay)&i^wog_191_enabled^=1;                       daily timer for every color (if script active)
 !!VRv2334&i^timerDay^=1/i^timerOnce^:S0;         init lvl 10 msg status at first day
-!!UN:B0/?v2369;                        check Mithril status (1=active)
 !!OW:H-1/2331/0;                       store current color's number of heroes in v2331
 !!DO2343/1/v2331/1:P;                  loop through every hero a player has
 
@@ -345,18 +347,18 @@ ZVSE2
 !!VRw47&w47<8/y13=13/y14=0:+8;         Estates specialty sets random resource to daily (even for low-level), Expert allows chosing as if lvl10+
 !!VRy5:S41 +y1;                        set correct Estates pic for msg below
 !!VRy6:S-1;                            init pic to none
-!!VRy6&y1=3/y3>9/v2369=1:S7;           set Mithril pic if Expert Estates and lvl10+ and Mithril active
+!!VRy6&y1=3/y3>9/i^wog_36_enabled^:S7;           set Mithril pic if Expert Estates and lvl10+ and Mithril active
 
 !!VRy-1:S1 Sd<<i^timerOwner^;
 !!VRy12:Sv2334 &y-1;
 
-!!VRz-1&v2369=1:Sz164014;              Mithril selection line added to lvl 10 msg if Mithril active
+!!VRz-1&i^wog_36_enabled^:Sz164014;              Mithril selection line added to lvl 10 msg if Mithril active
 
 !!IF&w47<8/y1>0/y3>9/1000/y12=0:Q236/20/y5/y6/0/2/z164015; human only msg once hero has reached lvl 10
 !!VRv2334&-236:|y-100;                 that color won't receive the message any more if Cancel was clicked
 !!VRy11&w47<8/y1>0/y3>9:S1;            indicator: no cycling/choice yet, Estates present, lvl10+
 !!VRw47&y11=1:S8;                      init w47 resource cycling
-!!VRw47&y11=1/y1=3/v2369=1:S15;        init w47 Mithril cycling if Mithril script active and Exp Estates and lvl10+
+!!VRw47&y11=1/y1=3/i^wog_36_enabled^:S15;        init w47 Mithril cycling if Mithril script active and Exp Estates and lvl10+
 !!VRw47&w47=16:S15;                    reset w47 Mithril choice unlucky flag (from the day before)
 
   prepare resources according to w47 state
@@ -379,8 +381,13 @@ ZVSE2
 
 !!OW&y7=6/w47<>14:R-1/y7/d350;         give 350 Gold - partially managed in FU(WOG_191_Hero_GetEstatesIIBonus)
 
-!!OW&y7=7/v2369=1:R-1/7/d1;            give 1 Mithril if active
-!!OW&y7=7/v2369=0:R-1/6/d350;          give 350 Gold if Mithril inactive (weekday cycle reached sunday)
+!!if&y7=7;
+  !!if&i^wog_36_enabled^;
+    !!OW:R-1/7/d1;                     give 1 Mithril if active
+  !!el;
+    !!OW:R-1/6/d350;                   give 350 Gold if Mithril inactive (weekday cycle reached sunday)
+  !!en;
+!!en;
 
     --------------------
 
@@ -492,7 +499,7 @@ ZVSE2
   !!en;
 
   !!VR(resource)&(resource)=2/(picSub)>1:S(RES_MERCURY);                set Mercury resource
-  !!VR(resource)&(resource)=(RES_MITHRIL)/v2369=0:S(RES_GOLD);              set gold resource instead of Mithril if Mithril script disabled (needed for weekday=sunday)
+  !!VR(resource)&(resource)=(RES_MITHRIL)/i^wog_36_enabled^<>(TRUE):S(RES_GOLD);              set gold resource instead of Mithril if Mithril script disabled (needed for weekday=sunday)
   !!VR(resourceNum:y):S1;                            resource amount
   !!VR(resourceNum)&(resource)=(RES_GOLD):S350;                    gold amount 350 instead of 1
 
@@ -539,7 +546,7 @@ ZVSE2
     !!VRw47:S1 +8;            set w47=8 (cycling) if final resource also rejected
 
     !!if&-1;
-      !!VR(maxRes:y):S(RES_GOLD) +v2369;                     init upper resource bound (Gold or Mithril if enabled)
+      !!VR(maxRes:y):S(RES_GOLD) +i^wog_36_enabled^;                     init upper resource bound (Gold or Mithril if enabled)
       !!VR(picSub):S44;
 
       !!re i/2/(maxRes);

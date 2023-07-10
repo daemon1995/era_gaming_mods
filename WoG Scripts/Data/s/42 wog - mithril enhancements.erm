@@ -136,7 +136,7 @@ entrance squares. Do not use this with another script that might do the same
 !!FU(WOG_149_DisplayMithril):P;
 
 !?FU(WOG_149_DisplayMithril);
-!!UN:P36/?(mithrilEnh:y); [Check if Mithril script is enabled: y1]
+!!UN:P36/?(mithrilEnabled:y); [Check if Mithril script is enabled: y1]
 !!OW:C?(player:y)/?(interactPlayer:y); [Store number of current player in y4]
 !!OW:R(interactPlayer)/(RES_MITHRIL)/?y-5; [Store current player's Mithril in y-5]
 
@@ -147,7 +147,7 @@ entrance squares. Do not use this with another script that might do the same
 !!en;
 
 [Display current player's Mithril amount in a text box]
-!!if&(mithrilEnh);
+!!if&(mithrilEnabled);
   !!IF:Q2/(PIC_TYPE_RES_MITHRIL)/y-5/(MSG_TYPE_QUESTION)/z136006; [Display Mithril and offer to display price list: Flag 2]
 
   !!if&2;
@@ -677,11 +677,14 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Witch Hut ***
 !?FU(WOG_36_ChangeWitchHutSkill);
-!#VA(usedY[6]:y);
+!#VA(usedY[2]:y);
+
 !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y2;        (Get amount of mithril)
 !!FU&y2<2:E;       (Check if enough Mithril)
 
+; Exit if the secondary skill is banned
 !!WHv4/v5/v6:S?(currentSkill:y); (Get skill)
+!!FU&(currentSkill)=-1:E;
 
 !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
 !!VR(skillBanPtr:y):S(gameMgr) +321112;
@@ -689,7 +692,9 @@ entrance squares. Do not use this with another script that might do the same
 
 !!re i/0/(SEC_SKILL_LAST);
   !!co&i=(currentSkill:y);
+
   !!UN:C(skillBanPtr)/i/(UNC_INT8)/?(isBanned:y);
+
   !!if&(isBanned)=(FALSE);
     !!FU(Array_Push):P(skills)/i;
   !!en;
@@ -701,19 +706,23 @@ entrance squares. Do not use this with another script that might do the same
   !!UN:N4/z1/(currentSkill:y);     (Get skill name)
   !!CM:R0;           (disable standard popup)
   !!VR(currentSkill):*3 +3;
-  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(currentSkill)/(RES_MITHRIL)/2/(MSG_TYPE_QUESTION)/z136043;
+  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(currentSkill)/(RES_MITHRIL)/2/(MSG_TYPE_QUESTION)/z136043; [legacy]
+  !!VRi^wog_36_mithrilDlg_on^:S(TRUE);  [for compatibility with Commander Witch Huts]
 
   !!if&1;
     !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-2;   (Take Mithril)
     !!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?(newSeed:y);
-    !!POv4/v5/v6:H?y6 Hd1;                        [setting new value for next time rng;]
-    !!VR(newSeed):+y6;
+    !!POv4/v5/v6:H?(value:y) Hd1;       [setting new value for next time rng;]
+    !!VR(newSeed):+(value);
     !!VR(size):-1;
     !!FU(WOG_SafeRand):P0/(size)/(newSeed:y)/?i;
     !!SN:M(skills)/i/?(newSkill:y);
     !!WHv4/v5/v6:S(newSkill:y); (Set skill)
   !!en;
 !!en;
+
+!?FU(OnAdventureMapRightMouseClick_Quit)&i^wog_36_mithrilDlg_on^;
+!!VRi^wog_36_mithrilDlg_on^:S(FALSE);
 
 
 *** Water Wheel ***

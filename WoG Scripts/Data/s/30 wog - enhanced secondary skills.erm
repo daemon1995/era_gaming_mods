@@ -179,9 +179,23 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ** Timer routines
 !?FU(OnEveryDay)&i^wog_205_enabled^/i^timerDay^>1; [daily - continue if learning enabled]
+; Check if there is only one player in the game. Skip giving exp if it does
+!!VR(counter:y):S0;
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!OW:Ii/d/?(isDead:y);
+  !!VR(counter)&(isDead)<>(TRUE):+1;
+
+  !!br&(counter)>=2;
+!!en;
+
+!!FU&i>(PLAYER_LAST):E;
+
+; Get the max exp of the game
 !!UN:J1/?(maxLevel:y)/d;                [Note: Level limit is 0 by default, if there is no limit]
 !!FU(WOG_GetExpRequirementOfLevel)&(maxLevel)>0:P(maxLevel)/?(maxExp:y);
 
+; Check all the heroes owned by the player
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
   !!HEi:O?(owner:y);
 
@@ -680,7 +694,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !?FU(WOG_204_FirstAidAfterBattle);                 y1= HP   y2=slot y9= first aid
 !#VA(side:x);
 
-!!HEi^battle_hero_%(side)^:A2/5/?y7/?y8 E?y3/?y4/1 S27/?y9;          [check for Ammo Cart, get hero's level, first aid level]
+!!HEi^battle_hero_%(side)^:A2/(ART_AMMO_CART)/?y7/?y8 E?y3/?y4/1 S(SKILL_FIRST_AID)/?y9;          [check for Ammo Cart, get hero's level, first aid level]
 !!VRy5:S1;                                          [set multiplier to 1]
 !!VRy5&y8>0:+1;                                     [ammo cart bonus]
 !!VRy5&y9>0:+y9;                                    [first aid bonus]
@@ -918,15 +932,19 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !?FU(WOG_ExecuteScoutingEvents);
 !#VA(skillLevel:x) (hero:x);
 
-!!VRy4:S0;                                    [set to 0]
-!!VRy4&x1=1:R1199;                            [set random roll to 1.0% (12/1200)]
-!!VRy4&x1=2:R799;                             [set random roll to 1.5% (12/800)]
-!!VRy4&x1=3:R599;                             [set random roll to 2.0% (12/600)]
+; Exit if not lucky
+!!VRy4&(skillLevel)=(SKILL_BASIC):R0/0/1199; [set random roll to 1.0% (12/1200)]
+!!VRy4&(skillLevel)=(SKILL_ADVANCED):R0/0/799; [set random roll to 1.5% (12/800)]
+!!VRy4&(skillLevel)=(SKILL_EXPERT):R0/0/599; [set random roll to 2.0% (12/600)]
 !!FU&y4>12:E;
 
-!!HE(hero):B0/?z700;                           [get hero's name]
-!!HE(hero):R2/?y1;                             [get hero's sex]
+; Exit if the position is not passable, or is a yellow square
 !!HE(hero)&y4>=10:P?y30/?y31/?y32;
+!!TRy30/y31/y32:E?y33 P?y34;
+!!FU|y33=0/y34=0:E;
+
+!!HE(hero):B0/?z700;                    [get hero's name]
+!!HE(hero):R2/?y1;                      [get hero's sex]
 
 !!VRz701&y1=0:Sz148017;
 !!VRz701&y1=1:Sz148018;
@@ -935,53 +953,53 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!VRz703&y1=0:Sz148021;
 !!VRz703&y1=1:Sz148022;
 
-!!VRy3:S11 +(skillLevel);                  [set scouting picture]
+!!VRy3:S11 +(skillLevel);               [set scouting picture]
 
 !!if&y4=1;
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_SPELL_POINTS)/20/(MSG_TYPE_MES)/z148023;
-  !!HE(hero):Id+20;                        [give 20 spell points]
+  !!HE(hero):Id+20;                     [give 20 spell points]
 !!el&y4=2;
-  !!VRr:S1 R24 *100;                       [random 1 to 25 x 100]
+  !!VRr:S1 R24 *100;                    [random 1 to 25 x 100]
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_RES_GOLD)/r/(MSG_TYPE_MES)/z148024;
   !!OW:Ri^timerOwner^/(RES_GOLD)/dr;       [give gold]
 !!el&y4=3;
-  !!VRs:S0 R5;                             [random resource 0 to 5]
-  !!VRr:S1 R2;                             [random quantity 1 to 3]
-  !!VRr&s=0:*2;                            [double for wood]
-  !!VRr&s=2:*2;                            [double for ore]
+  !!VRs:S0 R5;                          [random resource 0 to 5]
+  !!VRr:S1 R2;                          [random quantity 1 to 3]
+  !!VRr&s=0:*2;                         [double for wood]
+  !!VRr&s=2:*2;                         [double for ore]
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/s/r/(MSG_TYPE_MES)/z148025;
   !!OW:Ri^timerOwner^/s/dr;                        [give the resources]
 !!el&y4=4;
-  !!VRs:S0 R5;                             [random resource 0 to 5]
-  !!VRr:S4 R2;                             [random quantity 4 to 6]
-  !!VRr&s=0:*2;                            [double for wood]
-  !!VRr&s=2:*2;                            [double for ore]
+  !!VRs:S0 R5;                          [random resource 0 to 5]
+  !!VRr:S4 R2;                          [random quantity 4 to 6]
+  !!VRr&s=0:*2;                         [double for wood]
+  !!VRr&s=2:*2;                         [double for ore]
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/s/r/(MSG_TYPE_MES)/z148026;
-  !!OW:Ri^timerOwner^/s/dr;                [give resources]
+  !!OW:Ri^timerOwner^/s/dr;             [give resources]
 !!el&y4=5;
-  !!FU(WOG_212_GetRandMonAndNames):P?s;    [call function to pick monster]
-  !!MA:Gs/?r;                              [get 1 weeks production]
+  !!FU(WOG_212_GetRandMonAndNames):P?s; [call function to pick monster]
+  !!MA:Gs/?r;                           [get 1 weeks production]
   !!IF&1000/r=1:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MONSTER)/s/(MSG_TYPE_MES)/z148027;
   !!IF&1000/r>1:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MONSTER)/s/(MSG_TYPE_MES)/z148028;
   !!HE(hero)&1000:Cs/r/-1/0/-1/0/-1/0/-1/0/-1/0/-1/0;  [give creatures]
-  !!HE(hero)&-1000:C2/s/r/0;                [offer AI creatures]
+  !!HE(hero)&-1000:C2/s/r/0;            [offer AI creatures]
 !!el&y4=6;
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_MORALE_FIRST)/1/(MSG_TYPE_MES)/z148029;
-  !!HE(hero):R0/d1;                         [+1 morale]
+  !!HE(hero):R0/d1;                     [+1 morale]
 !!el&y4=7;
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_LUCK_FIRST)/1/(MSG_TYPE_MES)/z148030;
-  !!HE(hero):R1/d1;                         [+1 luck]
+  !!HE(hero):R1/d1;                     [+1 luck]
 !!el&y4=8;
-  !!HE(hero):E?y5/?y6/1;                    [get hero's level]
-  !!VRr:Sy6 R20 *50;                        [(level + 0-20) x 50]
+  !!HE(hero):E?y5/?y6/1;                [get hero's level]
+  !!VRr:Sy6 R20 *50;                    [(level + 0-20) x 50]
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_EXPERIENCE)/r/(MSG_TYPE_MES)/z148031;
-  !!HE(hero):Edr;                           [give experience]
+  !!HE(hero):Edr;                       [give experience]
 !!el&y4=9;
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(MSG_TYPE_MES)/z148032;
-  !!HE(hero):Wd+400;                        [increase movement]
+  !!HE(hero):Wd+400;                    [increase movement]
 !!el&y4=10;
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(MSG_TYPE_MES)/z148033;
-  !!VRr:S3 *x1 +16;                         [area]
+  !!VRr:S3 *x1 +16;                     [area]
   !!UN:Sy30/y31/y32/i^timerOwner^/r;    [reveal area]
 !!en;
 
