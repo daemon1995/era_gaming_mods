@@ -1,16 +1,329 @@
 ZVSE2
 
 
-
 ************************************************************************
 ************************************************************************
 ****************************** GAME FIXES ******************************
 ************************************************************************
 ************************************************************************
 
+// Assemble/Disassemble artifacts overhaul
+// by Archer30
+; In hero screen:
+; Assemble artifacts with parts not fully equipped (some in the backpack)
+; Disassemble artifacts in the backpack
+
+; For one slot combination artifact only:
+; Disassemble combination artifacts
+
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!VR(slot:y):S(NO_ART_SLOT);
+!!VR(item:y):Si^mouse_item^;
+
+!!if&(item)>=2/(item)<=14|(item)=20;
+  !!VR(slot):S(item) -2;
+!!el&(item)>=40/(item)<=44;
+  !!VR(slot):S(item) -21;
+!!en;
+
+!!FU&(slot)=(NO_ART_SLOT):E;
+
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU(gem_ManageArtifactMouseAction):P(hero)/(slot);
+
+!?FU(gem_ManageArtifactMouseAction);
+!#VA(hero:x) (slot:x);
+
+; Get (art) from the slot clicked, exit if it has no artifact, is a lock or is a spell scroll
+!!HE(hero):A1/?(art:y)/(slot);
+!!FU|(art)<=(NO_ART)/(art)=(ART_ARTIFACT_LOCK)/(art)>=(ART_META_SPELLBOOK):E;
+
+!!FU(gem_AssembleCombiArt):P(hero)/(slot)/(art)/?(result:y);
+; Disassemble artifact only when there is no chance to assemble
+!!FU(gem_DisassembleCombiArt)&(result)=(FALSE):P(hero)/(slot)/(art);
+
+!?FU(gem_AssembleCombiArt);
+!#VA(hero:x) (slot:x) (art:x) (result:x);
+
+!!VR(result):S(FALSE);
+
+; Check if the artifact is a part of a combination
+!!UN:A(art)/5/?(combiPart:y);
+!!FU&(combiPart)<=(NO_ART):E;
+
+; Loop through all the artifacts and get all the parts of the (art) set
+!!FU(NewIntArray):P?(combinationPartsList:y);
+!!FU(Array_Push):P(combinationPartsList)/(art); [Add the clicked artifact to the start of the array]
+!!FU(GetMaxArtifactId):P?(lastArt:y);
+
+!!re i/(ART_FIRST)/(lastArt);
+  !!co&i=(art);                         [skip the clicked artifact]
+
+  ; Check if the artifact is a part of a combination artifact
+  !!UN:Ai/5/?(combiArtPart:y);
+
+  ; Push the artifact ID to the array if it is a part of the (art) set
+  !!FU(Array_Push)&(combiArtPart)=(combiPart):P(combinationPartsList)/i;
+!!en;
+
+; Check if clicked on a slot of equipment
+!!VR(clickedEquipmentSlot:y):S(FALSE);
+!!VR(clickedEquipmentSlot)&(slot)<=(ART_SLOT_EQUIPPED_LAST):S(TRUE);
+
+; Check the conditions of parts
+!!SN:M(combinationPartsList)/?(size:y);
+!!FU(NewIntArray):P?(combinationSlotsList:y);
+!!FU(Array_Push):P(combinationSlotsList)/(slot); [Add the clicked artifact to the start of the array]
+
+!!re i/1/(size)/1/-1;
+  !!SN:M(combinationPartsList)/i/?(artPart:y);
+  !!HE(hero):A2/(artPart)/?(has:y)/?(equipped:y);
+
+  ; Exit if the hero hasn't got all the parts
+  !!FU&(has)<=0:E;
+
+  ; Get whether remove the artifact from equipment or backpack
+  !!VR(searchFromEquipped:y):S(FALSE);
+
+  !!if&(clickedEquipmentSlot);
+    !!if&(equipped)>0;
+      !!VR(searchFromEquipped):S(TRUE);
+    !!el;
+      !!VR(searchFromEquipped):S(FALSE);
+    !!en;
+  !!el;
+    !!VR(backpacked:y):S(has) -(equipped);
+
+    !!if&(backpacked)>0;
+      !!VR(searchFromEquipped):S(FALSE);
+    !!el;
+      !!VR(searchFromEquipped):S(TRUE);
+    !!en;
+  !!en;
+
+  ; Loop through equipment or backpack to find the slot to be removed
+  !!if&(searchFromEquipped);
+    !!VR(startInd:y):S(ART_SLOT_EQUIPPED_FIRST);
+    !!VR(endInd:y):S(ART_SLOT_EQUIPPED_LAST);
+  !!el;
+    !!VR(startInd):S(ART_SLOT_BACKPACK_FIRST);
+    !!VR(endInd):S(ART_SLOT_BACKPACK_LAST);
+  !!en;
+
+  !!re j/(startInd)/(endInd);
+    !!HE(hero):A1/?(artOfSlot:y)/j;
+
+    !!FU(Array_Push)&(artOfSlot)=(artPart):P(combinationSlotsList)/j;
+  !!en;
+!!en;
+
+!!CM:R0;
+
+; Get the combination artifact ID
+!!UN:A(combiPart)/?(combiArt:y)/d/d;
+
+!!SN:H^art^/(art)/1/?(desc:z);
+!!SN:H^art^/(combiArt)/0/?(combiArtName:z);
+!!SN:T^gem.hero.assemble^/?(str:z)/^art^/(combiArtName);
+!!VR(msg:z):S^%(desc)%T(gem.endl)%T(gem.endl)%(str)^;
+!!IF:Q2/^%(msg)^;
+!!FU&-2:E;
+
+; Remove parts from the hero
+!!re i/0/(size)/1/-1;
+  !!SN:M(combinationSlotsList)/i/?(artSlot:y);
+  !!FU(gem_RemoveArtFromSlot):P(hero)/(artSlot);
+!!en;
+
+; Equip the combination artifact
+; If clicked on an equipment slot
+!!if&(clickedEquipmentSlot);
+  !!HE(hero):A4/(combiArt);
+; If clicked on a backpack slot
+!!el;
+  !!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST);
+    !!HE(hero):A1/?(artOfSlot)/i;
+
+    !!br&(artOfSlot)<=(NO_ART);
+  !!en;
+
+  !!if&i<=(ART_SLOT_BACKPACK_LAST);
+    !!HE(hero):A(combiArt);                  [Generate the artifact in the backpack]
+  !!el;
+    !!HE(hero):A4/(combiArt);                [Generate the artifact in a slot of the body]
+  !!en;
+!!en;
+
+!!VR(result):S(TRUE);
+!!SN:D;
+
+; This function is needed as FU(UnequipArtFromSlot) cannot be used to remove artifact from the backpack. 
+!?FU(gem_RemoveArtFromSlot);
+!#VA(hero:x) (slot:x);
+
+!!FU&(slot)<=(NO_ART_SLOT):E;
+
+; Execute FU(UnequipArtFromSlot) if the artifact is equipped
+!!if&(slot)<=(ART_SLOT_EQUIPPED_LAST);
+  !!FU(UnequipArtFromSlot):P(hero)/(slot);
+; Use HE:A if the artifact is in the backpack
+!!el;
+  !!HE(hero):A1/?(art:y)/(slot);
+  !!HE(hero):A3/(art)/1/0;
+!!en;
+
+!?FU(gem_DisassembleCombiArt);
+!#VA(hero:x) (slot:x) (art:x);
+
+; Loop through all the artifacts and see if (art) is a combination artifact
+!!FU(NewIntArray):P?(combinationPartsList:y);
+!!FU(GetMaxArtifactId):P?(lastArt:y);
+
+!!re i/(ART_FIRST)/(lastArt);
+  ; Check if the artifact is a part of a combination artifact
+  !!UN:Ai/5/?(combiArtPart:y);
+
+  ; If the artifact is a part, get the combination artifact ID
+  !!if&(combiArtPart)>(NO_ART);
+    !!UN:A(combiArtPart)/?(combiArt:y)/d/d;
+
+    ; Push the artifact ID to the array if it is a part of the (art) set
+    !!FU(Array_Push)&(combiArt)=(art):P(combinationPartsList)/i;
+  !!en;
+!!en;
+
+; Exit if (art) is not a combination artifact
+!!SN:M(combinationPartsList)/?(size:y);
+!!FU&(size)=0:E;
+
+; Get the quantity of backpack slots available
+!!VR(availBackpackSlots:y):S1;          [Initialise as 1 because the combination artifact slot can be used for one of the parts]
+
+!!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST);
+  !!HE(hero):A1/?(artOfSlot:y)/i;
+  !!VR(availBackpackSlots)&(artOfSlot)<=(NO_ART):+1;
+!!en;
+
+; Exit if not enough slots for all the parts
+!!FU(gem_CheckIfEnoughSlots):P(hero)/(combinationPartsList)/(availBackpackSlots)/?(result:y);
+!!FU&(result)=0:E;
+
+; Ask if the player wants to disassemble the artifact
+!!CM:R0;
+
+!!SN:H^art^/(art)/1/?(desc:z);
+!!FU(GetTextFileString):P^genrltxt^/734/?(str:z);
+!!VR(msg:z):S^%(desc)%T(gem.endl)%T(gem.endl)%(str)^;
+!!IF:Q2/^%(msg)^;
+
+; Exit if the player choose not to disassemble
+!!FU&-2:E;
+
+; Remove the combination artifact from the hero
+!!FU(gem_RemoveArtFromSlot):P(hero)/(slot);
+
+; Loop through all the parts of the array put them to the hero
+; If the combination artifact is in the backpack, the parts have higher priority to be put in the backpack
+!!re i/0/(size)/1/-1;
+  !!SN:M(combinationPartsList)/i/?(artPart:y);
+
+  ; If the combination is equipped
+  !!if&(slot)<=(ART_SLOT_EQUIPPED_LAST);
+    !!HE(hero):A4/(artPart);
+  ; If the combination is in the backpack
+  !!el;
+    !!if&(availBackpackSlots)>0;
+      !!HE(hero):A(artPart);            [Generate the artifact in the backpack]
+      !!VR(availBackpackSlots):-1;
+    !!el;
+      !!HE(hero):A4/(artPart);          [Generate the artifact in a slot of the body]
+    !!en;
+  !!en;
+!!en;
+
+!!SN:D;
+
+!?FU(gem_CheckIfEnoughSlots);
+!#VA(hero:x);                           [Hero who has the combiniation artifact]
+!#VA(combinationPartsList:x);           [Array of all the parts of the combination artifact]
+!#VA(availBackpackSlots:x);             [number of backpack slots available]
+!#VA(result:x);                         [Out. 0 - not enought slot available. 1 - enought slot available]
+
+; Check if all the parts can be allocated
+; The following script assumes that all the parts have regular slots for equipment (for example, there should never be an art that can be equipped both the head and the misc slots)
+; War Mechines, spell book should never be a part of combination artifacts
+; There should be at least one part uses the same slot with the combination artifact
+!!VR(result):S(TRUE);
+
+; Get the quantity of ring/misc slots available
+!!VR(availRingSlots:y):S0;
+
+!!re i/(ART_SLOT_RIGHT_RING)/(ART_SLOT_LEFT_RING);
+  !!HE(hero):A1/?(artOfSlot:y)/i;
+  !!VR(availRingSlots)&(artOfSlot)<=(NO_ART):+1;
+!!en;
+
+!!VR(availMiscSlots:y):S0;
+!!VR(miscArtSlots[5]:y):C(ART_SLOT_MISC_1)/(ART_SLOT_MISC_2)/(ART_SLOT_MISC_3)/(ART_SLOT_MISC_4)/(ART_SLOT_MISC_5);
+
+!!re i/0/(miscArtSlots[SIZE])/1/-1;
+  !!HE(hero):A1/?(artOfSlot)/(miscArtSlots[i]);
+  !!VR(availMiscSlots)&(artOfSlot)<=(NO_ART):+1;
+!!en;
+
+; Loop through all the parts and calculate how many backpack slots are needed
+!!SN:M(combinationPartsList)/?(size:y);
+
+!!re i/0/(size)/1/-1;
+  !!SN:M(combinationPartsList)/i/?(artPart:y);
+  
+  !!UN:A(artPart)/2/?(artPosUNA:y);     [Note that there is a difference between UN:A slots and HE:A!]
+
+  !!if&(artPosUNA)=0;
+    !!VR(availBackpackSlots):-1;
+  !!el&(artPosUNA)>=1/(artPosUNA)<=6|(artPosUNA)=8;
+    !!if&(artPosUNA)=1;
+      !!VR(artPosHEA:y):S(ART_SLOT_HEAD);
+    !!el&(artPosUNA)=2;
+      !!VR(artPosHEA):S(ART_SLOT_SHOULDERS);
+    !!el&(artPosUNA)=3;
+      !!VR(artPosHEA):S(ART_SLOT_NECK);
+    !!el&(artPosUNA)=4;
+      !!VR(artPosHEA):S(ART_SLOT_RIGHT_HAND);
+    !!el&(artPosUNA)=5;
+      !!VR(artPosHEA):S(ART_SLOT_LEFT_HAND);
+    !!el&(artPosUNA)=6;
+      !!VR(artPosHEA):S(ART_SLOT_TORSO);
+    !!el&(artPosUNA)=8;
+      !!VR(artPosHEA):S(ART_SLOT_FEET);
+    !!en;
+
+    !!HE(hero):A1/?(artOfSlot:y)/(artPosHEA);
+    !!VR(availBackpackSlots)&(artOfSlot)>(NO_ART):-1;
+  !!el&(artPosUNA)=7;                   [Rings]
+    !!if&(availRingSlots)>0;
+      !!VR(availRingSlots):-1;
+    !!el;
+      !!VR(availBackpackSlots):-1;
+    !!en;
+  !!el&(artPosUNA)=9;                   [Miscs]
+    !!if&(availMiscSlots)>0;
+      !!VR(availMiscSlots):-1;
+    !!el;
+      !!VR(availBackpackSlots):-1;
+    !!en;
+  !!en;
+
+  !!br&(availBackpackSlots)<0;
+!!en;
+
+!!VR(result)&i<(size):S(FALSE);
+
+
 // Disable tactics message before tactics - 0x462D98 JMP SHORT 0x462DCA
 !#UN:C4599192/2/12523;
 !#UN:C4599194/4/2425393296;
+
 
 // Fix Angel's Morale display
 // by Hawaiing
@@ -18,11 +331,13 @@ ZVSE2
 !!UN:C7735887/4/2425393296;
 !!UN:C7735891/1/144;
 
+
 // Enable combination artifacts and 5th misc slot for RoE/AB maps
 !?FU(OnGameEnter);
 !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
 !!UN:C(gameMgr)/128664/(UNC_INT)/?(mapType:y);
 !!UN&(mapType)<2:C(gameMgr)/128664/(UNC_INT)/2;
+
 
 // Divide all the AI values by 15 in order to prevent negative values after gathering massive amount of troops
 // by Archer30
@@ -89,8 +404,9 @@ ZVSE2
 !!en;
 
 
-//
+
 !?FU(OnGameEnter);
+//
   !!UN:C6052891/1/4;                    [центрируем текст названия города в окне города (id 149)]
   ; радус открытия всей карты
   !!UN:C5196631/4/320;                  [чит-меню (ориг = 180)]
@@ -100,6 +416,7 @@ ZVSE2
   !!UN:C5125902/4/34281 C5125907/1/144; [; отключить сообщение об ограничении опыта © Berserker]
   
   !!TL:E1; enable mulpiplayer timer
+
 
   // Fix of the speed overload
   !!SN:F^GetModuleHandleA^/^BattleSpeed.era^; [check plugin is loaded]
@@ -116,14 +433,17 @@ ZVSE2
     !!UN:C6241867/1/4/230 C6243446/1/4/230 C6244497/1/4/230; [yPos of the creature desc in Battle/notBattle/buy creature info DLGs]
   !!en;
 
+
   // disable message about joining army after combat;
   !!re i/0/4;
     !!UN:C4856798/i/1/(OPCODE_NOP_1);
   !!en;
 
+
   // up to 6 digits to display mon_cost with RMC on mon dwell (default was 4)
   !!UN:C5578846/1/1/40; [new gold cost text field width (default 32)]
   !!UN:C5578848/2/1/36; [new gold cost text field xPos (default 40)]
+
 
   // fix AI behavior on the map >XL
   !!UN:X?(mapSize:y)/?y77;
@@ -138,6 +458,7 @@ ZVSE2
   !!re i/0/4;(end_value);
     !!UN:C7841770/i/1/i^gem_ai_move_patch_%i^ C7841673/i/1/?i^gem_ai_move_patch_%i_1^; // skip ai move foo call
   !!en;
+
 
 !?FU(gem_CreateERMHook);
 !!SN:Ex1/1/5576191/(gem_OnRecruitCreatureDlgLeftClick);
