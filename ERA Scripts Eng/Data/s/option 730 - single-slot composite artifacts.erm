@@ -6,6 +6,7 @@ ZVSE2
 ** Options       : 730
 
 ** Combination artifacts now takes only 1 slot and can no longer be disassembled.
+; Archer30: You can :)
 
 
 ; Function for setting or restoring UN:C values
@@ -77,80 +78,191 @@ ZVSE2
 
 ; Disable the following code as it is not working - might be used for further improvements
 ; Disassemble combination artfacts
-*?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
-*!UN:P730/?(wogOption:y);
-*!FU&(wogOption)<>(TRUE):E;
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!UN:P730/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-*!VR(slot:y):S(NO_ART_SLOT);
-*!VR(item:y):Si^mouse_item^;
+!!VR(slot:y):S(NO_ART_SLOT);
+!!VR(item:y):Si^mouse_item^;
 
-*!if&(item)>=2/(item)<=14|(item)=20;
-  *!VR(slot):S(item) -2;
-*!el&(item)>=40/(item)<=44;
-  *!VR(slot):S(item) -21;
-*!en;
+!!if&(item)>=2/(item)<=14|(item)=20;
+  !!VR(slot):S(item) -2;
+!!el&(item)>=40/(item)<=44;
+  !!VR(slot):S(item) -21;
+!!en;
 
-*!FU&(slot)=(NO_ART_SLOT):E;
+!!FU&(slot)=(NO_ART_SLOT):E;
 
-*!HE(CURRENT_HERO):N?(hero:y);
-*!FU(ES_730_CorrectValues):P(hero)/(slot);
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU(ES_730_ManageArtifactMouseAction):P(hero)/(slot);
 
 ; Hero Meetintg Screen trigger - Disabled as it does not work with HD mod
-*?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
-*!FU:E;
+!?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!FU:E;
 
-*!UN:P730/?(wogOption:y);
-*!FU&(wogOption)<>(TRUE):E;
+!!UN:P730/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-*!VR(hero:y):S(NO_HERO);
-*!VR(item:y):Si^mouse_item^;
+!!VR(hero:y):S(NO_HERO);
+!!VR(item:y):Si^mouse_item^;
 
-*!if&(item)>=27/(item)<=39|(item)=45;
-  *!VR(slot:y):S(item) -27;
-  *!CM:H?(hero)/?(otherHero:y);
-*!el&(item)>=89/(item)<=93;
-  *!VR(slot):S(item) -80;
-  *!CM:H?(hero)/?(otherHero:y);
-*!el&(item)>=46/(item)<=58|(item)=64;
-  *!VR(slot):S(item) -46;
-  *!CM:H?(otherHero)/?(hero);
-*!el&(item)>=94/(item)<=98;
-  *!VR(slot):S(item) -75;
-  *!CM:H?(otherHero)/?(hero);
-*!en;
+!!if&(item)>=27/(item)<=39|(item)=45;
+  !!VR(slot:y):S(item) -27;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=89/(item)<=93;
+  !!VR(slot):S(item) -80;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=46/(item)<=58|(item)=64;
+  !!VR(slot):S(item) -46;
+  !!CM:H?(otherHero)/?(hero);
+!!el&(item)>=94/(item)<=98;
+  !!VR(slot):S(item) -75;
+  !!CM:H?(otherHero)/?(hero);
+!!en;
 
-*!FU&(hero)=(NO_HERO):E;
+!!FU&(hero)=(NO_HERO):E;
 
-*!FU(ES_730_CorrectValues):P(hero)/(slot);
+!!FU(ES_730_ManageArtifactMouseAction):P(hero)/(slot);
 
-*?FU(ES_730_CorrectValues);
-*#VA(hero:x) (slot:x);
+!?FU(ES_730_ManageArtifactMouseAction);
+!#VA(hero:x) (slot:x);
 
-*!HE(hero):A1/?(art:y)/(slot);
-*!FU(ES_730_CheckIfArtIsCombined):P(art)/?(isCombinedArt:y);
+; Get (art) from the slot clicked, exit if it is a scroll
+!!HE(hero):A1/?(art:y)/(slot);
+!!FU&(art)>=(ART_META_SPELLBOOK):E;
 
-*!FU(ES_730_SetOrRestoreValues):P(isCombinedArt);
+; Loop through all the artifacts and see if (art) is a combination artifact
+!!FU(NewIntArray):P?(combinationPartsList:y);
+!!FU(GetMaxArtifactId):P?(lastArt:y);
 
-*?FU(ES_730_CheckIfArtIsCombined);
-*#VA(art:x) (result:x);
+!!re i/(ART_FIRST)/(lastArt);
+  ; Check if the artifact is a part of a combination artifact
+  !!UN:Ai/5/?(combiArtPart:y);
 
-*!VR(result):S(FALSE);
+  ; If the artifact is a part, get the combination artifact ID
+  !!if&(combiArtPart)>(NO_ART);
+    !!UN:A(combiArtPart)/?(combiArt:y)/d/d;
 
-; Exit if spell scrolls
-*!FU&(art)>=(ART_META_SPELLBOOK):E;
+    ; Push the artifact ID to the array if it is a part of the (art) set
+    !!FU(Array_Push)&(combiArt)=(art):P(combinationPartsList)/i;
+  !!en;
+!!en;
 
-*!FU(GetMaxArtifactId):P?(lastArt:y);
+; Exit if (art) is not a combination artifact
+!!SN:M(combinationPartsList)/?(size:y);
+!!FU&(size)=0:E;
 
-*!re i/(ART_FIRST)/(lastArt);
-  *!UN:Ai/5/?(combiArtPart:y);
+!!CM:R0;
 
-  *!if&(combiArtPart)>(NO_ART);
-    *!UN:A(combiArtPart)/?(combiArt:x)/d/d;
+; Ask if the player wants to disassemble the artifact
+!!SN:H^art^/(art)/1/?(desc:z);
+!!FU(GetTextFileString):P^genrltxt^/734/?(str:z);
+!!VR(msg:z):S(desc) +^%T(es.endl)^ +^%T(es.endl)^ +(str);
+!!IF:Q2/^%(msg)^;
 
-    *!br&(combiArt)=(art);
-  *!en;
-*!en;
+; Exit if the player choose not to disassemble
+!!FU&-2:E;
 
-*!VR(result)&i<=(lastArt):S(TRUE);
+; Exit if not enough slots for all the parts
+!!FU(ES_730_CheckIfEnoughSlots):P(hero)/(combinationPartsList)/?(result:y);
+
+!!if&(result)=(FALSE);
+  !!FU(GetTextFileString):P^genrltxt^/153/?(msg);
+  !!IF:M^%(msg)^;
+  !!FU:E;
+!!en;
+
+; Remove the combination artifact from the hero
+!!FU(ES_RemoveArtFromSlot):P(hero)/(slot);
+
+; Loop through all the parts of the array put them to the hero
+; Note that if the hero has not enough slots, artifacts may be destroyed!
+!!re i/0/(size)/1/-1;
+  !!SN:M(combinationPartsList)/i/?(artPart:y);
+  !!HE(hero):A4/(artPart);
+!!en;
+
+!!SN:D;
+
+!?FU(ES_730_CheckIfEnoughSlots);
+!#VA(hero:x) (combinationPartsList:x) (result:x);
+
+; Check if all the parts can be allocated
+; The following script assumes that all the parts have regular slots for equipment (for example, there should never be an art that can be equipped both the head and the misc slots)
+; War Mechines, spell book should never be a part of combination artifacts
+; There should be at least one part uses the same slot with the combination artifact
+!!VR(result):S(TRUE);
+
+; Get the quantity of ring/misc slots available
+!!VR(availRingSlots:y):S0;
+
+!!re i/(ART_SLOT_RIGHT_RING)/(ART_SLOT_LEFT_RING);
+  !!HE(hero):A1/?(artOfSlot:y)/i;
+  !!VR(availRingSlots)&(artOfSlot)<=(NO_ART):+1;
+!!en;
+
+!!VR(availMiscSlots:y):S0;
+!!VR(miscArtSlots[5]:y):C(ART_SLOT_MISC_1)/(ART_SLOT_MISC_2)/(ART_SLOT_MISC_3)/(ART_SLOT_MISC_4)/(ART_SLOT_MISC_5);
+
+!!re i/0/(miscArtSlots[SIZE])/1/-1;
+  !!HE(hero):A1/?(artOfSlot)/(miscArtSlots[i]);
+  !!VR(availMiscSlots)&(artOfSlot)<=(NO_ART):+1;
+!!en;
+
+; Get the quantity of backpack slots available
+!!VR(availBackpackSlots:y):S1;          [Initialise as 1 because the combination artifact slot can be used for one of the parts]
+
+!!re i/(ART_SLOT_BACKPACK_FIRST)/(ART_SLOT_BACKPACK_LAST);
+  !!HE(hero):A1/?(artOfSlot)/i;
+  !!VR(availBackpackSlots)&(artOfSlot)<=(NO_ART):+1;
+!!en;
+
+; Loop through all the parts and calculate how many backpack slots are needed
+!!SN:M(combinationPartsList)/?(size:y);
+
+!!re i/0/(size)/1/-1;
+  !!SN:M(combinationPartsList)/i/?(artPart:y);
+  
+  !!UN:A(artPart)/2/?(artPosUNA:y);     [Note that there is difference between UN:A slots and HE:A!]
+
+  !!if&(artPosUNA)=0;
+    !!VR(availBackpackSlots):-1;
+  !!el&(artPosUNA)>=1/(artPosUNA)<=6|(artPosUNA)=8;
+    !!if&(artPosUNA)=1;
+      !!VR(artPosHEA:y):S(ART_SLOT_HEAD);
+    !!el&(artPosUNA)=2;
+      !!VR(artPosHEA):S(ART_SLOT_SHOULDERS);
+    !!el&(artPosUNA)=3;
+      !!VR(artPosHEA):S(ART_SLOT_NECK);
+    !!el&(artPosUNA)=4;
+      !!VR(artPosHEA):S(ART_SLOT_RIGHT_HAND);
+    !!el&(artPosUNA)=5;
+      !!VR(artPosHEA):S(ART_SLOT_LEFT_HAND);
+    !!el&(artPosUNA)=6;
+      !!VR(artPosHEA):S(ART_SLOT_TORSO);
+    !!el&(artPosUNA)=8;
+      !!VR(artPosHEA):S(ART_SLOT_FEET);
+    !!en;
+
+    !!HE(hero):A1/?(artOfSlot:y)/(artPosHEA);
+    !!VR(availBackpackSlots)&(artOfSlot)>(NO_ART):-1;
+  !!el&(artPosUNA)=7;
+    !!if&(availRingSlots)>0;
+      !!VR(availRingSlots):-1;
+    !!el;
+      !!VR(availBackpackSlots):-1;
+    !!en;
+  !!el&(artPosUNA)=9;
+    !!if&(availMiscSlots)>0;
+      !!VR(availMiscSlots):-1;
+    !!el;
+      !!VR(availBackpackSlots):-1;
+    !!en;
+  !!en;
+
+  !!br&(availBackpackSlots)<0;
+!!en;
+
+!!VR(result)&i<(size):S(FALSE);
 
 ** end
