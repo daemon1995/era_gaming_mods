@@ -40,6 +40,18 @@ ZVSE2
   !!VRi^es_737_capturedWM3^:Sw83;
 !!en;
 
+// Check if the current map is a random map
+// This function must be put exactly this place in order to be executed by FU(ES_764_Initialization)
+!?FU(ES_CheckRandomMap);
+!#VA(result:x);
+
+!!VR(result):S(FALSE);
+!!UN:C6919480/4/?(value:y);
+!!VR(address:y):S(value) +128980;
+!!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
+
+!!VR(result)&(value2)=114:S(TRUE);
+
 // Disable Rebalanced Starting Armies (WoG) if Balanced Starting Army (ES) is enabled
 !?FU(ES_764_Initialization);
 !!UN:P764/?(wogOption:y);               [проверяем включена ли опция 764 в v1]
@@ -56,18 +68,6 @@ ZVSE2
     !!VRi^wog_199_enabled^:S(FALSE);
   !!en;
 !!en;
-
-// Check if the current map is a random map
-// This function must be put exactly this place in order to be executed by FU(ES_764_Initialization)
-!?FU(ES_CheckRandomMap);
-!#VA(result:x);
-
-!!VR(result):S(FALSE);
-!!UN:C6919480/4/?(value:y);
-!!VR(address:y):S(value) +128980;
-!!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
-
-!!VR(result)&(value2)=114:S(TRUE);
 
 !#FU(ES_764_Initialization):P;
 
@@ -140,9 +140,30 @@ ZVSE2
 // Disable Sorcery II if Critical Sorcery is re-enabled
 !?FU(ES_789_DisableSorceryII);
 !!UN:P789/?(critSorcery:y);             [проверяем включена ли опция 789]
-!!UN&(critSorcery):P213/0;              [если включена, отключаем опцию Волшебство II]
+!!UN&(critSorcery):P213/(FALSE);        [если включена, отключаем опцию Волшебство II]
 
 !#FU(ES_789_DisableSorceryII):P;
+
+// Quit the other mouse action if possible to use (sacrifice) an artifact
+// This script must be executed as early as possible to be compatible with other scripts
+!?FU(OnHeroScreenMouseClick)&i^key_ctrl^/i^es_796_during_hero_screen^=(FALSE);
+!!VRi^es_796_askedToSacrifice^:S(FALSE);
+!!FU(ES_796_ManageHeroScreenMouseAction):P;
+
+!!if&i^es_796_askedToSacrifice^;
+  !!VRi^es_796_askedToSacrifice^:S(FALSE);
+  !!SN:Q;
+!!en;
+
+; Hero Meetintg Screen trigger - left doesn't work with HD
+!?FU(OnHeroesMeetScreenMouseClick)&i^key_ctrl^;
+!!VRi^es_796_askedToSacrifice^:S(FALSE);
+!!FU(ES_796_ManageHeroesMeetingScreenMouseAction):P;
+
+!!if&i^es_796_askedToSacrifice^;
+  !!VRi^es_796_askedToSacrifice^:S(FALSE);
+  !!SN:Q;
+!!en;
 
 // Ask to write a spell to the spell book if condition has been meet
 // Execute sooner than daemon_n's Spell Research

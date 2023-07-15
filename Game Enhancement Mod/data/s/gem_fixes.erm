@@ -31,6 +31,28 @@ ZVSE2
 !!HE(CURRENT_HERO):N?(hero:y);
 !!FU(gem_ManageArtifactMouseAction):P(hero)/(slot);
 
+!?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!VR(hero:y):S(NO_HERO);
+!!VR(item:y):Si^mouse_item^;
+
+!!if&(item)>=27/(item)<=39|(item)=45;
+  !!VR(slot:y):S(item) -27;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=89/(item)<=93;
+  !!VR(slot):S(item) -70;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=46/(item)<=58|(item)=64;
+  !!VR(slot):S(item) -46;
+  !!CM:H?(otherHero)/?(hero);
+!!el&(item)>=94/(item)<=98;
+  !!VR(slot):S(item) -75;
+  !!CM:H?(otherHero)/?(hero);
+!!en;
+
+!!FU&(hero)=(NO_HERO):E;
+
+!!FU(gem_ManageArtifactMouseAction):P(hero)/(slot);
+
 !?FU(gem_ManageArtifactMouseAction);
 !#VA(hero:x) (slot:x);
 
@@ -79,8 +101,8 @@ ZVSE2
   !!SN:M(combinationPartsList)/i/?(artPart:y);
   !!HE(hero):A2/(artPart)/?(has:y)/?(equipped:y);
 
-  ; Exit if the hero hasn't got all the parts
-  !!FU&(has)<=0:E;
+  ; Break thw loop if there is one component the hero hasn't got
+  !!br&(has)<=0:E;
 
   ; Get whether remove the artifact from equipment or backpack
   !!VR(searchFromEquipped:y):S(FALSE);
@@ -117,16 +139,27 @@ ZVSE2
   !!en;
 !!en;
 
+; Exit if the hero hasn't got all the parts
+!!FU&i<(size):E;
+
 !!CM:R0;
 
 ; Get the combination artifact ID
 !!UN:A(combiPart)/?(combiArt:y)/d/d;
 
+; Set up extended combination parts description
+!!FU(gem_WorkWithArtifact)&i^Advanced_Classes_Mod_Active^=0:P(hero)/(art);
+!!FU(ACM_WorkWithArtifact)&i^Advanced_Classes_Mod_Active^=1:P(hero)/(art);
+
 !!SN:H^art^/(art)/1/?(desc:z);
 !!SN:H^art^/(combiArt)/0/?(combiArtName:z);
 !!SN:T^gem.hero.assemble^/?(str:z)/^art^/(combiArtName);
 !!VR(msg:z):S^%(desc)%T(gem.endl)%T(gem.endl)%(str)^;
-!!IF:Q2/^%(msg)^;
+!!IF:Q2/(PIC_TYPE_ART)/(combiArt)/(MSG_TYPE_QUESTION)/^%(msg)^;
+
+; Restore extended combination parts description
+!!FU(gem_AfterShowNewArtifactDescription):P;
+
 !!FU&-2:E;
 
 ; Remove parts from the hero
