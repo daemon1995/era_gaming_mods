@@ -64,6 +64,17 @@ ZVSE2
     !!EA(MON_NOT_USED_2):B(availSlot)/1/98/61/50/50/50/50/50/50/50/50/50/50/50; [set ignore defense to 50%]
   !!en;
 
+; Restrain war machine quantity of commanders
+!?FU(WOG_OnNpcPlacesWarMachine)&i^wog_55_enabled^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-16/4/?(wmAmount:y);
+
+!!if&i^wog_isCBBattle^;
+  !!UN:C(ebp)/-12/4/1;                  [don't allow to summon in CB]
+!!el;
+  !!VR(wmAmount):S1;
+  !!UN:C(ebp)/-16/4/(wmAmount);
+!!en;
+
 !?FU(OnGameEnter)&i^wog_55_enabled^;
 ; Set up new commander descriptions for Hierophant and Ogre Leader since they provide only one additional War Machine now
 !!SN:E7827723/(CALLCONV_CDECL)/20/1/42338084;
@@ -193,22 +204,25 @@ ZVSE2
   !!BM(attacker):T?(monType:y);
 
   !!if&(monType)=(MON_NOT_USED_2);
-    !!BM(attacker):N?(catNum:y);
     !!BM(defender):N?(defNum:y);
 
-    !!VR(random:y):R0/0/99;             [random roll - 1% chance per level]
-    !!VR(oldFlag:y):S1;
+    !!if&(defNum)>1;                    [Works only when the defending number is greater than 1]
+      !!BM(attacker):N?(catNum:y);
+      
 
-    !!HEi^battle_hero_%i(battle_acting_side)^:Ed/?(heroLvl:y)/1;
-    !!VR(chance:y):S(heroLvl) *(catNum) :2 F0/74; [multiply level by catapults and divide by 2, capped at 75%]
+      !!VR(random:y):R0/0/99;           [random roll - 1% chance per level]
 
-    !!if&(chance)>(random);
-      !!BM(defender):Nd-1;              [show animation, set target quantity and reduce target quantity by 1]
+      !!HEi^battle_hero_%i(battle_acting_side)^:Ed/?(heroLvl:y)/1;
+      !!VR(chance:y):S(heroLvl) *(catNum) :2 F0/74; [multiply level by catapults and divide by 2, capped at 75%]
 
-      !!if&i^battle_isVisible^<>(TRUE);
-        !!VR(logMsg:z):Sz155007;
-        !!MM:S(logMsg);
-        !!BM(defender):V82;
+      !!if&(random)<=(chance);
+        !!BM(defender):Nd-1;            [show animation, set target quantity and reduce target quantity by 1]
+
+        !!if&i^battle_isVisible^;
+          !!VR(logMsg:z):Sz155007;
+          !!MM:S(logMsg);
+          !!BM(defender):V82;
+        !!en;
       !!en;
     !!en;
   !!en;
