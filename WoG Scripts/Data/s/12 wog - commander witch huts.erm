@@ -155,7 +155,7 @@ ZVSE2
 
 ** Witch Hut object trigger
 
-!$OB(OBJ_WITCH_HUT);
+!?OB(OBJ_WITCH_HUT);
 !!UN:P66/?(wogOption:y);                [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
@@ -200,14 +200,24 @@ ZVSE2
 !!FU&(nativeObjType)<>(OBJ_WITCH_HUT):E;
 
 ; Check if the Witch Hut has been visited by the interacting player
-!!OW:C?(currPlayer:y)/?(interactPlayer:y);
-!!OB(tileX)/(tileY)/(tileZ):C?(controlWord:y);
+!!SN:O?(tileX)/?(tileY)/?(tileZ);       [compatibility with mods (Witch Huts with extra tiles)]
+
+; Get the control word of the entrance of the Witch Hut
+!!OB(tileX)/(tileY)/(tileZ):T?(entranceType:y);
+
+!!if&(entranceType)=(OBJ_HERO);
+  !!HE(tileX)/(tileY)/(tileZ):Z?(heroStruct:y);
+  !!UN:C(heroStruct)/20/(UNC_INT)/?(controlWord:y); [Get the control word under the hero]
+!!el;
+  !!OB(tileX)/(tileY)/(tileZ):C?(controlWord);
+!!en;
+
 !!VR(controlWordOrig:y):S(controlWord); [copy for checking later]
+!!OW:C?(currPlayer:y)/?(interactPlayer:y);
 !!VR(playerBit:y):S1 Sd<<(interactPlayer) *32; [Set to bit value for checking Control Word]
 !!VR(controlWord):|(playerBit);         [Try to "or" with current player's bit]
-!!FU&(controlWord)<>(controlWordOrig):E;[Check if not same, then abort]
 
-!!VR(result):S(TRUE);
+!!VR(result)&(controlWord)=(controlWordOrig):S(TRUE);
 
 ** end of function
 
@@ -220,6 +230,8 @@ ZVSE2
 !#VA(mode:x);
 
 !!VR(secSkill):S-1;
+
+!!SN:O?(x)/?(y)/?(z);                   [compatibility with mods (Witch Huts with extra tiles)]
 
 !!VRv600:C100/16/8192/105/103/101/512/104/102/256; [table of effects]
 !!VRv610:C100/103/4096/105/128/16384/105/1024/104/64; [100-105 are +stat, 0 is special estates]

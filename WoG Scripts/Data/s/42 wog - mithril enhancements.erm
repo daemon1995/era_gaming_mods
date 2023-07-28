@@ -193,38 +193,41 @@ entrance squares. Do not use this with another script that might do the same
   !!en;
 
 *** Adventure map Objects ***
+; Right-click on the entrance of an object OR Ctrl-click on an object
 !?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=37;
+  !!TRi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:E?(isNotYellow:y);              [Check for yellow trigger square: y-20]
+  !!FU&(isNotYellow):E;
+
+  !!FU(WOG_36_EnhanceWithMithril):P;
+
+!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_item^=37/i^key_ctrl^;
+  !!FU(WOG_36_EnhanceWithMithril):P;
+
+!?FU(WOG_36_EnhanceWithMithril);
   !!UN:P36/?(wogOption:y);              [Check if Mithril Enhancements script is enabled]
   !!FU&(wogOption)<>(TRUE):E;           [If script is disabled or not player's turn, exit trigger]
 
   !!CM:P?v4/?v5/?v6;                    [Get location: v4/v5/v6]
-
-  !!TR4:E?(isNotYellow:y);              [Check for yellow trigger square: y-20]
-  !!FU&(isNotYellow):E;
-
-  !!VR(isHero:y):S(FALSE);
+  !!SN:O?v4/?v5/?v6;                    [Get entrance]
   !!OB4:T?(type:y);                     [Get type of object]
 
   ; If there is a hero on the coordinate we clicked, check the real object type by hiding the hero temporarily.
   !!if&(type)=(OBJ_HERO);
-    !!VR(isHero):S(TRUE);
-    !!FU(WOG_AdvMgr_HideHero):Pv4/v5/v6;
-    !!OB4:T?(type);
+    !!HEv4/v5/v6:Z?(heroStruct:y);
+    !!UN:C(heroStruct)/12/(UNC_INT)/?(type:y) C(heroStruct)/16/(UNC_INT)/?(subtype:y) C(heroStruct)/20/(UNC_INT)/?(controlWord:y); [Get object details underneath the hero]
+  !!el;
+    !!OB4:U?(subtype:y);                  [Get Subtype]
+    !!OB4:C?(controlWord:y);
   !!en;
 
   ; Exit if the type of object cannot be enhanced by Mithril
   !!if&(type)<>(OBJ_MINE)/(type)<>(OBJ_TOWN)/(type)<>(OBJ_CREATURE_GENERATOR_1)/(type)<>(OBJ_CREATURE_GENERATOR_4)/(type)<>(OBJ_SHIPYARD)/
     (type)<>(OBJ_WINDMILL)/(type)<>(OBJ_WITCH_HUT)/(type)<>(OBJ_WATER_WHEEL)/(type)<>(OBJ_MONOLITH_ONE_WAY_ENTRANCE)/(type)<>(OBJ_MONOLITH_TWO_WAY)/(type)<>(OBJ_UNIVERSITY)/
     (type)<>(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(type)<>(OBJ_SHRINE_OF_MAGIC_GESTURE)/(type)<>(OBJ_SHRINE_OF_MAGIC_THOUGHT);
-    !!FU(WOG_AdvMgr_ShowHero)&(isHero):Pv4/v5/v6;
     !!FU:E;
   !!en;
 
   ; Set up variables
-  !!OB4:U?(subtype:y);                  [Get Subtype]
-  !!OB4:C?(controlWord:y);
-  !!FU(WOG_AdvMgr_ShowHero)&(isHero):Pv4/v5/v6;
-
   !!IF:V3/0;
   !!OW:Ri^timerOwner^/(RES_MITHRIL)/?(mithrilBefore:y);
 
@@ -363,19 +366,23 @@ entrance squares. Do not use this with another script that might do the same
 !!OW:Ty1/?y21;       (Check team)
 !!OW:C?y2;           (check current player)
 !!OW:Ty2/?y22;       (Check team)
-!!IF&y21<>y22:V10/1; (abort if not same)
-!!OW:R-1/7/?y7;  (get amount of mithril)
-!!IF&y7<4:V10/1; (check if has enough mithril)
+!!FU&y21<>y22:E; (abort if not same)
+
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y7;  (get amount of mithril)
+!!FU&y7<4:E; (check if has enough mithril)
+
 !!DW4:M0/?y1/d0;
-!!IF&y1<>112:V10/1;(abort if not Air elementals in first slot)
-!!CM&-10:R0;         (disable standard popup)
-!!IF&-10:Q1/7/4/2/z136011;
-!!IF&-1:V10/1;
-!!OW&-10:R-1/7/d-4;        (take Mithril)
-!!DW4&-10:M0/127/d0;
-!!DW4&-10:M1/123/d0;
-!!DW4&-10:M2/129/d0;
-!!DW4&-10:M3/125/d0;(Upgrade dwelling)
+!!FU&y1<>(MON_AIR_ELEMENTAL):E;(abort if not Air elementals in first slot)
+
+!!CM:R0;         (disable standard popup)
+!!IF:Q1/7/4/2/z136011;
+!!FU&-1:E;
+
+!!OW:R-1/7/d-4;        (take Mithril)
+!!DW4:M0/127/d0;
+!!DW4:M1/123/d0;
+!!DW4:M2/129/d0;
+!!DW4:M3/125/d0;(Upgrade dwelling)
 
 *** Upgrade Mine ***
 !?FU(WOG_36_UpgradeMine);
@@ -634,7 +641,7 @@ entrance squares. Do not use this with another script that might do the same
 !!OW:C?y2;            (check current player)
 !!FU&y1<>y2:E;
 !!IF:V3/0;
-!!OW-10:R-1/7/?y2;    (Get amount of mithril)
+!!OW:R(CURRENT_TOWN)/(RES_MITHRIL)/?y2;    (Get amount of mithril)
 !!VRz-5:Sz136004; (set z-5 to "bars")
 !!VRz-5&y2=1:Sz136005; (set z-5 to "bar" if only 1)
 !!IF:V9/0;        (Special for Magic Plains and Cursed Ground)
