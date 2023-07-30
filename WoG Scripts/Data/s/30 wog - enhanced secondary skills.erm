@@ -8,7 +8,7 @@ ZVSE2
 ** Special thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 *  Variables used: s, r, j
-*  V Variables used: v7018-v7054
+*  V Variables used: v7020-v7054
 *  Z Variables used: z1-z3, z700-z706
 *  Y Variables used: y1-y11
 *  W Variables used: w4-w8
@@ -286,17 +286,13 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !?FU(OnSetupBattlefield)&i^wog_202_enabled^;               [Continue trigger if any skills are enabled]
 
 ** eagle eye
-!!VRv7018:S0;                               [reset v7018]
-!!VRv7019:S0;                               [reset v7019]
+!!VRi^wog_202_chance_0^:S0;                               [reset i^wog_202_chance_0^]
+!!VRi^wog_202_chance_1^:S0;                               [reset i^wog_202_chance_1^]
 !!VRi^wog_202_heroSpellCountered^:S(FALSE);                        [reset global flag of whether a spell has been countered]
 
-!!VRy-9:S-1;                                [reset y-9]
-!!BA:H0/?y-9;                               [get attacking hero's #]
-!!FU7017&y-9>-1:Py-9/0;                     [call function 7017 for attacking hero]
-
-!!VRy-9:S-1;                                [reset y-9]
-!!BA:H1/?y-9;                               [get defending hero's #]
-!!FU7017&y-9>-1:Py-9/1;                     [call function 7017 for defending hero]
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!FU(WOG_202_CalcCounterSpellChance):Pi/?i^wog_202_chance_%i^;
+!!en;
 ** end of battle-start trigger
 
 
@@ -352,7 +348,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ** start of pre-action trigger
 !?FU(OnBeforeBattleAction)&i^wog_202_enabled^;                                      [Continue trigger if eagle eye is enabled]
-!!FU&v7018=0/v7019=0:E;                 [exit if no one has eagle eye]
+!!FU&i^wog_202_chance_0^=0/i^wog_202_chance_1^=0:E;                 [exit if no one has eagle eye]
 
 ; Exit if not casting
 !!BG:A?(action:y) E?(target:y);         [get action type and target]
@@ -386,8 +382,8 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 ; Check if it is lucky enough to counter
 !!VR(result:y):S(FALSE);
 !!VR(random:y):R0/0/99;                 [random roll]
-!!VR(result)&i^battle_acting_side^=(BATTLE_LEFT)/v7019>0/(random)<v7019:S(TRUE); [if attacker cast, check against defender Eagle Eye rating]
-!!VR(result)&i^battle_acting_side^=(BATTLE_RIGHT)/v7018>0/(random)<v7018:S(TRUE); [if defender cast, check against attacker Eagle Eye rating]
+!!VR(result)&i^battle_acting_side^=(BATTLE_LEFT)/i^wog_202_chance_1^>0/(random)<i^wog_202_chance_1^:S(TRUE); [if attacker cast, check against defender Eagle Eye rating]
+!!VR(result)&i^battle_acting_side^=(BATTLE_RIGHT)/i^wog_202_chance_0^>0/(random)<i^wog_202_chance_0^:S(TRUE); [if defender cast, check against attacker Eagle Eye rating]
 !!FU&(result)<>(TRUE):E;
 
 !!if&i^battle_isVisible^;
@@ -902,15 +898,22 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 
 ** function for eagle eye            x1 = hero #     x2 = attacker/defender
-!?FU7017;
-!!HEx1:S11/?y1 A2/63/?y2/?y3 A2/64/?y2/?y4 A2/65/?y2/?y5;     [get eagle eye skill level, check for artifacts]
-!!VRy6&y1>0:S10 *y1;                          [set base chance to skill level x 10]
-!!VRy6&y1>0/y3>0:+5;                          [Bird of Perception +5]
-!!VRy6&y1>0/y4>0:+10;                         [Stoic Watchman +10]
-!!VRy6&y1>0/y5>0:+15;                         [Emblem of Cognizance +15]
-!!VRy6&y1>0/y3>0/y4>0/y5>0:+20;               [All three +20]
-!!VRv7018&y1>0/x2=0:Sy6;                      [set for attacker]
-!!VRv7019&y1>0/x2=1:Sy6;                      [set for defender]
+!?FU(WOG_202_CalcCounterSpellChance);
+!#VA(side:x) (result:x);
+
+!!VR(result):S(NULL);
+!!BA:H(side)/?(hero:y);
+!!HE(hero):S(SKILL_EAGLE_EYE)/?(skillLvl:y); [get eagle eye skill level]
+!!FU&(skillLvl)<=(SKILL_NOT_LEARNED):E;
+
+!#VA(artEquipped[3]:y);
+
+!!HE(hero):A2/63/?(has:y)/?(artEquipped[0]) A2/64/?(has)/?(artEquipped[1]) A2/65/?(has)/?(artEquipped[2]); [check for artifacts]
+!!VR(result):S10 *(skillLvl);           [set base chance to skill level x 10]
+!!VR(result)&(artEquipped[0])>0:+5;     [Bird of Perception +5]
+!!VR(result)&(artEquipped[1])>0:+10;    [Stoic Watchman +10]
+!!VR(result)&(artEquipped[2])>0:+15;    [Emblem of Cognizance +15]
+!!VR(result)&(artEquipped[0])>0/(artEquipped[1])>0/(artEquipped[2])>0:+20; [All three +20]
 ** end of function
 
 
@@ -959,7 +962,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!el&y4=2;
   !!VRr:S1 R24 *100;                    [random 1 to 25 x 100]
   !!IF&1000:Q2/(PIC_TYPE_SEC_SKILL)/y3/(PIC_TYPE_RES_GOLD)/r/(MSG_TYPE_MES)/z148024;
-  !!OW:Ri^timerOwner^/(RES_GOLD)/dr;       [give gold]
+  !!OW:Ri^timerOwner^/(RES_GOLD)/dr;    [give gold]
 !!el&y4=3;
   !!VRs:S0 R5;                          [random resource 0 to 5]
   !!VRr:S1 R2;                          [random quantity 1 to 3]

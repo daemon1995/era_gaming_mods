@@ -293,6 +293,56 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Upgrade Dwelling ***
 !?FU(WOG_36_UpgradeDwelling_1);
+!#VA(usedY[10]:y);
+
+!!FU(WOG_36_GetDwellingUpgradeDetails):P?(mon:y)/?(upgMon:y)/?y7/?y6;
+!!FU&y6=0:E;
+
+!!CM:R0;                                [disable standard popup]
+!!SN:H^monname^/(upgMon)/1/?z1;         [Get new creature name- plural]
+!!SN:H^monname^/(mon)/1/?z2;            [Get old creature name- plural]
+!!SN:H^monname^/(mon)/0/?z3;            [Get old creature name- singular]
+
+!!if&y6>1;
+  !!IF:Q1/7/y6/2/z136009;               [plural]
+!!el&y6=1;
+  !!IF:Q1/7/y6/2/z136010;               [singular]
+!!en;
+
+!!FU&-1:E;
+
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-y6;               (take Mithril)
+!!DW4:M0/(upgMon)/d; (Upgrade dwelling)
+
+!?FU(WOG_36_UpgradeDwelling_2);
+!#VA(usedY[10]:y);
+!#VA(upgMon[4]:y);
+
+!!FU(WOG_36_GetDwellingUpgradeDetails):P?(mon:y)/?(upgMon[0])/?y7/?(canUpgrade:y);
+!!FU&(canUpgrade)=0:E;
+
+!!FU&(mon)<>(MON_AIR_ELEMENTAL):E;      [Only upgrading once is allowed even if mod supported as for balance concern]
+
+!!CM:R0;         (disable standard popup)
+!!IF:Q1/(PIC_TYPE_RES_MITHRIL)/4/(MSG_TYPE_QUESTION)/z136011;
+!!FU&-1:E;
+
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-4;        (take Mithril)
+
+; Upgrade dwelling
+!!DW4:M0/(upgMon[0])/d;
+
+!!re i/1/3;
+  !!DW4:Mi/?(mon:y)/d;
+  !!FU(GetUpgradedMonster):P(mon)/?(upgMon);
+  !!DW4&(upgMon)<>(NO_MON):Mi/(upgMon)/d;
+!!en;
+
+!?FU(WOG_36_GetDwellingUpgradeDetails);
+!#VA(mon:x) (upgMon:x) (mithrilOwned:x) (cost:x);
+
+!!VR(cost):S0;
+
 !!DW4:O?y1;       (check who owns dwelling)
 !!FU&y1=(NO_OWNER):E; (abort if unowned)
 
@@ -302,31 +352,32 @@ entrance squares. Do not use this with another script that might do the same
 !!FU&y21<>y22:E; (abort if not same)
 
 ; Check for upgrade of the creature
-!!DW4:M0/?y2/d;
-!!FU(GetUpgradedMonster):Py2/?y8;
-!!FU&y8=(NO_MON):E;
+!!DW4:M0/?(mon)/d;
+!!FU(GetUpgradedMonster):P(mon)/?(upgMon);
+!!FU&(upgMon)=(NO_MON):E;
 
 ; Exit if the upgraded monster has a different level with the original
-!!MA:Ly2/?y36 Ly8/?y37;
+!!MA:L(mon)/?y36 L(upgMon)/?y37;
 !!FU&y37<>y36:E;
 
 ; Exit if the upgraded monster is stronger than Blood Dragon (weakest Level 8)
-!!MA:Fy8/?y30 F(MON_BLOOD_DRAGON)/?y34;
+!!MA:F(upgMon)/?y30 F(MON_BLOOD_DRAGON)/?y34;
 !!FU&y30>=y34:E;
 
 ; Check if the upgrade is one of the monster of the other slots, exit if positive
 !!re i/1/3;
   !!DW4:Mi/?y35/d;
-  !!FU&y8=y35:E;
+  !!FU&(upgMon)=y35:E;
 !!en;
 
 ; Check if the dwelling has been upgraded at least once
 !!VRy31:S(FALSE);
-!!FU(GetDegradedMonCandidates):Py2/?y32;
+!!FU(GetDegradedMonCandidates):P(mon)/?y32;
 !!SN:My32/?y33;
 !!VRy31&y33>0:S(TRUE);
 
-!!MA:Ly8/?y30;
+; Get the basic cost of upgrade
+!!MA:L(upgMon)/?y30;
 
 !!if&y30<=3;
   !!VRy6:S1;                            [y6 - cost of mithril]
@@ -336,53 +387,13 @@ entrance squares. Do not use this with another script that might do the same
   !!VRy6:S3;
 !!en;
 
-; Double the price if the dwelling has been upgraded
+; Double the cost if the dwelling has been upgraded
 !!VRy6&y31:*2;
 
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y7;[get amount of mithril]
-!!FU&y7<y6:E;                           [check if has enough mithril]
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?(mithrilOwned);[get amount of mithril]
+!!FU&(mithrilOwned)<y6:E;                           [check if has enough mithril]
 
-!!SN:H^monname^/y8/1/?z1;               [Get new creature name- plural]
-!!SN:H^monname^/y2/1/?z2;               [Get old creature name- plural]
-!!SN:H^monname^/y2/0/?z3;               [Get old creature name- singular]
-!!CM:R0;                                [disable standard popup]
-
-!!if&y6>1;
-  !!IF:Q1/7/y6/2/z136009;               [plural]
-!!el;
-  !!IF&y6=1:Q1/7/y6/2/z136010;          [singular]
-!!en;
-
-!!FU&-1:E;
-
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-y6;               (take Mithril)
-!!DW4:M0/y8/d; (Upgrade dwelling if conflux)
-
-!?FU(WOG_36_UpgradeDwelling_2);
-!!VRy1:S-1;
-!!DW4:O?y1;       (check who owns dwelling)
-!!FU&y1=-1:E;
-
-!!OW:Ty1/?y21;       (Check team)
-!!OW:C?y2;           (check current player)
-!!OW:Ty2/?y22;       (Check team)
-!!FU&y21<>y22:E; (abort if not same)
-
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y7;  (get amount of mithril)
-!!FU&y7<4:E; (check if has enough mithril)
-
-!!DW4:M0/?y1/d0;
-!!FU&y1<>(MON_AIR_ELEMENTAL):E;(abort if not Air elementals in first slot)
-
-!!CM:R0;         (disable standard popup)
-!!IF:Q1/7/4/2/z136011;
-!!FU&-1:E;
-
-!!OW:R-1/7/d-4;        (take Mithril)
-!!DW4:M0/127/d0;
-!!DW4:M1/123/d0;
-!!DW4:M2/129/d0;
-!!DW4:M3/125/d0;(Upgrade dwelling)
+!!VR(cost):Sy6;
 
 *** Upgrade Mine ***
 !?FU(WOG_36_UpgradeMine);
