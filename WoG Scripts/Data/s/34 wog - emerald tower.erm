@@ -5,7 +5,7 @@ ZVSE2
 ** Requires WoG version 3.58 or later using ERM version 2.7 or later.
 ** WoGify Name: script44.erm
 ** Updated: September 24, 2004, 2004
-** Updated: Feb 2022 by Archer30
+** Updated: Aug 2023 by Archer30
 
 ** This script makes all golden-green roofed towers in the game (object type 63,
 ** subtype 65) into Emerald Towers where the Wizard who dwells there will
@@ -110,12 +110,10 @@ Dialogues: 3
       !!UN:R2;                         [refresh after gems are taken - Archer]
 
       !!VRz2:S^emerald.pcx^;  [File and path name for Mithril Price List image: z1]
-      !!SN:F^PcxPngExists^/z2; [Check if Mithril Price List image is there: v1=True if yes]
+      !!SN:F^PcxPngExists^/z2; [Check if emerald tower picture is there: v1=True if yes]
 
       !!if&v1;
-        !!VRz1:Sz144005;
-        !!VRz3:Sz144007;
-        !!IF:D3/1/^^/^^/2/^^/^^/^^/3/^^/^^/^^/^^/^^/^^/^^;
+        !!IF:D3/144005/^^/^^/2/^^/^^/^^/144007/^^/^^/^^/^^/^^/^^/^^;
         !!IF:F3/^^/^^/^^/^^/(FALSE); [Remove cancel button]
         !!IF:E1/3; [Display dialogue box]
       !!el;
@@ -198,6 +196,7 @@ Dialogues: 3
   !!if&(mon)>(NO_MON);
     ; Check if the monster is a new species
     !!VRi^wog_44_isNewSpecies^:S(TRUE);
+    !!VR(monInd:y):S0;
 
     !!if&i^wog_44_speciesCounter^>0;
       !!VR(maxIndex:y):S1240 +i^wog_44_speciesCounter^;
@@ -207,6 +206,7 @@ Dialogues: 3
       !!en;
 
       !!VRi^wog_44_isNewSpecies^&i<=(maxIndex):S(FALSE);
+      !!VR(monInd):Si -1241;
     !!en;
 
     ; Set the monster to NO_MON if the monster is new and there are already 12 monsters enhanced
@@ -221,7 +221,7 @@ Dialogues: 3
   !!en;
 
   !!if&(mon)>(NO_MON);
-    !!FU(WOG_44_ChooseImprovementType):P(mon); [Display improvement options]
+    !!FU(WOG_44_ChooseImprovementType):P(mon)/(monInd); [Display improvement options]
   !!el;
     !!FU(WOG_44_ChooseSpeciesMain)&-4/(ERM_FLAG_IS_HUMAN):P; [Choose another species to improve]
   !!en;
@@ -247,7 +247,7 @@ Dialogues: 3
  [Choose the type of improvement]
 
 !?FU(WOG_44_ChooseImprovementType);
-!#VA(mon:x);
+!#VA(mon:x) (monInd:x);
 
 !!SN:H^monname^/(mon)/0/?z3 H^monname^/(mon)/1/?z4;
 
@@ -255,41 +255,50 @@ Dialogues: 3
 
 !!VRy3:S5; [+5 Defense bonus: y3]
 
-!!MA:E(mon)/?y1; [Calculate 25% Damage bonus: y4]
-!!VRy4:Sy1 :4;
-!!VRy4&y4=0:S1;
+; Get new values if the enhancing monster is a new one
+!!if&i^wog_44_isNewSpecies^;
+  !!MA:E(mon)/?y1; [Calculate 25% Damage bonus: y4]
+  !!VRy4:Sy1 :4;
+  !!VRy4&y4=0:S1;
 
-!!MA:P(mon)/?y1; [Calculate 25% Health bonus: y5]
-!!VRy5:Sy1 :4;
-!!VRy5&y5=0:S1;
+  !!MA:P(mon)/?y1; [Calculate 25% Health bonus: y5]
+  !!VRy5:Sy1 :4;
+  !!VRy5&y5=0:S1;
 
-!!MA:S(mon)/?y1; [Calculate 25% Speed bonus: y6]
-!!VRy6:Sy1 :4;
-!!VRy6&y6=0:S1;
+  !!MA:S(mon)/?y1; [Calculate 25% Speed bonus: y6]
+  !!VRy6:Sy1 :4;
+  !!VRy6&y6=0:S1;
 
-!!MA:G(mon)/?y1; [Calculate 50% Growth bonus: y7]
-!!VRy7:Sy1 :2;
-!!VRy7&y7=0:S1;
+  !!MA:G(mon)/?y1; [Calculate 50% Growth bonus: y7]
+  !!VRy7:Sy1 :2;
+  !!VRy7&y7=0:S1;
+
+  ; Calculate the price for increasing spells according to creature level and the number of current spells: y15
+  !!MA:B(mon)/?y10; [Determine number of spell castings: y10]
+  !!MA:L(mon)/?y30;
+  !!VRy15:S0;
+
+  !!if&y10>0/y10<=12;
+    !!if&y30<=3;
+      !!VRy15:S6 -y10 F2/5;               [level 4 or lower]
+    !!el&y30=4;
+      !!VRy15:S11 -y10 F5/10;             [level 5]
+    !!el&y30=5;
+      !!VRy15:S16 -y10 F10/15;            [level 6]
+    !!el;
+      !!VRy15:S21 -y10 F15/20;            [level 7]
+    !!en;
+  !!en;
+; Get from array if exists
+!!el;
+  !!SN:Mi^wog_44_monStats_%(monInd)^/0/?y4; [Damage]
+  !!SN:Mi^wog_44_monStats_%(monInd)^/1/?y5; [Health]
+  !!SN:Mi^wog_44_monStats_%(monInd)^/2/?y6; [Speed]
+  !!SN:Mi^wog_44_monStats_%(monInd)^/3/?y7; [Growth]
+  !!SN:Mi^wog_44_monStats_%(monInd)^/4/?y15; [Spell - price]
+!!en;
 
 !!MA:N(mon)/?y8; [Determine number of shots: y8]
-
-; Calculate the price for increasing spells according to creature level and the number of current spells
-!!MA:B(mon)/?y10; [Determine number of spell castings: y10]
-!!MA:L(mon)/?y30;
-
-!!VRy15:S0;
-
-!!if&y10>0/y10<=12;
-  !!if&y30<=3;
-    !!VRy15:S6 -y10 F2/5;               [level 4 or lower]
-  !!el&y30=4;
-    !!VRy15:S11 -y10 F5/10;             [level 5]
-  !!el&y30=5;
-    !!VRy15:S16 -y10 F10/15;            [level 6]
-  !!el;
-    !!VRy15:S21 -y10 F15/20;            [level 7]
-  !!en;
-!!en;
 
 ; 24 shots
 !!VRz2:S^^; [Initialize shots text to null string: z2]
@@ -299,14 +308,16 @@ Dialogues: 3
 !!VRy14&y16<>y17/y8<24/y13=1:S99; [Set y14 to 99 if creature can gain Shooting ability and <24 shots: y14]
 !!VRz2&y8>0/y8<24/(mon)<>14/(mon)<>15|y14=99:Sz144025;
 
+; Check if Mithril is enabled - used for spell casting and special abilities
+!!UN:P36/?y31;
+
 ; Be aware not to use z3/z4 here as they are used for the names of creature
 ; +1 spell casting
 !!VRz5:S^^;
-!!VRz5&y10>0/y10<=12:Sz144026;
+!!VRz5&y15>0/y31:Sz144026;
 
 ; A new special ability
 !!VRz6:S^^;
-!!UN:P36/?y31;                          [Check if Mithril is enabled]
 !!FU(WOG_44_GetSpecialAbilityDetails):P(mon)/?y32; [Check if there is at least one special ability available, also set up strings]
 !!SN:My32/?y33;
 !!VRz6&y31/y33:Sz144027;
@@ -333,21 +344,31 @@ Dialogues: 3
 !!FU(WOG_44_ChooseSpecialAbility)&v3=10:P(mon)/y32/?v5; [Give choice of Special Bonus] - The choice returns in v5
 
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!FU(WOG_44_PayForBonus)&v3>1:P(mon)/y15/?y34;  [Ask player to pay for Bonus: y34=1 if player pays]
+  !!FU(WOG_44_PayForBonus)&v3>=2:P(mon)/y15/(monInd)/?y34;  [Ask player to pay for Bonus: y34=1 if player pays]
 !!el;
   !!VRy34:S(TRUE); [Set y34 to 1 if AI]
 !!en;
 
 !!if&y34;
-  !!if&v3>=2/v3<=8;
+  ; If chose a stats
+  !!if&v3>=2/v3<=9;
     !!VRy9:Syv3; [Bonus amount: y9]
     !!FU(WOG_44_AddBonusByCreatureType):P(mon)/y9; [Add bonus to creature type if player paid for it]
-
-  !!el&v3=10/v5>=1/v5<=10;
+  ; If chose a special ability
+  !!el&v3=10/v5>0;
     !!FU(WOG_44_AddSpecialAbility):P(mon)/v5; [Special]
   !!en;
 
-  !!VRi^wog_44_speciesCounter^&i^wog_44_isNewSpecies^:+1; [Increment Changed Creature Counter if y34=1 and is new species]
+  !!if&i^wog_44_isNewSpecies^;
+    !!FU(NewIntArray):P5/?i^wog_44_monStats_%(monInd)^/(M_STORED);
+    !!SN:Vi^wog_44_monStats_%(monInd)^/0/y4/y5/y6/y7/y15;
+
+    !!VRi^wog_44_speciesCounter^:+1; [Increment Changed Creature Counter if is new species]
+  !!en;
+
+  ; Increment enhancement granted
+  !!VRi^wog_44_enhancementsCounter_%(monInd)^:+1;
+
   !!FU(WOG_44_ChangeMonsterNamesAndDesc):P(mon)/v3/v5; [Change species name to reflect ability/bonus just gained]
 
   !!PO998:N1; [Set hint text to "visited"]
@@ -369,36 +390,36 @@ Dialogues: 3
  [(mon)=creature type, v3=bonus type]
 
 !?FU(WOG_44_PayForBonus);
-!#VA(mon:x) (spellCost:x) (paidCost:x);
+!#VA(mon:x) (spellCost:x) (monInd:x) (paidCost:x);
 
 !!VR(paidCost):S(FALSE);
 
  [Determine resource type and cost: y1=resource type, y2=resource amount]
-!!VRy1&v3=2:S3;  [Attack]
+!!VRy1&v3=2:S(RES_SULFUR);  [Attack]
 !!VRy2&v3=2:S15;
 !!VRz1&v3=2:Sz144029;
-!!VRy1&v3=3:S2;  [Defense]
+!!VRy1&v3=3:S(RES_ORE);  [Defense]
 !!VRy2&v3=3:S30;
 !!VRz1&v3=3:Sz144030;
-!!VRy1&v3=4:S5;  [Damage]
+!!VRy1&v3=4:S(RES_GEMS);  [Damage]
 !!VRy2&v3=4:S20;
 !!VRz1&v3=4:Sz144031;
-!!VRy1&v3=5:S4;  [Health]
+!!VRy1&v3=5:S(RES_CRYSTAL);  [Health]
 !!VRy2&v3=5:S20;
 !!VRz1&v3=5:Sz144032;
-!!VRy1&v3=6:S1;  [Speed]
+!!VRy1&v3=6:S(RES_MERCURY);  [Speed]
 !!VRy2&v3=6:S20;
 !!VRz1&v3=6:Sz144033;
-!!VRy1&v3=7:S0;  [Growth]
+!!VRy1&v3=7:S(RES_WOOD);  [Growth]
 !!VRy2&v3=7:S75;
 !!VRz1&v3=7:Sz144034;
-!!VRy1&v3=8:S6;  [Shots]
+!!VRy1&v3=8:S(RES_GOLD);  [Shots]
 !!VRy2&v3=8:S1000;
 !!VRz1&v3=8:Sz144035;
-!!VRy1&v3=9:S7;  [Spells]
+!!VRy1&v3=9:S(RES_MITHRIL);  [Spells]
 !!VRy2&v3=9:S(spellCost);
 !!VRz1&v3=9:Sz144036;
-!!VRy1&v3=10:S7;  [Special]
+!!VRy1&v3=10:S(RES_MITHRIL);  [Special]
 !!VRy2&v3=10/v5=1:S20;  [Flying]
 !!VRy2&v3=10/v5=2:S10;  [Extended Attack]
 !!VRy2&v3=10/v5=3:S10;  [Undead]
@@ -414,14 +435,48 @@ Dialogues: 3
 !!IF:V4/1; [Set flag 4 to true]
 !!OW:R(CURRENT_PLAYER)/y1/?y3; [Check if player can afford resource cost: y3=player's amount of resource]
 
-!!IF&y2>y3/1000:Q4/y1/y2/(MSG_TYPE_QUESTION)/z144037;
+!!if&y2>y3;
+  !!IF:Q4/y1/y2/(MSG_TYPE_QUESTION)/z144037;
+  !!FU:E;
+!!en;
+
+!!SN:H^monname^/(mon)/0/?z3 H^monname^/(mon)/1/?z4;
+
+; If the monster has been enhanced once, ask for more!
+!!if&i^wog_44_isNewSpecies^<>(TRUE);
+  !!VRy33:Si^wog_44_enhancementsCounter_%(monInd)^ *20;
+  !!VRy34:Si^wog_44_enhancementsCounter_%(monInd)^ *10;
+
+  !!IF:N(PIC_TYPE_RES_WOOD)/y33/(PIC_TYPE_RES_MERCURY)/y34/(PIC_TYPE_RES_ORE)/y33/
+  (PIC_TYPE_RES_SULFUR)/y34/(PIC_TYPE_RES_CRYSTAL)/y34/(PIC_TYPE_RES_GEMS)/y34;
+
+  !!SN:T^wog.44.extra^/?z5/^mon^/z4;
+  !!IF:N(MSG_TYPE_QUESTION)/^%z5^/?y37;
+
+  ; If the player doesn't agree
+  !!if&y37<>(TRUE);
+    !!VRv3:S-1;
+    !!FU:E;
+  !!en;
+
+  ; Check if the player has enough resources for the extra fee
+  ; Reduce resources and add back for using FU(WOG_Player_CheckEnoughResources)
+  !!OW:R(CURRENT_PLAYER)/y1/d-y2;
+  !!FU(WOG_Player_CheckEnoughResources):P?y36/(CURRENT_PLAYER)/y33/y34/y33/y34/y34/y34;
+  !!OW:R(CURRENT_PLAYER)/y1/dy2;
+
+  ; If not enough resources for the extra costs, ask if want to check out the other creatures
+  !!if&y36<>(TRUE);
+    !!IF:N(MSG_TYPE_QUESTION)/^%T(wog.44.extra_notEnough)^/?y37;
+    !!IF&y37=(FALSE):V4/(FALSE);
+    !!FU:E;
+  !!en;
+!!en;
 
  [Calculate number of creatures that must be left: y7]
 !!MA:G(mon)/?y6; [Growth of creature: y6]
 !!VRy10:Sy6 :2; [50% of growth (rounded down): y10]
 !!VRy7:Sy6 +y10; [150% of growth (rounded down): y7]
-
-!!SN:H^monname^/(mon)/0/?z3 H^monname^/(mon)/1/?z4;
 
 !!if&y7=1;
   !!VRz8:Sz3; [One]
@@ -435,22 +490,32 @@ Dialogues: 3
 !!VRy5:S65536 *y7; [Set number text for creature picture]
 !!VRy5:+(mon); [Set number text for creature picture]
 
-!!if&y3>=y2;
-  !!IF&1000:Q3/(PIC_TYPE_MONSTER)/y5/(MSG_TYPE_QUESTION)/z144039;
+!!IF:Q3/(PIC_TYPE_MONSTER)/y5/(MSG_TYPE_QUESTION)/z144039;
 
-  !!VRv3&-3:S-1; [If the player doesn't agree, set v3 to -1]
-!!en;
-
-!!if&3;
+; If the player doesn't agree, set v3 to -1
+!!if&-3;
+  !!VRv3:S-1;
+  !!FU:E;
+; If the player agree
+!!el;
   !!VRv7:S0;
   !!DO(WOG_44_CheckIfHeroHasEnoughCreature)/0/6/1:P(mon); [See if hero has enough creatures of the type to be enchanted]
 
+  ; If the hero has enough creatures
   !!if&v7>=y7;
     !!DO(WOG_44_RemoveCreatures)/0/6/1:P(mon)/y7; [Remove the creatures (if enough)]
-    !!IF&1000:Q1/21/y5/y1/y2/1/z144041;
 
-    !!VRy4:Sy3 -y2; [y4 = player's new amount of resource after payment]
-    !!OW:R(CURRENT_PLAYER)/y1/y4; [Set player's resource amount to y4]
+    !!if&i^wog_44_isNewSpecies^<>(TRUE);
+      !!IF:N(PIC_TYPE_MONSTER)/y5/y1/y2/(PIC_TYPE_RES_WOOD)/y33/(PIC_TYPE_RES_MERCURY)/y34/(PIC_TYPE_RES_ORE)/y33/
+    (PIC_TYPE_RES_SULFUR)/y34/(PIC_TYPE_RES_CRYSTAL)/y34/(PIC_TYPE_RES_GEMS)/y34;
+      !!IF:N(MSG_TYPE_MES)/z144041;
+    !!el;
+      !!IF:Q1/(PIC_TYPE_MONSTER)/y5/y1/y2/(MSG_TYPE_MES)/z144041;
+    !!en;
+
+    ; Set player's resource amount
+    !!OW:R(CURRENT_PLAYER)/y1/d-y2;
+    !!FU(WOG_Player_RemoveResources)&i^wog_44_isNewSpecies^<>(TRUE):P(CURRENT_PLAYER)/y33/y34/y33/y34/y34/y34;
 
     !!VRi^wog_44_bonusBought^:S1; [Increment i^wog_44_bonusBought^ to indicate at least one bonus bought this visit]
 
@@ -461,8 +526,9 @@ Dialogues: 3
     !!en;
 
     !!VR(paidCost):S(TRUE);
+  ; If not enough creatures, display this
   !!el;
-    !!IF&(ERM_FLAG_IS_HUMAN):Q4/21/y5/2/z144040;  [If not enough creatures, display this]
+    !!IF:Q4/(PIC_TYPE_MONSTER)/y5/2/z144040;
   !!en;
 !!en;
 
