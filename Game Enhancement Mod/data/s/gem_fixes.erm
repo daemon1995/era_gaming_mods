@@ -430,19 +430,19 @@ ZVSE2
 // Bad Fix: Set a hard limit of the AI's Army value to prevent AI player being stuck
 // by Archer30
 ; This script is disabled as it's proved to make AI players less aggressive
-!?FU(gem_CreateERMHook);
-!#VA(address:x);
+*?FU(gem_CreateERMHook);
+*#VA(address:x);
 
 *!SN:E(address)/1/4499845/(gem_OnCalcAIArmyValue);
 
-!?FU(gem_OnCalcAIArmyValue);
-!#VA(address:x);
+*?FU(gem_OnCalcAIArmyValue);
+*#VA(address:x);
 
-!!UN:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(value:y);
+*!UN:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(value:y);
 
-!!if|(value)<0/(value)>1500000;         [Note that this number cannot be any larger, otherwise it might not work in some situations (Like when the hero has very high Primary Skills)]
-  !!UN:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/1500000;
-!!en;
+*!if|(value)<0/(value)>1500000;         [Note that this number cannot be any larger, otherwise it might not work in some situations (Like when the hero has very high Primary Skills)]
+  *!UN:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/1500000;
+*!en;
 
 
 
@@ -475,11 +475,6 @@ ZVSE2
   !!en;
 
 
-  // disable message about joining army after combat;
-  !!re i/0/4;
-    !!UN:C4856798/i/1/(OPCODE_NOP_1);
-  !!en;
-
 
   // up to 6 digits to display mon_cost with RMC on mon dwell (default was 4)
   !!UN:C5578846/1/1/40; [new gold cost text field width (default 32)]
@@ -504,6 +499,29 @@ ZVSE2
 !?FU(gem_CreateERMHook);
 !!SN:Ex1/1/5576191/(gem_OnRecruitCreatureDlgLeftClick);
 !!SN:Ex1/1/4435784/(gem_AI_GetCloneCastValue);
+
+// disable message about hiring army from dwelling after combat;
+!!SN:Ex1/1/4856136/(gem_OnDwellingFreeJoin);
+!!SN:Ex1/1/4856798/(gem_OnDwellingJoinMessage);
+
+!?FU(gem_OnDwellingFreeJoin);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(dwellingMons:y);
+!!re i/0/3;(end_value);
+  !!VR(offset:y):Si*2;
+  !!UN:C(dwellingMons)/(offset)/2/?k;
+  !!if&k;
+    !!VRi^gem_skipMsg^:S(TRUE);
+    !!br;
+  !!en;
+!!en;
+
+!?FU(gem_OnDwellingJoinMessage)&i^gem_skipMsg^;
+!!VRi^gem_skipMsg^:S(FALSE);
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(string:y);
+!!SN:E4210992/(CALLCONV_THISCALL)/(string)/0;
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4856803;
 
 !?FU(gem_AI_GetCloneCastValue);
 !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78528/4/?(currentActiveSide:y);
@@ -592,8 +610,7 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
   !!VR(offset:y):S(clickedItem) -538 *4 +92;
   !!UN:C(dlg:y)/(offset:y)/4/?t;
   !!if&t<>(NO_MON);
-    !!re j/0/(RES_LAST_WOG);
-      !!co&j=(RES_GOLD);
+    !!re j/0/(RES_GEMS);
       !!MA:Ct/j/?n;
       !!if&n;
         !!FU(gem_DlgDefProc):P508/j P529/j;;
