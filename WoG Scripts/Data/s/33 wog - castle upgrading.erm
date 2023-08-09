@@ -38,20 +38,23 @@ ZVSE2
 !#DC(PTR_RESOURCE_DEF)     = 6865956;
 
 ; ==================================================================================================
+; Modded by Archer30
+; Store the upgraded monsters and growth in arrays for calculating the costs of upgrading dwellings later
+; This is necessary for compatiblity with Week of Monsters (growth would be changed) and mods modifying UN:T values
+; Must be executed later than 11 wog - neutral town
+!?FU(OnAfterErmInited);
+!!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
 
-; Store the upgraded monsters in the global variables for calculating the costs of upgrading dwellings later
-; This is necessary for compatiblity with mods modifying UN:T values
-; Must be executed earlier than any temparory UN:T modification
-!?FU(OnPreTownScreen)&999;
-!!re (monLvl:y)/0/6;
-  !!CA(CURRENT_TOWN):T?(townType:y);
-  !!UN:T(townType)/(monLvl)/1/?i^wog_45_upgMonLvl%(monLvl)^;
-!!en;
+!!re i/(TOWN_FIRST)/(TOWN_LAST_WOG);
+  !!FU(NewIntArray):P16/?i^wog_45_upgMonList_%i^/(M_STORED);
 
-; Release variables
-!?FU(OnCloseTownScreen)&999;
-!!re (monLvl:y)/0/6;
-  !!VRi^wog_45_upgMonLvl%(monLvl)^:S0;
+  !!re j/(MON_MIN_LEVEL)/(MON_MAX_LEVEL);
+    !!UN:Ti/j/(TRUE)/?(upgMon:y);
+    !!MA:G(upgMon)/?(growth:y);
+    !!VR(index:y):Sj *2;
+    !!SN:Vi^wog_45_upgMonList_%i^/(index)/(upgMon)/(growth);
+  !!en;
 !!en;
 
 ; Function to get the special resource requirement of a town
@@ -124,12 +127,12 @@ ZVSE2
 !!VR(monBonusItemId:y):S(ptrAlreadyBuilt) +2; 
 
 ; инициализируем главные переменные
-!#VA(monType[7]:y) (monCount[7]:y) (monLevel[7]:y);
-!#VA(msgType[7]:y) (msgMonType[7]:y);
+!#VA(monType[8]:y) (monCount[8]:y) (monLevel[8]:y);
+!#VA(msgType[8]:y) (msgMonType[8]:y);
 
 ; инициализируем массивы дефолнтными значениями
-!!VR(msgType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
-!!VR(msgMonType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
+!!VR(msgType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
+!!VR(msgMonType[0]):C(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON)/(NO_MON); 
 
 ; инициализируем дополнительные переменные
 !!VR(counter:y):S0;
@@ -168,6 +171,20 @@ ZVSE2
   !!en;
 !!en;
 
+; Set up 8th slot defined by mods - doesn't support Pikemen
+!!VR(monID:y):S(NO_MON);
+!!FU(WOG_45_SetUp8thSlot):P(townId)/?(monType[counter]);
+
+!!if&(monType[counter])>0;
+  !!VR(monID):S(monType[counter]);
+  !!VR(monLevel[counter]):S7;
+  !!VR(prtMonBonusItem):S(monBonusItemId) +(monLevel[counter]);
+  !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(prtMonBonusItem)/?(monCount[counter]); 
+  !!VR(msgType[counter]):S(PIC_TYPE_MONSTER) |(PIC_TYPE_FLAG_DISPLAY_ZEROS);
+  !!VR(msgMonType[counter]):S65536 *(monCount[counter]) +(monType[counter]);
+  !!VR(counter):+1;
+!!en;
+
 ; улучшенных жилищ нет - выходим
 !!if&(counter)<1;
   !!IF:M^%T(wog.45.noOneUpgDwelling)^;
@@ -182,7 +199,7 @@ ZVSE2
       (msgType[4])/(msgMonType[4])/
       (msgType[5])/(msgMonType[5])/
       (msgType[6])/(msgMonType[6])/
-      (NO_PIC_TYPE)/(NULL);
+      (msgType[7])/(msgMonType[7]);
 
 ; Configure message
 !!VR(requirementMsg:z):S^^;
@@ -206,26 +223,31 @@ ZVSE2
 ; вытаскиваем какой юнит был выбран в сообщении
 !!VR(chosenId:y):S(@monLevel) +(chosenPicture);
 !!VR(monLvl:y):Sy(chosenId);
-!!FU|(monLvl)<(MON_MIN_LEVEL)/(monLvl)>(MON_MAX_LEVEL):E;
 
 ; опять получаем id существа этого уровня в замке
-!!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/1/?(monID:y);
+; For 8th creature, (monID) has been stored earlier
+!!FU(WOG_Town_GetCreatureID)&(monLvl)<=(MON_MAX_LEVEL):P(townType)/(monLvl)/1/?(monID:y);
+
 ; опять получаем кол-во монстров
 ; получаем правильную ссылку на массив и считываем бонус кол-ва
 !!VR(monBonusItemId):+(monLvl);  
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(monBonusItemId)/?(monNum:y);
 
 ; величина бонуса в зависимости от уровня существа
-!!MA:G(monID)/?(growth:y);
+; Fix compatibility with Week of Monsters by using arrays - Archer
+*!MA:G(monID)/?(growth:y);
+!!VR(growthIndex:y):S(monLvl) *2 +1;
+!!SN:Mi^wog_45_upgMonList_%(townType)^/(growthIndex)/?(growth:y);
 !!VR(growth):+1 :2 F1/10;
 
 ; JackSlater - define buildTimesCounter
 !!VR(buildTimesCounter:y):+(monNum) :(growth) +1;
 
 ; получаем стоимость существа
-; Fix mods with UN:T hacks compatibility by using global variables - Archer
+; Fix mods with UN:T hacks compatibility by using arrays - Archer
 *!FU(WOG_Town_GetCreatureID):P(townType)/(monLvl)/0/?(trueMonID:y);
-!!VR(trueMonID:y):Si^wog_45_upgMonLvl%(monLvl)^;
+!!VR(trueMonIndex:y):S(monLvl) *2;
+!!SN:Mi^wog_45_upgMonList_%(townType)^/(trueMonIndex)/?(trueMonID:y);
 !!FU(WOG_Creature_GetCost):P(trueMonID)/?(wood:y)/?(mercury:y)/?(ore:y)/?(sulfur:y)/?(crystal:y)/?(gems:y)/?(gold:y);
 
 ; обязательны простые ресурсы для постройки (5 дерева, 5 руды)
@@ -241,11 +263,12 @@ ZVSE2
 !!VR(gold):*(growth) *(WOG_45_MINCOST) *(buildTimesCounter);
 
 ; проверяем опцию Половинная Cтоимость Существ
-!!UN:P(WOG_OPT_CREATURES_HALF_PRICE_ON_7TH_DAY)/?(wogOptionHalfPrice:y);
+!!if&i^timerWeekDay^=7;
+  !!UN:P(WOG_OPT_CREATURES_HALF_PRICE_ON_7TH_DAY)/?(wogOptionHalfPrice:y);
 
-!!if&(wogOptionHalfPrice)=(TRUE);
-  !!VR(day:y):Sc %(DAYS_IN_WEEK);
-  !!VR(gold)&(day)=0:*2; if Sunday
+  !!if&(wogOptionHalfPrice)=(TRUE);
+    !!VR(gold):*2; if Sunday
+  !!en;
 !!en;
 
 !!VR(gold)::100 *100;
@@ -275,7 +298,7 @@ ZVSE2
 !!en;
 
 ; Standarise the cost for Level 7 as they are usually very different. Price would be 10k at least, price over 10k is multiplied by 2/3 - Archer
-*!if&(monLvl)=6;
+*!if&(monLvl)=(MON_MAX_LEVEL);
   *!VR(basGold:y):S(WOG_45_MINCOST) *2000;
   *!VR(extGold:y):S(gold) -(basGold) F0/(INT_MAX) :3 *2 :100 *100;
   *!VR(gold)&(extGold)>0:S(basGold) +(extGold);
@@ -541,12 +564,12 @@ ZVSE2
 
 !?FU(WOG_CreateERMHook);
 !!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
+
 !!if&(wogOption);
   !!SN:Ex1/1/6113227/(WOG_Town_GetCreatureIncomeText);
   !!SN:Ex1/1/6029174/(WOG_Town_GetDwellingGrowth_GetTownId);
   !!SN:Ex1/1/6029759/(WOG_Town_GetDwellingGrowth);
 !!en;
-
 
 
 !?FU(WOG_45_FixGrailText);
@@ -586,11 +609,11 @@ ZVSE2
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrMonstersBonus)/?(growth:y);
 
 !!if&(growth);
-
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(currentTextPtr:y);                              [original text is in the ECX]
   !!SN:B(currentTextPtr:y)/d/?z1 T^wog.45.hintRMC^/?(addedString:z)/^number^/(growth:y); [get text and interpolate to the another text-var]
 
   !!CA-1:B3/26;                                                                          [if grail is built it counts all overgrowing into own field so it requires text fix]
+
   !!if&1;
     !!FU(WOG_45_FixGrailText):Pz1/(growth)/?z1;                                          [complex function lol]
   !!en;
@@ -606,19 +629,21 @@ ZVSE2
 
 !?FU(WOG_Town_GetDwellingGrowth);                                                       [hook when game counts growth in the town]
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(creatureSpot:y);             [Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(baseGrowth:y);]
-!!if&(creatureSpot)>(MON_MAX_LEVEL)/(creatureSpot)<14;                                  [only for upg dweillings (values are 0-13)]
-  *!CA-1:U?(townId:y);
 
+!!if&(creatureSpot)>(MON_MAX_LEVEL)/(creatureSpot)<14;                                  [only for upg dweillings (values are 0-13)]
   !!VR(creatureSpot):-7;                                                                [determinate dwelling level]
 
   !!VR(ptrMonstersBonus:y):Si^wog_45_town_id^ *(WOG_45_ITEMCOUNT) +2 +(creatureSpot:y); [find place in the main array]
 
   !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrMonstersBonus)/?(growth:y);
+
   !!if&(growth);
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(growth:y);                                   [increase summary growth after ALL bonuses been count before]
   !!en;
 !!en;
+
 !!VRi^wog_45_town_id^:S(NULL);
+
 !?FU(OnCalculateTownIncome); 
 !#VA(town:x) (gold:x);
 
