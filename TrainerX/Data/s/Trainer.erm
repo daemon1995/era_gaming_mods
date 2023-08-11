@@ -247,7 +247,15 @@ ZVSE2
   !!DL(TRAINER_MAIN_DLG):A99/(DLG_CMD_SET_PCX)/z1;
 
   ; Update a bunch of dialogues, including artifact table
-  !!FU(trainer_UpdateDlgsOnLevelUp):P(hero);
+  !!FU(trainer_UpdateArtTable):Pi^trainer_artTablePage^/(hero);
+  !!FU(trainer_UpdatePrimSkills):P(hero);
+  !!FU(trainer_UpdateSecSkills):P(hero);
+  !!FU(trainer_UpdateMoveBar):P(hero);
+  !!FU(trainer_UpdateManaBar):P(hero);
+  !!FU(trainer_UpdateSpellTable):Pi^trainer_spellTablePage^/(hero);
+
+  !!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
+  !!FU(trainer_UpdateHeroLevel):P(lv); hero level
 !!en;
 
 !!FU(trainer_UpdateResources):P(player); [Check resources including mithril]
@@ -270,19 +278,6 @@ ZVSE2
 !!VR(artLastPage)&(needOneMorePage):+1;
 
 !!VRi^trainer_artTableMaxPage^:S(artLastPage);
-
-!?FU(trainer_UpdateDlgsOnLevelUp);
-!#VA(hero:x);
-
-!!FU(trainer_UpdateArtTable):Pi^trainer_artTablePage^/(hero);
-!!FU(trainer_UpdatePrimSkills):P(hero);
-!!FU(trainer_UpdateSecSkills):P(hero);
-!!FU(trainer_UpdateMoveBar):P(hero);
-!!FU(trainer_UpdateManaBar):P(hero);
-!!FU(trainer_UpdateSpellTable):Pi^trainer_spellTablePage^/(hero);
-
-!!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
-!!FU(trainer_UpdateHeroLevel):P(lv); hero level
 
 !?FU(trainer_UpdateMoveBar);
 !#VA(hero:x);
@@ -353,7 +348,7 @@ ZVSE2
   !!en;
 
   ; Keep the Trainer Interface if the hero has leveled up upon clicking checkmark, otherwise close the dialogue
-  !!FU(trainer_UpdateDlgsOnLevelUp)&(hasLeveledUp):P(hero);
+  !!FU(trainer_UpdateAllTheDialogs)&(hasLeveledUp):P(hero);
 !!en;
 
 !!if&(hasLeveledUp)=(FALSE);
@@ -3223,13 +3218,19 @@ ZVSE2
   !!if|i^trainer_dlg_item^=1/i^trainer_dlg_item^=146/i^trainer_dlg_item^=147;
     !!FU&i^trainer_hero^<=(NO_HERO):E;
 
-    !!VRi^trainer_heroLv^:Sd(mult) S?(lvNew:y);
-    !!VR(lvNew):F1/(TRAINER_LEVEL_CAP_EXTREME);
-    !!FU(trainer_UpdateHeroLevel):P(lvNew); [Update interface]
-    !!VRi^trainer_heroLv^:S(lvNew);
+    !!if&(mult)<0;
+      !!VR(lv:y):Si^trainer_heroLv^ -1;
+      !!VR(isLvUp:y):S(FALSE);
+    !!el;
+      !!VR(lv:y):Si^trainer_heroLv^ +1;
+      !!VR(isLvUp:y):S(TRUE);
+    !!en;
+
+    !!FU(trainer_GetFixedLv):P(lv)/(isLvUp)/?(lvFixed:y);
+    !!FU(trainer_UpdateHeroLevel):P(lvFixed); [Update interface]
+    !!VRi^trainer_heroLv^:S(lvFixed);
     !!FU:E;
   !!en;
-
 
   //Secondary Skills
   !!if&i^trainer_dlg_item^>=55/i^trainer_dlg_item^<=82/i^trainer_hero^>(NO_HERO);
