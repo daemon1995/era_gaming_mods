@@ -13,29 +13,36 @@ ZVSE2
 !!FU&(wogOption)<>(TRUE):E;
 
 ; Disable Cover of Darkness (Necropolis building)
-*!UN:C5012927/(UNC_INT16)/?i^es_351_patch1^ C5012927/(UNC_INT16)/(OPCODE_NOP_2);
-!!UN:C5011669/1/?i^es_351_patch0^;  !!UN:C5011669/1/0;
-!!UN:C4854195/1/?i^es_351_patch1^;  !!UN:C4854195/1/0;
+!!UN:C5011552/4/?i^es_351_patch0^ C5011556/1/?i^es_351_patch1^;
+!!UN:C5011552/4/42729 C5011556/1/0;
+
 ; Disable Veil of Darkness ability of Darkness Dragon
 !!UN:C7685703/(UNC_INT)/?i^es_351_patch2^ C7685703/(UNC_INT)/(INT_MAX);
 !!UN:C7685961/(UNC_INT)/?i^es_351_patch3^ C7685961/(UNC_INT)/(INT_MAX);
 
-; Set up new description via ert for Cover of Darkness (Necropolis building)
+; Disable Cover of Darkness (Map Object)
+!!UN:C4854195/1/?i^es_351_patch4^;  !!UN:C4854195/1/0;
+
+; Set up new description for Cover of Darkness (Necropolis building)
 !!UN:C6977828/(UNC_INT)/?(ptr:y);       [Desc]
-!!SN:B(ptr)/d/^%T(es.351.buildingDescription)^;
+!!SN:B(ptr)/d/^%T(es.351.buildingDesc1)^;
 
 !?FU(OnGameLeave);
 !!UN:P351/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
 ; Restore Cover of Darkness (Necropolis building)
-*!UN:C5012927/(UNC_INT16)/i^es_351_patch1^;
-!!UN:C5011669/1/i^es_351_patch0^;
-!!UN:C4854195/1/i^es_351_patch1^;
+!!UN:C5011552/4/i^es_351_patch0^ C5011556/1/i^es_351_patch1^;
+
 ; Restore Veil of Darkness ability of Darkness Dragon
 !!UN:C7685703/(UNC_INT)/i^es_351_patch2^;
 !!UN:C7685961/(UNC_INT)/i^es_351_patch3^;
 
+; Restore Cover of Darkness (Map Object)
+!!UN:C4854195/1/i^es_351_patch4^;
+
+!!UN:C6977828/(UNC_INT)/?(ptr:y);       [Desc]
+!!SN:B(ptr)/d/^%T(es.351.buildingDesc0)^;
 
 // Siege with Cover of Darkness (Necropolis building)
 ; The Cover of Darkness reduce -1 to an intruder hero's morale when defending against a siege.
@@ -244,9 +251,26 @@ ZVSE2
 !!UN:P351/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
+; Check if it is a real multiplayer game
+!!VR(isLocalGame:y):S(TRUE);
+!!UN:V?t/?t/?t/?t/?(gameType:y);
+!!VR(isLocalGame)&(gameType)<>0/(gameType)<>3:S(FALSE);
+
 ; Loop through heroes
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  ; Veil of Darkness disguise the hero's army every turn
+  ; Update the hero's status of Cover of Darkness (map object)
+  !!if&i^es_351_coverCounter_%i^>0;
+    !!VRi^es_351_coverCounter_%i^:-1;
+    !!FU(ES_351_SetHeroCoverStatus)&i^es_351_coverCounter_%i^=0:Pi/(FALSE);
+  !!en;
+
+  ; Veil of Darkness casts disguise on the hero every turn (For human player, it happens only in real multiplayer game as AI sees through disguise)
+  !!HEi:O?(owner:y);
+  !!co&(owner)>(NO_OWNER);
+
+  !!OW:I(owner)/?(isAi:y);
+  !!co&(isAi)<>(TRUE)/(isLocalGame);
+
   !!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
     !!HEi:C0/j/?(type:y)/?(num:y);
 
@@ -258,12 +282,6 @@ ZVSE2
         !!UN:C(heroStruct)/270/(UNC_INT8)/(SKILL_EXPERT);
       !!en;
     !!en;
-  !!en;
-
-  ; Update the hero's status of Cover of Darkness (map object)
-  !!if&i^es_351_coverCounter_%i^>0;
-    !!VRi^es_351_coverCounter_%i^:-1;
-    !!FU(ES_351_SetHeroCoverStatus)&i^es_351_coverCounter_%i^=0:Pi/(FALSE);
   !!en;
 !!en;
 
