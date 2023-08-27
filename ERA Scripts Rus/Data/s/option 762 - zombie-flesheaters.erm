@@ -20,19 +20,32 @@ ZVSE2
 !!VR(fv):*105 :100;
 !!MA:F(MON_ZOMBIE)/(fv);
 
-!?FU(OnStackToStackDamage);
-!#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distancArg:x) (isTheoretical:x);
-
-!!FU&(isTheoretical):E;
-
+!?FU(OnMonsterPhysicalDamage);
 !!UN:P762/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
+
+; Exit if not normal melee damage
+!!UN:C42149568/(UNC_INT)/?(dmgType:y);
+!!FU&(dmgType)<>4462398:E;
+
+; Get the attacker/defender stack
+!!MF:N?(defStack:y);
+
+!!if&(defStack)=i^battle_acting_stack^;
+  !!BG:E?(atkStack:y);
+!!el;
+  !!VR(atkStack):Si^battle_acting_stack^;
+!!en;
+
+!!FU|(atkStack)=(NO_STACK)/(defStack)=(NO_STACK):E;
 
 ; Check if the attacking monster is a flesh eater
 !!BM(atkStack):T?(type:y);
 !!FU(ES_762_CheckIfMonIsEligible):P(type)/?(result:y);
 
 !!if&(result);
+  !!MF:F?(finalDmg:y);
+
   ; Check if the defedning monster is a living one
   !!BM(defStack):F?(monFlags:y);
   !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);
@@ -45,56 +58,57 @@ ZVSE2
     ; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
     !!if&(finalDmg)>=(defCurrTotalHp);
       !!VRi^es_762_regenHp^:S(defCurrTotalHp);
-      !!BM(defStack):Fd|813694976 E0 K1;    [добавляем цели флаги жертвы/клона/неизменяемости цвета]
+      !!BM(defStack):Fd|813694976 E0;    [добавляем цели флаги жертвы/клона/неизменяемости цвета]
     !!en;
   !!en;
 !!en;
 
 !?FU(ES_OnAfterMelee)&i^es_762_regenHp^;
-!#VA(zombieStack:x) (defStack:x);
+!#VA(atkStack:x) (defStack:x);
 
-!!UN:P762/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;
+; Warning: 
+; In some case the attacerk's killed, or the defender wasn't killed, quit the flesh eating scene
+; However, the defender would still suffer from clone flag/0 spell. Will be fixed if reported
+!!BM(atkStack):N?(atkNum:y);
+!!BM(defStack):N?(defNum:y);
 
-; Calculate the new HP and number of the flesheater
-!!VR(noHpLost:y):S(FALSE);
-!!BM(zombieStack):N?(num:y) H?(hp:y) L?(lostHp:y) B?(startNum:y);
+!!if&(atkNum)>0/(defNum)<=0;
+  ; Calculate the new HP and number of the flesheater
+  !!VR(noHpLost:y):S(FALSE);
+  !!BM(atkStack):H?(hp:y) L?(lostHp:y) B?(startNum:y);
 
-!!VR(totalStartHp:y):S(startNum) *(hp);
-!!VR(totalHp:y):S(num) *(hp) -(lostHp);
-!!VR(noHpLost)&(totalStartHp)=(totalHp):S(TRUE);
+  !!VR(totalStartHp:y):S(startNum) *(hp);
+  !!VR(totalHp:y):S(atkNum) *(hp) -(lostHp);
+  !!VR(noHpLost)&(totalStartHp)=(totalHp):S(TRUE);
 
-!!VR(newTotalHp:y):S(totalHp) +i^es_762_regenHp^ F(totalHp)/(totalStartHp);
-!!VR(newCurrHp:y):S(newTotalHp) %(hp);
-!!VR(newNum:y):S(newTotalHp) :(hp) +1;
+  !!VR(newTotalHp:y):S(totalHp) +i^es_762_regenHp^ F(totalHp)/(totalStartHp);
+  !!VR(newCurrHp:y):S(newTotalHp) %(hp);
+  !!VR(newNum:y):S(newTotalHp) :(hp) +1;
 
-!!if&(newCurrHp)=0;
-  !!VR(newCurrHp):S(hp);
-  !!VR(newNum):-1;
-!!en;
-
-!!VR(newLostHp:y):S(hp) -(newCurrHp);
-
-; Show battle log and play animation/sound
-!!if&i^battle_isVisible^/(noHpLost)<>(TRUE);
-  !!BM(zombieStack):T?(type:y);
-
-  !!if&(num)=1;
-    !!SN:H^monname^/(type)/0/?(flesheaterName:z);
-  !!el;
-    !!SN:H^monname^/(type)/1/?(flesheaterName);
+  !!if&(newCurrHp)=0;
+    !!VR(newCurrHp):S(hp);
+    !!VR(newNum):-1;
   !!en;
 
-  !!SN:T^es.762.battleLog^?(battleLog:z)/^flesheater^/(flesheaterName);
-  !!MM:S(battleLog);
+  !!VR(newLostHp:y):S(hp) -(newCurrHp);
 
-  ; Play sound and animation
-  !!SN:P^ANIMDEAD^;
-  !!BM(zombieStack):V74;
+  ; Set up new number and hp for the Zombises
+  !!BM(atkStack):N(newNum) L(newLostHp);
+
+  ; Show battle log and play animation/sound
+  !!if&i^battle_isVisible^/(noHpLost)<>(TRUE);
+    ; Play sound and animation
+    !!SN:P^ANIMDEAD^;
+    !!BM(atkStack):V74;
+
+    !!BM(atkStack):T?(type:y);
+    !!VR(isPlural:y):S(atkNum) -1 B;
+    !!SN:H^monname^/(type)/(isPlural)/?(flesheaterName:z);
+    !!SN:T^es.762.battleLog^?(battleLog:z)/^flesheater^/(flesheaterName);
+    !!MM:S(battleLog);
+  !!en;
 !!en;
 
-; Set up new number and hp for the Zombises
-!!BM(zombieStack):N(newNum) L(newLostHp);
 ; Restore the global variable
 !!VRi^es_762_regenHp^:S0;
 
