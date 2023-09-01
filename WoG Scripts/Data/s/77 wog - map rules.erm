@@ -14,16 +14,13 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
  5=disable all map rules
 
 ** Map Rules ERM script v2.0 - Donald X. Vaccarino
-** Requires WOG version 3.58 or later
+** Requires ERA version 3.9.1 or later
 ** Adds rules to a map on day one
 ** Several rules were suggested by Timothy Pulver
 ** WoGify Options editing by Timothy Pulver
 
 ** Modified by Thomas Franz (samot):
-** - FU710 - 9th / 10th skill: added check for warfare
 ** - Heroes pick up double artifacts works only for artifacts that are on the map if you start the game
-**   (modified ?OB5 new FU727, reuse of TM19 (script00), once at day 1)
-*  - FU(WOG_101_ChooseMapRules) / FU(WOG_117_AddBoarsOrAirElemsToDwells): Dwellings have Air Elementals instead of Boars if Neutral Town (script67) is active
 
 ** Rules: (Number in parenthesis is ERM code)
 **   1. Fliers can't fly but instead aren't retaliated against. (111)
@@ -48,37 +45,20 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 **  20. All towns have a grail (only used if no confluxes on map) (130)
 **  21. All towns have Warlord's Banners in front of them. (239)
 
-** To use this code, put it into a Global Event, set to never happen.
-** Make sure this event is prior to other events that may be affected by it.
-
-** Variables Used: z280-z299, z326-z328, z352-z354, v1-v4, v549-v560,
-** v564-v579, v600-v602, v610-v639, v700-v739
+** Variables Used: v1-v4,
 ** z680, z681-z697 (reserved for future rules!)
-** w33 (bits 0-4 used by script02) ***JHV
-** Flags Used: 1-3, 875
-** Functions Used: 691-727
-** Variables v549-v559, v576-v579, z280-z299, and z352-z354 must not be modified by other programs!
+** Flags Used: 875
 ** PO:N(=15) for Artifacts on the map (OB-Type 5) if double artifact rule is on
 ** PO:O(=-2) for Warlord's Banner placed on the map (OB-Type 5/156) if Warlord's Banner placement is on
 
-** functions for use during initialization
-
-** see if player x16 is with player x1 on team x2, if not use for their shroud
-
-!?FU719;
-
-!!OW:Tx16/?y1; [get team number if any]
-!!VRy1&y1=-1:S-2; [treat no team as not the same team]
-!!VRvv600&x1<>x16/x2<>y1:Sx16; [store player number if usable for shroud-placing]
-
-** find nonteammate for player x16
-
-!?FU720;
-
-!!VRv600:S564 +x16; [number of variable holding non-teammate]
-!!VRvv600:Sx16; [default for 8-player-team game]
-!!OW:Tx16/?y1; [get team number if any]
-!!DO719/0/7/1:Px16/y1; [check each player for not being on this team]
+!#DC(WOG_RULES_CHOOSE_DEFAULT) = 0;
+!#DC(WOG_RULES_CHOOSE_EACH_GAME) = 1;
+!#DC(WOG_RULES_FROM_MENU) = 2;
+!#DC(WOG_RULES_TWO_RANDOM) = 3;
+!#DC(WOG_RULES_TWO_RANDOM_FROM_MENU) = 4;
+!#DC(WOG_NO_MAP_RULES) = 5;
+!#DC(WOG_OPT_FIRST_MAP_RULES_AMOUNT) = 21;
+!#DC(WOG_OPT_FIRST_MAP_RULE_ID) = 111;
 
 ** end of initialization functions
 
@@ -87,36 +67,11 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 !?FU(WOG_101_Initialization);
 !!UN:P101/?(mapRulesMode:y); [check wogify options number - 5 means no rules]
-!!FU&(mapRulesMode)=5:E; [Exit timer if map rules are disabled in wogify options]
-
-!!VRv579:S0; [first 10 bits of rules - none chosen yet]
-!!VRv576:S0; [second 11 bits of rules - none chosen yet]
+!!FU&(mapRulesMode)=(WOG_NO_MAP_RULES):E; [Exit timer if map rules are disabled in wogify options]
 
 !!UN:X?i^wog_101_mapSize^/?i^wog_101_hasUnderground^; [get size/underground]
 !!VRi^wog_101_halfMapSize^:Si^wog_101_mapSize^ :2; [get half of size = middle of map]
-!!VRv550:C1/2/4/8/16/32/64/128/256/512/1024; [bit table]
 
-!!VRz332:Sz101000; [rule names for menu/papyrus] - Note: QW:A does not support ert index!
-!!VRz333:Sz101001;
-!!VRz334:Sz101002;
-!!VRz335:Sz101003;
-!!VRz336:Sz101004;
-!!VRz337:Sz101005;
-!!VRz338:Sz101006;
-!!VRz339:Sz101007;
-!!VRz340:Sz101008;
-!!VRz341:Sz101009;
-!!VRz342:Sz101010;
-!!VRz343:Sz101011;
-!!VRz344:Sz101012;
-!!VRz345:Sz101013;
-!!VRz346:Sz101014;
-!!VRz347:Sz101015;
-!!VRz348:Sz101016;
-!!VRz349:Sz101017;
-!!VRz350:Sz101018;
-!!VRz351:Sz101019;
-!!VRz680:Sz101051;
 
 !!DO720/0/7/1:P; [find an enemy for each player, for Perpetual Darkness]
 
@@ -125,614 +80,396 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** end of Initialization Code
 
 
-** Timer routine
+** function to only take effect at start ALL of them works for all players - function call is :P :D;
+!?FU(WOG_101_RunMapRulesOnce);
+  !!FU(WOG_101_BuildGrailsInTowns)&i^wog_101_map_rule_19_isEnabled^:P;           [build grails in towns - executed once]
+  !!FU(WOG_101_UpgradeTo8thLvl)&i^wog_101_map_rule_14_isEnabled^:P;              [upgrades creatures - executed every day needed for the first player turn]
+  !!FU(WOG_101_SetDoubledHeroesMovements)&i^wog_101_map_rule_10_isEnabled^:P;    [executed once - needed for the first player turn]
+  !!FU(WOG_101_PlaceWarlordsBanner)&i^wog_101_map_rule_20_isEnabled^:P;          [executed once]
+  !!FU(WOG_101_SetHeroes5thLevel)&i^wog_101_map_rule_7_isEnabled^:P;             [executed once]
+  !!FU(WOG_101_AllowMultiplyCapitols)&i^wog_101_map_rule_13_isEnabled^:P;        [executed once]
+  !!FU(WOG_101_AddBoarsOrAirElemsToDwells)&i^wog_101_map_rule_6_isEnabled^:P;    [executed once]
+  !!FU(WOG_101_SetDoubledArtifacts)&i^wog_101_map_rule_8_isEnabled^:P;           [executed once]
+  !!FU(WOG_101_PlaceMagicPlains)&i^wog_101_map_rule_3_isEnabled^:Pi^timerOwner^; [executed every day - needed for the first player turn]
+  !!FU(WOG_101_SetUpMonsters):P;                                                 [executed once]
+  !!FU(WOG_101_HideMapInitPlayer)&i^wog_101_map_rule_9_isEnabled^:P;
 
-!?FU(OnEveryDay);
-!!UN:P101/?(mapRulesMode:y); [check wogify options number - 5 means no rules]
-!!FU&(mapRulesMode)=5:E; [Exit timer if map rules are disabled in wogify options]
 
-!!FU(WOG_101_ChooseMapRules)&i^timerDay^=1/i^timerOnce^:P; [choose rules and implement some]
 
-!!UN:P230/?(showMapRules:y); [Check if Display Map Rules chosen at Map Start is enabled]
-!!FU(WOG_230_AnnounceMapRules)&1000/i^timerDay^=1/i^timerOnce^<>(TRUE)/(showMapRules):P; [announce rules to humans after 1st player on day 1]
 
-!!FU(WOG_101_CheckMapRule):P3; [check for rule 3]
-!!VR(shouldBeHalfPriced:y):S(FALSE); [assume creatures should be normal price]
-!!VR(shouldBeHalfPriced)&3/-1000:S(TRUE); [for AI with this rule they're always half price]
-!!VR(shouldBeHalfPriced)&3/1000/i^timerWeekday^=7:S(TRUE); [for humans just half price on sunday]
-!!FU(GetMaxMonsterId):P?(lastMon:y);   [fix max mon id - Archer]
-!!DO694/0/(lastMon)/1&(shouldBeHalfPriced)=1/i^wog_113_isHalfPriced^=0:P; [make creatures half price when needed]
-!!DO695/0/(lastMon)/1&(shouldBeHalfPriced)=0/i^wog_113_isHalfPriced^=1:P; [make creatures double price when needed]
-!!VRi^wog_113_isHalfPriced^:S(shouldBeHalfPriced); [remember whether creatures currently are normal or half price]
+!?FU(OnEveryDay)&i^timerDay^<>1;
 
-!!FU(WOG_101_CheckMapRule):P6; [check for rule 6]
-!!DO699/0/155/1&3:P; [grow hero monster stacks by 5%]
+  !!FU(WOG_101_SetMonstersHalfPrice)&i^wog_101_map_rule_2_isEnabled^:P D;
+  !!FU(WOG_101_PlaceMagicPlains)&i^wog_101_map_rule_3_isEnabled^:Pi^timerOwner^ Di^timerOwner^;
 
-!!if&i^timerDay^=1/i^wog_101_map_rule_8_isEnabled^;
-  ; Level 5 on start
-  !#VA(tavernHeroes[2]:y);
-  !!OW:Hi^timerOwner^/1 Vi^timerOwner^/?(tavernHeroes[0])/?(tavernHeroes[1]);
-  !!re i/2/v1/1/1;
-    !!FU702:Pvi;                      [upgrade this player's heroes to 5th level on day 1]
-  !!en;
-  !!re i/0/(tavernHeroes[SIZE])/1/-1;
-    !!if&(tavernHeroes[i])<>(NO_HERO);
-      !!FU702:P(tavernHeroes[i]); 
+  !!FU(WOG_101_HideMapInitPlayer):P(CURRENT_PLAYER) D(CURRENT_PLAYER);
+
+  !!if&i^timerOnce^;
+    !!FU(WOG_101_UpgradeTo8thLvl)&i^wog_101_map_rule_14_isEnabled^:P D;       
+    !!FU(WOG_101_IncreaseArmies)&i^timerOnce^/i^wog_101_map_rule_5_isEnabled^:P D;                     [build grails in towns]
+
+    !!if&i^timerWeekDay^=1;
+      !!FU(WOG_101_ClearHeroVisistedObjects)&i^timerMonthDay^=1/i^wog_101_map_rule_12_isEnabled^:P D;
+      !!FU(WOG_101_UpdateWarlordsBannerGuard)&i^wog_101_map_rule_20_isEnabled^:P D;
+      !!FU(WOG_101_ChangeMineProductions)&i^wog_101_map_rule_11_isEnabled^:P D;
     !!en;
   !!en;
 
-  ; Double movement points (part 1 - only for the first player)
-  !!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
 
-  !!if&3;
-    !!OW:H(CURRENT_PLAYER)/2/0; [number of heroes current player has: v2]
-    !!DO703/1/v2/1&v2>0:P; [double hero movement of current player's heroes]
-  !!en;
-!!en;
+!?FU(WOG_101_PickRandomOptions); [create list of options we can work with]
+!#VA(mapRulesMode:x) (rulesList:x);
 
-!!if&i^timerWeekday^=1/i^timerOnce^/i^timerDay^<>1;
-  !!FU(WOG_101_CheckMapRule):P12; [check for rule 12]
+  !!SN:M(rulesList)/?(size:y);
 
-  !!if&3;
-    !!UN:U(OBJ_MINE)/(ANY_OBJ)/?(minesQty:y); [count mines: y1]
+  !!SN&i^wog_101_hasConfluxes^:M(rulesList)/19/(NULL); [clear grails lol]
 
-    !!if&(minesQty)>0;
-      !!VRv2:S-1; [reset coordinate index]
-      !!DO(WOG_122_ChangeMineProductions)/1/(minesQty)/1:P; [change mine production once/week] - This will be reverted by Mithril Enhancedment script (Protected Mines)
+
+  !!FU(NewIntArray):P?(arrayForRandomPick:y);
+  !!re i/0/(size)/1/-1;
+    !!SN:M(rulesList)/i/?(optionId:y);
+    !!if&(optionId);                                 [if not disabled by script]
+      !!if&(mapRulesMode)=(WOG_RULES_TWO_RANDOM_FROM_MENU);
+        !!UN:P(optionId)/?(isEnabled:y);
+        !!co&(isEnabled)=0;
+      !!en;
+      !!FU(Array_Push):P(arrayForRandomPick)/i;
     !!en;
   !!en;
-!!en;
 
-!!if&i^timerMonthDay^=1/i^timerDay^<>1;
-  !!FU(WOG_101_CheckMapRule):P13; [check for rule 13]
-  !!if&3;
-    !!FU(WOG_101_ClearHeroVisistedObjects):P;
+  !!SN:M(arrayForRandomPick)/?(size:y);
+  !!if&(size);
+    !#VA(randomId[2]:y);
+    !!if&(size)>1;
+      !!FU(Array_Shuffle):P?(arrayForRandomPick);
+      !!SN:M(arrayForRandomPick)/0/?(randomId[0]) M(arrayForRandomPick)/1/?(randomId[1]);
+      !!VRi^wog_101_map_rule_%(randomId[0])_isEnabled^:S(TRUE);
+      !!VRi^wog_101_map_rule_%(randomId[1])_isEnabled^:S(TRUE);
+    !!el;
+      !!SN:M(arrayForRandomPick)/0/?(randomId[0]);
+      !!VRi^wog_101_map_rule_%(randomId[0])_isEnabled^:S(TRUE);
+    !!en;
+  !!en;
+
+!?FU(WOG_101_ReadOptionsFromMenu); [create list of options we can work with]
+!#VA(rulesList:x);
+
+  !!re i/0/19;(end_value);
+    !!VR(optionId:y):Si +(WOG_OPT_FIRST_MAP_RULE_ID);
+    !!SN:M(rulesList)/i/(optionId);
+  !!en;
+  !!SN:M(rulesList)/20/239;        [add warlords]
+
+!?FU(WOG_101_AcceptOptionsFromMenu);
+!#VA(rulesList:x);
+!!SN:M(rulesList)/?(size:y);
+!!re i/0/(size)/1/-1;
+  !!SN:M(rulesList)/i/?(optionId:y);
+  !!if&(optionId)>0;
+    !!UN:P(optionId)/?i^wog_101_map_rule_%i_isEnabled^;
   !!en;
 !!en;
+!?FU(WOG_101_SetRemoteIntVariable);
+!#VA(name:x) (val:x);
+!!VRi^%z(name)^:S(val);
 
-!!FU(WOG_101_CheckMapRule):P4; [check for rule 4]
-!!DO696/(HERO_FIRST)/(HERO_LAST_WOG)/1&3:P; [create magic plains by today's heroes]
-
-!!FU(WOG_101_CheckMapRule):P15; [check for rule 15]
-!!DO697/(HERO_FIRST)/(HERO_LAST_WOG)/1&3:P; [upgraded 7th level creatures become 8th for all heroes]
-
-!!FU(WOG_101_CheckMapRule):P10; [check for rule 10]
-
-
-
-!!if&3;
-  !!VRi^wog_101_map_rule_10_isEnabled^:S(TRUE);
-
-  !!if&i^timerIsAi^;
-    !!UN:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/0/i^timerOwner^/i^wog_101_mapSize^; [Hide the whole map for other playes - needed when a human player has an AI teammate]
-    !!UN&i^wog_101_hasUnderground^:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/1/i^timerOwner^/i^wog_101_mapSize^;
-
-    !!UN:Si^wog_101_halfMapSize^/i^wog_101_halfMapSize^/0/i^timerOwner^/i^wog_101_mapSize^; [reveal entire map, surface]
-    !!UN&i^wog_101_hasUnderground^:Si^wog_101_halfMapSize^/i^wog_101_halfMapSize^/1/i^timerOwner^/i^wog_101_mapSize^; [reveal entire map, underground]
-  !!el;
-    !!FU721:Pi^timerOwner^; [replace shroud for human, to handle AI teammate]
-    !!SN:D; [redraw screen]
-  !!en;
-!!el;
-  !!SN:L^erm_hooker.era^/?(hooker:y);
-  !!if&(hooker:y);
-    !!SN:A(hooker)/^UnsetHook^/?(unhookingFuncAddress:y);
-    !!SN:E(unhookingFuncAddress)/1/4721035;
-  !!en;
+!?FU(WOG_101_SyncMapRulesVariables);
+!!re i/0/20;
+  !!FU(WOG_101_SetRemoteIntVariable):D^wog_101_map_rule_%i_isEnabled^/i^wog_101_map_rule_%i_isEnabled^;
 !!en;
+
+
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^;
+  !!UN:P101/?(mapRulesMode:y);                                                               [check wogify options number - 5 means no rules]
+  !!FU&(mapRulesMode)=(WOG_NO_MAP_RULES):E;                                                  [Exit timer if map rules are disabled in wogify options]
+
+  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?i^wog_101_hasConfluxes^;
+
+  !!FU(NewIntArray):P21/?(rulesList:y);
+  !!FU(WOG_101_ReadOptionsFromMenu):P?(rulesList);
+  
+  !!if&(mapRulesMode)=(WOG_RULES_FROM_MENU);
+    !!FU(WOG_101_AcceptOptionsFromMenu):P?(rulesList);                                       [accept current options]
+  !!el|(mapRulesMode)=(WOG_RULES_CHOOSE_DEFAULT)/(mapRulesMode)=(WOG_RULES_CHOOSE_EACH_GAME);
+    !!FU(WOG_101_ChooseMapRules):P(mapRulesMode)/?(rulesList:y);                             [choose rules and implement some]
+  !!el|(mapRulesMode)=(WOG_RULES_TWO_RANDOM)/(mapRulesMode)=(WOG_RULES_TWO_RANDOM_FROM_MENU);
+    !!FU(WOG_101_PickRandomOptions):P(mapRulesMode)/?(rulesList:y);                          [pick random]
+  !!en;
+
+  !!VRi^wog_101_hasConfluxes^:S(NULL);
+  
+  !!FU(WOG_101_SyncMapRulesVariables):P;
+
+  !!UN:R5/1/1 R7/0/1;                                                                        [Change mouse cursor to "wait" hourglass symbol][Show mouse cursor and disable changing]
+  !!FU(WOG_101_RunMapRulesOnce):P D;
+  !!UN:R7/0/0 R5/0/0;                                                                        [Show mouse cursor and enable changing][Restore default cursor]
+  !!UN:P230/?(showMapRules:y);                                                               [Check if Display Map Rules chosen at Map Start is enabled]
+  !!if&(showMapRules);
+    !!FU(WOG_230_AnnounceMapRules):P D;                                                      [announce rules to humans after 1st player on day 1]
+  !!en;
 
 ** end of timer routine
 
 
-** function to choose rules and implement rules that only take effect at start
+
+
+** function to choose rules start
 
 !?FU(WOG_101_ChooseMapRules);
+!#VA(mapRulesMode:x) (rulesList:x);
 
-!!VRv1:S0; [make sure v1 starts as 0]
-!!VRv2:S0; [make sure v2 starts as 0]
-!!VRv3:S0; [make sure v3 starts as 0]
-!!VRv4:S0; [make sure v4 starts as 0]
-!!VRv579:S0; [initialize map rules page 1 to none selected]
-!!VRv576:S0; [intialize map rules page 2 to none selected]
-!!UN:P101/?v1; [check wogify options num: 0=choose rules each game but default to selected]
-[                                         1=choose rules each game (no defaults)          ]
-[                                         2=use rules selected in wogify options          ]
-[                                         3=use random, 4=random from selected, 5=disable ]
+  !!SN:M(rulesList)/?(size:y);
+  !!VRv2:C0/0;       [clear presetup variables]
 
-!!IF:V2/0; [Clear flag 2]
-!!IF&v1<>3:V2/1; [If v1=3 use random rules]
-
- [Use Map Rules selected in WoGify if this option was chosen]
- [or set these numbers to start if option 1 was chosen]
-!!if|v1=0/v1=2;
-  !!DO723/111/120/1:P;  [set v579]
-  !!DO724/121/131/1:P;  [set v576]
-!!en;
-
-!!if&2/v1<=1;
-  !!VRz326:Sz101020;
-  !!IF:G0/579/v579/326/101000/101001/101002/101003/101004/101005/101006/101007/101008/101009; [get bit choices in v579]
-  !!VRz326:Sz101021;
-  !!IF:G0/576/v576/326/101010/101011/101012/101013/101014/101015/101016/101017/101018/101019/101051; [get bit choices in v576]
-!!en;
-
-!!UN|-2/v1=4:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y1; [count confluxes]
-!!VRy2|-2/v1=4:S19; [normally 20 rules]
-!!VRy2&-2/y1=0:S20; [21 rules if no confluxes]
-!!VRy2&v1=4/y1=0:S20; [21 rules if no confluxes]
-
-!!if&-2;
-  !!VRy3:S1 Ry2; [pick a random rule]
-  !!VRy3&y1>0/y3>=20:+1; [skip conflux]
-  !!VRy4:S1 Ry2; [pick another one]
-  !!VRy4&y1>0/y4>=20:+1; [skip conflux]
-  !!VRy4&y3=y4:S1 Ry2; [if the same, try again]
-  !!VRy4&y1>0/y4>=20:+1; [skip conflux]
-  !!VRy4&y3=y4:S1 Ry2; [if the same, try again]
-  !!VRy4&y1>0/y4>=20:+1; [skip conflux]
-  !!VRy4&y3=y4:S1 Ry2; [if the same, try again]
-  !!VRy4&y1>0/y4>=20:+1; [skip conflux]
-  !!VRy4&y3=y4:S1 Ry2; [if the same, try again, just one rule if still the same]
-  !!VRy4&y1>0/y4>=20:+1; [skip conflux]
-!!en;
-
-!!if&v1=4;
-  !!DO725/1/100/1:Py2;                                             [get 1st random rule from selected rules if that option was chosen]
-  !!DO726/1/100/1:Py2;                                             [get 2nd random rule from selected rules if that option was chosen]
-  !!VRy3:Sv3;                                                      [random from selected rule 1]
-  !!VRy4:Sv4;                                                      [random from selected rule 2]
-!!en;
-
-!!FU(WOG_101_SetMapRulesBits)|-2/v1=4:Py3 Py4;                     [set the bits for our random rules]
-
-!!DO(WOG_101_AddPapyrusMessages)/1/21/1:P;                         [add papyrus messages for any rules that are active - now disabled as you can always check them from WoG Options menu]
-
-!!VRv600:S0;                                                       [flag for 1st rule announced]
-!!UN:P230/?y6;                                                     [Check if Display Map Rules chosen at Map Start is enabled: y6]
-!!FU(WOG_230_AnnounceMapRules)&y6=1:P;                             [announce rules to first player, who is always human]
-
-!!UN:R5/1/1;                                                       [Change mouse cursor to "wait" hourglass symbol]
-!!UN:R7/0/1;                                                       [Show mouse cursor and disable changing]
-
-!!FU(WOG_101_SetUpMonsters):P;
-
-; Most dwellings also have Boars
-; This option is fully compatible with Neighbour Creatures. If there is any other script that changes dwelling creatures, the compatibility may be broken
-!!FU(WOG_101_CheckMapRule):P7;                                     [check for rule 7]
-
-!!if&3;
-  !!UN:U17/-1/?y1;                                                 [count dwellings]
-  !!VRv600:S-1;                                                      [reset coordinate index]
-  !!VRy4:S(MON_BOAR);                                                [set y4 to boars]
-  !!UN:P67/=1;                                                       [check if Neutral town is active (flag1)]
-  !!VRy4&1:S(MON_AIR_ELEMENTAL);                                     [if yes set to Air Elementals instead of boars]
-  !!DO(WOG_117_AddBoarsOrAirElemsToDwells)/1/y1/1:Py4;             [add boars / Air Elementals to dwellings]
-!!en;
-
-!!FU(WOG_101_CheckMapRule):P8;                                     [check for rule 8]
-
-!!if&3;
-    !!FU(WOG_101_CheckMapRule):P16;                                [check for rule 8]
-    *!if&3;
-      *!VRi^wog_101_map_rule_16_isEnabled^:S(FALSE);
-    *!en;
-    !!re i/0/(PLAYER_LAST);
-      !!OW:Vi/?l/?r;
-      !!VRi^wog_101_hero_inTavern_%l^:S(TRUE);
-      !!VRi^wog_101_hero_inTavern_%r^:S(TRUE);
-    !!en;
-
-    !!VRi^wog_101_hero_inTavern_-1^:S(FALSE);
-
-    !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-      !!HEi:O?o;
-
-      !!if&o=(NO_OWNER);
-        !!if&i^wog_101_hero_inTavern_%i^<>(TRUE);
-          !!FU702:Pi;
-        !!el;
-          !!VRi^wog_101_hero_inTavern_%i^:S(FALSE);
-        !!en;
+  !!if&(mapRulesMode)=(WOG_RULES_CHOOSE_DEFAULT);
+    !!re i/0/(size)/1/-1;
+      !!SN:M(rulesList)/i/?(optionId:y);
+      !!VR(vVar:y):Si -9 F0/1 +2;
+      !!UN:P(optionId)/?(isEnabled:y);
+      !!if&(isEnabled);
+        !!VR(bit:y):S1 Sd<<i;
+        !!VRv(vVar):|(bit);
       !!en;
     !!en;
-    *!DO702/(HERO_FIRST)/(HERO_LAST_WOG)/1:P-1;                    [upgrade unowned heroes to 5th level]
-    *!FU(WOG_101_CheckMapRule):P16;                                [check for rule 8]
-    *!if&3;
-      *!VRi^wog_101_map_rule_16_isEnabled^:S(TRUE);
-    *!en;
-!!en;
-
-!!UN&i^wog_101_map_rule_14_isEnabled^:C4955234/(UNC_INT8)/?i^wog_124_patch1^ C4955234/(UNC_INT8)/0; [rule 14] - Capitol can be built in every town]
-
-!!FU(WOG_101_CheckMapRule):P20;                                    [check for rule 20]
-
-!!if&3;
-  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?y1;                                  [count towns: y1]
-  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y5;                             [count confluxes: y5]
-
-  !!if&y1>0/y5=0;
-    !!VRv600:S-1;                                                  [reset coordinate index]
-    !!DO(WOG_130_BuildGrailsInTowns)/1/y1/1:P;                     [build grails in towns]
-  !!en;
-!!en;
-
-!!FU(WOG_101_CheckMapRule):P21;                                    [check for rule 21]
-
-!!if&3;
-  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?y1;                                  [Number of Towns on map: y1]
-
-  !!if&y1>0;
-    !!VRv1:S-1;                                                    [reset coordinate index]
-    !!DO(WOG_239_PlaceWarlordsBanner)/1/y1/1&3/y1>0:P;             [Place Warlord's Banners in front of towns]
-  !!en;
-!!en;
-
-!!UN:R7/0/0; [Show mouse cursor and enable changing]
-!!UN:R5/0/0; [Restore default cursor]
-
-; Correct wog option selections - Archer30
-!!re i/1/21;
-  !!FU(WOG_101_CheckMapRule):Pi;
-
-  !!if&i<>21;
-    !!VR(optionNumber:y):Si +110;
-  !!el;
-    !!VR(optionNumber):S239;
   !!en;
 
-  !!if&3;
-    !!UN:P(optionNumber)/(TRUE);
-    !!VRi^wog_101_map_rule_%i_isEnabled^:S(TRUE);
-    *!IF:M^%i^;
-  !!el;
-    !!UN:P(optionNumber)/(FALSE);
+  !!VR(disabled:z)&i^wog_101_hasConfluxes^:S^%T(wog.101.dlg.disabled)^;
+  [get bit choices from v2 and set there]
+  !!IF:G0/2/v2/^%T(wog.101.dlg.title0)^/^%T(wog.101.dlg.0)^/^%T(wog.101.dlg.1)^/^%T(wog.101.dlg.2)^/^%T(wog.101.dlg.3)^/
+  ^%T(wog.101.dlg.4)^/^%T(wog.101.dlg.5)^/^%T(wog.101.dlg.6)^/^%T(wog.101.dlg.7)^/^%T(wog.101.dlg.8)^/^%T(wog.101.dlg.9)^; 
+  !!VRv3:Sd>>10;               [shift to right to write values properly at second page]
+  [get bit choices from v3 and set there]
+  !!IF:G0/3/v3/^%T(wog.101.dlg.title1)^/^%T(wog.101.dlg.10)^/^%T(wog.101.dlg.11)^/^%T(wog.101.dlg.12)^/^%T(wog.101.dlg.13)^/^%T(wog.101.dlg.14)^/
+  ^%T(wog.101.dlg.15)^/^%T(wog.101.dlg.16)^/^%T(wog.101.dlg.17)^/^%T(wog.101.dlg.18)^/^%T(wog.101.dlg.19) %(disabled:z)^/^%T(wog.101.dlg.20)^;
+  !!VRv3:Sd<<10;               [shift to left to read values properly at second page]
+
+  !!VRv3&i^wog_101_hasConfluxes^:Sd~(BIT_19); [remove grail from list if any conflux]
+
+  !!re i/0/(size:y)/1/-1;
+    !!VR(bit:y):S1 Sd<<i;(bit:y); &(bit:y);
+    !!VR(vVar:y):Si -9 F0/1 +2;
+    !!VR(check:y):Sv(vVar:y) &(bit);
+    !!if&(check);
+      !!VRi^wog_101_map_rule_%i_isEnabled^:S(TRUE);
+      *!SN:M(rulesList)/i/(NULL);
+    !!en;
   !!en;
-!!en;
 
-** end of function
-
-
-** function to announce a rule to human players if set
 
 !?FU(WOG_230_AnnounceMapRules);
-!!VR(firstMapRuleIsSet:y):S(FALSE);
-!!VRz326:Sz101022;
-!!VRs^wog_230_mapRulesString^S^^;
+  !#VA(isHeroScreen:x) (result:x);
+  !!VR(result):S(TRUE);
 
-!!re i/1/21;
-  !!FU(WOG_101_CheckMapRule):Pi;
-
-  !!VRz326&(firstMapRuleIsSet):Sz101023;
-
-  !!if&3;
-    !!VR(firstMapRuleIsSet):S(TRUE);
-
-    !!if&i<>21;
-      !!VR(index:y):Si +101023;
-    !!el;
-      !!VR(index):S101052;              [special index for Warlord's Banner at town entrances]
+  !!VR(optToStart:y):S-1;
+  !!re i/0/20;320;
+    !!if&i^wog_101_map_rule_%i_isEnabled^;
+      !!VR(optToStart):Si;
+      !!br;
     !!en;
-
-    !!VRs^wog_230_mapRulesString^:+z(index) +^%T(wog.endl)^; [Add in New line with every rules added]
   !!en;
-!!en;
 
-!!SN:Ks^wog_230_mapRulesString^/?(size:y);
+  !!if&(optToStart)<>-1;
+    !!SN:T^wog.101.description.%(optToStart)^/?(headOpt:z);
+    !!VRs^wog_230_mapRulesString^:S^%T(wog.101.description.head)%(headOpt:z)^;
 
-!!if&(size)>0;
-  !!FU(Substr):Ps^wog_230_mapRulesString^/0/-1/?s^wog_230_mapRulesString^; [Remove the last new line from the string (the last character)]
-  !!IF:M^%s(wog_230_mapRulesString)^;   [Show rules]
-  !!VRs^wog_230_mapRulesString^:S^^;    [Release the string]
-!!en;
+    !!VR(optToStart):+1;
+    !!re i/(optToStart)/20;320;
+      !!if&i^wog_101_map_rule_%i_isEnabled^;
+        !!SN:T^wog.101.description.%i^/?(optionDesc:z);
+        !!VRs^wog_230_mapRulesString^ +^%T(wog.endl)%T(wog.101.description.also)%(optionDesc:z)^;
+      !!en;
+    !!en;
+    !!VR(ms:y):S(MSG_TYPE_MES);
+    !!if&(isHeroScreen);
+      !!VR(ms:y):S(MSG_TYPE_QUESTION);
+      !!VRs^wog_230_mapRulesString^ +^%T(wog.endl)%T(wog.endl)%T(wog.101.description.papyrus)^;
+    !!en;
+    !!IF:Q2/-1/-1/(ms:y)/^%s(wog_230_mapRulesString)^;   [Show rules]
+    !!VR(result)&-2:S(FALSE);
+    !!VRs^wog_230_mapRulesString^:S^^;    [Release the string]
+  !!en;
+
 
 ** end of function
 
 
 ** function to change monster stats (inverted speed, attack twice and breath attack)
-
-
-
 !?FU(WOG_101_SetUpMonsters);
 
-!!VR(invertedSpeedOn:y):S(FALSE);
-!!VR(attackTwiceOn:y):S(FALSE);
-!!VR(breathAttackOn:y):S(FALSE);
-!!VR(noShooting:y):S(FALSE);
-!!VR(noFlying:y):S(FALSE);
+  !!VR(invertedSpeedOn:y):Si^wog_101_map_rule_1_isEnabled^; [check for rule 1]
+  !!VR(attackTwiceOn:y):Si^wog_101_map_rule_4_isEnabled^;   [check for rule 4]
+  !!VR(breathAttackOn:y):Si^wog_101_map_rule_17_isEnabled^; [check for rule 17]
+  !!VR(noShooting:y):Si^wog_101_map_rule_18_isEnabled^;     [check for rule 18 - shooters lose shooting but gain +50% hit points]
+  !!VR(noFlying:y):Si^wog_101_map_rule_0_isEnabled^;        [check for rule 0 fliers lose flying but can't be retaliated against].]
 
+  !!VR(atLeastOneOptionIsEnabled:y):S(FALSE);
 
-!!FU(WOG_101_CheckMapRule):P2;          [check for rule 2]
-!!VR(invertedSpeedOn)&3:S(TRUE);
-!!FU(WOG_101_CheckMapRule):P5;          [check for rule 5]
-!!VR(attackTwiceOn)&3:S(TRUE);
-!!FU(WOG_101_CheckMapRule):P18;         [check for rule 18]
-!!VR(breathAttackOn)&3:S(TRUE);
-!!FU(WOG_101_CheckMapRule):P19;         [check for rule 19 - shooters lose shooting but gain +50% hit points]
-!!VR(noShooting)&3:S(TRUE);
-!!FU(WOG_101_CheckMapRule):P1;          [check for rule 1 fliers lose flying but can't be retaliated against].
-
-!!VR(noFlying:y)&3:S(TRUE);
-
-!!VR(atLeastOneOptionIsEnabled:y):S(FALSE);
-
-!!re i/(@invertedSpeedOn)/(@noFlying);(end_value);
-  !!if&yi;
-    !!VR(atLeastOneOptionIsEnabled:y):S(TRUE);
-    !!br;
-  !!en;
-!!en;
-
-
-!!if&(atLeastOneOptionIsEnabled);
-
-  !!UN:C6768560/4/?(creatureInfoTablePtr:y);
-
-  !!FU(GetMaxMonsterId):P?(maxMonId:y);
-  !!FU(WOG_101_GetAffectedMonArray):P?(shouldThisMonIdBeAffected:y)/(maxMonId);
-
-  !!if&(attackTwiceOn);
-    !!re i/(MON_FIRST)/(maxMonId);
-      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
-      !!MA&(haveTo:y):Xi/d|(MON_FLAG_ATTACKS_TWICE);
+  !!re i/(@invertedSpeedOn)/(@noFlying);(end_value);
+    !!if&yi;
+      !!VR(atLeastOneOptionIsEnabled:y):S(TRUE);
+      !!br;
     !!en;
   !!en;
 
-  !!if&(breathAttackOn);
-    !!re i/(MON_FIRST)/(maxMonId);
-      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
-      !!MA&(haveTo:y):Xi/d|(MON_FLAG_WIDE_ATTACK);
+
+  !!if&(atLeastOneOptionIsEnabled);
+
+    !!UN:C6768560/4/?(creatureInfoTablePtr:y);
+
+    !!FU(GetMaxMonsterId):P?(maxMonId:y);
+    !!FU(WOG_101_GetAffectedMonArray):P?(shouldThisMonIdBeAffected:y)/(maxMonId);
+
+    !!if&(attackTwiceOn);
+      !!re i/(MON_FIRST)/(maxMonId);
+        !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+        !!MA&(haveTo:y):Xi/d|(MON_FLAG_ATTACKS_TWICE);
+      !!en;
     !!en;
-  !!en;
 
-  !!if&(noShooting);
-    !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y);
+    !!if&(breathAttackOn);
+      !!re i/(MON_FIRST)/(maxMonId);
+        !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+        !!MA&(haveTo:y):Xi/d|(MON_FLAG_WIDE_ATTACK);
+      !!en;
+    !!en;
 
-    !!re i/(MON_FIRST)/(maxMonId);
-      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
-      !!co&(haveTo:y)=(FALSE);
-      !!MA:Xi/?f;
-      !!VRf:&(MON_FLAG_SHOOTER);
+    !!if&(noShooting);
+      !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y);
 
-      !!if&f;
-        !!MA:Xi/d-(MON_FLAG_SHOOTER);
+      !!re i/(MON_FIRST)/(maxMonId);
+        !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+        !!co&(haveTo:y)=(FALSE);
+        !!MA:Xi/?f;
+        !!VRf:&(MON_FLAG_SHOOTER);
 
-        !!VR(offset:y):S116 *i +76;
-        !!UN:C(creatureInfoTablePtr:y)/(offset:y)/4/?h;
-        !!VRh:*3 :2;
-        !!UN:C(creatureInfoTablePtr:y)/(offset:y)/4/h;
+        !!if&f;
+          !!MA:Xi/d-(MON_FLAG_SHOOTER);
 
-        ; Remove shooting stack exp ability
-        !!if&(stackExp);
+          !!VR(offset:y):S116 *i +76;
+          !!UN:C(creatureInfoTablePtr:y)/(offset:y)/4/?h;
+          !!VRh:*3 :2;
+          !!UN:C(creatureInfoTablePtr:y)/(offset:y)/4/h;
 
-          !!re k/0/19;
-            !!EAi:Bk/d/?(abilitiy:y)/?(modifier:y)/d/d/d/d/d/d/d/d/d/d/d;
-            ; Disable the ability if it is not Attack, Defense, Health, Max Damage, Speed or Min Damage
-            !!if&(abilitiy)=102;                                                               [if it is flag ability]
-              !!EAi|(modifier)=69/(modifier)=83/(modifier)=115:Bk/0/0/0/0/0/0/0/0/0/0/0/0/0/0; [no melee penalty/shooter/close shooting]
-            !!el|(abilitiy)=79/(abilitiy)=105/(abilitiy)=111;                                  [shots/ no distance /no obstacle penalties]
-              !!EAi:Bk/0/0/0/0/0/0/0/0/0/0/0/0/0/0;
+          ; Remove shooting stack exp ability
+          !!if&(stackExp);
+
+            !!re k/0/19;
+              !!EAi:Bk/d/?(abilitiy:y)/?(modifier:y)/d/d/d/d/d/d/d/d/d/d/d;
+              ; Disable the ability if it is not Attack, Defense, Health, Max Damage, Speed or Min Damage
+              !!if&(abilitiy)=102;                                                               [if it is flag ability]
+                !!EAi|(modifier)=69/(modifier)=83/(modifier)=115:Bk/0/0/0/0/0/0/0/0/0/0/0/0/0/0; [no melee penalty/shooter/close shooting]
+              !!el|(abilitiy)=79/(abilitiy)=105/(abilitiy)=111;                                  [shots/ no distance /no obstacle penalties]
+                !!EAi:Bk/0/0/0/0/0/0/0/0/0/0/0/0/0/0;
+              !!en;
             !!en;
           !!en;
         !!en;
       !!en;
     !!en;
+
+    !!if&(noFlying);
+      !!re i/(MON_FIRST)/(maxMonId);
+        !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+        !!co&(haveTo:y)=(FALSE);
+
+        !!MA:Xi/?f;
+        !!VRf:&(MON_FLAG_FLYER);
+        !!if&f;
+          !!MA:Xi/d-(MON_FLAG_FLYER) Xi/d|(MON_FLAG_NO_RETALIATION);
+        !!en;
+      !!en;
+    !!en;
+
+    !!if&(invertedSpeedOn);
+      !!VR(maxSpeed:y):S0;
+
+      !!re i/(MON_FIRST)/(maxMonId);
+        !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+        !!co&(haveTo:y)=(FALSE);
+        !!MA:Si/?s;
+        !!VR(maxSpeed)&s>(maxSpeed):Ss;Fs/d;
+      !!en;
+
+      *!IF:M^%(maxSpeed)^;
+      !!re i/(MON_FIRST)/(maxMonId);
+        !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
+        !!co&(haveTo:y)=(FALSE);
+        !!MA:Si/?s;
+        !!VR(speed:y):S(maxSpeed) -s +3;F3/d;
+        !!MA:Si/(speed:y);
+
+        *!FU(WOG_112_InvertMonsterSpeeds):Pi;[invert monster speeds]
+      !!en;
+    !!en;
+    
   !!en;
 
-  !!if&(noFlying);
-    !!re i/(MON_FIRST)/(maxMonId);
-      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
-      !!co&(haveTo:y)=(FALSE);
+!?FU(WOG_101_GetAffectedMonArray);
+!#VA(arrayId:x) (maxMonId:x);
+  !!VR(arraySize:y):S(maxMonId) +1;
+  !!FU(NewIntArray):P(arraySize)/?(arrayId);
 
-      !!MA:Xi/?f;
-      !!VRf:&(MON_FLAG_FLYER);
-      !!if&f;
-        !!MA:Xi/d-(MON_FLAG_FLYER) Xi/d|(MON_FLAG_NO_RETALIATION);
+  !!re (mon:y)/0/(maxMonId);
+    !!co&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS);  // exit, if it is a war machine
+    !!co&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D);  // exit, if it is a commander
+    !!co|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4);  // exit, if it is a dummy-catapult (from the War Machine Scriptes)
+
+    !!SN:M(arrayId)/(mon)/(TRUE);
+  !!en;
+
+  !!SN:F^ExtendArrayLifetime^/(arrayId);
+
+
+
+
+** function to make hero at least 5th level if it has owner x1
+!?FU(WOG_101_SetHeroes5thLevel);
+!#VA(tavernHeroes[2]:y);
+
+  !!re j/0/(PLAYER_LAST);                              [affect all heroes with owner btw]
+    !!OW:Hj/1 Vj/?(tavernHeroes[0])/?(tavernHeroes[1]);
+
+    !!re i/0/(tavernHeroes[SIZE])/1/-1;
+      !!if&(tavernHeroes[i])<>(NO_HERO);
+        !!VRv1:+1;
+        !!VR(vVar:y):Sv1 +1;
+        !!VRv(vVar:y):S(tavernHeroes[i]);
+      !!en;
+    !!en;
+
+    !!re i/2/v1/1/1;
+      !!HEvi:E?(exp:y)/?l/1;
+      !!if&(exp)<5000;
+        !!VR(exp):-5000 *-1; 
+        !!HEvi:Ed(exp:y);
       !!en;
     !!en;
   !!en;
 
-  !!if&(invertedSpeedOn);
-    !!VR(maxSpeed:y):S0;
 
-    !!re i/(MON_FIRST)/(maxMonId);
-      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
-      !!co&(haveTo:y)=(FALSE);
-      !!MA:Si/?s;
-      !!VR(maxSpeed)&s>(maxSpeed):Ss;Fs/d;
-    !!en;
 
-    *!IF:M^%(maxSpeed)^;
-    !!re i/(MON_FIRST)/(maxMonId);
-      !!SN:M(shouldThisMonIdBeAffected)/i/?(haveTo:y);
-      !!co&(haveTo:y)=(FALSE);
-      !!MA:Si/?s;
-      !!VR(speed:y):S(maxSpeed) -s +3;F3/d;
-      !!MA:Si/(speed:y);
+!?FU(WOG_101_AddBoarsOrAirElemsToDwells);
+  !!UN:U(OBJ_CREATURE_GENERATOR_1)/-1/?(dwellings:y);                                                 [count dwellings]
 
-      *!FU(WOG_112_InvertMonsterSpeeds):Pi;[invert monster speeds]
+  !!VRv2:S-1;
+  !!VR(addedMon:y):S(MON_BOAR);
+  !!UN:P67/?(neutralTown:y);                                                       [check if Neutral town is active (flag1)]
+  !!VR(addedMon:y)&(neutralTown:y):S(MON_AIR_ELEMENTAL);
+
+  !!re i/0/(dwellings)/1/-1;
+    !!UN:U(OBJ_CREATURE_GENERATOR_1)/-1/-1/2; [get dwelling location into v600-v602]
+    !!DW2:M0/?t/?q; [get y1 type y2 qty in slot 0]
+    !!MA:Lt/?l; // get monster Level
+    !!if&l/t<>(MON_BOAR)/t<>(MON_NOMAD)/t<>(MON_AIR_ELEMENTAL)/t<>(MON_STORM_ELEMENTAL);
+      !!DW2:M1/(addedMon:y)/12; [12 boars / Air Elementals in slot 1]
     !!en;
   !!en;
-
-
-
-  *!FU(WOG_101_RestoreCreatureStats):P(creatureInfoTablePtr:y);
-  
-!!en;
-
-
-
-  *!FU(GetMaxMonsterId):P?(lastMon:y);   [fix max mon id - Archer]
-
-!?FU(WOG_101_GetAffectedMonArray);
-!#VA(arrayId:x) (maxMonId:x);
-
-!!VR(arraySize:y):S(maxMonId) +1;
-!!FU(NewIntArray):P(arraySize)/?(arrayId);
-
-!!re (mon:y)/0/(maxMonId);
-  !!co&(mon)>=(MON_CATAPULT)/(mon)<=(MON_ARROW_TOWERS);  // exit, if it is a war machine
-  !!co&(mon)>=(MON_COMMANDER_FIRST_A)/(mon)<=(MON_COMMANDER_LAST_D);  // exit, if it is a commander
-  !!co|(mon)=(MON_NOT_USED_1)/(mon)=(MON_NOT_USED_2)/(mon)=(MON_NOT_USED_3)/(mon)=(MON_NOT_USED_4);  // exit, if it is a dummy-catapult (from the War Machine Scriptes)
-
-  !!SN:M(arrayId)/(mon)/(TRUE);
-!!en;
-
-!!SN:F^ExtendArrayLifetime^/(arrayId);
-
-
-
-** end of function
-
-
-** function to make monster x16 cost half as much
-
-!?FU694;
-
-!!MA:Cx16/6/?y1; [get gold cost]
-!!VRy1::2; [half price]
-!!MA&x16<145|x16>149:Cx16/6/y1; [save gold cost, except for war machines]
-
-** end of function
-
-
-** function to make monster x16 cost twice as much
-
-!?FU695;
-
-!!MA:Cx16/6/?y1; [get gold cost]
-!!VRy1:*2; [double price]
-!!VRy2:Sy1 %10; [check low digit of price]
-!!VRy1&y2=4:+1; [turn 4's to 5's]
-!!MA&x16<145|x16>149:Cx16/6/y1; [save gold cost, except for war machines]
-
-** end of function
-
-
-** function to place magic plains by current player's hero
-
-!?FU696;
-
-!!OW:C?y1; [get current player]
-!!HEx16:O?y2; [get hero's owner]
-!!HEx16:P?y3/?y4/?y5; [get hero x/y/l]
-!!VRy3:+2;
-!!VRy4:+1; [place so that hero is kind of in the middle]
-!!TRy3/y4/y5:P?y6; [get y6=0 if red square]
-!!TRy3/y4/y5:E?y7; [get y7=0 if yellow square]
-!!TRy3/y4/y5:T?y8/d/d/d/d/d/d/d; [get terrain in y8, 8 = water]
-!!UN&y1=y2/y5=0/y6<>0/y7<>0/y8<>8:Iy3/y4/y5/46/0; [place magic plains]
-
- [If Passable Terrain script active, make squares passable again]
-!!UN:P63/?y9; [Check if Passable Terrain script is enabled: y9]
-!!FU&y9<>1:E; [Exit if Passable Terrain isn't enabled]
-
-!!UN:X?y10/?y11;          [Map size: y10]
-
-!!VRy12:Sy4 -3;  [Starting y-coordinate for loop (Magic Plains/Cursed Land): y12]
-!!VRy13:Sy4 +0;  [Ending y-coordinate for loop (Magic Plains/Cursed Land): y13]
-!!VRy12&y12<0:S0;         [No y-coordinate below 0: y12]
-!!VRy13&y13>=y10:Sy10 -1; [No y-coordinate above map size: y13]
-
-!!DO8/y12/y13/1:P0/y3/y5; [Make trees, mountains etc. passable again]
-
-** end of function
-
-
-** function to make hero's upgraded 7th level troops into 8th level
-
-!?FU697;
-
-!!OW:C?y1; [get current player]
-!!HEx16:O?y2; [get hero's owner]
-!!DO708/0/6/1&y1=y2:Px16; [check each slot]
-
-** end of function
-
-
-** function to make monster x16 attack/shoot twice
-
-!?FU698;
-
-!!MA:Xx16/?y1; [get flags]
-!!VRy1:|32768; [set attack twice bit]
-!!MA&x16<145|x16>149:Xx16/y1; [save flags, except for war machines]
-
-** end of function
-
-
-** function to make hero x16's monster stacks grow by 4%, to 10000
-
-!?FU699;
-
-!!OW:C?y1; [get current player]
-!!HEx16:O?y2; [get hero's owner]
-!!DO700/0/6/1&y1=y2:Px16; [handle each slot if it's this hero's player's turn]
-
-** end of function
-
-
-** function to make slot x16 of hero x1's army grow by 4%, to 10000
-
-!?FU700;
-
-!!HEx1:C0/x16/?y1/?y2; [get y1 type y2 qty]
-!!VRy3:Sy2 *104 :100; [add 4%]
-!!VRy3&y3>100000/y2<100000:S100000; [limit to 10000]
-!!HEx1&y2<100000:C0/x16/y1/y3; [store new qty]
-
-** end of function
-
-
-** function to add boars to dwelling number x16 if not first level
-
-!?FU(WOG_117_AddBoarsOrAirElemsToDwells);
-** x1 = new type (140 = boars, 112 = Air Elemental)
-!!UN:U17/-1/-1/600; [get dwelling location into v600-v602]
-
-; Check if the first slot is a unwanted creature, exit if positive (for the concern of Upgraded Dwellings, Neutral Town option)
-!!DW600:M0/?y1/?y2; [get y1 type y2 qty in slot 0]
-!!FU|y1=(MON_BOAR)/y1=(MON_NOMAD)/y1=(MON_AIR_ELEMENTAL)/y1=(MON_STORM_ELEMENTAL):E;
-; Exit if the first slot is level 1
-!!MA:Ly1/?y3; // get monster Level
-!!FU&y3=0:E;
-
-!!DW600:M1/x1/12; [12 boars / Air Elementals in slot 1]
-
-** end of function
-
-
-** function to make hero x16 at least 5th level if it has owner x1
-
-!?FU702;
-!!HEx1:E?(exp:y)/?l/1;
-
-!!if&(exp)<5000;
-
-  !!VR(exp):-5000 *-1; -(exp);
-  !!HEx1:Ed(exp:y);
-!!en;
- Ed5000; [give 5000 experience]
-
-** end of function
-
-
-** function to double hero x16's movement
-
-!?FU703;
-
-!!OW:H(CURRENT_PLAYER)/3/x16; [store hero number of hero x16 in v3]
-!!HEv3:W?y1; [get hero's movement: y1]
-!!VRy1:*2; [double hero's movement: y1]
-!!HEv3:Wy1 Gy1; [set hero's new movement plus initial hero movement values]
 
 ** end of function
 
 
 ** artifact trigger
 
-!$OB(OBJ_ARTIFACT);
-!!FU(WOG_101_CheckMapRule):P9; [check for rule 9 (pick up double artifacts)]
-!!FU&-3:E;
+!$OB(OBJ_ARTIFACT)&i^wog_101_map_rule_8_isEnabled^;
 
 !!HE-1:O>-1; // check if hero has owner (hero could lost the battle vs guardians of the artifact)
 !!FU&-1:E;
@@ -757,58 +494,69 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 !!HE-1:A2/y1/?y2/?y3; [get y2 number carried y3 number equipped]
 !!HE-1&y2<2:Ay1; [give an extra copy if they don't already have one (<2, because the found artifact is given already to the hero in the after trigger]
-!!UN:N0/-1/y1; [get name of artifact into z2]
-!!IF&1000/y2<2:Q1/8/y1/1/z101044;
+*!UN:N0/-1/y1; [get name of artifact into z2]
+!!if&999/y2<2;
+  !!SN:H^art^/y1/0/?(artName:z) T^wog.119.find^/?(msg:z)/^artName^/(artName);
+  !!IF:Q1/(PIC_TYPE_ART)/y1/1/(msg:z);
+!!en;
 
 !!PO998&y5=15:N0; // set to 0 it was an "original" artifact (placed on the map by the map maker)
 
 ** end of artifact trigger
 
-!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^; // uses Timer, only once at day 1
-!!UN:P119/=1;
-!!FU&-1:E;  // check for double artifact rule, exit if disabled
-
-!!VR(x:y):S-1;
-
-; loop through all the artifacts on the map
-!!re i;
-  !!UN:U(OBJ_ARTIFACT)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
-  !!br&(x)<0;
-
-  !!PO(x)/(y)/(z):N15; // set custom number for map field to 15 (used for double artifact rule)
-!!en;
-
 
 ** hero movement trigger
 
-!?FU(OnHeroMove)&i^wog_101_map_rule_10_isEnabled^/i^timerIsHuman^;
-!!FU721:Pi^timerOwner^; (owner); [do a Cover Of Darkness for a non-teammate of a human player]
+!?FU(OnHeroMove)&i^wog_101_map_rule_9_isEnabled^/999;
+!!re i/0/i^wog_101_hasUnderground^;
+  !!UN:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/i/i^wog_101_playersBitSet^/i^wog_101_mapSize^;
+!!en;
+
+!?FU(WOG_101_HideMapInitPlayer);
+  !#VA(playerId:x);
+  !!if&(playerId:x)=(CURRENT_PLAYER);
+    !!OW:C(CURRENT_PLAYER)/?(playerId:x);
+  !!en;
+  !!FU(WOG_GameMgr_GetPlayer_Team):P(playerId:x)/?(team:y);
+  !!VRi^wog_101_playersBitSet^:S1 Sd<<(playerId:x);
+  !!if&(team)<>(NO_PLAYER);
+    !!re i/0/(PLAYER_LAST);
+      !!FU(WOG_GameMgr_GetPlayer_Team):Pi/?t;
+      !!if&t=(team);
+        !!VR(bit:y):S1 Sd<<i;
+        !!VRi^wog_101_playersBitSet^:|(bit);
+      !!en;
+    !!en;
+  !!en;
 
 ** end of hero movement trigger
 
 
 ** function to let hero revisit objects
 !?FU(WOG_101_ClearHeroVisistedObjects);
-!!re i/0/(HERO_LAST_WOG);
-  !!re j/0/9;
-    !!HEi:Vj/0; [set hero to have not visited all objects of this type]
+  !!re i/0/(HERO_LAST_WOG);
+    !!re j/0/9;
+      !!HEi:Vj/0; [set hero to have not visited all objects of this type]
+    !!en;
   !!en;
-!!en;
 ** end of function
 
-
 ** function to change a mine's produced resource
-!?FU(WOG_122_ChangeMineProductions);
 
-!!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/2; [get mine location into v600-v602]
-!!VRy1:R0/(RES_FIRST)/(RES_LAST_SOD); [random 0-6]
-!!MN2:Ry1/1; [set random resource produced]
+!?FU(WOG_101_ChangeMineProductions);
+  !!UN:U(OBJ_MINE)/(ANY_OBJ)/?(minesQty:y); [count mines: y1]
+  !!VRv2:S-1;                               [reset coordinate index]
+  !!re i/0/(minesQty)/1/-1;
+    !!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/2;        [get mine location into v600-v602]
+    !!VRr:R0/(RES_FIRST)/(RES_LAST_SOD);    [random 0-6] tested in MP - went work but if any issue then change func to pass rand seed as arg]
+    !!MN2:Rr/1;                             [set random resource produced]
+  !!en;
 ** end of function
 
 
 ** hero level-up trigger
-!?FU(OnHeroGainLevel)&i^wog_101_map_rule_16_isEnabled^/i^wog_101_numberOfArtsLeft^=0;
-!!HE(CURRENT_HERO):O?o;
+!?FU(OnHeroGainLevel)&i^wog_101_map_rule_15_isEnabled^/i^wog_101_numberOfArtsLeft^=0;
+  !!HE(CURRENT_HERO):O?o;
 
 *!IF:L^%o^;
 *!if&o<>(NO_OWNER);
@@ -837,470 +585,422 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 
 !?FU(OnAfterHeroGainLevel)&i^wog_101_numberOfArts^;
-!!VRi^wog_101_numberOfArtsLeft^:-1;
+  !!VRi^wog_101_numberOfArtsLeft^:-1;
 
-!!if&i^wog_101_numberOfArtsLeft^=0;
+  !!if&i^wog_101_numberOfArtsLeft^=0;
 
-  !!VR(arraySize:y):Si^wog_101_numberOfArts^ Sd<<1;
-  !!FU(NewIntArray):P(arraySize:y)/(PIC_TYPE_ART)/?(artList:y);
+    !!VR(arraySize:y):Si^wog_101_numberOfArts^ Sd<<1;
+    !!FU(NewIntArray):P(arraySize:y)/(PIC_TYPE_ART)/?(artList:y);
 
-  !!re i/1/(arraySize:y)/2;/1/-1;
-    !!VR(vLvl:y):Si Sd>>1 +i^wog_101_startLvl^ :6 +1 F1/4;
-    !!VR(artLevel:y):S1 Sd<<(vLvl);
-    !!UN:J6/(artLevel)/?(art:y);
-    !!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
-    !!SN:M(artList)/i/(art);
+    !!re i/1/(arraySize:y)/2;/1/-1;
+      !!VR(vLvl:y):Si Sd>>1 +i^wog_101_startLvl^ :6 +1 F1/4;
+      !!VR(artLevel:y):S1 Sd<<(vLvl);
+      !!UN:J6/(artLevel)/?(art:y);
+      !!HE(CURRENT_HERO):A4/(art); [give (equip) artifact]
+      !!SN:M(artList)/i/(art);
+    !!en;
+
+    !!VR(dlgNums:y):S(arraySize) :16;
+    !!VR(remainder:y):S(arraySize) %16 F0/1;
+    !!VR(dlgNums):+(remainder);
+    !!VR(itemsLeft:y):S(arraySize:y);
+    !!HE(CURRENT_HERO):B0/?z2;
+
+    !!re i/0/(dlgNums)/1/-1;
+      !!VR(firstItem:y):Si *16;
+      !!VR(count:y):S16 F1/(itemsLeft);
+      !!VR(itemsLeft):-(count:y);
+      !!FU(Array_Slice):P(artList)/(firstItem)/(count)/?(picsArray:y);
+      !!FU(PrepareMultiPicDialog):P(picsArray:y);
+      ; Set up the string to display
+      !!VR(isPlural:y):S(count) :2 -1 F0/1;
+      !!SN:T^wog.126.art%(isPlural)^/?(artString:z);
+      !!SN:T^wog.126.title^/?(msg:z)/^hero^/z2/^artifact^/(artString);
+      !!IF:N(MSG_TYPE_MES)/(msg);
+    !!en;
+
+    !!VRi^wog_101_numberOfArts^:S0;
+    !!VRi^wog_101_startLvl^:S0;
+
   !!en;
-
-  !!VR(dlgNums:y):S(arraySize) :16;
-  !!VR(remainder:y):S(arraySize) %16 F0/1;
-  !!VR(dlgNums):+(remainder);
-  !!VR(itemsLeft:y):S(arraySize:y);
-  !!HE(CURRENT_HERO):B0/?z2;
-
-  !!re i/0/(dlgNums)/1/-1;
-    !!VR(firstItem:y):Si *16;
-    !!VR(count:y):S16 F1/(itemsLeft);
-    !!VR(itemsLeft):-(count:y);
-    !!FU(Array_Slice):P(artList)/(firstItem)/(count)/?(picsArray:y);
-    !!FU(PrepareMultiPicDialog):P(picsArray:y);
-    ; Set up the string to display
-    !!VR(isPlural:y):S(count) :2 -1 F0/1;
-    !!SN:T^wog.126.art%(isPlural)^/?(artString:z);
-    !!SN:T^wog.126.title^/?(msg:z)/^hero^/z2/^artifact^/(artString);
-    !!IF:N(MSG_TYPE_MES)/(msg);
-  !!en;
-
-  !!VRi^wog_101_numberOfArts^:S0;
-  !!VRi^wog_101_startLvl^:S0;
-
-!!en;
 
 ** end of hero level-up trigger
 
-
-** function to convert a stack of upgraded 7th level to 8th level
-** hero x1, slot x16
-
-!?FU708;
-!#VA(hero:x);
-
-!!HE(hero):C0/x16/?(mon:y)/?(num:y); [get y1 type y2 qty]
-!!FU&(mon)<=(NO_MON)|(num)<=0:E;
-!!FU&(mon)>=(MON_SUPREME_ARCHANGEL)/(mon)<=(MON_SACRED_PHOENIX):E;
-
-!!VR(lvEightMon:y):S(NO_MON);
-!!VR(lvEightMon)&(mon)=13:S150;  [archangel]
-!!VR(lvEightMon)&(mon)=27:S151;  [gold dragon]
-!!VR(lvEightMon)&(mon)=41:S152;  [titan]
-!!VR(lvEightMon)&(mon)=55:S153;  [archdevil]
-!!VR(lvEightMon)&(mon)=69:S154;  [ghost dragon]
-!!VR(lvEightMon)&(mon)=83:S155;  [black dragon]
-!!VR(lvEightMon)&(mon)=97:S156;  [ancient behemoth]
-!!VR(lvEightMon)&(mon)=111:S157; [chaos hydra]
-!!VR(lvEightMon)&(mon)=131:S158; [phoenix]
-!!HE(hero)&(lvEightMon)>=150/(lvEightMon)<=158:C0/x16/(lvEightMon)/(num); [set creature type/qty]
-
-** end of function
+EveryDays Routine
 
 
-!?CO2; // is called after buying a Commander in a Town
-!!FU(WOG_101_CheckMapRule):P8;
-!!FU&-3:E; // exit, if 5th level rule is not on
 
-!!CO(CURRENT_HERO):T?(commanderType:y);
 
-!!if&(commanderType)=0;
-  !!CO(CURRENT_HERO):X1/d7500; // give 5000 + 50% Experience to Paladins
-!!el;
-  !!CO(CURRENT_HERO):X1/d5000; // give 5000 Experience to other commanders
-!!en;
+!?CO2&i^wog_101_map_rule_7_isEnabled^; // is called after buying a Commander in a Town
+
+  !!CO(CURRENT_HERO):T?(commanderType:y);
+
+  !!if&(commanderType)=0;
+    !!CO(CURRENT_HERO):X1/d7500; // give 5000 + 50% Experience to Paladins
+  !!el;
+    !!CO(CURRENT_HERO):X1/d5000; // give 5000 Experience to other commanders
+  !!en;
 
 ** end of CO2
-
-
-** function to set flag 3 if rule x1 has been chosen
-
-!?FU(WOG_101_CheckMapRule);
-
-!!IF:V3/0;
-!!VRy1:S579; [variable # of rule]
-!!VRy1&x1>10:S576;
-!!VRx1&x1<=20:-1 %10 +550; [variable # of bit value]
-!!VRx1&x1=21:S560; [variable # of rule 21's bit value]
-!!VRy2:Svy1 &vx1; [get just our bit]
-!!IF&y2>0:V3/1; [set flag 3 if our bit set]
-
-** end of function
 
 
 ** Object triggers for Rogue fights
 
 !?OB12; [campfire]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB17; [most creature dwellings]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB29; [flotsam]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB32; [garden of revelation]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB39; [lean to]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB47; [school of magic]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB51; [mercenary camp]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB53; [mine]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB55; [mystical garden]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB57; [obelisk]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB58; [redwood observatory]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB60; [pillar of fire]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB61; [star axis]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB79; [resource]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB82; [sea chest]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB88; [shrine of magic incantation]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB94; [stables]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB100; [learning stone]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB101; [treasure chest]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB102; [tree of knowledge]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB104; [university]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB105; [wagon]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB107; [school of war]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB109; [water wheel]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB112; [windmill]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 !?OB113; [witch hut]
-!!FU713:P; [handle generating roving bands of Rogues]
+!!FU(WOG_101_RoguesAmbush):P; [handle generating roving bands of Rogues]
 
 ** end of set of object triggers
 
 
 ** function to generate roving bands of Rogues
 
-!?FU713&i^timerDay^<>i^wog_127_lastRogueDate_%i(timerOwner)^;
+!?FU(WOG_101_RoguesAmbush)&i^wog_101_map_rule_16_isEnabled^/i^timerDay^<>i^wog_127_lastRogueDate_%i(timerOwner)^;
 ; Check if the option is enabled (use only this way as the option can be enabled at the map start)
-!!FU(WOG_101_CheckMapRule):P17;
-!!FU&-3:E;
-
-!!if&i^timerIsHuman^;
-  !!VR(random:y):S0 R15; [1 in 16 chance for human]
-!!el;
-  !!VR(random):S0 R63; [1 in 64 chance for AI]
-!!en;
-
-!!IF:V875/0;
-
-!!if&(random)=0; [continue if odds are met and rule active and no other Rogues today]
-  ; Check if the terrain is water
-  !!TR998:T?(terrain:y);
-
-  ; Land - Rogues / Water - Water Elementals
-  !!HE(CURRENT_HERO):N?(hero:y); [get hero number]
-  !!HE(hero):B0/?z326; [get hero name]
 
   !!if&i^timerIsHuman^;
-    !!if&(terrain)<>8;
-      !!VR(mon:y):S(MON_ROGUE);
-      !!IF:Q1/21/143/1^%Z101049^;
-    !!el;
-      !!VR(mon):S(MON_WATER_ELEMENTAL);
-      !!IF:Q1/21/115/1^%Z101056^;
-    !!en;
+    !!VR(random:y):S0 R15; [1 in 16 chance for human]
+  !!el;
+    !!VR(random):S0 R63; [1 in 64 chance for AI]
   !!en;
 
-  !!VR(rogueNum:y):Si^timerWeek^ *10; [10 Rogues per elapsed week]
+  !!IF:V875/0;
 
+  !!if&(random)=0; [continue if odds are met and rule active and no other Rogues today]
+    ; Check if the terrain is water
+    !!TR998:T?(terrain:y);
 
-  !!HE(hero):Ed/?(lv:y)/1; [get hero level]
-  !!VR(rogueNum):S(lv) *10 +(rogueNum); [#Rogues = 10*week + 10*level]
+    ; Land - Rogues / Water - Water Elementals
+    !!HE(CURRENT_HERO):N?(hero:y); [get hero number]
+    !!HE(hero):B0/?(heroName:z); [get hero name]
 
-  !!IF:V875/1;           (For mithril and chest scripts)
-  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-  !!FU(WOG_PackedCoords):Pv998/v999/v1000/?(packedCoords:y);
-  *!HE(hero):Z?(heroStruct:y);
-  *!UN:C(heroStruct)/145/4/?(armyPtr:y);
-
-  *!re i/1/7;
-    *!VRj:Si +7;
-    *!VRvi:S(MON_PIXIE);
-    *!VRvj:S3;
-  *!en;
-  *!VRi^battle_hero_0^:S(hero);
-  *!SN:E4903264/(CALLCONV_THISCALL)/(advMgr)/(packedCoords)/(heroStruct)/?v1/(CURRENT_PLAYER)/0/0/?v1/-1/1/0;
-  *!IF:L^%v1^;
-    *!VRi^battle_hero_1^:S(NO_HERO);
-
-  !!HE(hero):Tv998/v999/v1000/(mon)/(rogueNum); [provoke Rogue battle]
-  !!HE(hero:y):O?(owner:y); [get hero owner]
-
-  !!if&(owner)<>(NO_OWNER);
-    !!if&(terrain)<>8;
-      !!VR(gold:y):S(rogueNum) *10 +300; [10 gold per Rogue + 300]
-      !!OW:R(owner)/(RES_GOLD)/d(gold); [give gold if hero lived]
-      !!IF&i^timerIsHuman^:Q2/(PIC_TYPE_RES_GOLD)/(gold)/(MSG_TYPE_MES)/z101050;
+    !!if&i^timerIsHuman^;
+      !!if&(terrain)<>8;
+        !!VR(mon:y):S(MON_ROGUE);
+        !!SN:T^wog.127.land^/?(mes:z)/^heroName^/(heroName);
+        !!IF:Q1/21/143/1/(mes:z);
+      !!el;
+        !!VR(mon):S(MON_WATER_ELEMENTAL);
+        !!SN:T^wog.127.water^/?(mes:z)/^heroName^/(heroName);
+        !!IF:Q1/21/115/1/(mes:z);
+      !!en;
     !!en;
 
-    !!IF:V875/0;    (For mithril and chest scripts)
-  !!en;
+    !!VR(rogueNum:y):Si^timerWeek^ *10; [10 Rogues per elapsed week]
 
-  !!VRi^wog_127_lastRogueDate_%i(timerOwner)^:Si^timerDay^; [set day of last Rogue fight]
-!!en;
+
+    !!HE(hero):Ed/?(lv:y)/1; [get hero level]
+    !!VR(rogueNum):S(lv) *10 +(rogueNum); [#Rogues = 10*week + 10*level]
+
+    !!IF:V875/1;           (For mithril and chest scripts)
+    *!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+    *!FU(WOG_PackedCoords):Pv998/v999/v1000/?(packedCoords:y);
+    *!HE(hero):Z?(heroStruct:y);
+    *!UN:C(heroStruct)/145/4/?(armyPtr:y);
+
+    *!re i/1/7;
+      *!VRj:Si +7;
+      *!VRvi:S(MON_PIXIE);
+      *!VRvj:S3;
+    *!en;
+    *!VRi^battle_hero_0^:S(hero);
+    *!SN:E4903264/(CALLCONV_THISCALL)/(advMgr)/(packedCoords)/(heroStruct)/?v1/(CURRENT_PLAYER)/0/0/?v1/-1/1/0;
+    *!IF:L^%v1^;
+      *!VRi^battle_hero_1^:S(NO_HERO);
+
+    !!HE(hero):Tv998/v999/v1000/(mon)/(rogueNum); [provoke Rogue battle]
+    !!HE(hero:y):O?(owner:y); [get hero owner]
+
+    !!if&(owner)<>(NO_OWNER);
+      !!if&(terrain)<>8;
+        !!VR(gold:y):S(rogueNum) *10 +300; [10 gold per Rogue + 300]
+        !!OW:R(owner)/(RES_GOLD)/d(gold); [give gold if hero lived]
+        !!IF&i^timerIsHuman^:Q2/(PIC_TYPE_RES_GOLD)/(gold)/(MSG_TYPE_MES)/^%T(wog.127.reward)^;
+      !!en;
+
+      !!IF:V875/0;    (For mithril and chest scripts)
+    !!en;
+
+    !!VRi^wog_127_lastRogueDate_%i(timerOwner)^:Si^timerDay^; [set day of last Rogue fight]
+  !!en;
 
 ** end of function
 
+** function to upgraid all lvl 7 monsters
+!?FU(WOG_101_UpgradeTo8thLvl);
+  !#VA(monsToUpgrade[9]:y);
+  !#VA(monsIntoUpgrade[9]:y);
+  !!VR(monsToUpgrade[0]):C13/27/41/55/69/83/97/111/131;
+  !!VR(monsIntoUpgrade[0]):C150/151/152/153/154/155/156/157/158;
+  !!re i/0/(HERO_LAST_WOG);
+    !!HEi:Z?(hero:y);
+    !!VR(hero):+145;                                                [add army offset to pass armyptr]
+    !!re j/0/(monsToUpgrade[SIZE])/1/-1;
+      !!SN:E4500112/(CALLCONV_THISCALL)/(hero:y)/(monsToUpgrade[j]); [if this army has any mon of type]
+      !!if&v1;
+        !!HEi:C1/(monsToUpgrade[j])/(monsIntoUpgrade[j])/d/d/3;
+      !!en;
+    !!en;
+  !!en;
 
 ** function to build a grail in town # x16
+!?FU(WOG_101_BuildGrailsInTowns);
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsAmount:y);
+  !!if&(townsAmount);
+    !!UN:C(GAME_MANAGER)/(UNC_UINT32)/?(game:y); 
+    !!UN:C(game)/136724/(UNC_UINT32)/?(ptr:y); 
+    !!re i/0/(townsAmount)/1/-1;
+      !!VR(town:y):Si *360 +(ptr);
+      !!SN:E6025696/(CALLCONV_THISCALL)/(town)/26/(FALSE)/(FALSE); [don't restrict bulding and don't give bonuses to heroes;]
+    !!en;
+    !!UN:C(ADV_MANAGER)/4/?(advMgr:y) C(advMgr)/228/4/?(screenPosition:y);
+    !!SN:E4271008/(CALLCONV_THISCALL)/(advMgr)/(screenPosition:y)/1/1/0/0/0; [redraw minimap]
+  !!en;
 
-!?FU(WOG_130_BuildGrailsInTowns);
+!?FU(WOG_101_SetDoubledHeroesMovements);
+  !!re i/0/(HERO_LAST_WOG);
+    !!HEi:Wd<<1 Gd<<1; [set hero's new movement plus initial hero movement values]
+  !!en;
 
-!!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/600; [get town location into v600-v602]
-!!CA600:B1/26; [build grail]
-!!CA600:T?y1; [get town type]
-!!CA600:O?y2; [get town owner]
-!!UN&y1=2:Si^wog_101_halfMapSize^/i^wog_101_halfMapSize^/0/y2/i^wog_101_mapSize^; [remove entire shroud, surface, for tower's skyship]
-!!UN:X?y10/?y11;
-!!UN&y1=2/y11=1:Si^wog_101_halfMapSize^/i^wog_101_halfMapSize^/1/y2/i^wog_101_mapSize^; [remove entire shroud, underground]
+!?FU(WOG_101_SetDoubledArtifacts);
+  !!VR(x:y):S-1;
+  !!re i;                               [; loop through all the artifacts on the map]
+    !!UN:U(OBJ_ARTIFACT)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+    !!PO(x)/(y)/(z):N15; // set custom number for map field to 15 (used for double artifact rule)
+  !!en;
 
-** end of function
-
-
-** function to add rule x16 to the papyrus if active
-
-!?FU(WOG_101_AddPapyrusMessages);
-
-!!FU(WOG_101_CheckMapRule):Px16;        [check for rule x16]
-
-!!if&3;
-  !!VRy1:S331 +x16; [z variable for this rule]
-  !!VRy1&x16>20:S659 +x16; [z variable for rule 21+]
-  *!VRy1:S101009 +x16;                  [z variable for this rule] - Note: QW:A does not support ert index!
-  *!VRy1&x16>20:S101051;                [z variable for rule 21+]
-  !!VRy2:S0;                            [initialize y2 to 0: y2]
-  !!UN&x16=20:U(OBJ_TOWN)/(TOWN_CONFLUX)/?y2; [count confluxes if rule 20: y2]
-  !!QW&y2=0:Ay1/-2/-2/y1;               [set papyrus message]
-!!en;
-
-** end of function
-
-
-** function to replace shroud for player x1 via Cover Of Darkness for their enemy
-
-!?FU721;
-
-!!VRy1:S564 +x1; [variable # of non-teammate player]
-!!UN:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/0/vy1/i^wog_101_mapSize^; [replace entire shroud, surface]
-!!UN&i^wog_101_hasUnderground^:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/1/vy1/i^wog_101_mapSize^; [replace entire shroud, underground]
-
-** end of function
-
-
-** function to set rule bit for numbered rule x1
-
-!?FU(WOG_101_SetMapRulesBits);
-
-!!VRy1:S579; [variable # of bit]
-!!VRy1&x1>10:S576;
-!!VRx1&x1<21:-1 %10 +550; [variable # of bit value]
-!!VRx1&x1=21:S560; [Warlord's Banner]
-!!VRvy1:|vx1; [set bit]
-
-** end of function
-
-
-** functions to add map rules selected in WoGify options dialogue
-
-!?FU723;
-
-!!UN:Px16/?y1;      [Check if each map rule is enabled (111-120)
-!!VRy2:Sx16 -111;   [Get loop number]
-!!VRy3&y1=1:S550 +y2;  [Get corresponding variable with bit number]
-!!VRv579&y1=1:+vy3;  [If it's enabled, add bit number to v579]
-
-!?FU724;
-
-!!UN:Px16/?y1;      [Check if each map rule is enabled (121-130)
-!!UN&x16=131:P239/?y1; [Check if Warlord's Banner (rule 21) is enabled]
-!!VRy2:Sx16 -121;   [Get loop number]
-!!VRy3&y1=1:S550 +y2;  [Get corresponding variable with bit number]
-!!VRv576&y1=1:+vy3;  [If it's enabled, add bit number to v576]
-
-** end of functions
-
-** functions choose two random rules, calling themselves again if a rule wasn't selected
-** If it can't find two unique selected rules after 100 loops, use only 1 or none.
-
-!?FU725;
-
-!!VRv3:S1 Rx1; [Random rule]
-!!VRv3&x1=19/v3>=20:+1; [skip conflux]
-!!VRy1:Sv3 +110; [Convert to ERM number]
-!!VRy1&v3=21:S239; [Warlord's Banners ERM Number]
-!!UN:Py1/?y2; [See if it's selected in Wogify options]
-!!VRv3&y2=0:S0; [set no rule found if it wasn't a selected rule]
-!!VRx16&y2=1:S101; [exit loop if a selected rule is found]
-
-!?FU726;
-
-!!VRv4:S1 Rx1; [Random rule]
-!!VRv4&x1=19/v4>=20:+1; [skip conflux]
-!!VRy1:Sv4 +110; [Convert to ERM number]
-!!VRy1&v4=21:S239; [Warlord's Banners ERM Number]
-!!UN&v3<>v4:Py1/?y2; [See if it's selected in Wogify options]
-!!VRv4&y2=0:S0; [set no rule found if it wasn't a selected rule]
-!!VRx16&y2=1/v3<>v4:S101; [exit loop if a unique selected rule is found]
 
 ** end of functions
 
 
  [Put Warlord's Banners in front of Towns]
-!?FU(WOG_239_PlaceWarlordsBanner);
-!!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/1; [Store Town Coordinates in v1/v2/v3]
-!!CA1:T?y2 O?y3; [Town Type: y2, Owner: y3]
-!!IF:V1/0 V2/0; [Set Flags 1 and 2 to False]
-!!VRy4:Sv1;    [Copy x coordinate to y4]
-!!VRy5:Sv2 +1; [Copy y+1 coordinate to y5]
-!!UN:X?y6/?y7; [Size of map: y6]
-!!FU&y5>=y6:E; [Exit Function if Y coordinate will be off the bottom of the map]
+!?FU(WOG_101_PlaceWarlordsBanner);
 
-!!UN:Ey4/y5/v3; [Check space directly in front of Town: Flag 1=True if blocked]
-!!VRy4&1:Sv1 -1; [X coordinate 1 to the left of entrance: y4]
-!!IF&y4<0/1:V2/1; [Set Flag 2 to True if X coordinate will be off the map to the left]
-!!UN&1/-2:Ey4/y5/v3; [Check space to left in front of Town: Flag 1=True if blocked]
-!!VRy4&1:Sv1 +1; [X coordinate 1 to the right of entrance: y4]
-!!IF:V2/0; [Reset Flag 2 to False]
-!!IF&y4>=y6/1:V2/1; [Set Flag 2 to True if X coordinate will be off the map to the right]
-!!UN&1/-2:Ey4/y5/v3; [Check space to right in front of Town: Flag 1=True if blocked]
-!!FU|1/2:E; [Exit if all spaces blocked or off the map]
-!!UN:Iy4/y5/v3/5/156/0; [Place Warlord's Banner, no redraw]
-!!UN:J2/?y9; [Player Difficulty level (0..4): y9]
-!!VRy8&y9<=2:Sy2 +1; [Add 1 to town type (y2) for Easy/Normal/Hard levels: y8]
-!!VRy10&y9=0:Sy2 -2; [Upgraded level 6 for Easy difficulty: y10]
-!!VRy10&y9=1:Sy2 -1; [Non-upgraded level 7 for Normal difficulty: y10]
-!!VRy10&y9=2:Sy2;    [Upgraded level 7 for Hard difficulty: y10]
-!!VRy8&y9<=2:*13 +y10; [Level 6 or 7 Guardian (for Easy/Normal/Hard difficulty): y8]
-!!VRy8&y9=0/y2=8:S121; [Set Magic Elemental for Conflux Town (for Easy difficulty): y8]
-!!VRy8&y9=1/y2=8:S130; [Set Firebird for Conflux Town (for Normal difficulty): y8]
-!!VRy8&y9=2/y2=8:S131; [Set Phoenix for Conflux Town (for Hard difficulty): y8]
-!!VRy8&y9>=3:S150 +y2; [Level 8 Guardian (for Expert/Impossible difficulty): y8]
-!!ARy4/y5/v3&y3>=0:X0 G0/y8/0; [If Town is owned, set 0 guardians and don't turn them on]
-!!POy4/y5/v3&y3>=0:Oy3; [Set PO:O to town owner (y3)]
-!!FU&y3>=0:E; [Exit if Town is owned: Banner is unguarded until month 2]
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/-1/1; [Store Town Coordinates in v1/v2/v3]
 
-!!UN&y8>=0:N3/-1/y8/0; [Name of single monster: z-1]
-!!ARy4/y5/v3:X1 G0/y8/1 M1/z101053; [Set 1 Guardian with message]
+  !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsAmount:y) X?(mapSize:y)/?y99 J2/?(gameDifficulty:y);                                  [Number of Towns on map: y1]
+  !!re i/0/(townsAmount)/1/-1;
+    !!CA0/i:T?t O?o P?(x:y)/?(y:y)/?(z:y);                                                            [Town Type: t, Owner: o]
+    !!if&(y)<(mapSize);
+      !!VR(y):+1;
+      !!UN:E(x)/(y)/(z);
+      !!if&1;
+        !!VR(x):+1;
+        !!UN:E(x)/(y)/(z);
+        !!if&1;
+          !!VR(x):-2;
+          !!UN:E(x)/(y)/(z);
+          !!co&1;
+        !!en;
+      !!en;
+
+      !!UN:I(x)/(y)/(z)/(OBJ_ARTIFACT)/(ART_WARLORDS_BANNER)/(FALSE); [Place Warlord's Banner, no redraw]
+      !!if&(gameDifficulty)>2;
+        !!VR(monType:y):St +(MON_SUPREME_ARCHANGEL);
+      !!el;
+        !!VRl:S(gameDifficulty) :2 +5;
+        !!VR(upg:y):S(gameDifficulty) &1 X1;
+        !!UN:Tt/l/(upg)/?(monType:y);
+      !!en;
+      !!if&o<>(NO_OWNER);
+        !!AR(x)/(y)/(z):X0 G0/(monType:y)/1;; [If Town is owned, set 0 guardians and don't turn them on]
+        !!PO(x)/(y)/(z):Oo; [Set PO:O to town owner (y3)]
+      !!el;
+        !!AR(x)/(y)/(z):X1 G0/(monType:y)/1; [Set 1 Guardian with message]
+      !!en;
+    !!en;
+
+  !!en;
+
+
+ [Add 1 to Banner Guardians on day 1 of each month]
+!?FU(WOG_101_UpdateWarlordsBannerGuard)&i^timerWeekDay^=1;
+
+  !!VR(growthWeek:y):Si^timerMonthWeek^ &1;
+  !!if&(growthWeek:y);
+    !!UN:J2/?(gameDifficulty:y); [Number of Warlord's Banners on map: y10]
+    !!if&i^timerMonthWeek^=3/(gameDifficulty:y);
+      !!VR(growthWeek:y):S(gameDifficulty:y) +1 &1;
+      !!FU&(growthWeek:y)=0:E;
+    !!en;
+
+    !!UN:U(OBJ_ARTIFACT)/(ART_WARLORDS_BANNER)/?(artsNum:y);
+    !!VRv2:S-1;
+    !!re i/0/(artsNum)/1/-1;
+      !!UN:U(OBJ_ARTIFACT)/(ART_WARLORDS_BANNER)/-1/2 ; [Store Banner Coordinates in v1/v2/v3]
+      !!PO2:O?y2; [Read PO:O for Warlord's Banner: y2]
+      !!OB2:C?y10;  [y10 - object config]
+
+      !!if&y2>-2/y10<0;
+        !!AR2:X1 G0/d/d1;y1; [Enable guards and set number of guards to y1]
+      !!en;
+    !!en;
+  !!en;
+
+!?FU(WOG_101_SetMonstersHalfPrice);
+  !!VR(shouldBeHalfPriced:y):S(FALSE); [assume creatures should be normal price]
+  !!if&-1000;
+    !!VR(shouldBeHalfPriced):S(TRUE); [for AI with this rule they're always half price]
+  !!el&i^timerWeekday^=7;
+    !!VR(shouldBeHalfPriced):S(TRUE); [for humans just half price on sunday]
+  !!en;
+  !!if&(shouldBeHalfPriced)<>i^wog_113_isHalfPriced^;
+    !!FU(GetMaxMonsterId):P?(lastMon:y);   [fix max mon id - Archer]
+
+    !!if&(shouldBeHalfPriced);
+      !!DO(WOG_101_DecreaseMonPrice)/0/(lastMon)/1:P; [make creatures half price when needed]
+    !!el;
+      !!DO(WOG_101_IncreaseMonPrice)/0/(lastMon)/1:P; [make creatures double price when needed]
+    !!en;
+    !!VRi^wog_113_isHalfPriced^:S(shouldBeHalfPriced); [remember whether creatures currently are normal or half price]
+  !!en;
+
+!?FU(WOG_101_DecreaseMonPrice);
+
+!!MA&x16<145|x16>149:Cx16/6/d>>1; [save gold cost, except for war machines]
 
 ** end of function
 
- [Weekly Timer, only activates once (for first colour)]
-!?FU(OnEveryDay)&i^timerOnce^/i^timerWeekday^=1/i^timerDay^>7;
-!!FU(WOG_101_CheckMapRule):P21; [check for rule 21]
-!!FU&-3:E; [Exit if rule not enabled]
 
-!!UN:U5/156/?y10; [Number of Warlord's Banners on map: y10]
-!!FU&y10<1:E; [Exit if no Banners on map]
+** function to make monster x16 cost twice as much
+!?FU(WOG_101_IncreaseMonPrice);
 
-!!VRy11:Sc0 -1; [Current day -1: y11]
-!!VRy1:Sy11 :7 +1; [Current week: y1]
-!!VRy22:Sy1 :2 *2; [Check if it's every 2rd week: y22]
-!!VRy2&y22=y1:S1; [Set y2 to 1 every 2nd (even) week: y2]
-!!VRy33:Sy1 :3 *3; [Check if it's every 3rd week: y33]
-!!VRy3&y33=y1:S1; [Set y3 to 1 every 3rd week: y3]
-!!VRy44:Sy1 :4 *4; [Check if it's every 4th week: y44]
-!!VRy4&y44=y1:S1; [Set y4 to 1 every 4th week: y4]
-!!VRy12:Sy1 -1; [Current week -1: y12]
-!!VRy55:Sy12 :4 *4; [Check if it's the 1st of every month: y55]
-!!VRy5&y55=y1:S1; [Set y5 to 1 at the start of every month: y5]
-!!UN:J2/?y6; [Player Difficulty level: y6]
-!!VRy7&y6=0/y5=1:S1; [Set y7 to 1 for Easy if start of a month: y7]
-!!VRy7&y6=1/y5=1:S1; [Set y7 to 1 for Normal if start of a month: y7]
-!!VRy7&y6=2/y2=1:S1; [Set y7 to 1 for Hard every 2 weeks: y7]
-!!VRy7&y6=3/y5=1:S1; [Set y7 to 1 for Expert if start of a month: y7]
-!!VRy7&y6=4/y2=1:S1; [Set y7 to 1 for Impossible every 2 weeks: y7]
-!!FU&y7<>1:E; [Exit if not a banner guard increase day]
+!!if&x16<145|x16>149;
+  !!MA:Cx16/6/?y1; [get gold cost]
+  !!VRy1:*2;       [double price]
+  !!VRy2:Sy1 %10;  [check low digit of price]
+  !!VRy1&y2=4:+1;  [turn 4's to 5's]
+  !!MA:Cx16/6/y1;  [save gold cost, except for war machines]
+!!en;
 
-!!VRv1:S-1; [reset coordinate index]
-!!DO(WOG_239_UpdateWarlordsBannerMessages)/1/y10/1&y10>0:P; [Loop through all banners]
 
-** end of timer
+** end of function
 
- [Add 1 to Banner Guardians on day 1 of each month]
-!?FU(WOG_239_UpdateWarlordsBannerMessages);
-!!UN:U(OBJ_ARTIFACT)/(ART_WARLORDS_BANNER)/-1/1; [Store Banner Coordinates in v1/v2/v3]
-!!PO1:O?y2; [Read PO:O for Warlord's Banner: y2]
-!!FU&y2=-2:E; [Exit if not a Banner in front of a town. Check is not reliable!]
-
-!!OB1:C?y10;  [y10 - object config]
-!!FU&y10>=0:E; [Exit if 31-st bit is zero = positive value = no config set for artifact]
-
-!!ARv1/v2/v3:G0/?y3/?y1; [Number of guards (y1), Type (y3)]
-!!VRy1:+1; [Add 1 to number of guards: y1]
-!!ARv1/v2/v3:X1 G0/d/y1; [Enable guards and set number of guards to y1]
-!!UN&y3>=0/y1=1:N3/-1/y3/0; [Name of single monster: z-1]
-!!UN&y3>=0/y1>1:N3/-1/y3/1; [Name of plural monsters: z-1]
-!!ARv1/v2/v3&y1=1:M1/z101054; [Update message (if only 1 guard)]
-
-!!ARv1/v2/v3&y1>1:M1/z101055; [Update message (if more than 1 guard)]
-
+!?FU(OnHeroScreenMouseClick)&i^mouse_item^=128/i^mouse_action^=(MOUSE_LMB_RELEASED);
+  !!UN:P101/?(mapRulesMode:y);
+  !!FU&(mapRulesMode)=(WOG_NO_MAP_RULES):E;
+  !!FU(WOG_230_AnnounceMapRules):P(TRUE)/?(result:y);
+  !!if&(result)=0;
+    !!CM:R0;
+  !!en;
 ** end of function
 
 ; Capitol can be built in every town by Archer30 (replaces Heroes get 9th-10th skills option)
-; Note: The start game part is included in FU(WOG_101_ChooseMapRules), a.k.a. OnEveryDay day 1. Please, no more OnStartOrLoad
-!?FU(WOG_OnCaptureTown)&i^wog_101_map_rule_14_isEnabled^;
+!?FU(WOG_OnCaptureTown)&i^wog_101_map_rule_13_isEnabled^;
 !!SN:X?y99/0;
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6025676;
 
-!?FU(OnAfterLoadGame)&i^wog_101_map_rule_14_isEnabled^;
+!?FU(WOG_101_AllowMultiplyCapitols);
+!!UN:C4955234/(UNC_INT8)/?i^wog_124_patch1^ C4955234/(UNC_INT8)/0; [rule 14] - Capitol can be built in every town]
+
+!?FU(OnAfterLoadGame)&i^wog_101_map_rule_13_isEnabled^;
 !!UN:C4955234/(UNC_INT8)/?i^wog_124_patch1^ C4955234/(UNC_INT8)/0;
 
-!?FU(OnGameLeave)&i^wog_101_map_rule_14_isEnabled^;
+!?FU(OnGameLeave)&i^wog_101_map_rule_13_isEnabled^;
 !!UN:C4955234/(UNC_INT8)/i^wog_124_patch1^;
 
-
-// Double Movement Points (part 2)
-!?FU(WOG_OnSetHeroMovementPoints);
+!?FU(WOG_OnSetHeroMovementPoints)&i^wog_101_map_rule_10_isEnabled^;
 !#VA(address:x);
-!!FU(WOG_101_CheckMapRule):P11; [check for rule 11]
+!!UN:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/d<<1;
 
-!!UN&3:C(address)/(STRUCT_HOOK_CONTEXT_EAX)/4/d*2;
+!?FU(WOG_101_IncreaseArmies);        [** function to make slot x16 of hero x1's army grow by 4%, to 10000]
+
+  !!re i/0/(HERO_LAST_WOG);
+    !!re j/0/(ARMY_SLOT_LAST);
+      !!HEi:C0/j/?t/?q;              [get t type q qty]
+      !!if&t<>(NO_MON);
+        !!VRn:Sq *104: 100 Fq/100000;
+        !!HEi&n>q:C0/j/t/n;          [set new q]
+      !!en;
+    !!en;
+  !!en;
+
+!?FU(WOG_101_PlaceMagicPlains);
+!#VA(playerID:x);
+!!OW:H(playerID)/1;
+!!re i/2/v1/1/1;(end_value);
+  !!HEvi:P?(x:y)/?(y:y)/?(z:y);/?y4/?y5; [get hero x/y/l]
+  !!if&(z)=0;
+    !!VR(x):+2;
+    !!VR(y):+1;
+    !!TR(x:y)/(y:y)/(z:y):P?(pass:y) E?(notYellow:y) T?(terrain:y)/d/d/d/d/d/d/d;
+    !!if&(pass)/(notYellow)/(terrain)<>8;
+      !!UN:I(x:y)/(y:y)/(z:y)/(OBJ_MAGIC_PLAINS)/0/0; [place magic plains]
+    !!en;
+  !!en;
+!!en;

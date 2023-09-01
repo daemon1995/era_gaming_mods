@@ -36,11 +36,11 @@ ZVSE2
 !?FU(WOG_CreateERMHook)&i^WOG_73_enabled^;
   !!SN:Ex1/1/5574655/(WOG_OnAddingCreatureToArmy);                [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
   
-  !!SN:Ex1/1/4494492/(WOG_DlgCreatureSplit_OnCreate);
+  !!SN:Ex1/1/4494487/(WOG_DlgCreatureSplit_OnCreate);
   !!SN:Ex1/1/4496378/(WOG_DlgCreatureSplit_BeforeSettingNumber);
   !!SN:Ex1/1/4496839/(WOG_DlgCreatureSplit_AfterSplit);
 
-  !!SN:Ex1/1/4677773/(WOG_BattleTent_SetupCursor); [Archer30: This hoook is not necessary as it can be replaced by simple erm. Check WMI for details]
+  !!SN:Ex1/1/4677660/(WOG_BattleTent_SetupCursor); [Archer30: This hoook is not necessary as it can be replaced by simple erm. Check WMI for details]
 
   ; These 3 hooks, WOG_BattleTent_SetupCursor, WOG_BattleTent_BeforeIterateLoses) and WOG_BattleTent_PrepareHealing have been moved to 9000 wog - stdlib as they would be used for all the war machine scripts
 
@@ -172,7 +172,6 @@ ZVSE2
       !!VR(art:y):Si +(ART_BALLISTA);
       !!VR(yVar:y):Si +(@ballistas);
       !!SN:H^art^/(art)/0/?(artName[i]) H^art^/(art)/0/^%y(yVar)^;^%W81^
-      !!SN:;
     !!en;
 
     !!IF:Q1/(PIC_TYPE_ART)/(ART_BALLISTA)/(PIC_TYPE_ART)/(ART_AMMO_CART)/(PIC_TYPE_ART)/(ART_FIRST_AID_TENT)/(MSG_TYPE_POPUP)/(objName); [show number]
@@ -730,15 +729,10 @@ ZVSE2
 
 ---------------------     B E F O R E     B A T T L E   ---------------------
 
-!?FU(OnBeforeBattleUniversal)&i^WOG_73_enabled^; //before battle begins
-  ** variables used:        i^WOG_73_enabled^, v850-v859, v864-v880 for long term
-  ** flags used:            784, 787-790 for long term
-  ** hero variables used:   w81-w83
-  !!IP:F781/790 Wi^battle_hero_0^/81/83 Wi^battle_hero_1^/81/83;
-
 
 !?FU(OnBeforeBattleUniversal)&i^WOG_73_enabled^; //before battle begins
 
+  !!IP:Wi^battle_hero_0^/81/83 Wi^battle_hero_1^/81/83;
 
 
   !!if&i^WOG_73_visited_art_id^;
@@ -787,6 +781,14 @@ ZVSE2
       !!FU(WOG_73_BattleFieldSetup):Pi/(isSiege);
     !!en;
   !!en;
+
+*?FU(WOG_BattleStack_InitParams)&i^WOG_73_enabled^;
+*#VA(stackId:x) (side:x);
+*!BM(stackId):T?t;
+*!if&t=(MON_BALLISTA);
+*!el&t=(MON_BALLISTA);
+*!el&t=(MON_BALLISTA);
+*!en;
 
 
 !?FU(WOG_73_BattleFieldSetup);
@@ -848,16 +850,19 @@ ZVSE2
 ---------------------  B A T T L E   P R O C E D U R E  ---------------------
 -----------------------------------------------------------------------------
 -----------------------------------------------------------------------------
+
+
 !?FU(WOG_BattleTent_SetupCursor)&i^WOG_73_Battle_HealPower^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(currStack:y) C(currStack)/52/4/?t;
 
   !!if&t=(MON_FIRST_AID_TENT);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(stack:y);
-
-    !!UN:C(stack)/96/4/?(startNum:y) C(stack)/76/4/?(currentNum:y) C(stack)/88/4/?l;
-    !!if&(currentNum)>0/(startNum)>(currentNum)|l;
-      !!SN:X?y99/0;
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4677801;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(stack:y) C(stack)/244/4/?(tSide:y) C(currStack)/244/4/?(sSide:y);
+    !!if&(tSide:y)=(sSide:y);
+      !!UN:C(stack)/96/4/?(startNum:y) C(stack)/76/4/?(currentNum:y) C(stack)/88/4/?l;
+      !!if&(currentNum)>0/(startNum)>(currentNum)|l;
+        !!SN:X?y99/0;
+        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4677801;
+      !!en;
     !!en;
   !!en;
 
@@ -865,8 +870,9 @@ ZVSE2
   !!BMi^battle_current_stack^:T?(monType:y);                                     [get type of monster]
   !!FU&(monType)<>(MON_FIRST_AID_TENT):E;
 
-  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78560/4/?(cursor:y);
 
+  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78560/4/?(cursor:y);
+  *!IF:L^%(cursor)^;
   !!if&(cursor)=17;
     !!BU:Ei^mouse_battleHex^/?(stackId:y);
     !!BM(stackId):N?n;
@@ -890,6 +896,7 @@ ZVSE2
     !!SN:T^wog.%(WOG_OPT_ENHANCED_WAR_MACHINES_III).healed^/?(msg:z)/^healing^/(healMsg:z)/^resurrection^/(resMsg:z);
     !!MM:M?(hint:z) M^%(hint) %(msg)^;
   !!en;
+
 !?FU(WOG_BattleTent_BeforeIterateLoses)&i^WOG_73_Battle_HealPower^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(side:y);
   !!VR(min:y):S(side) *21;
@@ -929,6 +936,8 @@ ZVSE2
   !!BM(stackId):L?l;
 
   !!if&i^WOG_73_Battle_HealPower^>l;
+    *!UN:C4677660/1/117;                                       [ restore mouse cursor after healing itself]
+
     !!VRi:Si^WOG_73_Battle_HealPower^;
     !!BM(stackId):N?(currentNum:y) B?(startNum:y) H?(health:y);
     !!VR(maxHeal:y):S(startNum) -(currentNum) *(health) +l;
@@ -988,12 +997,11 @@ ZVSE2
 !#VA(stackSide:x) (skillLvL:y) (specBonus:y);
 
   !!if&i^battle_hero_%(stackSide)^>=0;
-    !!HEi^battle_hero_%(stackSide)^:S(SKILL_FIRST_AID)/?(skillLvL:y) X?(heroSpec:y)/?(skillSpec:y) Ed/?(heroLvl:y); [store hero's first aid skill in v874]
+    !!HEi^battle_hero_%(stackSide)^:S(SKILL_FIRST_AID)/?(skillLvL:y) X?(heroSpec:y)/?(skillSpec:y) Ed/?(heroLvl:y);           [store hero's first aid skill in v874]
     !!if&(heroSpec)=0/(skillSpec)=(SKILL_FIRST_AID);
-      !!VR(specBonus:y):S(heroLvl) *2;                                                                              [calculate increased heal value//get hero level if he/she is specialist of first aid skill]
+      !!VR(specBonus:y):S(heroLvl) *2;                                                                                        [calculate increased heal value//get hero level if he/she is specialist of first aid skill]
     !!en;
   !!en;
-
   !!BMi^battle_current_stack^:N?(tentsAmount:y); 
 
   !!VRi^WOG_73_Battle_Heal_MinPower^:S(skillLvL) +1 +(specBonus) *(tentsAmount) F1/(INT_MAX);
@@ -1004,8 +1012,8 @@ ZVSE2
 ----------------------- B E F O R E         A C T I O N --------------------- 
 
 !?FU(OnBeforeBattleAction)&i^WOG_73_enabled^;
-  !!BG:A?(actionType:y) N?y4 A?i^WOG_73_BattleLastAction^ Q?i^WOG_73_BattleLastSide^; [D?(healDest:y);]
-  !!BMy4:T?(monType:y);                                                            [D?(healDest:y);]
+  !!BG:A?(actionType:y) N?y4 A?i^WOG_73_BattleLastAction^ Q?i^WOG_73_BattleLastSide^;                                         [D?(healDest:y);]
+  !!BMy4:T?(monType:y);                                                                                                       [D?(healDest:y);]
   !!if&(actionType)=(BATTLE_ACTION_WALK_AND_ATTACK)/(monType)=(MON_FIRST_AID_TENT);
     !!BG:A(BATTLE_ACTION_CANCEL);
   !!en;
@@ -1030,6 +1038,7 @@ ZVSE2
   !!VRi^WOG_73_BattleLastAction^:S(FALSE);
   !!VRi^WOG_73_BattleLastSide^:S(FALSE);
 
+
 !?FU(WOG_73_BattleFunc_CorrectMachines);
 !#VA(heroId:x) (side:x) (wVar:y);
 
@@ -1037,21 +1046,23 @@ ZVSE2
 
   !!IF:W(heroId);
   !!HE(heroId):O?(heroOwner:y);
-  
+  !!re i/0/2;
+      !!VR(wVar):Si +81;
+  !!en;
+  !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);  [set vars to 0 if no machines after combat or increase if captured]
+
   !!VRi^WOG_73_battle_hero_%(side)_SpellPoints^:S0;
 
   !!re i/0/2;
-    !!if&i^WOG_73_WM_%(side)_%i_stack_id^<>(NO_STACK);
+    !!if&i^WOG_73_WM_%(side)_%i_stack_id^<>(NO_STACK); if wm placed 
       !!VR(wVar):Si +81;
 
-      !!BMi^WOG_73_WM_%(side)_%i_stack_id^:N?(wmAmount:y);
-      !!VR(wmAmount):F0/w(wVar);
-
-      !!if&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_SURRENDER)/i^WOG_73_BattleLastSide^=(side)|(heroOwner)<>(NO_OWNER);
-        !!VRw(wVar):S(wmAmount);
-        !!FU(WOG_73_Func_CorrectHeroVariablesW):P(heroId);                                                      [correct eqipment]
-      !!el&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_RETREAT);
-        !!VRw(wVar):*(wmAmount) F0/1;
+      !!BMi^WOG_73_WM_%(side)_%i_stack_id^:N?(wmAmount:y); [get last number]
+      !!VR(wmAmount):F0/w(wVar);        [restrict by placed value]
+      !!if&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_SURRENDER)/i^WOG_73_BattleLastSide^=(side)|(heroOwner)<>(NO_OWNER); [if surrend or not loose]
+        !!VRw(wVar):S(wmAmount);                                                                                         [set no more then we had at start]
+      !!el&i^WOG_73_BattleLastAction^=(BATTLE_ACTION_RETREAT);                                                           [if retreated]
+        !!VRw(wVar):*(wmAmount) F0/1;                                                                                    [if at least vWar and stack is alive]
       !!el;
         !!VRw(wVar):S0;
       !!en;

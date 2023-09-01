@@ -6,6 +6,8 @@ ZVSE2
 ** Version: 1.11        updated October 2 2004
 ** Updated September 15, 2004 to change local y variables in instructions to v variables
 ** Version 1.2 updated July 2022 by Archer30
+** Version 2.0 rewritten September 2023 by daemon_n
+
 ** Special Thanks to Hermann the Weird for help with bug fixing and script maintenance
 
 ** Note: Commander Enhancements are disabled for network human-to-human battles.
@@ -55,324 +57,292 @@ ZVSE2
 
 
 ** initialization
-!?FU(OnAfterErmInstructions);
+
+*#DC(WOG_NPC_TABLE) = 42344640;
+!?FU(WOG_51_NPC_Init);
 !!UN:P51/?(enhCommander:y) P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y); [check if Enhanced Commanders is enabled in WoGify Options and if Commanders are enabled]
 
 !!VRi^wog_51_enabled^&(enhCommander)/(commanderDisabled)<>(TRUE):S(TRUE); [set var i^wog_51_enabled^ to true]
-!!FU&i^wog_51_enabled^<>(TRUE):E;
-
 ; Set up basic stuff
-!!CO-2&i^wog_51_enabled^:P1;                     [enable custom primary skill control]
-!!UN:B6/1;                                       [set new chest 6 to advanced setting (disabled)]
+!#FU(WOG_51_NPC_Init):P;
+
+!?FU(OnAfterErmInstructions)&i^wog_51_enabled^;
 
 ** make commanders alive
-!!re i/(MON_COMMANDER_FIRST_A)/(MON_COMMANDER_LAST_D); [iterate through all commander types and make alive]
-  !!co|i=(MON_SOUL_EATER_A)/i=(MON_SOUL_EATER_D)/i=(MON_ASTRAL_SPIRIT_A)/i=(MON_ASTRAL_SPIRIT_D); [Skip if Soul Eater or Astral Spirit]
-
-  !!MA:Xi/d|(MON_FLAG_ALIVE);
-!!en;
+  !#VA(npcBonuses[9]:y);
+  !!VR(npcBonuses[0]):C5/7/4/14/1/3/8/12/0; 
+  !!UN:B6/1;                                       [set new chest 6 to advanced setting (disabled)]
 
 
-** commander screen open trigger
-!?FU(OnOpenCommanderWindow)&i^wog_51_enabled^;   [check if Enhanced Commanders is enabled]
-!!FU(WOG_51_NPC_EditStats):P(CURRENT_HERO);
-** end of hero level trigger
-
-
-** start of pre-battle trigger **
-!?FU(OnBeforeBattleUniversal)&i^wog_51_enabled^/-998;     [check if Enhanced Commanders is enabled]
-!!VRi^wog_52_deathStare_0^:S0;
-!!VRi^wog_52_deathStare_1^:S0;
-!!VRi^wog_52_fireShield_0^:S0;
-!!VRi^wog_52_fireShield_1^:S0;
-
-!!FU(WOG_51_NPC_EditStats):Pi^battle_hero_0^; [modify commander stats - attacker]
-!!COi^battle_hero_0^:B0/?(commFlag:y);  [check skill bits, get type - attacker]
-!!VRi^wog_52_deathStare_0^:S(commFlag) &4096; [check death stare bit - attacker]
-!!COi^battle_hero_0^&i^wog_52_deathStare_0^:B1/12/0; [remove death stare - attacker]
-!!VRi^wog_52_fireShield_0^:S(commFlag) &128; [check fire shield bit - attacker]
-!!COi^battle_hero_0^&i^wog_52_fireShield_0^:B1/7/0; [remove fire shield - attacker]
-
-!!if&i^battle_hero_1^>(NO_HERO);
-  !!FU(WOG_51_NPC_EditStats):Pi^battle_hero_1^; [modify commander stats - defender]
-  !!COi^battle_hero_1^:B0/?(commFlag:y);[check skill bits, get type - defender]
-  !!VRi^wog_52_deathStare_1^:S(commFlag) &4096; [check death stare bit - defender]
-  !!COi^battle_hero_1^&i^wog_52_deathStare_1^:B1/12/0; [remove death stare - defender]
-  !!VRi^wog_52_fireShield_1^:S(commFlag) &128; [check fire shield bit - defender]
-  !!COi^battle_hero_1^&i^wog_52_fireShield_1^:B1/7/0; [remove fire shield - defender]
-!!en;
-
-** end of pre-battle trigger
-
-
-** start of battlefield trigger **
-!?FU(OnSetupBattlefield)&i^wog_51_enabled^/-998;  [continue if enabled]
-!!DO(WOG_51_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
-** end of battlefield trigger
-
-
-** start of battle turn trigger **
-!?FU(OnBattleRound)&i^wog_51_enabled^/-998;       [continue if enabled]
-!!DO(WOG_51_NPC_SetMagicMirror)/0/41/1:P;         [prepare to give magic mirror]
-** end of battle turn trigger **
+  !!re i/0/(HERO_LAST_WOG);
+    !!VR(of:y):Si*296 +24;
+    !!COi:P5/?s P0 T?t B1/(npcBonuses[t])/1; [set bonuses for each type;]
+    !!if&s<5;
+      !!COi:P5/5;          [set base npc speeds as 5]
+    !!en;
+  !!en;
 
 
 ; Manage spell casting
 ** pre-action trigger **
-!?FU(OnBeforeBattleAction)&i^wog_51_enabled^/-998; [continue if enabled]
-!!BG:A?(action:y);                      [get current stack, action type, destination stack]
-!!BMi^battle_acting_stack^:T?(type:y);    [get type of current creature stack]
-
-!!if&(action)=(BATTLE_ACTION_MONSTER_CAST);
-  !!if|(type)=(MON_ASTRAL_SPIRIT_A)/(type)=(MON_ASTRAL_SPIRIT_D);
-    !!VR(random:y):R0/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL); [if astral spirit is casting - choose random elemental spell]
-    !!BMi^battle_acting_stack^:U4/(random); [if astral spirit is casting - change spell to summon elemental]
+!?FU(OnBattleRegeneratePhase)&i^wog_51_enabled^;         [continue if enabled]
+  !!BMx1:T?t;
+  !!if|t=(MON_TEMPLE_GUARDIAN_A)/t=(MON_TEMPLE_GUARDIAN_D);
+    !!BMx1:U4/(SPELL_PRAYER);                              [if astral spirit is casting - change spell to summon elemental]
+  !!el|t=(MON_ASTRAL_SPIRIT_A)/t=(MON_ASTRAL_SPIRIT_D);
+    !!VRr:R0/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL); [set random summon spell]
+    !!BMx1:U4/r;
   !!en;
-!!en;
 
-** end of pre-action trigger **
+!?FU(OnBeforeBattleUniversal)&i^wog_51_enabled^;
+  !!VRi^wog_51_NPC_bonus_spell_id_0^:S(SPELL_BLESS);
+  !!VRi^wog_51_NPC_bonus_spell_id_1^:S(SPELL_MIRTH);
+  !!VRi^wog_51_NPC_bonus_spell_id_3^:S(SPELL_BLOODLUST);
+  !!VRi^wog_51_NPC_bonus_spell_id_5^:S(SPELL_STONE_SKIN);
+  !!VRi^wog_51_NPC_bonus_spell_id_6^:S(SPELL_COUNTERSTRIKE);
+  !!VRi^wog_51_NPC_bonus_spell_id_7^:S(SPELL_FORTUNE);
 
 
-** post-action trigger **
-!?FU(OnBattleActionEnd)&i^wog_51_enabled^/-998; [continue if enabled]
-!!BG:A?(action:y);
-!!FU&(action)<>(BATTLE_ACTION_MONSTER_CAST):E;
-
-!!BMi^battle_acting_stack^:T?(type:y);  [get acting monster type and side]
-!!FU(WOG_51_NPC_CastSpell)&(type)>=(MON_COMMANDER_FIRST_A)/(type)<=(MON_COMMANDER_LAST_D):P; [cast extra spell if commander cast]
-
-; astral spirit - revert spell to counterstrike for easier casting of elementals
-!!BMi^battle_acting_stack^|(type)=(MON_ASTRAL_SPIRIT_A)/(type)=(MON_ASTRAL_SPIRIT_D):U4/(SPELL_COUNTERSTRIKE);
-
-!?FU(OnAfterBattleAction)&i^wog_51_enabled^/-998;
-!!BU:C?(battleIsEnded:y);               [check for end of battle]
-
-!!if&(battleIsEnded);
-  !!COi^battle_hero_0^&i^wog_52_deathStare_0^:B1/12/1; [restore death stare - attacker]
-  !!COi^battle_hero_0^&i^wog_52_fireShield_0^:B1/7/1; [restore fire shield - attacker]
-
-  !!if&i^battle_hero_1^>(NO_HERO);
-    !!COi^battle_hero_1^&i^wog_52_deathStare_1^:B1/12/1; [restore death stare - defender]
-    !!COi^battle_hero_1^&i^wog_52_fireShield_1^:B1/7/1; [restore fire shield - defender]
+// fixing bug of the commander set summoned creature as the only one possible to summon;
+!?FU(OnBeforeBattleAction)&i^wog_isBattleStackAction^;
+  !!BG:A?(action:y);
+  !!if&(action)=(BATTLE_ACTION_MONSTER_CAST);
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+    !!VR(offset:y):Si^battle_acting_side^ *4 +78504;
+    !!UN:C(cmbMgr)/(offset)/4/?i^wog_51_summoned_creature_id^;
+    !!VRi^wog_51_change_creature_id^:S(TRUE);
   !!en;
-!!en;
-** end of post-action trigger **
 
+!?FU(WOG_51_NPC_GetSkills)&i^wog_51_change_creature_id^;
 
-** post-attck tigger (hook) **
-!?FU(WOG_OnAfterAttack);
-!#VA(atkStack:x) (defStack:x);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(skillType:y) C(ebp)/-20/4/?(npcPtr:y) C(npcPtr)/12/4/?(npcType:y);
 
-!!BM(atkStack):T?(atkType:y) I?(side:y);
-
-!!if&(atkType)>=(MON_COMMANDER_FIRST_A)/(atkType)<=(MON_COMMANDER_LAST_D)/i^wog_52_deathStare_%(side)^<>0;
-  !!BM(defStack):N?(num:y) F?(monFlag:y) P?(pos:y);
-  !!VR(isAlive:y):S(monFlag) &(MON_FLAG_ALIVE);
-
-  !!if&(num)>0/(isAlive);
-    !!VR(random:y):R0/0/99;             [random roll]
-    !!BM(atkStack)&(random)<50:C71/(pos)/1/3/1; [if target is alive have current stack cast poison]
+  !!if&(skillType)=4/(npcType:y)=(TOWN_CONFLUX);
+    !!UN:C(npcPtr)/72/4/?(magicPowerSkillLvl:y);
+    !!VR(magicPowerSkillLvl:y):+1;
+    !!UN:C(ebp)/-8/4/(magicPowerSkillLvl:y);
   !!en;
-!!en;
-** end of post-attck tigger (hook) **
 
+!?FU(OnBattleActionEnd)&i^wog_51_change_creature_id^;
+  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+  !!VR(offset:y):Si^battle_acting_side^ *4 +78504;
+  !!UN:C(cmbMgr)/(offset)/4/i^wog_51_summoned_creature_id^;
+
+  !!VRi^wog_51_change_creature_id^:S(FALSE);
+  !!BMi^battle_acting_stack^:T?t;
+  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);
+    !!MA:Ot/?(town:y);
+    !!if&i^wog_51_NPC_bonus_spell_id_%(town)^>0;
+      !!BMi^battle_acting_stack^:Z?(currentNpcPtr:y);
+      !!SN:E7782122/(CALLCONV_CDECL)/(currentNpcPtr:y);
+      !!VR(power:y):Sv1;
+      !!BG:D?(pos:y);
+      !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+      !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/i^wog_51_NPC_bonus_spell_id_%(town)^/(pos)/1/-1/(SKILL_ADVANCED)/(power:y);
+    !!en;
+  !!en;
+
+!?FU(OnAfterBattleUniversal)&i^wog_51_enabled^;
+  !!VRi^wog_51_summoned_creature_id^:S(FALSE);
+  !!re i/0/(TOWN_LAST_WOG);
+    !!VRi^wog_51_NPC_bonus_spell_id_%i^:S(NULL);
+  !!en;
 
 ; Change the type of commander hero bought to match the type of town unless choose Commanders script is enabled
 ** post-buy commander trigger **
-!?FU(OnAfterCommanderBuy)&i^wog_51_enabled^; [continue if enabled and "choose commanders" isn't]
-!!UN:P186/?(chooseComm:y);              [check if choose Commanders is enabled in WoGify Options]
-!!FU&(chooseComm):E;                    [exit if choose Commanders script is enabled]
+!?FU(OnAfterCommanderBuy)&i^wog_51_enabled^;        [continue if enabled and "choose commanders" isn't]
+!!UN:P186/?(chooseComm:y);                          [check if choose Commanders is enabled in WoGify Options]
+!!FU&(chooseComm):E;                                [exit if choose Commanders script is enabled]
 
-!!HE(CURRENT_HERO):P?(x:y)/?(y:y)/?(z:y);[get hero position]
-!!OB(x)/(y)/(z):U?(type:y);             [get subtype of town]
+!!HE(CURRENT_HERO):P?(x:y)/?(y:y)/?(z:y);           [get hero position]
+!!OB(x)/(y)/(z):U?(type:y);                         [get subtype of town]
 !!CO(CURRENT_HERO)&(type)<=(TOWN_LAST_WOG):T(type); [set commander type]
 ** end of post-buy commander trigger **
 
 
-** function to edit commander stats
-!?FU(WOG_51_NPC_EditStats);
-* x1 - hero number
-!!COx1:X2/?y2 T?y5;                              [get commander level & type]
-** attack - base 5 + 1/2 x level - skill adds +25%,+50%,+75%,+100%,+125%
-!!COx1:S0/?y3;                                   [get attack level]
-!!VRy4&y3=0:Sy2 :2 +5;                           [if attack=0 set attack to 5 + 1/2 level]
-!!VRy4&y3=1:Sy2 :2 +5 *125 :100 -2;              [if attack=1 set attack to 5 + 1/2 level x 125%]
-!!VRy4&y3=2:Sy2 :2 +5 *150 :100 -5;              [if attack=2 set attack to 5 + 1/2 level x 150%]
-!!VRy4&y3=3:Sy2 :2 +5 *175 :100 -9;              [if attack=3 set attack to 5 + 1/2 level x 175%]
-!!VRy4&y3=4:Sy2 :2 +5 *2 -15;                    [if attack=4 set attack to 5 + 1/2 level x 200%]
-!!VRy4&y3=5:Sy2 :2 +5 *225 :100 -25;             [if attack=5 set attack to 5 + 1/2 level x 225%]
-!!COx1:P0/y4;                                    [set attack]
-** defense - base 5 + 1/2 x level - skill adds +25%,+50%,+75%,+100%,+125%
-!!COx1:S1/?y3;                                   [get defence level]
-!!VRy4&y3=0:Sy2 :2 +5;                           [if defence=0 set defence to 5 + 1/2 level]
-!!VRy4&y3=1:Sy2 :2 +5 *125 :100 -4;              [if defence=1 set defence to 5 + 1/2 level x 125%]
-!!VRy4&y3=2:Sy2 :2 +5 *150 :100 -10;             [if defence=2 set defence to 5 + 1/2 level x 150%]
-!!VRy4&y3=3:Sy2 :2 +5 *175 :100 -18;             [if defence=3 set defence to 5 + 1/2 level x 175%]
-!!VRy4&y3=4:Sy2 :2 +5 *2 -30;                    [if defence=4 set defence to 5 + 1/2 level x 200%]
-!!VRy4&y3=5:Sy2 :2 +5 *225 :100 -50;             [if defence=5 set defence to 5 + 1/2 level x 225%]
-!!COx1:P1/y4;                                    [set defence]
-** hit points - base 30 + 15 x level - skill adds +25%,+50%,+75%,+100%,+125%
-!!COx1:S2/?y3;                                   [get hit points level]
-!!VRy4&y3=0:Sy2 *20 +40;                         [if hit points=0 set hit points to 40 + 20 x level]
-!!VRy4&y3=1:Sy2 *20 +40 *125 :110;               [if hit points=1 set hit points to 40 + 20 x level x 125%]
-!!VRy4&y3=2:Sy2 *20 +40 *150 :125;               [if hit points=2 set hit points to 40 + 20 x level x 150%]
-!!VRy4&y3=3:Sy2 *20 +40 *175 :145;               [if hit points=3 set hit points to 40 + 20 x level x 175%]
-!!VRy4&y3=4:Sy2 *20 +40 *200 :170;               [if hit points=4 set hit points to 40 + 20 x level x 200%]
-!!VRy4&y3=5:Sy2 *20 +40 *225 :200;               [if hit points=5 set hit points to 40 + 20 x level x 225%]
-!!COx1:P2/y4;                                    [set hit points]
-** damage - base 10 + 5 x level - skill adds +25%,+50%,+75%,+100%,+125%
-!!COx1:S3/?y3;                                   [get damage level]
-!!VRy4&y3=0:Sy2 *5 +10;                          [if damage=0 set damage to 10 + 5 x level]
-!!VRy4&y3=1:Sy2 *5 +10 *125 :110;                [if damage=1 set damage to 10 + 5 x level x 125%]
-!!VRy4&y3=2:Sy2 *5 +10 *150 :125;                [if damage=2 set damage to 10 + 5 x level x 150%]
-!!VRy4&y3=3:Sy2 *5 +10 *175 :145;                [if damage=3 set damage to 10 + 5 x level x 175%]
-!!VRy4&y3=4:Sy2 *5 +10 *200 :170;                [if damage=4 set damage to 10 + 5 x level x 200%]
-!!VRy4&y3=5:Sy2 *5 +10 *225 :200;                [if damage=5 set damage to 10 + 5 x level x 225%]
-!!COx1:P3/y4;                                    [set damage]
-** magic power - base 3 + 3 x skill level   (Soul Eater: base 1 + 1 x skill level)
-!!COx1:S4/?y3;                                   [get MP level]
-!!VRy6:Sy3 +1 *3;                                [set power to (MP+1)x3]
-!!VRy6&y5=4:Sy3 +1;                              [if Soul Eater set power MP+1]
-!!VRy6&y5=8:Sy3 +1;                              [if Astral Spirit set power MP+1]
-!!VRy4&y3=0:Sy6;                                 [if MP=0 set power]
-!!VRy4&y3=1:Sy6 -1;                              [if MP=1 set power]
-!!VRy4&y3=2:Sy6 -3;                              [if MP=2 set power]
-!!VRy4&y3=3:Sy6 -7;                              [if MP=3 set power]
-!!VRy4&y3=4:Sy6 -14;                             [if MP=4 set power]
-!!VRy4&y3=5:Sy6 -29;                             [if MP=5 set power]
-!!COx1:P4/y4;                                    [set power]
-** speed - base 5 - skill adds normal bonus
-!!COx1:P5/5;                                     [set base speed to 5]
-
-** starting special bonus
-!!COx1&y5=0:B1/5/1;                              [give paladin         - endless retaliation]
-!!COx1&y5=1:B1/7/1;                              [give hierophant      - magic mirror (fire shield)]
-!!COx1&y5=2:B1/4/1;                              [give temple guardian - shoot]
-!!COx1&y5=3:B1/14/1;                             [give succubus        - fly]
-!!COx1&y5=4:B1/1/1;                              [give soul eater      - fear]
-!!COx1&y5=5:B1/3/1;                              [give brute           - no retaliation]
-!!COx1&y5=6:B1/8/1;                              [give ogre leader     - block]
-!!COx1&y5=7:B1/12/1;                             [give shaman          - poison (death stare)]
-!!COx1&y5=8:B1/0/1;                              [give astral spirit   - ignore 50% defense]
-
-** end of function
+!?FU(WOG_CreateERMHook)&i^wog_51_enabled^;;
+!!SN:Ex1/1/7771478/(WOG_51_NPC_GetSkills);
+*!SN:Ex1/1/7773306/(WOG_NPC_Init);
+!!SN:Ex1/1/7722625/(WOG_NPC_DeathStare);
+!!SN:Ex1/1/5914665/(WOG_51_OnResurrectionAliveFlagCheckA);
+!!SN:Ex1/1/5914817/(WOG_51_OnResurrectionAliveFlagCheckB);
 
 
-** function to cast spell
-!?FU(WOG_51_NPC_CastSpell);
-; Get the real power of the commander
-!!BG:H?(hero:y) E?(targetStack:y);
-!!CO(hero):S4/?(magicLv:y) T?(type:y);
-!!VR(power:y):S(magicLv) *3 +3;           [Does Soul Eater and Astral Spirit cast with positive power?]
 
-; Add an additional spell to casting
-!!BM(targetStack)&(type)=(TOWN_CASTLE):V36 M(SPELL_BLESS)/(power)/(SKILL_ADVANCED); [apply bless - paladin]
-!!BM(targetStack)&(type)=(TOWN_RAMPART):V20 M(SPELL_MIRTH)/(power)/(SKILL_ADVANCED); [apply mirth - heirophant]
-!!BM(targetStack)&(type)=(TOWN_INFERNO):V51 M(SPELL_BLOODLUST)/(power)/(SKILL_ADVANCED); [apply bloodlust - succubus]
-!!BM(targetStack)&(type)=(TOWN_DUNGEON):V54 M(SPELL_STONE_SKIN)/(power)/(SKILL_ADVANCED); [apply stoneskin - brute]
-!!BM(targetStack)&(type)=(TOWN_STRONGHOLD):V7 M(SPELL_COUNTERSTRIKE)/(power)/(SKILL_ADVANCED); [apply counterstrike - ogre leader]
-!!BM(targetStack)&(type)=(TOWN_FORTRESS):V18 M(SPELL_FORTUNE)/(power)/(SKILL_ADVANCED); [apply fortune - shaman]
+!?FU(WOG_NPC_DeathStare);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(defStack:y) Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(atkStack:y); [get atk def]
+  !!CO-1:B0/?(skills:y);
+  !!VR(skills):&4096;                                                                                 [check for death stare]
+  !!if&(skills);
+    !!UN:C(atkStack)/52/4/?t C(atkStack)/52/4/(MON_WYVERN_MONARCH);                                   [imitate monarch]
+    !!UN:C4457822/2/1/?(oldPoisonChance:y) C4457822/2/1/50;                                           [set new poison chance]
+    !!SN:E4456992/(CALLCONV_THISCALL)/(atkStack)/(defStack);                                          [BattleStack::AfterHitSpell]
+    !!UN:C(atkStack)/52/4/t C4457822/2/1/(oldPoisonChance:y);                                         [restore mon type and poison chance]
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+    !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/-1/0;                                                [BattleMgr_DrawAction_Play]
+  !!en;
 
-** end of function **
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/-2;                                                          [why that was solution ? welcome to the WoG programming]
+  !!UN:C42230812/4/-2;
+  !!SN:X?y99/0;                                                                                     [return without death stare calculation]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7722877;
 
 
-** function to cycle through all stacks
-!?FU(WOG_51_NPC_SetMagicMirror);
-!!BMx16:T?(type:y);                                          [get stack's monster type]
+!?FU(WOG_51_CheckIfNotAliveMonsterCanBeResurrected);
+  !#VA(monId:x) (result:x);
+  !!VR(result):S(FALSE);
+  !!if&(monId:x)>=(MON_COMMANDER_FIRST_A)/(monId:x)<=(MON_COMMANDER_LAST_D)
+  /(monId:x)<>(MON_SOUL_EATER_A)/(monId:x)<>(MON_SOUL_EATER_D)/(monId:x)<>(MON_ASTRAL_SPIRIT_A)/(monId:x)<>(MON_ASTRAL_SPIRIT_D);
+    !!VR(result):S(TRUE);
+  !!en;
 
-; give magic mirror
-!!if&(type)>=(MON_COMMANDER_FIRST_A)/(type)<=(MON_COMMANDER_LAST_D);
-  !!BMx16&i^wog_52_fireShield_0^<>0/x16<=(BATTLE_ATTACKER_STACK_LAST):M(SPELL_MAGIC_MIRROR)/100/(SKILL_EXPERT);    [give commander with fire shield exp. magic mirror - attacker]
-  !!BMx16&i^wog_52_fireShield_1^<>0/x16>=(BATTLE_DEFENDER_STACK_FIRST):M(SPELL_MAGIC_MIRROR)/100/(SKILL_EXPERT);    [give commander with fire shield exp. magic mirror - defender]
+
+!?FU(WOG_51_OnResurrectionAliveFlagCheckB);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stack:y) C(stack)/52/4/?t;
+  !!FU(WOG_51_CheckIfNotAliveMonsterCanBeResurrected):Pt/?(result:y);
+
+  !!if&(result:y);
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5914831;
+  !!en;
+
+!?FU(WOG_51_OnResurrectionAliveFlagCheckA);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stack:y) C(stack)/52/4/?t;
+  !!FU(WOG_51_CheckIfNotAliveMonsterCanBeResurrected):Pt/?(result:y);
+
+  !!if&(result:y);
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5914716;
+  !!en;
+
+
+!?FU(OnGameEnter);
+!!VR(npcFileName:z):S^znpc00.txt^;
+
+!!if&i^wog_51_enabled^;
+  !!VR(npcFileName:z):S^znpc00a.txt^;
+
+  !!UN:C7772946/3/4/?i^wog_51_npc_speed_patch^ C7772946/3/4/5;                   [set base npc speeds as 5]
+  !!UN:C7788102/1/1/?i^wog_51_npc_buff_patch^ C7788102/1/1/(SPELL_MAGIC_MIRROR); [replace fireshield with magic mirror]
+
+  !!UN:C7783323/6/4/?i^wog_51_npc_combat_spell^ C7783323/6/4/(SPELL_PRAYER); [replace precision with spell prayer]
+
+  
+  !!UN:C7771384/4/4/?i^wog_51_npc_primary_skills_table^ C7771384/4/4/8002580;    [replace npc stats table]
+  !!UN:C7771468/3/4/8002580;                                                     [?(addr:y);]
+  !!UN:C7783548/6/4/(SPELL_AIR_ELEMENTAL);
+
+
+  !!SN:R^dlg_npc2.def:0_86.png^/^Data\Pcx\WS\mirror2d.png^; // changing fireshield ability frames
+  !!SN:R^dlg_npc2.def:0_87.png^/^Data\Pcx\WS\mirror2l.png^;
+  !!SN:R^dlg_npc2.def:0_96.png^/^Data\Pcx\WS\poison2d.png^;
+  !!SN:R^dlg_npc2.def:0_97.png^/^Data\Pcx\WS\poison2l.png^;
+
+  !!SN:R^dlg_npc3.def:0_15.png^/^Data\Pcx\WS\mirror3l.png^;  // changing death stare ability frames
+  !!SN:R^dlg_npc3.def:0_16.png^/^Data\Pcx\WS\mirror3d.png^;
+  !!SN:R^dlg_npc3.def:0_25.png^/^Data\Pcx\WS\poison3l.png^;
+  !!SN:R^dlg_npc3.def:0_26.png^/^Data\Pcx\WS\poison3d.png^;
+
+  !!SN:R^dlg_npc1.def:0_17.png^/^Data\Pcx\WS\summon44.png^;
+  !!SN:R^dlg_npc1.def:0_5.png^/^Data\Pcx\WS\prayer44.png^;
 !!en;
 
-; temple guardian - change spell to prayer (on turn 0)
-!!if&i^battle_round^=0;
-  !!BMx16|(type)=(MON_TEMPLE_GUARDIAN_A)/(type)=(MON_TEMPLE_GUARDIAN_D):U4/(SPELL_PRAYER);
-!!en;
 
-** end of function **
+!!FU(WOG_51_ReloadNpcDescription):P(npcFileName:z); [to set new NPC description]
 
+; New skill iconcs - this no longer works for some reason
+!?FU(WOG_51_ReloadNpcDescription);
+  !#VA(fileName:x);
+  !!SN:B8013344/d/z(fileName:x);
+  !!SN:E7802090/(CALLCONV_STDCALL);
+
+!?FU(OnGameLeave)&i^wog_51_enabled^;;
+  !!UN:C7771468/3/4/i^wog_51_npc_primary_skills_table^ C7771384/4/4/i^wog_51_npc_primary_skills_table^; restore orginal npc PSkills table addresses
+  !!UN:C7783323/6/4/i^wog_51_npc_combat_spell^; [restore temple guardian re]
+  !!UN:C7772946/3/4/i^wog_51_npc_speed_patch^;  [restore base NPC speed]
+  !!UN:C7788102/1/1/i^wog_51_npc_buff_patch^;   [restore NPC fireshield buff]
 
 **  object trigger - opal
-!?OB101/7&i^wog_51_enabled^;
-!!HE(CURRENT_HERO):N?(commander:y);
-; Exit if commander is killed or dismissed
-!!CO(commander):D?(isDead:y) E?(hasRecruited:y);
-!!FU|(isDead)/(hasRecruited)<>(TRUE):E;
 
-; Disable standard power stone feature
-!!OB998T101 U6;
+!?OB101&i^wog_51_enabled^;
+!!OB(CURRENT_OBJ):U?(objSubtype:y);
 
-; Get a random skill from the unlearned
-!!FU(NewIntArray):P?(availSkills:y);
+!!if&(objSubtype:y)>=7/(objSubtype:y)<=10;
+  !!HE(CURRENT_HERO):N?(commander:y);;
 
-!!re i/0/14;
-  !!CO(commander):B1/i/?(hasLearned:y);
-
-  !!FU(Array_Push)&(hasLearned)<>(TRUE):P(availSkills)/i;
-!!en;
-
-!!SN:M(availSkills)/?(size:y);
-
-; Show msg if all the skills have been learned
-!!if&(size)=0;
-  !!IF&(ERM_FLAG_IS_HUMAN):M1/z151016;
-; Get a random if any is not learned
-!!el;
-  !!VR(random:y):R0/1/(size) -1;
-  !!SN:M(availSkills)/(random)/?(skill:y);
-  !!CO(CURRENT_HERO):B1/(skill)/(TRUE);
-
-  !!if&(ERM_FLAG_IS_HUMAN);
-    !!CO(CURRENT_HERO):N?z1;
-    !!VR(stringInd:y):S151000 +(skill);
-    !!VRz2:Sz(stringInd);
-
-    !!VR(skillIcon:y):S(skill) *2 +72;
-
-    !!IF&1000:M^%z151015
+  !!CO(commander):D?(isDead:y) E?(hasRecruited:y);
+  !!FU|(isDead)/(hasRecruited)<>(TRUE):E;         [; Exit if commander is killed or dismissed]
+  !!OB998:T101 U6;                                [Disable standard power stone feature]
 
 
+  !!CO(commander):N?(name:z);
+  !!VR(result:y):S(FALSE);
+  !!if&(objSubtype:y)=7;
+    !!FU(WOG_51_NPC_GetRandomUnlearnedAbility):P(commander)/?(abilityId:y);; Get a random if any is not learned
 
-{~>dlg_npc2.def:0:%(skillIcon)}
+    !!if&(abilityId)<>(NO_SKILL);
+      !!CO(commander):B1/(abilityId)/(TRUE);
+      !!FU&-999:E;
+      !!VR(result):S(TRUE);
+      !!VR(skillIcon:y):S(abilityId) *2 +72;
+      !!SN:T^wog.51.ability.%(abilityId)^/?(skillName:z);
+      !!SN:T^wog.51.gem.%(objSubtype)^/?(msg:z)/^name^/(name)/^skillName^/(skillName:z)/^skillIcon^/(skillIcon:y);
+    !!en;
+  !!el;
+    !#VA(skills[6]:y);
+    !!VR(skills[0]):C0/3/1/2/4/5;
+    !!VRs:S(objSubtype) -8 *2;
+    !!VRt:Ss+1;
+    !!FU(WOG_51_NPC_GetRandomSSkillToUpgrade):P(commander)/(skills[s])/(skills[t])/?(skillId:y)/?(skillIcon:y);; Get a random if any is not learned   
 
-^;
+    !!if&(skillId:y)<>(NO_SKILL)/999;
+      !!VR(result):S(TRUE);
+      !!VR(skillId):+(skills[s]);
+      !!SN:T^wog.51.skill.%(skillId)^/?(skillName:z);
+      !!SN:T^wog.51.gem.%(objSubtype)^/?(msg:z)/^name^/(name) T^wog.51.gem.bonus^/?(bonus:z)/^skillName^/(skillName:z)/^skillIcon^/(skillIcon:y);
+      !!VR(msg):+(bonus);
+    !!en;
+
   !!en;
+
+  !!if&(result);
+    !!IF:M^%(msg:z)^;
+  !!el;
+    !!SN:T^wog.51.gem.fail^/?(fail:z)/^name^/(name);
+    !!IF:M^%(fail:z)^;                  [; Show msg if all the skills have been learned]
+
+  !!en;
+
 !!en;
-** end of object trigger
 
 
-**  object trigger - ruby
-!?OB101/8&i^wog_51_enabled^;
-!!FU(WOG_51_NPC_AddSSkill):P0/3/151017/151018/151021;
+!?FU(WOG_51_NPC_GetRandomUnlearnedAbility);
+!#VA(npcId:x) (result:x);
+  !!VR(result):S(NO_SKILL);
+  ; Get a random skill from the unlearned
+  !!FU(NewIntArray):P?(availSkills:y);
 
-**  object trigger - sapphire
-!?OB101/9&i^wog_51_enabled^;
-!!FU(WOG_51_NPC_AddSSkill):P1/2/151022/151023/151026;
+  !!re i/0/14;
+    !!CO(npcId):B1/i/?(hasLearned:y);
+    !!FU(Array_Push)&(hasLearned)<>(TRUE):P(availSkills)/i;
+  !!en;
+  !!SN:M(availSkills)/?(size:y);
+  !!if&(size);
+    !!VR(random:y):R0/1/(size) -1;
+    !!SN:M(availSkills)/(random)/?(result);
+  !!en;
 
-**  object trigger - emerald
-!?OB101/10&i^wog_51_enabled^;
-!!FU(WOG_51_NPC_AddSSkill):P4/5/151027/151028/151031;
-
-!?FU(WOG_51_NPC_AddSSkill)&i^wog_51_enabled^;
+!?FU(WOG_51_NPC_GetRandomSSkillToUpgrade);
 * refactoring by [igrik and Archer30]
-* x1 - first  sskill
-* x2 - second sskill
-* x3 - ert string id
-!#VA(skill1:x) (skill2:x) (string1:x) (string2:x) (string3:x);
+* x2 - first  sskill
+* x3 - second sskill
+!#VA(commander:x) (skill1:x) (skill2:x) (skillIndex:x) (skillIcon:x);
 
-!!HE(CURRENT_HERO):N?(commander:y);
-; Exit if commander is killed or dismissed
-!!CO(commander):D?(isDead:y) E?(hasRecruited:y);
-!!FU|(isDead)/(hasRecruited)<>(TRUE):E;
-
-; Disable standard power stone feature
-!!OB998T101 U6;
 
 ; Get the skill about to learn
-!!VR(skillIndex:y):S-1;
-!!CO(commander):S(skill1)/?(skill1Lv:y) S(skill2)/?(skill2Lv:y) N?z1;
+!!VR(skillIndex):S(NO_SKILL);
+!!VR(skillIcon):S(NO_PIC_TYPE);
+!!CO(commander):S(skill1)/?(skill1Lv:y) S(skill2)/?(skill2Lv:y);
 
 ; Pick the lower level skill. If the level is the same, randomly pick one
 !!if&(skill1Lv)>(skill2Lv);
@@ -388,7 +358,6 @@ ZVSE2
     !!VR(skillIndex):S0;
   !!en;
 !!en;
-
 ; If any of the skills is not at max level
 !!if&(skillIndex)>-1;
   !!VR(skillToLearn:y)&(skillIndex)=0:S(skill1);
@@ -421,84 +390,11 @@ ZVSE2
 
     ; Increase Magic Resistance along with Magic Power, doesn't work automatically
     !!CO(commander)&(skillToLearn)=4:S6/(skillToLearnLv);
-
-    ; Disable standard action
-    !!OB998:T101 U6;
-
-    !!if&(ERM_FLAG_IS_HUMAN);
-      !!VR(skillIcon:y):S(skillToLearn) *6 +(skillToLearnLv);
-      !!VR(msg:z)&(skillIndex)=0:Sz(string2);
-      !!VR(msg)&(skillIndex)=1:Sz(string1);
-
-      !!IF:M^%(msg)
-
-
-
-{~>dlg_npc2.def:0:%(skillIcon)}
-
-^;
-    !!en;
+    !!VR(skillIcon):S(skillToLearn) *6 +(skillToLearnLv);
   !!en;
 !!en;
 
-; Show msg if the commander has both skills maxed out
-!!if&(skillIndex)=-1/(ERM_FLAG_IS_HUMAN);
-  !!IF:M1/z(string3);
-!!en;
 ** end of object trigger
-
-
-** update Magic Mirror and Poison skill icons and descriptions **
-; To-do: Use a full commander table instead of SN:B as there are many detials can't be covered by SN:B
-!?FU(OnGameEnter)&i^wog_51_enabled^;
-; New skill iconcs - this no longer works for some reason
-!!SN:R^dlg_npc2.def:0_86.png^/^Data\Pcx\WS\mirror2d.png^;
-!!SN:R^dlg_npc2.def:0_87.png^/^Data\Pcx\WS\mirror2l.png^;
-!!SN:R^dlg_npc2.def:0_96.png^/^Data\Pcx\WS\poison2d.png^;
-!!SN:R^dlg_npc2.def:0_97.png^/^Data\Pcx\WS\poison2l.png^;
-
-!!SN:R^dlg_npc3.def:0_15.png^/^Data\Pcx\WS\mirror3l.png^;
-!!SN:R^dlg_npc3.def:0_16.png^/^Data\Pcx\WS\mirror3d.png^;
-!!SN:R^dlg_npc3.def:0_25.png^/^Data\Pcx\WS\poison3l.png^;
-!!SN:R^dlg_npc3.def:0_26.png^/^Data\Pcx\WS\poison3d.png^;
-
-; New descriptions
-; Magic Mirror basic desc
-!!SN:E7827723/(CALLCONV_CDECL)/38/1/42338084;
-!!SN:Bv1/d/z151032;
-!!SN:E7827723/(CALLCONV_CDECL)/38/2/42338084;
-!!SN:Bv1/d/z151033;
-!!SN:E7827723/(CALLCONV_CDECL)/75/1/42338084;
-!!VR(temp:y):Sv1;                            [fix broken string]
-!!SN:B(temp)/d/?(msg:z);                     [fix broken string]
-!!SN:E7827723/(CALLCONV_CDECL)/74/1/42338084;
-!!SN:Bv1/d/z151034;
-!!SN:B(temp)/d/(msg);                        [fix broken string]
-
-; Poison basic desc
-!!SN:E7827723/(CALLCONV_CDECL)/50/1/42338084;
-!!SN:Bv1/d/z151035;
-!!SN:E7827723/(CALLCONV_CDECL)/50/2/42338084;
-!!SN:Bv1/d/z151036;
-!!SN:E7827723/(CALLCONV_CDECL)/86/1/42338084;
-!!SN:Bv1/d/z151037;
-
-; Temple Guardian - Prayer
-!!SN:E7827723/(CALLCONV_CDECL)/3/1/42338084;
-!!SN:Bv1/d/z151038;
-!!SN:E7827723/(CALLCONV_CDECL)/12/2/42338084;
-!!SN:Bv1/d/z151039;
-!!SN:E7827723/(CALLCONV_CDECL)/21/2/42338084;
-!!SN:Bv1/d/z151040;
-
-; Astral Spirit - Summon Elemental
-!!SN:E7827723/(CALLCONV_CDECL)/9/1/42338084;
-!!SN:Bv1/d/z151041;
-!!SN:E7827723/(CALLCONV_CDECL)/18/2/42338084;
-!!SN:Bv1/d/z151042;
-!!SN:E7827723/(CALLCONV_CDECL)/27/2/42338084;
-!!SN:Bv1/d/z151043;
-** end of update Magic Mirror and Poison skill icons and descriptions**
 
 
 ** Maximum Commander Skills **
@@ -521,3 +417,5 @@ ZVSE2
 !?FU(OnGameLeave);
 !!UN&i^wog_comm_patch^:C7770979/(UNC_INT8)/i^wog_253_patch^;
 ** end of commander skill limit **
+
+
