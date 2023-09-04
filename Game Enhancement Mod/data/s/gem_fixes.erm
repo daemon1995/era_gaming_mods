@@ -445,17 +445,6 @@ ZVSE2
 *!en;
 
 
-!?FU(gem_OnBattleStackCheckReachability);                                 [blocking attk action by war machines]
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(currStack:y) C(currStack)/52/4/?t; [get current active stack]
-!!SN:E4696752/(CALLCONV_FASTCALL)/t;                                      [is mon a war machine]
-!!VRv1:&1;                                                                [check byte]
-!!if&v1;                                                                  [if true]
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(FALSE);                           [set return as FALSE]
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5390203;                           [skip the whole function]
-!!en;
-
-
 
 !?FU(OnGameEnter);
 //
@@ -740,6 +729,22 @@ C(cmbMgr)/21700/4/?(armyPtr[0]) C(cmbMgr)/21704/4/?(armyPtr[1]);
 
 !!SN:E4447296/(CALLCONV_THISCALL)/(stack)/(hero[side])/(armyPtr[side])/(town)/(hero[oppSide])/(armyPtr[oppSide])/(ground);         [recalc luck and morale for stack only]
 
+// fix of the melee WM attack
+!?FU(gem_CreateERMHook);
+  !!SN:Ex1/1/4928265/(gem_OnBattleStackCheckReachability);             [for any wm in melle]
+
+!?FU(gem_OnBattleStackCheckReachability);                              [blocking attk action by war machines]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(stack:y); [get current active stack]
+  !!UN:C(stack)/52/4/?t;                                               [get mon type]
+  !!SN:E4696752/(CALLCONV_FASTCALL)/t;                                 [is mon a war machine]
+  !!VRv1:&1;                                                           [check byte]
+  !!if&v1;                                                             [if true]
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4928298;                      [jump over adding near stack as reached target]
+  !!en;
+
+
+
 !?FU(gem_CreateERMHook);
 
 // open creatureInfoIncombat;
@@ -813,7 +818,7 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 *!VRi^weNeedReturn^:S(TRUE);
 *!IF:L^%(monLuck) %(heroLuck:y)^;
 !?FU(gem_OnCreatureLuckDescriptionSpellPartStart)&i^gem_MonPlusLuckChanger^;/i^weNeedReturn^;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); C(ebp)/16/4/?(bonusLuck:y) C(ebp)/20/4/?(luck:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); C(ebp)/16/4/?(bonusLuck:y) C(ebp)/20/4/?(luck:y);
 *!if&i^weNeedReturn^;
 *!IF:L^%^;
   !!SN:H^monname^/(MON_GHOST_BEHEMOTH)/1/?z3;
@@ -1315,6 +1320,14 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!SN:Ex1/1/7787216/(gem_OnAstralDefendMessage);
   !!SN:Ex1/1/7772772/(gem_OnBruteGoldBonusMessage);
 
+  // ART_SLAVAS_RING_OF_POWER's fixes
+  !!SN:Ex1/1/7782812/(gem_OnNPCBattleStackInit);
+  !!SN:Ex1/1/7779070/(gem_OnNPCBattleDescriptionGet);
+  !!SN:Ex1/1/7771289/(gem_OnNPCGetRingBonus);
+  !!UN:C7771553/-1/1/1;                                                                          [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3]
+
+
+
 !?FU(gem_OnBruteGoldBonusMessage); // replace brute message with adv map dlg info panel message
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(strPtr:y) Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-64/4/?(gold:y);
   !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
@@ -1354,7 +1367,7 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     !!VRs^gem_NPC_DecreeasesArmyMessage%(side)^:S(localStr:z);+^%n %(monName:z), ^;
     !!VRi^gem_NPC_DecreeasesArmyMessage%(side)^:S(TRUE);
   !!en;
-!?FU(OnCombatRound)&i^battle_isVisible^;/v997=0;
+!?FU(OnCombatRound)&i^battle_isVisible^/v997=0;
 *!IF:L^%i(battle_humanOnly) %i(battle_isQuick)^;
 
   !!re i/1/0/-1;/(BATTLE_RIGHT);
@@ -1371,13 +1384,42 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !?FU(OnAfterBattleUniversal);
 !!SN:W^gem_NPC_DecreeasesArmyMessage0^ W^gem_NPC_DecreeasesArmyMessage1^;:S(FALSE);
 
-*!IF:M^gem_OnAstralDefendMessage^;
-
-!?FU(gem_BlockPvPMessage);
-*!UN:C7786573/2/31467;31467 -jmp to 0x0076D0C9 to skip attacker message in pvp
-*!UN:C76D35B/2/21899;21899 -jmp to 0x0076D35B to skip defender message in pvp
 
 
+
+!?FU(gem_OnNPCGetRingBonus);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(npc:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(skillIndex:y); [получаем указатель на NPC и индекс проверяемого навыка]
+
+  !!VR(skillLevelPtr:y):S(skillIndex) *(SIZEOF_DWORD) +(npc) +56;                                [we get a pointer to the value of the skill being checked]
+
+  !!UN:C(skillLevelPtr)/4/?(skillLevel:y);                                                       [get skill value]
+  !!if&(skillLevel)<2;                                                                           [if less than 2]
+    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER);                          [check if NPC has a ring]
+    !!if&v1;                                                                                     [if there is]
+      !!SN:X?y99/0;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7771478;                                              [jumping directly to the calculation of bonuses from the ring, bypassing the addition of standard bonuses]
+    !!en;
+  !!en;
+
+!?FU(gem_OnNPCBattleDescriptionGet);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/1/?(skillLevel:y);                 [get skill value]
+  !!if&(skillLevel)<2;                                                  [if less than 2]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(npc:y);
+    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER); [check if NPC has a ring]
+    !!if&v1;                                                            [if there is]
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/1/2;                           [set skill cast value as at advanced skill lvl]
+    !!en;
+  !!en;
+
+!?FU(gem_OnNPCBattleStackInit);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/?(skillLevel:y);                 [get skill value]
+  !!if&(skillLevel)<2;                                                  [if less than 2]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(npc:y);
+    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER); [check if NPC has a ring]
+    !!if&v1;                                                            [if there is]
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/2;                           [set skill cast value as at advanced skill lvl]
+    !!en;
+  !!en;
 
 // Fix occasionally commanders receiving incorrect exp with when transfering between campaign zones
 // by Archer30

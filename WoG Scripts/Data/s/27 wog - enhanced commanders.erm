@@ -113,15 +113,51 @@ ZVSE2
     !!VRi^wog_51_change_creature_id^:S(TRUE);
   !!en;
 
-!?FU(WOG_51_NPC_GetSkills)&i^wog_51_change_creature_id^;
 
+
+!?FU(WOG_51_NPC_GetSecondarySkillLevel_AtEnd)&i^wog_51_change_creature_id^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(skillType:y) C(ebp)/-20/4/?(npcPtr:y) C(npcPtr)/12/4/?(npcType:y);
-
   !!if&(skillType)=4/(npcType:y)=(TOWN_CONFLUX);
-    !!UN:C(npcPtr)/72/4/?(magicPowerSkillLvl:y);
-    !!VR(magicPowerSkillLvl:y):+1;
-    !!UN:C(ebp)/-8/4/(magicPowerSkillLvl:y);
+    !!UN:C(npcPtr)/72/4/?(magicPowerSkillLvl:y) C(ebp)/-8/4/?(magicPower:y);
+    !!FU(WOG_51_NPC_GetSummonerSkillPower):P(magicPowerSkillLvl:y)/(magicPower:y)/?(result:y);
+    !!UN:C(ebp)/-8/4/(result:y);
   !!en;
+
+  !?FU(WOG_51_NPC_GetSummonerSkillPower);
+    !#VA(skill:x) (power:x) (result:x);
+    *!VR(power):+55;
+    !!VR(floatSkill:y):S(skill);
+    !!if&(floatSkill:y);
+      !!re i/1/(skill)/1/-1;
+        !!VR(floatSkill):*(skill);
+      !!en;
+    !!el;
+      !!VR(floatSkill:y):S1;
+    !!en;
+
+    !!VR(power):*(floatSkill) +1;
+    !!VR(floatSkill):+1;
+    !!VR(tempfloat:e):S(power) :(floatSkill) *2;
+    !!VR(tempInt:y):S(tempfloat:e);
+    !!VR(oddCheck:y):S(tempInt) &1;
+    !!if&(oddCheck);
+      !!VR(tempInt):+1;
+    !!en;
+
+    *!VR(tempfloat:e)::2;
+    !!VR(tempInt):Sd>>1;
+    *!IF:L^%(tempfloat) %(tempInt) %(oddCheck:y) %(result)^;
+    !!VR(half:e):S35:100;
+    !!VR(tempfloat:e):S(tempInt:y);
+    !!VR(result):S0;
+    !!re i;
+      !!VR(tempfloat)::2;Sd>>1;
+      !!if&(tempfloat)>(half:e);
+        !!VR(result):+1;
+      !!el;
+        !!br;
+      !!en;
+    !!en;
 
 !?FU(OnBattleActionEnd)&i^wog_51_change_creature_id^;
   !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
@@ -158,16 +194,6 @@ ZVSE2
 !!OB(x)/(y)/(z):U?(type:y);                         [get subtype of town]
 !!CO(CURRENT_HERO)&(type)<=(TOWN_LAST_WOG):T(type); [set commander type]
 ** end of post-buy commander trigger **
-
-
-!?FU(WOG_CreateERMHook)&i^wog_51_enabled^;;
-!!SN:Ex1/1/7771478/(WOG_51_NPC_GetSkills);
-*!SN:Ex1/1/7773306/(WOG_NPC_Init);
-!!SN:Ex1/1/7722625/(WOG_NPC_DeathStare);
-!!SN:Ex1/1/5914665/(WOG_51_OnResurrectionAliveFlagCheckA);
-!!SN:Ex1/1/5914817/(WOG_51_OnResurrectionAliveFlagCheckB);
-
-
 
 !?FU(WOG_NPC_DeathStare);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(defStack:y) Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(atkStack:y); [get atk def]
@@ -216,20 +242,52 @@ ZVSE2
   !!en;
 
 
+!?FU(WOG_51_NPC_GetSecondarySkillLevel_AtSlavaRing);
+*!UN:Cx1/
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(npc:y) Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(skillIndex:y); [получаем указатель на NPC и индекс проверяемого навыка]
+!!VR(skillLevelPtr:y):S(skillIndex) *(SIZEOF_DWORD) +(npc) +56;                                [we get a pointer to the value of the skill being checked]
+!!UN:C(skillLevelPtr)/4/?(skillLevel:y);                                                       [get skill value]
+!!if&(skillLevel:y)<2;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/?(currentValue:y);
+  !!VR(tableOffset:y):S(skillIndex)*5 +2 *4;
+  !!UN:C8002580/(tableOffset)/4/?(valueToAdd:y);
+
+  !!if|(skillIndex)=2/(skillIndex)=3; //HP or Damage
+    !!VR(floatAdd:e):S1:100 *(valueToAdd) *(currentValue);
+    !!VR(currentValue):+(floatAdd);
+  !!el;
+    !!VR(currentValue):+(valueToAdd);
+  !!en;
+
+  !!UN:C(ebp)/-8/4/(currentValue:y);
+!!en;
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7771619;
+
+!?FU(WOG_CreateERMHook)&i^wog_51_enabled^;;
+!!SN:Ex1/1/7771713/(WOG_51_NPC_GetSecondarySkillLevel_AtEnd);
+!!SN:Ex1/1/7771545/(WOG_51_NPC_GetSecondarySkillLevel_AtSlavaRing);
+
+*!SN:Ex1/1/7773306/(WOG_NPC_Init);
+!!SN:Ex1/1/7722625/(WOG_NPC_DeathStare);
+!!SN:Ex1/1/5914665/(WOG_51_OnResurrectionAliveFlagCheckA);
+!!SN:Ex1/1/5914817/(WOG_51_OnResurrectionAliveFlagCheckB);
+
+
+
 !?FU(OnGameEnter);
 !!VR(npcFileName:z):S^znpc00.txt^;
 
 !!if&i^wog_51_enabled^;
   !!VR(npcFileName:z):S^znpc00a.txt^;
 
-  !!UN:C7772946/3/4/?i^wog_51_npc_speed_patch^ C7772946/3/4/5;                   [set base npc speeds as 5]
-  !!UN:C7788102/1/1/?i^wog_51_npc_buff_patch^ C7788102/1/1/(SPELL_MAGIC_MIRROR); [replace fireshield with magic mirror]
+  !!UN:C7772946/3/4/?i^wog_51_npc_speed_patch^ C7772946/3/4/5;                                     [set base npc speeds as 5]
+  !!UN:C7788102/1/1/?i^wog_51_npc_buff_patch^ C7788102/1/1/(SPELL_MAGIC_MIRROR);                   [replace fireshield with magic mirror]
 
-  !!UN:C7783323/6/4/?i^wog_51_npc_combat_spell^ C7783323/6/4/(SPELL_PRAYER); [replace precision with spell prayer]
+  !!UN:C7783323/6/4/?i^wog_51_npc_combat_spell^ C7783323/6/4/(SPELL_PRAYER);                       [replace precision with spell prayer]
+  !!UN:C7771384/4/4/?i^wog_51_npc_primary_skills_table^ C7771384/4/4/8002580 C7771468/3/4/8002580; [replace npc stats table ptr for percentage / static skills]
 
-  
-  !!UN:C7771384/4/4/?i^wog_51_npc_primary_skills_table^ C7771384/4/4/8002580;    [replace npc stats table]
-  !!UN:C7771468/3/4/8002580;                                                     [?(addr:y);]
+
   !!UN:C7783548/6/4/(SPELL_AIR_ELEMENTAL);
 
 
@@ -256,8 +314,8 @@ ZVSE2
   !!SN:B8013344/d/z(fileName:x);
   !!SN:E7802090/(CALLCONV_STDCALL);
 
-!?FU(OnGameLeave)&i^wog_51_enabled^;;
-  !!UN:C7771468/3/4/i^wog_51_npc_primary_skills_table^ C7771384/4/4/i^wog_51_npc_primary_skills_table^; restore orginal npc PSkills table addresses
+!?FU(OnGameLeave)&i^wog_51_enabled^;
+  !!UN:C7771468/3/4/i^wog_51_npc_primary_skills_table^ C7771384/4/4/i^wog_51_npc_primary_skills_table^; [restore npc stats table ptr for percentage / static skills]
   !!UN:C7783323/6/4/i^wog_51_npc_combat_spell^; [restore temple guardian re]
   !!UN:C7772946/3/4/i^wog_51_npc_speed_patch^;  [restore base NPC speed]
   !!UN:C7788102/1/1/i^wog_51_npc_buff_patch^;   [restore NPC fireshield buff]
@@ -301,6 +359,8 @@ ZVSE2
       !!SN:T^wog.51.skill.%(skillId)^/?(skillName:z);
       !!SN:T^wog.51.gem.%(objSubtype)^/?(msg:z)/^name^/(name) T^wog.51.gem.bonus^/?(bonus:z)/^skillName^/(skillName:z)/^skillIcon^/(skillIcon:y);
       !!VR(msg):+(bonus);
+    !!el;
+      !!FU:E;
     !!en;
 
   !!en;
@@ -333,68 +393,68 @@ ZVSE2
   !!en;
 
 !?FU(WOG_51_NPC_GetRandomSSkillToUpgrade);
-* refactoring by [igrik and Archer30]
-* x2 - first  sskill
-* x3 - second sskill
-!#VA(commander:x) (skill1:x) (skill2:x) (skillIndex:x) (skillIcon:x);
+  * refactoring by [igrik and Archer30]
+  * x2 - first  sskill
+  * x3 - second sskill
+  !#VA(commander:x) (skill1:x) (skill2:x) (skillIndex:x) (skillIcon:x);
 
 
-; Get the skill about to learn
-!!VR(skillIndex):S(NO_SKILL);
-!!VR(skillIcon):S(NO_PIC_TYPE);
-!!CO(commander):S(skill1)/?(skill1Lv:y) S(skill2)/?(skill2Lv:y);
+  ; Get the skill about to learn
+  !!VR(skillIndex):S(NO_SKILL);
+  !!VR(skillIcon):S(NO_PIC_TYPE);
+  !!CO(commander):S(skill1)/?(skill1Lv:y) S(skill2)/?(skill2Lv:y);
 
-; Pick the lower level skill. If the level is the same, randomly pick one
-!!if&(skill1Lv)>(skill2Lv);
-  !!VR(skillIndex):S1;
-!!el&(skill1Lv)<(skill2Lv);
-  !!VR(skillIndex):S0;
-!!el&(skill1Lv)=(skill2Lv)/(skill2Lv)<5;
-  !!VR(random:y):R0/0/99;
-
-  !!if&(random)<=49;
+  ; Pick the lower level skill. If the level is the same, randomly pick one
+  !!if&(skill1Lv)>(skill2Lv);
     !!VR(skillIndex):S1;
-  !!el;
+  !!el&(skill1Lv)<(skill2Lv);
     !!VR(skillIndex):S0;
+  !!el&(skill1Lv)=(skill2Lv)/(skill2Lv)<5;
+    !!VR(random:y):R0/0/99;
+
+    !!if&(random)<=49;
+      !!VR(skillIndex):S1;
+    !!el;
+      !!VR(skillIndex):S0;
+    !!en;
   !!en;
-!!en;
-; If any of the skills is not at max level
-!!if&(skillIndex)>-1;
-  !!VR(skillToLearn:y)&(skillIndex)=0:S(skill1);
-  !!VR(skillToLearn)&(skillIndex)=1:S(skill2);
+  ; If any of the skills is not at max level
+  !!if&(skillIndex)>-1;
+    !!VR(skillToLearn:y)&(skillIndex)=0:S(skill1);
+    !!VR(skillToLearn)&(skillIndex)=1:S(skill2);
 
-  !!CO(commander):S(skillToLearn)/?(skillToLearnLv:y); [get current skill level]
+    !!CO(commander):S(skillToLearn)/?(skillToLearnLv:y); [get current skill level]
 
-  ; Check if learning the new basic skill could result in exceeding skills limit
-  !!if&(skillToLearnLv)=0;
-    ; Get the skills limit
-    !!UN:C7770979/(UNC_INT8)/?(maxSkills:y); [if Option 253 is enabled, this would be 6]
+    ; Check if learning the new basic skill could result in exceeding skills limit
+    !!if&(skillToLearnLv)=0;
+      ; Get the skills limit
+      !!UN:C7770979/(UNC_INT8)/?(maxSkills:y); [if Option 253 is enabled, this would be 6]
 
-    ; Get the quanity of existing skills learned
-    !!VR(learnedSkills:y):S0;
+      ; Get the quanity of existing skills learned
+      !!VR(learnedSkills:y):S0;
 
-    !!re i/0/5;
-      !!CO(CURRENT_HERO):Si/?(skillLv:y);
+      !!re i/0/5;
+        !!CO(CURRENT_HERO):Si/?(skillLv:y);
 
-      !!VR(learnedSkills)&(skillLv)>0:+1;
+        !!VR(learnedSkills)&(skillLv)>0:+1;
+      !!en;
+
+      ; Set var if skills limit has been reached
+      !!VR(skillIndex)&(learnedSkills)>=(maxSkills):S-1;
     !!en;
 
-    ; Set var if skills limit has been reached
-    !!VR(skillIndex)&(learnedSkills)>=(maxSkills):S-1;
+    !!if&(skillIndex)>-1;
+      ; give one extra skill level
+      !!VR(skillToLearnLv):+1;
+      !!CO(commander):S(skillToLearn)/(skillToLearnLv);
+
+      ; Increase Magic Resistance along with Magic Power, doesn't work automatically
+      !!CO(commander)&(skillToLearn)=4:S6/(skillToLearnLv);
+      !!VR(skillIcon):S(skillToLearn) *6 +(skillToLearnLv);
+    !!en;
   !!en;
 
-  !!if&(skillIndex)>-1;
-    ; give one extra skill level
-    !!VR(skillToLearnLv):+1;
-    !!CO(commander):S(skillToLearn)/(skillToLearnLv);
-
-    ; Increase Magic Resistance along with Magic Power, doesn't work automatically
-    !!CO(commander)&(skillToLearn)=4:S6/(skillToLearnLv);
-    !!VR(skillIcon):S(skillToLearn) *6 +(skillToLearnLv);
-  !!en;
-!!en;
-
-** end of object trigger
+  ** end of object trigger
 
 
 ** Maximum Commander Skills **
