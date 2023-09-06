@@ -61,37 +61,6 @@ ZVSE2
   !!FU(gem_GetRandomMon)&(flag)=(FALSE):P?(mon)/(monsToExcl)/(mons[0])/(mons[1])/(mons[2])/(mons[3])/(mons[4])/(mons[5])/(mons[6])/(mons[7])/(mons[9]);
 
 
-!?FU(gem_GetPlayerActiveHeroesList);
-!#VA(playerID:x) (array:x);
-  !!VR(array):S0;
-
-  !#VA(hero[8]:y);
-  !!OW:O(playerID)/?(heroesOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
-  
-  !!if&(heroesOnMap)>0;
-    !!FU(NewIntArray):P(heroesOnMap)/?(array);
-
-    !!re i/0/(heroesOnMap)/1/-1;
-      !!SN:M(array)/i/(hero[i]);
-    !!en;
-	
-    !!SN:F^ExtendArrayLifetime^/(array);
-  !!en;
-
-!?FU(gem_GetPlayerHeroesList);
-!#VA(playerID:x) (array:x);
-  !!VR(array):S-1;
-
-  !!OW:H(playerID)/1;
-  !!if&v1;
-    !!FU(NewIntArray):Pv1/?(array);
-
-    !!re i/2/v1/1/1;
-      !!SN:M(array)/i/vi;
-    !!en;
-
-    !!SN:F^ExtendArrayLifetime^/(array);
-  !!en;
 
 !?FU(gem_GetRectCenter);
 !#VA(x:x) (y:x) (width:x) (height:x) (xPos:x) (yPos:x);
@@ -147,13 +116,70 @@ ZVSE2
   !#VA(hero[3]:x);
   !!FU:A?(numArgs:y);
   !!if&(numArgs)>1;
-    !!HE(hero[0])/(hero[1])/(hero[2]):Z?(heroPtr:y) N?(heroId:y);
+    !!HE(hero[0])/(hero[1])/(hero[2]):N?(heroId:y);
   !!el;
-    !!HE(hero[0]):Z?(heroPtr:y) N?(heroId:y);
+    !!HE(hero[0]):N?(heroId:y);
   !!en;
-  !!SN:E5077056/(CALLCONV_THISCALL)/(heroPtr)/(OBJ_HERO)/(heroId:y);         [hide hero if it is there]
+  !!VR(objType:y):S(OBJ_HERO);
 
+  !!HE(heroId):R7/?(setUp:y) Z?(heroPtr:y);
+  !!VR(setUp:y):&(BIT_19);
+  !!if&(setUp);
+    !!VR(objType:y):S(OBJ_BOAT);
+  !!en;
+  !!SN:E5077056/(CALLCONV_THISCALL)/(heroPtr)/(objType)/(heroId:y);         [hide hero if it is there]
 
+!?FU(gem_Player_GetResourceIncome);
+  !#VA(playerId:x) (result[7]:x) (customWeekDay:x);
+  !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+  !!UN:C(gameMgr)/128574/(UNC_INT16)/?(currentWeekDay:y);
+
+  !!FU:A?(argNum:y);
+  !!if&(argNum)=(@customWeekDay)/(customWeekDay)>=1/(customWeekDay)<=7;
+    !!UN:C(gameMgr)/128574/(UNC_INT16)/(customWeekDay);
+  !!en;
+
+  !!SN:E4950000/(CALLCONV_THISCALL)/(gameMgr); // recalc all players income
+  !!VR(offset:y):S360 *(playerId:x) + 264 + 133840; [player setup size * id + income offset + playerSetup offset]
+
+  !!re i/(RES_FIRST)/(RES_LAST_SOD);(end_value);
+    !!UN:C(gameMgr)/(offset)/4/?(result[i]);
+    !!VR(offset:y):+4;
+  !!en;
+   
+  !!UN:C(gameMgr)/128574/(UNC_INT16)/(currentWeekDay:y);
+
+!?FU(gem_Player_GetActiveHeroesList);
+!#VA(playerID:x) (array:x);
+  !!VR(array):S0;
+
+  !#VA(hero[8]:y);
+  !!OW:O(playerID)/?(heroesOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
+  
+  !!if&(heroesOnMap)>0;
+    !!FU(NewIntArray):P(heroesOnMap)/?(array);
+
+    !!re i/0/(heroesOnMap)/1/-1;
+      !!SN:M(array)/i/(hero[i]);
+    !!en;
+  
+    !!SN:F^ExtendArrayLifetime^/(array);
+  !!en;
+
+!?FU(gem_Player_GetHeroesList);
+!#VA(playerID:x) (array:x);
+  !!VR(array):S-1;
+
+  !!OW:H(playerID)/1;
+  !!if&v1;
+    !!FU(NewIntArray):Pv1/?(array);
+
+    !!re i/2/v1/1/1;
+      !!SN:M(array)/i/vi;
+    !!en;
+
+    !!SN:F^ExtendArrayLifetime^/(array);
+  !!en;
 
 
 ************************************************************************
@@ -436,21 +462,58 @@ ZVSE2
 !!FU(gem_SetRandomSeed):P?(oldSeed:y);
 !!VR(result):Rd/(seed) R0/(min)/(max) Rd/(oldSeed);
 
-!?FU(gem_GetLocalDate);
-!#VA(day:x) (month:x) (year:x);
+!?FU(gem_GetLocalTime);
+!#VA(year:x) (month:x) (weekDay:x) (day:x) (hour:x) (minute:x) (second:x) (mSecond:x);
 !#VA(systemTime[4]:y);
-!!SN:L^kernel32.dll^/?(kernel:y) A(kernel:y)/^GetLocalTime^/?(func:y) E(func)/(CALLCONV_CDECL)/?(systemTime[0]);
-!!VR(day):S(systemTime[1]) :65536;
-!!VR(month):S(systemTime[0]) :65536;
-!!VR(year):S(systemTime[0]) %65536;
+  !!SN:L^kernel32.dll^/?(kernel:y) A(kernel:y)/^GetLocalTime^/?(func:y) E(func)/(CALLCONV_CDECL)/?(systemTime[0]);
+  !!VR(year):S(systemTime[0]) %65536;
+  !!VR(month):S(systemTime[0]) :65536;
 
-!?FU(gem_UnsetHookAt);
-!#VA(address:x);
-!!SN:L^EraPlugins\erm_hooker.era^/?y1;
+  !!VR(weekDay):S(systemTime[1]) %65536;
+  !!VR(day):S(systemTime[1]) :65536;
 
-!!if&y1<>0;
-  !!SN:Ay1/^UnsetHook^/?y2 Ey2/(CALLCONV_STDCALL)/x1;
+  !!VR(hour):S(systemTime[2]) %65536;
+  !!VR(minute):S(systemTime[2]) :65536;
+
+  !!VR(second):S(systemTime[3]) %65536;
+  !!VR(mSecond):S(systemTime[3]) :65536;
+
+!?FU(gem_SetHookAt);                                               [sets hook by address and foo "name"]
+!!FU:A?(numArgs:y);
+!!VRt:S(numArgs) %2;
+
+!!if|t/(numArgs)=0;
+  !!SN:F^ShowErmError^/^gem_SetHookAt: invalid arguments number: %(numArgs)^;
+  !!FU:E;
 !!en;
+
+!!SN:L^EraPlugins\erm_hooker.era^/?(hooker:y);
+!!if&(hooker:y)<>0;
+  !!SN:A(hooker:y)/^SetHook^/?(funcAddr:y);
+  !!re i/1/(numArgs)/2;
+    !!VRj:Si +1;
+    !!SN:E(funcAddr)/(CALLCONV_STDCALL)/xi/xj;
+  !!en;
+!!en;
+
+!?FU(gem_UnsetHookAt);                                             [unsets hook by address and foo "name"]
+!!FU:A?(numArgs:y);
+!!VRt:S(numArgs) %2;
+
+!!if|t/(numArgs)=0;
+  !!SN:F^ShowErmError^/^gem_SetHookAt: invalid arguments number: %(numArgs)^;
+  !!FU:E;
+!!en;
+
+!!SN:L^EraPlugins\erm_hooker.era^/?(hooker:y);
+!!if&(hooker:y)<>0;
+  !!SN:A(hooker:y)/^UnsetHook^/?(funcAddr:y);
+  !!re i/1/(numArgs)/2;
+    !!VRj:Si +1;
+    !!SN:E(funcAddr)/(CALLCONV_STDCALL)/xi/xj;
+  !!en;
+!!en;
+
 
 ************************************************************************
 ************************************************************************
@@ -550,7 +613,7 @@ ZVSE2
 
   !!VRv1:S(savedV1);
 
-!?FU(gem_DlgDisableBtn);
+!?FU(gem_DlgDefButton_Disable);
 !#VA(itemId:x) (enable:x) (whenDisabledFrame:x) (redraw:x) (dlgObj:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
@@ -585,7 +648,7 @@ ZVSE2
   !!VRv1:S(savedV1);
 
 
-!?FU(gem_DlgShowItem);
+!?FU(gem_DlgItem_Show);
 !#VA(itemId:x) (showItem:x) (clickableItem:x) (redraw:x) (currentDlgStruct:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
@@ -628,7 +691,7 @@ ZVSE2
 
   !!VRv1:S(savedV1);
 
-!?FU(gem_DlgItemSize);
+!?FU(gem_DlgItem_Size);
 !#VA(itemId:x) (width:x) (height:x) (redraw:x) (currentDlgStruct:x);
   !!if&(itemId)<0;
     !!IF:M^itemId is incorrect!
@@ -707,7 +770,7 @@ ZVSE2
 
 
 
-!?FU(gem_DlgItemPosition);
+!?FU(gem_DlgItem_Position);
 !#VA(itemId:x) (xPos:x) (yPos:x) (redraw:x) (customDlgStruct:x) (parrent:x);
   !!FU:A?(argNum:y);
   !!if|(itemId)<0/(argNum)<=(@itemId);
@@ -765,20 +828,19 @@ ZVSE2
       !!UN:C(itemAction)/2/(yPos);    
     !!en;
     !!if&(redraw);
-      !!SN&(redraw)=1:E6288864/2/(dlgStruct)/1/-65535/65535; [update currentDlg;]
-      !!SN&(redraw)=-1:E6288864/2/(dlgStruct)/1/(itemId)/(itemId); [update onlyItem;]
+      !!SN&(redraw)=1:E6288864/2/(dlgStruct)/1/-65535/65535; [redraw currentDlg;]
+      !!SN&(redraw)=-1:E6288864/2/(dlgStruct)/1/(itemId)/(itemId); [redraw onlyItem;]
     !!en;
 
   !!VRv1:S(savedV1);
 
-!?FU(gem_GetItemStructure);
+!?FU(gem_DlgItem_Get);
 !#VA(itemId:x) (itStructure:x);
   !!VR(savedV1:y):Sv1;
 
   !!FU(H3Dlg_GetCurrentDlg):P?(currentDlgStruct:y);
   !!SN:E6288816/2/(currentDlgStruct)/(itemId);
   !!VR(itStructure)&v1>0:Sv1; [getItemStruture] item = (_Dlg_*)->GetItem(id)
-
   !!VRv1:S(savedV1);
 
 
@@ -823,7 +885,10 @@ ZVSE2
   *!SN:B(addr)/d/(str);
 *!en;
 
-
+!?FU(gem_ShowHeroScreen);
+!#VA(heroId:x) (isRmc:x);
+  !!VR(isRmc:x):B;
+  !!SN:E5118576/(CALLCONV_FASTCALL)/(heroId)/1/1/(isRmc:x);
 
 
 !?FU(gem_Town_GetStruct);
@@ -883,6 +948,10 @@ ZVSE2
   !!VRx3&v1<>0:S1;
   !!CA0/x1:Ry2;
 
+!?FU(gem_TownMgr_SetHint);
+!#VA(hint:x);
+  !!VR(zHint:z):Sz(hint:x);
+  !!CM:M(zHint:z);
 
 
 

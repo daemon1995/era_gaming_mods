@@ -300,31 +300,30 @@ ZVSE2
 !!VR(spell):S(NO_SPELL);
 !!VR(frequency):S(NULL);
 
-!!HE(heroId):X?(specType:y)/?(spellID:y);
+!!HE(heroId):X?(specType:y)/?(heroSpell:y);
 
-!!if&(specType)=3/(spellID)>=(SPELL_FIRST_BATTLE);
-  !!SS(spellID):L?l F?f;(flag:y);
+!!if&(specType)=3/(heroSpell)>=(SPELL_FIRST_BATTLE);
+  !!SS(heroSpell):L?l F?f;(flag:y);
   !!VR(damageSpell:y):Sf &512;
   !!VR(anyHexTarget:y):Sf &128;
 
-  !!if&(spellID)=(SPELL_FIRE_WALL);
+  !!if&(heroSpell)=(SPELL_FIRE_WALL);
     !!VR(spell):S(SPELL_SHIELD);
-  !!el|(spellID)=(SPELL_FIREBALL)/(spellID)=(SPELL_INFERNO);
+  !!el|(heroSpell)=(SPELL_FIREBALL)/(heroSpell)=(SPELL_INFERNO);
     !!VR(spell):S(SPELL_FIRE_SHIELD);
-  !!el|(spellID)=(SPELL_PRECISION);/(spellID)=(SPELL_INFERNO);
+  !!el|(heroSpell)=(SPELL_PRECISION);/(spellID)=(SPELL_INFERNO);
     !!VR(spell):S(SPELL_AIR_SHIELD);
-  !!el&(anyHexTarget)/l>2/(damageSpell)=0|(spellID)=(SPELL_RESURRECTION)/(spellID)=(SPELL_ANIMATE_DEAD);
+  !!el&(anyHexTarget)/l>2/(damageSpell)=0|(heroSpell)=(SPELL_RESURRECTION)/(heroSpell)=(SPELL_ANIMATE_DEAD);
     !!VR(spell):S(SPELL_SLOW);
-  !!el&l>2/(damageSpell)|(spellID)=(SPELL_DEATH_RIPPLE);
+  !!el&l>2/(damageSpell)|(heroSpell)=(SPELL_DEATH_RIPPLE);
     !!VR(spell):S(SPELL_MAGIC_ARROW);
   !!el;
-    !!VR(spell):S(spellID);
+    !!VR(spell):S(heroSpell);
   !!en;
 
   !!if&(spell)<>(NO_SPELL);
     !!SS(spell):L?l F?f;
     !!VR(damageSpell:y):Sf &512;
-
     !!VR(frequency):S5 *l;
     !!if&(damageSpell);
       !!VR(frequency):+3;
@@ -334,64 +333,68 @@ ZVSE2
 
     !!if&(spell)=(SPELL_MAGIC_ARROW);
       !!VR(frequency):S14;
-      !!if&(spellID)=(spell);
+      !!if&(heroSpell)=(spell);
         !!VR(frequency):S9;
       !!en;
     !!en;
-    !!VR(frequency):*3;
+    !!VR(frequency):F7/25 *2;
   !!en;
 !!en;
 
 !?FU(WOG_39_CastAutoSpell);
-!!re i/0/i^battle_hero_vs_hero^;(end_value);
+!#VA(side:x);
 
-  !!if&i^wog_39_hero_%i_cast_chance^;
-    !!VR(rand:y):R0/1/i^wog_39_hero_%i_cast_chance^;
-      *!IF:M^%i %i(wog_39_hero_%i_cast_chance)^;
-    *!IF:L^%(rand) %i(wog_39_hero_%i_cast_chance)^;
+!!if&i^wog_39_hero_%(side)_cast_chance^;
+  *!VRi:S(side:x);
+  *!if&(side:x)=(activeSide);
+    !!VR(rand:y):R0/1/i^wog_39_hero_%(side)_cast_chance^;
 
-    !!if&(rand)=i^wog_39_hero_%i_cast_chance^;
-      !!FU(WOG_39_GetCastedSpell):Pi^battle_hero_%i^/?(spellID:y)/?i^wog_39_hero_%i_cast_chance^; [reset cast chance]
+    !!if&(rand)=i^wog_39_hero_%(side)_cast_chance^;
+      !!FU(WOG_39_GetCastedSpell):Pi^battle_hero_%(side)^/?(spellID:y)/?i^wog_39_hero_%(side)_cast_chance^; [reset cast chance]
+      !!if&(spellID:y)=(NO_SPELL);
+        *!IF:M^%(side)^;
+        !!FU:E;
+      !!en;
+      *!IF&(side):M^%(side)^;
       !!FU(WOG_33_GetSpellTargetSide):P(spellID:y)/?(targetStackSide:y);
 
       !!if&(targetStackSide)<>(NO_STACK);
-        !!VR(targetStackSide):Xi;                                                                 [revert side for right hero]
-        !!FU(WOG_33_GetTargetStackId):P(targetStackSide)/i/(spellID)/?(targetStackId:y);
+        !!VR(targetStackSide):X(side);                                                                 [revert side for right hero]
+        !!FU(WOG_33_GetTargetStackId):P(targetStackSide)/(side)/(spellID)/?(targetStackId:y);
 
         !!if&(targetStackId)<>(NO_STACK);
           !!BM(targetStackId):P?(position:y);
-          !!FU(WOG_Battle_GetHeroSpellSchoolLvl):Pi^battle_hero_%i^/(spellID)/?(schoolLvl:y);
-          !!UN:C5133500/1/?(oldSpell:y) C5133500/1/(spellID:y) C(COMBAT_MANAGER)/4/?(cmbMgr:y)
-          C(cmbMgr)/81268/1/?(noCastLimit:y) C(cmbMgr)/81268/1/(TRUE);
-          !!BHi:M?(cast:y) C(spellID)/(position)/(schoolLvl)/1 M?(lol:y) M(cast:y);
-          !!UN:C5133500/1/(oldSpell:y) C(cmbMgr)/81268/1/(noCastLimit);
+          !!FU(WOG_Battle_GetHeroSpellSchoolLvl):Pi^battle_hero_%(side)^/(spellID)/?(schoolLvl:y);
+
+          !!UN:C5133500/1/?(oldSpell:y) C(COMBAT_MANAGER)/4/?(cmbMgr:y)  C(cmbMgr)/81268/1/?(noCastLimit:y)   C(cmbMgr)/78528/4/?(activeSide:y) 
+          C5133500/1/(spellID:y) C(cmbMgr)/81268/1/(TRUE) C(cmbMgr)/78528/4/(side);
+
+          !!BH(side:x):M?(cast:y) C(spellID)/(position)/3/1 M(cast:y);
+          !!UN:C5133500/1/(oldSpell:y) C(cmbMgr)/81268/1/(noCastLimit) C(cmbMgr)/78528/4/(activeSide:y);
         !!en;
       !!en;
     !!el;
-      !!VRi^wog_39_hero_%i_cast_chance^:-1;                                                       [increase cast chance]
+      !!VRi^wog_39_hero_%(side)_cast_chance^:-1;                                                       [increase cast chance]
     !!en;
-
-  !!en;
-
 !!en;
 
-!?FU(OnAfterBattleAction)&i^wog_39_enabled^/i^battle_round^>-1;
-!!BU:C?(isEnd:y);
+!?FU(OnBeforeBattleAction)&i^wog_39_enabled^/i^battle_round^>-1;
+  !!BU:C?(isEnd:y);
 
-!!if&(isEnd);
-  !!re i/0/i^battle_hero_vs_hero^;
-    !!if&i^wog_39_hero_%i_mana^;
-      !!HEi^battle_hero_%i^:Id-i^wog_39_hero_%i_mana^/1 I?m/1;
-      !!VRm:F0/(INT_MAX);
-      !!HEi^battle_hero_%i^:Im/1;
-      !!VRi^wog_39_hero_%i_mana^:S0;
+  !!if&(isEnd);
+    !!re i/0/i^battle_hero_vs_hero^;
+      !!if&i^wog_39_hero_%i_mana^;
+        !!HEi^battle_hero_%i^:Id-i^wog_39_hero_%i_mana^/1 I?m/1;
+        !!VRm:F0/(INT_MAX);
+        !!HEi^battle_hero_%i^:Im/1;
+        !!VRi^wog_39_hero_%i_mana^:S0;
+      !!en;
+
+      !!VRi^wog_39_hero_%i_cast_chance^:S(NULL);
     !!en;
-
-    !!VRi^wog_39_hero_%i_cast_chance^:S(NULL);
   !!en;
-!!el&i^wog_isBattleStackAction^;
-  !!FU(WOG_39_CastAutoSpell)|i^wog_39_hero_0_cast_chance^/i^wog_39_hero_1_cast_chance^:P;
-!!en;
+!?FU(OnBattleStackObtainsTurn)&i^wog_39_enabled^/i^battle_round^>-1;
+!!FU(WOG_39_CastAutoSpell):Px1;i^battle_acting_side^;/i^wog_39_hero_1_cast_chance^;
 
 !?FU(OnAfterBattleUniversal)&i^wog_39_enabled^;
 !!re i/0/(BATTLE_LEFT);

@@ -12,22 +12,13 @@ ZVSE2
 
 
 ;spellResearch mod is rewritten in ERM 2.0
-;current version is 1.3
+;current version is 1.4
 ;author - daemon_n
 ;original idea - HotA Crew (Horn of the Abyss game)
 ;requires ERA 3.9.0 +, ERA ERM Framework mod;
 ;used dialogs ID - 506, 507, 508, 509
 ;used z-vars - 1-15, 20-23, 30-32, 40, 41, 50;
 ;added NewSpells Mod support
-
-!?FU(gem_OnDlgProcessAction)&i^gem_DlgIsOpened^;
-
-  !!FU(gem_DlgDefProc):P6/?(currentFrame:y)/d/d/d/i^gem_DlgIsOpened^;
-  !!if&(currentFrame)=24;
-    !!FU(gem_DlgShowItem):P6/(FALSE)/(FALSE)/(FALSE);
-    *!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(TRUE);
-    !!VRi^gem_DlgIsOpened^:S0;
-  !!en;
 
 
 !?FU(OnAfterBuildTownBuilding);    [trigger after Bulding - ERA 3.9.1+]
@@ -40,31 +31,33 @@ ZVSE2
     !!FU(srm_remove_library_spells_from_arrays_when_built):P(townId); [start remove library_spells from_arrays_when_built FU]
   !!en;
 
-!?FU(OnTownMouseClick)&i^srm_mod_is_enabled^/i^mouse_action^=(MOUSE_LMB_PRESSED);
-  !!CM:S?(clickSub:y) I?(clickedPlace:y);
+!?FU(gem_CreateERMHook)&i^srm_mod_is_enabled^;
+!!SN:Ex1/1/6109567/(gem_TownMgr_MagicGuildClick);
+
+
+
+!?FU(gem_TownMgr_MagicGuildClick);
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(townMgr:y) C(townMgr)/56/4/?(town:y);
+
   !!CA-1:G?(guildLevel:y);
   !!VR(guildId:y):S(guildLevel) -1;
 
-  !!if&i^mouse_flags^<>(NO_MOUSE_FLAGS)/(clickedPlace)=(guildId);
-    !!CM:R0;
-  !!en;
-  !!if&(guildLevel)/(clickSub)=(MOUSE_LMB_PRESSED)/(clickedPlace)=(guildId)/i^mouse_flags^=(NO_MOUSE_FLAGS);
+  !!CA-1:U?(townId:y) T?(townType:y) B3/26;    
 
-    !!CA-1:U?(townId:y) T?(townType:y) B3/26;    
-
-    !!FU&1/(townType)=(TOWN_CONFLUX)|(townId)>=i^srm_townsAmount^:E;        [if this is not town from the start or flux with graal]
+  !!FU&1/(townType)=(TOWN_CONFLUX)|(townId)>=i^srm_townsAmount^:E;        [if this is not town from the start or flux with graal]
 
     
-    !!CA-1:B3/22;
-    !!if&1/(townType)=(TOWN_TOWER);
-      !!VR(hasLibrary:y):S(TRUE);
+  !!CA-1:B3/22;
+  !!if&1/(townType)=(TOWN_TOWER);
+    !!VR(hasLibrary:y):S(TRUE);
 
-      !!if&i^srm_town%(townId)_has_no_library_from_start^;
-        *!FU(srm_remove_library_spells_from_arrays_when_built):P(townId);   [start remove library_spells from_arrays_when_built FU]
-        !!VRi^srm_town%(townId)_has_no_library_from_start^:S(FALSE);        [and it should be once]
-      !!en;
-
+    !!if&i^srm_town%(townId)_has_no_library_from_start^;
+      *!FU(srm_remove_library_spells_from_arrays_when_built):P(townId);   [start remove library_spells from_arrays_when_built FU]
+      !!VRi^srm_town%(townId)_has_no_library_from_start^:S(FALSE);        [and it should be once]
     !!en;
+
+  !!en;
 
     *!FU(FileExists):P^Mods\Game enhancement Mod\data\srm_data.pac^/?(isExist:y);
     !!UN:J8/1/^gem_hota.pac^;
@@ -91,26 +84,18 @@ ZVSE2
       !!VRi^srm_greetings_message^:S2;
     !!en;
     !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlg:y);
-    *!UN:C
+
     !!UN:C(dlg)/(UNC_INT)/?(dlg);
     !!FU(DoT_ChangeMGBG):P(dlg)/(SRM_ITEM_BACKGROUND)/1;
 
-    !!FU(gem_DlgShowItem):P6/(FALSE)/(FALSE)/(FALSE)/(dlg);
-    !!FU(gem_DlgShowItem):P7/(FALSE)/(FALSE)/(FALSE)/(dlg);
+    !!FU(gem_DlgItem_Show):P(SRM_ITEM_BACKGROUND_ANIM)/(FALSE)/(FALSE)/(FALSE)/(dlg);
+    !!FU(gem_DlgItem_Show):P7/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!DL(SRM_DLG_MAGE_GUILD):S1;
-    !!VRi^gem_DlgIsOpened^:S0;
     [AFTER DLG WAS CLOSED]
-    !!if&i^srm_rebuild_guild^|i^srm_spell_bought^;
-      !!VR(realGuildLevel:y):S(guildLevel) -1;             
-      *!CA-1:B6/(realGuildLevel);         [rebuild magic guild for learn new spells - evading from learn bug, idk]
-      !!FU(gem_Town_GetStruct):P(townId)/?(town:y);
-      !!SN:E6025696/(CALLCONV_THISCALL)/(town:y)/(realGuildLevel)/0/0; [regive all spells from magic guild]
-      !!VRi^srm_rebuild_guild^:S(FALSE);
-      !!VRi^srm_spell_bought^:S(FALSE);
-    !!en;
-    !!CM:R0;
-    !!SN:D;
-  !!en;
+    // cancel standaed action
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6109572;
+
 
 !?FU(OnCustomDialogEvent)&x1=(SRM_DLG_MAGE_GUILD)/v999>=0/v999<=42;
   !#VA(spellId:y) (townId:y) (spellPlace:y) (isSpellResearched:y);
@@ -162,7 +147,7 @@ ZVSE2
       !!SN:P(buildSound);
       !!UN:R6/500;
 
-      !!VRi^srm_rebuild_guild^:S(TRUE);
+      *!VRi^srm_rebuild_guild^:S(TRUE);
 
     !!en;
 
@@ -755,8 +740,8 @@ ZVSE2
     !!FU(DL_FindById):P(SRM_DLG_SPELL_CHOICE)/?(dlg:y);
     !!UN:C(dlg)/(UNC_INT)/?(dlg);
     
-    !!FU(gem_DlgItemSize):P12/d/d20/(FALSE)/(dlg);
-    !!FU(gem_DlgItemSize):P13/d/d20/(FALSE)/(dlg);
+    !!FU(gem_DlgItem_Size):P12/d/d20/(FALSE)/(dlg);
+    !!FU(gem_DlgItem_Size):P13/d/d20/(FALSE)/(dlg);
   !!en;
 
   !!DL(SRM_DLG_SPELL_CHOICE):A11/(DLG_CMD_SET_TEXT)/(head)/0 A12/(DLG_CMD_SET_TEXT)/z3/0;
@@ -822,7 +807,7 @@ ZVSE2
 
     !!FU(gem_DlgSetColor):P(dlgId)/(clickedPlayer);
     !!re i/0/116;
-      !!FU(gem_DlgShowItem):Pi/0/0/0/(dlg);
+      !!FU(gem_DlgItem_Show):Pi/0/0/0/(dlg);
     !!en;
     !!SN:T^srm.help.levelSpellsHead^/?(head:z);
 
@@ -849,7 +834,7 @@ ZVSE2
           !!SN:M(tempSpellListarray)/(itemId)/?(spellId:y);
 
           !!VR(dlgItemId):S(spellId);
-          !!FU(gem_DlgShowItem):P(dlgItemId)/(TRUE)/0/0/(dlg);
+          !!FU(gem_DlgItem_Show):P(dlgItemId)/(TRUE)/0/0/(dlg);
 
           !!VR(spellId):+1;               [for SpellInt.def only. Disable this line if Spells.def is used]
           !!if&(xPos)>552;
@@ -870,7 +855,7 @@ ZVSE2
       !!DL(dlgId):S;
     !!el;
       !!re i/30720/37222;
-        !!FU(gem_DlgShowItem):Pi/(FALSE)/0/0/(dlg);
+        !!FU(gem_DlgItem_Show):Pi/(FALSE)/0/0/(dlg);
       !!en;
 
       !!FU(DL_ShowPopup):P(dlgId);
@@ -1194,9 +1179,9 @@ ZVSE2
     !!SN:Mi^srm_town%(townId)_researched_slots^/i/?(itemId:y);             [read exh element]
     !!VR(coverId):S200 +(itemId);
 
-    !!FU(gem_DlgItemPosition):P(itemId)/?(x)/?(y)/d/(dlg);
+    !!FU(gem_DlgItem_Position):P(itemId)/?(x)/?(y)/d/(dlg);
     !!VR(y):-5;
-    !!FU(gem_DlgItemPosition):P(coverId)/(x)/(y)/d/(dlg);
+    !!FU(gem_DlgItem_Position):P(coverId)/(x)/(y)/d/(dlg);
   !!en;
 
 !?FU(srm_set_text_lang);
@@ -1234,6 +1219,24 @@ ZVSE2
 
 !?FU(srm_buy_spell_book);
   !#VA(heroId:x);
+
+
+  !!if&(heroId)=45;
+    !!UN:C6911900/1/?(isCampaign:y);
+
+    !!if&(isCampaign);
+      !!VR(campIdOffset:y):S128088 +4;
+      !!UN:C(GAME_MANAGER)/4/?(gameMgr:y) C(gameMgr)/(campIdOffset)/4/?(bigCampaignIndex:y);
+      !!if&(bigCampaignIndex:y);
+        !!FU(GetTextFileString):P^genrltxt^/737/?(cantBuy:z);
+        !!IF:M^%(cantBuy)^;
+
+        !!FU:E;
+      !!en;
+    !!en;
+
+  !!en;
+  
   !!HE(heroId):O?(heroOwner:y);
   !!OW:R(heroOwner)/(RES_GOLD)/?(goldAmount:y);
   !!UN:C6089301/4/?(spellBookCost:y);  [проверка на наличие 500 голды]

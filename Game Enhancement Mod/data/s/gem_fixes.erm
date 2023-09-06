@@ -459,11 +459,14 @@ ZVSE2
   !!TL:E1; enable mulpiplayer timer
 
 
+
   // Fix of the speed overload
   !!SN:F^GetModuleHandleA^/^BattleSpeed.era^; [check plugin is loaded]
   !!if&v1<1;
     !!UN:C6916156/4/?(gameSpeed:y);     [if not loaded and speed >2]
     !!UN&(gameSpeed)>2:C6916156/4/2;    [set speed to 2]
+  !!el;
+    !!UN:C4203475/6/4/8;             [set gosolo speed as 9]
   !!en;
 *!UN:C5021668/1/144; cartographer lvl revie only upper level
   // 4 lines of the creature description instead of 3 
@@ -498,7 +501,7 @@ ZVSE2
 
 !?FU(gem_CreateERMHook);
 !!SN:Ex1/1/5576191/(gem_OnRecruitCreatureDlgLeftClick);
-!!SN:Ex1/1/4435784/(gem_AI_GetCloneCastValue);
+!!SN:Ex1/1/4435778/(gem_AI_GetCloneCastValue);
 
 // disable message about hiring army from dwelling after combat;
 !!SN:Ex1/1/4856136/(gem_OnDwellingFreeJoin);
@@ -640,25 +643,11 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 !?FU(gem_OnCLoseMapViewDlg);
   !!FU(gem_Buttons_Interaction):P;
 
-// Removing bttns from Town Dlg - hook from gem_core.erm
-!?FU(gem_OnPlaceTownBttns);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y);
-  !!UN:C(ebp)/-16/(UNC_INT)/?(dlg:y);
+!?FU(gem_CreateERMHook);                     [refresh screen after placing stack]
+!!SN:Ex1/1/7696427/(gem_OnMonsterPlaceAtMap);
 
-  !!UN:P724/?(isBankEnabled:y);
-  !!if&(isBankEnabled)=(FALSE);
-    !!SN:F^GetButtonID^/^bank^;
-    !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
-  !!en;
-
-  !!UN:P785/?(isPeonsEnabled:y);
-  !!if&(isPeonsEnabled)=(FALSE);
-    !!SN:F^GetButtonID^/^Peons^;
-    !!FU(gem_DlgShowItem)&v1>0:Pv1/0/0/0/(dlg);/1;
-  !!en;
-
-
-
+!?FU(gem_OnMonsterPlaceAtMap);
+!!UN:R1;
 ************************************************************************
 ************************************************************************
 ***************************** BATTLE FIXES *****************************
@@ -744,6 +733,22 @@ C(cmbMgr)/21700/4/?(armyPtr[0]) C(cmbMgr)/21704/4/?(armyPtr[1]);
 
 !!SN:E4447296/(CALLCONV_THISCALL)/(stack)/(hero[side])/(armyPtr[side])/(town)/(hero[oppSide])/(armyPtr[oppSide])/(ground);         [recalc luck and morale for stack only]
 
+// fix of the melee WM attack
+!?FU(gem_CreateERMHook);
+  !!SN:Ex1/1/4928265/(gem_OnBattleStackCheckReachability);             [for any wm in melle]
+
+!?FU(gem_OnBattleStackCheckReachability);                              [blocking attk action by war machines]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(stack:y); [get current active stack]
+  !!UN:C(stack)/52/4/?t;                                               [get mon type]
+  !!SN:E4696752/(CALLCONV_FASTCALL)/t;                                 [is mon a war machine]
+  !!VRv1:&1;                                                           [check byte]
+  !!if&v1;                                                             [if true]
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4928298;                      [jump over adding near stack as reached target]
+  !!en;
+
+
+
 !?FU(gem_CreateERMHook);
 
 // open creatureInfoIncombat;
@@ -758,6 +763,7 @@ C(cmbMgr)/21700/4/?(armyPtr[0]) C(cmbMgr)/21704/4/?(armyPtr[1]);
 !!SN:Ex1/1/4447389/(gem_OnAfterArmySetPositiveLuck); for positive luck stat changing in combat only
 
 !!SN:Ex1/1/4501694/(gem_OnCreatureGetLuckLvl); for luck stat changing not in combat only
+
 
 // text changing
 !!SN:Ex1/1/4505906/(gem_OnCreatureLuckDescriptionHalfingPart);
@@ -816,7 +822,7 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 *!VRi^weNeedReturn^:S(TRUE);
 *!IF:L^%(monLuck) %(heroLuck:y)^;
 !?FU(gem_OnCreatureLuckDescriptionSpellPartStart)&i^gem_MonPlusLuckChanger^;/i^weNeedReturn^;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); C(ebp)/16/4/?(bonusLuck:y) C(ebp)/20/4/?(luck:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y); C(ebp)/16/4/?(bonusLuck:y) C(ebp)/20/4/?(luck:y);
 *!if&i^weNeedReturn^;
 *!IF:L^%^;
   !!SN:H^monname^/(MON_GHOST_BEHEMOTH)/1/?z3;
@@ -1078,12 +1084,13 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
         !!MA:G(mon)/?(growth:y);
         !!OB2:T?(objType:y);
         !!if&(objType)=(OBJ_HERO);
-          !!HEv2/v3/v4:N?(heroId:y);
-          !!FU(gem_AdvMgr_HideHero):P(heroId:y);
+          !!co;
+          *!HEv2/v3/v4:N?(heroId:y);
+          *!FU(gem_AdvMgr_HideHero):P(heroId:y);
         !!en;
         !!OB2:U(mon) C(growth);
         !!if&(objType)=(OBJ_HERO);
-          !!FU(gem_AdvMgr_ShowHero):P(heroId:y);
+          *!FU(gem_AdvMgr_ShowHero):P(heroId:y);
         !!en;
       !!en;
     !!en;
@@ -1128,7 +1135,7 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!OW:Cd/?(clickedPlayer:y);
 
   !!if&(clickedPlayer)=i^timerOwner^;
-    !!FU(gem_GetPlayerActiveHeroesList):P(clickedPlayer)/?(herArray:y);
+    !!FU(gem_Player_GetActiveHeroesList):P(clickedPlayer)/?(herArray:y);
 
     !!if&(herArray)<>0;
       !!FU(gem_UpdateScoutingRange):Pd/(herArray);
@@ -1164,7 +1171,7 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!MO(x)/(y)/(z):G?(qty:y);
   !!UN:P905/?(hasError:y);
 
-  !!if|(qty)=4095/(hasError);           [4095 is the magic number]
+  !!if&(hasError);
     !!UN:P905/(FALSE);
     !!UN:O(x)/(y)/(z)/1;                [Debug msg can be added here to help collect debug info from players]
   !!en;
@@ -1309,10 +1316,119 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 **************************** COMMANDER FIXES ***************************
 ************************************************************************
 ************************************************************************
+// Removing message about deacreasing army before combat and placing
+// them into combat log
+
+!?FU(gem_CreateERMHook);
+  !!SN:Ex1/1/7786558/(gem_OnAstralAttackMessage);
+  !!SN:Ex1/1/7787216/(gem_OnAstralDefendMessage);
+  !!SN:Ex1/1/7772772/(gem_OnBruteGoldBonusMessage);
+
+  // ART_SLAVAS_RING_OF_POWER's fixes
+  !!SN:Ex1/1/7782812/(gem_OnNPCBattleStackInit);
+  *!SN:Ex1/1/7779070/(gem_OnNPCBattleDescriptionGet);
+  !!SN:Ex1/1/7771289/(gem_OnNPCGetRingBonus);
+  !!UN:C7771553/-1/1/1;                                                                          [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3]
+
+
+
+!?FU(gem_OnBruteGoldBonusMessage); // replace brute message with adv map dlg info panel message
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(strPtr:y) Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-64/4/?(gold:y);
+  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+  !!FU(GetTextTableString):P^znpc00^/175/1/?(npcMes:z);
+  !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(npcMes:z)/(RES_GOLD)/(gold); [show message]
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7772811;                            [return to stack end]
+
+!?FU(gem_OnAstralAttackMessage);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7786697;
+  !!FU(gem_PreapareNpcMessage):P(BATTLE_RIGHT);
+
+!?FU(gem_OnAstralDefendMessage);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7787355;
+  !!FU(gem_PreapareNpcMessage):P(BATTLE_LEFT);
+
+!?FU(gem_PreapareNpcMessage);
+!#VA(side:x) (localStr:z);
+  !!VRo:S(side) *56;                        [weird offset btw - 14 intead of 7]
+
+  !!re i/0/(ARMY_SLOT_LAST);                [iterate all army slots]
+    !!UN:C42338576/o/4/?t C42338604/o/4/?n; [take stolen army types and numbers]
+    !!if&n;
+      !!VRs:Sn -1 B;
+      !!SN:H^monname^/t/s/?(monName:z);
+      !!VR(localStr:z):+^%n %(monName:z), ^;
+    !!en;
+    !!VRo:+4;
+  !!en;
+
+  !!SN:K(localStr:z)/?(size:y);d-2;
+  !!if&(size)>2;
+    !!VR(size):-2;
+    !!SN:K(localStr:z)/(size:y)/^.^;d-2;
+    !!VRs^gem_NPC_DecreeasesArmyMessage%(side)^:S(localStr:z);+^%n %(monName:z), ^;
+    !!VRi^gem_NPC_DecreeasesArmyMessage%(side)^:S(TRUE);
+  !!en;
+!?FU(OnCombatRound)&i^battle_isVisible^/v997=0;
+*!IF:L^%i(battle_humanOnly) %i(battle_isQuick)^;
+
+  !!re i/1/0/-1;/(BATTLE_RIGHT);
+    !!if&i^gem_NPC_DecreeasesArmyMessage%i^;
+      !!VR(hint:z):S^%T(gem.endl)^;
+      !!MM:S(hint:z);
+      !!SN:T^gem.battle.armyDecrease%i^/?(head:z);
+      !!MM:S(head:z);
+      !!VR(hint:z):Ss^gem_NPC_DecreeasesArmyMessage%i^;
+      !!MM:S(hint:z);
+    !!en;
+  !!en;
+
+!?FU(OnAfterBattleUniversal);
+!!SN:W^gem_NPC_DecreeasesArmyMessage0^ W^gem_NPC_DecreeasesArmyMessage1^;:S(FALSE);
+
+
+
+
+!?FU(gem_OnNPCGetRingBonus);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(npc:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(skillIndex:y); [получаем указатель на NPC и индекс проверяемого навыка]
+
+  !!VR(skillLevelPtr:y):S(skillIndex) *(SIZEOF_DWORD) +(npc) +56;                                [we get a pointer to the value of the skill being checked]
+
+  !!UN:C(skillLevelPtr)/4/?(skillLevel:y);                                                       [get skill value]
+  !!if&(skillLevel)<2;                                                                           [if less than 2]
+    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER);                          [check if NPC has a ring]
+    !!if&v1;                                                                                     [if there is]
+      !!SN:X?y99/0;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7771478;                                              [jumping directly to the calculation of bonuses from the ring, bypassing the addition of standard bonuses]
+    !!en;
+  !!en;
+
+!?FU(gem_OnNPCBattleDescriptionGet);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/1/?(skillLevel:y);                 [get skill value]
+  !!if&(skillLevel)<2;                                                  [if less than 2]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(npc:y);
+    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER); [check if NPC has a ring]
+    !!if&v1;                                                            [if there is]
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/1/2;                           [set skill cast value as at advanced skill lvl]
+    !!en;
+  !!en;
+
+!?FU(gem_OnNPCBattleStackInit);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/?(skillLevel:y);                 [get skill value]
+  !!if&(skillLevel)<2;                                                  [if less than 2]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(npc:y);
+    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER); [check if NPC has a ring]
+    !!if&v1;                                                            [if there is]
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/2;                           [set skill cast value as at advanced skill lvl]
+    !!en;
+  !!en;
 
 // Fix occasionally commanders receiving incorrect exp with when transfering between campaign zones
 // by Archer30
 ; This happens in SoD scenarios - Commanders' exp are reset to 0
+
 !?FU(OnTransferHero);
   !#VA(hero:x);
 
