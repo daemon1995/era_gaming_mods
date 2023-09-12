@@ -166,7 +166,7 @@ ZVSE2
 ; Set up dialogue structure
 !!DL(TRAINER_MAIN_DLG):N^trainer.txt^;
 
-*!FU(trainer_SetDlgColour):P(TRAINER_MAIN_DLG)/(player); [set dialogue colour - disable for now]
+!!FU(trainer_SetDlgColour):P(TRAINER_MAIN_DLG)/(player); [set dialogue colour - disable for now]
 
 !!VRz30:S^^;                            [BE VERY CAREFUL! Always avoid z30 to z35 in other places of this script - need DL mouse hovering trigger to fix]
 
@@ -2598,12 +2598,12 @@ ZVSE2
 
 !!VR(artUpdated)|(hasSameArt)/(hasEmptySlot):S(TRUE);
 
-; Ctrl Click - Add an artifact with 100 victories or add 100 victories to the existing one
+; Ctrl Click - Add an artifact or add 100 victories to the existing one
 !!if&i^key_ctrl^/i^key_shift^=(FALSE)/i^key_alt^=(FALSE);
   !!if&(hasSameArt);
     !!CO(cmd):A3/(artSlot)/(art)/d100;
   !!el&(hasEmptySlot);
-    !!CO(cmd):A1/(art)/100;
+    !!CO(cmd):A1/(art)/0;
   !!en;
 ; Shift Click - Remove the specific artifact
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
@@ -2612,12 +2612,18 @@ ZVSE2
   !!el;
     !!VR(artUpdated):S(FALSE);
   !!en;
-; Alt Click - Add an artifact with 1000 victories or add 100 victories to the existing one
+; Alt Click - Add an artifact or set the victory to 32000 to the existing one
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^;
   !!if&(hasSameArt);
-    !!CO(cmd):A3/(artSlot)/(art)/d1000;
+    !!CO(cmd):A3/(artSlot)/(art)/?(victories:y);
+
+    !!if&(victories)<>32000;
+      !!CO(cmd):A3/(artSlot)/(art)/32000;
+    !!el;
+      !!VR(artUpdated):S(FALSE);
+    !!en;
   !!el&(hasEmptySlot);
-    !!CO(cmd):A1/(art)/1000;
+    !!CO(cmd):A1/(art)/0;
   !!en;
 ; Normal Click - Remove or add in new artifact
 !!el;
@@ -2627,6 +2633,8 @@ ZVSE2
     !!if&1;
       !!CO(cmd):A2/(art);                 [remove art]
       !!FU(trainer_UpdateCommanderArts):P(cmd); [Update commander artifacts]
+    !!el;
+      !!VR(artUpdated):S(FALSE);
     !!en;
   !!el&(hasEmptySlot);
     !!CO(cmd):A1/(art)/0;                 [add in new art with 0 victory]
@@ -2772,8 +2780,16 @@ ZVSE2
 
 !!if&i^trainer_cmdLv^<>(lv);           [if commander's lv was changed]
   !!FU(trainer_GetExpRequirementOfLevel):Pi^trainer_cmdLv^/?(expNew:y);
-  !!CO(cmd):X1/(expNew);
-  !!CO(cmd):X2/i^trainer_cmdLv^;
+
+  ; Set the level if the new level is lower
+  !!if&i^trainer_cmdLv^<(lv);
+    !!CO(cmd):X1/(expNew);
+    !!CO(cmd):X2/i^trainer_cmdLv^;
+  ; 
+  !!el;
+    !!VR(npcStruct:y):S296 *(cmd) +42344640;
+    !!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(expNew)/(FALSE);
+  !!en;
 !!en;
 
 !?FU(trainer_UpdateCommanderLv);
