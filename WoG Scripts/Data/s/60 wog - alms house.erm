@@ -1,4 +1,4 @@
-ZVSE
+ZVSE2
 
 ** Alms House ERM script v1.1 - Donald X. Vaccarino
 ** with one visit per hero update (for interacting with the Arcane Tower) by Steven Lynch
@@ -19,30 +19,43 @@ ZVSE
 
 
 ** Initialization code
-!#UN:P18/?v1;     [Check for WoG option]
-!#VRz402&v1=1:Sz118000;
-!#VRv590&v1=1:S0;
-!#HT63/24&v1=1:V590/0/402; [set hint to z402, whenever v590 is 0, which it always will be]
+
+!?FU(OnAfterErmInstructions);
+!!UN:P18/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VRz402:Sz118000;
+!!VRv590:S0;
+!!HT(OBJ_NEW_WOG_OBJECTS)/24:V590/0/402; [set hint to z402, whenever v590 is 0, which it always will be]
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!IF:Wi;
+  !!VRw13:S0;
+!!en;
 
 ** end of Initialization code
 
 
 ** Object routine
 
-!?OB63/24;
+!?OB(OBJ_NEW_WOG_OBJECTS)/24;
 !!UN:P18/?y-1;     [Check for WoG option]
 !!FU&y-1=0:E;     [Exit if its disabled]
 
-!!IF:W-1;
-!!HE-1:W?v606; [get movement]
-!!HE-1:B0/?z120;
-!!IF&1000/v606=0/w13=0:M1/z118001;
-!!IF&1000/v606>=0/w13>=1:M1/z118002;
+!!IF:W(CURRENT_HERO);
+!!HE(CURRENT_HERO):W?v606; [get movement]
 
-!!FU611&v606>0/w13<1:P; [do actual visiting if hero has any movement]
-!!FU611&w13=1:E;
-!!VRw13:+1; [add 1 to hero's w13 variable]
-
+; Visited
+!!if&w13>0;
+  !!IF&1000:M1/z118002;
+; Too Tired
+!!el&v606=0;
+  !!IF&1000:M1/z118001;
+; Visit now
+!!el&v606>0/w13=0;
+  !!FU611:P;
+  !!VRw13:+1;
+!!en;
 
 ** function to handle visiting Alms House
 
@@ -52,54 +65,56 @@ ZVSE
 !!IF&1000:M1/z118003;
 
 !!VRz326:Sz118004;
-!!FU610:P0/1; [wood]
+!!FU610:P(RES_WOOD)/1; [wood]
 
 !!VRz326:Sz118005;
-!!FU610:P1/1; [mercury]
+!!FU610:P(RES_MERCURY)/1; [mercury]
 
 !!VRz326:Sz118006;
-!!FU610:P2/1; [ore]
+!!FU610:P(RES_ORE)/1; [ore]
 
 !!VRz326:Sz118007;
-!!FU610:P3/1; [sulfur]
+!!FU610:P(RES_SULFUR)/1; [sulfur]
 
 !!VRz326:Sz118008;
-!!FU610:P4/1; [crystal]
+!!FU610:P(RES_CRYSTAL)/1; [crystal]
 
 !!VRz326:Sz118009;
-!!FU610:P5/1; [gems]
+!!FU610:P(RES_GEMS)/1; [gems]
 
 !!VRz326:Sz118010;
-!!FU610:P6/100; [gold]
+!!FU610:P(RES_GOLD)/100; [gold]
 
-!!HE-1:F?v602/?v603/?v604/?v605; [get primary skills]
+!!HE(CURRENT_HERO):F?v602/?v603/?v604/?v605; [get primary skills]
 
 !!IF&1000/v602=0:Q1/31/1/1/z118011;
-!!HE-1&v602=0:Fd1/d/d/d; [+1 attack]
+!!HE(CURRENT_HERO)&v602=0:Fd1/d/d/d; [+1 attack]
 !!VRv600&v602=0:+1; [count times helped]
 
 !!IF&1000/v603=0:Q1/32/1/1/z118012;
-!!HE-1&v603=0:Fd/d1/d/d; [+1 defense]
+!!HE(CURRENT_HERO)&v603=0:Fd/d1/d/d; [+1 defense]
 !!VRv600&v603=0:+1; [count times helped]
 
 !!IF&1000/v604=1:Q1/33/1/1/z118013;
-!!HE-1&v604=1:Fd/d/d1/d; [+1 spell power]
+!!HE(CURRENT_HERO)&v604=1:Fd/d/d1/d; [+1 spell power]
 !!VRv600&v604=1:+1; [count times helped]
 
 !!IF&1000/v605=1:Q1/34/1/1/z118014;
-!!HE-1&v605=1:Fd/d/d/d1; [+1 knowledge]
+!!HE(CURRENT_HERO)&v605=1:Fd/d/d/d1; [+1 knowledge]
 !!VRv600&v605=1:+1; [count times helped]
 
-!!HE-1:E?v606; [get experience]
+!!HE(CURRENT_HERO):E?v606; [get experience]
 !!IF&1000/v606<200:Q1/17/1000/1/z118015;
-!!HE-1&v606<200:Ed1000; [give experience]
+!!HE(CURRENT_HERO)&v606<200:Ed1000; [give experience]
 !!VRv600&v606<200:+1; [count times helped]
 
-!!IF&1000/v600=0:M1/z118016;
-!!IF&1000/v600>0/v600<4:M1/z118017;
-!!IF&1000/v600>=4:M1/z118018;
+!!if&1000;
+  !!IF&v600=0:M1/z118016;
+  !!IF&v600>0/v600<4:M1/z118017;
+  !!IF&v600>=4:M1/z118018;
+!!en;
 
-!!HE-1&v600>0:W0; [remove movement to prevent infinite resources]
+!!HE(CURRENT_HERO)&v600>0:W0; [remove movement to prevent infinite resources]
 
 ** End of Object routine
 
@@ -110,10 +125,9 @@ ZVSE
 
 !?FU610;
 
-!!OW:R-1/x1/?v601; [get quantity]
+!!OW:R(CURRENT_PLAYER)/x1/?v601; [get quantity]
 !!IF&1000/v601=0:Q1/x1/x2/1^%Z326^; [show message]
 !!OW&v601=0:R-1/x1/dx2; [give some of that resource]
 !!VRv600&v601=0:+1; [count times helped]
 
 ** end of function
-

@@ -13,70 +13,67 @@ ZVSE2
 
 
 !?FU(OnEveryDay)&i^timerWeekday^=7;
-!!UN:P994/?y1;
-!!FU&y1<>1:E;                          [выход, если опция 994 не включена]
+!!UN:P994/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;             [выход, если опция 994 не включена]
 
-!!MA:F(MON_BLOOD_DRAGON)/?y30;
+!!FU(ES_994_CheckForAllDwellings):P(OBJ_CREATURE_GENERATOR_1) P(OBJ_CREATURE_GENERATOR_4);
 
-!!OW:C?y2;                             [y2 - текущий игрок]
-!!UN:U(OBJ_CREATURE_GENERATOR_1)/-1/?y1;
-!!VRv10:S-1;                           [y1 - количество жилищ на карте (тип 17), инициализация v10 для быстрого поиска]
-!!DO(ES_994_CheckForDwellings)/1/y1/1&y1>0:Py2/(OBJ_CREATURE_GENERATOR_1)/y30;           [для каждого жилища призываем обитателей в подходящие города игрока]
-!!UN:U(OBJ_CREATURE_GENERATOR_4)/-1/?y1;
-!!VRv10:S-1;                           [y1 - количество жилищ на карте (тип 20), инициализация v10 для быстрого поиска]
-!!DO(ES_994_CheckForDwellings)/1/y1/1&y1>0:Py2/(OBJ_CREATURE_GENERATOR_4)/y30;           [для каждого жилища призываем обитателей в подходящие города игрока]
+!?FU(ES_994_CheckForAllDwellings);
+!#VA(objType:x);
 
-!?FU(ES_994_CheckForDwellings);
-!!UN:Ux2/-1/-1/10;                     [v10..v12 - dwelling coordinates]
-!!DW10:O?y1/1;
-!!FU&y1<>x1:E;                         [выход, если жилище не принадлежит текущему игроку]
+!!MA:F(MON_BLOOD_DRAGON)/?(bloodDragonFv:y);
+!!OW:Wi^timerOwner^/?(townQty:y);
+!!VR(lastTown:y):S(townQty) -1;
 
-; Loop through all the slots
-!!re i/0/3;
-  !!DW10:Mi/?y1/?y2;                   [y1/y2 - тип и кол-во доступных существ в 1м слоте жилища]
+!!VR(x:y):S-1;
 
-  !!if&y1>(NO_MON)/y2>0;                 [если в слоте жилища есть существа]
-    !!VRy5:S-2;
-    !!VRy6:S-2;                          [инициализация переменных]
-    !!MA:Oy1/?y3 Ly1/?y4 Fy1/?y30;       [y3/y4 - тип города, которому принадлежит существо / уровень существа]
+; loop through all the towns
+!!re k;
+  !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
 
-    !!if&y3>(NO_TOWN)/y30<x3;
-      !!UN:Ty3/y4/0/?y5;                 [y5 - тип существа для найма в подходящем городе (баз.)]
-      !!UN:Ty3/y4/1/?y6;
+  !!DW(x)/(y)/(z):O?(owner:y);
+  !!co&(owner)<>i^timerOwner^;
 
-      !!if|y5=y1/y6=y1;                    [если существо возможно нанять в городе (не нейтрал)]
-        !!OW:Wx1/?y7;
-        !!VRy7:-1;                         [y7 - количество городов у игрока-1]
-        !!VRv13:S-1;                       [инициализация v13 - номер подходящего города]
-        !!VRy8:Sy4 +30;
-        !!VRy8&y6=y1:+7;                   [y8 - номер необходимого здания для перемещения существ]
+  ; Loop through all the slots
+  !!re i/0/3;
+    !!DW(x)/(y)/(z):Mi/?(mon:y)/?(num:y); [тип и кол-во доступных существ в 1м слоте жилища]
 
-        !!DO(ES_994_CheckForOwnedTowns)/0/y7/1&y7>=0:Px1/y3/y8;   [v13 - номер подходящего города для перемещения существ]
+    !!if&(mon)>(NO_MON)/(num)>0;      [если в слоте жилища есть существа]
+      !!MA:O(mon)/?(townType:y) L(mon)/?(level:y) F(mon)/?(fv:y); [тип города, которому принадлежит существо / уровень существа]
 
-        !!if&v13>=0;                       [если город найден]
-          !!VRy8&y8<37:+7;
-          !!CA0/v13:B3/y8;                 [f1=1, если отстроено улучшенное жилище]
+      !!if&(townType)>(NO_TOWN)/(fv)<(bloodDragonFv);
+        !!UN:T(townType)/(level)/0/?(nonUpgMon:y); [тип существа для найма в подходящем городе (баз.)]
+        !!UN:T(townType)/(level)/1/?(upgMon:y);
 
-          ; Increase the quantity of available creatures depending on upgraded or degraded building is built
-          !!if&1;                          [если отстроено улучшенное жилище]
-            !!CA0/v13:M1/y4/d/dy2;         [увеличиваем кол-во доступных улучшенных существ]
-          !!el;                            [иначе]
-            !!CA0/v13:M1/y4/dy2/d;         [увеличиваем кол-во доступных неулучшенных существ]
+        !!if|(nonUpgMon)=(mon)/(upgMon)=(mon); [если существо возможно нанять в городе (не нейтрал)]
+          !!VR(dwell:y):S(level) +30;
+          !!VR(dwell)&(upgMon)=(mon):+7; [номер необходимого здания для перемещения существ]
+
+          !!re j/0/(lastTown);
+            !!OW:W(owner)/j/?(townId:y);
+            !!CA0/(townId):T?(loopTownType:y) B3/(dwell);
+
+            !!br&(loopTownType)=(townType)/1;
           !!en;
 
-          !!DW10:Mi/d/0;                   [удаляем существ из слота внешнего жилища]
+          !!if&j<=(lastTown);         [если город найден]
+            !!VR(dwell)&(dwell)<37:+7;
+            !!CA0/(townId):B3/(dwell);[f1=1, если отстроено улучшенное жилище]
+
+            ; Increase the quantity of available creatures depending on upgraded or degraded building is built
+            !!if&1;                   [если отстроено улучшенное жилище]
+              !!CA0/(townId):M1/(level)/d/d(num); [увеличиваем кол-во доступных улучшенных существ]
+            !!el;                     [иначе]
+              !!CA0/(townId):M1/(level)/d(num)/d; [увеличиваем кол-во доступных неулучшенных существ]
+            !!en;
+
+            !!DW(x)/(y)/(z):Mi/d/0;   [удаляем существ из слота внешнего жилища]
+          !!en;
         !!en;
       !!en;
     !!en;
   !!en;
 !!en;
-
-!?FU(ES_994_CheckForOwnedTowns);                              [поиск подходящего города]
-!!OW:Wx1/x16/?y1;                      [y1 - номер города на карте]
-!!CA0/y1:T?y2 B3/x3;
-!!FU|-1/y2<>x2:E;                      [выход, если город не подходящего типа или в нем не отстроено подходящее жилище]
-
-!!VRv13:Sy1;
-!!VRx16:S99;                           [v13 - номер (на карте) подходящего города, прерывание поиска]
 
 ** end
