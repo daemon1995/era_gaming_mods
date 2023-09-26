@@ -1374,31 +1374,42 @@ The game may fall at any time.^;
 ; Get a random valid monster, aka all except not-used, warmachines, emissaries and commanders
 !?FU(WOG_GetRandomMonster);             [by Archer30]
 !#VA(mon:x);                            [Return the random monster ID]
+!#VA(minLevel:x);                       [Optional. Min Monster level, including the level specified]
+!#VA(maxLevel:x);                       [Optional. Man Monster level, including the level specified]
 !#VA(maxFightValue:x);                  [Optional. Max fight value allowed, not including the value specified]
 
 !!FU:A?(numArgs:y);
-!!VR(maxFightValue)&(numArgs)<2:S(INT_MAX);
+
+!!if&(numArgs)<3;
+  !!VR(minLevel):S(MON_MIN_LEVEL);
+  !!VR(maxLevel):S(MON_MAX_LEVEL);
+!!en;
+
+!!VR(maxFightValue)&(numArgs)<4:S(INT_MAX);
 
 !!VR(mon):S(NO_MON);
 !!FU(GetMaxMonsterId):P?(lastMon:y);
-!!FU(NewIntArray):P?(validMons:y);
 
-!!re i/(MON_FIRST)/(lastMon);
-  !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
-  !!co&i>=(MON_CATAPULT)/i<=(MON_ARROW_TOWERS);
-  !!co&i>=(MON_EMISSARY_OF_WAR)/i<=(MON_EMISSARY_OF_LORE);
-  !!co&i>=(MON_COMMANDER_FIRST_A)/i<=(MON_COMMANDER_LAST_D);
+!!re i;
+  !!VR(randMon:y):R0/(MON_FIRST)/(lastMon);
+  ; Skip invalid monsters
+  !!co|(randMon)=(MON_NOT_USED_1)/(randMon)=(MON_NOT_USED_2)/(randMon)=(MON_NOT_USED_3)/(randMon)=(MON_NOT_USED_4);
+  !!co&(randMon)>=(MON_CATAPULT)/(randMon)<=(MON_ARROW_TOWERS);
+  !!co&(randMon)>=(MON_EMISSARY_OF_WAR)/(randMon)<=(MON_EMISSARY_OF_LORE);
+  !!co&(randMon)>=(MON_COMMANDER_FIRST_A)/(randMon)<=(MON_COMMANDER_LAST_D);
 
-  !!MA:Fi/?(fightValue:y);
-  !!FU(Array_Push)&(fightValue)>0/(fightValue)<(maxFightValue):P(validMons)/i;
-!!en;
+  ; Check if the level and fight value are ideal
+  !!MA:L(randMon)/?(level:y);
 
-!!SN:M(validMons)/?(size:y);
+  !!if&(level)>=(minLevel)/(level)<=(maxLevel);
+    !!MA:F(randMon)/?(fightValue:y);
 
-!!if&(size)>0;
-  !!VR(lastIndex:y):S(size) -1;
-  !!VR(random:y):R0/0/(lastIndex);
-  !!SN:M(validMons)/(random)/?(mon);
+    !!if&(fightValue)>0/(fightValue)<(maxFightValue);
+      !!VR(mon):S(randMon);
+
+      !!br;
+    !!en;
+  !!en;
 !!en;
 
 ; **************************************************************************************************
