@@ -208,22 +208,25 @@ ZVSE2
 ** end of post-buy commander trigger **
 
 !?FU(WOG_NPC_DeathStare);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(defStack:y) Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(atkStack:y); [get atk def]
-  !!CO-1:B0/?(skills:y);
-  !!VR(skills):&4096;                                                                                 [check for death stare]
-  !!if&(skills);
-    !!UN:C(atkStack)/52/4/?t C(atkStack)/52/4/(MON_WYVERN_MONARCH);                                   [imitate monarch]
-    !!UN:C4457822/2/1/?(oldPoisonChance:y) C4457822/2/1/50;                                           [set new poison chance]
-    !!SN:E4456992/(CALLCONV_THISCALL)/(atkStack)/(defStack);                                          [BattleStack::AfterHitSpell]
-    !!UN:C(atkStack)/52/4/t C4457822/2/1/(oldPoisonChance:y);                                         [restore mon type and poison chance]
-    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
-    !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/-1/0;                                                [BattleMgr_DrawAction_Play]
-  !!en;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(defStack:y) Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(atkStack:y) C(atkStack)/52/4/?t; [get atk def]
 
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/-2;                                                          [why that was solution ? welcome to the WoG programming]
-  !!UN:C42230812/4/-2;
-  !!SN:X?y99/0;                                                                                     [return without death stare calculation]
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7722877;
+  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);                                                            [added npc type cehck]
+    !!CO-1:B0/?(skills:y);
+    !!VR(skills):&4096;                                                                                                 [check for death stare]
+    !!if&(skills);
+      !!UN:C(atkStack)/52/4/(MON_WYVERN_MONARCH);                                                                       [imitate monarch]
+      !!UN:C4457822/2/1/?(oldPoisonChance:y) C4457822/2/1/50;                                                           [set new poison chance]
+      !!SN:E4456992/(CALLCONV_THISCALL)/(atkStack)/(defStack);                                                          [BattleStack::AfterHitSpell]
+      !!UN:C(atkStack)/52/4/t C4457822/2/1/(oldPoisonChance:y);                                                         [restore mon type and poison chance]
+      !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
+      !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/-1/0;                                                                [BattleMgr_DrawAction_Play]
+    !!en;
+
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/-2;                                                                            [why that was solution ? welcome to the WoG programming]
+    !!UN:C42230812/4/-2;
+    !!SN:X?y99/0;                                                                                                       [return without death stare calculation]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7722877;
+  !!en;
 
 
 !?FU(WOG_51_CheckIfNotAliveMonsterCanBeResurrected);
@@ -298,6 +301,7 @@ ZVSE2
 
   !!UN:C7783323/6/4/?i^wog_51_npc_combat_spell^ C7783323/6/4/(SPELL_PRAYER);                       [replace precision with spell prayer]
   !!UN:C7771384/4/4/?i^wog_51_npc_primary_skills_table^ C7771384/4/4/8002580 C7771468/3/4/8002580; [replace npc stats table ptr for percentage / static skills]
+  !!UN:C8002720/4/?i^wog_51_npc_resistance_max_bonus^ C8002720/4/90;                                                                              [set max resistance equal to 95%]
 
 
   !!UN:C7783548/6/4/(SPELL_AIR_ELEMENTAL);
@@ -320,7 +324,6 @@ ZVSE2
 
 !!FU(WOG_51_ReloadNpcDescription):P(npcFileName:z); [to set new NPC description]
 
-; New skill iconcs - this no longer works for some reason
 !?FU(WOG_51_ReloadNpcDescription);
   !#VA(fileName:x);
   !!SN:B8013344/d/z(fileName:x);
@@ -328,10 +331,10 @@ ZVSE2
 
 !?FU(OnGameLeave)&i^wog_51_enabled^;
   !!UN:C7771468/3/4/i^wog_51_npc_primary_skills_table^ C7771384/4/4/i^wog_51_npc_primary_skills_table^; [restore npc stats table ptr for percentage / static skills]
-  !!UN:C7783323/6/4/i^wog_51_npc_combat_spell^; [restore temple guardian re]
-  !!UN:C7772946/3/4/i^wog_51_npc_speed_patch^;  [restore base NPC speed]
-  !!UN:C7788102/1/1/i^wog_51_npc_buff_patch^;   [restore NPC fireshield buff]
-
+  !!UN:C7783323/6/4/i^wog_51_npc_combat_spell^;       [restore temple guardian re]
+  !!UN:C7772946/3/4/i^wog_51_npc_speed_patch^;        [restore base NPC speed]
+  !!UN:C7788102/1/1/i^wog_51_npc_buff_patch^;         [restore NPC fireshield buff]
+  !!UN:C8002720/4/i^wog_51_npc_resistance_max_bonus^; [restore resistance bonus]
 **  object trigger - opal
 
 !?OB101&i^wog_51_enabled^;
@@ -477,8 +480,11 @@ ZVSE2
 !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y) P253/?(maxCommSkills:y);
 
 !!if&(commanderDisabled)<>(TRUE)/(maxCommSkills);
-  !!UN:C7770979/(UNC_INT8)/?i^wog_253_patch^;
-  !!UN:C7770979/(UNC_INT8)/6;
+  !!UN:C7770979/(UNC_INT8)/?(currentSkillLimit:y);
+  !!if&(currentSkillLimit:y)<>6;
+    !!VRi^wog_253_patch^:S(currentSkillLimit);
+    !!UN:C7770979/(UNC_INT8)/6;
+  !!en;
 !!en;
 
 !#FU(WOG_253_NPC_MaxSkills):P;
@@ -486,8 +492,8 @@ ZVSE2
 !?FU(OnAfterLoadGame);
 !!FU(WOG_253_NPC_MaxSkills):P;
 
-!?FU(OnGameLeave);
-!!UN&i^wog_comm_patch^:C7770979/(UNC_INT8)/i^wog_253_patch^;
+!?FU(OnGameLeave)&i^wog_253_patch^;
+!!UN:C7770979/(UNC_INT8)/i^wog_253_patch^;
 ** end of commander skill limit **
 
 
