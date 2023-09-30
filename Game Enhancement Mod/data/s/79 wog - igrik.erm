@@ -24,6 +24,33 @@ ZVSE2
     !!CM:R0;
   !!en;
 
+; Fixed losing Double Strike/Strike all around after the commander learns shooting with igrik's ChooseAttack plugin
+; Ideally this should be fixed in the plugin
+; by Archer30
+!?FU(OnBeforeBattleAction);
+!!SN:F^PluginExists^/^ChooseAttack^;
+!!FU&v1<>(TRUE):E;
+
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_WALK_AND_ATTACK):E;
+
+!!BMi^battle_acting_stack^:T?(type:y);
+
+!!if&(type)>=(MON_PALADIN_A)/(type)<=(MON_ASTRAL_SPIRIT_D);
+  !!BMi^battle_acting_stack^:F?(flags:y) Fd~(MON_FLAG_SHOOTER);
+  !!VRi^gem_comm_canShoot^:S(flags) &(MON_FLAG_SHOOTER);
+!!en;
+
+!?FU(OnBattleActionEnd)&i^gem_comm_canShoot^;
+; Double check the creature type
+!!BMi^battle_acting_stack^:T?(type:y);
+
+!!if&(type)>=(MON_PALADIN_A)/(type)<=(MON_ASTRAL_SPIRIT_D);
+  !!BMi^battle_acting_stack^:Fd|(MON_FLAG_SHOOTER);
+!!en;
+
+!!VRi^gem_comm_canShoot^:S(FALSE);
+
 ; --------------------------------------------------------------------------------------------------
 
 ; --------------------------------------------------------------------------------------------------
@@ -31,6 +58,37 @@ ZVSE2
 *                 [Adventure Map  - scripts for adventure map]
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
+
+; Fixed losing commander after loading save game with igrik's BattleSave plugin. It happens with a small chance
+; The real reason of the problem has not yet been sorted out - it is possible not the fault of the plugin
+; by Archer30
+!?FU(OnBeforeSaveGame);
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commIsDisabled:y);
+!!FU&(commIsDisabled):E;
+
+!!SN:Mi^gem_comm_deadList^;
+!!FU(NewIntArray):P156/?i^gem_comm_deadList^/(M_STORED);
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!COi:D?(isDead:y);
+  !!SN:Mi^gem_comm_deadList^/i/(isDead);
+!!en;
+
+!?FU(OnAfterLoadGame);
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commIsDisabled:y);
+!!FU&(commIsDisabled):E;
+
+!!FU&i^gem_comm_deadList^=0:E;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!SN:Mi^gem_comm_deadList^/i/?(isDead:y);
+  !!COi:D(isDead);
+!!en;
+
+!!SN:Mi^gem_comm_deadList^;
+!!VRi^gem_comm_deadList^:S0;
+
+
 ** script that displays the distance to the end of the route is triggered by Alt/Alt + RMB on the map:
 ; Ideally this script should be executed as early as possible
 !?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^key_leftAlt^;
@@ -180,10 +238,10 @@ ZVSE2
   !!UN:X?(mapSize:y)/?(isDung:y);                      
   !!VR(tile:y):S(mapSize) *30 *(mapSize) *2 *(z);
   !!VR(mapSize): *(y) +(x);
-  !!VR(mapSize): *30;                   [???? ? ????????]
+  !!VR(mapSize): *30;
   !!UN:C6918868/4/?(tileStruct:y);      [6992D4]
   !!VR(tileStruct:y):+36;
-  !!UN:C(tileStruct:y)/4/?(mapAddr:y);  [????????]
+  !!UN:C(tileStruct:y)/4/?(mapAddr:y);
   !!if&(mapAddr:y)=0;
     !!VRx7:S1;
     !!FU:E;
