@@ -40,25 +40,23 @@ ZVSE2
   !!SN:Ex1/1/4496378/(WOG_DlgCreatureSplit_BeforeSettingNumber);
   !!SN:Ex1/1/4496839/(WOG_DlgCreatureSplit_AfterSplit);
 
-  !!SN:Ex1/1/4677660/(WOG_BattleTent_SetupCursor); [Archer30: This hoook is not necessary as it can be replaced by simple erm. Check WMI for details]
-
-  ; These 3 hooks, WOG_BattleTent_SetupCursor, WOG_BattleTent_BeforeIterateLoses) and WOG_BattleTent_PrepareHealing have been moved to 9000 wog - stdlib as they would be used for all the war machine scripts
+  ; These 2 hooks, WOG_BattleTent_BeforeIterateLoses and WOG_BattleTent_PrepareHealing have been moved to 9000 wog - stdlib as they would be used for all the war machine scripts
 
 !?FU(OnAfterErmInstructions)&i^WOG_73_enabled^;
   !!FU(WOG_73_Initialization):P;
 
 !?FU(WOG_73_Initialization);
   *!IF:V784/0;                            [flg#784, 784 set false for the first battle]
-  !!VRi^WOG_73_visited_art_id^:S0;                            [flg#785, hero doesn't fights for war machine artifact by default]
-  !!IF:V787/0;                            [flg#787, 787 set false for the fist battle]
+  !!VRi^WOG_73_visited_art_id^:S0;              [flg#785, hero doesn't fights for war machine artifact by default]
+  !!IF:V787/0;                                  [flg#787, 787 set false for the fist battle]
 
   !!MA:C(MON_BALLISTA)/(RES_GOLD)/1500;
-  !!MA:C(MON_FIRST_AID_TENT)/(RES_GOLD)/750;                        [War machines cost 750 gold except for Ballista]
+  !!MA:C(MON_FIRST_AID_TENT)/(RES_GOLD)/750;    [War machines cost 750 gold except for Ballista]
   !!MA:C(MON_AMMO_CART)/(RES_GOLD)/750;
 
-  !!re i/0/(HERO_LAST_WOG);                                         [reset all w-vars]
+  !!re i/0/(HERO_LAST_WOG);                     [reset all w-vars]
     !!IF:Wi;
-    !!FU(WOG_73_Func_CorrectHeroVariablesW):Pi;       [correct w-vars if there are some wm equipped]
+    !!FU(WOG_73_Func_CorrectHeroVariablesW):Pi; [correct w-vars if there are some wm equipped]
   !!en;
 
 
@@ -76,8 +74,6 @@ ZVSE2
   !!en;
 
 !?FU(OnEveryDay)&i^timerOnce^/i^WOG_73_enabled^; [continue trigger only if it is an other days and the beginning of a new week]
-
-
 
   !!if&i^timerWeekday^=1;
 
@@ -851,50 +847,51 @@ ZVSE2
 -----------------------------------------------------------------------------
 -----------------------------------------------------------------------------
 
+!?FU(OnBattleMouseHint)&i^WOG_73_Battle_HealPower^/i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
+  !!BMi^battle_current_stack^:T?(monType:y);                                                                           [get type of monster]
+  !!BU:Ei^mouse_battleHex^/?(targetStackId:y);                                                                         [check monster position]
+  !!FU&(monType)<>(MON_FIRST_AID_TENT):E;
+  !!FU&(targetStackId)=(NO_STACK):E;                                                                                   [exit if no monster]
+  !!BM(targetStackId):I?(targetSide:y);                                                                                [get targetSide]
 
-!?FU(WOG_BattleTent_SetupCursor)&i^WOG_73_Battle_HealPower^;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(currStack:y) C(currStack)/52/4/?t;
+  !!OW:C?y99/?(mouseOwner:y);
+  !!if&(mouseOwner)=i^battle_owner_%i(battle_current_side)^/(targetSide)=i^battle_current_side^;                       [allow proc only if we own both stacks]
 
-  !!if&t=(MON_FIRST_AID_TENT);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(stack:y) C(stack)/244/4/?(tSide:y) C(currStack)/244/4/?(sSide:y);
-    !!if&(tSide:y)=(sSide:y);
+    !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78560/4/?(cursor:y);
+
+    !!if&(cursor)<>17;
+      // allow to heal all targets 
+      !!BM(targetStackId):Z?(stack:y);
       !!UN:C(stack)/96/4/?(startNum:y) C(stack)/76/4/?(currentNum:y) C(stack)/88/4/?l;
       !!if&(currentNum)>0/(startNum)>(currentNum)|l;
-        !!SN:X?y99/0;
-        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4677801;
+        !!UN:R5/2/17 C(cmbMgr)/78560/4/17;?(cursor:y);                                                                 [change cursor]
+        !!VR(cursor):S17;
       !!en;
     !!en;
-  !!en;
 
-!?FU(OnBattleMouseHint)&i^WOG_73_enabled^/i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
-  !!BMi^battle_current_stack^:T?(monType:y);                                     [get type of monster]
-  !!FU&(monType)<>(MON_FIRST_AID_TENT):E;
+    !!if&(cursor)=17;
+      !!BU:Ei^mouse_battleHex^/?(stackId:y);
+      !!BM(targetStackId):N?n;
+      !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(targetStackId)/i^WOG_73_Battle_Heal_MinPower^/d/?(minToRes:y);
+      !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(targetStackId)/i^WOG_73_Battle_Heal_MaxPower^/d/?(maxToRes:y);
+      !!VR(maxToRes):-n;
+      !!VR(minToRes):-n;
 
-
-  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78560/4/?(cursor:y);
-  *!IF:L^%(cursor)^;
-  !!if&(cursor)=17;
-    !!BU:Ei^mouse_battleHex^/?(stackId:y);
-    !!BM(stackId):N?n;
-    !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(stackId)/i^WOG_73_Battle_Heal_MinPower^/d/?(minToRes:y);
-    !!FU(WOG_73_BattleFunc_CalculateStackHealing):P(stackId)/i^WOG_73_Battle_Heal_MaxPower^/d/?(maxToRes:y);
-    !!VR(maxToRes):-n;
-    !!VR(minToRes):-n;
-
-    !!if&i^WOG_73_Battle_Heal_MinPower^=i^WOG_73_Battle_Heal_MaxPower^;
-      !!VR(healMsg:z):S^%i(WOG_73_Battle_Heal_MaxPower)^;
-      !!VR(resMsg:z):S^%(minToRes)^;
-    !!el;
-      !!VR(healMsg:z):S^%i(WOG_73_Battle_Heal_MinPower)-%i(WOG_73_Battle_Heal_MaxPower)^;
-      !!if&(minToRes)=(maxToRes);
+      !!if&i^WOG_73_Battle_Heal_MinPower^=i^WOG_73_Battle_Heal_MaxPower^;
+        !!VR(healMsg:z):S^%i(WOG_73_Battle_Heal_MaxPower)^;
         !!VR(resMsg:z):S^%(minToRes)^;
       !!el;
-        !!VR(resMsg:z):S^%(minToRes)-%(maxToRes)^;
+        !!VR(healMsg:z):S^%i(WOG_73_Battle_Heal_MinPower)-%i(WOG_73_Battle_Heal_MaxPower)^;
+        !!if&(minToRes)=(maxToRes);
+          !!VR(resMsg:z):S^%(minToRes)^;
+        !!el;
+          !!VR(resMsg:z):S^%(minToRes)-%(maxToRes)^;
+        !!en;
       !!en;
-    !!en;
 
-    !!SN:T^wog.%(WOG_OPT_ENHANCED_WAR_MACHINES_III).healed^/?(msg:z)/^healing^/(healMsg:z)/^resurrection^/(resMsg:z);
-    !!MM:M?(hint:z) M^%(hint) %(msg)^;
+      !!SN:T^wog.%(WOG_OPT_ENHANCED_WAR_MACHINES_III).healed^/?(msg:z)/^healing^/(healMsg:z)/^resurrection^/(resMsg:z);
+      !!MM:M?(hint:z) M^%(hint) %(msg)^;
+    !!en;
   !!en;
 
 !?FU(WOG_BattleTent_BeforeIterateLoses)&i^WOG_73_Battle_HealPower^;
