@@ -142,6 +142,9 @@ ZVSE2
   !!UN:P103/?(wogOption:y);             [Check if Eagle Eye I is enabled in WoGify Options]
   !!FU&(wogOption)<>(TRUE):E;           [Exit if it isn't]
 
+  !!UN:C6915152/(UNC_INT)/?(gameNotStarted:y); [igrik: isGameNotYetStarted]
+  !!FU&(gameNotStarted):E;
+
   !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/?(eeLvl:y); [get eagle eye level]
   !!FU&(eeLvl)=(SKILL_NOT_LEARNED):E;   [Exit if no eagle eye]
 
@@ -159,19 +162,20 @@ ZVSE2
     !!VRz73:Sz103045;
   !!en;
 
-  !!HE(CURRENT_HERO):O?v908;            [get owner of this hero]
-  !!OW&v908<>(NO_OWNER):Iv908/?v909;    [get AI (1) or human (0)]
   !!VR(showMsg:y):S(FALSE);             [assume AI]
-  !!VR(showMsg)&v908<>-1/v909=0:S(TRUE);[human if has owner and that owner is human]
+  !!HE(CURRENT_HERO):O?(owner:y);            [get owner of this hero]
 
-  !!UN:C6915152/(UNC_INT)/?(gameNotStarted:y); [igrik: isGameNotYetStarted]
-  !!VR(showMsg)&(gameNotStarted):S(FALSE);
+  !!if&(owner)<>(NO_OWNER);
+    !!OW:I(owner)/?(isAi:y);    [get AI (1) or human (0)]
+    !!VR(showMsg)&(isAi)<>(TRUE):S(TRUE);[human if has owner and that owner is human]
+  !!en;
 
-  !!HE(CURRENT_HERO):A2/0/?v911/?v906;  [see if hero has a spell book]
-  !!IF&(showMsg)/v906=0:M1/z103026;     [Message if no spell book]
+  !!HE(CURRENT_HERO):A2/(ART_SPELL_BOOK)/?(has:y)/?(equipped:y);  [see if hero has a spell book]
 
-  ** Algor: begin
-  !!FU&v906=0:E;                        [exit, if no spellbook]
+  !!if&(equipped)<=0;
+    !!IF&(showMsg):M1/z103026;          [Message if no spell book]
+    !!FU:E;                             [exit, if no spellbook]
+  !!en;
   
   **daemon_n: begin
   !!HE(CURRENT_HERO):S(SKILL_WISDOM)/?(wisLvl:y); [wisdom/e.eye skill level]
@@ -228,8 +232,6 @@ ZVSE2
     !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/0; [Remove eagle eye]
   !!en;
 **daemon_n: end
-
-** Algor: end
 
 
 *************************************************************************
