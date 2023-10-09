@@ -478,7 +478,7 @@ ZVSE2
 
 !!if&v547=1;
   ; Warning: Battling the Troglodyte at the entrance of cave could resutl in the amount of troops in the hero army messing up
-  !!FU738&i^battle_isQuick^<>(TRUE):P57/59/90/77/125/111/127/3/133/30/137/70/164/174;
+  !!FU738&i^battle_isVisible^<>(TRUE):P57/59/90/77/125/111/127/3/133/30/137/70/164/174;
   !!FU740:P(MON_TROGLODYTE)/10/4 P(MON_TROGLODYTE)/10/31 P(MON_TROGLODYTE)/10/48 P(MON_TROGLODYTE)/10/173 P(MON_TROGLODYTE)/10/165;
 !!en;
 
@@ -651,6 +651,19 @@ ZVSE2
 !!FU827:P; [handle altar stuff]
 
 ** end of BG0 trigger
+
+
+** OnAfterMelee Hook
+
+!?FU(WOG_OnAfterMelee);
+!#VA(atkStack:x) (defStack:x);
+
+!!UN:P30/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
+
+!!FU(WOG_30_ExecuteSpecialAbilities)&i^battle_acting_stack^=(atkStack):P(atkStack)/(defStack); [cannot be retaliation]
+
+** end of OnAfterMelee Hook
 
 
 ** function to handle Rogue caves, x1 cave, x2 cave bits 65432
@@ -1665,18 +1678,58 @@ ZVSE2
 !!IF&y3<>-1/w66=3/y4=1/y6=1/y2=0:V600/1; [remember extra spell was granted]
 !!IF&y3<>-1/w66=3/y4=1/y6=1/y2=1:V601/1;
 
-!!BMy5&y5<>-1:F?i; [get flags of target stack]
-!!VRi:&-623631; [remove some abilities]
-!!BMy5&y5<>-1/y1=(BATTLE_ACTION_WALK_AND_ATTACK)/y3<>-1/w67=3:Fi; [steal abilities with voodoo]
 
-!!VRy7:S1 -y2; [get attacked side]
-!!BHy7:N?y8; [get attacked hero number if any]
-!!IF&y8<>-1:Wy8; [use attacked hero's w variables]
+!?FU(WOG_30_ExecuteSpecialAbilities);
+!#VA(atkStack:x) (defStack:x);
 
-; extra retaliation
-!!if&y5<>(NO_STACK)/y8<>(NO_HERO)/w65=3/y1=(BATTLE_ACTION_WALK_AND_ATTACK);
-  !!BMy5:T?y30;
-  !!BMy5&y30<>(MON_NOT_USED_2)/y30<>(MON_CATAPULT)/y30<>(MON_BALLISTA)/y30<>(MON_FIRST_AID_TENT)/y30<>(MON_AMMO_CART):Rd1;
+!!BA:E?v1;                              [Check if Network Battle: v1>0 if yes]
+!!FU&v1>0:E;                            [Continue function 783 if not a Network Battle]
+
+; Exit if the defending stack is killed
+!!BM(defStack):N?(defNum:y);
+!!FU&(defNum)<=0:E;
+
+; Get info
+!!BG:Q?(atkSide:y);
+!!BM(defStack):T?(type:y);
+
+; Remove some abilities (Voodoo)
+!!if&i^battle_hero_%(atkSide)^>(NO_HERO);
+  !!IF:Wi^battle_hero_%(atkSide)^;
+
+  !!if&w67=3;
+    !!BM(defStack):F?i;
+    !!VR(isFlyer:y):Si &(MON_FLAG_FLYER);
+    !!VR(isShooter:y):Si &(MON_FLAG_SHOOTER);
+
+    !!if|(isFlyer)/(isShooter);
+      ; remove flyer and shooter - if applicable
+      !!VR(removedFlags:y):S(MON_FLAG_FLYER) +(MON_FLAG_SHOOTER);
+      !!BM(defStack):Fd~(removedFlags);
+
+      !!if&i^battle_isVisible^;
+        !!BM(defStack):N?(num:y);
+        !!VR(isPlural:y):S(num) -1 B;
+        !!SN:H^monname^/(type)/(isPlural)/?(monName:z);
+        !!VR(abilityType:y)&(isFlyer)/(isShooter)=(FALSE):S0;
+        !!VR(abilityType)&(isFlyer)=(FALSE)/(isShooter):S1;
+        !!VR(abilityType)&(isFlyer)/(isShooter):S2;
+        !!SN:T^wog.30.voodooAbil%(abilityType)^/?(abilName:z);
+        !!SN:T^wog.30.voodooLog%(isPlural)^/?(battleLog:z)/^mon^/(monName)/^abilities^/(abilName);
+        !!MM:S(battleLog);
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Unlimited retaliations
+!!if&(type)<>(MON_NOT_USED_2)/(type)<>(MON_CATAPULT)/(type)<>(MON_BALLISTA)/(type)<>(MON_FIRST_AID_TENT)/(type)<>(MON_AMMO_CART);
+  !!BM(defStack):I?(defSide:y);
+
+  !!if&i^battle_hero_%(defSide)^>(NO_HERO);
+    !!IF:Wi^battle_hero_%(defSide)^;
+    !!BM(defStack)&w65=3:Rd1;
+  !!en;
 !!en;
 
 ** end of function
