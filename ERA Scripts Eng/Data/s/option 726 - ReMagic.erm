@@ -8,7 +8,7 @@ ZVSE2
 ** Variables     : -
 ** Tmp variables : z1-z3
 ** Timers        : -
-** Functions     : FU79000-FU79006
+** Functions     : -
 ** PO-values     : -
 
 ** Балансировка Знания/Силы героев под новые цены заклинаний
@@ -90,18 +90,11 @@ ZVSE2
 !#FU(ES_726_ReplaceSpellTable):P;
 
 ** Палач дает +8 к атаке против всех существ.
-!?FU(OnAfterBattleAction);              [После любого действия]
+
+!?FU(ES_BattleStack_InitParams);[Установка флага Король1 всем отрядам на поле]
 !!UN:P726/?y1;
 !!FU&y1=0:E;                  [выход, если опция не включена]
-
-!!DO79000/0/41/1:P;           [Установка флага Король1 всем отрядам на поле]
-
-!?FU79000;                    [Установка флага Король1 отряду]
-!!BMx16:T?y1 F?y2;            [y1/y2 - тип/флаги отряда]
-!!FU&y1<0:E;                  [выход, если отряда нет]
-
-!!VRy2:|896 -768;             [добавление флага Король1, удаление Король2, Король3]
-!!BMx16:Fy2;                  [обновление флагов отряда]
+!!BMx1:Fd|(MON_FLAG_KING_1) Fd~(MON_FLAG_KING_2) Fd~(MON_FLAG_KING_3);[добавление флага Король1, удаление Король2, Король3]
 
 ** Палач позволяет существам добивать существо врага, у которого после атаки останется не более 20/30/40/50% здоровья.
 !?FU(OnMonsterPhysicalDamage);
@@ -226,6 +219,7 @@ ZVSE2
 !!UN:C5896327/(UNC_INT8)/235;                  [Отключение проверки типа призываемых элементалей]
 !!UN:C5936848/(UNC_INT8)/235;                  [большое спасибо Sav'у за пример...]
 
+
 !?FU(OnGameLeave);
 !!UN:P726/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;           [выход, если опция не включена]
@@ -233,127 +227,51 @@ ZVSE2
 !!UN:C5896327/(UNC_INT8)/i^es_726_patch1^;
 !!UN:C5936848/(UNC_INT8)/i^es_726_patch2^;
 
-!?FU(OnBeforeBattleAction);           [действие в бою]
-!!UN:P726/?y1;
-!!FU&y1=0:E;                          [выход, если опция не включена]
+!?FU(ES_CreateERMHook);
+!#VA(address:x);
+!!UN:P726/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;           [выход, если опция не включена]
+!!SN:E(address)/1/5928230/(ES_726_OnCombatElementalSummonCount);
 
-!!BG:A?y1;                            [y1 - тип действия]
-!!FU&y1<>1:E;                         [выход, если не колдовство героя]
-
-!!BG:S?y1 Q?y2;                       [y1 - номер колдующегося заклинания, y2 - текущая сторона]
-!!FU|y1<(SPELL_FIRE_ELEMENTAL)/y1>(SPELL_AIR_ELEMENTAL):E; [выход, если не призыв элементалей]
-
-!!VRy4&y1=(SPELL_FIRE_ELEMENTAL):S(MON_FIRE_MESSENGER); [y4 - номер призываемого существа]
-!!VRy4&y1=(SPELL_EARTH_ELEMENTAL):S(MON_EARTH_MESSENGER); [y4 - номер призываемого существа]
-!!VRy4&y1=(SPELL_WATER_ELEMENTAL):S(MON_WATER_MESSENGER); [y4 - номер призываемого существа]
-!!VRy4&y1=(SPELL_AIR_ELEMENTAL):S(MON_AIR_MESSENGER); [y4 - номер призываемого существа]
-!!BA:Hy2/?y5;                         [y5 - колдующий герой]
-!!FU79006:Py1/0/y5/?y7;               [y7 - уровень Школы для заклианния]
-!!SSy1:Cy7/?y9 Ey7/?y10 P?y11;        [y9/y10/y11 цена/бонус/эффект заклинания]
-!!VRy9:*-1;                           [...]
-!!HEy5:Fd/d/?y12/d;                   [y12 - Сила героя, уменьшаем ману]
-!!VRy13:Sy12 *y11 +y10;               [y13 - HP призванных существ (SP*P+E)]
-!!HEy5:A2/(ART_ORB_OF_THE_FIRMAMENT)/?i/?y14 A2/(ART_ORB_OF_DRIVING_RAIN)/?i/?y15 A2/(ART_ORB_OF_TEMPESTUOUS_FIRE)/?i/?y16 A2/(ART_ORB_OF_SILT)/?i/?y17; [y14-y17 Сферы стихий у героя]
-!!VRy13&y1=(SPELL_FIRE_ELEMENTAL)/y16>0:*3 :2; [+50% к HP призываемых посланников, если на герое надета Сфера соотв. стихии]
-!!VRy13&y1=(SPELL_EARTH_ELEMENTAL)/y17>0:*3 :2; [...]
-!!VRy13&y1=(SPELL_WATER_ELEMENTAL)/y15>0:*3 :2; [...]
-!!VRy13&y1=(SPELL_AIR_ELEMENTAL)/y14>0:*3 :2; [...]
-!!MA:Py4/?y20;                        [y20 - базовое здоровье призываемого существа]
-!!VRy21:Sy13 :y20 +1;                 [y21 - количество призываемых существ]
-
-; Fix quantity/lost HP in particular cases
-!!VRy22:Sy13 %y20 -y20 *-1;           [y22 - "потерянное здоровье" призываемых существ]
-
-!!if&y20=y22;
-  !!VRy21:-1;                         
-  !!VRy22:S0;
-!!el&y22=0;
-  !!VRy21:-1;                         [уменьшение числа призванных, если нет "раненого" существа]
+!?FU(ES_726_OnCombatElementalSummonCount);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(spellId:y);
+!!VR(monId:y):S(NO_MON);
+!!VR(artId:y):S(NO_ART);
+!!if&(spellId)=(SPELL_FIRE_ELEMENTAL);
+  !!VR(monId):S(MON_FIRE_MESSENGER);
+  !!VR(artId:y):S(ART_ORB_OF_TEMPESTUOUS_FIRE);
+!!el&(spellId)=(SPELL_EARTH_ELEMENTAL);;
+  !!VR(monId):S(MON_EARTH_MESSENGER);
+  !!VR(artId:y):S(ART_ORB_OF_SILT);
+!!el&(spellId)=(SPELL_WATER_ELEMENTAL);;
+  !!VR(monId):S(MON_WATER_MESSENGER);
+  !!VR(artId:y):S(ART_ORB_OF_DRIVING_RAIN);
+!!el&(spellId)=(SPELL_AIR_ELEMENTAL);;
+  !!VR(artId:y):S(ART_ORB_OF_THE_FIRMAMENT);
+  !!VR(monId):S(MON_AIR_MESSENGER);
 !!en;
 
-!!FU79001:Py4/y2/y21/?y18/y22;        [призываем посланников]
+!!if&(monId)<>(NO_MON);
+  !!UN:C(ebp)/16/4/?(spellPwr:y) C(ebp)/20/4/?(skillLevel:y);
+  !!SS(spellId):E(skillLevel)/?(skillLevelEffect:y) P?(spellEffect:y);
+  !!VR(totalHp:y):S(spellPwr) *(spellEffect) +(skillLevelEffect);   [y13 - HP призванных существ (SP*P+E)]
 
-!!if&y18=0;                           [если призыв удачен]
-  !!BHy2:M1;                          [запрещаем колдовство в этом раунде]
-  !!HEy5:Idy9/1 B0/?z1;               [уменьшаем ману, z1 - имя героя]
-
-  !!if&i^battle_isVisible^;
-    !!UN:N1/2/y1;                     [z2 - Название заклинания]
-    !!SN:T^es.726.summon1^/?z3/^hero^/z1/^spell^/z2;       [z3 сообщение для вывода в лог боя]         
-    !!MM:Sz3;                         [вывод сообщения в лог боя]
+  !!VR(heroId:y):Si^battle_hero_%i(battle_current_side)^;
+  !!if&(heroId:y)<>(NO_HERO);
+    !!HE(heroId:y):A2/(artId)/?i/?n;
+    !!VR(totalHp:y)&n>0:*3 :2;                                      [+50% к HP призываемых посланников, если на герое надета Сфера соотв. стихии]
   !!en;
-!!en;
-
-!!FU(Fun_RedrawShadowAfterAction):P;
-!!BG:A0;                              [отменяем штатный призыв с перерисовкой тени]
-
-!?FU79001;                            [добавление отряда x1 на поле боя, сторона x2 (0/1), количество x3, потер. здоровье x5]
-!!VRy1:Sx2 *21;                       [y1 - первый отряд для поиска (0/21)]
-!!VRy2:Sy1 +20;                       [y2 - последний отряд для поиска (20/41)]
-!!VRy3:S-1;                           [y3 - результат поиска]
-!!DO79002/y1/y2/1:P?y3;               [y3>=0, если есть свободный отряд]
-
-!!if&y3=-1;                           [если нет свободного отряда]
-  !!if&i^battle_isVisible^;
-    !!SN:T^es.726.summon2^/?z3;       [z3 сообщение для вывода в лог боя]
-    !!MM:Sz3;                         [вывод сообщения в лог боя]
+  !!MA:P(monId)/?(baseHp:y);[y20 - базовое здоровье призываемого существа]
+  !!VR(totalSummonCount:y):S(totalHp:y) :(baseHp);F1/(INT_MAX);
+  !!if&(totalSummonCount)>0;
+    !!VR(lostHp:y):S(totalHp:y) %(baseHp);
+    !!VR(totalSummonCount)&(lostHp): +1;
   !!en;
+  !!VR(totalSummonCount):F1/(INT_MAX);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/(totalSummonCount:y) C(ebp)/12/4/(monId:y) C(ebp)/86/4/(monId:y); [set new mon count and id to summon and text]
 
-  !!VRx4:S1;                          [возврат кода неудачного призыва]
-  !!FU:E;                             [выход]
 !!en;
 
-!!VRv1:S0;                            [v1 - результат поиска]
-!!DO79003/0/10/1:P0/x2;               [v1 - количество свободных позиций]
-
-!!if&v1>0;                            [если есть свободная позиция]
-  !!VRv1:-1;                          [y4 - порядковый номер свободной позиции для призыва]
-  !!VRy4:S1 Rv1;                      [...]
-  !!VRv1:S0;                          [v1 - результат поиска]
-  !!DO79003/0/10/1:Py4/x2;            [v1 - позиция для призыва]
-  !!BU:Sx1/x3/v1/x2/-1/1 Ev1/?y4;     [призыв нового отряда и получение его номера в y4]
-  !!BMy4:Lx5;                         [установка "потерянного здоровья"]
-
-  !!SN&i^battle_isVisible^:P^SUMNELM^; [вывод звука, если не быстрая битва]
-  !!VRx4:S0;                          [возврат кода удачного призыва]
-!!el;
-  !!if&i^battle_isVisible^;
-    !!SN:T^es.726.summon3^/?z3;       [z3 сообщение для вывода в лог боя]
-    !!MM:Sz3;                         [вывод сообщения в лог боя]
-  !!en;
-
-  !!VRx4:S2;                          [возврат кода неудачного призыва]
-  !!FU:E;                             [выход]
-!!en;
-
-!?FU79002;                            [возвращает в x1 номер первого свободного отряда]
-!!BMx16:T?y1 N?y2;                    [y1 - тип отряда, y2 - кол-во существ в отряде]
-!!FU|y1<>-1/y2<>0:E;                  [выход, если отряд занят]
-
-!!VRx1:Sx16;                          [если отряда свободен, возвращаем его номер]
-!!VRx16:S100500;                      [прерываем цикл]
-
-!?FU79003;                            [поиск количества (x1=0) или возврат в x3 x1-й свободной позиции для стороны x2. x16 - ряд.]
-!!VRi:Sx2 *13;                        [i - сдвиг позиции для защищающегося игрока]
-!!VRy1:Sx16 *17 +1 +i;                [y1 - проверяемая позиция (1й ряд)]
-!!BU:Dy1/?y2 Oy1/?y3 Ey1/?y4;         [y2=-1, y3=0, y4=-1 если на позиции нет отрядов и препятствий]
-!!VRv1&y2=-1/y3=0/y4=-1:+1;           [v1 - счетчик свободных позиций]
-
-!!if&x1>0/x1=v1;                      [если найдена позиция для призыва]
-  !!VRv1:Sy1;                         [возвращаем ее]
-  !!VRx16:S100500;                    [и прерываем цикл]
-  !!FU:E;                             [выход]
-!!en; 
-
-!!VRy1:+1;                            [y1 - проверяемая позиция (2й ряд)]
-!!BU:Dy1/?y2 Oy1/?y3 Ey1/?y4;         [y2=-1, y3=0, y4=-1 если на позиции нет отрядов и препятствий]
-!!VRv1&y2=-1/y3=0/y4=-1:+1;           [v1 - счетчик свободных позиций]
-
-!!if&x1>0/x1=v1;                      [если найдена позиция для призыва]
-  !!VRv1:Sy1;                         [возвращаем ее]
-  !!VRx16:S100500;                    [и прерываем цикл]
-  !!FU:E;                             [выход]
-!!en; 
 
 // Adapt the Summon Elementals Option
 // The following lines must be executed later than the functions with the same name in 4 wog - summon elementals.erm
@@ -391,61 +309,21 @@ ZVSE2
 !!VR(qty)|(hp)=(lostHp)/(lostHp)=0:-1;
 
 ** Отключение заклинаний призыва у существ
-!?FU(OnAfterErmInstructions);         [опыт существ: удаление заклинаний призыва у существ]
-!!UN:P726/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;           [выход, если опция не включена]
+*?FU(OnAfterErmInstructions);         [опыт существ: удаление заклинаний призыва у существ]
+*!UN:P726/?(wogOption:y);
+*!FU&(wogOption)<>(TRUE):E;           [выход, если опция не включена]
 
-!!DO79004/0/196/1:P;                  [перебор существ]
+*!FU(GetMaxMonsterId):P?(maxMonId:y);
 
-!?FU79004;
-!!DO79005/0/19/1:Px16;                [перебор линий опыта]
+*!re (monId:y)/0/(maxMonId);
+  *!re l/0/19;
+    *!EA(monId:y):Bl/?i/?(skill:y)/?m/d/d/d/d/d/d/d/d/d/d/d; [получение параметров линии опыта]
+    *!if|(skill:y)=74/(skill:y)=97/(skill:y)=99/(skill:y)=106/(skill:y)=112/(skill:y)=115;   [если линия связана с сотворением заклинания призыва]
+      *!EA(monId:y)&m>=(SPELL_FIRE_ELEMENTAL)/m<=(SPELL_AIR_ELEMENTAL):Bl/0/d/d/0/0/0/0/0/0/0/0/0/0/0; [отключение линии опыта]
+    *!en;
+  *!en;
+*!en;
 
-!?FU79005;
-!!EAx1:Bx16/?y2/?y3/?y4/d/d/d/d/d/d/d/d/d/d/d; [получение параметров линии опыта]
-
-!!if|y3=74/y3=97/y3=99/y3=106/y3=112/y3=115;   [если линия связана с сотворением заклинания призыва]
-  !!EAx1&y4>65/y4<70:Bx16/0/d/d/0/0/0/0/0/0/0/0/0/0/0; [отключение линии опыта]
-!!en; 
-
-** Призыв посланников командиром
-!?FU(OnBeforeBattleAction);                                [действие в бою]
-!!UN:P726/?y1;
-!!FU&y1=0:E;                          [выход, если опция не включена]
-
-!!BG:A?y1;                            [y1 - тип действия]
-!!FU&y1<>10:E;                        [выход, если не колдовство существа]
-
-!!BG:Q?y2 N?y3;                       [y2 - текущая сторона, y3 - активный отряд]
-!!BMy3:T?y4 U4/?y1 E?y30;             [y4 - тип существ активного отряда, y1 - номер колдующегося заклинания, y30 - кол-во заклинаний]
-!!FU|y1<(SPELL_FIRE_ELEMENTAL)/y1>(SPELL_AIR_ELEMENTAL)/y4<(MON_COMMANDER_FIRST_A)/y4>(MON_COMMANDER_LAST_D)/y30<1:E;[выход, если не призыв элементалей командиром]
-
-!!VRy4&y1=(SPELL_FIRE_ELEMENTAL):S(MON_FIRE_MESSENGER); [y4 - номер призываемого существа]
-!!VRy4&y1=(SPELL_EARTH_ELEMENTAL):S(MON_EARTH_MESSENGER); [y4 - номер призываемого существа]
-!!VRy4&y1=(SPELL_WATER_ELEMENTAL):S(MON_WATER_MESSENGER); [y4 - номер призываемого существа]
-!!VRy4&y1=(SPELL_AIR_ELEMENTAL):S(MON_AIR_MESSENGER); [y4 - номер призываемого существа]
-!!BA:Hy2/?y5;                         [y5 - герой]
-!!COy5:S4/?y6;                        [y6 - сила магии командира]
-!!VRy7:S2;                            [y7 - множитель призыва элементалей]
-!!BA:P?y11/?y12/?y13;                 [y11-y13 - координаты битвы]
-!!TRy11/y12/y13:G?y8;                 [y8 - тип бонусной земли]
-!!VRy7&y8=46:S(SKILL_EXPERT);         [множитель призыва на соотв. бонусной земле]
-!!VRy7&y1=(SPELL_AIR_ELEMENTAL)/y8=229:S(SKILL_EXPERT);  [множитель призыва на соотв. бонусной земле]
-!!VRy7&y1=(SPELL_FIRE_ELEMENTAL)/y8=226:S(SKILL_EXPERT); [множитель призыва на соотв. бонусной земле]
-!!VRy7&y1=(SPELL_WATER_ELEMENTAL)/y8=228:S(SKILL_EXPERT); [множитель призыва на соотв. бонусной земле]
-!!VRy7&y1=(SPELL_EARTH_ELEMENTAL)/y8=231:S(SKILL_EXPERT); [множитель призыва на соотв. бонусной земле]
-!!HEy5:A2/(ART_ORB_OF_THE_FIRMAMENT)/?i/?y14 A2/(ART_ORB_OF_SILT)/?i/?y15 A2/(ART_ORB_OF_TEMPESTUOUS_FIRE)/?i/?y16 A2/(ART_ORB_OF_DRIVING_RAIN)/?i/?y17; [y14-y17 Сферы стихий у героя]
-!!VRy9:Sy6 +1 *y7;                    [y9 - количество призызываемых элементалей]
-!!VRy9&y1=(SPELL_FIRE_ELEMENTAL)/y16>0:*3 :2; [+50% к количеству призываемых, если на герое надета Сфера соотв. стихии]
-!!VRy9&y1=(SPELL_EARTH_ELEMENTAL)/y17>0:*3 :2; [...]
-!!VRy9&y1=(SPELL_WATER_ELEMENTAL)/y15>0:*3 :2; [...]
-!!VRy9&y1=(SPELL_AIR_ELEMENTAL)/y14>0:*3 :2; [...]
-!!FU79001:Py4/y2/y9/?y18/0;           [призываем посланников]
-
-!!if&y18=0;                           [если призыв удачен]
-  !!BG:A12;                           [тратим ход командира]
-  !!VRy30:-1;                         [уменьшаем кол-во заклинаний командира]
-  !!BMy3:Ey30;                        [обновляем кол-во заклинаний командира]
-!!en;
 
 ** Городской Портал кроме маны расходует еще и очки передвижения (только для игрока-человека)
 !?FU(OnBeforeAdventureMagic);
@@ -453,9 +331,12 @@ ZVSE2
 !!FU&y1=0:E;                          [выход, если опция не включена]
 
 !!OW:A-1/?h;                          [h - номер выбранного героя]
-!!HEh:P?y1/?y2/?y3 W?y4;              [сохраняем координаты и ОД героя при открытии книги заклинаний]
-!!FU79006:P9/1/h/?y10;                [y10 - уровень Школы для заклианния]
-!!SN:W^ReMagicTPx^/y1 W^ReMagicTPy^/y2 W^ReMagicTPz^/y3 W^ReMagicTPw^/y4 W^ReMagicTPs^/y10; [...]
+!!HEh:P?y1/?y2/?y3 W?y4 Z?h;              [сохраняем координаты и ОД героя при открытии книги заклинаний]
+
+!!SN:E5132816/(CALLCONV_THISCALL)/h; Get Land Type
+!!SN:E5133040/(CALLCONV_THISCALL)/h/(SPELL_TOWN_PORTAL)/v1;
+[v1 - уровень Школы для заклианния]
+!!SN:W^ReMagicTPx^/y1 W^ReMagicTPy^/y2 W^ReMagicTPz^/y3 W^ReMagicTPw^/y4 W^ReMagicTPs^/v1; [...]
 
 !?FU(OnAfterAdventureMagic);
 !!UN:P726/?y1;
@@ -490,29 +371,6 @@ ZVSE2
   !!UN:C7722324/(UNC_INT)/(MON_GHOST_BEHEMOTH);
   !!VRi^es_726_clone_mon_id^:S0;
 
-
-!?FU79006;                            [возврат в x4 действующего уровня Школы заклинания x1 в бою (x2=0) или на карте (x2=1) для героя x3]
-!!VRy10:S0;                           [обнуляем искомое значение]
-!!HEx3&x2=1:P?y1/?y2/?y3;             [y1/y2/y3 - координаты места колдовства]
-!!BA&x2=0:P?y1/?y2/?y3;               [...]
-!!TRy1/y2/y3:G?y4;                    [y4 - тип бонусной земли]
-!!SSx1:S?y5;                          [y5 - биты школ заклинания]
-!!VRy6:Sy5 &1;                        [y6>0 - заклинание Воздуха]
-!!VRy7:Sy5 &4;                        [y7>0 - заклинание Воды]
-!!VRy8:Sy5 &2;                        [y8>0 - заклинание Огня]
-!!VRy9:Sy5 &8;                        [y9>0 - заклинание Земли]
-!!HEx3:S15/?y11 S16/?y12 S14/?y13 S17/?y14; [y11-y14 Уровни навыков Школ героя]
-!!VRy10&y6>0/y10<y11:Sy11;            [y10 - макс. уровень по Школам героя и бонусам террирорий]
-!!VRy10&y7>0/y10<y12:Sy12;            [...]
-!!VRy10&y8>0/y10<y13:Sy13;            [...]
-!!VRy10&y9>0/y10<y14:Sy14;            [...]
-!!VRy10&y4=46:S3;                     [маг. земля]
-!!VRy10&y6>0/y4=229:S3;               [маг. облака]
-!!VRy10&y7>0/y4=228:S3;               [прозрачные пруды]
-!!VRy10&y8>0/y4=226:S3;               [огненные поля]
-!!VRy10&y9>0/y4=231:S3;               [скалистая земля]
-!!VRx4:Sy10;                          [Возвращаем макс. значение Школы]
-
 *** Силовое поле имеет длительность A+SP/B
 !?FU(OnBeforeBattleAction);                        [Перед действием в бою]
 !!UN:P726/?y1;
@@ -522,9 +380,11 @@ ZVSE2
 !!VRy5:Sy4 +1 *-10;           [y5 - герой]
 !!FU|y1<>1/y2<>12:E;          [выход, если не колдовство "Силового поля"]
 
-!!FU79006:P12/0/y5/?y6;       [y6 - уровень Школы]
-!!HEy5:Fd/d/?y7/d;            [y7 - Сила героя]
-!!SS12:P?y8 Ey6/?y9;          [y8/y9 - Сила/Эффект заклинания]
+
+!!HEy5:Fd/d/?y7/d Z?h;            [y7 - Сила героя]
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/21440/4/?(ground:y);
+!!SN:E5133040/(CALLCONV_THISCALL)/h/(SPELL_FORCE_FIELD)/(ground:y);
+!!SS(SPELL_FORCE_FIELD):P?y8 Ev1/?y9;          [y8/y9 - Сила/Эффект заклинания]
 !!VRy10:Sy7 :y9 +y8;          [y10 - длительность Силового поля]
 !!UN:C5901022/4/y10;          [устанавливаем длительность (спс. gamecreator'у)]
 
