@@ -2,8 +2,7 @@ ZVSE2
 
 ** Arcane Tower ERM script v1.5 - Donald X. Vaccarino
 ** Updated: 09/20/03 by Hermann the Weird
-** Updated: Mar 2022 by Archer30
-** Requires WOG v3.52 or later.
+** Updated: Oct 2023 by Archer30
 ** A location to let heroes exchange primary skill points
 
 ** To use this code, put it into a Global Event, set to never happen,
@@ -14,22 +13,29 @@ ZVSE2
 ** right next to each other. If you put an Arcane Tower by a Magic Well or similar
 ** object, note that it can be used to really fill up on spell points.
 
-** Variables Used: v590, v600-v617, v618, z403
+** Variables Used: v600-v617, v618
 ** Flags used: 2-5
-** z403 must not be changed in other programs!
-** v590 must always be 0! Some of my other scripts also use it as 0 for hint indexing.
 ** The other variables may be used elsewhere but will be trashed by this code.
 
 ** Functions Used: 620-624
 
 
-** Initialization code
-!#UN:P104/?v1;     [Check for WoG option]
-!#VRz403&v1=1:Sz104000;
-!#VRv590&v1=1:S0;
-!#HT63/9&v1=1:V590/0/403; [set hint to z403, whenever v590 is 0, which it always will be]
+// Hint for mouse hovering
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
 
-** end of Initialization code
+!!FU(WOG_ShowNewWoGObjectInfo):P104/9/(tileX)/(tileY)/(tileZ);
+
+// Right-clicking dialogue
+!?FU(OnAdventureMapRightMouseClick);
+!!FU(WOG_ShowNewWoGObjectInfo):P104/9;
+
+; Function to reset all the right-click text of object
+; This function also sets PM commands to attract AI to Altar objects
+!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerDay^>1/i^timerOnce^;
+!!FU(WOG_ResetNewWoGObject):P104/9;
 
 
 ** Object routine
@@ -38,12 +44,24 @@ ZVSE2
 !!UN:P104/?(wogOption:y);               [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
+!!PM998:Pi^timerOwner^/(TRUE);
+
+!!PO998:N?(value:y);  // get current PO:N value
+
+!!if&(value);
+  !!IF&(ERM_FLAG_IS_HUMAN):M(MSG_TYPE_MES)/^%T(wog.104.visited)^; // show message that already visited
+  !!FU:E; // Exit function if altar has been visited
+!!en;
+
 !!if&(ERM_FLAG_IS_HUMAN);
   !!FU620:P;                            [do rest of code if human (not AI)]
 ; For AI
 !!el;
   ; Disable standard action of the object and set as visited
   !!OB998:S;                            [disable pyramid feature]
+
+  ; Set as visited
+  !!PO998:N1;
   !!PM998:V(FALSE);
 
   ; Give 1000 exp to the visiting hero
@@ -54,8 +72,6 @@ ZVSE2
     !!HE(CURRENT_HERO):Ed1000;
   !!en;
 !!en;
-
-!!PM998:Pi^timerOwner^/(TRUE);
 
 ** end of object routine
 
@@ -133,6 +149,10 @@ ZVSE2
 !!IF:V2/1; [flag indicates we'll make trade]
 !!DO624/1/30/1:P; [allow them to make the chosen trade as many times as they can]
 !!IF:M1/z104013;
+
+; Set as visited only when there is one successful exchange
+!!PO998:N1;
+!!PM998:V(FALSE);
 
 ** end of function
 
