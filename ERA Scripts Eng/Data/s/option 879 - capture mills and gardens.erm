@@ -15,36 +15,95 @@ ZVSE2
 ** PO-values     : V0, V1 (mills and leprechaun's gardens squares)
 
 ** дублирование стандартных триггеров
-
+*?FU(ES_OnMapItem_HasFlag);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(objType:y);
+*!IF:L^%(objType:y)^;
+*!if&(objType)=(OBJ_WATER_WHEEL);
+  *!IF:L^1^;
+*!en;
 28.07.2022 Fully rewritten by daemon_n
+!?FU(ES_CreateERMHook);
+!#VA(address:x);
+!!UN:P879/?(isCaptureObjOpt:y);
+!!if&(isCaptureObjOpt);
+  !!SN:E(address)/1/4864048/(ES_OnPlayerVisit_MystGarden); [Trigger on player visiting Mysticism Garden]
+  !!SN:E(address)/1/4880976/(ES_OnPlayerVisit_WaterWheel); [Trigger on player viisiting Water Wheel]
+  !!SN:E(address)/1/4881456/(ES_OnPlayerVisit_WindMill);   [Trigger on player visiting Wind Mill]
+  !!SN:E(address)/1/4263804/(ES_OnMapItem_GetOwner);
+  !!SN:E(address)/1/4263370/(ES_OnMapItem_Draw);
+
+!!en;
+!?FU(OnGameEnter);
+!!UN:P879/?(isCaptureObjOpt:y);
+!!if&(isCaptureObjOpt);
+  //replace wind mill grass
+  !!re i/0/7;(end_value);
+    !!SN:R^AVMwndd0.def:0_%i.png^/^Data\Defs\ESwind00.def\0_%i.png^;;
+  !!en;
+  //replace wind mill snow
+  !!re i/0/7;(end_value);
+    !!SN:R^AVMwmsn0.def:0_%i.png^/^Data\Defs\ESwind10.def\0_%i.png^;;
+  !!en;
 
 
+  //replace OBJ_WATER_WHEEL
+  !!re i/0/7;(end_value);
+    !!SN:R^AVMwwhl0.def:0_%i.png^/^Data\Defs\ESwtr00.def\0_%i.png^;;
+  !!en;
+
+    //replace OBJ_WATER_WHEEL snow
+  !!SN:R^AVMwwsn0.def:0_0.png^/^Data\Defs\ESwtr10.def\0_0.png^;;
+
+  //replace OBJ_MYSTICAL_GARDEN
+  !!re i/0/14;(end_value);
+    !!SN:R^avtmyst0.def:0_%i.png^/^Data\Defs\ESmyst0.def\0_%i.png^;;
+  !!en;
+!!en;
+
+!?FU(ES_OnMapItem_GetOwner)&i^ES_879_DrawObjectType^;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-68/4/?(coords:y);
+  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
+  !!PO(x)/(y)/(z):O?(owner:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(owner);?(objType:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(mapitem:y) C(mapitem:y)/56/4/i^ES_879_DrawObjectType^; [restore obj type]
+
+  !!VRi^ES_879_DrawObjectType^:S(NULL);
+
+
+!?FU(ES_OnMapItem_Draw);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(mapitem:y) C(mapitem:y)/56/4/?(objType:y);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(objType:y);
+
+!!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
+  !!VRi^ES_879_DrawObjectType^:S(objType);
+  !!UN:C(mapitem:y)/56/4/(OBJ_CREATURE_GENERATOR_1);                                      [emulate obj gen 1 to get color]
+!!en;
 !?FU(ES_OnPlayerVisit_MystGarden)&i^ES_879_isAuto^=(FALSE);
   !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
 
-  !!if&999;
-    !!GD2:B?(resType:y);
-    !!VR(value:y):S5;
-    !!VR(value)&(resType)=(RES_GOLD):S500;
-    !!FU(ES_879_ShowMessage):P(owner)/(OBJ_MYSTICAL_GARDEN)/(resType)/(value);
-  !!en;
+  *!if&999;
+    *!GD2:B?(resType:y);
+    *!VR(value:y):S5;
+    *!VR(value)&(resType)=(RES_GOLD):S500;
+    *!FU(ES_879_ShowMessage):P(owner)/(OBJ_MYSTICAL_GARDEN)/(resType)/(value);
+  *!en;
 
 !?FU(ES_OnPlayerVisit_WaterWheel)&i^ES_879_isAuto^=(FALSE);
   !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
 
-  !!if&999;
-    !!WM2:B?(value:y);
-    !!VR(value):*500;
-    !!FU(ES_879_ShowMessage):P(owner)/(OBJ_WATER_WHEEL)/(RES_GOLD)/(value);
-  !!en;  
+  *!if&999;
+    *!WM2:B?(value:y);
+    *!VR(value):*500;
+    *!FU(ES_879_ShowMessage):P(owner)/(OBJ_WATER_WHEEL)/(RES_GOLD)/(value);
+  *!en;  
 
 !?FU(ES_OnPlayerVisit_WindMill)&i^ES_879_isAuto^=(FALSE);
   !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
 
-  !!if&999;
-    !!ML2:B?(resType:y)/?(value:y);
-    !!FU(ES_879_ShowMessage):P(owner)/(OBJ_WINDMILL)/(resType)/(value);
-  !!en;
+  *!if&999;
+    *!ML2:B?(resType:y)/?(value:y);
+    *!FU(ES_879_ShowMessage):P(owner)/(OBJ_WINDMILL)/(resType)/(value);
+  *!en;
 
 
 !?FU(ES_879_ShowMessage);
@@ -70,7 +129,7 @@ ZVSE2
 
 !?FU(ES_879_OnVisitResourceObject);
 !#VA(addr:x) (owner:x);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESP)/4/?(esp:y) C(esp)/16/4/0;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESP)/4/?(esp:y) C(esp)/16/4/0;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(coords:y);
   !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);/8/?(sth:y)/8;
   !!VRv2:C(x)/(y)/(z);
