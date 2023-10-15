@@ -213,7 +213,7 @@ ZVSE2
 **   replace the successive msgboxes for resource selection
 **
 ** USES hero var w47 (resource choice)
-**      FU2342-FU2344
+**      FU(WOG_191_ShowEstatesSkillDlg)-FU2344
 ** calls library fcts FU(WOG_Hero_GetLuckLevel) (luck), FU(WOG_GetSkillInfoByClick) (skill click)
 ** uses flag 236, uses v2333 (modifier for ExpEst gold/day), v2334 (lvl 10 msg status)
 ** temp uses vars (v2331,v2332)
@@ -249,38 +249,38 @@ ZVSE2
 ;   only take Estates into account when *changing* w47
 
 !?FU(WOG_OnHeroGetGoldIncome);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/214/1/?(skillLvl:y);
-
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/1/?(skillLvl:y);
 !!VR(offset:y):S(skillLvl) *(SIZEOF_INT);
 !!UN:C6547992/(offset:y)/4/?(gold:y);
-
 !!if&(skillLvl);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
 
-  ; Temp fix for missing Estates Specialty bonuses - there should be a clever method by daemon_n
-  !!HE(heroId):X?(specType:y)/?(specSkill:y);
 
+  !!HE(heroId):X?(specType:y)/?(specSkill:y); better use this way so far as game uses __int64 (rax => eax+ [ebp-8])
+  
   !!if&(specType)=0/(specSkill)=(SKILL_ESTATES);
     !!HE(heroId):E?(exp:y)/?(level:y)/1;
     !!VR(specGold:y):S(gold) *(level) *5 :100;
     !!VR(gold):+(specGold);
   !!en;
 
-  ; Adds bonus from scripts
-  !!if&i^wog_203_enabled^;              [Estates I]
-    !!FU(WOG_203_Hero_GetEstatesIBonus):P(heroId)/(skillLvl)/?(result:y); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
-    !!VR(gold):+(result);
-  !!en;
+  !!if&i^wog_estates_ignore_native_calculation^=0; [Adds bonus from scripts]
 
-  !!if&i^wog_191_enabled^;              [Estates II]
-    !!FU(WOG_191_Hero_GetEstatesIIBonus):P(heroId)/(skillLvl)/?(result);
-    !!VR(gold):+(result);
+    !!if&i^wog_203_enabled^;              [Estates I]
+      !!FU(WOG_203_Hero_GetEstatesIBonus):P(heroId)/(skillLvl)/?(result:y); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
+      !!VR(gold):+(result);
+    !!en;
+
+    !!if&i^wog_191_enabled^;              [Estates II]
+      !!FU(WOG_191_Hero_GetEstatesIIBonus):P(heroId)/(skillLvl)/?(result);
+      !!VR(gold):+(result);
+    !!en;
   !!en;
 !!en;
 
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(gold:y);
 !!SN:X?y99/0;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5129762;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5129831; // now return directly to the +350 gold
 
 !?FU(WOG_203_Hero_GetEstatesIBonus);    [Estates I]
 !#VA(heroId:x) (skillLvl:x) (result:x);
@@ -291,30 +291,16 @@ ZVSE2
 !?FU(WOG_191_Hero_GetEstatesIIBonus);   [Estates II]
 !#VA(heroId:x) (skillLvl:x) (result:x);
 
-!!HE(heroId):E?(exp:y)/?l/1;
-
-!!VR(divisor:y):S1;
-
-!!if&(skillLvl)=(SKILL_BASIC);
-  !!VR(divisor:y):S4;
-!!el&(skillLvl)=(SKILL_ADVANCED);
-  !!VR(divisor):S2;
-!!en;
-
-!!VR(result):S(exp) :10000 *v2333 :(divisor); +(skillLvl);
-
+!!HE(heroId):E?(exp:y)/?l/1 X?(type:y)/?(subtype:y)/d/d/d/d/d;;
 ; Restrain the gold gained (2000/5000 depending on whether the hero is a Estate Specialist)
-!!if&(result)>5000;
-  !!VR(result):S5000;
-
-  !!if&(result)>2000;
-    !!HE(heroId):X?(type:y)/?(subtype:y)/d/d/d/d/d;
-
-    !!if|(type)<>0/(subtype)<>(SKILL_ESTATES);
-      !!VR(result):S2000;
-    !!en;
-  !!en;
+!!if&(type)=0/(subtype)=(SKILL_ESTATES);
+  !!VR(maxGold:y):S5000;
+!!el;
+  !!VR(maxGold:y):S2000;
 !!en;
+
+!!VR(divisor:y):S(skillLvl) -3 *-1; // divide gold depending on skill lvl /by 4/by 2 / by 1
+!!VR(result):S(exp) :10000 *v2333 Sd>>(divisor) F0/(maxGold);
 
 ; Manage daily gold bonus from selection
 !!if&l>=10;
@@ -410,15 +396,14 @@ ZVSE2
 
     !!if&(skill)=(SKILL_ESTATES)/i^wog_191_enabled^=1;
       !!UN:P75/?(isShortDescr:y);                                                       [check if Short Skill descriptions (script75.erm, Hermann the Weird) is enabled]
-
       ; 203 - Estates I
       !!if&i^wog_203_enabled^=(FALSE)/(isShortDescr)=(FALSE);
         !!CM:R0;                                                                        [if clicked skill was Estates, disable standard skill click reaction         [NOTE to get std Estates descr on name click: y-1<87 instead of y-1<103]
-        !!FU2342:P(skillArea)/i^mouse_action^;                                          [.. and call enhEstates display function (in: skill area, left/right-click)  [NOTE to get std Estates descr on name click: add /y-1<87]
+        !!FU(WOG_191_ShowEstatesSkillDlg):P(skillArea)/i^mouse_action^;                                          [.. and call enhEstates display function (in: skill area, left/right-click)  [NOTE to get std Estates descr on name click: add /y-1<87]
 
       !!el&(skillArea)=1;
         !!CM:R0;                                                                        [same but for Estates I or short skill descr, then only a click on skill icons will trigger the below msgboxes]
-        !!FU2342:P(skillArea)/i^mouse_action^;                                          [.. same but for Estates I or short skill descr]
+        !!FU(WOG_191_ShowEstatesSkillDlg):P(skillArea)/i^mouse_action^;                                          [.. same but for Estates I or short skill descr]
       !!en;
 
     !!en;
@@ -434,7 +419,7 @@ ZVSE2
 
   ENHANCED ESTATES DISPLAY FUNCTION
 
-!?FU2342;                            display function
+!?FU(WOG_191_ShowEstatesSkillDlg);                            display function
 !#VA(skillArea:x) (mouseAction:x);
 ;   x1 = skill area (= 1 if icon, = 2 if name, = 3 if expertise clicked)
 ;   x2 = click type (= 12 left click, = 14 right click)
@@ -510,20 +495,13 @@ ZVSE2
   !!VR(resourceNum:y):S1;                            resource amount
   !!VR(resourceNum)&(resource)=(RES_GOLD):S350;                    gold amount 350 instead of 1
 
-  ; calculate correct additional amount of gold text (dep on hero experience and Estates Expertise) [%gold, %x and %y]
-  !!if&(skillLvl)=(SKILL_BASIC);
-    !!VR(baseBonus:y):S125;                      set basic standard value
-  !!el&(skillLvl)=(SKILL_ADVANCED);
-    !!VR(baseBonus:y):S250;                       .. adv
-  !!el&(skillLvl)>=(SKILL_EXPERT);
-    !!VR(baseBonus:y):S500;                       ... exp
-  !!en;
+  !!VRi^wog_estates_ignore_native_calculation^:S(TRUE);
+  !!HE(CURRENT_HERO):Z?(hero:y);
+  !!SN:E5129728/(CALLCONV_THISCALL)/(hero); Hero::GetEstatesPower;  
+  !!VR(baseBonus:y):Sv1;
+  !!VRi^wog_estates_ignore_native_calculation^:S(FALSE);
 
-  ; Add up Estates specialty bonus
-  !!if&(specType)=0/(specSkill)=(SKILL_ESTATES);
-    !!VR(specGold:y):S(baseBonus) *(heroLvl) *5 :100;
-    !!VR(baseBonus):+(specGold);
-  !!en;
+  ; calculate correct additional amount of gold text (dep on hero experience and Estates Expertise) [%gold, %x and %y]
 
   !!VR(goldBonus:y):S(baseBonus);
 
@@ -531,12 +509,10 @@ ZVSE2
   !!VRz-4:S^^;
 
   !!if&i^wog_203_enabled^;
-    !!VRv6:S5 *(skillLvl);                        check if 5, 10 or 15 gold
-    !!VR(estatesIBonus:y):Sv6 *(heroLvl);                      set 5/10/15 gold per level (from Estates I)
+    !!FU(WOG_203_Hero_GetEstatesIBonus):P(CURRENT_HERO)/(skillLvl)/?(estatesIBonus:y);
     !!VR(goldBonus):+(estatesIBonus);                   total if Estates I also active
     !!VRz-4:S^ + %(estatesIBonus) (%T(wog.191.estates)I)^;              if Estates I active
   !!en;
-
   ; Add up Estates II bonus
   !!FU(WOG_191_Hero_GetEstatesIIBonus):P(CURRENT_HERO)/(skillLvl)/?(estatesIIBonus:y);
   !!VR(goldBonus):+(estatesIIBonus);
@@ -547,7 +523,6 @@ ZVSE2
   !!FU(GetTextFileString):P^skilllev^/(skillLvlMinusOne)/?z-2;
   !!SN:T^wog.191.dlg^/?z2/^level^/z-2/^gold^/(goldBonus)/^base^/(baseBonus)/^bonus^/z-4/^end^/z-1;
   !!IF:Q1/(pic)/(picSub)/(resource)/(resourceNum)/(msgType)/z2; main display
-
   !!if&-1/(skillLvl)=3/(msgType)=(MSG_TYPE_QUESTION);
 
     !!IF:Q1/(RES_WOOD)/1/(RES_ORE)/1/(msgType)/z164038; main display
