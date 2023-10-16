@@ -57,25 +57,12 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !#DC(WOG_RULES_TWO_RANDOM) = 3;
 !#DC(WOG_RULES_TWO_RANDOM_FROM_MENU) = 4;
 !#DC(WOG_NO_MAP_RULES) = 5;
-!#DC(WOG_OPT_FIRST_MAP_RULES_AMOUNT) = 21;
+*#DC(WOG_OPT_FIRST_MAP_RULES_AMOUNT) = 21;
 !#DC(WOG_OPT_FIRST_MAP_RULE_ID) = 111;
 
 ** end of initialization functions
 
 
-** Initialization Code
-
-!?FU(WOG_101_Initialization);
-!!UN:P101/?(mapRulesMode:y); [check wogify options number - 5 means no rules]
-!!FU&(mapRulesMode)=(WOG_NO_MAP_RULES):E; [Exit timer if map rules are disabled in wogify options]
-
-!!UN:X?i^wog_101_mapSize^/?i^wog_101_hasUnderground^; [get size/underground]
-!!VRi^wog_101_halfMapSize^:Si^wog_101_mapSize^ :2; [get half of size = middle of map]
-
-
-!!DO720/0/7/1:P; [find an enemy for each player, for Perpetual Darkness]
-
-!#FU(WOG_101_Initialization):P;
 
 ** end of Initialization Code
 
@@ -121,13 +108,13 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
   !!SN:M(rulesList)/?(size:y);
 
-  !!SN&i^wog_101_hasConfluxes^:M(rulesList)/19/(NULL); [clear grails lol]
+
 
 
   !!FU(NewIntArray):P?(arrayForRandomPick:y);
   !!re i/0/(size)/1/-1;
     !!SN:M(rulesList)/i/?(optionId:y);
-    !!if&(optionId);                                 [if not disabled by script]
+    !!if&(optionId)>0;                                 [if not disabled by script]
       !!if&(mapRulesMode)=(WOG_RULES_TWO_RANDOM_FROM_MENU);
         !!UN:P(optionId)/?(isEnabled:y);
         !!co&(isEnabled)=0;
@@ -157,6 +144,10 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
     !!VR(optionId:y):Si +(WOG_OPT_FIRST_MAP_RULE_ID);
     !!SN:M(rulesList)/i/(optionId);
   !!en;
+  *!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(isStackExp:y);
+  *!UN:P239/0;?(isStackExp:y);
+  &(isStackExp)
+  *!IF:M^%(isStackExp:y)^;
   !!SN:M(rulesList)/20/239;        [add warlords]
 
 !?FU(WOG_101_AcceptOptionsFromMenu);
@@ -182,11 +173,15 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
   !!UN:P101/?(mapRulesMode:y);                                                               [check wogify options number - 5 means no rules]
   !!FU&(mapRulesMode)=(WOG_NO_MAP_RULES):E;                                                  [Exit timer if map rules are disabled in wogify options]
 
-  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?i^wog_101_hasConfluxes^;
+  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?(isAnyConflux:y) P(WOG_OPT_STACK_EXPERIENCE)/?(isStackExp:y);
+  !!VRi^wog_101_noStackExperience^:F0/1 X1;
 
   !!FU(NewIntArray):P21/?(rulesList:y);
   !!FU(WOG_101_ReadOptionsFromMenu):P?(rulesList);
-  
+
+  !!SN&(isAnyConflux:y):M(rulesList)/19/d*-1;                                                [clear grails option affection lol]
+  !!SN&(isStackExp:y)=(NULL):M(rulesList)/20/d*-1;                                           [clear warlord banners affection lol]
+
   !!if&(mapRulesMode)=(WOG_RULES_FROM_MENU);
     !!FU(WOG_101_AcceptOptionsFromMenu):P?(rulesList);                                       [accept current options]
   !!el|(mapRulesMode)=(WOG_RULES_CHOOSE_DEFAULT)/(mapRulesMode)=(WOG_RULES_CHOOSE_EACH_GAME);
@@ -194,8 +189,6 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
   !!el|(mapRulesMode)=(WOG_RULES_TWO_RANDOM)/(mapRulesMode)=(WOG_RULES_TWO_RANDOM_FROM_MENU);
     !!FU(WOG_101_PickRandomOptions):P(mapRulesMode)/?(rulesList:y);                          [pick random]
   !!en;
-
-  !!VRi^wog_101_hasConfluxes^:S(NULL);
   
   !!FU(WOG_101_SyncMapRulesVariables):P;
 
@@ -206,6 +199,7 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
   !!if&(showMapRules);
     !!FU(WOG_230_AnnounceMapRules):P D;                                                      [announce rules to humans after 1st player on day 1]
   !!en;
+
 
 ** end of timer routine
 
@@ -218,39 +212,47 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !#VA(mapRulesMode:x) (rulesList:x);
 
   !!SN:M(rulesList)/?(size:y);
-  !!VRv2:C0/0;       [clear presetup variables]
+  !!VRv2:C0/0;                                                           [clear presetup variables]
 
-  !!if&(mapRulesMode)=(WOG_RULES_CHOOSE_DEFAULT);
-    !!re i/0/(size)/1/-1;
-      !!SN:M(rulesList)/i/?(optionId:y);
-      !!VR(vVar:y):Si -9 F0/1 +2;
-      !!UN:P(optionId)/?(isEnabled:y);
-      !!if&(isEnabled);
-        !!VR(bit:y):S1 Sd<<i;
-        !!VRv(vVar):|(bit);
-      !!en;
+  // Prapare options text
+  !!re i/0/(size)/1/-1;
+    !!SN:M(rulesList)/i/?(optionId:y);
+
+    !!VR(zVar:y):Si+1;
+    !!SN:T^wog.101.dlg.%i^/?z(zVar);
+
+    !!if&(optionId:y)<0;                                                 [if option is negative it means it can't be enabled;]
+      !!VR(optionId):*-1;                                                [set it positve back to check for default state]
+      !!VRz(zVar):+^ %T(wog.101.dlg.disabled)^;
+    !!en;
+
+    !!co&(mapRulesMode)<>(WOG_RULES_CHOOSE_DEFAULT);
+
+    !!VR(vVar:y):Si -9 F0/1 +2;
+    !!UN:P(optionId)/?(isEnabled:y);
+    !!if&(isEnabled);
+      !!VR(bit:y):S1 Sd<<i;
+      !!VRv(vVar):|(bit);
     !!en;
   !!en;
 
-  !!VR(disabled:z)&i^wog_101_hasConfluxes^:S^%T(wog.101.dlg.disabled)^;
+
   [get bit choices from v2 and set there]
-  !!IF:G0/2/v2/^%T(wog.101.dlg.title0)^/^%T(wog.101.dlg.0)^/^%T(wog.101.dlg.1)^/^%T(wog.101.dlg.2)^/^%T(wog.101.dlg.3)^/
-  ^%T(wog.101.dlg.4)^/^%T(wog.101.dlg.5)^/^%T(wog.101.dlg.6)^/^%T(wog.101.dlg.7)^/^%T(wog.101.dlg.8)^/^%T(wog.101.dlg.9)^; 
-  !!VRv3:Sd>>10;               [shift to right to write values properly at second page]
+  !!IF:G0/2/v2/^%T(wog.101.dlg.title0)^/1/2/3/4/5/6/7/8/9/10;
+  !!VRv3:Sd>>10;                                                         [shift to right to write values properly at second page]
   [get bit choices from v3 and set there]
-  !!IF:G0/3/v3/^%T(wog.101.dlg.title1)^/^%T(wog.101.dlg.10)^/^%T(wog.101.dlg.11)^/^%T(wog.101.dlg.12)^/^%T(wog.101.dlg.13)^/^%T(wog.101.dlg.14)^/
-  ^%T(wog.101.dlg.15)^/^%T(wog.101.dlg.16)^/^%T(wog.101.dlg.17)^/^%T(wog.101.dlg.18)^/^%T(wog.101.dlg.19) %(disabled:z)^/^%T(wog.101.dlg.20)^;
-  !!VRv3:Sd<<10;               [shift to left to read values properly at second page]
+  !!IF:G0/3/v3/^%T(wog.101.dlg.title1)^/11/12/13/14/15/16/17/18/19/20/21;
+  !!VRv3:Sd<<10;                                                         [shift to left to read values properly at second page]
 
-  !!VRv3&i^wog_101_hasConfluxes^:Sd~(BIT_19); [remove grail from list if any conflux]
-
+  // iterate options again;
   !!re i/0/(size:y)/1/-1;
-    !!VR(bit:y):S1 Sd<<i;(bit:y); &(bit:y);
+    !!VR(bit:y):S1 Sd<<i;
     !!VR(vVar:y):Si -9 F0/1 +2;
-    !!VR(check:y):Sv(vVar:y) &(bit);
-    !!if&(check);
-      !!VRi^wog_101_map_rule_%i_isEnabled^:S(TRUE);
-      *!SN:M(rulesList)/i/(NULL);
+    !!VR(check:y):Sv(vVar:y) &(bit);                                     [check selection bit]
+
+    !!SN:M(rulesList)/i/?(optionId:y);                                   [check if it wasn't force disabled]
+    !!if&(check)/(optionId)>0; 
+      !!VRi^wog_101_map_rule_%i_isEnabled^:S(TRUE);                      [enable option into variable]
     !!en;
   !!en;
 
@@ -505,18 +507,14 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ** end of artifact trigger
 
 
-** hero movement trigger
-
-!?FU(OnHeroMove)&i^wog_101_map_rule_9_isEnabled^/999;
-!!re i/0/i^wog_101_hasUnderground^;
-  !!UN:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/i/i^wog_101_playersBitSet^/i^wog_101_mapSize^;
-!!en;
-
 !?FU(WOG_101_HideMapInitPlayer);
   !#VA(playerId:x);
   !!if&(playerId:x)=(CURRENT_PLAYER);
-    !!OW:C(CURRENT_PLAYER)/?(playerId:x);
+    !!OW:C?(playerId:x)/?(playerId:x);
   !!en;
+  !!UN:X?i^wog_101_mapSize^/?i^wog_101_hasUnderground^; [get size/underground]
+  !!VRi^wog_101_halfMapSize^:Si^wog_101_mapSize^ :2; [get half of size = middle of map]
+
   !!FU(WOG_GameMgr_GetPlayer_Team):P(playerId:x)/?(team:y);
   !!VRi^wog_101_playersBitSet^:S1 Sd<<(playerId:x);
   !!if&(team)<>(NO_PLAYER);
@@ -529,8 +527,12 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
     !!en;
   !!en;
 
+** hero movement trigger
+!?FU(OnHeroMove)&i^wog_101_map_rule_9_isEnabled^/999;
+!!re i/0/i^wog_101_hasUnderground^;
+  !!UN:Hi^wog_101_halfMapSize^/i^wog_101_halfMapSize^/i/i^wog_101_playersBitSet^/i^wog_101_mapSize^;
+!!en;
 ** end of hero movement trigger
-
 
 ** function to let hero revisit objects
 !?FU(WOG_101_ClearHeroVisistedObjects);
