@@ -4,6 +4,7 @@ Mysticism Enhancement v1.3 by Anders Jonsson
 Updated July 14, 2004
 Updated September 15, 2004 by Timothy Pulver for local y variable correction.
 Updated August 1, 2022 by daemon_n
+Updated October 20, 2023 by daemon_n: no more ERT/Z/V/F/etc
 
 This script enhances the Mysticism Skill levels as:
 Basic- hero can predict what next "Week of" will be. This only works if Timothy Pulver's Week of Monsters
@@ -16,12 +17,8 @@ spells, equipped artifacts, creatures, and how much experience, primary skills, 
 points that hero has.
 It also lets heroes regenerate 5%, 10% or 15% of their normal maximum spell points each day, depending
 on their level of Mysticism, double amount for AI heroes.
-
 Variables used:
-v1-v10
-(z1-z9), [z135000-z135177]
 Flags:
-(1-10), 56, 172, 412 (flag 56 for checking whether Week of Monsters is enabled)
 
 
 ; Set up global var for additional spell points regeneration
@@ -36,12 +33,6 @@ Flags:
 !!UN:P35/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-!!if&56/i^timerWeekday^=2;       (Week of Monsters script is enabled, on tuesday)
-  !!re i/(PLAYER_FIRST)/(PLAYER_LAST);      (loop for all players)
-    !!SN:W^wog_35_HeroID_%i^/-1; (reset var)
-  !!en;
-!!en;
-
 ; Loop through all the heroes to show Week of Monsters info and add extra spell points
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
   !!HEi:O?y1 S(SKILL_MYSTICISM)/?y2; (Check hero owner and level of Mysticism)
@@ -49,8 +40,6 @@ Flags:
 
   ; Set up variables for showing week of monsters info
   !!OW:Iy1/?y4;        (owner is AI?)
-  !!FU(WOG_35_GetHeroID_KnowWeekOfMonster)&56/i^timerWeekday^=2/y4=0:Pi/y1; (Week of Monsters script is enabled, on tuesday and not AI)
-
   ; Add additional spell points
   !!if&i^wog_35_extraManaRegenEnabled^;
     !!FU(WOG_Hero_GetFullSpellPoints):Pi/?y3;
@@ -74,48 +63,47 @@ Flags:
   !!en;
 !!en;
 
-!?FU(WOG_35_GetHeroID_KnowWeekOfMonster);
-; x1 - hero id
-; x2 - player color
-!!SN:W^wog_35_HeroID_%X2^/?y1; (check player hero id)
-!!SN&y1=-1:W^wog_35_HeroID_%X2^/x1; (save player hero id)
 
-
-!?FU(OnEveryDay)&56/i^timerWeekday^=2;
+!?FU(OnEveryDay)&i^timerWeekday^=2/i^timerIsAi^=(FALSE);
 *** Linked to Week of Monster Script ***
-!!UN:P35/?y1;
-!!FU&y1<>1:E;
+!!UN:P35/?(isMysticism:y) P20/?(isWeekOf:y);
+!!if&(isMysticism:y)/(isWeekOf:y);
+  !!VR(heroId:y):S(NO_HERO);
+  !!OW:Hi^timerOwner^/1;
+  !!re i/2/v1/1/1;
+    !!HEvi:S(SKILL_MYSTICISM)/?l;
+    !!if&l>0;
+      !!VR(heroId:y):Svi;
+      !!br;
+    !!en;
+  !!en;
 
-!!OW:C?y1 Iy1/?y2;   (get active player)
-!!SN:W^wog_35_HeroID_%Y1^/?y16; (check player hero id)
-!!SN:W^wog_35_HeroID_%Y1^/-1;   (reset player hero id)
-!!FU|y16=-1/y2=1:E;
+  !!if&(heroId)<>(NO_HERO);
+    !!HE(heroId:y):R2/?g B0/?(heroName:z);
+    !!SN:T^wog.whom%g^/?(whom:z);
 
-!!HEy16:O?y1 S8/?y2;   (Check hero owner and level of Mysticism)
-!!FU|y1=-1/y2<1:E;     (Abort if not the same)
+    !!FU(WOG_20_GetNextWeekType):Pi^wog_20_week_type^/?(nextWeekType:y);
+    !!VR(nextWeekSubtype:y):Si^wog_20_next_week_subtype^;
 
-!!HEy16:B0/?z1; (get hero name)
-!!HEy16:R2/?y2;
-!!VRz7&y2=0:Sz135000;
-!!VRz7&y2=1:Sz135001;
-!!VRz2&y2=0:Sz135002;
-!!VRz2&y2=1:Sz135003; (Get hero sex)
-!!FU(WOG_35_DrawCreaturesDesc):P1/y16; (get creature with description and way to predict)
-!!FU181:P; (call Function 181 from Week of Monsters to see if it's "Week of the Imp" at start of game)
-!!UN&v180>=0/-172:N3/z3/v180/0; (get monster Type)
-!!VRz3&v180=-1:Sz135004;
-!!VRz3&v180=-2:Sz135005;
-!!VRz3&v180=-3:Sz135006;
-!!VRz3&v180=-4:Sz135007;
-!!VRz3&v180=-5:Sz135008;
-!!VRz3&v180=-6:Sz135009;
-!!VRz3&v180=-7:Sz135010;
-!!VRz-4:S^ ^;
-!!VRz-4&v180>=0:Sz135011;
-*!VRz1:S^%Z1's^;
-~~VRz1:+z135012; [This doesn't work properly, it adds an extra space]
-!!IF:M1/z135013;
-!!IF:V9/1; (Don't display this again if more heroes have mysticism)
+    !!if&(nextWeekType)<>i^wog_20_next_week_type^;
+      !!FU(WOG_20_GetNextWeekSubtype):P(nextWeekType)/?i^wog_20_next_week_subtype^;
+      !!VR(nextWeekSubtype:y):Si^wog_20_next_week_subtype^;
+      !!VRi^wog_20_next_week_type^:S(nextWeekType);
+    !!en;
+    !!FU(WOG_20_GetWeekName):P(nextWeekType:y)/(nextWeekSubtype:y)/?(nextWeekName:z);
+    !!FU(WOG_35_GetMethodText):P(heroId:y)/?(method:z); (get creature with description and way to predict)
+    !!SN:T^wog.35.prediction^/?(msg:z)/^method^/(method)/^heroName^/(heroName)/^whom^/(whom)/^nextWeekName^/(nextWeekName);
+    !!if&(nextWeekType:y)=(WOG_20_RESOURCE_WEEK);
+      !!VR(picType:y):S(nextWeekSubtype:y);
+    !!el;
+      !!VR(picType:y):S(PIC_TYPE_MONSTER);
+      !!VR(picSubType:y):S(nextWeekSubtype:y);
+    !!en;
+    !!VR(skillIco:y):S(SKILL_MYSTICISM) +1 *3 -1 +l;
+    !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(skillIco:y)/(picType:y)/(picSubType:y)/(MSG_TYPE_MES)/(msg:z) V9/1; [Display Week of Monsters info](Don't display this again if more heroes have mysticism)
+  !!en;
+!!en;
+
 
 ****************
 *** Advanced ***
@@ -126,7 +114,7 @@ Flags:
 !!FU&(wogOption)<>(TRUE):E;
 
 !!VR(heroId:y):S(NO_HERO);
-!!CA-1:H0/?(harHero:y) H1/?(visHero:y) G?(guildLevel:y) T?(townType:y);
+!!CA-1:H0/?(harHero:y) H1/?(visHero:y) G?(guildLevel:y) T?(townType:y) U?(townId:y);
 !!VR(maxGm:y):S4;
 
 !!if|(townType)=(TOWN_STRONGHOLD)/(townType)=(TOWN_FORTRESS);
@@ -145,33 +133,31 @@ Flags:
   !!HE(harHero):S(SKILL_MYSTICISM)/?(lvl:y);
   !!VR(heroId)&(lvl)>1:S(harHero);
 !!en;
-*!IF:L^%(guildId)^;
 
 !!if&(heroId)<>(NO_HERO)/i^mouse_item^=(guildId)/(guildId)<>(maxGm);
 
-  !!CA-1:N?z1;               (get town name)
-  !!HE(heroId):R2/?y29 I?(sPoints:y)/1;
-  !!VRz2&y29=0:Sz135014;
-  !!VRz2&y29=1:Sz135015;
-  !!VRz3&y29=0:Sz135000;
-  !!VRz3&y29=1:Sz135001;       (get hero sex)
-  !!HE(heroId):B0/?z7 B0/?z5;             (Get hero name)
-  !!VRz1:+z135012;
+  !!CA-1:N?z1;(townName:z);               (get town name)
+  !!VR(townName:z):Sz1;
+  !!HE(heroId):R2/?g I?(sPoints:y)/1 B0/?(heroName:z);
+  !!SN:T^wog.who%g^/?(who:z) T^wog.whose%g^/?(whose:z) T^wog.whom%g^/?(whom:z);
+
+  !!SN:T^wog.35.mageGuild.question^/?(msg:z)/^heroName^/(heroName)/^townName^/(townName)/^who^/(who)/^whose^/(whose)/^whom^/(whom);
+
+  !!CM:R0;                   (Disable normal popup)
+
   !!VR(sPoints):*-1;
   !!VR(picType:y):S(PIC_TYPE_FIRST_TOWN_BUILDING) +(townType);
   !!VR(picId:y):S(lvl) +26;
-  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picId)/(picType)/(maxGm)/(PIC_TYPE_SPELL_POINTS)/(sPoints)/(MSG_TYPE_QUESTION)/z135016;
+  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picId)/(picType)/(maxGm)/(PIC_TYPE_SPELL_POINTS)/(sPoints)/(MSG_TYPE_QUESTION)/(msg:z);
   !!if&1;
     !!HE(heroId):I0/1 W0/1;
-
     !!FU(NewIntArray):P42/(PIC_TYPE_SPELL)/?(spells:y); [set array of pic spells]
     !!VR(hasLibrary:y):S(FALSE);
 
     !!VR(hasLibrary)&(townType)=(TOWN_TOWER):S(TRUE);
-
     !!VRf:S1;
 
-    !!re i/0/(maxGm); loop all gm's
+    !!re i/0/(maxGm);
       !!VR(maxScrollsOnLevel:y):S5 -i +(hasLibrary);
       !!re j/0/(maxScrollsOnLevel)/1/-1;
         !!CA-1:Gi/j/?(spellId:y);
@@ -183,60 +169,38 @@ Flags:
     !!en;
 
     !!VR(size:y):Sf -1;
+
+
     !!SN:M(spells)/(size);
-    !!VR(dlgs:y):S(size):16;
+    !!VR(dlgs:y):S(size) Sd>>4;
     !!VR(it:y):S0;
-    !!VRv1:S(heroId);
-    !!FU(WOG_35_DrawCreaturesDesc):P2;                              (get creature with description and way to predict)
-    !!VRz3:S^^;
-    !!VRz1:Sz135017;
+    !!FU(WOG_35_GetMethodText):P(heroId)/?(method:z);                              (get creature with description and way to predict)
+
+    !!SN:T^wog.35.mageGuild.answer^/?(msg:z)/^method^/(method:z)/^heroName^/(heroName);/^townName^/(townName)/^who^/(who)/^whose^/(whose)/^whom^/(whom);
+
     !!re i/0/(dlgs);
       !!FU(Array_Slice):P(spells)/(it)/16/?(spellsC:y);
       !!VR(it:y):+16; Fd/(size);
       !!FU(PrepareMultiPicDialog):P(spellsC);
-      !!IF:N1/z135020;    
+      !!IF:N1/(msg:z);    
     !!en;
 
-    !!CM:R0;                   (Disable normal popup)
 
   !!en;
 
 !!en;
 
 
-!?FU(WOG_35_DrawCreaturesDesc);                    (Draw creature with description and way to predict)
-!!VRy3:T4;               (Draw to decide what kind of method is used)
-!!VRy4:R160;             (Draw to get creature)
-!!VRy4&y4=>122:+1;
-!!VRy4&y4=>124:+1;
-!!VRy4&y4=>126:+1;
-!!VRy4&y4=>128:+1;
-!!VRy4&y4=>145:+1;
-!!VRy4&y4=>146:+1;
-!!VRy4&y4=>147:+1;
-!!VRy4&y4=>148:+1;
-!!VRy4&y4=>149:+1;
-!!VRy4&y4=>160:+1;
-!!VRy4&y4=>161:+1;
-!!VRy4&y4=>162:+1;
-!!VRy4&y4=>163:+1;       (Exclude certain creatures)
-!!UN:N3/z6/y4/0;         (Get creature name)
-
-!!VRy5:S135021 R32;              (Draw description)
-!!VRz4:Szy5; (Get description straight from ert file)
-
-!!VRz5&y3=0:Sz135154;
-!!VRz5&y3=1:Sz135155;
-!!HEv1&x1=2:R2/?y1;     (Get hero sex)
-!!HEx2&x1=1:R2/?y1;     (Get hero sex) (Different methods depending on what called this function)
-!!VRz8&y1=0/y3=2/x1=1:Sz135000;
-!!VRz8&y1=1/y3=2/x1=1:Sz135001;
-!!VRz8&x1=1:Sz7;
-!!VRz8&y3=3/y1=0:Sz135014;
-!!VRz8&y3=3/y1=1:Sz135015;
-!!VRz5&y3=2:Sz135156;
-!!VRz5&y3=3:Sz135157;
-!!VRz5&y3=4:Sz135158;
+!?FU(WOG_35_GetMethodText);                    (Draw creature with description and way to predict)
+!#VA(heroId:x) (result:x);
+!!VR(method:y):T0/0/4;
+!!VRr:T0/0/32;
+!!FU(WOG_GetRandomMonster):P?(ranMon:y);
+!!SN:H^monname^/(ranMon)/0/?(monName:z);
+!!HE(heroId:x):R2/?g;     (Get hero sex)
+!!SN:T^wog.who%g^/?(who:z) T^wog.whose%g^/?(whose:z) T^wog.35.kind.%r^/?(kind:z);
+!!SN:T^wog.35.method.%(method)^/?(msg:z)/^kind^/(kind)/^monName^/(monName)/^who^/(who)/^whose^/(whose);
+!!VR(result):Z(msg);
 
 **************
 *** Expert ***
@@ -255,8 +219,9 @@ Flags:
   !!en;
 
 !?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP);
-!!UN:P35/?y1;
-!!FU(WOG_35_MistExp)&y1=1:P;
+!!UN:P35/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+!!FU(WOG_35_MistExp):P;
 
 !?FU(WOG_35_MistExp);
 
@@ -264,8 +229,8 @@ Flags:
 
 !!if&(activeHero)<>(NO_HERO);
   !!HE(activeHero):S(SKILL_MYSTICISM)/?(mist:y) I?(sPoints:y)/1;
-
-  !!if&(mist)>2/(sPoints)>=5;
+  !!VR(cost:y):S5;
+  !!if&(mist)>2/(sPoints)>=(cost);
     !!OBi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:T?t;
     !!if&t=(OBJ_HERO);
       !!HEi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:N?(heroId:y) O?(owner:y);
@@ -275,13 +240,13 @@ Flags:
         !!FU(WOG_Hero_GetObjectRange):P(activeHero)/i^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^/?(range:y);
         !!FU(WOG_Hero_GetScoutingRadius):P(activeHero)/?(scouting:y);
         !!VR(scouting):+1 Sd*(scouting);
+
         !!if&(scouting)>(range);
           
-
-          !!FU(WOG_35_ShowOfferMessage):P(activeHero)/(heroId)/?(result:y);
+          !!FU(WOG_35_ShowOfferMessage):P(activeHero)/(heroId)/(cost)/?(result:y);
 
           !!if&(result); // show hero dlg
-            !!HE(activeHero):Id-5;
+            !!HE(activeHero):Id-(cost);
             !!CM:R0;
             !!VRi^WOG_35_DisableHeroClick^:S(TRUE); // tell to disable actions
             !!UN:R5/1/0; // set std cursor
@@ -290,28 +255,21 @@ Flags:
             !!VRi^WOG_35_DisableHeroClick^:S(FALSE);
           !!en;
         !!en;
-
       !!en;
-      
     !!en;
   !!en;
 !!en;
 
 
 !?FU(WOG_35_ShowOfferMessage);
-!#VA(heroId:x) (targetHero:x) (result:x);
-!!IF:V10/0;   (Check if Hero has Expert Mysticism)
+!#VA(heroId:x) (targetHero:x) (cost:x) (result:x);
+!!HE(heroId:x):R2/?g B0/?(heroName:z);
+!!SN:T^wog.who%g^/?(who0:z) T^wog.whose%g^/?(whose0:z);
 
-!!HE(heroId:x):B0/?z1 R2/?y1;          (Get Hero name)
+!!HE(targetHero:x):B0/?(targetHeroName:z) R2/?g;           (Get Hero name)
+!!SN:T^wog.who%g^/?(who1:z) T^wog.whose%g^/?(whose1:z);
 
-!!VRz3&y1=0:Sz135014;
-!!VRz3&y1=1:Sz135015;
-!!VRz4&y1=0:Sz135000;
-!!VRz4&y1=1:Sz135001;
-!!HEx2:B0/?z2 R2/?y1;           (Get Hero name)
-!!VRz6&y1=0:Sz135002;
-!!VRz6&y1=1:Sz135003;      (Get Hero Sex)
-!!VRz-1:Sz2;
-!!VRz-1:+z135012;
-!!IF:Q1/(PIC_TYPE_SEC_SKILL)/29/(PIC_TYPE_SPELL_POINTS)/-5/(MSG_TYPE_QUESTION)/z135159;
+!!SN:T^wog.35.distanceView^/?(msg:z)/^heroName^/(heroName)/^targetHeroName^/(targetHeroName)/^who0^/(who0)/^whose0^/(whose0)/^whose1^/(whose1)/^cost^/(cost);
+!!VR(cost)&(cost)>0:*-1;
+!!IF:Q1/(PIC_TYPE_SEC_SKILL)/29/(PIC_TYPE_SPELL_POINTS)/(cost)/(MSG_TYPE_QUESTION)/(msg:z);
 !!VR(result)&1:S(TRUE);

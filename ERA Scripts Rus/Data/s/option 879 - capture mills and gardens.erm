@@ -14,25 +14,24 @@ ZVSE2
 ** Functions     : -
 ** PO-values     : V0, V1 (mills and leprechaun's gardens squares)
 
-** дублирование стандартных триггеров
-*?FU(ES_OnMapItem_HasFlag);
-*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(objType:y);
-*!IF:L^%(objType:y)^;
-*!if&(objType)=(OBJ_WATER_WHEEL);
-  *!IF:L^1^;
-*!en;
+
 28.07.2022 Fully rewritten by daemon_n
+15.10.2023 Updated by daemon_n: Added graphics with flags;
+15.10.2023 Updated by daemon_n: Now supported capture status in MP game during enemy turn but not added in replay turn;
+
 !?FU(ES_CreateERMHook);
 !#VA(address:x);
 !!UN:P879/?(isCaptureObjOpt:y);
 !!if&(isCaptureObjOpt);
-  !!SN:E(address)/1/4864048/(ES_OnPlayerVisit_MystGarden); [Trigger on player visiting Mysticism Garden]
-  !!SN:E(address)/1/4880976/(ES_OnPlayerVisit_WaterWheel); [Trigger on player viisiting Water Wheel]
-  !!SN:E(address)/1/4881456/(ES_OnPlayerVisit_WindMill);   [Trigger on player visiting Wind Mill]
+  !!SN:E(address)/1/4864048/(ES_OnPlayerVisit_MillOrFarden); [Trigger on player visiting Mysticism Garden]
+  !!SN:E(address)/1/4880976/(ES_OnPlayerVisit_MillOrFarden); [Trigger on player viisiting Water Wheel]
+  !!SN:E(address)/1/4881456/(ES_OnPlayerVisit_MillOrFarden); [Trigger on player visiting Wind Mill]
   !!SN:E(address)/1/4263804/(ES_OnMapItem_GetOwner);
   !!SN:E(address)/1/4263370/(ES_OnMapItem_Draw);
-
+  !!SN:E(address)/1/4283008/(ES_Hook_GetObjectRMCDescription);
+  !!SN:E(address)/1/5183597/(ES_Hook_OnPlayerDefeated);
 !!en;
+
 !?FU(OnGameEnter);
 !!UN:P879/?(isCaptureObjOpt:y);
 !!if&(isCaptureObjOpt);
@@ -44,7 +43,6 @@ ZVSE2
   !!re i/0/7;(end_value);
     !!SN:R^AVMwmsn0.def:0_%i.png^/^Data\Defs\ESwind10.def\0_%i.png^;;
   !!en;
-
 
   //replace OBJ_WATER_WHEEL
   !!re i/0/7;(end_value);
@@ -64,82 +62,43 @@ ZVSE2
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-68/4/?(coords:y);
   !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
   !!PO(x)/(y)/(z):O?(owner:y);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(owner);?(objType:y);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(mapitem:y) C(mapitem:y)/56/4/i^ES_879_DrawObjectType^; [restore obj type]
-
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(owner);
   !!VRi^ES_879_DrawObjectType^:S(NULL);
 
 
 !?FU(ES_OnMapItem_Draw);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(mapitem:y) C(mapitem:y)/56/4/?(objType:y);
-*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(objType:y);
 
 !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
-  !!VRi^ES_879_DrawObjectType^:S(objType);
-  !!UN:C(mapitem:y)/56/4/(OBJ_CREATURE_GENERATOR_1);                                      [emulate obj gen 1 to get color]
+  !!UN:C6916676/4/?(noShowObjectcts:y);
+  !!if&(noShowObjectcts)=0;
+     !!VRi^ES_879_DrawObjectType^:S(objType);
+     !!SN:X?t/0;
+     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4263617;
+  !!en; 
 !!en;
-!?FU(ES_OnPlayerVisit_MystGarden)&i^ES_879_isAuto^=(FALSE);
-  !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
 
-  *!if&999;
-    *!GD2:B?(resType:y);
-    *!VR(value:y):S5;
-    *!VR(value)&(resType)=(RES_GOLD):S500;
-    *!FU(ES_879_ShowMessage):P(owner)/(OBJ_MYSTICAL_GARDEN)/(resType)/(value);
-  *!en;
+!?FU(ES_OnPlayerVisit_MillOrFarden)&i^ES_879_isAuto^=(FALSE);
+  !!FU(ES_879_OnVisitResourceObject):Px1/?(packedCoords:y)/?(oldOwner:y)/?(newOwner:y);
+  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
+  !!FU(ES_879_MP_SendObjectOwner):D(x)/(y)/(z)/i^timerOwner^;
 
-!?FU(ES_OnPlayerVisit_WaterWheel)&i^ES_879_isAuto^=(FALSE);
-  !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
-
-  *!if&999;
-    *!WM2:B?(value:y);
-    *!VR(value):*500;
-    *!FU(ES_879_ShowMessage):P(owner)/(OBJ_WATER_WHEEL)/(RES_GOLD)/(value);
-  *!en;  
-
-!?FU(ES_OnPlayerVisit_WindMill)&i^ES_879_isAuto^=(FALSE);
-  !!FU(ES_879_OnVisitResourceObject):Px1/?(owner:y);
-
-  *!if&999;
-    *!ML2:B?(resType:y)/?(value:y);
-    *!FU(ES_879_ShowMessage):P(owner)/(OBJ_WINDMILL)/(resType)/(value);
-  *!en;
-
-
-!?FU(ES_879_ShowMessage);
-!#VA(owner:x) (objType:x) (res:x) (value:x);
-
-  !!if&(owner)<>i^timerOwner^;
-    !!if&(owner)=(NO_OWNER);
-      !!SN:T^es.879.%(objType)_Gives^/?(msg:z);
-      !!IF:Q2/(res)/(value)/(MSG_TYPE_MES)/(msg);
-    !!el;
-      !!OW:T(owner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
-
-      ; Show message if the owner and the visiting player are on different teams
-      !!if&(team)<>(newTeam);
-        !!SN:T^es.879.%(objType)_Owned^/?(msg:z);
-        !!IF:M(msg);
-      !!en;
-    !!en;
-  !!el;
-    !!SN:T^es.879.%(objType)_Sent^/?(msg:z);
-    !!IF:M(msg);
-  !!en;
+!?FU(ES_879_MP_SendObjectOwner);
+!#VA (packedCoords[3]:x) (newOwner:x) (newRes:x) (newVal:x);
+!!POx1/x2/x3:O(newOwner);
 
 !?FU(ES_879_OnVisitResourceObject);
-!#VA(addr:x) (owner:x);
-  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESP)/4/?(esp:y) C(esp)/16/4/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(coords:y);
-  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);/8/?(sth:y)/8;
-  !!VRv2:C(x)/(y)/(z);
-  !!PO(x)/(y)/(z):O?(owner);
+!#VA(addr:x) (packedCoords:x) (oldOwner:x); (newOwner:x) (newRes:x) (newVal:x);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESP)/4/?(esp:y) C(esp)/16/4/0; emulate AI visit to block message
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(packedCoords);
+  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
+  !!PO(x)/(y)/(z):O?(oldOwner);
 
-  !!if&(owner)=(NO_OWNER);
+  !!if&(oldOwner)=(NO_OWNER);
     !!PO(x)/(y)/(z):Oi^timerOwner^;
     !!PO(x)/(y)/(z):V0/0 V1/0;          [res type and num]
   !!el;
-    !!OW:T(owner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
+    !!OW:T(oldOwner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
 
     !!if&(team)<>(newTeam);
       !!PO(x)/(y)/(z):Oi^timerOwner^;
@@ -147,103 +106,61 @@ ZVSE2
     !!en;
   !!en;
 
-  !!if&(ERM_FLAG_IS_HUMAN);
-    !!HE(CURRENT_HERO):P?(xH:y)/?(yH:y)/?(zH:y);
 
-    !!if|(xH)<>(x)/(yH)<>(y)/(zH)<>(z);
-      !!VRi^ES_879_isRMC^:S(TRUE);
-    !!en;
-  !!en;
+// after local visit send new owner to all players - MP support
+!$OB(OBJ_MYSTICAL_GARDEN);
+  !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
+!$OB(OBJ_WINDMILL);
+  !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
 
-
-!?FU(OnAdventureMapRightMouseClick_Quit)&i^ES_879_isRMC^;
-  !!VRi^ES_879_isRMC^:S(FALSE);
-
-!?FU(OnAdventureMapRightMouseClick)&i^ES_879_isRMC^<>(TRUE);
-  !!UN:P879/?(wogOption:y);               [провер€ем включена ли опци€]
-  !!FU&(wogOption)<>(TRUE):E;
-
-  !!OW:C?(player:y)/?(interactPlayer:y) A(interactPlayer)/?(activeHero:y);
-
-  !!if&(activeHero)<>(NO_HERO);
-    !!HE(activeHero):P?(x:y)/?(y:y)/?(z:y);
-    !!FU&i^mouse_mapX^=(x)/i^mouse_mapY^=(y)/i^mouse_mapZ^=(z):E; // exit if click on hero
-  !!en;
-
-  !!CM:P?(x:y)/?(y:y)/?(z:y);             [координаты клика]
-
-  !!OB(x)/(y)/(z):T?(objType:y);          [тип объекта]
-  !!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;[выход если клик не на мельнице/садке]
-
-  !!SN:O?(x)/?(y)/?(z);                   [корректировка координат]         
-  !!PO(x)/(y)/(z):O?(owner:y);            [владелец объекта]
-
-  !!if&(owner)>(NO_OWNER);
-    ; Disable standard action
-    !!CM:R0;
-    ; Set up strings
-    !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(rmbStr:z);
-    !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
-    !!VR(rmbStr):+^%T(es.endl)%(ownerStr)^;
-
-    !!VR(res:y):S(NO_PIC_TYPE);
-    !!VR(num:y):S(NO_PIC_TYPE);
-
-    ; Set up text for what have been brought this week if the clicked objects belongs to the interacting player
-    !!if&(owner)=(interactPlayer);
-      !!PO(x)/(y)/(z):V0/?(res:y) V1/?(num:y); [тип и количество принесенных ресурсов, если объект свой]
-
-      !!if&(num)=0;
-        !!VR(res:y):S(NO_PIC_TYPE);
-        !!VR(num:y):S(NO_PIC_TYPE);
-      !!el;
-        !!SN:T^es.879.%(objType)_Brought^/?(txt:z);
-        !!VR(rmbStr):+(txt);
-      !!en;
-    !!en;
-
-    !!IF:Q2/(PIC_TYPE_FLAG)/(owner)/(res)/(num)/(MSG_TYPE_POPUP)/(rmbStr); [вывод сообщени€ "чужой"]
-  !!en;
+!$OB(OBJ_WATER_WHEEL);
+  !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
 
 
 !?FU(OnAdvMapTileHint);
 !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
 !#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
-!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
 
   !!UN:P879/?(wogOption:y);
   !!FU&(wogOption)<>(TRUE):E;
+  !!VRt:S(objType:x);
 
-
-  !!FU&(objType)<>(OBJ_WINDMILL)/(objType)<>(OBJ_WATER_WHEEL)/(objType)<>(OBJ_MYSTICAL_GARDEN):E;
-
-  !!OW:Cd/?(clickedPlayer:y) A(clickedPlayer:y)/?(activeHero:y);
-  !!if&(activeHero)<>(NO_HERO);/(objType)=(OBJ_FIRST);
-    !!HE(activeHero):P?(xH:y)/?(yH:y)/?(zH:y);
-    !!FU&(xH)=(tileX)/(yH)=(tileY)/(zH)=(tileZ):E;
+  !!if&(objType:x)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(ES_AdvMgr_HideHero):P(x)/(y)/(z);
+    !!OB(x)/(y)/(z):T?t;
   !!en;
 
-  !!PO(x)/(y)/(z):O?(owner:y);
-
-  ; Correct owner if the owner has been removed from the game
-  !!OW:I(owner)/?(isAi:y)/?(hasLost:y);
-  !!if&(hasLost);
-  	!!VR(owner):S(NO_OWNER);
-	!!PO(x)/(y)/(z):O(NO_OWNER);
+  !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+    *!IF:L^%^;
+    !!PO(x)/(y)/(z):O?(owner:y);
+    ; Correct owner if the owner has been removed from the game
+    !!OW:I(owner)/?(isAi:y)/?(hasLost:y);
+    !!if&(hasLost);
+      !!VR(owner):S(NO_OWNER);
+      !!PO(x)/(y)/(z):O(NO_OWNER);
+    !!en;
+    !!VR(newHint:z):S^^;
+    !!if&(owner)>(NO_OWNER);
+      !!VR(ownerStrIndex:y):S(owner) +23;
+      !!FU(GetTextFileString):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
+      !!VR(newHint:z):+^ - %(ownerStr)^;
+      !!MM:M?(hint:z) M^%(hint:z)%(newHint:z)^;
+    !!en;
   !!en;
-  !!FU(ES_879_GetObjectName):P(x)/(y)/(z)/(objType)/?(newHint:z);
 
-  !!if&(owner)>(NO_OWNER);
-    !!VR(ownerStrIndex:y):S(owner) +23;
-    !!FU(GetTextFileString):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
-    !!VR(newHint):+^ - %(ownerStr)^;
+  !!if&(objType:x)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(ES_AdvMgr_ShowHero):P(x)/(y)/(z);
   !!en;
-
-  !!MM:M^%(newHint)^;
 
 !?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1/i^timerOnce^; [поставка ресурсов владельцам мельниц/садов каждый первый день недели, начина€ с 8го дн€]
   !!UN:P879/?(wogOption:y);             [провер€ем включена ли опци€ в y1]
   !!FU&(wogOption)<>(TRUE):E;           [выход, если опци€ не включена]
+  !!FU(ES_879_CollectResources):P;
+
+!?FU(ES_Hook_OnPlayerDefeated);
+  !!FU(ES_879_CollectResources):P;
+
+!?FU(ES_879_CollectResources);
 
   !!FU(NewIntArray):P8/?(liveArr:y); 
   !!re (playerID:y)/0/(PLAYER_LAST);
@@ -261,14 +178,14 @@ ZVSE2
   !!en;
 
   !!VRi^ES_879_isAuto^:S(TRUE);
-  !!FU(ES_879_CollectResources):P4864048/(OBJ_MYSTICAL_GARDEN)/(hero)/(liveArr);
-  !!FU(ES_879_CollectResources):P4880976/(OBJ_WATER_WHEEL)/(hero)/(liveArr);
-  !!FU(ES_879_CollectResources):P4881456/(OBJ_WINDMILL)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P4864048/(OBJ_MYSTICAL_GARDEN)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P4880976/(OBJ_WATER_WHEEL)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P4881456/(OBJ_WINDMILL)/(hero)/(liveArr);
   !!UN:C(hero)/34/1/(NO_OWNER);
   !!VRi^ES_879_isAuto^:S(FALSE);
 
 
-!?FU(ES_879_CollectResources); 
+!?FU(ES_879_IterateObjects); 
 !#VA(funcAddr:x) (objType:x) (hero:x) (liveArr:x);
 !#VA(x:y) (y:y) (z:y); 
 
@@ -295,9 +212,9 @@ ZVSE2
       !!FU(ES_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);  [get mapItem]
       !!FU(ES_879_AdjustStoredRes):P(x)/(y)/(z)/(objType);
       !!SN:E(funcAddr)/(CALLCONV_STDCALL)/(hero)/(mapItem)/0; [visit mapItem as AI]
-
     !!el;
       !!PO(x)/(y)/(z):O(NO_OWNER) V0/0 V1/0;                            [set no owner if is dead]
+      !!FU(ES_879_MP_SendObjectOwner):P(x)/(y)/(z)/(NO_OWNER);
     !!en;
   !!en;
 !!en;
@@ -319,16 +236,55 @@ ZVSE2
 
 !!PO(x)/(y)/(z):V0/(resType) V1/(value);
 
-!?FU(ES_879_GetObjectName);
-!#VA(x:x) (y:x) (z:x) (objType:x) (objNamePtr:x);
+
+
+
+!?FU(ES_Hook_GetObjectRMCDescription);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(mapItem:y);
+!!if&(mapItem)>(BIT_16);
+  !!UN:C(mapItem:y)/30/2/?(objType:y) C(mapItem:y)/34/2/?(objSubtype:y) C(ebp)/-32/4/?(coords:y);
+  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
+
+  !!SN:O?(x:y)/?(y:y)/?(z:y);
+  !!VRt:S(objType);
+
+  !!if&(objType)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(ES_AdvMgr_HideHero):P(x)/(y)/(z);
+    !!OB(x)/(y)/(z):T?t;
+  !!en;
+
+  !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+    !!PO(x)/(y)/(z):O?(owner:y);
+    !!if&(owner)<>(NO_OWNER);
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
+      !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
+      !!SN:B(textBuffer)/d/?(currHint:z) B(textBuffer)/d/^%(currHint:z)%T(es.endl)%(ownerStr:z)^;
+    !!en;
+  !!en;
+
+  !!if&(objType)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(ES_AdvMgr_ShowHero):P(x)/(y)/(z);
+  !!en;
+!!en;
+
+
+
+*?FU(ES_879_GetObjectName);
+*#VA(x:x) (y:x) (z:x) (objType:x) (objNamePtr:x);
 
   ; Set up object names
-  !!FU(GetTextFileString):P^objnames^/(objType)/?(objName:z); [windmill]
+  *!FU(GetTextFileString):P^objnames^/(objType)/?(objName:z); [windmill]
   ; Set up "Improved" object text if Mithril Enhancedment is enabled
-  !!VR(isUpg:y):S(FALSE);
-  !!UN:P36/?(enhMithril:y);
-  !!PO(x)/(y)/(z)&(enhMithril):N?(isUpg);
-  !!VR(objName)&(isUpg):S^%T(es.879.improved)%(objName)^;
-  !!VR(objNamePtr):Z(objName);
+  *!VR(isUpg:y):S(FALSE);
+  *!UN:P36/?(enhMithril:y);
+  *!if&(enhMithril:y);
+    *!PO(x)/(y)/(z):N?(isUpg);
+    *!if&(isUpg);
+      *!SN:T^wog.36.hint.%(objType)^/?(upg:z);
+      *!VR(objName):S^%(upg:z)%(objName)^;
+    *!en;
+  *!en;
+  *!VR(objNamePtr):Z(objName);
 
 ** end

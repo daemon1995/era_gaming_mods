@@ -2,11 +2,16 @@ ZVSE2
 
 ** Updated: September 16, 2004
 ** Updated: June 2022 by Archer30
+** Rewritten: October 2023 by daemon_n - almost week spent. Week of ERM monster :thinking:
 
-** Week of Monsters ERM Script Version 1.7 created by Timothy Pulver
+
+** Version 2.0 19 October 2023;
+
+
+** Week of Monsters ERM Scriptcreated by Timothy Pulver
 ** with minor modifications by Anders Jonnson
 ** and suggestions by Donald X. Vaccarino and the Qurqirish Dragon
-** Requires WoG version 3.57 or later using ERM version 2.6 or later.
+** Requires ERA version 3.9 or later using ERM 2.0 version 1.0 or later.
 
 ** This script replaces the standard "Week of the" results that appear each
 ** day 1, as well as eliminating the monthly "Month of the" results that
@@ -19,17 +24,6 @@ ZVSE2
 ** bonus to Growth for the entire week. If the monster type is neutral, rather
 ** than one that may be recruited from a town, there is no Growth bonus.
 
-** There are also weeks of the various War Machines but these bonuses are
-** more limited -- usually to health and defense but sometimes also to
-** attack and damage.
-
-** To install this script in a map, simply copy & paste the code into a global
-** (timed) event. Copy the entire code, from ZVSE to the end. Make sure
-** that you disable ALL colours from receiving the event and/or change
-** the event day to something like 500 or later to avoid the ERM script
-** popping up as if it were a regular event message. The title of the event
-** is unimportant, but I would suggest something like "Week of Monster".
-** Have fun and enjoy the Monster Mash! :-)
 
 ** Version 1.1 adds a check for the Diety of Fire - if it's present, it will be
 ** "Week of the Imp" (with +15 Imp *and* +15 Familiar Growth).
@@ -65,345 +59,379 @@ ZVSE2
 ** Version 1.8 reduces the chance of generating Warlord's Banners to 10%. Added
 ** support for new monsters declared in FU(GetMaxMonsterId).
 
---------------------------------------------------------------------------------------
-
-Flags Used in this Script: 1, 2, 56, 170-172, 205, 412
-v Variables used: v1-v7, v166-v200, v205, v361-v367, v372-v373, v1200-v1210
-z Variables used: z190-z199, z495
-Functions used: FU5301-FU5310, FU8000
-ERM Numbers used: 20, 134, 135, 136, 172, 200
-
---------------------------------------------------------------------------------------
-
- [Initialize variables]
-!#VRv170:S-100;
-!#VRv180:S0;
-!#IF:V412/1;
-
- [Set up selection for player cycle for monster type selection]
-!#VRv372:R0/0/9; [Random number for "X" for selecting next player]
-!#VRv373:R0/1/9; [Random number for selecting "R" for selecting a player - constant]
-
-!#VRv1200:C-1/-1/-1/-1/-1/-1/-1/-1/-1/-1;
-
- [Check if script is enabled: if it is, set flag 56 to true]
-!#UN:P20/?v1;
-!#IF&v1=1:V56/1;
+** Version 2.0 rewritten whole script:
+  now works directly at new week start;
+  really increase income of the all mines
+  places monster into refugee when game iterates them at week start;
+  full MP support
+  freed all flags, non-named functions and non-temp variables 
 
 --------------------------------------------------------------------------------------
+!#DC(WOG_20_MONSTER_WEEK) = 1;
+!#DC(WOG_20_RESOURCE_WEEK) = 2;
+!#DC(WOG_20_PLAYER_WEEK) = 3;
+!#DC(WOG_20_INFERNO_WEEK) = 4;
 
- [Right-Click on End-Turn button will display current week's monster]
-!?FU(OnAdventureMapRightMouseClick)&56;
+ [Check if script is enabled: if it is, set flag i^wog_20_enabled^ to true]
 
-!!CM:S?v1 I?v2; [Check if it's a right-click on the End-Turn button]
 
- [Set up v3 and v4 for type/subtype of message display picture]
-!!if&v170>=0;
-  !!VRv3:S21;
-  !!VRv4&v170>=0:Sv170;
-!!el&v170<0/v170<>-100;
-  !!VRv3:Sv170 *-1 -1;
-  !!VRv4:S0;
+!?FU(WOG_20_Initialization);
+!!UN:P20/?i^wog_20_enabled^;
+!!if&i^wog_20_enabled^;
+  !!VRi^wog_20_next_week_subtype^:S(NO_MON);
+  !!FU(WOG_20_GetNextWeekType):P(NULL)/?i^wog_20_next_week_type^;
+  !!FU(WOG_20_GetNextWeekSubtype):Pi^wog_20_next_week_type^/?i^wog_20_next_week_subtype^;
 !!en;
 
- [Display Week of Monsters info]
-!!if&v1=14/v2=12;
-  !!if&v170<>-100;
-    !!IF:Q1/v3/v4/4^%Z495^;
-  !!el;
-
- [Display the following if it's the first week]
-    !!IF:Q1/-1/-1/4/z120000;
-  !!en;
-
-  !!CM:R0; [Disable standard right-click message]
-!!en;
-
+!#FU(WOG_20_Initialization):P;
 --------------------------------------------------------------------------------------
+!?FU(WOG_CreateERMHook)&i^wog_20_enabled^;
+!!SN:Ex1/1/5032547/(WOG_20_HOOK_OnNewWeekMessage);
 
->>[Set up new bonuses for "Week of" monster]
-  [Only if Flag 56 is true meaning script is enabled]
-!?FU(WOG_OnNewWeek)&56;
-
-!!VRv188:Sc; [Set v188 to current day]
-
- [Continue command only if first time executed this day]
- [Also: only if Flag 56 is true - set in Map Enhancement dialogue box]
-!?FU(WOG_OnNewWeek)&56/v189<v188;
-
-!!VRv189:Sc; [Set day check to current day]
-
- [Function 181 checks if Diety of Fire is built and if so, makes it Week of the Imp]
-!!FU(WOG_20_ManageDietyOfFire):P;
-
-!!VRz190:S^^;  [Initialize z190 to a null string]
-
-!!if&-171;
-  !!VRv190:Sv181 :3;  [Calculate 33% bonus to Attack - store in v190]
-  !!VRv190&v190=0/v180<>(MON_FIRST_AID_TENT)/v180<>(MON_AMMO_CART):S1;  [If 33% bonus = 0, set to 1]
-  !!VRv191:Sv181 +v190;  [New Attack value - store in v191]
-  !!VRz191:Sz120001;  [Attack bonus string - store in z191]
-  !!VRz190&v180<>(MON_FIRST_AID_TENT)/v180<>(MON_AMMO_CART):+z191;  [Add Attack bonus string to z190]
-
-  !!VRv190:Sv182 :3;  [Calculate 33% bonus to Defense - store in v190]
-  !!VRv190&v190=0:S1;  [If 33% bonus = 0, set to 1]
-  !!VRv192:Sv182 +v190;  [New Defense value - store in v192]
-  !!VRz192:Sz120002;  [Defense bonus string - store in z192]
-  !!VRz190:+z192;  [Add Defense bonus string to z190]
-
-  !!VRv190:Sv186 :3;  [Calculate 33% bonus to Damage High - store in v190]
-  !!VRv190&v190=0/v180<>(MON_FIRST_AID_TENT)/v180<>(MON_AMMO_CART):S1;  [If 33% bonus = 0, set to 1]
-  !!VRv195:Sv185 +v190;  [New Damage Low value - store in v195]
-  !!VRv196:Sv186 +v190;  [New Damage High value - store in v196]
-  !!VRz196:Sz120003;  [Damage bonus string - store in z196]
-  !!VRz190&v180<>(MON_FIRST_AID_TENT)/v180<>(MON_AMMO_CART):+z196;  [Add Damage bonus string to z190]
-
-  !!VRv190:Sv184 :3;  [Calculate 33% bonus to Health - store in v190]
-  !!VRv190&v190=0:S1;  [If 33% bonus = 0, set to 1]
-  !!VRv194:Sv184 +v190;  [New Health value - store in v194]
-  !!VRz194:Sz120004;  [Health bonus string - store in z194]
-  !!VRz190:+z194;  [Add Health bonus string to z190]
-
-  !!VRv190:Sv183 :3;  [Calculate 33% bonus to Speed - store in v190]
-  !!VRv190&v190=0/v180<>(MON_CATAPULT)/v180<>(MON_BALLISTA)/v180<>(MON_FIRST_AID_TENT)/v180<>(MON_AMMO_CART):S1;  [If 33% bonus = 0, set to 1]
-  !!VRv193:Sv183 +v190;  [New Speed value - store in v193]
-  !!VRz193:Sz120005;  [Speed bonus string - store in z193]
-  !!VRz190&v180<>(MON_CATAPULT)/v180<>(MON_BALLISTA)/v180<>(MON_FIRST_AID_TENT)/v180<>(MON_AMMO_CART):+z193;  [Add Speed bonus string to z190]
-
-  !!VRv190:Sv187 :2;  [Calculate 50% bonus to Growth - store in v190]
-  !!VRv190&v190=0:S1;  [If 50% bonus = 0, set to 1]
-  !!VRz197:Sz120006;  [Growth bonus string - store in z197]
-  !!VRv197:Sv187 +v190;  [New Growth value - store in v197]
-  !!VRz190&v180<>(MON_GOLD_GOLEM)/v180<>(MON_DIAMOND_GOLEM)/v180<(MON_PHOENIX):+z197;  [Add Growth bonus string to z190]
+!!UN:P200/?(isRefugeeSync:y);
+!!if&(isRefugeeSync);
+  !!SN:Ex1/1/5015808/(WOG_20_HOOK_RefugeeIteration);
 !!en;
 
- [Sets up "Week of" monster with appropriate text]
-!!if&-172;
-  !!SN:H^monname^/v180/0/?z197; [Lookup monster name - singular]
-  !!SN:H^monname^/v180/1/?z198; [Lookup monster name - plural]
-!!en;
+!?FU(WOG_OnNewMonth)&i^wog_20_enabled^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(edi:y) C(edi:y)/128578/2/d1; [add + 1 month to counter]
+!!UN:M0;                                                            [set defaut month type]
 
- [Set up "Week of" dialog box text string]
-!!if&-171;
-  !!VRz199:Sz120007;
+!!SN:X?t/0;                                                         [skip all "new month" routine]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5017339;                       [till adding new artifacts]
+
+!?FU(WOG_OnNewWeek)&i^wog_20_enabled^;
+
+!!VR(previousWeekType:y):Si^wog_20_week_type^; [strore global data to local to better code]
+!!VR(previousWeekSubType:y):Si^wog_20_week_subtype^;
+
+
+!!VR(thisWeekType:y):S(NO_RES);         [init new week values]
+!!VR(thisWeekSubType:y):S(NO_RES);
+
+// first - reset monster stats;
+!!FU(WOG_20_ResetWeekBonus):P(previousWeekType:y)/(previousWeekSubType:y)/?i^wog_20_monster_parameter_0^/?i^wog_20_monster_parameter_1^/?i^wog_20_monster_parameter_2^  /?i^wog_20_monster_parameter_3^/?i^wog_20_monster_parameter_4^/?i^wog_20_monster_parameter_5^/?i^wog_20_monster_parameter_6^; [reset parameters]
+
+// then check again next week type
+!!FU(WOG_20_GetNextWeekType):P(previousWeekType:y)/?(thisWeekType:y);
+
+!!if&(thisWeekType:y)=i^wog_20_next_week_type^; [if resul is the same]
+  !!VR(thisWeekSubType:y):Si^wog_20_next_week_subtype^; [then set this week type properly]
 !!el;
-
-  ; Special, preset Dialogue for Week of the Imp from Diety of Fire
-  !!VRz199:Sz120008;
+  !!FU(WOG_20_GetNextWeekSubtype):P(thisWeekType:y)/?(thisWeekSubType:y); [else recalc result (lmao only imps gonna be here)]
 !!en;
 
- [If week is "Week of Resources", set up special text]
-!!FU(WOG_20_SetUpWeekOfResourcesText)&v180<0/v180<>-100/-171:P;
+!!FU(WOG_20_GetNextWeekType):P(thisWeekType:y)/?i^wog_20_next_week_type^; [then get new weeks type based on the new one]
+!!FU(WOG_20_GetNextWeekSubtype):Pi^wog_20_next_week_type^/?i^wog_20_next_week_subtype^; [then get subtype for new one]
 
-!!UN:K1/1 K2/199 M1; [Change "Week of" text and disable possible "Month of" results]
+!!if&(thisWeekType)=(WOG_20_RESOURCE_WEEK); [if resources then]
+  !!VRi^wog_20_double_mine_income^:S(TRUE); [allow double income]
+  !!VR(needToPlaceAnywhere:y):S(TRUE);  [allow to place]
+  !!VR(returnAddress:y):S5015175;       [skip all monster data like week of mon and adding growth into town]
+!!el&(thisWeekType)<>(WOG_20_RESOURCE_WEEK); [if any monster week]
+  !!VR(returnAddress:y):S5015087;       [skip only mon init and imp week but add mon to towns]
+  !!FU(WOG_20_SetMonsterParameters):P(thisWeekSubType)/?(needToPlaceAnywhere:y)/?i^wog_20_monster_parameter_0^/?i^wog_20_monster_parameter_1^/?i^wog_20_monster_parameter_2^
+  /?i^wog_20_monster_parameter_3^/?i^wog_20_monster_parameter_4^/?i^wog_20_monster_parameter_5^/?i^wog_20_monster_parameter_6^;
+  !!VRi^wog_20_sync_refugee^:S(needToPlaceAnywhere);
+!!en;
 
- [Restore previous "Week of" monsters default Growth rate unless 1st monster week]
-!!MA&170:Gv170/v177;
-
- [Set new "Week of" monsters Growth rate unless it's Week of Resources]
-!!MA&-172:Gv180/v197;
-
- [If this week is Week of the Imp from the Diety of Fire, set new Imp values]
-!!MA&171:A42/3 D42/4 S42/6 P42/5 M42/2 E42/3 G42/15;
-
---------------------------------------------------------------------------------------
-
->>[Set new "Week of" monster values and restore old ones]
-  [Only if Flag 56 is true meaning script is enabled]
-!?FU(OnEveryDay)&i^timerWeekday^=1/56;
-
- [Set z495 equal to z199 for End-Turn button right-click display]
-!!VRz495:Sz199;
-
-!!VRv179:Sc; [Set v179 to current day]
-
- [Continue command only if first time executed this day]
- [Also: only if Flag 56 is true - set in Map Enhancement dialogue box]
-!?FU(OnEveryDay)&i^timerWeekday^=1/56/v178<v179;
-
-!!VRv178:Sc; [Set day check to current day]
-
-!!FU8000&v178<>1:P; [Set new stats if it's not day 1]
-
- [Store previous week's default monster values in v171-v177 - v170 = previous monster number]
- [Don't store if it's Week of the Imp (Flag 171 set) or Week of Resources (Flag 172 set)]
-!!if&v178<>1;
-  !!VRv170:Sv180;
-
-  !!if&-171/-172;
-    !!VRv171:Sv181;
-    !!VRv172:Sv182;
-    !!VRv173:Sv183;
-    !!VRv174:Sv184;
-    !!VRv175:Sv185;
-    !!VRv176:Sv186;
-    !!VRv177:Sv187;
+!!if&(needToPlaceAnywhere);             [if need to place check other scripts]
+  !#VA(customArg[2]:y);
+  !!FU(WOG_20_GetObjectToPlace):P(thisWeekType:y)/(thisWeekSubType:y)/?(fooPtr:y)/?(objectNumber:y)/?(customArg[0])/?(customArg[1]);
+  !!if&(fooPtr);
+    !!FU(WOG_20_PlaceNewObjects):P(fooPtr)/(thisWeekSubType:y)/(objectNumber)/(customArg[0])/(customArg[1]);
   !!en;
 !!en;
 
- [Function 5300 calculates the next player to base this week's monster type on]
-!!FU(WOG_20_GetBasicTypeOfWeek):P;      [v372 is changed here]
+!!VRi^wog_20_week_type^:S(thisWeekType);
+!!VRi^wog_20_week_subtype^:S(thisWeekSubType);
 
- [Function 180 gets number for new "Week of" monster and stores in v180]
-!!FU(WOG_20_SetActualTypeOfWeek):P;
+!!if&(thisWeekType)<>(NO_RES)/(returnAddress);
+  !!FU(WOG_20_SyncOnlineData):D^wog_20_week_type^/i^wog_20_week_type^ D^wog_20_week_subtype^/i^wog_20_week_subtype^; [send data to all players]
+  !!UN:C6911904/4/1 C6915148/4/1;     [-set week type && week subtype; to show proper message]
 
- [Function 181 checks if Diety of Fire is built and if so, makes it Week of the Imp]
-!!FU(WOG_20_ManageDietyOfFire):P;
+  !!VR(monId:y):S(thisWeekSubType);
+  !!MA:G(monId)/?(growth:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(this:y); // get this
+  !!UN:C(ebp:y)/-4/4/(this) C(ebp:y)/-12/4/(growth:y) C(ebp:y)/-8/4/(monId) C(ebp:y)/-16/4/(monId); [this is necessary all another used only to set town creatures gorwth]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(monId:y);
+  !!SN:X?t/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/(returnAddress);
+!!en;
 
- [Store "Week of" monster's default values in v181-v187 unless it's Week of Resources]
-!!if&v180>=0;
-  !!MA:Av180/?v181 Dv180/?v182 Pv180/?v184 Mv180/?v185 Ev180/?v186 Gv180/?v187;
-  !!MA&v180>0:Sv180/?v183;
+!?FU(WOG_20_SyncOnlineData);
+!#VA(variableName:x) (value:x);
+!!VRi^%z(variableName)^:S(value);
+---------------------------------------------------------------------------------------
+!?FU(WOG_20_GetNextWeekSubtype);
+!#VA(weekType:x) (weekSubType:x);
+!!VR(weekSubType):S(NO_MON);
+!!MA:F(MON_AZURE_DRAGON)/?(fv:y);                                                                                 [get strongest mon FV to limit monster week power]
+
+!!if&(weekType:x)=(WOG_20_INFERNO_WEEK);
+  !!VR(weekSubType):S(MON_IMP);
+!!el&(weekType)=(WOG_20_RESOURCE_WEEK);
+  !!VR(weekSubType):T0/(RES_FIRST)/(RES_LAST_SOD);
+!!el&(weekType)=(WOG_20_PLAYER_WEEK);
+  !!FU(WOG_20_GetMonsterOfPlayerWeek):P?(weekSubType)/?(player:y)/?(hero:y)/(fv);
+!!el&(weekType)=(WOG_20_MONSTER_WEEK);
+  !!FU(WOG_20_GetRandomMonster):P(NO_MON)/(NO_MON)/?(weekSubType)/(fv);
 !!en;
 
 ---------------------------------------------------------------------------------------
-
-!?FU8000;
-
- [Restore previous "Week of" monsters default values unless 1st monster week]
- [or if previous week was a Week of Resources]
-!!if&170/v178>8;
-  !!MA:Av170/v171 Dv170/v172 Pv170/v174 Mv170/v175 Ev170/v176;
-  !!MA&v173>0:Sv170/v173;
+!?FU(WOG_20_GetNextWeekType);
+!#VA(currentType:x) (nextType:x);
+!!VR(nextType):S(currentType) +1;       [set next week type]
+!!if&(nextType)>(WOG_20_PLAYER_WEEK);   [if out of range]
+  !!VR(nextType):S(WOG_20_MONSTER_WEEK);[set first week again if out of range]
 !!en;
 
-!!IF:V170/1; [Flag is set to indicate no longer first monster week]
+!!VR(x:y):S-1;
+!!re i;
+  !!UN:U(OBJ_TOWN)/(TOWN_INFERNO)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+  !!CA(x)/(y)/(z):B3/26;
+  !!if&1;
+    !!VR(nextType):S(WOG_20_INFERNO_WEEK);
+    !!FU:E;
+    !!br;                               [; break the loop if Inferno with grail found]
+  !!en;
+!!en;
 
-!!IF&172:V170/0; [If week is Week of Resources, reset "1st week flag" for next week]
 
- [Set new "Week of" monster values unless it's Week of Resources or Week of Imp from Diety of Fire]
-!!MA&-171/-172:Av180/v191 Dv180/v192 Sv180/v193 Pv180/v194 Mv180/v195 Ev180/v196;
+---------------------------------------------------------------------------------------
+!?FU(WOG_20_HOOK_OnNewWeekMessage);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
+!!FU(WOG_20_GetWeekDescription):Pi^wog_20_week_type^/i^wog_20_week_subtype^/?(descrition:z);
+!!SN:B(textBuffer)/d/^%(descrition)^;
 
-[Setup Imp's new stats if Week of Imp from Diety of Fire]
-!!MA&171:A42/3 D42/4 S42/6 P42/5 M42/2 E42/3 G42/15;
+!?FU(WOG_20_HOOK_RefugeeIteration)&i^wog_20_sync_refugee^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^wog_20_week_subtype^; replace refugee mon id by own 
 
-!!VRv205&v180<0/v180<>-100:Sv180;  [Copy to v205 if week of the resource]
-!!VRv205&v180>=0:S0;               [Reset if it's not]
+!?FU(WOG_OnCalculateMineIncome_Quit)&i^wog_20_double_mine_income^;
+!#VA(x:x) (y:x) (z:x) (baseIncome:x) (newIncome:x);
+!!MN(x)/(y)/(z):R?r/1;                  [get res type no redraw]
+!!if&r=i^wog_20_week_subtype^;
+  !!VR(newIncome):Sd<<1;                [double income for this mine]
+!!en;
+
+ [Right-Click on End-Turn button will display current week's monster]
+!?FU(OnAdventureMapRightMouseClick)&i^wog_20_enabled^/i^mouse_item^=(ITEM_ADVMAP_END_TURN_BTN)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+
+!!if&i^timerWeek^>1;
+  !!FU(WOG_20_GetWeekDescription):Pi^wog_20_week_type^/i^wog_20_week_subtype^/?(weekMsg:z);
+  !!if&i^wog_20_week_type^=(WOG_20_RESOURCE_WEEK);
+    !!VR(picType:y):Si^wog_20_week_subtype^;
+    !!VR(offset:y):S(picType:y) *4;
+    !!UN:C6781304/(offset)/4/?(picSubType:y);
+    !!VR(picSubType):*-2;
+  !!el;
+    !!VR(picType:y):S(PIC_TYPE_MONSTER);
+    !!VR(picSubType:y):Si^wog_20_week_subtype^;
+  !!en;
+  !!IF:Q1/(picType:y)/(picSubType:y)/(MSG_TYPE_POPUP)/(weekMsg:z); [Display Week of Monsters info]
+!!el;
+  !!IF:Q1/(PIC_TYPE_LUCK_NEUTRAL)/-1/(MSG_TYPE_POPUP)/^%T(wog.20.monster.not)^;
+!!en;
+
+!!CM:R0;                                [Disable standard right-click message]
+
+!?FU(WOG_20_GetWeekDescription);
+!#VA(weekType:x) (weekSubType:x) (result:x);
+
+!!FU(WOG_20_GetWeekName):P(weekType:x)/(weekSubType:x)/?(weekName:z);
+!!FU(WOG_20_GetWeekBonusName):P(weekType:x)/(weekSubType:x)/?(weekBonusName:z);
+
+!!VR(result):Z^%(weekName)%(weekBonusName)^;
+
+
+!?FU(WOG_20_GetWeekName);
+!#VA(weekType:x) (weekSubType:x) (result:x);
+!!if&(weekType)=(WOG_20_RESOURCE_WEEK);
+  !!SN:T^wog.20.resource.name.%(weekSubType)^/?(msg:z);
+!!el;
+  !!SN:H^monname^/(weekSubType:x)/0/?(single:z) T^wog.20.monster.name^/?(msg:z)/^single^/(single);
+!!en;
+
+!!VR(result):Z(msg);
+
+!?FU(WOG_20_GetWeekBonusName);
+!#VA(weekType:x) (weekSubType:x) (result:x);
+
+!!if&(weekType)=(WOG_20_RESOURCE_WEEK);
+  !!SN:T^wog.20.resource.description.%(weekSubType)^/?(msg:z);
+!!el;
+  !!VR(bonus:z):S^^;
+  !!re i/0/6;
+    !!VR(value:y):Si^wog_20_monster_parameter_%i^;
+    !!if&(value)>0;
+      !!SN:T^wog.20.monster.%i^/?(tmp:z)/^value^/(value);
+      !!VR(bonus):+(tmp);
+    !!en;
+  !!en;
+  !!SN:H^monname^/(weekSubType:x)/1/?(mult:z);
+  !!SN:T^wog.20.monster.description^/?(msg:z)/^mult^/(mult)/^bonus^/(bonus);
+!!en;
+
+!!VR(result):Z(msg);
+
+
+
+
+!?FU(WOG_20_SetMonsterParameters);
+!#VA(monId:x) (needToPlaceAnywhere:x) (s[7]:x); [return changes]
+!#VA(st[7]:y);
+!!VR(needToPlaceAnywhere):S(TRUE);
+
+
+!!MA:A(monId:x)/?(st[0]) D(monId:x)/?(st[1]) M(monId:x)/?(st[2]) E(monId:x)/?(st[3]) P(monId:x)/?(st[4]) S(monId:x)/?(st[5]) G(monId:x)/?(growth:y);
+
+*!VR(st[2]):S(st[3]);                   [set min damage as max damage;]
+
+!!re i/0/5;
+  !!if&(st[i])>0;
+    !!VR(s[i]):S(st[i]) :3 F1/(st[i]); set 33% stats bonus
+  !!en;
+!!en;
+!!if&(growth)>0;
+  !!VR(s[6]):S(growth) Sd>>1 F1/(growth);
+!!en;
+
+
+!!MA:A(monId:x)/d(s[0]) D(monId:x)/d(s[1]) M(monId:x)/d(s[2]) E(monId:x)/d(s[3]) P(monId:x)/d(s[4]) S(monId:x)/d(s[5]) G(monId:x)/d(s[6]);
+
+!!SN:E4696752/(CALLCONV_FASTCALL)/(monId:x); [is mon a war machine]
+!!VRv1:&1;                                   [check byte]
+!!VR(isWarMachine:y):Sv1;
+!!if|(isWarMachine)/(monId)=(MON_GHOST);
+  !!VR(needToPlaceAnywhere):S(FALSE);
+!!en;
+
+
+!?FU(WOG_20_ResetWeekBonus);
+!#VA(type:x) (monId:x) (st[7]:x);
+
+!!if|(type)=(WOG_20_MONSTER_WEEK)/(type)=(WOG_20_PLAYER_WEEK); if week bonus = 1 = monster
+  !!MA:A(monId:x)/d-(st[0]) D(monId:x)/d-(st[1]) M(monId:x)/d-(st[2]) E(monId:x)/d-(st[3]) P(monId:x)/d-(st[4]) S(monId:x)/d-(st[5]) G(monId:x)/d-(st[6]);
+  !!re i/0/(st[SIZE])/1/-1;
+    !!VR(st[i]):S0;                                                                                                                                   [reset variables]
+  !!en;
+!!en;
+!!VRi^wog_20_sync_refugee^:S(FALSE); 
+!!VRi^wog_20_double_mine_income^:S(FALSE);
+
+!?FU(WOG_20_GetObjectToPlace);
+!#VA(weekType:x) (weekSubType:x) (fooPtr:x) (objectNumber:x) (customArg[2]:x);
+!!VR(fooPtr):S(NULL);
+!!UN:X?(mapSize:y)/?t;
+!!if&(weekType)=(WOG_20_RESOURCE_WEEK);
+  !!FU(WOG_20_GetBasicTypeOfWeek):P;
+  !!UN:P134/?(isPlacingEnabled:y);
+  !!if&(isPlacingEnabled);
+    !!VR(fooPtr):S(WOG_20_PlaceResource);
+
+    !!VR(objectNumber):S(mapSize:y) -1:36 *2 F1/12 *2 *2;
+    !!VR(customArg[0]):S3;
+    !!VR(customArg[1]):S6;
+    !!if|(weekSubType)=(RES_ORE)/(weekSubType)=(RES_WOOD);
+      !!VR(customArg[0]):S6;
+      !!VR(customArg[1]):S10;
+    !!el|(weekSubType)=(RES_GOLD);
+      !!VR(customArg[0]):S500;
+      !!VR(customArg[1]):S1000;
+    !!en;
+  !!en;
+!!el;
+  
+  !!UN:P135/?(isWanderingEnabled:y) P136/?(isStationaryEnabled:y) P234/?(isBaner:y);
+
+  !!if|(isWanderingEnabled)/(isStationaryEnabled);
+
+    !!MA:G(weekSubType)/?(growth:y) L(weekSubType)/?l;                [Enhanced base value (+50% for Town creatures)]
+    !!VR(objectNumber):S(mapSize:y) -1:36 *2 F1/12 *2;
+    !!VR(week:y):Sc0 -1 :7 +1 F1/4095;
+    !!VR(customArg[0]):S(growth) Sd>>1 F1/(growth) *(week:y) F1/4095; [calc growth of the creatures]
+    !!VR(customArg[1]):S(isBaner);
+    !!if&(isWanderingEnabled);
+      !!FU(WOG_GetNumberOfAvailWanderingMonsters):P?(monstersLeft:y);
+      !!VR(objectNumber):F0/(monstersLeft);
+      !!VR(fooPtr):S(WOG_20_PlaceWanderingMonster);
+    !!el;
+      !!VR(fooPtr):S(WOG_20_PlaceStaticMonster);
+    !!en;
+  !!en;
+!!en;
 
 --------------------------------------------------------------------------------------
 
 >>[Calculates the next player to base monster type on]
-!?FU(WOG_20_GetBasicTypeOfWeek);
+!?FU(WOG_20_GetMonsterOfPlayerWeek);
+!#VA(monster:x) (player:x) (hero:x) (maxFv:x);
+
+; init values
+!!VR(monster):S(NO_MON);
+!!VR(player):S(NO_PLAYER);
+!!VR(hero):S(NO_HERO);
 ; Create a new array for all the valid options of the week with 2 elements
-!!FU(NewIntArray):P2/?(weekOptions:y);
-; Set up initial elements (8 for a random monster from the pool, 9 for a random resource)
-!!SN:V(weekOptions)/0/8/9;
+!!FU(NewIntArray):P?(livingPlayers:y);;create living players array:
+
 
 !!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-  !!OW:Ii/d/?(isAlive:y);
-
-  !!FU(Array_Push)&(isAlive):P(weekOptions)/i;
+  !!OW:Ii/d/?(isDead:y);
+  !!FU(Array_Push)&(isDead)=0:P(livingPlayers)/i;
 !!en;
 
-!!SN:M(weekOptions)/?(size:y);
-!!VR(lastIndex:y):S(size) -1;
-!!VR(random:y):R0/0/(lastIndex);
-!!SN:M(weekOptions)/(random)/?v372;
 
---------------------------------------------------------------------------------------
+!!SN:M(livingPlayers)/?(size:y); 
 
->>[Gets number for new "Week of" monster and stores in v180]
-; v170 - monster of this week
-; v180 - monster of the next week
-!?FU(WOG_20_SetActualTypeOfWeek);
 
-!!VRv180:S-100;  [Initialize new monster number to -100]
-!!VRy9:S0;
+!!if&(size:y);                                            [if there are living players]
+  !!FU(Array_Shuffle):P?(livingPlayers);                  [huffle them]
 
-!!IF:V172/0;  [Initialize flag 172 to false]
+  !!re i/0/(size)/1/-1;                                   [loop living players]
+    
+    !!SN:M(livingPlayers)/i/?(playerId:y);                [get them one by one]
 
- [Check previous monster week for a given player]
-!!VRy3:S1200 +v372;
-!!VRy4:Svy3;
+    !!OW:H(playerId)/1;                                   [get player heroes]
+    !!VR(heroesNum:y):Sv1;                                [store]
+    !!if&(heroesNum:y);                                   [if there are heros]
+      !!FU(NewIntArray):P(heroesNum:y)/?(playerHeroes:y); [create array for them]
 
-!!VRy1:R0/(HERO_FIRST)/(HERO_LAST_WOG); [Random start number for choosing a hero]
-!!VRy2:Sy1 -1;  [End number for second loop]
+      !!re j/2/(heroesNum:y)/1/1;
+        !!VR(ind:y):Sj -2;
+        !!SN:M(playerHeroes)/(ind:y)/vj;                  [fill array]
+      !!en;
 
-!!if&v180=-100;
-  !!if&v372<8;
-    !!DO5301/y1/(HERO_LAST_WOG)/1:Py4;[Random monster type is based on a hero's army stack]
-    !!DO5301/0/y2/1&y1>0:Py4; [2nd part of loop]
+      !!FU(Array_Shuffle):P?(playerHeroes);               [shuffle heroes]
+
+      !!re j/0/(heroesNum:y)/1/-1;                        [now iterate them]
+        !!SN:M(playerHeroes)/j/?(randomPlayerHero:y);     [get random hero]
+
+        !!FU(NewIntArray):P?(heroArmy:y);                 [create array again lmao now for army]
+        !!re (slotInd:y)/0/(ARMY_SLOT_LAST);              [iterate hero's army]
+          !!HE(randomPlayerHero):C0/(slotInd:y)/?t/?n;
+          !!if&t<>(NO_MON)/n>0;                           [if there is creature]
+            !!MA:Ft/?f;                                   [get fight value]
+            !!FU(Array_Push)&f<=(maxFv):P(heroArmy)/t;    [if less then max FV add mon "t" there]
+          !!en;
+        !!en;
+
+        !!SN:M(heroArmy)/?(armyTypesSize:y);              [check if array isn't empty]
+        !!if&(armyTypesSize);
+          !!FU(Array_SortedUnique):P?(heroArmy);          [sort unique]
+          !!FU(Array_Shuffle):P?(heroArmy);               [shuffle afte sort]
+          !!SN:M(heroArmy)/0/?(monster);                  [take first mon as result]
+          !!VR(player):S(playerId:y);                     [take player as result]
+          !!VR(hero):S(randomPlayerHero:y);               [take hero as result]
+          !!FU:E;                                         [end all the loops]
+        !!en;
+      !!en;
+    !!en;
   !!en;
-
-  !!VRy9&v372<9:S1; [If no monster found in hero's army choose random monster: y9=1]
 !!en;
+!!FU(WOG_20_GetRandomMonster):P(NO_MON)/(NO_MON)/?(monster)/(maxFv);
 
-!!VRy9&v372=8:S1; [If random monster week, choose random monster: y9=1]
-
-!!MA:F(MON_AZURE_DRAGON)/?y32;          [Monster of the week cannot be stronger than Azure - for mod compatibility]
-
- [Random # for "Week of" monster, excluding "not used", Emissaries, Commanders if v372=8]
-!!if|v372=8/y9=1;
-  !!FU(WOG_20_GetMonsterOfNextWeek):Pv170/y4/?v180/y32; [v170/y4 - monsters of the last week?]
-; Random resource week if v372=9
-!!el&v372=9;
-  !!VRv180:R0/-7/-1; [Random number for resource week]
-  !!IF:V172/1;  [If week is less than 0 (but not -100), it's a resource week - set flag 172 to true]
-!!en;
-
-!!VRy5:Sc;  [set y5 to current day]
-!!VRy6:Sy5 -1; [set y6 to current day -1]
-!!VRy6::7; [set y6 to current week -1]
-!!VRy6:+1; [set y6 to current week]
-!!VRy10:Sy6 :2; [Half of current week]
-!!VRy10&y10<1:S1;
-
-!!if&v180>(NO_MON);
-  !!MA:Lv180/?y7; [Store monster level (0-6) in y7]
-  !!VRy7:+1;      [set y7 to "true" monster level (1-7)]
-!!en;
-
- [Keep track of previous monster weeks for each player]
-!!VRvy3:Sv180;
-
- [Place some wandering monster stacks and resources of this type unless it's the first week]
- [Don't call function if it's a war machine or ghost]
-!!VRy8:S(TRUE); [Assume wandering monster stacks and resources can be placed]
-!!VRy8&v170=-100:S(FALSE); [Must have been a monster chosen]
-
-; No War Machines or Level 8 Monsters or Ghosts
-!!if&v170>(NO_MON);
-  !!VRy8&v170>=(MON_CATAPULT)/v170<(MON_ARROW_TOWERS):S(FALSE);
-  !!VRy8&v170=(MON_GHOST):S(FALSE);
-  !!MA:F(MON_BLOOD_DRAGON)/?y30 Fv170/?y31;
-  !!VRy8&y31>=y30:S(FALSE);
-!!en;
-
-!!UN:P135/?y15; [y15=1 if wandering monsters are enabled]
-!!UN:P136/?y16; [y16=1 if stationary monsters are enabled]
-!!VRy8&v170>=0/y15=0/y16=0:S0; [Don't call if a monster week and wandering and stationary monsters are both disabled]
-
-!!UN:P134/?y17; [y17=1 if resource piles are enabled]
-!!VRy8&v170<0/y17=0:S0; [Don't call if resource week and resource piles are disabled]
-
-!!if&v170>=0;
-  !!MA:Lv170/?y11; [Store monster level (0-6) in y11]
-  !!VRy11:+1;      [set y11 to "true" monster level (1-7)]
-!!el;
-  !!VRy11:S0;       [set y11 to 0 if it's a resource week]
-!!en;
-
-!!VRy12:Sc; [Set y12 to current day]
-
-!!FU(WOG_20_PlaceMonstersOrResources)&y8=1/y6>1/y6>=y11/y12<>v1210:P; [Place wandering monster stacks or resources]
-
- [Store v170 in y13 for purposes of changing Refugee Camps]
- [If week 1, set it to a level 1 creature]
-!!VRy13:Sv170;
-
-!!if&v170=-100;
-  !!VRy14:S0 R8;
-  !!VRy13:Sy14 *14;
-  !!VRy13&y14=8:S118;
-  !!VRy13:R1; [Add 0 or 1 for possible upgraded level 1]
-!!en;
-
- [Change monster type of Refugee Camp to match "week of" Monster type]
- [Don't call function if it's a war machine, resource week or disabled]
-!!UN:P200/?y19; [Check if Refugee Camp synchronization is enabled: y19]
-!!FU(WOG_20_SyncRefugeeMonster)&y19=1/y13>=0/v170<>(MON_CATAPULT)/v170<>(MON_BALLISTA)/v170<>(MON_FIRST_AID_TENT)/v170<>(MON_AMMO_CART):Py13;
-
-!?FU(WOG_20_GetMonsterOfNextWeek);
+!?FU(WOG_20_GetRandomMonster);
 !#VA(excludeMon1:x) (excludeMon2:x) (mon:x) (maxFv:x);
 
 !!FU:A?(numArgs:y);
@@ -440,324 +468,64 @@ ERM Numbers used: 20, 134, 135, 136, 172, 200
 
 --------------------------------------------------------------------------------------
 
->>[Function 5301 locates a hero owned by the current player in the cycle to]
-  [select a random troop type from]
-!?FU5301;
-
-!!HEx16:O?y1; [Check who owns hero]
-
-!!VRy2:S(ARMY_SLOT_FIRST) R(ARMY_SLOT_LAST);  [Random starting stack number]
-!!VRy3:Sy2 -1; [End number for second loop]
-
-!!if&y1=v372/v180=-100;
-  !!DO5302/y2/6/1:Px16/x1; [If a valid hero is found, call function loop 5302]
-  !!DO5302/0/y3/1&y2>0:Px16/x1; [2nd part of loop]
-!!en;
-
-!!VRx16&v180<>-100:S999;  [Exit loop if a monster type is chosen]
-
 --------------------------------------------------------------------------------------
+!?FU(WOG_20_PlaceNewObjects);
+!#VA(fooPtr:x) (subtype:x) (objectNumber:x) (value:x) (customArg:x); 
 
->>[Function 5302 locates a monster stack from the]
-  [chosen hero to use for this week's monster type]
-!?FU5302;
+!!UN:X?(mapSize:y)/?(hasUnderground:y);
+!!VR(hasUnderground):F0/1;
+!!VR(chance:y):S(mapSize) *(mapSize) Sd>>1 Sd<<(hasUnderground) :(objectNumber);
+!!VR(objectNumber):S0;
+!!re (z:y)/0/(hasUnderground);
+  !!re (y:y)/0/(mapSize)/1/-1;
+    !!re (x:y)/0/(mapSize)/1/-1;
+      *!FU&(objectNumber)=0:E;
 
- [Check monsters in hero's slot number x16 - store type in y1, number in y2]
-!!HEx1:C0/x16/?y1/?y2;
-
- [Set monster type (v180) to y1 if y2 is greater than 0
- [and monster is different from previous week]
-!!if&y2>0/y1<>v170/y1<>x2;
-  !!VRv180:Sy1;
-
- [Exit loop if acceptable monster stack found]
-  !!VRx16:S999;
-!!en;
-
---------------------------------------------------------------------------------------
-
->>[Function 181 checks if Deity of Fire is built, and if so, makes it Week of the Imp]
-!?FU(WOG_20_ManageDietyOfFire);
-!!IF:V171/0;
-
-; loop through all towns
-!!VR(x:y):S-1;
-
-!!re i;
-  !!UN:U(OBJ_TOWN)/(TOWN_INFERNO)/-1/(x)/(y:y)/(z:y);
-  !!br&(x)<0;
-
-  ; break the loop if Inferno with grail found
-  !!CA(x)/(y)/(z):B3/26;
-
-  !!if&1;
-    !!IF:V171/1;
-    !!br;
+      !!TR(x)/(y)/(z):T?t/d/d/d/d/d/d/d; [Check terrain type]
+      !!co&t>7;
+      !!OB(x)/(y)/(z):T?t; [Check object type for free square]
+      !!co&t;
+      !!VRr:R0/1/(chance);
+      !!co&r<(chance);
+      *!VR(objectNumber):-1;
+      !!FU(fooPtr):P(x)/(y)/(z)/(subtype)/(value)/(customArg);/(arg[2]);
+    !!en;
   !!en;
 !!en;
+*!IF:M^%(objectNumber)^;
 
-!!VRv180&171:S(MON_IMP); [If Deity of Fire present, set it to Week of Imp]
-!!IF&171:V172/0;  [If Deity of Fire present, set Week of Resource flag to false]
+!?FU(WOG_20_PlaceResource);
+!#VA(x:x) (y:x) (z:x) (resType:x) (minValue:x) (maxValue:x);
+  !!UN:I(x)/(y)/(z)/(OBJ_RESOURCE)/(resType)/0;                                          [Place monster or resource on empty land square only]
+  !!VR(value:y):R0/(minValue)/(maxValue:x);                                              [Random number for value of resource pile]
+  !!AR(x)/(y)/(z):V(value);                                                              [Set value of resource pile]
 
---------------------------------------------------------------------------------------
+!?FU(WOG_20_PlaceStaticMonster);
+!#VA(x:x) (y:x) (z:x) (monId:x) (monNum:x) (banner:x);
+  !!UN:I(x)/(y)/(z)/(OBJ_MONSTER)/(monId);                                               [Place monster or resource on empty land square only]
+  !!VR(aggresion:y):R0/(ADV_MON_AGGRESSION_HOSTILE_MIN)/(ADV_MON_AGGRESSION_HOSTILE_MAX);
+  !!MO(x)/(y)/(z):O0 U0 R(aggresion)/1 G(monNum:x);                                      [Set number of monsters, aggression, etc.]
 
->>[If week is "Week of Resources", set up special text]
-!?FU(WOG_20_SetUpWeekOfResourcesText);
-
-!!VRz199&v180=-1:Sz120009; [Wood]
-!!VRz199&v180=-2:Sz120010; [Mercury]
-!!VRz199&v180=-3:Sz120011; [Ore]
-!!VRz199&v180=-4:Sz120012; [Sulfur]
-!!VRz199&v180=-5:Sz120013; [Crystal]
-!!VRz199&v180=-6:Sz120014; [Gems]
-!!VRz199&v180=-7:Sz120015; [Gold]
-
---------------------------------------------------------------------------------------
-
->>[Set up new bonuses for "Week of Resources" if flag 173 set to true]
-  [Also: only if Flag 56 is true - set in Map Enhancement dialogue box]
-!?FU(OnEveryDay)&i^timerWeek^>=2/56/v205<0/v205<>-100;
-
-!!VRv169:S0; [Initialize v169 to 0]
-!!VR(resOfWeek:y):Sv205 *-1 -1; [Get resource type]
-
-; loop through all the mines
-!!VR(x:y):S-1;
-
-!!re i;
-  !!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
-  !!br&(x)<0;
-
-  !!MN(x)/(y)/(z):O?(owner:y)/1 R?(res:y)/1;
-
-  !!if&(owner)=i^timerOwner^/(res)=(resOfWeek);
-    !!VRv169:+1;
+  !!if&(banner:x);
+    !!VRr:R0/0/9;                                                                        [Random number for chance of carrying a Warlord's Banner]
+    !!if&r=0;
+      !!MO(x)/(y)/(z):A(ART_WARLORDS_BANNER);                                            [10% chance of carrying a Warlord's Banner]
+    !!en;
   !!en;
-!!en;
 
- [Calculate and give bonus resources]
-!!if&v169>0;
-  !!VRv169&(resOfWeek)=0:Sv169 *2;     [Wood x 2]
-  !!VRv169&(resOfWeek)=2:Sv169 *2;     [Ore x 2]
-  !!VRv169&(resOfWeek)=6:Sv169 *1000;  [Gold x 1000]
-  !!OW:Ri^timerOwner^/(resOfWeek)/dv169;
-!!en;
+!?FU(WOG_20_PlaceWanderingMonster);
+!#VA(x:x) (y:x) (z:x) (monId:x) (monNum:x) (banner:x);
+  !!FU(WOG_20_PlaceStaticMonster):P(x)/(y)/(z)/(monId)/(monNum)/(banner);                [first place monster with delegating function]
+  !!MW:M(x)/(y)/(z)/?(wm:y);                                                             [Make monster a wandering monster: y5=WM number]
+  !!MW(wm:y):A2/0/0/0 A3/0/0/0/0/0/0/0;                                                  [Set WM defaults]
 
 --------------------------------------------------------------------------------------
-
->>[Place some wandering monster stacks or random resources]
-!?FU(WOG_20_PlaceMonstersOrResources);
-
- [Set v1210 to current day]
-!!VRv1210:Sc;
-
- [Get size of map (y1) and if it has an underground (y2=0 for no, 1 for yes)
-!!UN:X?y1/?y2;
-!!VRy9:Sy1 -1; [Map size for loop purposes]
-
- [Store v170 in y6 - convert value for resource week]
-!!VRy6:Sv170;
-!!VRy6&y6<0/y6<>-100:*-1 -1;
-
- [Set y7 to object number 54 for a monster and 79 for a resource]
-!!VRy7:S(OBJ_MONSTER);
-!!VRy7&v170<0/v170<>-100:S(OBJ_RESOURCE);
-
- [Set y8 to number of monsters or resources appearing (resources = number x 2)]
-!!VRy8:S0;
-!!VRy8&y1<=36:S1; [Small map]
-!!VRy8&y1>36/y1<=72:S2; [Medium map]
-!!VRy8&y1>72/y1<=108:S4; [Large map]
-!!VRy8&y1>108/y1<=144:S6; [Extra Large map]
-!!VRy8&y1>144/y1<=180:S8; [Huge map]
-!!VRy8&y1>180/y1<=216:S10; [Extra Huge map]
-!!VRy8&y1>216:S12; [Giant map]
-!!VRy8&v170<0/v170<>-100:*2; [Double for resources]
-
- [Calculate base creature numbers - store in y4]
-!!if&v170>=0;
-  !!MA:Gv170/?y3;  [Enhanced base value (+50% for Town creatures)]
-  !!VRy4:Sc-1;  [Day minus 1]
-  !!VRy4:Sy4 :7;  [Week number -1]
-!!en;
-
-!!VRy4:+1; [Week number]
-
-!!if&v170>=0;
-  !!VRy10:Sy3 :2; [Half of enhanced base value (rounded down)]
-  !!VRy10&y10<1:S1; [Make sure y10 is at least 1]
-  !!VRy5:Sy10 *y4; [Half enhanced base value x number of weeks]
-  *!MA:Fv170/?y30 F(MON_BLOOD_DRAGON)/?y31; [Get the fight values of the creature and Blood Dragon - disabled as level 8 won't be put on the map anyway]
-  *!VRy5&y30>=y31::2; [Halve the number if it's a OP monster (fight value >= Blood Dragon)]
-  !!VRy5&y3<1:S1; [Make sure y5 is at least 1]
-!!en;
-
- [Generate random resource amount - store in y5]
-!!if&v170<0/v170<>-100;
-  !!VRy5:S3;
-  !!VRy5|y6=0/y6=2:S5;
-!!en;
-
- [Check if there are enough wandering monsters on the map]
-!!if&y7=(OBJ_MONSTER);
-  !!UN:P135/?y30;
-
-  !!if&y30;
-    !!FU(WOG_GetNumberOfAvailWanderingMonsters):P?y31; [y31 = available wandering monster slots]
-    !!VRy8:F0/y31;
-  !!en;
-!!en;
-
- [Set v3 and v4 to 0]
-!!VRv3:S0;
-!!VRv4:S0;
-
- [Place monsters/resources on upper level]
-
-!!DO(WOG_20_PlaceMonstersOrResourcesOnLevel)/1/y8/1:Py9/0/y5/y6/y7/y8/y3;
-
- [exit if the map has no underground]
-!!FU&y2<>(TRUE):E;
-
- [Check if there are enough wandering monsters on the map]
-!!if&y7=(OBJ_MONSTER)/y30;
-  !!VRy32:Sy31 -y8;
-  !!FU&y32<=0:E;                        [y32 = available wandering monster slots for underground]
-
-  !!VRy8&y8<=y32:Sy8;
-  !!VRy8&y8>y31:Sy32;
-!!en;
-
- [Set v3 and v4 to 0]
-!!VRv3:S0;
-!!VRv4:S0;
-
- [Place monsters/resources on lower level if it exists]
-!!DO(WOG_20_PlaceMonstersOrResourcesOnLevel)/1/y8/1:Py9/1/y5/y6/y7/y8/y3;
-
---------------------------------------------------------------------------------------
-
->>[Place monster stacks]
-
-  [x1=map size-1, x2=map level (0 or 1), x3=monster stack size/resource amount]
-  [x4=resource type, x5=object type: monster(54) or resource (79), x6=# of stacks to place]
-  [x7=enhanced monster growth value, x16=function loop number]
-
-!?FU(WOG_20_PlaceMonstersOrResourcesOnLevel);
-!!VRy10:S0 Rx1; [Random x value]
-!!VRy11:S0 Rx1; [Random y value]
-!!TRy10/y11/x2:T?y1/d/d/d/d/d/d/d; [Check terrain type]
-!!OBy10/y11/x2:T?y3; [Check object type for free square]
-
-!!UN&y1<8/y3=0:Iy10/y11/x2/x5/x4; [Place monster or resource on empty land square only]
-!!VRy2&v170>=0/y1<8/y3=0:Sx3 Rx7; [Random number for number of monsters]
-!!VRy12:S4 R6; [Random aggression level from 4 to 10: y12]
-!!MOy10/y11/x2&v170>=0/y1<8/y3=0:O0 U0 Ry12/1 Gy2; [Set number of monsters, aggression, etc.]
-!!VRy14:R0/0/9; [Random number 0..9: y14]
-
-!!UN:P234/?y15; [Check if Warlord's Banner are disabled: y15=1 if disabled]
-!!MOy10/y11/x2&v170>=0/y1<8/y3=0/y14=0/y15<>(TRUE):A(ART_WARLORDS_BANNER); [25% chance of carrying a Warlord's Banner]
-
-!!if&v170<0/v179<>-100/y1<8/y3=0;
-  !!VRy5:Sx3 Rx3; [Random number for value of resource pile]
-  !!ARy10/y11/x2:Vy5; [Set value of resource pile]
-!!en;
-
-!!UN:P135/?y6; [y6=1 if wandering monsters are enabled]
-
-!!if&v170>=0/y1<8/y3=0/y6=1;
-  !!MW:My10/y11/x2/?y5; [Make monster a wandering monster: y5=WM number]
-  !!MWy5:A2/0/0/0 A3/0/0/0/0/0/0/0; [Set WM defaults]
-!!en;
-
-!!VRx16&y3<>0/x16>0:-1; [Extend loop if a free space isn't available]
-
-!!if&y3=0;
-  !!VRx16&y1>=8/x16>0:-1; [Extend loop if terrain type is wrong]
-  !!VRv3&y1<8:+1; [Count each monster placed]
-!!en;
-
-!!VRx16&v3>=x6:S99; [Failsafe 1: if all monsters placed, exit loop]
-!!VRv4:+1; [Count each time through the loop]
-!!VRx16&v4>999:S99; [Failsafe 2: if loop exceeds 999, exit loop]
-
---------------------------------------------------------------------------------------
-
->>[Check if all wanted wandering monster numbesr are used]
-!?FU(WOG_GetNumberOfAvailWanderingMonsters);
+!?FU(WOG_GetNumberOfAvailWanderingMonsters);                                             [; Check how many wandering monster slot is available. Max = 48.]
 !#VA(result:x);
-
 !!VR(result):S0;
-
-; Check how many wandering monster slot is available. Max = 48.
 !!re (wm:y)/1/48;
   !!MW(wm):E?(wmExisted:y);
   !!VR(result)&(wmExisted)<>(TRUE):+1;
 !!en;
 
 --------------------------------------------------------------------------------------
-
->>[Set up any Refugee Camps to match "Week of" Monster]
-  [x1=monster type]
-!?FU(WOG_20_SyncRefugeeMonster);
-
- [Store weekly growth of monster in y1]
-!!MA:Gx1/?y1;
-
- [Get number of Mercenary Camps]
-!!UN:U78/-1/?y2;
-
- [Loop through Camps, changing them to this week's monster]
-!!DO5307/1/y2/1&y2>0:Py1/y2/x1;
-
---------------------------------------------------------------------------------------
-
->>[Change each camp to this week's monster]
-  [x1=weekly growth of monster, x2=camp number, x3=monster type]
-!?FU5307;
-
- [Loop backwards through camps to avoid possible errors]
-!!VRy1:Sx2 +1 -x16;
-
- [Store coordinates of each camp in v1/v2/v3]
-!!UN:U78/-1/y1/1;
-
- [Copy coordinates into y10/y11/y12]
-!!VRy10:Sv1;
-!!VRy11:Sv2;
-!!VRy12:Sv3;
-
- [Check if a hero is visiting the camp - if so, get]
- [his number and owner, store his creatures, then kill him (temporarily)]
-!!OBy10/y11/y12:T?y2;
-!!DO5308/0/6/1&y2=34:Py10/y11/y12;
-!!HEy10/y11/y12&y2=34:N?y3 O?y4 K;
-
- [Change each camp to this week's monster (subtype) and growth number (control word)]
-!!OBy10/y11/y12:Ux3 Cx1;
-
- [Restore hero and creatures if one was visiting the camp]
-!!HEy3&y2=34:Py10/y11/y12 Oy4;
-!!DO5309/0/6/1&y2=34:Py10/y11/y12;
-
---------------------------------------------------------------------------------------
-
->>[Store hero's troops]
-!?FU5308;
-
- [Store each slot's type in v1-v7, number in v361-v367]
-!!VRy1:S1 +x16;
-!!VRy2:S361 +x16;
-!!HEx1/x2/x3:C0/x16/?vy1/?vy2;
-
---------------------------------------------------------------------------------------
-
->>[Restore hero's troops]
-!?FU5309;
-
- [Restore each slot's type from v1-v7, and number from v361-v367]
-!!VRy1:S1 +x16;
-!!VRy2:S361 +x16;
-!!HEx1/x2/x3:C0/x16/vy1/vy2;
-
-** End of Script **

@@ -55,23 +55,16 @@ Mithril Enhancements Price List
 12. Upgrade University
  - may improve a hero's Basic skills: 4 Mithril
 
-It also replaces 1 in 15 resource stacks with stacks with the same amount of mithril (Half amount if
-it's wood, ore or gold), and 1 in 15 campfires contain mithril. To disable this feature, remove the
-"d" from the following line:
-!#UN:P170/d0;
 
 If you want to change the frequency, change the number 15 below to how often you want mithril to
 appear. If you set it to 4, one in four stacks will be replaced, and so on(if set to 1 or lower,
 or 50 or higher, it will default to 15):
-!#VRv70:S15;
+!#DC(WOG_170_RESOURCES_CAMPFIRES_FREQUENCY) = 15;
 
-It also sets up Windmills and Mystical Gardens so that one in ten contain Mithril. To disable this
-feature, remove the "d" from the following line:
-!#UN:P171/d0;
 
 If you want to change the frequency, change the number 10 below to how often you want mithril to
 appear(if set to 1 or lower, or 50 or higher, it will default to 10):
-!#VRv71:S10;
+!#DC(WOG_171_MILLS_GARDENS_FREQUENCY) = 10;
 
 Mithril Display scripts shows a message when a player picks up a pile of Mithril, showing how much
 Mithril that pile contained, and how much Mithril the player has right now. It also shows how much
@@ -79,14 +72,14 @@ Mithril the player has if (s)he right-clicks on the Kingdom Overwiev button.
 
 Variables used:
 (v1-v6)
-(z1-z9), v70, v71, z429, z805-z815, z919, [z136000-z136084]
+(z1-z9), z429, z805-z815, z919, [z136000-z136084]
 
 Flags:
 (1,2,9,10)
 172, 410, 870-875
 
 Functions:
-FU(WOG_101_CheckMapRule), FU(WOG_36_UpgradeDwelling_1)-FU8189
+FU(WOG_36_UpgradeDwelling_1)-FU8189
 
 Sets up PO:N numbers at University, Mine, Water Wheel and Windmill
 entrance squares. Do not use this with another script that might do the same
@@ -95,38 +88,18 @@ entrance squares. Do not use this with another script that might do the same
 
 *--- Setup ---*
 !?FU(WOG_36_Initialization);
-!!UN:P36/?v1;  [Check if Mithril script is enabled: v1]
-!!UN:P149/?v2; [Check if Mithril Display is enabled: v2]
-!!VRi^wog_149_enabled^&v2:S(TRUE);
 
-!!UN:P170/?v3; [Check if Mithril Replacment is enabled: v3]
-!!UN:P171/?v4; [Check if Mithril in Windmills and Gardens is enabled: v4]
-!!UN|v1=1/v2=1/v3=1/v4=1:B0/1;   (Enable Mithril)
-!!UN|v1=1/v3=1:P149/1; [Enable Mithril Display if Mithril script or Mithril Replacement is enabled]
-!!IF|v1=1/v2=1/v3=1/v4=1:V410/0; (For Sorcery/Mithril)
-!!VRv550:C1/2/4/8/16/32/64/128/256/512; (Setup table of bit values)
-!!VRz805:Sz136000;
-!!VRz806:Sz136001;
-!!VRz807:Sz136002;
-!!VRz808:Sz136003;
-!!VRz429:Sz136060;
-!!HT(OBJ_UNIVERSITY)/-1&v1=1:P2/429; (set "Advanced University" hint text)
+!#VA(options[4]:y);[Check if Mithril script is enabled: v1][Check if Mithril Replacment is enabled: v3]
+!!VR(options[0]):C36/149/170/171;
 
-!!HT(OBJ_WATER_WHEEL)/-1&v1=1:P2/805;
-!!HT(OBJ_WINDMILL)/-1&v1=1:P2/806;  (Setup Hint text)
-
-!!HT(OBJ_WATER_WHEEL)/-1&v1=1:P3/807;
-!!HT(OBJ_WINDMILL)/-1&v1=1:P3/808;  (Setup Hint text)
-!!IF:V874/0;
-!!IF:V870/1;
-!!IF:V873/1;        (security measure)
-!!VRv70&v70<2|v70>49:S15;
-!!VRv71&v70<2|v70>49:S10;
-
-!!UN:P170/?v1;
-!!IF&v1=0:V870/0;
-!!UN:P171/?v1;
-!!IF&v1=0:V873/0; (Check for replacing)
+!!re i/0/(options[SIZE])/1/-1;
+  !!UN:P(options[i])/?(isEnabled:y);
+  !!VRi^wog_%(options[i])_enabled^:S(isEnabled:y);
+  !!if&(isEnabled:y);
+    !!UN:B0/1;   (Enable Mithril)
+    !!UN&i<3:P149/1;[Enable Mithril Display if Mithril script or Mithril Replacement is enabled][Check if Mithril in Windmills and Gardens is enabled: v4]
+  !!en;
+!!en;
 
 !#FU(WOG_36_Initialization):P;
 
@@ -136,72 +109,66 @@ entrance squares. Do not use this with another script that might do the same
 !!FU(WOG_149_DisplayMithril):P;
 
 !?FU(WOG_149_DisplayMithril);
-!!UN:P36/?(mithrilEnabled:y); [Check if Mithril script is enabled: y1]
 !!OW:C?(player:y)/?(interactPlayer:y); [Store number of current player in y4]
-!!OW:R(interactPlayer)/(RES_MITHRIL)/?y-5; [Store current player's Mithril in y-5]
+!!OW:R(interactPlayer)/(RES_MITHRIL)/?(number:y); [Store current player's Mithril in y-5]
 
-!!if&y-5=1;
-  !!VRz-1:Sz136005; [Set "bar" if Mithril total is 1: z-1]
-!!el;
-  !!VRz-1:Sz136004; [Set "bars" unless Mithril total is 1: z-1]
-!!en;
+!!VRn:S(number) -1 F0/1;
 
-[Display current player's Mithril amount in a text box]
-!!if&(mithrilEnabled);
-  !!IF:Q2/(PIC_TYPE_RES_MITHRIL)/y-5/(MSG_TYPE_QUESTION)/z136006; [Display Mithril and offer to display price list: Flag 2]
+!!SN:T^wog.36.description.%n^/?(name:z) T^wog.36.description.msg^/?(msg:z)/^number^/(number)/^name^/(name);
+!!if&i^wog_36_enabled^;
 
+  !!IF:Q2/(PIC_TYPE_RES_MITHRIL)/(number:y)/(MSG_TYPE_QUESTION)/^%(msg:z)%T(wog.36.description.question)^; [Display Mithril and offer to display price list: Flag 2]
   !!if&2;
     !!VRz1:S^mithPric.pcx^;  [File and path name for Mithril Price List image: z1]
     !!SN:F^PcxPngExists^/z1; [Check if Mithril Price List image is there: v1=True if yes]
-
     !!if&v1;
       !!IF:B1/1/0 P1; [Display Mithril price list]
     !!el;
-      !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/0/(MSG_TYPE_MES)^%z136087%z136088%z136089^; [Display standard dialogue price list if image file missing]
+      !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/0/(MSG_TYPE_MES)/^%T(wog.36.description.std)^; [Display standard dialogue price list if image file missing]
     !!en;
   !!en;
 !!el;
-  !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/y-5/(MSG_TYPE_MES)/z136059; [Just display total Mithril if Mithril script is disabled]
+  !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/(number:y)/(MSG_TYPE_MES)/(msg:z); [Just display total Mithril if Mithril script is disabled]
 !!en;
 
 *** Display when Mithril is picked up ***
 !?OB(OBJ_RESOURCE)/(RES_MITHRIL)&999;  [Mithril is trigger]
-  !!UN:P149/?(wogOption:y);
-  !!FU&(wogOption)<>(TRUE):E; (If Mithril display is disabled, end function)
+  !!UN:B0/?(isMithrilEnabled:y);
 
-  !!AR(CURRENT_OBJ):V?(resAmount:y); [Store value of Mithril bars in v1]
+  !!if&(isMithrilEnabled:y);                                                                 [(If Mithril display is disabled, end function)]
+    !!AR(CURRENT_OBJ):V?(resAmount:y); 
+    !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/^%T(wog.36.pickup)^/(RES_MITHRIL)/(resAmount);
 
-  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-  !!VR(mithrilText:z):Sz136091;
-
-  !!if&i^WOG_IsHdMod^;
-    !!VRi^WOG_149_mithril_pickup^:S(TRUE);
-    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_GOLD)/(resAmount);
-  !!el;
-    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_MITHRIL)/(resAmount);
+    *!if&i^WOG_IsHdMod^;
+      *!VRi^WOG_149_mithril_pickup^:S(TRUE);
+      *!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_GOLD)/(resAmount);
+    *!el;
+    *!en;
   !!en;
 
-!?OB(OBJ_RESOURCE)/(RES_GOLD)&999;  [Mithril is trigger]
-!!VRi^WOG_149_mithril_pickup^:S(FALSE);
 
-!?FU(WOG_OnChangeWindowByResources)&i^WOG_149_mithril_pickup^/i^WOG_IsHdMod^;;
+*?OB(OBJ_RESOURCE)/(RES_GOLD)&999;  [Mithril is trigger]
+*!VRi^WOG_149_mithril_pickup^:S(FALSE);
+
+*?FU(WOG_OnChangeWindowByResources)&i^WOG_149_mithril_pickup^/i^WOG_IsHdMod^;;
 451087
-  !!UN:Cx1/216/(SIZEOF_INT32)/?(resType:y);                                  [is equal to line below]
+  *!UN:Cx1/216/(SIZEOF_INT32)/?(resType:y);                                  [is equal to line below]
 
-  !!if&(resType)=(RES_GOLD);
-    !!UN:Cx1/216/(SIZEOF_INT32)/(RES_MITHRIL);                                  [is equal to line below]
-  !!en;
+  *!if&(resType)=(RES_GOLD);
+    *!UN:Cx1/216/(SIZEOF_INT32)/(RES_MITHRIL);                                  [is equal to line below]
+  *!en;
 
 *** Adventure map Objects ***
 ; Right-click on the entrance of an object OR Ctrl-click on an object
-!?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=37;
+!?FU(OnAdventureMapRightMouseClick)&999/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP);
   !!TRi^mouse_mapX^/i^mouse_mapY^/i^mouse_mapZ^:E?(isNotYellow:y);              [Check for yellow trigger square: y-20]
   !!FU&(isNotYellow):E;
 
   !!FU(WOG_36_EnhanceWithMithril):P?(dlgShown:y);
   !!SN&(dlgShown):Q;
 
-!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_item^=37/i^key_ctrl^;
+!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^key_ctrl^;
   !!FU(WOG_36_EnhanceWithMithril):P?(dlgShown:y);
   !!SN&(dlgShown):Q;
 
@@ -241,9 +208,9 @@ entrance squares. Do not use this with another script that might do the same
   !!if|(type)=(OBJ_MINE)/(type)=(OBJ_TOWN)/(type)=(OBJ_CREATURE_GENERATOR_1)/(type)=(OBJ_CREATURE_GENERATOR_4)/(type)=(OBJ_SHIPYARD);
     !!FU(WOG_36_UpgradeMine)&(type)=(OBJ_MINE):P; [Mine]
     !!FU(WOG_36_UpgradeTown)&(type)=(OBJ_TOWN):P; [Town]
-    !!FU(WOG_36_UpgradeDwelling_1)&(type)=(OBJ_CREATURE_GENERATOR_1):P; [Normal Creature Generator]
+    !!FU(WOG_36_UpgradeDwelling_1)&(type)=(OBJ_CREATURE_GENERATOR_1):P(subtype); [Normal Creature Generator]
     !!FU(WOG_36_UpgradeDwelling_2)&(type)=(OBJ_CREATURE_GENERATOR_4)/(subtype)=0:P; [Conflux dwelling]
-    !!FU(WOG_36_UpgradeShipyard)&(type)=(OBJ_SHIPYARD):P; [Shipyard]
+    !!FU(WOG_36_UpgradeShipyard)&(type)=(OBJ_SHIPYARD):P(type)/3; [Shipyard]
   ; For object with distance requirement
   !!el;
     ; Check if any hero owned by the current player near the object
@@ -278,15 +245,17 @@ entrance squares. Do not use this with another script that might do the same
     !!en;
 
     ; Objects
-    !!FU(WOG_36_UpgradeWindmill)&(type)=(OBJ_WINDMILL):P?(dlgShown); [Windmill]
-    !!FU(WOG_36_UpgradeWaterWheel)&(type)=(OBJ_WATER_WHEEL):P?(dlgShown); [Water Wheel]
+
+    !!FU(WOG_36_UpgradeObject)|(type)=(OBJ_WINDMILL)/(type)=(OBJ_WATER_WHEEL):P?(dlgShown)/(type)/5; [Windmill][Water Wheel]
+    !!FU(WOG_36_UpgradeObject)|(type)=(OBJ_UNIVERSITY):P?(dlgShown)/(type)/4;                        [University]
+
+
 
     !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/(CURRENT_HERO);
     !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO); [Monolith (with instruction on which type and what hero]
 
-    !!FU(WOG_36_UpgradeUniversity)&(type)=(OBJ_UNIVERSITY):P; [University]
 
-    !!FU(WOG_36_ChangeWitchHutSkill)&(type)=(OBJ_WITCH_HUT):P; [Witch Hut]
+    !!FU(WOG_36_ChangeWitchHutSkill)&(type)=(OBJ_WITCH_HUT):P(type)/2; [Witch Hut]
 
     !!if|(type)=(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(type)=(OBJ_SHRINE_OF_MAGIC_GESTURE)/(type)=(OBJ_SHRINE_OF_MAGIC_THOUGHT);
       !!VR(lvl:y):S(type) - (OBJ_SHRINE_OF_MAGIC_INCANTATION) +1;
@@ -299,50 +268,53 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Upgrade Dwelling ***
 !?FU(WOG_36_UpgradeDwelling_1);
-!#VA(usedY[10]:y);
+!#VA(dwellingType:x);
 
-!!FU(WOG_36_GetDwellingUpgradeDetails):P?(mon:y)/?(upgMon:y)/?y7/?y6;
-!!FU&y6=0:E;
+!!FU(WOG_36_GetDwellingUpgradeDetails):P?(mon:y)/?(upgMon:y)/?(number:y)/?(cost:y);
 
-!!CM:R0;                                [disable standard popup]
-!!SN:H^monname^/(upgMon)/1/?z1;         [Get new creature name- plural]
-!!SN:H^monname^/(mon)/1/?z2;            [Get old creature name- plural]
-!!SN:H^monname^/(mon)/0/?z3;            [Get old creature name- singular]
+!!if&(cost);[Only upgrading once is allowed even if mod supported as for balance concern]
 
-!!if&y6>1;
-  !!IF:Q1/7/y6/2/z136009;               [plural]
-!!el&y6=1;
-  !!IF:Q1/7/y6/2/z136010;               [singular]
+  !!CM:R0;                                [disable standard popup]
+  !!SN:H^monname^/(upgMon)/1/?(upgMonName:z);         [Get new creature name- plural]
+  !!SN:H^monname^/(mon)/1/?(monName:z);            [Get old creature name- plural]
+
+  !!VRn:S(cost:y) -1 F0/1;
+  !!FU(WOG_GameMgr_GetDwellingName):P(OBJ_CREATURE_GENERATOR_1)/(dwellingType:x);/?(objName:z);
+
+  !!SN:T^wog.36.dwelling.%n^/?(msg:z)/^objName^/s^result^/^monName^/(monName)/^upgMonName^/(upgMonName)/^cost^/(cost)/^number^/(number);
+  !!IF:Q1/(RES_MITHRIL)/(cost:y)/(MSG_TYPE_QUESTION)/(msg:z);               
+  !!if&1;
+    !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-(cost:y);               (take Mithril)
+    !!DW4:M0/(upgMon)/d; (Upgrade dwelling)
+  !!en;
+
 !!en;
-
-!!FU&-1:E;
-
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-y6;               (take Mithril)
-!!DW4:M0/(upgMon)/d; (Upgrade dwelling)
 
 !?FU(WOG_36_UpgradeDwelling_2);
-!#VA(usedY[10]:y);
 !#VA(upgMon[4]:y);
 
-!!FU(WOG_36_GetDwellingUpgradeDetails):P?(mon:y)/?(upgMon[0])/?y7/?(canUpgrade:y);
-!!FU&(canUpgrade)=0:E;
+!!FU(WOG_36_GetDwellingUpgradeDetails):P?(mon:y)/?(upgMon[0])/?(number:y)/?(canUpgrade:y);
 
-!!FU&(mon)<>(MON_AIR_ELEMENTAL):E;      [Only upgrading once is allowed even if mod supported as for balance concern]
+!!if&(canUpgrade)/(mon)<>(MON_AIR_ELEMENTAL);[Only upgrading once is allowed even if mod supported as for balance concern]
 
-!!CM:R0;         (disable standard popup)
-!!IF:Q1/(PIC_TYPE_RES_MITHRIL)/4/(MSG_TYPE_QUESTION)/z136011;
-!!FU&-1:E;
+  !!CM:R0;         (disable standard popup)
+  !!SN:T^wog.36.upgrade.elementalConflux^/?(msg:z)/^number^/(number:y);
+  !!IF:Q1/(PIC_TYPE_RES_MITHRIL)/4/(MSG_TYPE_QUESTION)/(msg:z);
 
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-4;        (take Mithril)
+  !!if&1;
+    !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-4;        (take Mithril)
 
-; Upgrade dwelling
-!!DW4:M0/(upgMon[0])/d;
+    ; Upgrade dwelling
+    !!DW4:M0/(upgMon[0])/d;
 
-!!re i/1/3;
-  !!DW4:Mi/?(mon:y)/d;
-  !!FU(GetUpgradedMonster):P(mon)/?(upgMon);
-  !!DW4&(upgMon)<>(NO_MON):Mi/(upgMon)/d;
+    !!re i/1/3;
+      !!DW4:Mi/?(mon:y)/d;
+      !!FU(GetUpgradedMonster):P(mon)/?(upgMon);
+      !!DW4&(upgMon)<>(NO_MON):Mi/(upgMon)/d;
+    !!en;
+  !!en;
 !!en;
+
 
 !?FU(WOG_36_GetDwellingUpgradeDetails);
 !#VA(mon:x) (upgMon:x) (mithrilOwned:x) (cost:x);
@@ -402,94 +374,57 @@ entrance squares. Do not use this with another script that might do the same
 !!VR(cost):Sy6;
 
 *** Upgrade Mine ***
+
 !?FU(WOG_36_UpgradeMine);
 ; Warning: Mixing classic y and name y is a very bad practice. This needs to be rewritten later.
-!!PO4:V3/?i;
-!!FU&i=1:E;
+!!PO4:V3/?i N?(modNumber:y);
+!!FU|i=1/(modNumber:y):E; // exit if modified
 
-!!FU(WOG_101_CheckMapRule):P12;         (check for "Mines change Resource every week" rule)
+(check for "Mines change Resource every week" rule)
 
-; If Mines change Resources every week is disabled
-!!if&-3;
-  !#VA(usedY[10]:y);
+!!MN4:O?(mineOwner:y) R?(resType:y);   (check who owns mine)
+!#VA(owners[2]:y);
+!!OW:Ri^timerOwner^/(RES_MITHRIL)/?(number:y) T(mineOwner)/?(owners[0]) Ti^timerOwner^/?(owners[1]);
 
-  !!VRy1:S-1;
-  !!MN4:O?y1;   (check who owns mine)
-  !!FU&y1=-1:E;
+!!FU|(mineOwner:y)<=(NO_OWNER)/(owners[0])<>(owners[1]):E;
 
-  !!OW:Ty1/?y21;       (Check team)
-  !!OW:C?y2;           (check current player)
-  !!OW:Ty2/?y22;       (Check team)
-  !!CM:R0;             (disable standard popup)
-  !!FU(WOG_36_SetMinesHint)&y21<>y22:Pv4/v5/v6/99/0/0; (update and display hint text)
-  !!FU&y21<>y22:E; (abort if not same)
-
-  !!PO4:N?y3;
-  !!FU(WOG_36_SetMinesHint)&y3<>0:Pv4/v5/v6/99/0/0; (update and display hint text)
-  !!FU&y3<>0:E;     (see if mine has been upgraded earlier)
-
-  !!IF:V3/0;
-  !!MN4:R?(resType:y);    (Get resource produced)
-  !!VRy5:S4;            (Set base Cost)
-  !!VRy5&(resType)=6:S7;       (Set Cost for Gold Mine)
-  !!OW:R-1/(RES_MITHRIL)/?y7;       (get amount of mithril)
-  !!FU(WOG_36_SetMinesHint)&y7<y5:Pv4/v5/v6/99/0/0; (update and display hint text)
-  !!FU&y7<y5:E;     (check if has enough mithril)
-
-  !!IF:V1/0;
-  !!VR(zIndex:y):S(resType) +136012;
-  !!IF:Q1/7/y5/2/z(zIndex);
-  !!FU&-1:E;
-
-  !!OW:R-1/7/d-y5;            (take mithril)
-  !!PO4:N7;           (set flag so mine is upgraded)
-  !!FU(WOG_36_SetMinesHint):Pv4/v5/v6/0/0/0;  (set hint text for upgraded mine)
-; If Mines change Resources every week is enabled
+!!if&i^wog_101_map_rule_11_isEnabled^;
+  !#VA(upgCosts[7]:y);
+  !!VR(upgCosts[0]):C1/3/1/3/3/3/5;
+  !!VR(cost:y):S(upgCosts[resType]);
 !!el;
-  !!MN4:O?y1/1;  (check who owns Mine)
-  !!OW:C?y2;            (check current player)
-  !!FU(WOG_36_SetMinesHint)&y1<>y2:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
-  !!FU&y1<>y2:E;        (abort if not same)
+  !!VR(cost):S(resType) -5 F0/1 *3 +4; [(Set base Cost && Set More Cost for Gold Mine)]
+!!en;
 
-  !!PO4:N?y3;
-  !!FU(WOG_36_SetMinesHint)&y3<>0:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
-  !!FU&y3<>0:E;         (see if mine has been protected earlier)
+!!if&(number)>=(cost);
+  !!if&i^wog_101_map_rule_11_isEnabled^;
+    !!VRi:S-1;
+  !!el;
+    !!VRi:S(resType);
+  !!en;
+  !!FU(WOG_GetMineName):P(resType:y)/?(mineName:z);
 
-  !!MN4:R?y4/1;  (Get resource produced)
-  !!VRy5:S3;            (Set base Cost: y5)
-  !!VRy5&y4<>1/y4<3:S1; (Set cost for ore/wood: y5)
-  !!VRy5&y4=6:S5;       (Set Cost for Gold Mine: y5)
-  !!OW:R-1/7/?y7;       (get player's current mithril: y7)
-  !!FU(WOG_36_SetMinesHint)&y7<y5:Pv4/v5/v6/99/0/0; (Display hint text for protected mine)
-  !!FU&y7<y5:E;         (check if has enough mithril)
+  !!SN:T^wog.36.mine.%i^/?(msg:z)/^mineName^/(mineName)/^cost^/(cost)/^number^/(number);
 
-  !!VRz1&y4=0:Sz136019;
-  !!VRz1&y4=1:Sz136020;
-  !!VRz1&y4=2:Sz136021;
-  !!VRz1&y4=3:Sz136022;
-  !!VRz1&y4=4:Sz136023;
-  !!VRz1&y4=5:Sz136024;
-  !!VRz1&y4=6:Sz136025;
-  !!CM:R0;                  (disable standard popup)
-  !!IF:Q1/7/y5/2/z136026;
-  !!FU&-1:E;
-  
-  !!VRy5:*-1;
-  !!OW:R-1/7/dy5;           (take mithril)
-  !!VRy4:+2;
-  !!PO4:Ny4;         (set marker so mine is protected: N=2 through 8)
-  !!FU(WOG_36_SetMinesHint):Pv4/v5/v6/0/0/0; (set hint text for protected mine)
+  !!CM:R0;
+  !!IF:Q1/(RES_MITHRIL)/(cost)/2/(msg:z);
+  !!if&1;
+    !!OW:R-1/(RES_MITHRIL)/d-(cost);           [(take mithril)]
+    !!PO4:N2;                                  [set as protected - assigned with Map Rules for mines protection]
+  !!en;
+!!en;
+
+!?FU(WOG_OnCalculateMineIncome_Quit)&i^wog_36_enabled^/i^wog_101_map_rule_11_isEnabled^=0;
+!#VA(x:x) (y:x) (z:x) (baseIncome:x) (newIncome:x);
+!!PO(x)/(y)/(z):N?n;                                                                      [get po value if upgraded]
+!!if&n;
+  !!VR(newIncome):Sd<<1;                                                                  [twice income for this mine]
 !!en;
 
 *** Mine produce Extra, AI gets gold & Replace resource piles and campfires with Mithril ***
 !?FU(OnEveryDay);
 !#VA(day:x) (weekDay:x) (once:x) (owner:x) (isAi:x);
 
-!!IF:V9/0;
-!!IF:V10/0;
-!!UN:P36/?y-1;
-!!IF:V2/0;
-!!IF&y-1=1:V2/1;
 
 *** AI Gets Gold ***
 !!if&(isAi);
@@ -500,129 +435,97 @@ entrance squares. Do not use this with another script that might do the same
   !!en:;
 !!en;
 
-!!if&870;
-  *** Replace Resource Piles ***
-  !!VRy-1&870:S1;
-  !!UN&870:U79/-1/?v1;  (Get number of resource piles on map (for replacing with Mithril))
-  !!VRy-3:S10;
-  !!VRy-3&v1<10:Sv1;       (1 of the ten first stacks will always be replaced. If less than ten stacks total, one will still be replaced)
-  !!VRy-1&870:S1 Ry-3;     (Draw random number to see what pile to start with)
-  !!VRv5:Sv70 +v70 -1;     (Get replacing frequency)
-  !!DO8179/y-1/v1/1&870:P; (Cycle through all resource piles, replace one in what value v70 holds)
+!!IF:V9/0;
+!!IF:V10/0;
+!!UN:P36/?y-1;
+!!IF:V2/0;
+!!IF&y-1=1:V2/1;
 
-  *** Campfires ***
-  !!IF:V9/1;
-  !!UN&870:U12/-1/?v1;   (Get number of campfires on map(for replacing with Mithril))
-  !!VRy-3:S10;
-  !!VRy-3&v1<10:Sv1;      (1 of the ten first stacks will always be replaced. If less than ten stacks total, one will still be replaced)
-  !!VRy-1&870:S1 Ry-3;    (Draw random number to see what pile to start with)
-  !!VRv5:Sv70 +v70 -1;    (Get replacing frequency)
-  !!DO8179/y-1/v1/1&870:P;(Cycle through all Campfires, replace one in what value v70 holds)
+
+
+!!if&i^timerWeekDay^=1/i^timerOnce^/i^wog_171_enabled^;
+  !!FU(WOG_171_PlaceMithrilIntoMillsAndGardens):P;
 !!en;
 
-!!IF:V870/0;    (set Flag to indicate that Mithril has been added)
-!!IF:V9/0;
+!?FU(WOG_171_PlaceMithrilIntoMillsAndGardens);
 
-*** Mines ***
-!!FU(WOG_101_CheckMapRule):P12;          (check for "Mines change Resource every week" rule)
-!!VRy-20:Sc0;
-!!VRy-20:%7;          (get day of week)
+  !!VR(x:y):S-1;
+  !!re i;
+    !!UN:U(OBJ_MYSTICAL_GARDEN)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+    !!VRr:R0/1/(WOG_171_MILLS_GARDENS_FREQUENCY);
+    !!if&r=(WOG_171_MILLS_GARDENS_FREQUENCY);
+      !!GD(x)/(y)/(z):B(RES_MITHRIL);            [add mithril]
+    !!en;
+  !!en;
 
-!!IF:V9/0;
-!!IF&y-20=2:V872/0;   (If day 2 of week, reset flag)
-!!IF&3/872:V9/1;
-!!IF&3/y-20<>1:V9/1;  (Don't do anything about mines if it already have been done or it's not day 1 of the week (only if mines changes resources))
-!!UN:U53/-1/?v5;      (Get number of Mines on the map)
-!!UN&v5<>0:U53/-1/1/7;      (Get location of mine: v7/v8/v9)
-!!DO8178/1/v5/1&2/v5>0/-9:P; (Cycle through all mines)
-!!IF:V9/0;
+  !!VR(x:y):S-1;
+  !!re i;
+    !!UN:U(OBJ_WATER_WHEEL)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+    !!PO(x)/(y)/(z):N?(isUpgraded:y);                 [(Get PO number at position)]
 
-!!VRy-20:Sc0;
-!!VRy-20:%7;      (get day of week)
-!!IF&y-20=1:V9/1; (Check for Windmills, Mystical Gardens and Water Weels, so they only work on day one of the week and if it hasn't been done earlier)
+    !!if&(isUpgraded:y);
+      !!WM(x)/(y)/(z):Bd*2;                           [(Water Wheel now contains new value)]
+      !!PO(x)/(y)/(z):N0;                             [(reset upgrade)]
+    !!en;
+  !!en;
 
-!!VRv6:Sv71 -1; (value for frequency of replacing)
+  !!VR(x:y):S-1;
+  !!re i;
+    !!UN:U(OBJ_WINDMILL)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+    !!VRr:R0/1/(WOG_171_MILLS_GARDENS_FREQUENCY);
+    !!if&r=(WOG_171_MILLS_GARDENS_FREQUENCY);
+      !!ML(x)/(y)/(z):B(RES_MITHRIL)/d;               [(Water Wheel now contains new  mithril)]
+    !!en;
 
-*** Mystical Gardens ***
-; May produce Mithril
-!!UN:U(OBJ_MYSTICAL_GARDEN)/-1/?v5;                (Get number of Mystical Gardens on the map)
-!!UN&v5<>0:U(OBJ_MYSTICAL_GARDEN)/-1/1/7;
-!!DO8180/1/v5/1&9/-872/873/v5>0:P(OBJ_MYSTICAL_GARDEN);(Cycle through all Gardens)
+    !!PO(x)/(y)/(z):N?(isUpgraded:y);                 [(Get PO number at position)]
+    !!if&(isUpgraded:y);
+      !!ML(x)/(y)/(z):Bd/d*2;                         [(Water Wheel now contains new value)]
+      !!PO(x)/(y)/(z):N0;                             [(reset upgrade)]
+    !!en;
+  !!en;
 
-*** Water Weels ***
-!!UN:U(OBJ_WATER_WHEEL)/-1/?v5;                (Get number of Water Weels on the map)
-!!UN&v5<>0:U(OBJ_WATER_WHEEL)/-1/1/7;
-!!DO8180/1/v5/1&2/9/-872/v5>0:P(OBJ_WATER_WHEEL);(Cycle through all Weels)
 
-*** Windmills ***
-!!UN:U(OBJ_WINDMILL)/-1/?v5;                (Get number of Windmills on the map)
-!!UN&v5<>0:U(OBJ_WINDMILL)/-1/1/7;
-!!DO8180/1/v5/1&9/-872/v5>0:P(OBJ_WINDMILL);(Cycle through all Windmills)
-!!VRy-20:Sc0;
-!!VRy-20:%7;          (get day of week)
-!!IF&y-20=1:V872/1;   (Flag that marks that Windmills, Water Wheels and Mystical Gardens have been set up. Also for mines if that rule is in effect)
-!!IF:V9/0;
+!?FU(OnAfterErmInstructions)&i^wog_170_enabled^;
 
-!?FU8180;                    (Mystical Gardens, Water Weels and Windmills)
-!!IF:V1/0;
-!!UN&x16>1:Ux1/-1/-1/7;           (get location in v7, v8 and v9)
+!!FU(WOG_170_ReplaceResourcesAndCampfires):P;
 
-!!VRy2:S0 Rv6;               (Random number to see if to replace normal resource)
+!?FU(WOG_170_ReplaceResourcesAndCampfires);
 
-!!if&x1=(OBJ_MYSTICAL_GARDEN);
-  !!GD7:B?y7;            (Get if it is gold or resource)
-  !!GD7&y7=7:B5;         (resource is normally Gems)
+!!UN:U(OBJ_RESOURCE)/-1/?(objNumber:y);  (Get number of resource piles on map (for replacing with Mithril))
 
-  !!if&873/y2=v6;
-    !!GD7:B7;
-    !!GD7:T1;    (In one in ten, resource is Mithril)
+
+!!UN:C(SOUND_MANAGER)/4/?(sndMgr:y) C(sndMgr)/132/4/?s C(sndMgr)/132/4/0; [block snd mag to remove objects w/o crash]
+
+!!VRe1:S(objNumber) :100 *(WOG_171_MILLS_GARDENS_FREQUENCY);
+!!VR(rndStep:y):Se1;
+!!VR(start:y):S1 R(rndStep);            [set random start pile]
+!!re i/(start:y)/(objNumber);
+  !!UN:U(OBJ_RESOURCE)/-1/i/2;
+  !!OB2:U?t;
+  !!AR2:V?n;
+  !!if&n>1/n<10;
+    !!if|t=(RES_ORE)/t=(RES_WOOD)/t=(RES_GOLD); [( if wood, ore or gold)]
+      !!VRn:Sd>>1 +1;                   [(Divide by 2 Then add 1 to get the same amount range as other stacks)]
+    !!en;
+    !!UN:Ov2/v3/v4/1/0 Iv2/v3/v4/(OBJ_RESOURCE)/(RES_MITHRIL); [(Delete old resource pile)(place Mithril)]
+    !!ARv2/v3/v4:Vn;                    [(set new amount)]
+    !!VRi:R(rndStep);                   [go next if success]
   !!en;
 !!en;
+!!UN:C(sndMgr)/132/4/s;                 [restore snd mgr]
 
-!!POv7/v8/v9:N?y1;           (Get PO number at position)
-!!IF&y1<>2/y1<>3:V1/1;       (abort if wrong number)
-!!POv7/v8/v9&y1=3:N2;        (reset hint text)
-
-!!if&x1=(OBJ_WINDMILL);
-  !!ML7&873/y2=v6:B7/d; (One in ten contains Mithril)
-  !!ML7&-1:Bd/d*2;      (Windmill now contains new value)
+!!UN:U(OBJ_CAMPFIRE)/-1/?(objNumber:y); [(Get number of OBJ_CAMPFIRE on map (for replacing with Mithril))]
+!!VRe1:S(objNumber) :100 *(WOG_171_MILLS_GARDENS_FREQUENCY);
+!!VR(rndStep:y):Se1;
+!!VR(start:y):S1 R(rndStep);            [set random start pile]
+!!re i/(start:y)/(objNumber);           [(Cycle through all Campfires, replace one in what value (WOG_170_RESOURCES_CAMPFIRES_FREQUENCY) holds)]
+  !!UN:U(OBJ_CAMPFIRE)/-1/i/2;
+  !!FRv2/v3/v4:B?r/?n B(RES_MITHRIL)/n; [(Get resource and amount)(Setup to contain Mithril)]
+  !!VRi:R(rndStep);
 !!en;
-
-!!WM7&-1/x1=(OBJ_WATER_WHEEL):Bd*2;        (Water Wheel now contains new value)
-
-
-!?FU8178;
-!!UN&x16>1:U53/-1/-1/7;      (Get location of mine: v7/v8/v9)
-!!IF:V1/0;
-!!FU(WOG_101_CheckMapRule):P12;            (check for "Mines change Resource every week" rule)
-!!IF&3:V1/1;            (If mines change every week, Flag 1 set to True)
-!!MNv7/v8/v9:R?y1/1;    (Get resource produced)
-!!MNv7/v8/v9&-1:O?y5/1; (get owner of mine without redrawing)
-!!OW:C?y20;             (Get Current Player)
-!!FU&-1/y5<>y20:E;      (Exit Function if not current player)
-!!POv7/v8/v9:N?y6;      (get custom number)
-!!FU&y6=0:E;            (Exit Function if PO:N is 0)
-!!VRy7&-1:S1;
-!!VRy7&-1/y1=0:S2;
-!!VRy7&-1/y1=2:S2;
-!!VRy7&-1/y1=6:S1000;
-!!VRy8&-1/v205>173:Sv205;
-!!VRy8&-1/v205>173:-174;        (If resource week, get what resource)
-!!VRy7&-1/v205>173/y1=y8:*2;    (double resource if resource week)
-!!OW&-1:R-1/y1/dy7;             (give adjusted mine resources to player)
-!!POv7/v8/v9&-1:Nd-1;           (set custom number to one less)
-!!FU(WOG_36_SetMinesHint)&-1:Pv7/v8/v9/0/y6/0/0; (update hint text, resetting if no longer upgraded)
-
-*** Special if mine change resource every week ***
-!!FU(WOG_101_CheckMapRule):P12;            (check for "Mines change Resource every week" rule)
-!!FU&-3:E;              (Exit Function if mines don't change every week)
-
-!!POv7/v8/v9:N?y21;          (Get custom number)
-!!VRy20:Sy21 -2; (transform number to resource)
-!!MNv7/v8/v9&-9/y21>1:Ry20/1;(Set resource produced)
-!!FU(WOG_36_SetMinesHint)&-9/y21>1:Pv7/v8/v9/0/y6/0/0; (update hint text)
-!!POv7/v8/v9:N0; (reset custom number so mine is no longer protected)
-!!FU(WOG_36_SetMinesHint)&1:Pv7/v8/v9/0/1/0/0; (update hint text to show unprotected)
 
 
 
@@ -665,10 +568,13 @@ entrance squares. Do not use this with another script that might do the same
 !!FU&y2<1:E;
 !!IF&y2<3:V9/1;
 !!CAv4/v5/v6:N?z1;(Get Town Name)
-!!FU(WOG_101_CheckMapRule):P4;       (check for "Heroes Create Magic Plains each day" rule)
-!!IF&3:M1/z136030;
 !!CM:R0;          (disable standard popup)
-!!FU&3:E;
+
+!!if&i^wog_101_map_rule_3_isEnabled^;
+  !!IF:M1/z136030;
+  !!FU:E;
+!!en;
+
 !!IF&-9:Q1/z136031;
 !!IF&9:Q1/7/1/2/z136032;
 
@@ -699,123 +605,108 @@ entrance squares. Do not use this with another script that might do the same
 !!UN:Iy3/y4/v6/y5/0/y5/0/-1/0; (Place second patch(unless Cursed Ground))
 
 
+
+
+
 *** Witch Hut ***
 !?FU(WOG_36_ChangeWitchHutSkill);
-!#VA(usedY[2]:y);
+!#VA(objType:x)(cost:x); 
 
-!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y2;        (Get amount of mithril)
-!!FU&y2<2:E;       (Check if enough Mithril)
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?(number:y);        (Get amount of mithril)
 
-; Exit if the secondary skill is banned
-!!WHv4/v5/v6:S?(currentSkill:y); (Get skill)
-!!FU&(currentSkill)=-1:E;
+!!if&(number)>=(cost);
+  !!WHv4/v5/v6:S?(currentSkill:y); (Get skill)
+  !!if&(currentSkill)<>(NO_SKILL);
+    
+    !!FU(WOG_36_GetAllowedSkillsList):P?(skills:y);
+    !!SN:M(skills)/?(size:y);
 
-!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
-!!VR(skillBanPtr:y):S(gameMgr) +321112;
-!!FU(NewIntArray):P?(skills:y);
+    !!if&(size);; Exit if the secondary skill is banned
 
+      !!SN:H^secskill^/(currentSkill:y)/0/?(skillName:z) T^wog.36.upgrade.%(objType)^/?(msg:z)/^skillName^/(skillName)/^number^/(number)/^cost^/(cost);
+      !!CM:R0;           (disable standard popup)
+      !!VR(currentSkill):*3 +3;
+      !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(currentSkill)/(RES_MITHRIL)/(cost)/(MSG_TYPE_QUESTION)/(msg:z); 
+      !!VRi^wog_36_mithrilDlg_on^:S(TRUE);  [for compatibility with Commander Witch Huts]
+
+      !!if&1;
+        !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-(cost);   (Take Mithril)
+        !!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?(newSeed:y);
+        !!POv4/v5/v6:H?(value:y) Hd1;       [setting new value for next time rng;]
+        !!VR(newSeed):+(value);
+        !!VR(size):-1;
+        !!FU(WOG_SafeRand):P0/(size)/(newSeed:y)/?i;
+        !!SN:M(skills)/i/?(newSkill:y);
+        !!WHv4/v5/v6:S(newSkill:y); (Set skill)
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+!?FU(WOG_36_GetAllowedSkillsList);
+!#VA(skills:x);
+
+!!FU(NewIntArray):P?(skills);
 !!re i/0/(SEC_SKILL_LAST);
   !!co&i=(currentSkill:y);
-
-  !!UN:C(skillBanPtr)/i/(UNC_INT8)/?(isBanned:y);
-
+  !!FU(WOG_GameMgr_Skill_isBanned):Pi/?(isBanned:y);
   !!if&(isBanned)=(FALSE);
     !!FU(Array_Push):P(skills)/i;
   !!en;
 !!en;
+!!SN:F^ExtendArrayLifetime^/(skills:x);
 
-!!SN:M(skills)/?(size:y);
 
-!!if&(size);
-  !!UN:N4/z1/(currentSkill:y);     (Get skill name)
-  !!CM:R0;           (disable standard popup)
-  !!VR(currentSkill):*3 +3;
-  !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(currentSkill)/(RES_MITHRIL)/2/(MSG_TYPE_QUESTION)/z136043; [legacy]
-  !!VRi^wog_36_mithrilDlg_on^:S(TRUE);  [for compatibility with Commander Witch Huts]
-
-  !!if&1;
-    !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-2;   (Take Mithril)
-    !!FU(WOG_GetRandomSeedByCoord):Pv4/v5/v6/?(newSeed:y);
-    !!POv4/v5/v6:H?(value:y) Hd1;       [setting new value for next time rng;]
-    !!VR(newSeed):+(value);
-    !!VR(size):-1;
-    !!FU(WOG_SafeRand):P0/(size)/(newSeed:y)/?i;
-    !!SN:M(skills)/i/?(newSkill:y);
-    !!WHv4/v5/v6:S(newSkill:y); (Set skill)
-  !!en;
-!!en;
 
 !?FU(OnAdventureMapRightMouseClick_Quit)&i^wog_36_mithrilDlg_on^;
 !!VRi^wog_36_mithrilDlg_on^:S(FALSE);
 
 
-*** Water Wheel ***
-!?FU(WOG_36_UpgradeWaterWheel);
-!#VA(dlgShown:x);
+!?FU(WOG_36_UpgradeObject);
+!#VA(dlgShown:x) (objType:x) (cost:x);
 
 !!VR(dlgShown):S(FALSE);
+!!POv4/v5/v6:N?(upgraded:y);                                                   [(Get PO number)]
+!!if&(upgraded:y)=0;
+  !!OW:R-1/(RES_MITHRIL)/?(number:y);                                          [(Get amount of mithril)]
+  !!if&(number)>=(cost);
+    !!VR(dlgShown):S(TRUE);
+    !!CM:R0;                                                                   [(disable standard popup)]
 
-!!POv4/v5/v6:N?y1;   (Get PO number)
-!!FU|y1=2/y1=3:E;(Abort if Upgraded earlier)
+    !!SN:T^wog.36.upgrade.%(objType)^/?(msg:z)/^number^/(number)/^cost^/(cost);
+    !!IF:Q1/(RES_MITHRIL)/(cost)/(MSG_TYPE_QUESTION)/(msg:z);
 
-!!OW:R-1/7/?y2;  (Get amount of mithril)
-!!FU&y2<5:E; (Check if enough Mithril)
-!!CM:R0;         (disable standard popup)
-!!IF:Q1/7/5/2/z136044;
-!!VR(dlgShown):S(TRUE);
-!!FU&-1:E;
-!!OW:R-1/7/d-5;    (Take Mithril)
-!!POv4/v5/v6:N2;   (setup so it's upgraded)
-!!POv4/v5/v6&y5=0:N3;(setup so it's upgraded (and visited hint text))
+    !!if&1;
+      !!OW:R-1/(RES_MITHRIL)/d-(cost);
+      !!POv4/v5/v6:N2;                                                         [(setup so it's upgraded)]
+    !!en;
+  !!en;
+!!en;
 
-
-***  Windmill ***
-!?FU(WOG_36_UpgradeWindmill);
-!#VA(dlgShown:x);
-
-!!VR(dlgShown):S(FALSE);
-
-!!POv4/v5/v6:N?y1;   (Get PO number)
-!!FU|y1=2/y1=3:E;(Abort if Upgraded earlier)
-
-!!OW:R-1/7/?y2;  (Get amount of mithril)
-!!FU&y2<5:E; (Check if enough Mithril)
-!!CM:R0;         (disable standard popup)
-!!IF:Q1/7/5/2/z136045;
-!!VR(dlgShown):S(TRUE);
-!!FU&-1:E;
-!!OW:R-1/7/d-5;       (Take Mithril)
-!!POv4/v5/v6:N2;      (setup so it's upgraded)
-!!POv4/v5/v6&y5=0:N3;(setup so it's upgraded(and visited hint text))
-
-*** Setup hint text for visted windmills and water wheels ***
-!?OB(OBJ_WINDMILL);
-!!UN:P36/?y-2;
-!!POv998/v999/v1000&y-2=1:N?y-1;
-!!POv998/v999/v1000&y-1=2/y-2=1:N3; (For Hint text)
-
-!?OB(OBJ_WATER_WHEEL);
-!!UN:P36/?y-2;
-!!POv998/v999/v1000&y-2=1:N?y-1;
-!!POv998/v999/v1000&y-1=2/y-2=1:N3; (For Hint text)
 
 !?FU(WOG_36_UpgradeShipyard);              (Shipyard)
-!!VRy1:Sv4;
-!!VRy1:-1;             (Setup location where Lighthouse will be placed)
-!!TRy1/v5/v6:E?y2;
-!!FU&y2=0:E;   (check if entrance(which means that there's a lighthouse already))
-!!SYv4/v5/v6:O?y3; (check who owns yard)
-!!OW:C?y2;         (check current player)
-!!FU&y2<>y3:E; (if not the same, abort)
-!!OW:R-1/7/?y2;    (Get amount of mithril)
-!!FU&y2<3:E;   (Exit if not enough Mithril)
-!!CM:R0;           (disable standard popup)
-!!IF:Q1/7/3/2/z136046;
-!!FU&-1:E;
-!!OW:R-1/7/d-3;      (Take Mithril)
-!!TRy1/v5/v6:P1;     (Make square passable(Maybe unnecessary))
-!!UN:Iy1/v5/v6/42/0; (Place Lighthouse)
-!!MNy1/v5/v6:Oy3;    (Setup owner)
+!#VA(objType:x) (cost:x);
+
+
+!!VR(x:y):Sv4 -1;                                                                [(Setup location where Lighthouse will be placed)]
+!!TR(x:y)/v5/v6:E?(pass:y);
+!!if&(pass);                                                                     [(check if entrance(which means that there's a lighthouse already))]
+  !!SYv4/v5/v6:O?o;                                                              [(check who owns yard)]
+  !!if&o=i^timerOwner^;                                                          [(if not the same, abort)]
+    !!OW:R-1/(RES_MITHRIL)/?(number:y);                                          [(Get amount of mithril)]
+    !!if&(number)>=(cost);
+      !!CM:R0;                                                                   [(disable standard popup)]
+      !!SN:T^wog.36.upgrade.%(objType)^/?(msg:z)/^number^/(number)/^cost^/(cost);
+      !!IF:Q1/(RES_MITHRIL)/(cost)/(MSG_TYPE_QUESTION)/(msg:z);
+      !!if&1;
+        !!OW:R-1/(RES_MITHRIL)/d-(cost);                                           [(Take Mithril)]
+        !!TR(x:y)/v5/v6:P1;                                                        [(Make square passable(Maybe unnecessary))]
+        !!UN:I(x:y)/v5/v6/(OBJ_LIGHTHOUSE)/0;                                      [(Place Lighthouse)]
+        !!MN(x:y)/v5/v6:Oi^timerOwner^;                                            [(Setup owner)]
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
 
 *** Monoliths ***
@@ -844,17 +735,6 @@ entrance squares. Do not use this with another script that might do the same
 !!UN:Sv3/v4/v5/y1/2; (open shroud)
 !!UN:Lv3/v4/v5/1500; (Center view for 1.5s - Archer)
 
-*** University ***
-!?FU(WOG_36_UpgradeUniversity);
-!!IF:V1/0; (Init flag)
-!!VRy9:S4;                  (init Mithril Cost for upgrading to Advanced Universities)
-!!OW:R-1/7/?y7;             (get owner Mithril)
-!!PO4:N?y8; (check if already upgraded)
-!!IF&y8<>2/y7=>y9:Q1/7/y9/2/z136061; (upgrading need Mithril)
-!!CM&y8<>2/y7=>y9:R0;      (disable standard msg)
-!!PO4&1:N2;        (setup Advanced University PO number (=2 if upgraded with Mithril))
-!!VRy7&1:-y9;              (Mithril calculations for payment)
-!!OW&1:R-1/7/y7;           (set updated Mithril)
 
 !$OB104/0;                   (post-visit trigger for Universities)
 !!POv998/v999/v1000:N?y-5;   (check if Advanced University)
@@ -904,83 +784,70 @@ entrance squares. Do not use this with another script that might do the same
 !!HE-1&y-1<28/y-2=28:Sy-1/2; (only 1 skill, no choice)
 !!OW&y-1<28:R-1/6/d-3000;    (pay 3000 gold)
 
+!?FU(WOG_CreateERMHook)&i^wog_36_enabled^;
+!!SN:Ex1/1/4249128/(WOG_Hook_GetMineDescription);
+!!SN:Ex1/1/4283008/(WOG_Hook_GetObjectRMCDescription);
 
-!$OB(OBJ_MINE);                          (Post-visit trigger for Mines)
-  !!UN:P36/?y-1;                   (Check if Mithril Enhancements enabled: y-1)
-  !!PO998:N?y-2;                   (Check PO:N number: y-2)
-  !!FU|y-1<>1/y-2=0:E;             (Exit trigger if script not enabled or not upgraded/protected)
-  !!FU(WOG_36_SetMinesHint):Pv998/v999/v1000/0/0/0; (Update mine hint text)
+!?FU(WOG_Hook_GetObjectRMCDescription);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(mapItem:y);
+!!if&(mapItem)>(BIT_16);
+  !!UN:C(mapItem:y)/30/2/?(objType:y) C(mapItem:y)/34/2/?(objSubtype:y) C(ebp)/-32/4/?(coords:y);
+  !!FU(WOG_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
 
+  !!SN:O?(x:y)/?(y:y)/?(z:y);
+  !!VRt:S(objType);
 
-!?FU(WOG_36_SetMinesHint);              (Hint text for upgraded/protected mines)
- (Location of mine = x1/x2/x3, x4=99 if called from CM Trigger)
- (x5=1 if mine no longer upgraded, restore hint text)
- (x6=88 if CM Trigger call when not clicking on yellow square)
-!#VA(usedY[6]:y) (mineType:y) (owner:y);
-!#VA(x:x) (y:x) (z:x) (rcType:x) (restoreHint:x) (notYellowSquare:x);
+  !!if&(objType)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(WOG_AdvMgr_HideHero):P(x)/(y)/(z);
+    !!OB(x)/(y)/(z):T?t;
+  !!en;
 
-!!OBx1/x2/x3:H?y4;             (Hint text z variable index: y4)
-!!VRx1&x6=88/y4=0:-1;          (Adjust x1 variable for possible 1 square left click: x1)
-!!OBx1/x2/x3&x6=88/y4=0:H?y4;  (Hint text z variable index if clicked on left: y4)
-!!VRx1&x6=88/y4=0:+2;          (Adjust x1 variable for possible 1 square right click: x1)
-!!OBx1/x2/x3&x6=88/y4=0:H?y4;  (Hint text z variable index if clicked on right: y4)
+  !!if|t=(OBJ_UNIVERSITY)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+    !!PO(x)/(y)/(z):N?(isUpgraded:y);
 
-!!CM&x4=99/y4=0:R1;    (Re-enable normal right-click operation for CM trigger if exiting)
-!!FU&x4=99/y4=0:E;     (Exit if mine not upgraded/protected and called by CM trigger)
+    !!if&(isUpgraded);
+      !!SN:T^wog.36.hint.%t^/?(upg:z);
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
+      !!SN:B(textBuffer)/d/?(currHint:z) B(textBuffer)/d/^%(upg)%(currHint:z)^;
+    !!en;
+  !!en;
 
-!!MNx1/x2/x3:O?(owner)/1; (Type of Mine: y1, Owner: y2)
-!!OBx1/x2/x3:U?(mineType);     (Subtype of mine: y6)
-
-!!FU(WOG_GetMineName):P(mineType)/?z-1;
-!!FU(WOG_101_CheckMapRule):P12;     (check for "Mines change Resource every week" rule)
-
-!!if&-3;
-  !!VRz-2:Sz136066; (Upgraded: z-2)
-!!el;
-  !!VRz-2&3:Sz136067; (Protected: z-2)
+  !!if&(objType)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(WOG_AdvMgr_ShowHero):P(x)/(y)/(z);
+  !!en;
 !!en;
 
-!!if&(owner)<>(NO_OWNER);
-  !!FU(WOG_GetColorOwnerString):P(owner)/?z-3;
-!!el;
-  !!VRz-3:Sz136086; (no player: z-3)
+
+!?FU(WOG_Hook_GetMineDescription);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(mine:y);
+!!UN:C(mine)/60/-1/?j C(mine)/61/-1/?k C(mine)/62/-1/?l;
+!!POj/k/l:N?n;
+!!if&n;            [if true]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y); [get current description]
+  !!SN:T^wog.36.mine.upgrade%i(wog_101_map_rule_11_isEnabled)^/?(msg:z) B(ebx:y)/d/?z1 B(ebx)/d/^%(msg:z)%z1^;;B(ecx)/d/?z2;
 !!en;
 
-!!MNx1/x2/x3:R?(mineRes:y)/1 ; (Type of Mine: y1, Owner: y2)
+!?FU(OnAdvMapTileHint)&i^wog_36_enabled^;
+!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
+  !!VRt:S(objType:x);
+  !!if&(objType:x)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(WOG_AdvMgr_HideHero):P(x)/(y)/(z);
+    !!OB(x)/(y)/(z):T?t;
+  !!en;
+  !!if|t=(OBJ_UNIVERSITY)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+    !!PO(x)/(y)/(z):N?(isUpgraded:y);
+
+    !!if&(isUpgraded);
+      !!MM:M?(currHint:z); ^%(newHint)^;
+      !!SN:T^wog.36.hint.%t^/?(upg:z);
+      !!MM:M^%(upg:z)%(currHint:z)^;
+    !!en;
+  !!en;
+  !!if&(objType:x)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
+    !!FU(WOG_AdvMgr_ShowHero):P(x)/(y)/(z);
+  !!en;
 
 
-!!FU(WOG_GetResourceName):P(mineRes)/?z-4;
-
-!!VRy5:S809 +(mineRes);   (Index for hint text z variable: y5)
-!!VRzy5&x4=0:Sz136084;  (Upgraded/Protected mine hint text: zy5)
-!!OBx1/x2/x3&x4=0:Hzy5; (Set new hint text: zy5) (z809..z815)
-!!OBx1/x2/x3&x5=1:H0; (If x5=1 (mine no longer upgraded or protected), restore hint text)
-
-!!IF&x4=99:Q1/-1/-1/4/z136083; (Display text for CM trigger)
-!!CM&x4=99:R0; (Disable standard right-click operation)
-
-
-*** Replacement functions ***
-
-!?FU8179;
-
-*** Resource Pile ***
-!!UN&-9:U79/-1/x16/2;   (Store location of resource pile nr x16 in v2/v3/v4)
-!!OBv2/v3/v4&-9:U?y1;   (Get Subtype)
-!!ARv2/v3/v4&-9:V?y2;   (Get amount)
-!!VRy3:Sy2;
-!!VRy2&-9/y1<>1/y1<>3/y1<>4/y1<>5::2;(Divide by 2 if wood, ore or gold)
-!!VRy2&-9/y1<>1/y1<>3/y1<>4/y1<>5:+1;(Then add 1 to get the same amount range as other stacks)
-
-!!UN&-9/y3<10/y3>2:Ov2/v3/v4;      (Delete old resource pile)
-!!UN&-9/y3<10/y3>2:Iv2/v3/v4/79/7/79/7/-1/0; (place Mithril)
-!!ARv2/v3/v4&-9/y3<10/y3>2:Vy2;    (set new amount)
-!!VRv6&-9/y3<10/y3>2:+1;
-
-*** Campfire ***
-!!UN&9:U12/-1/x16/2;    (Store location of campfire nr x16 in v2/v3/v4)
-!!FRv2/v3/v4&9:B?y1/?y2;(Get resource and amount)
-!!FRv2/v3/v4&9:B7/y2;   (Setup to contain Mithril)
-
-!!VRx16&-9/y2<10/y2>2:Rv5;
-!!VRx16&9:Rv5; (distance between piles is random between 1 and 30. If resource and not replaced, move to next)

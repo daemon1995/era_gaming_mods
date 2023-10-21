@@ -60,7 +60,12 @@ ZVSE2
 !!SN:E(address)/1/5968384/(WOG_OnUpdateHeroInteractionScreen);       [trigger WHILE hero meeting screen]
 !!SN:E(address)/1/5942672/(WOG_OnBeforeHeroSwap);                    [trigger AFTER OnBeforeHeroInteraction but BEFORE Dlg show (works in town screen)]
 !!SN:E(address)/1/4893738/(WOG_OnAfterHeroSwap);                     [trigger AFTER Dlg Closed but BEFORE OnAfterHeroInteraction(works in town screen)]
-!!SN:E(address)/1/4526215/(WOG_OnChangeWindowByResources);           [trigger WHEN counts what pic to display in status window for pickuped resource]
+*!SN:E(address)/1/4526215/(WOG_OnChangeWindowByResources);           [trigger WHEN counts what pic to display in status window for pickuped resource]
+
+
+!!SN:E(address)/1/4950122/(WOG_HOOK_OnResourceMineIncomeCalculation); [trigger right before not gold mine tries to add income from int[8] table at 0x677978 to player income]
+!!SN:E(address)/1/5010999/(WOG_HOOK_OnGoldMineIncomeCalculation);     [trigger right before gold mine tries to add income from int at 0x4C7647 to player income]
+
 
 !!SN:E(address)/1/4462998/(WOG_HOOK_AfterAttackMainFunc);            [Trigger after melee attack, before retaliation]
 !!SN:E(address)/1/4455129/(WOG_HOOK_AfterAttackMainFunc);            [Trigger after shooting]
@@ -110,6 +115,52 @@ ZVSE2
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stackStruct:y) C(stackStruct)/244/(UNC_INT)/?(side:y) C(stackStruct)/248/(UNC_INT)/?(stackPerSide:y);
 !!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackPerSide);
 !!FU(WOG_BattleStack_InitParams):P(stackId)/(side);
+
+
+
+!?FU(WOG_HOOK_OnResourceMineIncomeCalculation);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(gameMgr:y);                                             [game mgr]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(mineOffset:y);                                          [iteratable mine ptr]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(baseIncome:y);                                          [get bonus from table read]
+
+!!UN:C(gameMgr)/320396/4/?(mines:y);                                                           [get mines vector ptr]
+!#VA(pos[3]:y);
+
+!!re i/0/2;
+  !!VR(posOffset:y):Si +60 +(mineOffset:y);                                                    [find x/y/z coordinates this mine ptr offset]
+  !!UN:C(mines)/(posOffset)/-1/?(pos[i]);                                                      [read into array]
+!!en;
+!!VR(newIncome:y):S(baseIncome);
+
+!!FU(WOG_OnCalculateMineIncome):P(pos[0])/(pos[1])/(pos[2])/(baseIncome)/?(newIncome);         [@daemon_n recommends this for addition/subtraction]
+!!FU(WOG_OnCalculateMineIncome_Quit):P(pos[0])/(pos[1])/(pos[2])/(baseIncome)/?(newIncome);    [@daemon_n recommends this for multiplication/division]
+!!if&(baseIncome)<>(newIncome);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(newIncome);
+!!en;
+
+!?FU(WOG_HOOK_OnGoldMineIncomeCalculation);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(mine:y) C(mine)/1/?(mineOwner:y) C(mine)/1/1/?(type:y); [cause of hook overriden default income value]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(playerId:y);                        [I set it earlier and check owner and type manually]
+
+!!if&(mineOwner)=(playerId)/(type)=(RES_GOLD);                                                 [if owner and type are proper]
+  !#VA(pos[3]:y);
+  !!re i/0/2;
+    !!VR(posOffset:y):Si +60;                                                                  [find x/y/z coordinates this mine ptr offset]
+    !!UN:C(mine)/(posOffset)/-1/?(pos[i]);
+  !!en;
+  !!UN:C5011012/3/4/?(baseIncome:y);                                                           [1000 by default]
+  !!VR(newIncome:y):S(baseIncome);
+
+  !!FU(WOG_OnCalculateMineIncome):P(pos[0])/(pos[1])/(pos[2])/(baseIncome)/?(newIncome);       [@daemon_n recommends this for addition/subtraction]
+  !!FU(WOG_OnCalculateMineIncome_Quit):P(pos[0])/(pos[1])/(pos[2])/(baseIncome)/?(newIncome);  [@daemon_n recommends this for multiplication/division]
+
+  !!UN:C(ebp)/-4/4/d(newIncome);                                                               [repeat orignal bonus addition]
+!!en;
+
+!!SN:X?t/0;                                                                                    [an easter egg for Bersy]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5011019;                                                  [return to next mine searching]
+
+
 
 // EXAMPLE OF USING
 *?FU(WOG_OnNpcPlacesWarMachine);
@@ -250,7 +301,7 @@ ZVSE2
 !!el;
   !!HE(hero[0]):Z?(heroPtr:y) N?(heroId:y);
 !!en;
-!!SN:E5077056/(CALLCONV_THISCALL)/(heroPtr)/(OBJ_HERO)/(heroId:y);         [hide hero if it is there]
+!!SN:E5077056/(CALLCONV_THISCALL)/(heroPtr)/(OBJ_HERO)/(heroId:y);         [show hero if it is there]
 
 !?FU(WOG_AdvMgr_HeroEnterObject);
 ; x1, x2, x3 - coords (x/y/z)
@@ -1006,7 +1057,7 @@ The game may fall at any time.^;
 !!SN:E4696752/(CALLCONV_FASTCALL)/t;                                      [is mon a war machine]
 !!VRv1:&1;                                                                [check byte]
 !!if&v1;                                                                  [if true]
-  !!SN:X?y99/0;
+  !!SN:X?t/0;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4928298;                           [jump over adding near stack as reached target]
 !!en;
 
