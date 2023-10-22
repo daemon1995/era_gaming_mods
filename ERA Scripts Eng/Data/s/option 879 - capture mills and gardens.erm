@@ -28,8 +28,12 @@ ZVSE2
   !!SN:E(address)/1/4881456/(ES_OnPlayerVisit_MillOrFarden); [Trigger on player visiting Wind Mill]
   !!SN:E(address)/1/4263804/(ES_OnMapItem_GetOwner);
   !!SN:E(address)/1/4263370/(ES_OnMapItem_Draw);
-  !!SN:E(address)/1/4283008/(ES_Hook_GetObjectRMCDescription);
   !!SN:E(address)/1/5183597/(ES_Hook_OnPlayerDefeated);
+
+  !!SN:E(address)/1/4239726/(ES_HOOK_OnObjectHintGetType);
+
+  !!SN:E(address)/1/4274465/(ES_HOOK_OnObjectRmcHintGetType);
+  !!SN:E(address)/1/4283008/(ES_HOOH_OnObjectRmcHintMsgBox);
 !!en;
 
 !?FU(OnGameEnter);
@@ -117,40 +121,8 @@ ZVSE2
   !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
 
 
-!?FU(OnAdvMapTileHint);
-!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
-!#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
 
-  !!UN:P879/?(wogOption:y);
-  !!FU&(wogOption)<>(TRUE):E;
-  !!VRt:S(objType:x);
 
-  !!if&(objType:x)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
-    !!FU(ES_AdvMgr_HideHero):P(x)/(y)/(z);
-    !!OB(x)/(y)/(z):T?t;
-  !!en;
-
-  !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
-    *!IF:L^%^;
-    !!PO(x)/(y)/(z):O?(owner:y);
-    ; Correct owner if the owner has been removed from the game
-    !!OW:I(owner)/?(isAi:y)/?(hasLost:y);
-    !!if&(hasLost);
-      !!VR(owner):S(NO_OWNER);
-      !!PO(x)/(y)/(z):O(NO_OWNER);
-    !!en;
-    !!VR(newHint:z):S^^;
-    !!if&(owner)>(NO_OWNER);
-      !!VR(ownerStrIndex:y):S(owner) +23;
-      !!FU(GetTextFileString):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
-      !!VR(newHint:z):+^ - %(ownerStr)^;
-      !!MM:M?(hint:z) M^%(hint:z)%(newHint:z)^;
-    !!en;
-  !!en;
-
-  !!if&(objType:x)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
-    !!FU(ES_AdvMgr_ShowHero):P(x)/(y)/(z);
-  !!en;
 
 !?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1/i^timerOnce^; [поставка ресурсов владельцам мельниц/садов каждый первый день недели, начина€ с 8го дн€]
   !!UN:P879/?(wogOption:y);             [провер€ем включена ли опци€ в y1]
@@ -237,54 +209,41 @@ ZVSE2
 !!PO(x)/(y)/(z):V0/(resType) V1/(value);
 
 
+!?FU(ES_HOOK_OnObjectHintGetType);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y) C(ebx)/30/2/?t;(objType:y);
+!!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+  !!VRi^es_879_hint_object_type^:St;
+!!en;
+
+!?FU(OnAdvMapTileHint)&i^es_879_hint_object_type^;
+!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!!PO(x)/(y)/(z):O?(owner:y);
+!!if&(owner)>(NO_OWNER);
+  !!VR(ownerStrIndex:y):S(owner) +23;
+  !!FU(GetTextFileString):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
+  !!VR(newHint:z):S^ - %(ownerStr)^;
+  !!MM:M?(hint:z) M^%(hint:z)%(newHint:z)^;
+!!en;
+!!VRi^es_879_hint_object_type^:S0;
 
 
-!?FU(ES_Hook_GetObjectRMCDescription);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!?FU(ES_HOOK_OnObjectRmcHintGetType);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(mapItem:y);
 !!if&(mapItem)>(BIT_16);
-  !!UN:C(mapItem:y)/30/2/?(objType:y) C(mapItem:y)/34/2/?(objSubtype:y) C(ebp)/-32/4/?(coords:y);
-  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
-
-  !!SN:O?(x:y)/?(y:y)/?(z:y);
-  !!VRt:S(objType);
-
-  !!if&(objType)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
-    !!FU(ES_AdvMgr_HideHero):P(x)/(y)/(z);
-    !!OB(x)/(y)/(z):T?t;
-  !!en;
-
+  !!UN:C(mapItem:y)/30/2/?t;(objType:y);
   !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
-    !!PO(x)/(y)/(z):O?(owner:y);
-    !!if&(owner)<>(NO_OWNER);
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
-      !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
-      !!SN:B(textBuffer)/d/?(currHint:z) B(textBuffer)/d/^%(currHint:z)%T(es.endl)%(ownerStr:z)^;
-    !!en;
-  !!en;
-
-  !!if&(objType)=(OBJ_HERO)/(objSubtype)=(NO_HERO);
-    !!FU(ES_AdvMgr_ShowHero):P(x)/(y)/(z);
+    !!VRi^es_879_rmc_hint_object_type^:St;
   !!en;
 !!en;
 
-
-
-*?FU(ES_879_GetObjectName);
-*#VA(x:x) (y:x) (z:x) (objType:x) (objNamePtr:x);
-
-  ; Set up object names
-  *!FU(GetTextFileString):P^objnames^/(objType)/?(objName:z); [windmill]
-  ; Set up "Improved" object text if Mithril Enhancedment is enabled
-  *!VR(isUpg:y):S(FALSE);
-  *!UN:P36/?(enhMithril:y);
-  *!if&(enhMithril:y);
-    *!PO(x)/(y)/(z):N?(isUpg);
-    *!if&(isUpg);
-      *!SN:T^wog.36.hint.%(objType)^/?(upg:z);
-      *!VR(objName):S^%(upg:z)%(objName)^;
-    *!en;
-  *!en;
-  *!VR(objNamePtr):Z(objName);
-
-** end
+!?FU(ES_HOOH_OnObjectRmcHintMsgBox)&i^es_879_rmc_hint_object_type^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-32/4/?(coords:y);
+!!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
+!!SN:O?(x:y)/?(y:y)/?(z:y);
+!!VRt:Si^es_879_rmc_hint_object_type^;
+!!PO(x)/(y)/(z):O?(owner:y);
+!!if&(owner)<>(NO_OWNER);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
+  !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
+  !!SN:B(textBuffer)/d/?(currHint:z) B(textBuffer)/d/^%(currHint:z)%T(es.endl)%(ownerStr:z)^;
+!!en;
