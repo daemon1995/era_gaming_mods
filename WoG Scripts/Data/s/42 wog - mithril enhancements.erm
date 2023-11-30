@@ -103,6 +103,7 @@ entrance squares. Do not use this with another script that might do the same
 
 !#FU(WOG_36_Initialization):P;
 
+
 *** Display Mithril on Rightclick on Kingdom Overview ***
 !?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=(ITEM_ADVMAP_KINGDOM_OVERVIEW_BTN)/i^wog_149_enabled^;
 !!CM:R0;
@@ -140,7 +141,7 @@ entrance squares. Do not use this with another script that might do the same
     !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
     !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/^%T(wog.36.pickup)^/(RES_MITHRIL)/(resAmount);
 
-    *!if&i^WOG_IsHdMod^;
+    *!if&i^wog_hdMod_enabled^;
       *!VRi^WOG_149_mithril_pickup^:S(TRUE);
       *!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(mithrilText)/(RES_GOLD)/(resAmount);
     *!el;
@@ -151,7 +152,7 @@ entrance squares. Do not use this with another script that might do the same
 *?OB(OBJ_RESOURCE)/(RES_GOLD)&999;  [Mithril is trigger]
 *!VRi^WOG_149_mithril_pickup^:S(FALSE);
 
-*?FU(WOG_OnChangeWindowByResources)&i^WOG_149_mithril_pickup^/i^WOG_IsHdMod^;;
+*?FU(WOG_OnChangeWindowByResources)&i^WOG_149_mithril_pickup^/i^wog_hdMod_enabled^;;
 451087
   *!UN:Cx1/216/(SIZEOF_INT32)/?(resType:y);                                  [is equal to line below]
 
@@ -245,15 +246,11 @@ entrance squares. Do not use this with another script that might do the same
     !!en;
 
     ; Objects
-
     !!FU(WOG_36_UpgradeObject)|(type)=(OBJ_WINDMILL)/(type)=(OBJ_WATER_WHEEL):P?(dlgShown)/(type)/5; [Windmill][Water Wheel]
     !!FU(WOG_36_UpgradeObject)|(type)=(OBJ_UNIVERSITY):P?(dlgShown)/(type)/4;                        [University]
 
-
-
-    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P1/(CURRENT_HERO);
-    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_TWO_WAY):P2/(CURRENT_HERO); [Monolith (with instruction on which type and what hero]
-
+    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P(OBJ_MONOLITH_ONE_WAY_EXIT)/(subtype);
+    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_TWO_WAY):P(OBJ_MONOLITH_TWO_WAY)/(subtype); [Monolith (with instruction on which type and what hero]
 
     !!FU(WOG_36_ChangeWitchHutSkill)&(type)=(OBJ_WITCH_HUT):P(type)/2; [Witch Hut]
 
@@ -677,7 +674,7 @@ entrance squares. Do not use this with another script that might do the same
     !!IF:Q1/(RES_MITHRIL)/(cost)/(MSG_TYPE_QUESTION)/(msg:z);
 
     !!if&1;
-      !!OW:R-1/(RES_MITHRIL)/d-(cost);
+      !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-(cost);
       !!POv4/v5/v6:N2;                                                         [(setup so it's upgraded)]
     !!en;
   !!en;
@@ -711,34 +708,51 @@ entrance squares. Do not use this with another script that might do the same
 
 *** Monoliths ***
 !?FU(WOG_36_CheckMonolithExit);
-!!OW:R-1/7/?y2;    (Get amount of mithril)
+!#VA(objType:x) (objSubtype:x);
+
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/?y2;    (Get amount of mithril)
 !!FU&y2<1:E;   (Check if enough Mithril)
-!!VRz1&x1=1:Sz136047;
-!!VRz1&x1=2:Sz136048;
-!!HEx2:B0/?z2; (get hero name)
-!!HEx2:R2/?y1;
-!!VRz3&y1=0:Sz136049;
-!!VRz3&y1=1:Sz136050;
+
+!!VRz1&(objType)=(OBJ_MONOLITH_ONE_WAY_EXIT):Sz136047;
+!!VRz1&(objType)=(OBJ_MONOLITH_TWO_WAY):Sz136048;
+!!OW:A(CURRENT_PLAYER)/?(hero:y);
+!!HE(hero):B0/?z2; (get hero name)
+!!HE(hero):R2/?(gender:y);
+!!SN:T^wog.who%(gender)^/?z3;
 
 !!CM:R0; (disable standard popup)
 !!IF:Q1/z136051;
 !!FU&-1:E;
 
-!!OW:R-1/7/d-1;   (Take Mithril)
-!!VRv1&x1=1:S44;
-!!UN:Uv1/v2/?y2;  (get number of liths)
-!!DO8186/1/y2/1:P;(loop through liths)
+!!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d-1;   (Take Mithril)
 
-!?FU8186;
-!!UN:Uv1/v2/x16/3;   (Get coords of monolith)
-!!OW:C?y1;           (Get current player)
-!!UN:Sv3/v4/v5/y1/2; (open shroud)
-!!UN:Lv3/v4/v5/1500; (Center view for 1.5s - Archer)
+!!VR(x:y):S-1;
+!!VR(lithFound:y):S(FALSE);
 
+; loop through all the liths
+!!re i;
+  !!UN:U(objType)/(objSubtype)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
+  ; Skip the clicked two way monolith
+  !!co&(objType)=(OBJ_MONOLITH_TWO_WAY)/(x)=v4/(y)=v5/(z)=v6;
+
+  !!UN:S(x)/(y)/(z)/(CURRENT_PLAYER)/2; [open shroud]
+  !!UN:L(x)/(y)/(z)/1500;               [Center view for 1.5s]
+  !!VR(lithFound):S(TRUE);
+!!en;
+
+; Move the camera back
+!!if&(lithFound);
+  !!VR(currX:y):Sv4 -i^wog_screenOffsetX^;
+  !!VR(currY:y):Sv5 -i^wog_screenOffsetY^;
+  !!UN:L(currX)/(currY)/v6/10;          [move back]
+!!en;
 
 !$OB104/0;                   (post-visit trigger for Universities)
 !!POv998/v999/v1000:N?y-5;   (check if Advanced University)
 !!FU&y-5<>2:E;               (exit trigger if not an Advanced University)
+
 !!VRy-1:S28; !!VRy-2:S28;    (set skill variables out of range)
 !!VRy-3:S0;                  (init trigger-based var y-3)
 !!IF:V2/0;                   (init flag 2)
