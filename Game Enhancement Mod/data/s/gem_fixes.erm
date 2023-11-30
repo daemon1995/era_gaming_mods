@@ -1351,7 +1351,8 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!SN:Ex1/1/7771289/(gem_OnNPCGetRingBonus);
   !!UN:C7771553/-1/1/1;                                                                          [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3]
 
-
+  ; Brute Gold
+  !!SN:Ex1/1/7772754/(gem_Brute_AddGold);
 
 !?FU(gem_OnBruteGoldBonusMessage); // replace brute message with adv map dlg info panel message
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(strPtr:y) Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-64/4/?(gold:y);
@@ -1447,6 +1448,43 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
       !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/2;                           [set skill cast value as at advanced skill lvl]
     !!en;
   !!en;
+
+// Brute Gold
+// by Berserker
+!?FU(gem_Brute_AddGold);
+!!SN:X?(hook:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_UINT32)/?(ebp:y);
+!!UN:C(ebp)/-64/(UNC_INT32)/?(bruteGold:y);
+!!UN:C(ebp)/-68/(UNC_INT32)/?(playerGold:y);
+
+; Fix calculated Brute gold bonus overflow
+!!VR(bruteGold)&(bruteGold)<0:S(INT_MAX);
+!!FU(gem_Brute_SafeAdd):P(playerGold)/(bruteGold)/?(finalGold:y);
+!!VR(playerGold):S(finalGold) -(bruteGold);
+!!UN:C(ebp)/-64/(UNC_INT32)/(bruteGold);
+!!UN:C(ebp)/-68/(UNC_INT32)/(playerGold);
+
+!?FU(gem_Brute_SafeAdd);
+!#VA(value1:x);
+!#VA(value2:x);
+!#VA(result:x);
+
+!!VR(result):S(value1) +(value2);
+!!VR(sign1:y):S1;
+!!VR(sign1)&(value1)<0:S-1;
+!!VR(sign2:y):S1;
+!!VR(sign2)&(value2)<0:S-1;
+
+!!if&(sign1)=(sign2);
+  !!VR(sign3:y):S1;
+  !!VR(sign3)&(result)<0:S-1;
+
+  ; Overflow changed result sign
+  !!if&(sign1)<>(sign3);
+    !!VR(result)&(sign1)<0:S(INT_MIN);
+    !!VR(result)&(sign1)>=0:S(INT_MAX);
+  !!en;
+!!en;
 
 // Fix occasionally commanders receiving incorrect exp with when transfering between campaign zones
 // by Archer30
