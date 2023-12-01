@@ -672,14 +672,16 @@ ZVSE2
 ; This function is executed in 1000 es - stdlib in order to be sooner than Advanced Witch Huts (option 194 from WoG Scripts)
 !?FU(ES_760_StoreSecSkillLevel);
 !!WH998:S?(secSkill:y);
-!!HE(CURRENT_HERO):S(secSkill)/?i^es_760_prevSecSkillLv^;                           // Номер навыка у ведьмы/уровень навыка у героя
+!!HE(CURRENT_HERO):S(secSkill)/?(witchSkill:y);
+!!VRi^es_760_prevSecSkillLvPlusOne^:S(witchSkill) +1;                           // Номер навыка у ведьмы/уровень навыка у героя
 
-; Warning: Different trigger should be used depending on whether Advanced Witch Huts is enabled, as OB:S on ! ?OB blocks the execution of ! $OB
-; Both triggers Probably can be replaced with 4AA766
-!?OB(OBJ_WITCH_HUT)&i^wog_194_enabled^;
+; Warning: Different triggers should be used depending on whether Advanced Witch Huts is enabled, as OB:S on ! ?OB blocks the execution of ! $OB
+; The following script must be executed later than Advaned Witch Huts
+; Both triggers probably can be replaced with 4AA766
+!?OB(OBJ_WITCH_HUT)&i^es_760_prevSecSkillLvPlusOne^;
 !!FU(ES_760_ExecuteWitchHutsAchievement):P;
 
-!$OB(OBJ_WITCH_HUT)&i^wog_194_enabled^<>(TRUE);                    [после посещения Хижины ведьмы]
+!$OB(OBJ_WITCH_HUT)&i^es_760_prevSecSkillLvPlusOne^;
 !!FU(ES_760_ExecuteWitchHutsAchievement):P;
 
 !?FU(ES_760_ExecuteWitchHutsAchievement);
@@ -688,14 +690,15 @@ ZVSE2
 
 !!WH998:S?y2;
 !!HE(CURRENT_HERO):Sy2/?y3;             // y2/y3 - Номер навыка у ведьмы/уровень навыка у героя
-!!FU&y3=i^es_760_prevSecSkillLv^:E;                           // выход если опция не включена или обучения не было
+!!VRy30:Si^es_760_prevSecSkillLvPlusOne^ -1;
+!!FU&y3=y30:E;                           // выход если опция не включена или обучения не было
 
 !!HE(CURRENT_HERO):N?y77;               // y77 - номер текущего героя
 !!SN:W^opt760.h%Y77a10r^/?y2;           // y2 - ранг достижения Курьер
 !!OW:C?y5 Iy5/?y6;                      // y6=0, для игрока человека
 
 ; Increase the rank of achievement if the hero learn a new skill from the Withch Hut (not counting when advancing a skill)
-!!if&i^es_760_prevSecSkillLv^=(SKILL_NOT_LEARNED)/y2<9;                   // если был получен новый навык и ранг достижения не максимален
+!!if&y30=(SKILL_NOT_LEARNED)/y2<9;                   // если был получен новый навык и ранг достижения не максимален
   !!VRy2:+1;                            // повышаем ранг достижения
   !!SN:W^opt760.h%Y77a10r^/y2;          // ...
   !!FU(ES_760_ShowAchievement)&y6=0:Py77/10/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
@@ -710,7 +713,10 @@ ZVSE2
     !!SN:T^opt760.m10^/?z2/^HeroName^/z1/^Rang^/y2; // z2 - текст сообщения
     !!IF:M1/2;                          // показ сообщения
   !!en; 
-!!en; 
+!!en;
+
+; Reset the variable
+!!VRi^es_760_prevSecSkillLvPlusOne^:S0;
 
 !?FU(OnBeforeBattleUniversal);          // перед битвой
 !!UN:P760/?y1;                          // [y1 - состояние опции
