@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.039 ******************
+                 ************** version: 1.04 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -67,6 +67,13 @@ You can conduct the priority order for equipping by reading the code. The lower 
 Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
 Changelog:
+1.04
+- slightly reduced the health of commanders in creature banks on all levels.
+- slightly increased the speed of battle commanders in lategame with very high amount of HP
+- reduced the starting army of the computer player depending on the Neutral Stack size option, increased the creatures that the AI can hire in town instead
+- added new option to allow stats scaling of units also for AI heroes
+- added new option to allow stronger neutral commanders and henchman
+
 1.0391
 - fixed incorrect primary stat bonus for AI on Extreme and Insane setting. Thanks to Orc for testing.
 

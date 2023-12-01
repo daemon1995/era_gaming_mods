@@ -221,11 +221,30 @@ Recommendations for Neutral Units Bonuses:
 ; Archer30: It is not very ideal to have stack exp and bonus stats setting up on ! ? BR for these reasons:
 ; ! !EA resets any stats setting up by other scripts (when using ! !BM) . This could lead to compatibility issue if there is another script trying to give additional stats to the neutral creatures.
 ; Both ! !EA and ! !BM setting up on ! ?BR means the player has no chance to know what exactly the stats of the neutral would be before Tactic phase. It could be confusing.
+
+*New option form Dif mod that provides the same scaling to usually only neutrals get, also to AI players. 
+This option is for everyone who wants to have stronger AI players and the difficulty not just comes from the amount of units.
+!?FU(OnCombatRound)&i^battle_round^=0/(ERM_FLAG_IS_HUMAN);
+
+!!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
+!!BA:O?y2/?y3;
+!!OW:Iy2/?y5;                           [Attacker Owner check for AI]
+!!OW:Iy3/?y7;                           [Defender Owner check for AI]
+!!FU&y5=0/y7=0:E;                       [If both human exit script]
+!!FU&y5=1/y7=1:E;                       [If both AI exit script]
+
+!!VRy10&y5=1:S0; !!VRy11&y5=1:S20;      [If Attacker is AI]
+!!VRy10&y7=1:S21; !!VRy11&y7=1:S41;     [If Defender is AI]
+!!DO1000/y10/y11/1&v2=1/i^Health_Grow_Enable^/i^Dif_Mod_AI_Scaling^:P; [Add Att, Def, HP]
+
+
 !?FU(OnCombatRound)&i^battle_round^=0/i^Encounter_Type^>=1/(ERM_FLAG_IS_HUMAN);[Edit: Moved Trigger from BF to OnCombatRound]
 
 !!FU(WOG_231_SetBonuses):P;
 
+
 !?FU(WOG_231_SetBonuses);
+
 !!BA:O?y2/?y3;
 !!FU&y3>(NO_HERO):E;                    [Exit if Enemy Hero at Neutrals and its not from Random Hero]
 
@@ -235,7 +254,9 @@ Recommendations for Neutral Units Bonuses:
 !!FU5400&v1=1/i^Encounter_Type^<>3:P;
 
 !!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
-!!DO1000/21/41/1&v2=1/i^Health_Grow_Enable^:P; [Add Att, Def, HP, Bless, and Precision to stacks]  Only Run when selected and not for AI]
+!!DO1000/21/41/1&v2=1/i^Health_Grow_Enable^:P; [Add Att, Def, HP, only Run when selected and not for AI]
+!!DO(Dif_Mod_Static_Boost)/21/41/1&i^Dif_Mod_Neutral_boost^:P; [Add Att, Def, HP, and speed]
+
 
 ; Restore stack exp option after battle
 !?FU(OnAfterBattleAction);
@@ -244,8 +265,8 @@ Recommendations for Neutral Units Bonuses:
 
 !!UN:P231/?(neutralExp:y);
 !!FU&(neutralExp)<>(TRUE):E;
-
 !!UN:P(WOG_OPT_STACK_EXPERIENCE)/i^wog_900_enabled^;
+
 
  [Add experience ranks to neutral stacks]
 !?FU5400;
@@ -290,13 +311,32 @@ Recommendations for Neutral Units Bonuses:
 !!BMx16:N?y20;                          [Creature Number y20]
 
 !!if&y20>0;
-  !!VRy1:Si^timerDay^ :i^Health_Grow_Enable^; [current day: y1] ; Sunday is the bonuses day
+  !!VRy1:Si^timerDay^:i^Health_Grow_Enable^; [current day: y1] ; Sunday is the bonuses day]
   !!BMx16:Ady1 Ddy1;                    [+1.75 attack per week(month+7), +1.75 defense per week(month+7)]
   !!BMx16:H?y2;                         [Hit Points of stack: y2]
   !!VRy6:Sy1*5+100;
   !!VRy4:Sy2*y6:100-y2;                 [5% of hit points: y3]
   !!BMx16:Hdy4;                         [+10.5-12.25% per week;+42-49% of hit points per month]
 !!en;
+
+
+!?FU(Dif_Mod_Static_Boost);
+!!BMx16:N?y20;                          [Creature Number y20]
+
+!!if&y20>0;                             [if a valid stack]
+  !!VRy1:S1;                            [set bonus to 1]
+  !!BMx16:Ady1 Ddy1;                    [+1 attack and defense]
+  !!BMx16:H?y2 T?y11;                   [Hit Points of stack: y2]
+  !!VRy6:Sy1*5+100;                     [calc new HP]
+  !!VRy4:Sy2*y6:100-y2;                 [5% of hit points]
+  !!BMx16:Hdy4;                         [set hit points]
+  !!VRy10:Si^timerDay^;                 [current day  y10 Sunday is the bonuses day]
+  !!FU|y11=145/y11=146/y11=147/y11=148/y11=149:E; [Execlude Warmachines]
+  !!BMx16&y10>84:Sd1;                   [add one speed at start of month 4]
+  !!BMx16&y10>168:Sd1;                  [add one speed at start of month 7]
+  !!BMx16&y10>252:Sd1;                  [add one speed at start of month 10]
+!!en;
+
 
 ********************************************************************************
 ** Monsters Aggression **
