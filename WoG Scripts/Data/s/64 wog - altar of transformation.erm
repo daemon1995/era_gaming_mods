@@ -10,7 +10,7 @@ ZVSE2
 **   Requires WoG version 3.58 or later using ERM version 2.8 or later.
 **   WoGify Name: script14.erm
 **   Updated: October 14, 2004
-**   Updated: Oct 2023 by Archer30
+**   Updated: Dec 2023 by Archer30
 
 ** This script makes all "Lightning Altars" on a map function as transformation
 ** devices. When a hero climbs the altar, his or her army will be transformed
@@ -113,30 +113,33 @@ Function Variables Used in this Script: x1-x5, y-1, y-2
 !!FU(Array_SortedUnique):P(availMonList);
 !!SN:M(availMonList)/?(size:y);
 
+; Exit if there is no creature available to be converted (no creature at all or only overpowered ones exist)
+!!if&(size)=0;
+  !!IF&(ERM_FLAG_IS_HUMAN):M^%T(wog.14.noMon)^;
+  !!FU:E;
+!!en;
+
+!!VR(chosenMon:y):S(NO_MON);
+
 // Manage human behaviours
 !!if&(ERM_FLAG_IS_HUMAN);
   ; Show tutorial for human player
   !!IF:M1/z114004;
 
-  ; Exit if there is no creature available to be converted (no creature at all or just OP)
-  !!if&(size)=0;
-    !!IF:M^%T(wog.14.noMon)^;
-    !!FU:E;
-  !!en;
+  ; Organise array for IF:N - disabled for now for converting all
+  ; Disabled to work with the whole army
+  *!FU(NewIntArray):P?(monPicsList:y);
 
-  ; Organise array for IF:N
-  !!FU(NewIntArray):P?(monPicsList:y);
+  *!re i/0/(size)/1/-1;
+    *!SN:M(availMonList)/i/?(type);
+    *!FU(Array_Push):P(monPicsList)/(PIC_TYPE_MONSTER)/(type);
+  *!en;
 
-  !!re i/0/(size)/1/-1;
-    !!SN:M(availMonList)/i/?(type);
-    !!FU(Array_Push):P(monPicsList)/(PIC_TYPE_MONSTER)/(type);
-  !!en;
+  *!FU(PrepareMultiPicDialog):P(monPicsList);
+  *!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(wog.14.chooseMon)^/?(choice:y);
+  *!FU&(choice)=-1:E;
 
-  !!FU(PrepareMultiPicDialog):P(monPicsList);
-  !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(wog.14.chooseMon)^/?(choice:y);
-  !!FU&(choice)=-1:E;
-
-  !!SN:M(availMonList)/(choice)/?(chosenMon:y);
+  *!SN:M(availMonList)/(choice)/?(chosenMon:y);
 
   ; Ask if hero wishes to visit the altar and how much of his mana he want to invest, return in v1
   !!VRv1:S0;
@@ -179,7 +182,7 @@ Function Variables Used in this Script: x1-x5, y-1, y-2
       !!FU(WOG_Town_GetName):Pi/?z(index);
     !!en;
 
-    !!IF:G1/1/1/114033/4/5/6/7/8/9/10/11/12/13/114022;
+    !!IF:G1/1/1/114033/4/5/6/7/8/9/10/11/12/114032/114022;
     !!FU(IntLog2):Pv1/?(townType:y);
 
     ; Set neutral town
@@ -195,58 +198,80 @@ Function Variables Used in this Script: x1-x5, y-1, y-2
 !!el;
   !!OB998:S;                            [disable pyramid feature]
 
-  !!VR(chosenMon):S(NO_MON);
+  ; AI has a 100 % chance to convert without mana costs
+  !!VR(investedMana):S100; 
+  ; set town to hero's native town if AI visits
+  !!HE(CURRENT_HERO):B2/?(heroType:y);          [Get type of hero of AI]
+  !!VR(townType):S(heroType) :2;
 
-  !!if&(size)>0;
-    ; AI has a 100 % chance to convert without mana costs
-    !!VR(investedMana):S100; 
-    ; set town to hero's native town if AI visits
-    !!HE(CURRENT_HERO):B2/?(heroType:y);          [Get type of hero of AI]
-    !!VR(townType):S(heroType) :2;
+  ; Get the best creature to be converted
+  ; Currenlty we select with this criteria: not belongs to the town of the hero/highest total fight value
+  ; Disabled to work with the whole army
+  *!VR(hightestTotalFv:y):S0;
 
-    ; Get the best creature to be converted
-    ; Currenlty we select with this criteria: not belongs to the town of the hero/highest total fight value
-    !!VR(hightestTotalFv:y):S0;
+  *!re j/0/(size)/1/-1;
+    *!SN:M(availMonList)/j/?(availMon:y);
+    ; Check if the town type is the same as the hero's town type
+    *!MA:O(availMon)/?(monTownType:y);
+    *!co&(monTownType)=(townType);
 
-    !!re j/0/(size)/1/-1;
-      !!SN:M(availMonList)/j/?(availMon:y);
-      ; Check if the town type is the same as the hero's town type
-      !!MA:O(availMon)/?(monTownType:y);
-      !!co&(monTownType)=(townType);
+    ; Calculate the total fight value of the available monster type
+    *!VR(totalNum:y):S0;
 
-      ; Calculate the total fight value of the available monster type
-      !!VR(totalNum:y):S0;
+    *!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+      *!HE(CURRENT_HERO):C0/i/?(type)/?(num);
 
-      !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-        !!HE(CURRENT_HERO):C0/i/?(type)/?(num);
+      *!if&(type)=(availMon)/(num)>0;
+        *!VR(totalNum:y):+(num);
+      *!en;
+    *!en;
 
-        !!if&(type)=(availMon)/(num)>0;
-          !!VR(totalNum:y):+(num);
-        !!en;
-      !!en;
+    *!MA:F(availMon)/?(fv);
+    *!VR(totalFv:y):S(totalNum) *(fv);
 
-      !!MA:F(availMon)/?(fv);
-      !!VR(totalFv:y):S(totalNum) *(fv);
+    ; Set if the total fight value is bigger than the current one
+    *!if&(totalFv)>(hightestTotalFv);
+      *!VR(hightestTotalFv):S(totalFv);
 
-      ; Set if the total fight value is bigger than the current one
-      !!if&(totalFv)>(hightestTotalFv);
-        !!VR(hightestTotalFv):S(totalFv);
+      *!VR(chosenMon):S(availMon);
+    *!en;
+  *!en;
+!!en;
 
-        !!VR(chosenMon):S(availMon);
+; Convert the chosen monster
+; Disabled to work with the whole army
+*!FU(WOG_14_ConvertMonsters)&(chosenMon)>(NO_MON):P(townType)/(investedMana)/(chosenMon);
+; Convert the whole army - for creatures with town type mismatching the picked town type only
+!!VRi^wog_14_monsterChanged^:S(FALSE);
+
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!HE(CURRENT_HERO):C0/i/?(chosenMon:y)/?(num:y);
+
+  !!if&(chosenMon)>(NO_MON)/(num)>0;
+    !!MA:F(chosenMon)/?(fv);
+
+    !!if&(fv)<=(darknessDragonFv);
+      ; Convert only when the chosen type is different from destination (plus not neutral)
+      !!MA:O(chosenMon)/?(chosenTownType:y);
+
+      !!if&(chosenTownType)<>(townType)/(chosenTownType)<>(NO_TOWN);
+        !!FU(WOG_14_ConvertMonsters):P(townType)/(investedMana)/(chosenMon);
       !!en;
     !!en;
   !!en;
 !!en;
-
-; Convert the chosen monster
-!!FU(WOG_14_ConvertMonsters)&(chosenMon)>(NO_MON):P(townType)/(investedMana)/(chosenMon);
 
  [If hero visits altar, display this message]
 !!if&(ERM_FLAG_IS_HUMAN);
   !!SN:D;
   !!SN:P^TELPTOUT^; // make teleport sound
 
-  !!VRz3:Sz114006 +z114007;
+  ; Different msg depending on whether any of the troops has been changed
+  !!if&i^wog_14_monsterChanged^;
+    !!VRz3:Sz114006 +z114007;
+  !!el;
+    !!VRz3:Sz114006 +^%T(wog.14.noChange)^;
+  !!en;
 
   ; Check if pictures exists
   !!VRz2:S^..\data\s\pic\script14.jpg^;
@@ -299,18 +324,23 @@ Function Variables Used in this Script: x1-x5, y-1, y-2
       !!VR(newTownType):S(random);
     !!en;
   
-    ; Get teh actual monster to convert to
+    ; Get the actual monster to convert to
     !!if&(newTownType)>=(TOWN_FIRST)/(newTownType)<=(TOWN_LAST_WOG);
       !!if&(level)<7;
-        !!UN:T(newTownType)/(level)/(FALSE)/?(newType:y); // get new monster type (town, Lvl, upgr) (if no neutral creature and Level 1-7)
+        !!UN:T(newTownType)/(level)/(FALSE)/?(newMon:y); // get new monster type (town, Lvl, upgr) (if no neutral creature and Level 1-7)
       !!el;
-        !!VR(newType):S(newTownType) +(MON_SUPREME_ARCHANGEL);  // L8-Units (town typ + 150)
+        !!VR(newMon):S(newTownType) +(MON_SUPREME_ARCHANGEL);  // L8-Units (town typ + 150)
       !!en;
     !!el;
-      !!FU(WOG_14_GetNeutralMon):P(type)/(level)/(FALSE)/?(newType); // If town type is Neutral, calculate creature
+      !!FU(WOG_14_GetNeutralMon):P(type)/(level)/(FALSE)/?(newMon); // If town type is Neutral, calculate creature
     !!en;
 
-    !!HE(CURRENT_HERO):C0/i/(newType)/(num); // change creatures in the targeted slot to new type, reset the experience
+    ; Convert monster only when the new type is different from the original
+    !!if&(chosenMon)<>(newMon);
+      !!HE(CURRENT_HERO):C0/i/(newMon)/(num)/0/0; // change creatures in the targeted slot to new type, reset the experience
+
+      !!VRi^wog_14_monsterChanged^:S(TRUE);
+    !!en;
   !!en;
 !!en;
 
