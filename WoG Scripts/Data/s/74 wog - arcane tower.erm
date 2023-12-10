@@ -2,7 +2,7 @@ ZVSE2
 
 ** Arcane Tower ERM script v1.5 - Donald X. Vaccarino
 ** Updated: 09/20/03 by Hermann the Weird
-** Updated: Oct 2023 by Archer30
+** Updated: Dec 2023 by Archer30
 ** A location to let heroes exchange primary skill points
 
 ** To use this code, put it into a Global Event, set to never happen,
@@ -53,8 +53,16 @@ ZVSE2
   !!FU:E; // Exit function if altar has been visited
 !!en;
 
+; For Human
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!FU620:P;                            [do rest of code if human (not AI)]
+  !!VR(msg:z):Sz104001 +^%T(wog.endl)^ +^%T(wog.endl)^ +z104002;
+  !!IF:Q2/(msg);
+
+  !!if&2;
+    !!FU(WOG_104_ChooseSkills):P;
+  !!el;
+    !!IF:M1/z104003;
+  !!en;
 ; For AI
 !!el;
   ; Disable standard action of the object and set as visited
@@ -76,46 +84,34 @@ ZVSE2
 ** end of object routine
 
 
-** function to handle visiting by humans
-** code is broken up this way to avoid having to retest the same flags over and over
+!?FU(WOG_104_ChooseSkills);
+!!IF:N(PIC_TYPE_SKILL_ATTACK)/0/(PIC_TYPE_SKILL_DEFENSE)/0/(PIC_TYPE_SKILL_POWER)/0/(PIC_TYPE_SKILL_KNOWLEDGE)/0 N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z104004/?(skillToLearn:y);
 
-!?FU620;
+!!if&(skillToLearn)>-1;
+  !!FU(NewIntArray):P?(skillsToUnlearnList:y);
 
-!!IF:M1/z104001;
-!!IF:Q2/z104002;
-!!IF&-2:M1/z104003;
+  !!re i/(PRIM_SKILL_FIRST)/(PRIM_SKILL_LAST);
+    !!if&i<>(skillToLearn);
+      !!VR(picType:y):Si +(PIC_TYPE_SKILL_ATTACK);
+      !!FU(Array_Push):P(skillsToUnlearnList)/(picType)/0;
+    !!en;
+  !!en;
 
-!!FU621&2:P; [do rest of code if they picked yes]
+  !!FU(PrepareMultiPicDialog):P(skillsToUnlearnList);
+  !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(wog.104.pay)^/?(choice:y);
 
-** end of function
-
-
-** function to handle meaningful visit by non-AI
-
-!?FU621;
-
-!!IF:Q3/31/0/33/0/7/z104004;
-!!IF&3:Q4/31/1/32/1/7/z104005;
-!!VRv600&3/4:S0; [v600=0 = they want attack]
-!!VRv600&3/-4:S1; [v600=1 = they want defense]
-!!IF&-3:Q4/33/1/34/1/7/z104006;
-!!VRv600&-3/4:S2; [v600=2 = they want spell power]
-!!VRv600&-3/-4:S3; [v600=3 = they want knowledge]
-
-!!VRv601:S4; [v601=4 = no payment chosen]
-!!IF&v600<>0:Q5/31/0/2/z104007;
-!!VRv601&v600<>0/5:S0; [v601=0 = pay with attack]
-!!IF&v600<>1/v601=4:Q5/32/0/2/z104008;
-!!VRv601&v600<>1/v601=4/5:S1; [v601=1 = pay with defense]
-!!IF&v600<>2/v601=4:Q5/33/0/2/z104009;
-!!VRv601&v600<>2/v601=4/5:S2; [v601=2 = pay with spell power]
-!!IF&v600<>3/v601=4:Q5/34/0/2/z104010;
-!!VRv601&v600<>3/v601=4/5:S3; [v601=3 = pay with knowledge]
-
-!!IF&v601=4:M1/z104011;
-!!FU622&v601<4:P; [continue if both skills picked]
-
-** end of function
+  !!if&(choice)>-1;
+    !!VRv600:S(skillToLearn);
+    !!VR(skillInd:y):S(choice) *2;
+    !!SN:M(skillsToUnlearnList)/(skillInd)/?(skillPicType:y); 
+    !!VRv601:S(skillPicType) -(PIC_TYPE_SKILL_ATTACK); [v601 - skill to unlearn]
+    !!FU622:P;
+  !!el;
+    !!IF:M1/z104003;
+  !!en;
+!!el;
+  !!IF:M1/z104003;
+!!en;
 
 
 ** function to handle trades once skills are selected
@@ -148,11 +144,20 @@ ZVSE2
 
 !!IF:V2/1; [flag indicates we'll make trade]
 !!DO624/1/30/1:P; [allow them to make the chosen trade as many times as they can]
-!!IF:M1/z104013;
 
 ; Set as visited only when there is one successful exchange
 !!PO998:N1;
 !!PM998:V(FALSE);
+
+; Ask if want to trade other primary skills
+!!VR(msg:z):Sz104013 +^%T(wog.endl)^ +^%T(wog.endl)^ +^%T(wog.104.anotherTrade)^;
+!!IF:Q3/(msg);
+
+!!if&3;
+  !!FU(WOG_104_ChooseSkills):P;
+!!el;
+  !!IF:M^%T(wog.104.rest)^;
+!!en;
 
 ** end of function
 
@@ -164,9 +169,11 @@ ZVSE2
 !!VRvv609&2:-1; [deduct one point of paying skill]
 !!VRvv608&2:+1; [add one point to wanted skill]
 !!HE(CURRENT_HERO)&2:Fv604/v605/v606/v607; [save new skill values]
+!!SN:D;
+
 !!VRv610&2:-1; [countdown times we can make trade]
-!!IF&2/v610=0:Q1/v602/1/1/z104014;
+!!IF&2/v610=0:Q1/v602/1/v603/0/(MSG_TYPE_MES)/z104014; [Warning: negative primary skill in IF:Q dialogue will have the text shown as +-number, which is not ideal]
 !!IF&2/v610=0:V2/0;
-!!IF&2/v610>0:Q2/v602/1/2/z104015;
+!!IF&2/v610>0:Q2/v602/1/v603/0/(MSG_TYPE_QUESTION)/z104015;
 
 ** end of function
