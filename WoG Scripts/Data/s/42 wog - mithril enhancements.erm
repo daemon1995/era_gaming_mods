@@ -64,7 +64,7 @@ or 50 or higher, it will default to 15):
 
 If you want to change the frequency, change the number 10 below to how often you want mithril to
 appear(if set to 1 or lower, or 50 or higher, it will default to 10):
-!#DC(WOG_171_MILLS_GARDENS_FREQUENCY) = 10;
+!#DC(WOG_171_MILLS_GARDENS_FREQUENCY) = 15;
 
 Mithril Display scripts shows a message when a player picks up a pile of Mithril, showing how much
 Mithril that pile contained, and how much Mithril the player has right now. It also shows how much
@@ -100,6 +100,11 @@ entrance squares. Do not use this with another script that might do the same
     !!UN&i<3:P149/1;[Enable Mithril Display if Mithril script or Mithril Replacement is enabled][Check if Mithril in Windmills and Gardens is enabled: v4]
   !!en;
 !!en;
+!!if&i^wog_170_enabled^;
+  !!UN:U(OBJ_RESOURCE)/-1/?i^wog_170_%(OBJ_RESOURCE)_num^;
+  !!UN:U(OBJ_CAMPFIRE)/-1/?i^wog_170_%(OBJ_CAMPFIRE)_num^;
+!!en;
+
 
 !#FU(WOG_36_Initialization):P;
 
@@ -496,35 +501,47 @@ entrance squares. Do not use this with another script that might do the same
 
 !!UN:C(SOUND_MANAGER)/4/?(sndMgr:y) C(sndMgr)/132/4/?s C(sndMgr)/132/4/0; [block snd mag to remove objects w/o crash]
 
-!!VRe1:S(objNumber) :100 *(WOG_171_MILLS_GARDENS_FREQUENCY);
-!!VR(rndStep:y):Se1;
-!!VR(start:y):S1 R(rndStep);            [set random start pile]
-!!re i/(start:y)/(objNumber);
-  !!UN:U(OBJ_RESOURCE)/-1/i/2;
-  !!OB2:U?t;
-  !!AR2:V?n;
+
+
+
+
+!?FU(WOG_OnIterateAllMapObjects)&i^wog_170_enabled^;
+!#VA(x:x) (y:x) (z:x);
+!#VA(objType:x);
+!#VA(objSubtype:x);
+!#VA(isYellowSquare:x); boolean.
+!#VA(isPassable:x);     boolean.
+
+; check: is entry to the object
+!!FU&(isYellowSquare)<>(TRUE):E;
+!!FU&x4<>(OBJ_RESOURCE):E;
+
+!!if&(objType:x)=(OBJ_RESOURCE);
+  !!ARx1/x2/x3:V?n;
   !!if&n>1/n<10;
-    !!if|t=(RES_ORE)/t=(RES_WOOD)/t=(RES_GOLD); [( if wood, ore or gold)]
+    !!if|(objSubtype:x)=(RES_ORE)/(objSubtype:x)=(RES_WOOD)/(objSubtype:x)=(RES_GOLD); [( if wood, ore or gold)]
       !!VRn:Sd>>1 +1;                   [(Divide by 2 Then add 1 to get the same amount range as other stacks)]
     !!en;
-    !!UN:Ov2/v3/v4/1/0 Iv2/v3/v4/(OBJ_RESOURCE)/(RES_MITHRIL); [(Delete old resource pile)(place Mithril)]
-    !!ARv2/v3/v4:Vn;                    [(set new amount)]
-    !!VRi:R(rndStep);                   [go next if success]
+    !!VRe1:Si^wog_170_%(OBJ_RESOURCE)_num^ :100 *(WOG_171_MILLS_GARDENS_FREQUENCY);
+    !!VR(rndStep:y):Se1;
+    !!VRr:R0/0/(rndStep);
+    !!if&r=0;
+      !!UN:Ox1/x2/x3/1/0 Ix1/x2/x3/(OBJ_RESOURCE)/(RES_MITHRIL); [(Delete old resource pile)(place Mithril)]
+      !!ARx1/x2/x3:Vn;                    [(set new amount)]
+    !!en;
+  !!en;
+!!el&(objType:x)=(OBJ_CAMPFIRE);
+  !!VRe1:Si^wog_170_%(OBJ_CAMPFIRE)_num^ :100 *(WOG_170_RESOURCES_CAMPFIRES_FREQUENCY);
+  !!VR(rndStep:y):Se1;
+  !!VRr:R0/0/(rndStep);
+  !!if&r=0;
+    !!FRv2/v3/v4:B?r/?n B(RES_MITHRIL)/n; [(Get resource and amount)(Setup to contain Mithril)]
   !!en;
 !!en;
-!!UN:C(sndMgr)/132/4/s;                 [restore snd mgr]
 
-!!UN:U(OBJ_CAMPFIRE)/-1/?(objNumber:y); [(Get number of OBJ_CAMPFIRE on map (for replacing with Mithril))]
-!!VRe1:S(objNumber) :100 *(WOG_171_MILLS_GARDENS_FREQUENCY);
-!!VR(rndStep:y):Se1;
-!!VR(start:y):S1 R(rndStep);            [set random start pile]
-!!re i/(start:y)/(objNumber);           [(Cycle through all Campfires, replace one in what value (WOG_170_RESOURCES_CAMPFIRES_FREQUENCY) holds)]
-  !!UN:U(OBJ_CAMPFIRE)/-1/i/2;
-  !!FRv2/v3/v4:B?r/?n B(RES_MITHRIL)/n; [(Get resource and amount)(Setup to contain Mithril)]
-  !!VRi:R(rndStep);
-!!en;
-
-
+!?FU(OnAfterErmInstructions)&i^wog_170_enabled^;
+!!VRi^wog_170_%(OBJ_RESOURCE)_num^:S(NULL);
+!!VRi^wog_170_%(OBJ_CAMPFIRE)_num^:S(NULL);
 
 *** Upgrade Shrines ***
 !?FU(WOG_36_ChangeShrineSpell);
