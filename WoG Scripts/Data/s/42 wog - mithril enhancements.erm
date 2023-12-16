@@ -56,16 +56,15 @@ Mithril Enhancements Price List
  - may improve a hero's Basic skills: 4 Mithril
 
 
-If you want to change the frequency, change the number 15 below to how often you want mithril to
-appear. If you set it to 4, one in four stacks will be replaced, and so on(if set to 1 or lower,
-or 50 or higher, it will default to 15):
-!#DC(WOG_170_RESOURCES_CAMPFIRES_FREQUENCY) = 10;
-!#DC(WOG_170_RESOURCES_RESOURCE_PILE_FREQUENCY) = 5;
+If you want to change the frequency, change the number 16 below to how often you want mithril to
+appear. If you set it to 4, one in four stacks will be replaced, and so on:
+!#DC(WOG_170_RESOURCE_FREQUENCY) = 16;
+!#DC(WOG_170_CAMPFIRE_FREQUENCY) = 16;
 
 
 If you want to change the frequency, change the number 10 below to how often you want mithril to
-appear(if set to 1 or lower, or 50 or higher, it will default to 10):
-!#DC(WOG_171_MILLS_GARDENS_FREQUENCY) = 15;
+appear:
+!#DC(WOG_171_MILL_GARDEN_FREQUENCY) = 10;
 
 Mithril Display scripts shows a message when a player picks up a pile of Mithril, showing how much
 Mithril that pile contained, and how much Mithril the player has right now. It also shows how much
@@ -101,13 +100,19 @@ entrance squares. Do not use this with another script that might do the same
     !!UN&i<3:P149/1;[Enable Mithril Display if Mithril script or Mithril Replacement is enabled][Check if Mithril in Windmills and Gardens is enabled: v4]
   !!en;
 !!en;
+
 !!if&i^wog_170_enabled^;
-  !!UN:U(OBJ_RESOURCE)/-1/?i^wog_170_%(OBJ_RESOURCE)_num^;
-  !!UN:U(OBJ_CAMPFIRE)/-1/?i^wog_170_%(OBJ_CAMPFIRE)_num^;
+  !!VRi^wog_170_%(OBJ_RESOURCE)_maxStep^:S(WOG_170_RESOURCE_FREQUENCY) *2 -1;
+  !!VRi^wog_170_%(OBJ_CAMPFIRE)_maxStep^:S(WOG_170_CAMPFIRE_FREQUENCY) *2 -1;
 !!en;
 
-
 !#FU(WOG_36_Initialization):P;
+
+!?FU(OnAfterErmInstructions);
+!!VRi^wog_170_%(OBJ_RESOURCE)_maxStep^:S0;
+!!VRi^wog_170_%(OBJ_CAMPFIRE)_maxStep^:S0;
+!!VRi^wog_170_%(OBJ_RESOURCE)_interval^:S0;
+!!VRi^wog_170_%(OBJ_CAMPFIRE)_interval^:S0;
 
 
 *** Display Mithril on Rightclick on Kingdom Overview ***
@@ -458,8 +463,8 @@ entrance squares. Do not use this with another script that might do the same
   !!re i;
     !!UN:U(OBJ_MYSTICAL_GARDEN)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
     !!br&(x)<0;
-    !!VRr:R0/1/(WOG_171_MILLS_GARDENS_FREQUENCY);
-    !!if&r=(WOG_171_MILLS_GARDENS_FREQUENCY);
+    !!VRr:R0/1/(WOG_171_MILL_GARDEN_FREQUENCY);
+    !!if&r=(WOG_171_MILL_GARDEN_FREQUENCY);
       !!GD(x)/(y)/(z):B(RES_MITHRIL);            [add mithril]
     !!en;
   !!en;
@@ -480,8 +485,8 @@ entrance squares. Do not use this with another script that might do the same
   !!re i;
     !!UN:U(OBJ_WINDMILL)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
     !!br&(x)<0;
-    !!VRr:R0/1/(WOG_171_MILLS_GARDENS_FREQUENCY);
-    !!if&r=(WOG_171_MILLS_GARDENS_FREQUENCY);
+    !!VRr:R0/1/(WOG_171_MILL_GARDEN_FREQUENCY);
+    !!if&r=(WOG_171_MILL_GARDEN_FREQUENCY);
       !!ML(x)/(y)/(z):B(RES_MITHRIL)/d;               [(Water Wheel now contains new  mithril)]
     !!en;
 
@@ -492,6 +497,7 @@ entrance squares. Do not use this with another script that might do the same
     !!en;
   !!en;
 
+
 !?FU(WOG_OnIterateAllMapObjects)&i^wog_170_enabled^;
 !#VA(x:x) (y:x) (z:x);
 !#VA(objType:x);
@@ -501,29 +507,39 @@ entrance squares. Do not use this with another script that might do the same
 
 ; check: is entry to the object
 !!FU&(isYellowSquare)<>(TRUE):E;
+; Exit if not resouce or campfire
+!!FU&(objType)<>(OBJ_RESOURCE)/(objType)<>(OBJ_CAMPFIRE):E;
 
+!!VR(mithrilPlaced:y):S(FALSE);
 
-!!if&(objType:x)=(OBJ_RESOURCE);
-  !!ARx1/x2/x3:V?n;
-  !!if&n>1/n<10;
-    !!if|(objSubtype:x)=(RES_ORE)/(objSubtype:x)=(RES_WOOD)/(objSubtype:x)=(RES_GOLD); [( if wood, ore or gold)]
-      !!VRn:Sd>>1 +1;                   [(Divide by 2 Then add 1 to get the same amount range as other stacks)]
+!!if&i^wog_36_%(objType)_interval^<=0;
+  !!if&(objType:x)=(OBJ_RESOURCE);
+    !!AR(x)/(y)/(z):V?n;
+
+    ; Replace only when the amount of the resource pile is reasonable
+    !!if&n>=2/n<=9;
+      ; Divide by 2 Then add 1 to get the same amount range as other stacks if wood, ore or gold
+      !!if|(objSubtype:x)=(RES_ORE)/(objSubtype:x)=(RES_WOOD)/(objSubtype:x)=(RES_GOLD);
+        !!VRn::2 +1;
+      !!en;
+
+      !!UN:O(x)/(y)/(z)/1/0 I(x)/(y)/(z)/(OBJ_RESOURCE)/(RES_MITHRIL); [Delete old resource pile, place Mithril]
+      !!AR(x)/(y)/(z):Vn;               [set new amount]
+      !!VR(mithrilPlaced):S(TRUE);
     !!en;
-    !!VRe1:Si^wog_170_%(OBJ_RESOURCE)_num^ :100 *(WOG_170_RESOURCES_RESOURCE_PILE_FREQUENCY);
-    !!VR(rndStep:y):Se1;
-    !!VRr:R0/0/(rndStep);
-    !!if&r=0;
-      !!UN:Ox1/x2/x3/1/0 Ix1/x2/x3/(OBJ_RESOURCE)/(RES_MITHRIL); [(Delete old resource pile)(place Mithril)]
-      !!ARx1/x2/x3:Vn;                    [(set new amount)]
-    !!en;
+
+  !!el&(objType:x)=(OBJ_CAMPFIRE);
+    !!FR(x)/(y)/(z):B?r/?n B(RES_MITHRIL)/n; [Get resource and amount)(Setup to contain Mithril]
+    !!VR(mithrilPlaced):S(TRUE);
   !!en;
-!!el&(objType:x)=(OBJ_CAMPFIRE);
-  !!VRe1:Si^wog_170_%(OBJ_CAMPFIRE)_num^ :100 *(WOG_170_RESOURCES_CAMPFIRES_FREQUENCY);
-  !!VR(rndStep:y):Se1;
-  !!VRr:R0/0/(rndStep);
-  !!if&r=0;
-    !!FRx1/x2/x3:B?r/?n B(RES_MITHRIL)/n; [(Get resource and amount)(Setup to contain Mithril)]
-  !!en;
+!!en;
+
+; If object has added mithril, get the next object of the same type to be dealt with
+!!if&(mithrilPlaced);
+  !!VRi^wog_36_%(objType)_interval^:R0/0/i^wog_170_%(objType)_maxStep^;
+; If object was not dealt with, minus one on the global var
+!!el;
+  !!VRi^wog_36_%(objType)_interval^:-1;
 !!en;
 
 !?FU(OnAfterErmInstructions)&i^wog_170_enabled^;
@@ -868,5 +884,3 @@ entrance squares. Do not use this with another script that might do the same
   !!MM:M^%(prefix:z)%(currHint:z)^;
 !!en;
 !!VRi^wog_36_hint_object_type^:S0;
-
-
