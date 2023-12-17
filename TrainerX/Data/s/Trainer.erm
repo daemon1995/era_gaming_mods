@@ -227,8 +227,11 @@ ZVSE2
 !!en;
 
 !!FU(trainer_UpdateAllTheDialogs):P(hero)/(player);
-
+!!FU(trainer_HandleHooks):P1;
 !!DL(TRAINER_MAIN_DLG):S1;
+!!FU(trainer_HandleHooks):P0;
+
+
 !!UN:R1 R2;                             [Redraw screen after DL is closed - Thanks to daemon_n!]
 
 !?FU(trainer_UpdateAllTheDialogs);
@@ -2929,6 +2932,26 @@ ZVSE2
   !!FU(DL_ShowPopup):P(TRAINER_SECHEN_DLG);
 !!en;
 
+!?FU(trainer_HandleHooks);
+!#VA(doesSetHook:x);
+// daemon_n's scrolling support, mousewheel events
+  !!VRi^trainer_dlg_item^:S(NULL);              [clear variables data]
+  !!VRi^trainer_Dlg_mouseX^:S(NULL);
+  !!VRi^trainer_Dlg_mouseY^:S(NULL);
+
+  !!SN:L^EraPlugins\erm_hooker.era^/?(hooker:y);
+
+  !!if&(hooker:y)<>0;
+    !!if&(doesSetHook:x);
+      !!VR(funcName:z):S^SetHook^;
+    !!el;
+      !!VR(funcName:z):S^UnsetHook^;
+    !!en;
+    !!SN:A(hooker:y)/(funcName:z)/?(function:y);
+    !!SN:E(function:y)/1/6290592/(trainer_Dlg_OnMouseMove);                [005FFCA0 6290592 Dlg_OnMouseMove __this]
+    !!SN:E(function:y)/1/6287088/(trainer_DlgItem_ShowHint);              [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
+  !!en;
+
 !?FU(trainer_SetUpSecHenchUIStrings);
 ; Main
 !!DL(TRAINER_SECHEN_DLG):A200/(DLG_CMD_SET_TEXT)/^%T(trainer.sechen.title)^;
@@ -3147,15 +3170,6 @@ ZVSE2
 **** End Second Henchmen ****
 
 
-// daemon_n's scrolling support, mousewheel events
-!?FU(OnStartOrLoad);
-  !!SN:L^EraPlugins\erm_hooker.era^/?y1;
-
-  !!if&y1<>0;
-    !!SN:Ay1/^SetHook^/?y2;
-    !!SN:Ey2/1/6290592/(trainer_Dlg_OnMouseMove);                [005FFCA0 6290592 Dlg_OnMouseMove __this]
-    !!SN:Ey2/1/6287088/(trainer_DlgItem_ShowHint);              [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
-  !!en;
 
 
 !?FU(trainer_DlgDefGetDefFrame);
@@ -3179,7 +3193,6 @@ ZVSE2
 
   !!SN:E6289824/2/(currentDlgStruct)/i^trainer_Dlg_mouseX^/i^trainer_Dlg_mouseY^; (get item id by pos)
   !!UN&v1>0:Cv1/16/2/?i^trainer_dlg_item^;
-
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^dlg_action^=(DLG_ACTION_MOUSE_WHEEL); [buttons adding primary skills]
 
