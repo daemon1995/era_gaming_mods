@@ -1,5 +1,5 @@
 
-Advanced Classes Mod 1.087
+Advanced Classes Mod 1.09
 
 A Mod by Perry R, for Heroes of Might and Magic 3, ERA3 
 with the help of AlfWithCake, anti-victor, Daemon_n, Sandris, Berserker and Archer
@@ -34,10 +34,10 @@ Now it is possible to play three very distinct classes, each with their own stre
 - Completely reworked the Magic-System, now all spells scale with Spell Power and much more
 - New Master and Grandmaster level for every combat spell, with new effects and powers
 - Reworked Commander abilities, they are now much more combat active and actually fun to use
+- 9 new base Commander classes and 18 specialisations, each with unique abilities
 - Most artifacts are improved and are part of a set with interesting bonuses
 - Added 3 new secret class sets
 - New settings for increased difficulty of Neutral Units and computer players (AI)
-- 9 new Commander classes, each with unique abilities
 - Good compatibility with WoG options
 
 
@@ -66,6 +66,7 @@ Spells:
 Commanders:
 - disabled most of the old WoG commander features and remade them. Commanders now require at least 1 point in Magic skill to be able to cast. Spells are made much more useful, read description. All Commanders now profit from carring out actual attacks in combat, some can even increase their damage or health permanently by killing whole squads.
 - When doing your first kill in combat you can choose a commander class. Each class has different attributes, that can be viewed by right-clicking the experience icon in the hero screen and the additional right click on the commander class text field.
+- when reaching a certain kill count with your commander you can choose a new class, that usually specialises in a certain ability
 
 Eagle Eye:
 - Spells are now learned directly in combat and you get permanent spell power. And some more goodies are on this skill.
@@ -77,13 +78,13 @@ Diplomacy:
 - Reworked complete skills. Now gives a chance to attract creatures from your actual army, you can directly hire them for an increased price. This makes Diplomacy more useful and predictable, also it cannot happen that a random free join of thousands neutrals give you an insta win.
 
 Fire Shield:
-- Returned damage is now additionaly dependant on your Spell Power and can exceede the original damage amount, this gives much more tactical depth to this spell. Some creatures are now immune to Fire Shield, like Dragons and other fire affinite units.  
+- Returned damage is now additionaly dependant on your Spell Power and can exceede the original damage amount, this gives much more tactical depth to this spell. Some creatures are now immune to Fire Shield, like Dragons and other fire affinite units. Fire Shields that are passivly granted due to SE or other abilites will just return 20% damage.   
 
 Summoning Elementals:
 - HP of summons is now dependant on your MS, also summons can grant buffs to your army while alive on the battlefield. Summoing Air is available early but therefore very weak.
 
 Navigation:
-- Skill deleted and replaced with Nobility skill. Nobility can increase creature growth in towns.
+- Skill deleted and replaced with Nobility skill. Nobility can increase creature growth in towns once per week. 
 
 Creatures stats and Town lineups
 - no changes were made to creatures or towns. I'll leave that to other mods.
@@ -182,7 +183,7 @@ The mod is intended to be played with only 8 hero secondary skills. If you want 
 -Berserker for creating ERA, without him the mod would not be possible.
 -AlfWithCake and anti-victor as team members.
 -Daemon_n for testing and super translation into Russian language! Community support and designing the Difficulty Mod.
--Archer for support and fixes and help in the chinese community.
+-Archer for support, fixes coding and help in the chinese community.
 -Sandris for amazing pictures for class skills and Warmachine upgrades pictures.
 -Sagamosa Mod for inspiration and graphics.
 
