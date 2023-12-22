@@ -21,6 +21,10 @@ ZVSE2
 ; Exit if the defeated hero is Asmodeus
 !!FU&(hero)=i^wog_106_Asmodeus^:E;
 
+; Exit if the hero is visible
+!!HE(hero):P?(x:y)/?(y:y)/?(z:y);
+!!FU|(x)<>-1/(y)<>-1/(z)<>-1:E;
+
 ; Reset the hero
 !!HE(hero):Z?(heroPtr:y);
 !!SN:E5081488/(CALLCONV_THISCALL)/(heroPtr)/(hero);
@@ -32,6 +36,14 @@ ZVSE2
 ; Restore Movement Points
 !!SN:E5132288/(CALLCONV_THISCALL)/(heroPtr);
 !!HE(hero):Gv1 Wv1/1;
+
+; Unlearn all the spells
+!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);  // для каждого заклинания
+  !!HE(hero):Mi/0;                      // удаляем заклинание
+!!en;
+
+; Remove war machines
+!!HE(hero):A-(ART_BALLISTA) A-(ART_FIRST_AID_TENT);
 
 !!HE(hero):B2/?y2;
 !!VRy1:Sy2 :2;                          // y1 - раса героя 0..8
@@ -45,12 +57,6 @@ ZVSE2
 !!VRy13:R0/2/3 +y2;
 !!VRy14:R0/2/3 +y2;                      // ...
 !!HE(hero):Fy11/y12/y13/y14;                // Установка первичных параметров
-
-; Add in spell book
-!!HE(hero):A1/(ART_SPELL_BOOK)/17;                 // выдам катапульту и книгу всем героям
-
-; Ensure war machines are removed (will be added back later depending on the specialty)
-!!HE(hero):A-(ART_BALLISTA) A-(ART_FIRST_AID_TENT);
 
 ** выбор специализации
 !!VRy3:R0/0/1;
@@ -76,7 +82,7 @@ ZVSE2
   !!if&y3=0;                         // странник со вторичным навыком
     !!VRi:R0/0/3;                          // i - случайное число 0..3
   !!el;                         // странник с ресурсом
-    !!VRi:R0/0/6;                          // i - случайное число 0..6
+    !!VRi:R0/(RES_FIRST)/(RES_LAST_SOD); // i - случайное число
   !!en;
 ; Mages
 !!el&y2=1;
@@ -87,21 +93,19 @@ ZVSE2
   !!en;
 !!en;
 
-; Set Up new specialty
+; Set Up new specialty (give Ballista for Ballista specialists)
 !!FU(ES_788_SetUpNewSpecialty):P(hero)/y2/y3/y4/i;
+
+; Add in spell book if the hero is a Mage
+; By default the spell book is given with internal function so only Alchemists and Death Knights start with a spell book
+!!HE(hero)&y2=1:A1/(ART_SPELL_BOOK)/17;                 // выдам катапульту и книгу всем героям
+
 ; Set up reborn flags (set the last 16 bit to 788 to ensure the variable is not 0)
 !!VRy30:Sy2 +1;                         [Set hero type to positive number in order to be packed]
 !!FU(PackUnion):Py30/2/y3/1/y4/1/i/12/788/16/?i^es_788_rebornFlags_%(hero)^;
 
-; Reset spell known and teach the specialty spell
-!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);  // для каждого заклинания
-  !!HE(hero):Mi/0;                          // удаляем заклинание
-!!en; 
-
-!!HE(hero):X?j/?k/d/d/d/d/d;
-!!HE(hero)&j=3:Mk/1;                        // даем герою спец.заклинание
-
 ; Reset secondary skills and teach the specialty skill
+; Warning: This script does not include checks of banned skills, idealy should use FU(ES_GameMgr_Skill_isBanned)
 ; Teach Estates if the hero is a resources master
 !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST); // для каждого втор.навыка
   !!HE(hero):Si/(SKILL_NOT_LEARNED);        // удаляем все вторичные навыки героя
@@ -228,34 +232,37 @@ ZVSE2
 !?FU(ES_788_SetUpNewSpecialty);
 !#VA(hero:x) (heroType:x) (random1:x) (random2:x) (subtype:x);
 
+; Set up variable to determine whether to set hero spec desc
+!!VR(isNotValid:y):S(FALSE);
+
 !!HE(hero):B2/?(class:y);
 !!VR(faction:y):S(class) :2;
 
 ; Warriors
 !!if&(heroType)=-1;
   ; Skill Master (Warrior)
-  !!if&(random1)=0;                                      // воин со вторичным навыком
-    !!if&(subtype)=0;
-      !!HE(hero):X0/(SKILL_ARCHERY)/0/0/0/0/0;           // 0 - Стрельба
-    !!el&(subtype)=1;
-      !!HE(hero):X0/(SKILL_OFFENCE)/0/0/0/0/0;           // 1 - Нападение
-    !!el&(subtype)=2;
-      !!HE(hero):X0/(SKILL_ARMORER)/0/0/0/0/0;           // 2 - Доспехи
-    !!el&(subtype)=3/(faction)<>(TOWN_NECROPOLIS);
-      !!HE(hero):X0/(SKILL_FIRST_AID)/0/0/0/0/0;         // 3 - First Aid
-      !!HE(hero):A1/(ART_FIRST_AID_TENT)/15;             [Give first aid tent]
-    !!el&(subtype)=3/(faction)=(TOWN_NECROPOLIS);
-      !!HE(hero):X0/(SKILL_NECROMANCY)/0/0/0/0/0;        // 3 - Некромантия (Некрополь)
-    !!en;
+  !!if&(random1)=0;            // воин со вторичным навыком
+    !#VA(skillsList[4]:y);
 
-    !!SN:T^es.788.skillMaster^/?(spec:z);
+    !!VR(skillsList):C(SKILL_ARCHERY)/(SKILL_OFFENCE)/(SKILL_ARMORER)/(SKILL_FIRST_AID);
+    !!VR(skillsList[3])&(faction)=(TOWN_NECROPOLIS):S(SKILL_NECROMANCY); [Necropolis heroes won't learn First Aid, only Necromancy]
+    !!VR(skill:y):S(skillsList[subtype]);
+
+    ; Check if the skill is banned
+    !!FU(ES_GameMgr_Skill_isBanned):P(skill)/?(isNotValid:y);
+
+    !!if&(isNotValid)=(FALSE);
+      !!HE(hero):X0/(skill)/0/0/0/0/0;
+      !!SN:T^es.788.skillMaster^/?(spec:z);
+      !!HE(hero)&(skill)=(SKILL_FIRST_AID):A1/(ART_FIRST_AID_TENT)/15;
+    !!en;
   !!el;                                                  // воин с существом
     ; Creature Specialist
-    ; Question: What about the compatibility with Hero Specialty Boost?
+    ; Question: What about the compatibility with Hero Specialty Boost (WoG)?
     !!HE(hero):X1/(subtype)/0/0/0/0/0;                   // специалист по существам
     !!HE(hero)&(subtype)=(MON_BALLISTA):A1/(ART_BALLISTA)/13;      [Give Ballista]
 
-    !!UN:P740/?(enhCreaSpec:y);
+    !!UN:P740/?(enhCreaSpec:y);         [Enhanced Creature specialty (ES)]
 
     !!if&(enhCreaSpec);
       !!SN:T^es.740.spec^/?(spec);
@@ -304,75 +311,111 @@ ZVSE2
       !!en;
     !!en; 
   !!en;
+
 ; Adventurers
 !!el&(heroType)=0;
   ; Skill Master (Adventurer)
   !!if&(random1)=0;                                      // странник со вторичным навыком
-    !!HE(hero)&(subtype)=0:X0/(SKILL_LOGISTICS)/0/0/0/0/0;            // 0 - Логистика
-    !!HE(hero)&(subtype)=1:X0/(SKILL_NAVIGATION)/0/0/0/0/0;            // 1 - Навигация
-    !!HE(hero)&(subtype)=2:X0/(SKILL_EAGLE_EYE)/0/0/0/0/0;           // 2 - Зоркость
-    !!HE(hero)&(subtype)=3:X0/(SKILL_ESTATES)/0/0/0/0/0;           // 3 - Имущество
-    !!SN:T^es.788.skillMaster^/?(spec);
+    !!VR(skillsList):C(SKILL_LOGISTICS)/(SKILL_NAVIGATION)/(SKILL_EAGLE_EYE)/(SKILL_ESTATES);
+    !!VR(skillsList[1])&i^es_773_landMode^:S(SKILL_LOGISTICS);
+    !!VR(skill):S(skillsList[subtype]);
+
+    ; Check if the skill is banned
+    !!FU(ES_GameMgr_Skill_isBanned):P(skill)/?(isNotValid:y);
+
+    !!if&(isNotValid)=(FALSE);
+      !!HE(hero):X0/(skill)/0/0/0/0/0;
+      !!SN:T^es.788.skillMaster^/?(spec:z);
+    !!en;
   ; Supplier
   !!el;                                                  // странник с ресурсом
     !!HE(hero):X2/(subtype)/0/0/0/0/0;                   // специалист по ресурсам
 
     !!if&(subtype)<>(RES_GOLD);
-      !!SN:T^es.788.supplier1^/?(spec);
+      !!SN:T^es.788.supplier0^/?(spec);
     !!el;
-      !!SN:T^es.788.supplier2^/?(spec);
+      !!SN:T^es.788.supplier1^/?(spec);
     !!en;
   !!en;
+
 ; Mages
 !!el&(heroType)=1;
   ; Skill Master (Mage)
   !!if&(random1)=0;                                      // маг со вторичным навыком
-    !!HE(hero)&(subtype)=0:X0/(SKILL_MYSTICISM)/0/0/0/0/0;            // 0 - Мистицизм
-    !!HE(hero)&(subtype)=1:X0/(SKILL_INTELLIGENCE)/0/0/0/0/0;           // 1 - Интеллект
-    !!HE(hero)&(subtype)=2:X0/(SKILL_SORCERY)/0/0/0/0/0;           // 2 - Волшебство
-    !!HE(hero)&(subtype)=3:X0/(SKILL_RESISTANCE)/0/0/0/0/0;           // 3 - Сопротивление
-    !!SN:T^es.788.skillMaster^/?(spec);
-  !!el;                                               // маг с заклинанием
-    ; Battle Mage
-    !!HE(hero)&(subtype)=0:X3/15/0/0/0/0/0;           // Волшебная стрела
-    !!HE(hero)&(subtype)=1:X3/16/0/0/0/0/0;           // Ледяная молния
-    !!HE(hero)&(subtype)=2:X3/17/0/0/0/0/0;           // Удар молнии
-    !!HE(hero)&(subtype)=3:X3/20/0/0/0/0/0;           // Кольцо холода
-    !!HE(hero)&(subtype)=4:X3/21/0/0/0/0/0;           // Огненный шар
-    !!HE(hero)&(subtype)=5:X3/23/0/0/0/0/0;           // Метеоритный дождь
-    !!HE(hero)&(subtype)=6:X3/22/0/0/0/0/0;           // Инферно
-    !!HE(hero)&(subtype)=7:X3/18/0/0/0/0/0;           // Взрыв
-    !!HE(hero)&(subtype)=8:X3/19/0/0/0/0/0;           // Цепная молния
-    !!HE(hero)&(subtype)=9:X3/26/0/0/0/0/0;           // Армагеддон
-    !!HE(hero)&(subtype)=10/(faction)<>(TOWN_NECROPOLIS):X3/25/0/0/0/0/0;    // Уничтожение нежити (кроме Некрополя)
-    !!HE(hero)&(subtype)=10/(faction)=(TOWN_NECROPOLIS):X3/24/0/0/0/0/0;     // Волна смерти (Некрополь)
-    !!SN:T^es.788.battlemage^/?(spec);
-    
-    ; Aura of Curse
-    !!if&(random2)=1;                                 // специалисты по аурам-проклятиям
-      !!HE(hero)&(subtype)=7:X3/45/0/0/0/0/0;         // Слабость
-      !!HE(hero)&(subtype)=8:X3/47/0/0/0/0/0;         // Разрушение
-      !!HE(hero)&(subtype)=9:X3/42/0/0/0/0/0;         // Проклятье
-      !!HE(hero)&(subtype)=10:X3/54/0/0/0/0/0;        // Медлительность
+    !!VR(skillsList):C(SKILL_MYSTICISM)/(SKILL_INTELLIGENCE)/(SKILL_SORCERY)/(SKILL_RESISTANCE);
+    !!VR(skill):S(skillsList[subtype]);
 
-      !!if&(subtype)>=7/(subtype)<=10;
-        !!VR(curseType:y):S(subtype) -6;
+    ; Check if the skill is banned
+    !!FU(ES_GameMgr_Skill_isBanned):P(skill)/?(isNotValid:y);
+
+    !!if&(isNotValid)=(FALSE);
+      !!HE(hero):X0/(skill)/0/0/0/0/0;
+      !!SN:T^es.788.skillMaster^/?(spec:z);
+    !!en;
+
+  !!el;                                               // маг с заклинанием
+    ; Aura of Curse
+    ; Note: Aura of Curse specialists are also spell specialists
+    !!if&(random2)=1/(subtype)>=7/(subtype)<=10;      // специалисты по аурам-проклятиям
+      !#VA(spellsList[11]:y);
+
+      !!VR(spellsList):C45/47/42/54;
+      !!VR(curseType:y):S(subtype) -7;
+      !!VR(spell:y):S(spellsList[curseType]);
+
+      !!UN:J0/(spell)/?(isNotValid);
+
+      !!if&(isNotValid)=(FALSE);
+        !!FU10932:P(spell)/?(isNotValid); [WoG legacy. same function as FU(WOG_CHECK_SPELL_BAN)]
+
+        !!HE(hero):X3/(spell)/0/0/0/0/0;
+        !!HE(hero):M(spell)/(TRUE);
         !!SN:T^es.788.auraOfCurse%(curseType)^/?(spec);
+      !!en;
+    ; Battlemage
+    !!el;
+      ; Check if the spell is disabled (map editor) or banned (wog options)
+      ; Note that here we use the same variable name (isNotValid) for the convenience of scripting
+      !#VA(spellsList[11]:y);
+
+      !!VR(spellsList):C15/16/17/20/21/23/22/18/19/26/25;
+      !!VR(spellsList[10])&(faction)=(TOWN_NECROPOLIS):S24;
+      !!VR(spell):S(spellsList[subtype]);
+
+      !!UN:J0/(spell)/?(isNotValid);
+
+      !!if&(isNotValid)=(FALSE);
+        !!FU10932:P(spell)/?(isNotValid); [WoG legacy. same function as FU(WOG_CHECK_SPELL_BAN)]
+
+        !!if&(isNotValid)=(FALSE);
+          !!HE(hero):X3/(spell)/0/0/0/0/0;
+          !!HE(hero):M(spell)/(TRUE);
+          !!SN:T^es.788.battlemage^/?(spec);
+        !!en;
       !!en;
     !!en;
   !!en;
 !!en;
 
-!!SN:H^spec^/(hero)/2/^%(spec)%T(es.788.reborn)^;
-!!UN:P151/?(startSpellsBan:y);
-!!if&(startSpellsBan);
-  !!re i/0/(SPELL_LAST_WOG);
-    !!FU(WOG_CHECK_SPELL_BAN):Pi/?(isSpellBanned:y);
-    !!if&(isSpellBanned);
-      !!HE(hero):Mi/0;
-    !!en;
-  !!en;
+; Set up specailty text if the specialty is valid
+!!if&(isNotValid)=(FALSE);
+  !!SN:H^spec^/(hero)/2/^%(spec)%T(es.788.reborn)^;
+; Reroll if the specialty is not valid
+!!el;
+  !!FU(ES_788_Rebirth):P(hero);
 !!en;
+
+!?FU(ES_788_SetUpAuraOfCurseSpec);
+!#VA(hero:x) (subtype:x) (specInd:x);
+
+!!HE(hero)&(subtype)=7:X3/45/0/0/0/0/0;         // Слабость
+!!HE(hero)&(subtype)=8:X3/47/0/0/0/0/0;         // Разрушение
+!!HE(hero)&(subtype)=9:X3/42/0/0/0/0/0;         // Проклятье
+!!HE(hero)&(subtype)=10:X3/54/0/0/0/0/0;        // Медлительность
+
+!!VR(curseType:y):S(subtype) -6;
+!!SN:T^es.788.auraOfCurse%(curseType)^/?(spec:z);
+!!VR(specInd):Z(spec);
 
 
 ** Подержка специализаций на заклинаниях перерожденных героев
