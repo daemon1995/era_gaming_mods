@@ -188,10 +188,10 @@ ZVSE2
 
 
   !!re i/(firstStack)/(lastStack);
-    !!BMi:L?(hpLost:y) B?(startNum:y) N?(num:y); F?f; H130;
+    !!BMi:L?(hpLost:y) B?(initNum:y) N?(num:y); F?f; H130;
 
     !!if&(num);
-      !!if&(startNum)>(num)|(hpLost);
+      !!if&(initNum)>(num)|(hpLost);
         !!VR(damagedStack):+1;
 
         !!br;
@@ -289,9 +289,9 @@ ZVSE2
 
 !!if&(currType)=(MON_FIRST_AID_TENT)/(targetType)<>(MON_NOT_USED_2)/(stackSide)=i^battle_current_side^;
   !!if|(targetType)<(MON_CATAPULT)/(targetType)>(MON_ARROW_TOWERS);
-    !!BM(targetStack):L?(lostHp:y) N?(num:y) B?(startNum:y);
+    !!BM(targetStack):L?(lostHp:y) N?(num:y) B?(initNum:y);
 
-    !!UN|(lostHp)>0/(num)<(startNum):R5/2/17;
+    !!UN|(lostHp)>0/(num)<(initNum):R5/2/17;
   !!en;
 !!en;
 
@@ -312,8 +312,8 @@ ZVSE2
 !#VA(mode:x) (targetStack:x);
 
 ; Exit if the target is full
-!!BM(targetStack):L?(lostHp:y) N?(num:y) B?(startNum:y);
-!!FU&(lostHp)<=0/(num)>=(startNum):E;
+!!BM(targetStack):L?(lostHp:y) N?(num:y) B?(initNum:y);
+!!FU&(lostHp)<=0/(num)>=(initNum):E;
 
 ; Exit if the target is not the same side with the tent
 !!BMi^battle_current_stack^:I?(currSide:y);
@@ -334,15 +334,18 @@ ZVSE2
   !!BM(stackId):L?l;
 
   !!if&i^wog_55_Battle_HealPower^>l;
-    !!VRi:Si^wog_55_Battle_HealPower^;
-    !!BM(stackId):N?(currentNum:y) B?(startNum:y) H?(health:y);
-    !!VR(maxHeal:y):S(startNum) -(currentNum) *(health) +l;
-    !!FU(WOG_55_BattleFunc_CalculateStackHealing):P(stackId)/i^wog_55_Battle_HealPower^/?(hpLost:y)/?(num:y);
-    !!BM(stackId):N(num);
-    !!VRi^wog_55_Battle_HealPower^:Fd/(maxHeal);
+    !!BM(stackId):N?(currNum:y) B?(initNum:y) H?(health:y);
 
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^wog_55_Battle_HealPower^;
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(hpLost);
+    !!if&(currNum)<=(initNum);          [In some cases, the current number might be bigger than initial number]
+      !!VR(maxHeal:y):S(initNum) -(currNum) *(health) +l;
+
+      !!FU(WOG_55_BattleFunc_CalculateStackHealing):P(stackId)/i^wog_55_Battle_HealPower^/?(hpLost:y)/?(num:y);
+      !!BM(stackId):N(num);
+      !!VRi^wog_55_Battle_HealPower^:F1/(maxHeal);
+
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^wog_55_Battle_HealPower^;
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(hpLost);
+    !!en;
   !!en;
 
   !!VRi^wog_55_Battle_HealPower^:S0;
@@ -356,9 +359,9 @@ ZVSE2
 !?FU(WOG_55_BattleFunc_CalculateStackHealing);
 !#VA(stack:x) (healPower:x) (hpLost:x) (num:x);
 
-  !!BM(stack):H?(maxHp:y) L?(hpLost) B?(startNum:y) N?(num);
+  !!BM(stack):H?(maxHp:y) L?(hpLost) B?(initNum:y) N?(num);
 
-  !!if&(startNum)>(num);
+  !!if&(initNum)>(num);
 
     !!if&(healPower)>(hpLost);
 
@@ -367,7 +370,7 @@ ZVSE2
 
       !!if&(qtyToResurrect);
         !!VR(num):+(qtyToResurrect);
-        !!VR(num)&(num)>(startNum):S(startNum);
+        !!VR(num)&(num)>(initNum):S(initNum);
       !!en;
     !!el;
       !!VR(hpLost):-(healPower);

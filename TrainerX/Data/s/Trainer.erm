@@ -329,8 +329,9 @@ ZVSE2
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=30722/i^mouse_action^=(MOUSE_LMB_RELEASED);      [close trainer]
 !!VR(hasLeveledUp:y):S(FALSE);
+!!OW:C?(currPlayer:y)/?(interactPlayer:y); [It is not possible to activate level up screen if the hero doesn't belong to the player using tranier]
 
-!!if&i^trainer_hero^>(NO_HERO);
+!!if&i^trainer_hero^>(NO_HERO)/i^trainer_player^=(interactPlayer);
   !!VR(hero:y):Si^trainer_hero^;
   !!VR(lvNew:y):Si^trainer_heroLv^;
   !!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
@@ -2408,6 +2409,28 @@ ZVSE2
 !!VR(cmd:y):Si^trainer_hero^;
 !!CO(cmd):T?(type:y) D?(isDead:y);                 [revive the commander if dead]
 
+; If it is Shift+Left-click, dismiss the commander
+; This is useful as it is not possible to dismiss commander from hero screen if the targeted hero doesn't belong to the interacting player
+!!if&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
+  !!if&(isDead)<>(TRUE);
+    !!CO(cmd):D(TRUE);
+    !!SN:P^recruit^;
+  !!en;
+
+  !!FU:E;
+; If it is Ctrl or Alt+Left-cick, hire the commander
+!!el|i^key_ctrl^/i^key_alt^;
+  !!if&i^key_shift^=(FALSE);
+    !!if&(isDead);
+      !!CO(cmd):D(FALSE);
+      !!SN:P^recruit^;
+    !!en;
+
+    !!FU:E;
+  !!en;
+!!en;
+
+; Continute the process if it is not Shift+Left-click
 !!if&(isDead);                          [new syntax works?]
   !!FU&i^mouse_action^=(MOUSE_RMB_PRESSED):E;
 
@@ -2722,7 +2745,34 @@ ZVSE2
 
 ; Close the commander trainer dialogue
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=12/i^mouse_action^=(MOUSE_LMB_RELEASED);
-!!DL(TRAINER_CMD_DLG):C1;
+!!VR(hasLeveledUp:y):S(FALSE);
+!!OW:C?(currPlayer:y)/?(interactPlayer:y); [It is not possible to activate level up screen if the hero doesn't belong to the player using tranier]
+
+!!if&(interactPlayer)=i^trainer_player^;
+  !!VR(cmd:y):Si^trainer_hero^;
+  !!CO(cmd):X2/?(lv:y);
+
+  !!if&i^trainer_cmdLv^<>(lv);          [if commander's lv was changed]
+    !!FU(trainer_GetExpRequirementOfLevel):Pi^trainer_cmdLv^/?(expNew:y);
+
+    ; Set the level if the new level is lower
+    !!if&i^trainer_cmdLv^<(lv);
+      !!CO(cmd):X1/(expNew);
+      !!CO(cmd):X2/i^trainer_cmdLv^;
+    ; activate level up process if the level is higher
+    !!el&i^trainer_cmdLv^>(lv);
+      !!VR(npcStruct:y):S296 *(cmd) +42344640;
+      !!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(expNew)/(FALSE);
+
+      !!FU(trainer_UpdateCommanderPrimSkills):P(cmd);
+      !!FU(trainer_UpdateCommanderArts):P(cmd);
+
+      !!VR(hasLeveledUp):S(TRUE);
+    !!en;
+  !!en;
+!!en;
+
+!!DL(TRAINER_CMD_DLG)&(hasLeveledUp)<>(TRUE):C1;
 
 ; Show commander screen
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=28;
@@ -2777,24 +2827,6 @@ ZVSE2
 !!if&(art)>=(ART_AXE_OF_SMASHING);
   !!SN:H^art^/(art)/0/?(artName:z);
   !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_POPUP)^%(artName)^;
-!!en;
-
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=12/i^mouse_action^=(MOUSE_LMB_RELEASED); [close cmd dialogue]
-!!VR(cmd:y):Si^trainer_hero^;
-!!CO(cmd):X2/?(lv:y);
-
-!!if&i^trainer_cmdLv^<>(lv);           [if commander's lv was changed]
-  !!FU(trainer_GetExpRequirementOfLevel):Pi^trainer_cmdLv^/?(expNew:y);
-
-  ; Set the level if the new level is lower
-  !!if&i^trainer_cmdLv^<(lv);
-    !!CO(cmd):X1/(expNew);
-    !!CO(cmd):X2/i^trainer_cmdLv^;
-  ; 
-  !!el;
-    !!VR(npcStruct:y):S296 *(cmd) +42344640;
-    !!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(expNew)/(FALSE);
-  !!en;
 !!en;
 
 !?FU(trainer_UpdateCommanderLv);
