@@ -77,11 +77,15 @@ ZVSE2
 
 !?FU(WOG_20_Initialization);
 !!UN:P20/?i^wog_20_enabled^;
-!!if&i^wog_20_enabled^;
-  !!VRi^wog_20_next_week_subtype^:S(NO_MON);
-  !!FU(WOG_20_GetNextWeekType):P(NULL)/?i^wog_20_next_week_type^;
-  !!FU(WOG_20_GetNextWeekSubtype):Pi^wog_20_next_week_type^/?i^wog_20_next_week_subtype^;
-!!en;
+!!FU&i^wog_20_enabled^<>(TRUE):E;
+
+!!VRi^wog_20_next_week_subtype^:S(NO_MON);
+!!FU(WOG_20_GetNextWeekType):P(NULL)/?i^wog_20_next_week_type^;
+!!FU(WOG_20_GetNextWeekSubtype):Pi^wog_20_next_week_type^/?i^wog_20_next_week_subtype^;
+
+; Set up addtional monsters list for Deity Of Fire
+!!FU(NewIntArray):P?i^wog_20_deityOfFireExtraMonsters^/(M_STORED);
+!!FU(Array_Push):Pi^wog_20_deityOfFireExtraMonsters^/(MON_FAMILIAR);
 
 !#FU(WOG_20_Initialization):P;
 --------------------------------------------------------------------------------------
@@ -106,17 +110,16 @@ ZVSE2
 !!VR(previousWeekSubType:y):Si^wog_20_week_subtype^;
 
 
-!!VR(thisWeekType:y):S(NO_RES);         [init new week values]
-!!VR(thisWeekSubType:y):S(NO_RES);
+!!VR(thisWeekType:y):S-1;         [init new week values]
+!!VR(thisWeekSubType:y):S-1;
 
 // first - reset monster stats;
-
 !!FU(WOG_20_ResetWeekBonus):P(previousWeekType:y)/(previousWeekSubType:y)/?i^wog_20_monster_parameter_0^/?i^wog_20_monster_parameter_1^/?i^wog_20_monster_parameter_2^  /?i^wog_20_monster_parameter_3^/?i^wog_20_monster_parameter_4^/?i^wog_20_monster_parameter_5^/?i^wog_20_monster_parameter_6^; [reset parameters]
 
 // then check again next week type
 !!FU(WOG_20_GetNextWeekType):P(previousWeekType:y)/?(thisWeekType:y);
 
-!!if&(thisWeekType:y)=i^wog_20_next_week_type^; [if resul is the same]
+!!if&(thisWeekType:y)=i^wog_20_next_week_type^; [if result is the same]
   !!VR(thisWeekSubType:y):Si^wog_20_next_week_subtype^; [then set this week type properly]
 !!el;
   !!FU(WOG_20_GetNextWeekSubtype):P(thisWeekType:y)/?(thisWeekSubType:y); [else recalc result (lmao only imps gonna be here)]
@@ -129,7 +132,7 @@ ZVSE2
   !!VRi^wog_20_double_mine_income^:S(TRUE); [allow double income]
   !!VR(needToPlaceAnywhere:y):S(TRUE);  [allow to place]
 !!el; [if any monster week]
-  !!FU(WOG_20_SetMonsterParameters):P(thisWeekSubType)/?(needToPlaceAnywhere:y)/?i^wog_20_monster_parameter_0^/?i^wog_20_monster_parameter_1^/?i^wog_20_monster_parameter_2^
+  !!FU(WOG_20_SetMonsterParameters):P(thisWeekType)/(thisWeekSubType)/?(needToPlaceAnywhere:y)/?i^wog_20_monster_parameter_0^/?i^wog_20_monster_parameter_1^/?i^wog_20_monster_parameter_2^
   /?i^wog_20_monster_parameter_3^/?i^wog_20_monster_parameter_4^/?i^wog_20_monster_parameter_5^/?i^wog_20_monster_parameter_6^;
   !!VRi^wog_20_sync_refugee^:S(needToPlaceAnywhere);
 !!en;
@@ -220,15 +223,20 @@ ZVSE2
 
 !!if&i^timerWeek^>1;
   !!FU(WOG_20_GetWeekDescription):Pi^wog_20_week_type^/i^wog_20_week_subtype^/?(weekMsg:z);
+
   !!if&i^wog_20_week_type^=(WOG_20_RESOURCE_WEEK);
     !!VR(picType:y):Si^wog_20_week_subtype^;
     !!VR(offset:y):S(picType:y) *4;
     !!UN:C6781304/(offset)/4/?(picSubType:y);
     !!VR(picSubType):*-2;
-  !!el;
+  !!el&i^wog_20_week_type^=(WOG_20_MONSTER_WEEK);
     !!VR(picType:y):S(PIC_TYPE_MONSTER);
     !!VR(picSubType:y):Si^wog_20_week_subtype^;
+  !!el&i^wog_20_week_type^=(WOG_20_INFERNO_WEEK);
+    !!VR(picType):S25;                  [Inferno buildings]
+    !!VR(picSubType):S26;               [Deity of Fire]
   !!en;
+
   !!IF:Q1/(picType:y)/(picSubType:y)/(MSG_TYPE_POPUP)/(weekMsg:z); [Display Week of Monsters info]
 !!el;
   !!IF:Q1/(PIC_TYPE_LUCK_NEUTRAL)/-1/(MSG_TYPE_POPUP)/^%T(wog.20.monster.not)^;
@@ -261,16 +269,35 @@ ZVSE2
 !!if&(weekType)=(WOG_20_RESOURCE_WEEK);
   !!SN:T^wog.20.resource.description.%(weekSubType)^/?(msg:z);
 !!el;
-  !!VR(bonus:z):S^^;
+  !!VR(bonus:z):S^%T(wog.endl)^;
   !!re i/0/6;
     !!co&i=3;                           [Archer30: It doesn't seem like we need both min/max damage to be displayed as their bonuses are the same]
 
     !!VR(value:y):Si^wog_20_monster_parameter_%i^;
+
     !!if&(value)>0;
       !!SN:T^wog.20.monster.%i^/?(tmp:z)/^value^/(value);
       !!VR(bonus):+(tmp);
     !!en;
   !!en;
+
+  ; Additional text for Deity of Fire
+  !!if&(weekType)=(WOG_20_INFERNO_WEEK);
+    !!VR(deityMons:z):S^^;
+    !!SN:Mi^wog_20_deityOfFireExtraMonsters^/?(size:y);
+
+    !!re i/0/(size)/1/-1;
+      !!SN:Mi^wog_20_deityOfFireExtraMonsters^/i/?(mon:y);
+      !!SN:H^monname^/(mon)/1/?(mult:z);
+
+      !!VR(deityMons)&(deityMons)<>^^:+^%T(wog.slash)^;
+      !!VR(deityMons):+(mult);
+    !!en;
+
+    !!SN:T^wog.20.monster.deityOfFire^/?(deityMsg:z)/^monsters^/(deityMons);
+    !!VR(bonus):S^%(deityMsg)%(bonus)^;
+  !!en;
+
   !!SN:H^monname^/(weekSubType:x)/1/?(mult:z);
   !!SN:T^wog.20.monster.description^/?(msg:z)/^mult^/(mult)/^bonus^/(bonus);
 !!en;
@@ -281,10 +308,11 @@ ZVSE2
 
 
 !?FU(WOG_20_SetMonsterParameters);
+!#VA(type:x);
 !#VA(monId:x) (needToPlaceAnywhere:x) (s[7]:x); [return changes]
 !#VA(st[7]:y);
-!!VR(needToPlaceAnywhere):S(TRUE);
 
+!!VR(needToPlaceAnywhere):S(TRUE);
 
 !!MA:A(monId:x)/?(st[0]) D(monId:x)/?(st[1]) M(monId:x)/?(st[2]) E(monId:x)/?(st[3]) P(monId:x)/?(st[4]) S(monId:x)/?(st[5]) G(monId:x)/?(growth:y);
 
@@ -299,8 +327,18 @@ ZVSE2
   !!VR(s[6]):S(growth) Sd>>1 F1/(growth);
 !!en;
 
+!!MA:A(monId:x)/d(s[0]) D(monId:x)/d(s[1]) M(monId:x)/d(s[2]) E(monId:x)/d(s[3]) P(monId:x)/d(s[4]) S(monId)/d(s[5]) G(monId:x)/d(s[6]);
 
-!!MA:A(monId:x)/d(s[0]) D(monId:x)/d(s[1]) M(monId:x)/d(s[2]) E(monId:x)/d(s[3]) P(monId:x)/d(s[4]) S(monId:x)/d(s[5]) G(monId:x)/d(s[6]);
+; Set bonuses for Familiars if Deity of Fire is built
+!!if&(type)=(WOG_20_INFERNO_WEEK);
+  !!SN:Mi^wog_20_deityOfFireExtraMonsters^/?(size:y);
+
+  !!re i/0/(size)/1/-1;
+    !!SN:Mi^wog_20_deityOfFireExtraMonsters^/i/?(extraMonId:y);
+
+    !!MA:A(extraMonId)/d(s[0]) D(extraMonId)/d(s[1]) M(extraMonId)/d(s[2]) E(extraMonId)/d(s[3]) P(extraMonId)/d(s[4]) S(extraMonId)/d(s[5]) G(extraMonId)/d(s[6]);
+  !!en;
+!!en;
 
 !!SN:E4696752/(CALLCONV_FASTCALL)/(monId:x); [is mon a war machine]
 !!VRv1:&1;                                   [check byte]
@@ -315,10 +353,23 @@ ZVSE2
 
 !!if|(type)=(WOG_20_MONSTER_WEEK)/(type)=(WOG_20_PLAYER_WEEK)/(type)=(WOG_20_INFERNO_WEEK); if week bonus = 1 = monster
   !!MA:A(monId:x)/d-(st[0]) D(monId:x)/d-(st[1]) M(monId:x)/d-(st[2]) E(monId:x)/d-(st[3]) P(monId:x)/d-(st[4]) S(monId:x)/d-(st[5]) G(monId:x)/d-(st[6]);
+
+  ; Reset bonuses for Familiars if Deity of Fire is built
+  !!if&(type)=(WOG_20_INFERNO_WEEK);
+    !!SN:Mi^wog_20_deityOfFireExtraMonsters^/?(size:y);
+
+    !!re i/0/(size)/1/-1;
+      !!SN:Mi^wog_20_deityOfFireExtraMonsters^/i/?(extraMonId:y);
+      !!MA:A(extraMonId)/d-(st[0]) D(extraMonId)/d-(st[1]) M(extraMonId)/d-(st[2]) E(extraMonId)/d-(st[3]) P(extraMonId)/d-(st[4]) S(extraMonId)/d-(st[5]) G(extraMonId)/d-(st[6]);
+    !!en;
+  !!en;
+
+  ; reset variables
   !!re i/0/(st[SIZE])/1/-1;
-    !!VR(st[i]):S0;                                                                                                                                   [reset variables]
+    !!VR(st[i]):S0;
   !!en;
 !!en;
+
 !!VRi^wog_20_sync_refugee^:S(FALSE); 
 !!VRi^wog_20_double_mine_income^:S(FALSE);
 
