@@ -180,16 +180,39 @@ Dialogues: 3
   !!IF&(mon)=(NO_MON)/(ERM_FLAG_IS_HUMAN):Q4/z144012;
 
    [Check for "Week of Monsters" script activated and if it's the monster of the week.]
-   [Flag 56 will be true if script is active, v170 is monster of the week]
+   [i^wog_20_enabled^ will be true if script is active, v170 is monster of the week]
   !!if&(mon)>(NO_MON);
     !!SN:H^monname^/(mon)/0/?z3;             [Store monster name (singular) in z3]
     !!SN:H^monname^/(mon)/1/?z4;             [Store monster name (plural) in z4]
   !!en;
 
-  !!if&56/v170>(NO_MON)/v170=(mon);
-    !!IF&(ERM_FLAG_IS_HUMAN):Q4/(PIC_TYPE_MONSTER)/(mon)/(MSG_TYPE_QUESTION)/z144013;
+  !!if&i^wog_20_enabled^;
+    !!if|i^wog_20_week_type^=(WOG_20_MONSTER_WEEK)/i^wog_20_week_type^=(WOG_20_PLAYER_WEEK)/i^wog_20_week_type^=(WOG_20_INFERNO_WEEK);
+      !!VR(isMonOfWeek:y):S(FALSE);
 
-    !!VR(mon):S(NO_MON); [Set (mon) to -1 if it's the monster of the week]
+      ; Other monster weeks
+      !!if|i^wog_20_week_type^=(WOG_20_MONSTER_WEEK)/i^wog_20_week_type^=(WOG_20_PLAYER_WEEK);
+        !!VR(isMonOfWeek:y)&i^wog_20_week_subtype^=(mon):S(TRUE);
+      ; Deity of Fire Week
+      !!el;
+        !!SN:Mi^wog_20_deityOfFireExtraMonsters^/?(size:y);
+
+        !!re i/0/(size)/1/-1;
+          !!SN:Mi^wog_20_deityOfFireExtraMonsters^/i/?(monOfWeek:y);
+
+          !!br&(mon)=(monOfWeek);
+        !!en;
+
+        !!VR(isMonOfWeek)&i<(size):S(TRUE);
+      !!en;
+
+      ; Show msg about not being able to use emerald on the targeted monster
+      !!if&(isMonOfWeek);
+        !!IF&(ERM_FLAG_IS_HUMAN):Q4/(PIC_TYPE_MONSTER)/(mon)/(MSG_TYPE_QUESTION)/z144013;
+
+        !!VR(mon):S(NO_MON); [Set (mon) to -1 if it's the monster of the week]
+      !!en;
+    !!en;
   !!en;
 
     [Check if this is a new creature (if it is and if i^wog_44_speciesCounter^>12, set (mon) to -1)]
