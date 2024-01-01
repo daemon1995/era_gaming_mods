@@ -7,7 +7,7 @@ WoG图像优化精简版
 
 同时使用了以下作者制作的素材：
 Valery
-HotA Crews
+HotA Crew
 Kuririn
 Fred79
 Mod Design Team

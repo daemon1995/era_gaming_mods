@@ -8,7 +8,7 @@ That's why this mod is compatible with the all another object mods;
 
 Also used materials made by:
 Valery
-HotA Crews
+HotA Crew
 Kuririn
 Fred79
 Mod Design Team
