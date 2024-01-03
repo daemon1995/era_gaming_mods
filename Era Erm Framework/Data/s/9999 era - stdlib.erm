@@ -1179,6 +1179,64 @@ ZVSE2
 !!VRf:S(value) Sd>>16 X(value) *295559667;
 !!VRg:Sf Sd>>16 Xf *295559667;
 !!VR(result):Sg Sd>>16 Xg;
+
+!?FU(Hash32);
+; Calculates int32 digest (hash sum) of arbitrary sequence of bytes.
+!#VA(data:x);    Pointer to data first byte or string
+!#VA(dataLen:x); Length of data in bytes
+!#VA(result:x);  Result hash
+
+!!VR(savedV1:y):Sv1;
+!!SN:F^Hash32^/(data)/(dataLen);
+!!VR(result):Sv1;
+!!VRv1:S(savedV1);
+
+!?FU(MakeRngSeed);
+; Generates deterministic int32 seed for pseudo random number generator, consuming up to 15 arbitrary int32 parameters.
+; Example: FU(MakeRngSeed):P(x)/(y)/(z)/(heroId)/?(seed:y); get prng seed, which will be the same for given coordinates and hero
+!#VA(firstArg:x);
+
+!!FU:A?(numArgs:y);
+!!FU&(numArgs)=0:E;
+
+!!VR(savedV1:y):Sv1;
+!!VR(resultPtr:y):S(numArgs);
+!!VR(dataLen:y):S(numArgs) -1 *(SIZEOF_INT);
+!!SN:F^Hash32^/?(firstArg)/(dataLen);
+!!VRx(resultPtr):Sv1;
+!!VRv1:S(savedV1);
+
+!?FU(SplitMix32);
+; Generates new random value using SplitMix32 algorithm and modifies input seed value.
+; Possible syntaxes:
+;  FU:P?(seed:y) ?(result:y);             Generate random int32 value (negative or positive)
+;  FU:P?(seed:y)/(min)/(max) ?(result:y); Generate random int32 value in [min..max] range
+!#VA(seed:x);   OUT. Previous generator seed. Pass by reference (using ?), because this value will change after generation
+!#VA(min:x);    Minimum value.
+!#VA(max:x);    Maximum value.
+!#VA(result:x); OUT. Result number
+
+!!FU:A?(numArgs:y);
+
+!!if&(numArgs)<>2/(numArgs)<>4;
+  !!SN:F^ShowErmError^/^SplitMix32: invalid number of arguments^;
+  !!FU:E;
+!!en;
+
+!!if&(numArgs)=2;
+  !!VR(minValue:y):S(INT_MIN);
+  !!VR(maxValue:y):S(INT_MAX);
+  !!VR(resultPtr:y):S(@min);
+!!el;
+  !!VR(minValue:y):S(min);
+  !!VR(maxValue:y):S(max);
+  !!VR(resultPtr:y):S(@result);
+!!en;
+
+!!VR(savedV1:y):Sv1;
+!!SN:F^SplitMix32^/?(seed)/(minValue)/(maxValue);
+!!VRx(resultPtr):Sv1;
+!!VRv1:S(savedV1);
 ; ======== END MATH ========
 
 
@@ -2720,14 +2778,14 @@ ZVSE2
 !!el&(text)=^skilllev^;
   !!VR(address):S6979432;               [secondary skill levels]
 !!el&(text)=^advevent^;
-  !!VR(address):S6908520;               [adventure map object events]  
+  !!VR(address):S6908520;               [adventure map object events]
 !!el;
   !!VR(string):Z^Wrong txt filename!^;
   !!FU:E;
 !!en;
 
 ; @Master Of Puppets
-!!UN:C(address)/(UNC_INT)/?(value:y);            
+!!UN:C(address)/(UNC_INT)/?(value:y);
 !!VR(address2:y):S(value) +32;
 !!UN:C(address2)/(UNC_INT)/?(value3:y);
 !!VR(address3:y):S(rowIndex) *4 +(value3);
