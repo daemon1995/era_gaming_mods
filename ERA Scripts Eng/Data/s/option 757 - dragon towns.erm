@@ -10,6 +10,20 @@ ZVSE2
 ; This script used to work with AI, but not anymore. UN:I seems to have some problem on AI's turn, the new town sometimes fails to be put on the map and leads to a crash.
 
 
+; Set up array for the index of dragon town names
+; We use an array in order to generate random town names without duplicates
+!?FU(OnAfterErmInstructions);
+!!UN:P757/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Set up a function to be used later
+!!FU(ES_757_SetUpDragonTownNamesIndList):P;
+
+!?FU(ES_757_SetUpDragonTownNamesIndList);
+!!FU(NewIntArray):P16/?i^es_757_dragonTownNamesIndList^/(M_STORED);
+!!FU(Array_Fill):Pi^es_757_dragonTownNamesIndList^/0/1; [Fill the array with number 0 to 15]
+
+; Trigger after leaving Utopias
 !$OB(OBJ_DRAGON_UTOPIA)&i^timerIsHuman^;
 ; Exit if the Utopia has not been cleared
 !!CB998:T?(isCleared:y);
@@ -199,12 +213,19 @@ ZVSE2
 *!VR(extraX):-1;
 *!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
 
-; Generate a random number
-!!VR(random:y):R0/1/15;
+; Generate a random index for the name of dragon town
+!!SN:Mi^es_757_dragonTownNamesIndList^/?(size:y);
+
+!!if&(size)=0;
+  !!FU(ES_757_SetUpDragonTownNamesIndList):P;
+!!en;
+
+!!FU(Array_Shuffle):Pi^es_757_dragonTownNamesIndList^;
+!!FU(Array_Pop):Pi^es_757_dragonTownNamesIndList^/?(nameInd:y);
 
 ; Place and set up the new town
 !!IP:D(ANY_PLAYER);
-!!FU(ES_757_PlaceAndSetUpTheTown):P(townX)/(owner)/(townType)/(random) D(townX)/(owner)/(townType)/(random);
+!!FU(ES_757_PlaceAndSetUpTheTown):P(townX)/(owner)/(townType)/(nameInd) D(townX)/(owner)/(townType)/(nameInd);
 
 // Check if the targeted tile is available
 !?FU(ES_757_CheckTileEligibility);
@@ -265,7 +286,7 @@ ZVSE2
 // Place and set up the town for every player in MP
 // For some reason, the new town will only visually appear after showing up IF msg (from Achievements for example)
 !?FU(ES_757_PlaceAndSetUpTheTown);
-!#VA(x:x) (owner:x) (townType:x) (random:x);
+!#VA(x:x) (owner:x) (townType:x) (nameInd:x);
 
 !!VR(y:y):Sv999;
 !!VR(z:y):Sv1000;
@@ -280,15 +301,18 @@ ZVSE2
 
 ; Set up town data
 !!CA(x)/(y)/(z):U?(townId:y);
-!!SN:T^es.757.name%(random)^/?z2;
+!!SN:T^es.757.name%(nameInd)^/?z2;
 !!CA0/(townId):Nz2 B2/30 B2/31 B6/2 B6/9;                                             [установка владельца, имени, разрушение жилищ и отстройка «амка и √ћ3 уровн€]
 !!CA0/(townId):M2/0/-1/0 M2/1/-1/0 M2/2/-1/0 M2/3/-1/0 M2/4/-1/0 M2/5/-1/0 M2/6/-1/0; [нет стражников]
 !!CA0/(townId):M1/0/0/0 M1/1/0/0 M1/2/0/0 M1/3/0/0 M1/4/0/0 M1/5/0/0 M1/6/0/0;        [нет существ дл€ выкупа]
 !!CA0/(townId):O(owner);                                                              [Set the owner]
+
+; Compatibility with All towns have a grail
 !!if&(townType:x)<>(TOWN_CONFLUX)/i^wog_101_map_rule_19_isEnabled^;                   [if build grails anywhere]
   !!CA0/(townId):B6/26;                                                               [build grail]
 !!en;
-; Add in compatibility with Enhanced War Machines III
+
+; Compatibility with Enhanced War Machines III
 !!UN:P73/?(enhWMIII:y); 
 !!PO(x)/(y)/(z)&(enhWMIII):H1 T1;
 
