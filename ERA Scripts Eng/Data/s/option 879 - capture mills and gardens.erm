@@ -21,7 +21,9 @@ ZVSE2
 
 !?FU(ES_CreateERMHook);
 !#VA(address:x);
+
 !!UN:P879/?(isCaptureObjOpt:y);
+
 !!if&(isCaptureObjOpt);
   !!SN:E(address)/1/4864048/(ES_OnPlayerVisit_MillOrFarden); [Trigger on player visiting Mysticism Garden]
   !!SN:E(address)/1/4880976/(ES_OnPlayerVisit_MillOrFarden); [Trigger on player viisiting Water Wheel]
@@ -38,6 +40,7 @@ ZVSE2
 
 !?FU(OnGameEnter);
 !!UN:P879/?(isCaptureObjOpt:y);
+
 !!if&(isCaptureObjOpt);
   //replace wind mill grass
   !!re i/0/7;(end_value);
@@ -75,10 +78,11 @@ ZVSE2
 
 !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
   !!UN:C6916676/4/?(noShowObjectcts:y);
+
   !!if&(noShowObjectcts)=0;
-     !!VRi^ES_879_DrawObjectType^:S(objType);
-     !!SN:X?t/0;
-     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4263617;
+    !!VRi^ES_879_DrawObjectType^:S(objType);
+    !!SN:X?t/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4263617;
   !!en; 
 !!en;
 
@@ -89,10 +93,12 @@ ZVSE2
 
 !?FU(ES_879_MP_SendObjectOwner);
 !#VA (packedCoords[3]:x) (newOwner:x) (newRes:x) (newVal:x);
+
 !!POx1/x2/x3:O(newOwner);
 
 !?FU(ES_879_OnVisitResourceObject);
 !#VA(addr:x) (packedCoords:x) (oldOwner:x); (newOwner:x) (newRes:x) (newVal:x);
+
   *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESP)/4/?(esp:y) C(esp)/16/4/0; emulate AI visit to block message
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(packedCoords);
   !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
@@ -211,24 +217,29 @@ ZVSE2
 
 !?FU(ES_HOOK_OnObjectHintGetType);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y) C(ebx)/30/2/?t;(objType:y);
+
 !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
   !!VRi^es_879_hint_object_type^:St;
 !!en;
 
 !?FU(OnAdvMapTileHint)&i^es_879_hint_object_type^;
 !#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+
 !!PO(x)/(y)/(z):O?(owner:y);
+
 !!if&(owner)>(NO_OWNER);
   !!VR(ownerStrIndex:y):S(owner) +23;
   !!FU(GetTextFileString):P^arraytxt^/(ownerStrIndex)/?(ownerStr:z);
   !!VR(newHint:z):S^ - %(ownerStr)^;
   !!MM:M?(hint:z) M^%(hint:z)%(newHint:z)^;
 !!en;
+
 !!VRi^es_879_hint_object_type^:S0;
 
 
 !?FU(ES_HOOK_OnObjectRmcHintGetType);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(mapItem:y);
+
 !!if&(mapItem)>(BIT_16);
   !!UN:C(mapItem:y)/30/2/?t;(objType:y);
   !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
@@ -242,8 +253,39 @@ ZVSE2
 !!SN:O?(x:y)/?(y:y)/?(z:y);
 !!VRt:Si^es_879_rmc_hint_object_type^;
 !!PO(x)/(y)/(z):O?(owner:y);
+
 !!if&(owner)<>(NO_OWNER);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
   !!FU(ES_GameMgr_GetObjOwnerStr):P(owner)/?(ownerStr:z);
   !!SN:B(textBuffer)/d/?(currHint:z) B(textBuffer)/d/^%(currHint:z)%T(es.endl)%(ownerStr:z)^;
+!!en;
+
+; Reveal the area for owners every day (in case it's covered by Cover of Darkness)
+; Warning: must not use OnEveryDay and UN:S as they don't work exactly the same as native behaviours
+!?FU(ES_OnNewDay);
+!!UN:P879/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+
+; get size of the map
+!!UN:X?(mapSize:y)/?(hasUnderground:y); 
+; pass once through all cells of the map
+!!re l/0/(hasUnderground)/1;  coord z
+  !!re k/0/(mapSize)/1/-1;    coord y
+    !!re i/0/(mapSize)/1/-1;  coord x
+      !!OBi/k/l:T?(objType:y);
+
+      !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
+        !!TRi/k/l:E?(isYellowSquare:y); 
+        !!VR(isYellowSquare):X(TRUE);  reverse param isYellowSquare
+
+        !!if&(isYellowSquare);
+          !!FU(ES_AdvMgr_GetMapItem):Pi/k/l/?(mapItem:y);
+          !!POi/k/l:O?(owner:y);
+          !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/i/k/l/(owner)/3;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
 !!en;
