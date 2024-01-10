@@ -942,146 +942,143 @@ ZVSE2
 
 !?FU(OnAfterErmInited)&i^gem_option_5_ini^;
 
-  !!VRi^srm_mod_is_enabled^:S(TRUE);
-    !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?i^srm_townsAmount^;
-    !!UN:U(OBJ_RANDOM_TOWN)/(ANY_OBJ)/?(randomTownsAmount:y);
-    !!VRi^srm_townsAmount^&(randomTownsAmount):+(randomTownsAmount);
+!!VRi^srm_mod_is_enabled^:S(TRUE);
+!!UN:U(OBJ_TOWN)/(ANY_OBJ)/?i^srm_townsAmount^;
+!!UN:U(OBJ_RANDOM_TOWN)/(ANY_OBJ)/?(randomTownsAmount:y);
+!!VRi^srm_townsAmount^&(randomTownsAmount):+(randomTownsAmount);
 
-    !!UN:C(SPELL_TABLE_POINTER)/4/?(spellsTable:y);
-    *!IF:M^%(spellsTable)^;
+!!UN:C(SPELL_TABLE_POINTER)/4/?(spellsTable:y);
+*!IF:M^%(spellsTable)^;
+
+!!re (townId:y)/(MAP_TOWN_FIRST)/i^srm_townsAmount^/1/-1;
+  !!FU(srm_SetUpTown):P(townId)/(spellsTable);
+!!en;
 
 
-    !!re (townId:y)/(MAP_TOWN_FIRST)/i^srm_townsAmount^/1/-1;
-      !!CA0/(townId):T?(townType:y);
-      !!VRi^current_researchable_spell_in_town%(townId)^:S-1;
-      !!VRi^current_researchable_spell_in_town%(townId)_place^:S-1;
+!?FU(srm_SetUpTown);
+  !#VA(townId:x) (spellsTable:x);
 
-      !!if|(townType)=(TOWN_STRONGHOLD)/(townType)=(TOWN_FORTRESS);
-        !!VR(maxGm:y):S2;
-      !!el&(townType)=(TOWN_CASTLE);
-        !!VR(maxGm:y):S3;
-      !!el;
-        !!VR(maxGm:y):S4;
+  !!CA0/(townId):T?(townType:y);
+  !!VRi^current_researchable_spell_in_town%(townId)^:S-1;
+  !!VRi^current_researchable_spell_in_town%(townId)_place^:S-1;
+
+  !!if|(townType)=(TOWN_STRONGHOLD)/(townType)=(TOWN_FORTRESS);
+    !!VR(maxGm:y):S2;
+  !!el&(townType)=(TOWN_CASTLE);
+    !!VR(maxGm:y):S3;
+  !!el;
+    !!VR(maxGm:y):S4;
+  !!en;
+
+
+  !!re (guildLevel:y)/0/(maxGm);
+    !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_gm%(guildLevel)_store^;;
+  !!en;
+
+  !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_researched_slots^; [create empty arrays for in the future spells research]
+
+  !!VR(hasLibrary:y):S(FALSE);
+
+  !!if&(townType)=(TOWN_TOWER);
+    !!CA0/(townId):B3/22;                                                   [check if has library in Tower]
+    !!VR(hasLibrary)&1:S(TRUE);
+    !!VRi^srm_town%(townId)_has_no_library_from_start^&-1:S(TRUE);
+  !!en;
+
+  !!re (spellForCheck:y)/(SPELL_FIRST)/i^srm_MAX_SPELL_ID^;(GEM_SPELLS_NUM)/1/-1;(SPELL_LAST_WOG);                                            [loop all spells]
+
+    !!if&(spellForCheck)<=(SPELL_LAST_WOG);
+      !!UN:J0/(spellForCheck)/?(isSpellRestricted:y);
+        !!co&(isSpellRestricted);                                                                       [if spell is banned  then skip round;]
+
+      !!SS(spellForCheck):H(townType)/?(appearChance:y);
+        !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
+
+    !!el;
+
+      !!VR(spellPtr:y):S(spellForCheck) *(SIZEOF_SPELL_STRUCT) +(spellsTable);
+      !!UN:C(spellPtr)/12/(UNC_INT8)/?(flags:y);
+      !!VR(flags):&8;                                                                        [check if creature spell]
+        !!co&(flags);                                                                          [if spell is creature spell then skip round;]
+
+      !!VR(offset:y):S(townType) *(UNC_INT) +68;
+      !!UN:C(spellPtr)/(offset)/(UNC_INT)/?(appearChance:y);
+
+        !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
+    !!en;
+
+    !!FU(srm_GetSpellLevel):P(spellForCheck)/?(spellLevel:y);
+    !!VR(guildLevel):S(spellLevel) -1;
+      !!co|(guildLevel)>(maxGm)/(guildLevel)<0;                                                                          [if spell can't appear then skip round;]
+
+    !!if&(spellForCheck)<=(SPELL_LAST_WOG);
+      
+      !!FU(Town_IsSpellBanned):P(townId)/(spellForCheck)/?(isBanned:y);
+      !!co&(isBanned);                                                                          [if spell can't appear then skip round;]
+
+    !!en;
+
+    !!FU(srm_CheckIfSpellIsAlreadyInTown):P(townId)/(spellForCheck)/(guildLevel)/(hasLibrary)/?(isSpellFree:y);   [check if spell is now at any position in town]
+      *!IF&(spellForCheck)>=85/(spellForCheck)<=87:M^%(spellForCheck) %(isSpellFree)^;
+
+    !!FU(Array_Push)&(isSpellFree)=(TRUE):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellForCheck); [if spell is free, then add in array]
+  !!en;
+
+  !!if&(townId)=0;
+    !!SN:Mi^srm_town%(townId)_gm4_store^/?(arraySize:y);
+
+    !!re i/0/(arraySize)/1/-1;
+      !!SN:Mi^srm_town%(townId)_gm4_store^/i/?j;
+
+      !!if&j>70;
+
       !!en;
-
-
-      !!re (guildLevel:y)/0/(maxGm);
-        !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_gm%(guildLevel)_store^;;
-      !!en;
-      !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_researched_slots^; [create empty arrays for in the future spells research]
-
-      !!VR(hasLibrary:y):S(FALSE);
-
-      !!if&(townType)=(TOWN_TOWER);
-        !!CA0/(townId):B3/22;                                                   [check if has library in Tower]
-        !!VR(hasLibrary)&1:S(TRUE);
-        !!VRi^srm_town%(townId)_has_no_library_from_start^&-1:S(TRUE);
-      !!en;
-
-      !!re (spellForCheck:y)/(SPELL_FIRST)/i^srm_MAX_SPELL_ID^;(GEM_SPELLS_NUM)/1/-1;(SPELL_LAST_WOG);                                            [loop all spells]
-
-
-
-        !!if&(spellForCheck)<=(SPELL_LAST_WOG);
-          !!UN:J0/(spellForCheck)/?(isSpellRestricted:y);
-            !!co&(isSpellRestricted);                                                                       [if spell is banned  then skip round;]
-
-          !!SS(spellForCheck):H(townType)/?(appearChance:y);
-            !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
-
-        !!el;
-
-          !!VR(spellPtr:y):S(spellForCheck) *(SIZEOF_SPELL_STRUCT) +(spellsTable);
-          !!UN:C(spellPtr)/12/(UNC_INT8)/?(flags:y);
-          !!VR(flags):&8;                                                                        [check if creature spell]
-          !!co&(flags);                                                                          [if spell is creature spell then skip round;]
-
-          !!VR(offset:y):S(townType) *(UNC_INT) +68;
-          !!UN:C(spellPtr)/(offset)/(UNC_INT)/?(appearChance:y);
-
-            !!co&(appearChance)<1;                                                                          [if spell can't appear then skip round;]
-        !!en;
-
-        !!FU(srm_GetSpellLevel):P(spellForCheck)/?(spellLevel:y);
-        !!VR(guildLevel):S(spellLevel) -1;
-          !!co|(guildLevel)>(maxGm)/(guildLevel)<0;                                                                          [if spell can't appear then skip round;]
-
-        !!if&(spellForCheck)<=(SPELL_LAST_WOG);
-          
-          !!FU(Town_IsSpellBanned):P(townId)/(spellForCheck)/?(isBanned:y);
-          !!co&(isBanned);                                                                          [if spell can't appear then skip round;]
-
-        !!en;
-
-
-        !!FU(srm_CheckIfSpellIsAlreadyInTown):P(townId)/(spellForCheck)/(guildLevel)/(hasLibrary)/?(isSpellFree:y);   [check if spell is now at any position in town]
-          *!IF&(spellForCheck)>=85/(spellForCheck)<=87:M^%(spellForCheck) %(isSpellFree)^;
-
-        !!FU(Array_Push)&(isSpellFree)=(TRUE):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellForCheck); [if spell is free, then add in array]
-
-      !!en;
-      !!if&(townId)=0;
-        !!SN:Mi^srm_town%(townId)_gm4_store^/?(arraySize:y);
-        !!re i/0/(arraySize)/1/-1;
-          !!SN:Mi^srm_town%(townId)_gm4_store^/i/?j;
-          !!if&j>70;
-
-          !!en;
-          
-        !!en;
-      !!en;
+    !!en;
+  !!en;
 
 
 ************  AFTER ADDING ALL SPELLS TO RESEARH IN THE ARRAYS DO THIS:  ************************* 
 
-      !!re (guildLevel:y)/0/4;                                                                             [after all the spells loops - loop all mg lvls]
-        !!br&(guildLevel)=3/(townType)=(TOWN_STRONGHOLD);  
-        !!br&(guildLevel)=3/(townType)=(TOWN_FORTRESS);
-        !!br&(guildLevel)=4/(townType)=(TOWN_CASTLE); 
-        !!FU(Array_Shuffle):Pi^srm_town%(townId)_gm%(guildLevel)_store^;                                   [shuffle all the arrays]
+  !!re (guildLevel:y)/0/4;                                                                             [after all the spells loops - loop all mg lvls]
+    !!br&(guildLevel)=3/(townType)=(TOWN_STRONGHOLD);  
+    !!br&(guildLevel)=3/(townType)=(TOWN_FORTRESS);
+    !!br&(guildLevel)=4/(townType)=(TOWN_CASTLE); 
+    !!FU(Array_Shuffle):Pi^srm_town%(townId)_gm%(guildLevel)_store^;                                   [shuffle all the arrays]
 
-        !!if&(townType)=(TOWN_TOWER)/i^srm_town%(townId)_has_no_library_from_start^;                    [if tower has no library from start]
-          !!VR(scrollPosition:y):S5 -(guildLevel);
-          !!CA0/(townId):G(guildLevel)/(scrollPosition)/?(extraLibrarySpell:y);                            [check each latest scroll in each gm lvl]
+    !!if&(townType)=(TOWN_TOWER)/i^srm_town%(townId)_has_no_library_from_start^;                    [if tower has no library from start]
+      !!VR(scrollPosition:y):S5 -(guildLevel);
+      !!CA0/(townId):G(guildLevel)/(scrollPosition)/?(extraLibrarySpell:y);                            [check each latest scroll in each gm lvl]
 
-          !!if&(extraLibrarySpell)>=(SPELL_FIRST);                                                           [only if extra slot has spell]
-            !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(arraySize:y);                                 [get research array size]
+      !!if&(extraLibrarySpell)>=(SPELL_FIRST);                                                           [only if extra slot has spell]
+        !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(arraySize:y);                                 [get research array size]
 
-            !!FU(NewIntArray):P?(mainArrayLocalCopy:y);
-            !!FU(Array_Copy):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(mainArrayLocalCopy);               [copy to local array]
-            !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/1;                                              [set array size = to  1]
-            !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/0/(extraLibrarySpell);                          [set extraLibrarySpell to the 0th array elem]
+        !!FU(NewIntArray):P?(mainArrayLocalCopy:y);
+        !!FU(Array_Copy):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(mainArrayLocalCopy);               [copy to local array]
+        !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/1;                                              [set array size = to  1]
+        !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/0/(extraLibrarySpell);                          [set extraLibrarySpell to the 0th array elem]
 
-            !!re i/0/(arraySize)/1/-1;
-              !!SN:M(mainArrayLocalCopy)/i/?(spellFromArray:y);                                           [check each its spell]
+        !!re i/0/(arraySize)/1/-1;
+          !!SN:M(mainArrayLocalCopy)/i/?(spellFromArray:y);                                           [check each its spell]
 
-              !!if&(extraLibrarySpell)<>(spellFromArray);                                                 [except extraLibrarySpell ID]
-                !!FU(Array_Push):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellFromArray);                 [filling the main array with itself and only from 1st (not 0th) element]
-              !!en;
-            !!en;
-
+          !!if&(extraLibrarySpell)<>(spellFromArray);                                                 [except extraLibrarySpell ID]
+            !!FU(Array_Push):Pi^srm_town%(townId)_gm%(guildLevel)_store^/(spellFromArray);                 [filling the main array with itself and only from 1st (not 0th) element]
           !!en;
-
         !!en;
-
-        !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(availableSpellsToResearch:y);
-
-
-        !!if&(availableSpellsToResearch)<1;
-          *!VR(maxScrollsOnLevel:y):S5 -(guildLevel) +(hasLibrary);
-          !!CA0/(townId):G(guildLevel)/?(maxScrollsOnLevel:y);
-
-          !!re i/0/(maxScrollsOnLevel)/1/-1;
-            !!VR(itemId:y):S(guildLevel) *10 + i;
-            !!FU(Array_Push):Pi^srm_town%(townId)_researched_slots^/(itemId);
-          !!en;
-
-        !!en;
-
       !!en;
-
-
     !!en;
+
+    !!SN:Mi^srm_town%(townId)_gm%(guildLevel)_store^/?(availableSpellsToResearch:y);
+
+    !!if&(availableSpellsToResearch)<1;
+      *!VR(maxScrollsOnLevel:y):S5 -(guildLevel) +(hasLibrary);
+      !!CA0/(townId):G(guildLevel)/?(maxScrollsOnLevel:y);
+
+      !!re i/0/(maxScrollsOnLevel)/1/-1;
+        !!VR(itemId:y):S(guildLevel) *10 + i;
+        !!FU(Array_Push):Pi^srm_town%(townId)_researched_slots^/(itemId);
+      !!en;
+    !!en;
+  !!en;
 
 !?FU(srm_CheckIfSpellIsAlreadyInTown);
   !#VA(townId:x) (spellForCheck:x) (guildLevel:x) (hasLibrary:x) (isSpellFree:x);
@@ -1258,7 +1255,13 @@ ZVSE2
   !!en;
 
 
+; Compatiblity with Dragon Town (Era Scripts)
+!?FU(ES_757_SetUpDragonTown);
+!#VA(townId:x);
 
+!!VRi^srm_townsAmount^:+1;
+!!UN:C(SPELL_TABLE_POINTER)/4/?(spellsTable:y);
+!!FU(srm_SetUpTown):P(townId)/(spellsTable);
 
 
 ; Function for setting the filename of the DL template of the main dialogue
@@ -1266,5 +1269,3 @@ ZVSE2
 !#VA(file:x);
 
 !!VR(file):Z^srm_gm_rebuild^;
-
-
