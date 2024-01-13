@@ -41,7 +41,9 @@ Variables Used in this Script: v1-v4,v310-v312,z1-z5
 Functions Used in this Script: 849,5000-5037
 Function Variables Used in this Script: x1-x5,x16,y1-y17
 
-; Note: This script has compatiblity lines with Era Scripts options
+; Note: Behaviour after entering objects can be configured with FU(WOG_23_OnAfterEnterObject)
+
+
 !?FU(WOG_CreateERMHook);
 !#VA(address:x);
 
@@ -62,6 +64,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 !#FU(WOG_23_Initialization):P23;
 -----------------------------------------------------------------------------------------
 [Timer - give AI additional movement points accoridng to Sorcery level]
+; Archer30: Sure this is still needed?
 !?FU(OnEveryDay)&i^timerIsAi^;
   !!UN:P23/?(wogOption:y);
   !!FU&(wogOption)<>(TRUE):E;
@@ -80,7 +83,9 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
 
 !?FU(WOG_23_GetObjectToSetAsVisited);
 !#VA(objType:x) (result:x);
+
 !!VR(result):S(FALSE);
+
 !!if&(objType)=>88/(objType)<=90|(objType)=(OBJ_WITCH_HUT)/(objType)=(OBJ_TREE_OF_KNOWLEDGE)/(objType)=(OBJ_CREATURE_BANK)/(objType)=(OBJ_CRYPT) 
     /(objType)=(OBJ_DRAGON_UTOPIA)/(objType)=(OBJ_DERELICT_SHIP)/(objType)=(OBJ_SHIPWRECK)/(objType)=(OBJ_UNIVERSITY);
   !!VR(result):S(TRUE);
@@ -122,6 +127,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
             !!HE(heroId):Z?(hero:y) Wd1/1;
             !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
             !!SN:E4901264/(CALLCONV_THISCALL)/(advMgr)/(mapItem)/(hero)/(xyz);
+            !!FU(WOG_23_OnAfterEnterObject):P(x)/(y)/(z)/t/(heroOwner); [This function would be called by 3rd party scripts]
           !!en;
         !!en;
       !!en;
@@ -149,13 +155,11 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
     !!HE(activeHero):S(SKILL_SORCERY)/?(sorceryLevel:y) P?(hX:y)/?(hY:y)/?(hZ:y);
     !!FU&(x)=(hX)/(y)=(hY)|(z)<>(hZ)/(sorceryLevel)<1:E;
 
-    !!SN:O?(x:y)/?(y:y)/?(z:y);             [Get the coordinate of the entrance - Archer]
-
+    !!SN:O?(x:y)/?(y:y)/?(z:y);             [Get the coordinate of the entrance]
     !!FU(WOG_23_CanReachObject):P(x)/(y)/(z)/(activeHero)/(sorceryLevel)/?(result:y);
+
     !!if&(result);
-
       !!FU(WOG_23_MainProcedure):P(x)/(y)/(z)/(activeHero)/(sorceryLevel);
-
     !!en;
   !!en;
 
@@ -350,11 +354,13 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
   !!OB(x)/(y)/(z):T?(objType:y);
   
   !!FU(WOG_GetObjectName):P(objType)/?(objName:z);
+
   !!if&999/(sorceryLevel)>=3;
     !!SN:T^wog.23.remote^/?(msg:z)/^objName^/(objName);
     !!IF:Q2/(PIC_TYPE_SEC_SKILL)/80/(pic)/(value)/(MSG_TYPE_QUESTION)/(msg);
     !!if&2;
       !!FU(WOG_AdvMgr_HeroEnterObject):Px1/x2/x3/x4; [visit object with hero]
+      !!FU(WOG_23_OnAfterEnterObject):P(x)/(y)/(z)/(objType)/i^timerOwner^; [This function would be called by 3rd party scripts]
     !!en;
   !!el;
     !!IF:Q2/(pic)/(value)/(MSG_TYPE_POPUP)/^%(objName)%T(wog.endl)%T(wog.endl)%T(wog.notVisited)^;
@@ -420,7 +426,7 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
     !!if&(monId)<>(NO_MON);
       !!VR(hasGuard):+1;
       !!SN&(monCount)=1:H^monname^/(monId)/0/?(monName:z);
-      !!SN&(monCount)>1:H^monname^/(monId)/0/?(monName:z);
+      !!SN&(monCount)>1:H^monname^/(monId)/1/?(monName:z);
       !!VR(text):+^%(monCount) %(monName)^+(endl); [%T(wog.endl)^;]
     !!en;
   !!en;
@@ -568,8 +574,6 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
   !!IF&y1=2:Q1/36/1000/8/y2/4/z123073;  [Display hint text for 1000 gold plus artifact]
   !!CM:R0;
 -----------------------------------------------------------------------------------------
-
------------------------------------------------------------------------------------------
 !?FU(WOG_23_CalculateResourceBonus);
 !#VA(resType:x) (heroId:x) (sorceryLevel:x) (bonus:x);
   !!FU&(sorceryLevel)<2:E;
@@ -656,7 +660,6 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
   !!VRy2:Sy1 +x1-1 F0/15 -y1;             [Increase value of chest by 1 for Advanced Sorcery, by 2 for Expert Sorcery]
   !!VRy3:Sy1 +y2;
   !!CHv998/v999/v1000:Bdy2;        [Set new value of chest]
-
 -----------------------------------------------------------------------------------------
 !?FU5036;                               [Start of Function 5036 - Look up artifact class]
   !!UN:Ax1/3/?y1;  [x1=artifact number. Lookup artifact class (y1) and store text in z2]
@@ -693,4 +696,5 @@ Function Variables Used in this Script: x1-x5,x16,y1-y17
       !!VR(result):S(TRUE);
     !!en;
   !!en;
+
 ** End of Script **

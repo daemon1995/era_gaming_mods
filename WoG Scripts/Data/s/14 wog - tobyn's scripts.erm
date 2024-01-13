@@ -241,7 +241,7 @@ ZVSE2
 ; To-do: Hide everything about Mithril if Mithril is not enabled in the game
 
 
-!#VRv2333&i^wog_191_enabled^=1:S10; set daily additional Expert Estates gold per 10,000 experience (adv=half, basic=quarter), may be modified by map maker, e.g. =0 if only resource bonus
+!#VRv2333&i^wog_191_enabled^=1:S100; set daily additional Expert Estates gold per 100,000 experience (adv=half, basic=quarter), may be modified by map maker, e.g. =0 if only resource bonus
 
   DAILY ADDED RESOURCES FOR ESTATES HEROES (or heroes with manually ERM set w47)
 
@@ -291,21 +291,29 @@ ZVSE2
 !?FU(WOG_191_Hero_GetEstatesIIBonus);   [Estates II]
 !#VA(heroId:x) (skillLvl:x) (result:x);
 
-!!HE(heroId):E?(exp:y)/?l/1 X?(type:y)/?(subtype:y)/d/d/d/d/d;;
-; Restrain the gold gained (2000/5000 depending on whether the hero is a Estate Specialist)
-!!if&(type)=0/(subtype)=(SKILL_ESTATES);
-  !!VR(maxGold:y):S5000;
-!!el;
-  !!VR(maxGold:y):S2000;
-!!en;
+!!VR(result):S0;
+!!HE(heroId):E?(exp:y)/?(level:y)/1;
 
-!!VR(divisor:y):S(skillLvl) -3 *-1; // divide gold depending on skill lvl /by 4/by 2 / by 1
-!!VR(result):S(exp) :10000 *v2333 Sd>>(divisor) F0/(maxGold);
+!!if&(level)>=1;
+  !!HE(heroId):X?(type:y)/?(subtype:y)/d/d/d/d/d;;
 
-; Manage daily gold bonus from selection
-!!if&l>=10;
-  !!IF:W(heroId);
-  !!VR(result)&w47=14:+350;
+  ; Restrain the gold gained (2000/5000 depending on whether the hero is a Estate Specialist)
+  !!if&(type)=0/(subtype)=(SKILL_ESTATES);
+    !!VR(maxGold:y):S5000;
+  !!el;
+    !!VR(maxGold:y):S2000;
+  !!en;
+
+  !!VR(divisor:y):S(skillLvl) -3 *-1; // divide gold depending on skill lvl /by 4/by 2 / by 1
+  !!VR(result):S(exp) *v2333 :100000 Sd>>(divisor);
+  !!VR(result)&(result)<0:S(maxGold);   [If the value become negative (due to super high level), set the addtional gold to the max value]
+  !!VR(result):F0/(maxGold);
+
+  ; Manage daily gold bonus from selection (level 10+ only)
+  !!if&(level)>=10;
+    !!IF:W(heroId);
+    !!VR(result)&w47=14:+350;
+  !!en;
 !!en;
 
 !?FU(OnEveryDay)&i^wog_191_enabled^;                       daily timer for every color (if script active)
@@ -329,7 +337,7 @@ ZVSE2
 *!VRy10:S1;                            full modifier for Expert Estates and in general to avoid division by zero
 *!VRy10&(estatesLvl)=2:S2;                       half for Advanced Estates
 *!VRy10&(estatesLvl)=1:S4;                       quarter for Basic Estates
-*!VRy4&(estatesLvl)>0:S(exp) :10000 *v2333 :y10;    calculate gold according to expertise and experience
+*!VRy4&(estatesLvl)>0:S(exp) :100000 *v2333 :y10;    calculate gold according to expertise and experience
 *!VRy4&y4>2000/y13<>(SKILL_ESTATES):S2000;          max of +2000 Gold/day (from lvl 25 on) unless Estates specialist
 *!VRy4&y4>5000:S5000;                  max of +5000 Gold/day (around lvl 30) even if Estates specialist
 *!OW&(estatesLvl)>0:R-1/6/dy4;                   give/remove that gold
