@@ -395,8 +395,9 @@ ZVSE2
 !!FU&(wogOption)<>(TRUE):E;
 
 ; Initialization
-!!FU(NewIntArray):P?(stacksList:y);
-!!VR(sideDowngraded[2]:y):C0/0;
+!!SN:Mi^wog_216_sideDowngraded^;
+!!FU(NewIntArray):P?(stacksList:y) P2/?i^wog_216_sideDowngraded^/(M_TEMP);
+!!VR(hasDowngraded:y):S(FALSE);
 
 ; Check if there is any stack downgraded by Resistance. Add in stack ID to the array for playing animation later
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
@@ -407,19 +408,32 @@ ZVSE2
       !!VR(stack:y):Si *(BATTLE_DEFENDER_STACK_FIRST) +(slot);
       !!FU(Array_Push):P(stacksList)/(stack);
 
-      !!VR(sideDowngraded[i]):S(TRUE);
+      !!SN:Mi^wog_216_sideDowngraded^/i/(TRUE);
+      !!VR(hasDowngraded):S(TRUE);
     !!en;
   !!en;
 !!en;
 
-; Exit if there was no stack downgraded
-!!FU&(sideDowngraded[0])<>(TRUE)/(sideDowngraded[1])<>(TRUE):E;
+; Exit and remove the array if there was no stack downgraded
+!!if&(hasDowngraded)=(FALSE);
+  !!SN:Mi^wog_216_sideDowngraded^;
+  !!VRi^wog_216_sideDowngraded^:S0;
+  !!FU:E;
+!!en;
 
+; Play sound, animation
+!!SN:P^Resurect^;
+!!FU(WOG_PlayAnimationOnMultipleStacks):P57/(stacksList);
+
+; Show battle log on the first round, as tactics phase could break it
+!?FU(OnBattleRound)&i^battle_round^=0/i^battle_isVisible^/i^wog_isNeutralBattle^/i^wog_216_sideDowngraded^;
 ; Set up text - ert legacy
 !!VRz3:S^^;
 
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
-  !!if&(sideDowngraded[i]);
+  !!SN:Mi^wog_216_sideDowngraded^/i/?(isDowngraded:y);
+
+  !!if&(isDowngraded);
     !!VR(oppSide:y):Si X(TRUE);
     !!HEi^battle_hero_%(oppSide)^:B0/?z2 R2/?(gender:y);
 
@@ -436,10 +450,11 @@ ZVSE2
   !!en;
 !!en;
 
-; Play sound, animation and text
-!!SN:P^Resurect^;
-!!FU(WOG_PlayAnimationOnMultipleStacks):P57/(stacksList);
 !!MM:Sz3;
+
+; Remove the array
+!!SN:Mi^wog_216_sideDowngraded^;
+!!VRi^wog_216_sideDowngraded^:S0;
 
 ** End of battle trigger for resistance
 
