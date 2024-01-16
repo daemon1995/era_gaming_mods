@@ -7,7 +7,7 @@ ZVSE2
 * Updated by Archer30 and daemon_n on Feb 2023
 
 *War Machine script 0.9 by Overlord
-*Reserved: TM41, v591, v2000-v2073, FU903-FU927, w81-83
+*Reserved: v2000-v2073, FU903-FU927, w81-83
 *Temporary: z1-z4
 *
 *ballista "base on ballista level" upgrades in towns
@@ -23,7 +23,7 @@ ZVSE2
 *increases hit, with ballistics: shoot ability with 2,4 or 8 shoots
 *
 
-
+!#DC(WOG_54_UPGRADE_LIMIT) = 2;
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Check if script is enabled]
 
 !?FU(OnAfterErmInstructions)&i^wog_54_enabled^;
@@ -45,50 +45,77 @@ ZVSE2
 
 ************************ before action combat screen ***************************
 
+************************* damage calculation combat screen ***************************
+
 ; Ballista
-!?FU(OnBeforeBattleAction)&i^wog_54_enabled^; get before action
-!!BG:E?(targetStack:y) H?(actingHero:y) A?(actionType:y);
+!?FU(OnStackToStackDamage)&i^wog_54_enabled^;
+!#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distanceArg:x) (isTheoretical:x);
 
-!!BMi^battle_acting_stack^:T?(type:y) I?(side:y) N?(num:y);
+; Compatibility with Artillery option in order to prevent it benefit from the bonus here
+!!if&(isTheoretical)<>(TRUE);
+  !!BG:A?(action:y);
+  !!FU&(action)<>(BATTLE_ACTION_SHOOT):E;
+!!en;
 
-!!FU(WOG_54_Ballista)&(type)=(MON_BALLISTA)/(actionType)=(BATTLE_ACTION_SHOOT):P0/(targetStack); ballista
+; Check if it is Ballista attacking with hero
+!!BM(atkStack):T?(atkType:y);
+!!BG:H?(hero:y);
 
-!?FU(WOG_54_Ballista)&i^wog_54_enabled^;
-!#VA(mode:x) (targetStack:x);
+!!if&(atkType)=(MON_BALLISTA)/(hero)>(NO_HERO);
+  !!BM(atkStack):I?(side:y);
+  !!HE(hero):S(SKILL_ARTILLERY)/?(skillLvl:y);
+  !!IF:W(hero);
+  !!VR(ballistaLvl:y):Sw81 +1;
+  !!VR(extDmgPercent:y):S(skillLvl) +(ballistaLvl) *20 -20; artillery + level * 20, +80
 
-* 1
-!!if&x1=0;
-  !!VRv2053:S2;
-  !!BMx2:N?v2054 H?y2 L?y3;
-  !!VRv2054:*y2 -y3; get before life
-  !!VRv2055:Sx2;
-* 2
-!!el;
-  !!VRv2053:S0;
-  !!BMv2055:N?y1 H?y2 L?y3 I?y4 S?y13;
-  !!BH0&y4=1:N?y5;
-  !!BH1&y4=0:N?y5; get THE hero number
-  !!VRy1:*y2 -y3; get after life
-  !!HEy5:S20/?y11;
-  !!IF:Wy5;
-  !!VRy6:Sw81 +1;
-  !!VRy7:Sy11 +y6 *20 -20; artillery + level * 20, +80
-  !!FU&y7=0:E; exit if not more damage
-  !!VRy8:Sv2054 -y1 *y7 :100;
-  !!VRy15:Sy13;
-  !!VRy13&y15>0:-y11;
-  !!VRy13&y15>0/y13<1:S1; no less than 1 speed
-  !!BMv2055:Ky8 Sy13; give additional damage and speed loss
-  !!SN:D;
+  !!if&(extDmgPercent)>0;
+    !!VR(finalDmgNew:y):S(extDmgPercent) *(finalDmgConst) :100 +(finalDmg);
+
+    !!if&(finalDmgNew)>(finalDmg);
+      !!VR(finalDmg):S(finalDmgNew);
+    !!en;
+  !!en;
 !!en;
 
 ************************* after action combat screen ***************************
 
 ; Ballista
-!?FU(OnBattleActionEnd)&i^wog_54_enabled^; get after action
-!!FU(WOG_54_Ballista)&v2053=2:P1;
+; Reduce the target's speed at the end of Ballista shooting
+!?FU(OnBattleActionEnd)&i^wog_54_enabled^;
+!!BG:A?(action:y) H?(hero:y);
 
-; Catapult
+!!if&(action)=(BATTLE_ACTION_SHOOT)/(hero)>(NO_HERO);
+  !!BMi^battle_acting_stack^:T?(actType:y);
+
+  !!if&(actType)=(MON_BALLISTA);
+    !!HE(hero):S(SKILL_ARTILLERY)/?(skillLvl:y);
+
+    !!if&(skillLvl)>(SKILL_NOT_LEARNED);
+      !!BG:E?(targetStack:y);
+
+      !!if&(targetStack)>(NO_STACK);
+        !!BM(targetStack):N?(num:y) S?(speed:y);
+
+        !!if&(num)>0/(speed)>1;
+          !!if&i^battle_isVisible^;
+            !!SN:P^muckmire^;
+            !!BM(targetStack):V19;
+            !!BM(targetStack):T?(targetType:y);
+            !!VR(isPlural:y):S(num) -1 B;
+            !!SN:H^monname^/(targetType)/(isPlural)/?(monName:z);
+            !!SN:T^wog.54.slow%(isPlural)^/?(msg:z)/^mon^/(monName);
+            !!MM:S(msg);
+          !!en;
+
+          !!VR(speed):-(skillLvl) F1/(INT_MAX);
+          !!BM(targetStack):S(speed);
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Catapult in non-siege, Fireball attack
 !?FU(WOG_OnAfterShoot)&i^wog_54_enabled^;
 !#VA(atkStack:x) (defStack:x);
 
@@ -529,12 +556,12 @@ ZVSE2
 
 !!VRy9:S(heroLevel);
 
-!!if|y11<y7/y9<y8/i^wog_54_upgradeCounter_%(townId)^>=3;
+!!if|y11<y7/y9<y8/i^wog_54_upgradeCounter_%(townId)^>=(WOG_54_UPGRADE_LIMIT);
   !!VR(msgType):S(MSG_TYPE_MES); set to message with no choice
   !!VRz4&y11<y7:Sz154017;                 [Not enough money]
   !!VRz4&y9<y8:Sz154018;                  [Level is too low]
 
-  !!SN&i^wog_54_upgradeCounter_%(townId)^>=3:T^wog.54.soldOut^/?z4; [Sold out]
+  !!SN&i^wog_54_upgradeCounter_%(townId)^>=(WOG_54_UPGRADE_LIMIT):T^wog.54.soldOut^/?z4/^limit^/(WOG_54_UPGRADE_LIMIT); [Sold out]
 !!en;
 
 !!IF:V1/0;
@@ -550,7 +577,7 @@ ZVSE2
 
 ; Check if it is eligible for the next level
 !!VRy7:Sy31 *y8 :5;
-!!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8/i^wog_54_upgradeCounter_%(townId)^<3:P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel)/(owner)/(townId);
+!!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8/i^wog_54_upgradeCounter_%(townId)^<(WOG_54_UPGRADE_LIMIT):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel)/(owner)/(townId);
 
 !?FU(OnHeroScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside hero screen
 !!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_hero_0^/0;
@@ -574,7 +601,7 @@ ZVSE2
 !!VR(warMachine)&(clickedSlot)=(MON_BALLISTA):S(ART_BALLISTA);
 !!VR(warMachine)&(clickedSlot)=(MON_AMMO_CART):S(ART_AMMO_CART);
 !!VR(warMachine)&(clickedSlot)=(MON_FIRST_AID_TENT):S(ART_FIRST_AID_TENT);
-!!HE(heroId):A2/(warMachine)/d/?(wmAmount:y) S(SKILL_BALLISTICS)/?(skilLvl:y) B0/?z7 R2/?(gender:y);
+!!HE(heroId):A2/(warMachine)/d/?(wmAmount:y) S(SKILL_BALLISTICS)/?(skillLvl:y) B0/?z7 R2/?(gender:y);
 
 !!FU&(wmAmount)=0:E; exit if no found
 
@@ -587,10 +614,10 @@ ZVSE2
 !!FU(WOG_54_GetWarMachineStats)&i^mouse_action^=(MOUSE_RMB_PRESSED):P(warMachine)/(heroId)/y6; get stats
 *
 !!if&(warMachine)=(ART_CATAPULT);
-  !!VRz1&(skilLvl)=0:Sz154021;
-  !!VRz1&(skilLvl)=1:Sz154022;
-  !!VRz1&(skilLvl)=2:Sz154023;
-  !!VRz1&(skilLvl)=3:Sz154024;
+  !!VRz1&(skillLvl)=0:Sz154021;
+  !!VRz1&(skillLvl)=1:Sz154022;
+  !!VRz1&(skillLvl)=2:Sz154023;
+  !!VRz1&(skillLvl)=3:Sz154024;
 !!en;
 
 !!VRz1&(warMachine)=(ART_BALLISTA):Sz154025;
@@ -672,20 +699,20 @@ ZVSE2
 ************************** Get Z-var for warmachines ***************************
 
 !?FU(WOG_54_GetWarMachineStats)&i^wog_54_enabled^;
-!#VA(art:x) (heroId:x) (nextLv:x);
-!#VA(usedY[10]:y);
+!#VA(art:x) (heroId:x) (nextLvl:x);
+!#VA(usedY[20]:y);
 
 !!HE(heroId):Ed/?(heroLevel:y)/1;
 
 * catapult
 !!if&(art)=(ART_CATAPULT);
-  !!HE(heroId):S(SKILL_BALLISTICS)/?(skilLv:y) Ed/?(heroLevel:y)/1;
+  !!HE(heroId):S(SKILL_BALLISTICS)/?(skillLvl:y) Ed/?(heroLevel:y)/1;
 
-  !!if&(skilLv)>(SKILL_NOT_LEARNED);
-    !!VR(hp:y):S(skilLv) *(skilLv) *50 +550;
+  !!if&(skillLvl)>(SKILL_NOT_LEARNED);
+    !!VR(hp:y):S(skillLvl) *(skillLvl) *50 +550;
     !!VRy10:S1;
 
-    !!re i/1/(skilLv);
+    !!re i/1/(skillLvl);
       !!VRy10:*2;
     !!en;
 
@@ -700,36 +727,36 @@ ZVSE2
   !!VRz5:Sz154048;
 * first aid tent
 !!el&(art)=(ART_FIRST_AID_TENT);
-  !!HE(heroId):S(SKILL_FIRST_AID)/?(skilLv);
+  !!HE(heroId):S(SKILL_FIRST_AID)/?(skillLvl);
 
-  !!if&(skilLv);
+  !!if&(skillLvl);
     !!VRz6:Sz154049;
   !!el;
     !!VRz6:S^^;
   !!en;
 
-  !!VRy8:S(nextLv) *25 +125;
-  !!VRy7:S(skilLv) +(nextLv) *20 +80; first aid + level * 20, +80
+  !!VRy8:S(nextLvl) *25 +125;
+  !!VRy7:S(skillLvl) +(nextLvl) *20 +80; first aid + level * 20, +80
 
   !!VRz5:Sz154050;
 * ammo cart
 !!el&(art)=(ART_AMMO_CART);
-  !!VRy8:S(nextLv) *10 +90;
-  !!VRz4&(nextLv)=1:S^^;
-  !!VRz4&(nextLv)>1:Sz154051;
+  !!VRy8:S(nextLvl) *10 +90;
+  !!VRz4&(nextLvl)=1:S^^;
+  !!VRz4&(nextLvl)>1:Sz154051;
   !!VRz5:Sz154052;
 * Ballista
 !!el&(art)=(ART_BALLISTA);
-  !!HE(heroId):S(SKILL_ARTILLERY)/?(skilLv);
+  !!HE(heroId):S(SKILL_ARTILLERY)/?y11; [legacy]
 
-  !!if&(skilLv);
+  !!if&y11;
     !!VRz6:Sz154053;
   !!el;
     !!VRz6:S^^;
   !!en;
 
-  !!VRy8:S(nextLv) *50 +200;
-  !!VRy7:S(skilLv) +(nextLv) *20 +80; artillery + level * 20, +80
+  !!VRy8:S(nextLvl) *50 +200;
+  !!VRy7:Sy11 +(nextLvl) *20 +80; artillery + level * 20, +80
 
   !!VRz5:Sz154054;
 !!en;
