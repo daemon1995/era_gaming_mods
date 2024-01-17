@@ -76,13 +76,12 @@ ZVSE2
 ** For four, left-left is 0, left-right 1, right-left 2, right-right 3
 
 
-** Variables Used: z326-z330, z360-z366, z368-z379, z404, v1, v510-v548, v550-v559, v600-v669, w61-w78, i
-** v510-v548, w61-w74, and z404 must not be changed elsewhere!
+** Variables Used: z326-z330, z360-z366, z368-z379, z404, v1, v510-v547, v550-v559, v600-v669, w61-w78, i
+** v510-v547, w61-w74, and z404 must not be changed elsewhere!
 ** v550-v559 is a bit table also used by the map rules, it must not be changed but may be used elsewhere.
 ** The other variables may be used elsewhere but will be trashed by this code.
-** Flags used: 2, 600-603
+** Flags used: 2, 602-603
 ** Functions Used: 730-776, 780-799, 820-835
-** Timers Used: 90
 
 ** Notes on hero w variables:
 **   w61 4 bits for what Rogue cave positions have been visited this turn
@@ -113,7 +112,6 @@ ZVSE2
 !!VRz404:Sz130000;
 !!HT63/57:T404; [set hint to z404]
 
-!!VRv548:S0; [haven't initialized caves]
 !!VRi^wog_30_advCaveBattleType^:S0; [special battle screen to use]
 !!VRv524:C0/0/0/0/0/0/0/0; [stolen gold mine #'s by player]
 !!VRv510:C0/0/0/0/0/0/0/0; [obelisk treasures by player]
@@ -134,6 +132,8 @@ ZVSE2
 !!VRz378:Sz130011;
 !!VRz379:Sz130012;
 
+!!DO(WOG_30_InitializeHeroVars)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P; [initialize hero w variables]
+
 !#FU(WOG_30_Initialization):P;
 
 ** end of Initialization code
@@ -145,10 +145,11 @@ ZVSE2
 !!UN:P30/?y-1;     [Check for WoG option]
 !!FU&y-1=0:E;     [Exit if its disabled]
 
-!!UN&v548=0:U63/57/?v600; [count caves]
-!!DO730/1/v600/1&v548=0:P; [loop through caves]
-!!DO750/(HERO_FIRST)/(HERO_LAST_WOG)/1&v548=0:P; [initialize hero w variables]
-!!VRv548:S1; [indicate we've initialized
+; Initialization
+!!if&i^timerDay^=1/i^timerOnce^;
+  !!UN:U63/57/?v600; [count caves]
+  !!DO730/1/v600/1:P; [loop through caves]
+!!en;
 
 !!OW:C?y-1; [get current player]
 
@@ -631,12 +632,16 @@ ZVSE2
 !!UN:P30/?(wogOption:y);                [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
-!!IF:V600/0 V601/0; [clear flags for extra spell cast - not necessarily needed in caves]
-
 !!if&i^wog_30_advCaveBattleType^;
   !!BA:B12; [subterranean background]
-  !!HEi^battle_hero_0^:R4/?i^wog_48_tacticsStatus^ R4/(FALSE); [disable tactics for special battles]
+  !!HEi^battle_hero_0^:R4/?i^wog_30_tacticsStatus^ R4/(FALSE); [disable tactics for special battles]
   !!FU832:Pi^battle_hero_0^; [remove war machines, remember them]
+!!en;
+
+; Set up extra cast vars
+!?FU(OnSetupBattlefield);
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!VRi^wog_30_extraCastSpent_%i^:S0;
 !!en;
 
 ** end of pre-battle trigger
@@ -645,8 +650,8 @@ ZVSE2
 ** Post-battle trigger
 
 !?FU(OnAfterBattleUniversal)&i^wog_30_advCaveBattleType^;
-!!HEi^battle_hero_0^:R4/i^wog_48_tacticsStatus^; [restore tactics]
-!!VRi^wog_48_tacticsStatus^:S0;
+!!HEi^battle_hero_0^:R4/i^wog_30_tacticsStatus^; [restore tactics]
+!!VRi^wog_30_tacticsStatus^:S0;
 !!FU833:Pi^battle_hero_0^; [restore war machines]
 !!VRi^wog_30_advCaveBattleType^:S0;
 
@@ -659,7 +664,6 @@ ZVSE2
 !!UN:P30/?(wogOption:y);                [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
-!!FU783:P; [handle hermit-related stuff]
 !!FU827:P; [handle altar stuff]
 
 ** end of BG0 trigger
@@ -676,6 +680,17 @@ ZVSE2
 !!FU(WOG_30_ExecuteSpecialAbilities)&i^battle_acting_stack^=(atkStack):P(atkStack)/(defStack); [cannot be retaliation]
 
 ** end of OnAfterMelee Hook
+
+
+** OnBattleActionEnd trigger
+
+!?FU(OnBattleActionEnd);
+!!UN:P30/?(wogOption:y);                [Check for WoG option]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
+
+!!FU(WOG_30_HandleExtraSpell):P;        [handle hermit double casts]
+
+** end of OnBattleActionEnd trigger
 
 
 ** function to handle Rogue caves, x1 cave, x2 cave bits 65432
@@ -933,7 +948,7 @@ ZVSE2
 
 ** function to initialize w variables for hero x16
 
-!?FU750;
+!?FU(WOG_30_InitializeHeroVars);
 
 !!IF:Wx16; [pick hero x16 for w variables]
 !!VRw62:S-1; [hero paying for Rogue attack]
@@ -1670,30 +1685,35 @@ ZVSE2
 
 ** function to handle hermit-related BG0 and after attack stuff
 
-!?FU783;
+!?FU(WOG_30_HandleExtraSpell);
 
-!!BA:E?v1;                              [Check if Network Battle: v1>0 if yes]
-!!FU&v1>0:E;                            [Continue function 783 if not a Network Battle]
+!!BA:E?(networkType:y);                 [Check if Network Battle]
+!!FU&(networkType)>0:E;                 [Continue function if not a Network Battle]
 
-!!BG:Q?y2; [get current acting side]
-!!BHy2:N?y3; [get acting hero number if any]
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_HERO_CAST):E;
 
-!!IF&y3<>-1:Wy3; [use acting hero's w variables]
+!!BG:Q?(side:y);                        [get current acting side]
 
-!!VRy4:S0; [assume no extra-spell ability]
-!!VRy4&y2=0/-600:S1; [check flag by side for allowing extra spell]
-!!VRy4&y2=1/-601:S1;
-!!BHy2&y3<>-1/w66=3/y4=1:M?y6; [get current spellcasting enabling]
-!!BHy2&y3<>-1/w66=3/y4=1/y6=1:M0; [re-enable spellcasting]
-!!IF&y3<>-1/w66=3/y4=1/y6=1/y2=0:V600/1; [remember extra spell was granted]
-!!IF&y3<>-1/w66=3/y4=1/y6=1/y2=1:V601/1;
+!!if&i^wog_30_extraCastSpent_%(side)^<>(TRUE)/i^battle_hero_%(side)^>(NO_HERO);
+  !!IF:Wi^battle_hero_%(side)^;         [use acting hero's w variables]
+
+  !!if&w66=3;
+    !!BH(side):M?(spellUsed:y);         [get current spellcasting enabling]
+
+    !!if&(spellUsed);
+      !!BH(side):M(FALSE);              [re-enable spellcasting]
+      !!VRi^wog_30_extraCastSpent_%(side)^:S(TRUE);
+    !!en;
+  !!en;
+!!en;
 
 
 !?FU(WOG_30_ExecuteSpecialAbilities);
 !#VA(atkStack:x) (defStack:x);
 
-!!BA:E?v1;                              [Check if Network Battle: v1>0 if yes]
-!!FU&v1>0:E;                            [Continue function 783 if not a Network Battle]
+!!BA:E?(networkType:y);                 [Check if Network Battle]
+!!FU&(networkType)>0:E;                 [Continue function if not a Network Battle]
 
 ; Exit if the defending stack is killed
 !!BM(defStack):N?(defNum:y);
