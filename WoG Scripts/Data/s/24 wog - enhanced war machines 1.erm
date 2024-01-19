@@ -52,6 +52,7 @@ ZVSE2
 !#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distanceArg:x) (isTheoretical:x);
 
 ; Compatibility with Artillery option in order to prevent it benefit from the bonus here
+; Not sure why it works though
 !!if&(isTheoretical)<>(TRUE);
   !!BG:A?(action:y);
   !!FU&(action)<>(BATTLE_ACTION_SHOOT):E;
@@ -233,6 +234,20 @@ ZVSE2
 
 !!FU(WOG_54_SetUpWarMachinesHP):P;
 
+; Set up initial mana for Ammo Carts
+; It is possible to gain more mana after battle
+; If VRi^wog_54_maxMana_%i^:S(initialMana) F0/(maxMana) is enabled instead, then no
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!VRi^wog_54_maxMana_%i^:S0;
+
+  !!if&i^battle_hero_%i^>(NO_HERO);
+    !!HEi^battle_hero_%i^:I?(initialMana:y)/1;
+    !!FU(WOG_Hero_GetFullSpellPoints):Pi^battle_hero_%i^/?(maxMana:y);
+    !!VRi^wog_54_maxMana_%i^:S(maxMana);
+    *!VRi^wog_54_maxMana_%i^:S(initialMana) F0/(maxMana);
+  !!en;
+!!en;
+
 ; Set Mana for Ammo Cart
 !?FU(OnBattleRound)&i^wog_54_enabled^/i^battle_round^>0; set mana for ammo cart
 !!DO(WOG_54_SetManaForAmmoCart)/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST)/1:P1;
@@ -267,16 +282,15 @@ ZVSE2
 !!IF:Wy3;
 !!VRy6:Sw83 +1; get addition
 !!HEy3:I?y7/1; get current spell points
-!!FU(WOG_Hero_GetFullSpellPoints):Py3/?y9;
-!!FU&y7=>y9:E; exit if spell already enough
 
-!!VRy6:+y7; set additioanl spell
-!!VRy6&y6>y9:Sy9; set max if y6 > y9
-!!HEy3:Iy6/1;
+!!if&y7<i^wog_54_maxMana_%y2^;
+  !!VRy7:+y6 F0/i^wog_54_maxMana_%y2^;
+  !!HEy3:Iy7/1;
 
-!!if&i^battle_isVisible^;
-  !!SN:P^MagChFil^;
-  !!BMx16:V76;
+  !!if&i^battle_isVisible^;
+    !!SN:P^MagChFil^;
+    !!BMx16:V76;
+  !!en;
 !!en;
 
 !?FU(WOG_54_SetUpWarMachinesHP);
