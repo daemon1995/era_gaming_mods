@@ -30,21 +30,21 @@ ZVSE2
 ; eat some carrots
 
 **------------------------------------------------------------------------------
-
 **Set up Death Chamber structure
-!?FU(WOG_70_Initialization);
-!!UN:P(WOG_OPT_DEATH_CHAMBER)/?i^WOG_70_enabled^; ** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled
+!#UN:P(WOG_OPT_DEATH_CHAMBER)/?i^WOG_70_enabled^; ** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled
 
-!#FU(WOG_70_Initialization):P;
+!?FU(OnEveryDay)&i^timerOnce^;
+!!VR(x:y):S-1; 
 
-!?FU670&i^WOG_70_enabled^;
-*!UN:P
-!#VA(x:y) (y:y) (z:y);
-!!VR(x):S-1; 
 !!re i;                                 [endless loop]
-  !!UN:U63/15/-1/(x)/(y)/(z); [find next (x) = -1 on failure]
-  !!br&(x)<0;                         
+  !!UN:U(OBJ_NEW_WOG_OBJECTS)/15/-1/(x)/(y:y)/(z:y);       [find next (x) = -1 on failure]
+  !!br&(x)<0;
+
+  ; Set as not visited
   !!PM(x)/(y)/(z):V(TRUE);
+  ; Set PO:N for default difficulty
+  !!VR(random:y):R0/1/4;
+  !!PO(x)/(y)/(z):N(random);
 !!en;
 **------------------------------------------------------------------------------
 !?FU(WOG_CreateERMHook)&i^WOG_70_enabled^;
@@ -55,41 +55,33 @@ ZVSE2
 !!SN:B(textPtr)/d/?(currentText:z);
 !!SN:B(textPtr)/d/^%T(wog.70.name)%(currentText:z)^;
 
-!?OB63/15&1000/i^WOG_70_enabled^=1;  *Triggers when any "Death Chamber" is visited
-!!PO998:S?(coeff:y); **Check PO:N value of Death Chamber square
-
+!?OB(OBJ_NEW_WOG_OBJECTS)/15&(ERM_FLAG_IS_HUMAN)/i^WOG_70_enabled^;  *Triggers when any "Death Chamber" is visited
 !!FU(WOG_AdvMgr_SetObjectAsVisited):Pv998/v999/v1000/i^timerOwner^;
 !!PM998:V?(notVisited:y); Pi^timerOwner^/?(bb:y) Pi^timerOwner^/1 ;P1/0;
+
 !!if&(notVisited)=(FALSE);
   !!IF:M1/^%T(wog.70.visited)^;
 !!el;
   !!SN:H^monname^/(MON_POWER_LICH)/1/?(storeName:z) H^monname^/(MON_POWER_LICH)/1/^%T(wog.70.name)^;
   !!IF:Q3/21/65/2/^%T(wog.70.greeting)^;
   !!SN:H^monname^/(MON_POWER_LICH)/1/(storeName:z);
+
   !!if&3;
     !!VRi^WOG_70_BattleRound^:S-2;
 
-    !!VRi^WOG_70_BattleDifficulty^:S1;
-
-    !!if&v998>35/v998<72;
-      !!VRi^WOG_70_BattleDifficulty^:S2;
-
-    !!el&v998>71/v998<108;
-      !!VRi^WOG_70_BattleDifficulty^:S3;
-
-    !!el&v998>107;
-      !!VRi^WOG_70_BattleDifficulty^:S4;
-    !!en;
+    !!PO998:N?i^WOG_70_BattleDifficulty^;
 
     !!UN:P235/?(cbGrowth:y); [Check if script is enabled: y-12]
 
     !!if&(cbGrowth);
+      !!PO998:S?(coeff:y); **Check PO:S value of Death Chamber square
       !!VRi^WOG_70_BattleDifficulty^:+(coeff);
     !!en;
-    *!IF:M^%i(WOG_70_BattleDifficulty)^;
-    !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(battlefields:y) P(WOG_OPT_NEW_BATTLE_FIELDS)/0; 
 
-    !!HE-1:Tv998/v999/v1000/(MON_POWER_LICH)/1 O?(owner:y); **Trigger battle with the Lich King
+    !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(battlefields:y) P(WOG_OPT_NEW_BATTLE_FIELDS)/(FALSE); 
+
+    !!HE(CURRENT_HERO):Tv998/v999/v1000/(MON_POWER_LICH)/1 O?(owner:y); **Trigger battle with the Lich King
+
     !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/(battlefields:y); 
 
     !!if&(owner)<>(NO_OWNER);
@@ -123,10 +115,14 @@ ZVSE2
       !!HE-1:C2/(MON_GHOST)/(ghosts)/1;  **Give 60 Ghosts to current hero
 
       !!PM998:V0;                                                                       [set obj is visited]
+
+      ; Set up PO:S value
       !!UN:P235/?(cbGrowth:y);
 
       !!if&(cbGrowth);
-        !!PO998:S28;
+        !!VR(random:y):R0/6/9;
+        !!VR(coeff):+(random) *11 :10 F0/255;
+        !!PO998:S(coeff);
       !!en;
     !!en;
 
@@ -135,7 +131,15 @@ ZVSE2
   !!en;
 !!en;
 
-//prevent repeating battle
+// Disable Tactics
+!?FU(OnBeforeBattleUniversal)&i^WOG_70_BattleDifficulty^;
+!!HEi^battle_hero_0^:R4/?i^wog_70_tacticsStatus^ R4/(FALSE); [disable tactics for special battles]
+
+!?FU(OnAfterBattleUniversal)&i^WOG_70_BattleDifficulty^;
+!!HEi^battle_hero_0^:R4/i^wog_70_tacticsStatus^; [restore tactics]
+
+
+// prevent repeating battle
 !?FU(OnAfterLoadGame)&i^WOG_70_BattleDifficulty^;
 !!VRi^WOG_70_BattleDifficulty^:S0;
 !!VRi^WOG_70_BattleRound^:S0;
@@ -150,7 +154,7 @@ ZVSE2
 !!BA:B20;  **Evil Fog
 
 
-!?FU(OnSetupBattlefield)&i^WOG_70_BattleDifficulty^;800/i^WOG_70_enabled^=1; **Sets up special battlefield
+!?FU(OnSetupBattlefield)&i^WOG_70_BattleDifficulty^;800/i^WOG_70_enabled^; **Sets up special battlefield
   !!BU:G4;  **Evil Fog effect
   !!BF:C; **Clear the battlefield
   **Place 4 huge Crypts onto center of battlefield
