@@ -2,7 +2,7 @@ ZVSE2
 
 ** Adventure Cave ERM script v1.0 - Donald X. Vaccarino
 ** Updated: Sep. 11. 2004 by Hermann the Weird
-** Updated: Apr 2022 by Archer30
+** Updated: Jan 2024 by Archer30
 ** Requires WOG v3.58 or later.
 ** A location where lots of different things can happen
 
@@ -12,7 +12,7 @@ ZVSE2
 
 ** You can generate a specific cave through ERM by initializing its PO values
 ** in a timer numbered higher than 90, on day one. You can set these values easily
-** by calling functions 767 or the hard way through PO.
+** by calling functions (WOG_30_SetBits) or the hard way through PO.
 
 ** Caves 0, 1, 2 are stored in PO:H, PO:T, PO:S, low 7 bits
 ** Cave 3 is stored with its low 4 bits in PO:N, the next 3 bits the hi bits of PO:S, PO:T, PO:H
@@ -81,7 +81,7 @@ ZVSE2
 ** v550-v559 is a bit table also used by the map rules, it must not be changed but may be used elsewhere.
 ** The other variables may be used elsewhere but will be trashed by this code.
 ** Flags used: 2, 602-603
-** Functions Used: 730-776, 780-799, 820-835
+** Functions Used: 736-776, 780-799, 820-835
 
 ** Notes on hero w variables:
 **   w61 4 bits for what Rogue cave positions have been visited this turn
@@ -146,7 +146,7 @@ ZVSE2
 ; Initialization
 !!if&i^timerDay^=1/i^timerOnce^;
   !!UN:U63/57/?v600; [count caves]
-  !!DO730/1/v600/1:P; [loop through caves]
+  !!DO(WOG_30_InitializeACave)/1/v600/1:P; [loop through caves]
   !!DO(WOG_30_InitializeHeroVars)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P; [initialize hero w variables - must be OnEveryDay]
 !!en;
 
@@ -183,15 +183,15 @@ ZVSE2
   !!VRz328:Sz130016;
 
   !!if&v601=0;
-    !!FU733:P53/98/602; [get choice in v602 - 0 is explore]
+    !!FU(WOG_30_GetChoice):P53/98/602; [get choice in v602 - 0 is explore]
 
     !!if&v602;
       !!IF:M1/z130017;
     !!el;
-      !!FU731:P0; [handle visiting cave 0]
+      !!FU(WOG_30_HandleVisitingCave):P0; [handle visiting cave 0]
     !!en;
   !!el;
-    !!FU732:P; [handle split cave]
+    !!FU(WOG_30_HandleSplitCave):Pv601; [handle split cave]
   !!en;
 !!en;
 
@@ -208,11 +208,11 @@ ZVSE2
 
 ** function to initialize a cave
 
-!?FU730;
+!?FU(WOG_30_InitializeACave);
 
 !!UN:U63/57/x16/601; [get x/y/level in v601-v603]
 !!PM601:V0; [tell AI not to come here]
-!!DO770/0/3/1:P; [randomize cave bits]
+!!DO(WOG_30_RandomizeCaveBits)/0/3/1:P; [randomize cave bits]
 !!VRy1:R0/0/3; [random split cave value, monster not killed]
 !!PO601:Oy1; [store it]
 
@@ -221,16 +221,16 @@ ZVSE2
 
 ** function to handle visiting cave x1
 
-!?FU731;
+!?FU(WOG_30_HandleVisitingCave);
 
-!!FU734:Px1/610; [get cave type in v610]
-!!FU766:Px1/611/998; [read cave bits into v611]
+!!FU(WOG_30_GetTypeOfCave):Px1/610; [get cave type in v610]
+!!FU(WOG_30_ReadCaveBits):Px1/611/998; [read cave bits into v611]
 !!VRv611::4; [throw away low cave type bits]
 
-!!FU742&v610=0:Px1/v611; [handle Rogue cave]
-!!FU772&v610=1:Px1/v611; [handle Hermit cave]
-!!FU784&v610=2:Px1/v611; [handle monster cave]
-!!FU795&v610=3:Px1/v611; [handle other cave]
+!!FU(WOG_30_HandleRogueCave)&v610=0:Px1/v611; [handle Rogue cave]
+!!FU(WOG_30_HandleHermitCave)&v610=1:Px1/v611; [handle Hermit cave]
+!!FU(WOG_30_HandleMonsterCave)&v610=2:Px1/v611; [handle monster cave]
+!!FU(WOG_30_HandleOtherCave)&v610=3:Px1/v611; [handle other cave]
 
 ** end of function
 
@@ -240,104 +240,122 @@ ZVSE2
 ** splits can continue two caves deep (to four total end caves)
 ** further split caves are always just forks in the tunnel
 
-** v601=1 -> left is 0, right is 1
-** v601=2 -> left is 0-1, right is 2
-** v601=3 -> left is 0-1, right is 2-3
+** x1=1 -> left is 0, right is 1
+** x1=2 -> left is 0-1, right is 2
+** x1=3 -> left is 0-1, right is 2-3
 
-!?FU732;
+!?FU(WOG_30_HandleSplitCave);
+!#VA(caveType:x);
 
-!!VRy1:Sv998 %4;                        [use x mod 4 as split cave type]
-!!FU(WOG_30_ReadSplitCaveBits):P609/998;                       [read split cave values]
-!!VRy1&y1=1/v609>=4:S0;                 [then treat monster cave as empty cave]
+!!VR(caveSubtype:y):Sv998 %4;              [use x mod 4 as split cave type]
+!!FU(WOG_30_ReadSplitCaveBits):P609/998;[read split cave values]
+!!VR(splitCaveValue:y):Sv609;
+!!VR(caveSubtype)&(caveSubtype)=1/(splitCaveValue)>=4:S0; [then treat monster cave as empty cave]
 
 [initial foray into the cave]
 
 !!VRz326:Sz130018;
 !!VRz327:Sz130019;
 !!VRz328:Sz130020;
-!!FU733:P53/98/602;                     [get choice in v602 - 0 is searching]
+!!FU(WOG_30_GetChoice):P53/98/602;                     [get choice in v602 - 0 is searching]
+!!VR(choice:y):Sv602;
 
-!!IF&v602=1:M1/z130021;
+!!if&(choice)=1;
+  !!IF:M1/z130021;
 
 ; Fight with Infernal Troglodyte if it is the first time visiting/mod =1 
-!!if&v602=0/y1=1;
+!!el&(choice)=0/(caveSubtype)=1;
   !!IF:M1/z130022;
-  !!VRi^wog_30_advCaveBattleType^:S1;                          [use battlefield #1 for this fight]
+  !!VRi^wog_30_advCaveBattleType^:S1;   [i, use battlefield #1 for this fight]
   !!HE(CURRENT_HERO):Tv998/v999/v1000/(MON_INFERNAL_TROGLODYTE)/70; [provoke battle w/ 70 infernal trogs]
 !!en;
 
-!!HE(CURRENT_HERO):O?y3;                [check owner in y3 to see if hero died]
+!!HE(CURRENT_HERO):O?(owner:y);         [check owner to see if hero died]
 
-!!if&v602=0/y1=1;
-  !!if&y3>(NO_OWNER);
-    !!VRv609:|4;                        [set split-cave-monster-killed bit]
-    !!PO998:Ov609;                      [store modified bits if monster and it's beaten]
+!!if&(choice)=0/(caveSubtype)=1;
+  !!if&(owner)>(NO_OWNER);
+    !!VR(splitCaveValue):|4;            [set split-cave-monster-killed bit]
+    !!PO998:O(splitCaveValue);          [store modified bits if monster and it's beaten]
   !!el;
-    !!VRv602:S1;                        [treat dead hero as not searching]
+    !!VR(choice):S1;                    [treat dead hero as not searching]
   !!en;
-!!en;
 
 [choice of initial two tunnels, sometimes with signpost]
+  !!VRz329:Sz130024;
+  !!VR(caveSubtype):S0;                    [from now on treat monster cave as empty cave]
 
-!!VRz329&y1=0:Sz130023;
-!!VRz329&v602=0/y1=1:Sz130024;
-!!VRy1&v602=0/y1=1:S0; [from now on treat monster cave as empty cave]
-
-!!FU734:P0/603; [get type of cave 0 in v603]
-!!VRv608:S-1; [default is no other left cave]
-!!FU734&v601>1:P1/608; [get other left cave in v608]
-!!FU734&v601=1:P1/604; [get type of cave 1 in v604]
-!!FU734&v601>1:P2/604; [get type of cave 2 instead]
-!!VRv609:S-1; [default is no other right cave]
-!!FU734&v601=3:P3/609; [get other right cave in v609]
-
-!!if&v602=0;
-  !!FU735:Pv603/v608/360; [get z360 name of left cave type(s)]
-  !!FU735:Pv604/v609/361; [get z361 name of right cave type(s)]
+!!el&(caveSubtype)=0;
+  !!VRz329:Sz130023;
 !!en;
 
-!!VRz330:Sz360; [temporary copy]
-!!VRy4:Sv999 %2; [use bit 0 of object y as a psuedo-random #]
+!!FU(WOG_30_GetTypeOfCave):P0/603;                         [get type of cave 0 in v603]
+!!VRv608:S-1;                           [v608, default is no other left cave]
 
-!!if&y1=3/y4=0;
-  !!VRz360:Sz361; [switch sign sides half the time if down]
+!!if&(caveType)>1;
+  !!FU(WOG_30_GetTypeOfCave):P1/608;                       [get other left cave in v608]
+  !!FU(WOG_30_GetTypeOfCave):P2/604;                       [get type of cave 2 instead]
+
+!!el&(caveType)=1;
+  !!FU(WOG_30_GetTypeOfCave):P1/604;                       [get type of cave 1 in v604]
+!!en;
+
+!!VRv609:S-1;                           [v609, default is no other right cave]
+!!FU(WOG_30_GetTypeOfCave)&(caveType)=3:P3/609;            [get other right cave in v609]
+
+!!if&(choice)=0;
+  !!FU(WOG_30_GetNameOfCaveTypes):Pv603/v608/360;               [get z360 name of left cave type(s)]
+  !!FU(WOG_30_GetNameOfCaveTypes):Pv604/v609/361;               [get z361 name of right cave type(s)]
+!!en;
+
+!!VRz330:Sz360;                         [z330, temporary copy]
+!!VR(bit:y):Sv999 %2;                   [use bit 0 of object y as a psuedo-random #]
+
+!!if&(caveSubtype)=3/(bit)=0;
+  !!VRz360:Sz361;                       [z360, switch sign sides half the time if down]
   !!VRz361:Sz330;
 !!en;
 
-!!IF:V2/0; [assume names are different]
-!!IF&z360=z361:V2/1; [they're the same]
-!!VRz329&y1=2/-2:Sz130025;
-!!VRz329&y1=2/2:Sz130026;
-!!VRz329&y1=3/-2:Sz130027;
-!!VRz329&y1=3/2:Sz130028;
+!!IF:V2/0;                              [flg#2, assume names are different]
+!!IF&z360=z361:V2/1;                    [flg#2, they're the same]
+
+!!if&(caveSubtype)=2;
+  !!VRz329&-2:Sz130025;
+  !!VRz329&2:Sz130026;
+!!el&(caveSubtype)=3;
+  !!VRz329&-2:Sz130027;
+  !!VRz329&2:Sz130028;
+!!en;
 
 !!VRz362:S^"%Z360?" "%Z361?"^;
-!!VRz362&2:S^"%Z360"^; [if fallen but sides same, just show one name]
+!!VRz362&2:S^"%Z360"^;                  [z362, if fallen but sides same, just show one name]
 
 !!VRz326:Sz329+z130029;
 !!VRz327:Sz130030;
 !!VRz328:Sz130031;
-!!VRv605:S1; [assume hero leaves (for not searching or dead heroes)]
-!!FU733&v602=0:P50/98/605; [get choice in v605 - 0 is exploring]
+!!VRv605:S1;                            [v605, assume hero leaves (for not searching or dead heroes)]
 
-!!IF&v602=0/v605=1:M1/z130032;
+!!if&(choice)=0;
+  !!FU(WOG_30_GetChoice):P50/98/605;                   [get choice in v605 - 0 is exploring]
+
+  !!IF&v605=1:M1/z130032;
+!!en;
 
 !!VRz326:Sz130033;
 !!VRz327:Sz130034;
-!!VRz327&y1=2:Sz130035+z360+^"^;
-!!VRz327&y1=3:Sz130036+z362;
+!!VRz327&(caveSubtype)=2:Sz130035+z360+^"^;
+!!VRz327&(caveSubtype)=3:Sz130036+z362;
 !!VRz328:Sz130037;
-!!VRz328&y1=2:Sz130038+z361+^"^;
-!!VRz328&y1=3:Sz130039+z362;
-!!FU733&v605=0:P38/128/606; [get tunnel choice in v606]
+!!VRz328&(caveSubtype)=2:Sz130038+z361+^"^;
+!!VRz328&(caveSubtype)=3:Sz130039+z362;
+!!FU(WOG_30_GetChoice)&v605=0:P38/128/606;             [get tunnel choice in v606]
 
 [handle case with only two caves]
 
-!!if&v605=0/v601=1;
+!!if&v605=0/(caveType)=1;
   !!if&v606=0;
-    !!FU731:P0; [handle visiting cave 0 on left]
+    !!FU(WOG_30_HandleVisitingCave):P0;                         [handle visiting cave 0 on left]
   !!el;
-    !!FU731:P1; [handle visiting cave 1 on right]
+    !!FU(WOG_30_HandleVisitingCave):P1;                         [handle visiting cave 1 on right]
   !!en;
 !!en;
 
@@ -347,11 +365,11 @@ ZVSE2
 !!VRz327:Sz130041;
 !!VRz328:Sz130042;
 
-!!if&v605=0/v601=2;
-  !!FU733&v606=0:P38/128/607; [get 2nd tunnel choice in v607]
-  !!FU731&v606=0/v607=0:P0; [handle visiting left-left cave 0]
-  !!FU731&v606=0/v607=1:P1; [handle visiting left-right cave 1]
-  !!FU731&v606=1:P2; [handle visiting cave 2 on right]
+!!if&v605=0/(caveType)=2;
+  !!FU(WOG_30_GetChoice)&v606=0:P38/128/607;           [get 2nd tunnel choice in v607]
+  !!FU(WOG_30_HandleVisitingCave)&v606=0/v607=0:P0;             [handle visiting left-left cave 0]
+  !!FU(WOG_30_HandleVisitingCave)&v606=0/v607=1:P1;             [handle visiting left-right cave 1]
+  !!FU(WOG_30_HandleVisitingCave)&v606=1:P2;                    [handle visiting cave 2 on right]
 !!en;
 
 [handle case with caves 0-1 left and caves 2-3 right]
@@ -360,12 +378,12 @@ ZVSE2
 !!VRz327:Sz130044;
 !!VRz328:Sz130045;
 
-!!if&v605=0/v601=3;
-  !!FU733:P38/128/607; [get 2nd tunnel choice in v607]
-  !!FU731&v606=0/v607=0:P0; [handle left-left cave 0]
-  !!FU731&v606=0/v607=1:P1; [handle left-right cave 1]
-  !!FU731&v606=1/v607=0:P2; [handle right-left cave 2]
-  !!FU731&v606=1/v607=1:P3; [handle right-right cave 3]
+!!if&v605=0/(caveType)=3;
+  !!FU(WOG_30_GetChoice):P38/128/607;                  [get 2nd tunnel choice in v607]
+  !!FU(WOG_30_HandleVisitingCave)&v606=0/v607=0:P0;             [handle left-left cave 0]
+  !!FU(WOG_30_HandleVisitingCave)&v606=0/v607=1:P1;             [handle left-right cave 1]
+  !!FU(WOG_30_HandleVisitingCave)&v606=1/v607=0:P2;             [handle right-left cave 2]
+  !!FU(WOG_30_HandleVisitingCave)&v606=1/v607=1:P3;             [handle right-right cave 3]
 !!en;
 
 ** end of function
@@ -377,7 +395,7 @@ ZVSE2
 ** x1/x2 are artifact numbers for pictures
 ** vx3 returns the choice (0 left, 1 right)
 
-!?FU733;
+!?FU(WOG_30_GetChoice);
 
 !!UN:Ax1/9/?y1; [remember left artifact name]
 !!UN:Ax1/10/?y2; [remember left artifact description]
@@ -403,9 +421,9 @@ ZVSE2
 
 ** function to get type of cave #x1 and return it in vx2
 
-!?FU734;
+!?FU(WOG_30_GetTypeOfCave);
 
-!!FU766:Px1/x2/998; [get cave's bits into vx2]
+!!FU(WOG_30_ReadCaveBits):Px1/x2/998; [get cave's bits into vx2]
 !!VRvx2:&3; [cave type is low 2 bits]
 
 ** end of function
@@ -413,7 +431,7 @@ ZVSE2
 
 ** function to get name of cave types x1/x2 into zx3
 
-!?FU735;
+!?FU(WOG_30_GetNameOfCaveTypes);
 
 !!VRzx3&x1=0/x2=-1:Sz130046;
 !!VRzx3&x1=0/x2=0:Sz130047;
@@ -694,7 +712,7 @@ ZVSE2
 
 ** function to handle Rogue caves, x1 cave, x2 cave bits 65432
 
-!?FU742;
+!?FU(WOG_30_HandleRogueCave);
 
 !!VRy1:Sx2 &3; [get base Friendliness level in y1]
 !!VRy2:Sx2 :4 &3; [get ability in y2 - 0 sell Rogues, 1 steal mine, 2 attack hero, 3 steal artifact]
@@ -763,7 +781,7 @@ ZVSE2
 !!VRz327&y4=5:Sz130104;
 !!VRz328&y4=5:Sz130105;
 !!VRv613:S-1; [default if Rogues dead]
-!!FU733&y3=0:Py5/y6/613; [get choice in v613 - 0 is left]
+!!FU(WOG_30_GetChoice)&y3=0:Py5/y6/613; [get choice in v613 - 0 is left]
 !!VRv613&v613=0:Sy5;
 !!VRv613&v613=1:Sy6; [now v613 has chosen picture - 66 peace, 12 fight, 90 flee]
 
@@ -778,7 +796,7 @@ ZVSE2
 !!VRz326:Sz130108;
 !!VRz327:Sz130109;
 !!VRz328:Sz130110;
-!!FU733&v613=66/y4=5:P50/98/614; [get choice in v614 - 0 disturb, 1 leave]
+!!FU(WOG_30_GetChoice)&v613=66/y4=5:P50/98/614; [get choice in v614 - 0 disturb, 1 leave]
 
 !!if&v613=66/y4=5;
   !!IF&v614=1:M1/z130111;
@@ -842,7 +860,7 @@ ZVSE2
 !!VRz327:Sz130117;
 !!VRz328:Sz130118;
 !!VRv624:S-1; [default if no obelisk or no survivor or hero died]
-!!FU733&y1<>-1/v620>0/y3<50:P117/12/624; [get choice in v624 - 0 live, 1 kill]
+!!FU(WOG_30_GetChoice)&y1<>-1/v620>0/y3<50:P117/12/624; [get choice in v624 - 0 live, 1 kill]
 
 !!VRz326:Sz130119;
 !!VRz327:Sz130120;
@@ -916,9 +934,9 @@ ZVSE2
 
 !?FU748;
 
-!!FU766:Px1/660/998; [read cave bits into v660]
+!!FU(WOG_30_ReadCaveBits):Px1/660/998; [read cave bits into v660]
 !!VRv660:|64; [set monsters-killed bit]
-!!FU767:Px1/v660/998; [set cave bits]
+!!FU(WOG_30_SetBits):Px1/v660/998; [set cave bits]
 
 ** end of function
 
@@ -1086,7 +1104,7 @@ ZVSE2
 !!VRz326:Sz130135;
 !!VRz327:Sz130136;
 !!VRz328:Sz130137;
-!!FU733:P117/98/621; [get choice in v621 - 0 deal, 1 no]
+!!FU(WOG_30_GetChoice):P117/98/621; [get choice in v621 - 0 deal, 1 no]
 
 !!IF&v621=1:M1/z130138;
 
@@ -1116,7 +1134,7 @@ ZVSE2
 !!VRz326:Sz130141;
 !!VRz327:Sz130142;
 !!VRz328:Sz130143;
-!!FU733&v620<>-1:P117/98/626; [get choice in v626 - 0 deal, 1 leave]
+!!FU(WOG_30_GetChoice)&v620<>-1:P117/98/626; [get choice in v626 - 0 deal, 1 leave]
 
 !!IF&v620<>-1/v626=1:M1/z130144;
 !!VRv626&v620=-1:S1; [now treat no mine available as saying no]
@@ -1174,7 +1192,7 @@ ZVSE2
 !!VRz326:Sz130159;
 !!VRz327:Sz130160;
 !!VRz328:Sz130161;
-!!FU733&v620<>-1:P117/98/624; [get choice in v624 - 0 deal, 1 leave]
+!!FU(WOG_30_GetChoice)&v620<>-1:P117/98/624; [get choice in v624 - 0 deal, 1 leave]
 
 !!IF&v620<>-1/v624=1:M1/z130162;
 !!VRv624&v620=-1:S1; [now treat no target as saying no]
@@ -1214,7 +1232,7 @@ ZVSE2
 !!VRz326:Sz130165;
 !!VRz327:Sz130166;
 !!VRz328:Sz130167;
-!!FU733&v620<>-1:P117/98/623; [get choice in v623 - 0 deal, 1 leave]
+!!FU(WOG_30_GetChoice)&v620<>-1:P117/98/623; [get choice in v623 - 0 deal, 1 leave]
 
 !!IF&v620<>-1/v623=1:M1/z130168;
 !!VRv623&v620=-1:S1; [now treat no artifact available as saying no]
@@ -1253,12 +1271,12 @@ ZVSE2
 
 !!IF:M1/z130178;
 !!VRy1:S0 R99; [roll % dice]
-!!FU766:Px1/660/998; [read cave's bits into v660]
+!!FU(WOG_30_ReadCaveBits):Px1/660/998; [read cave's bits into v660]
 !!VRy2:Sv660 :4 &3; [now y2 is unmodified friendliness]
 !!VRy2&y2>0/y1<50:-1; [50% chance to get permanently less friendly if possible]
 !!VRy2:*4; [get bits back to position we need them in]
 !!VRv660:&115 |y2; [clear friendliness bits, then OR our new value in]
-!!FU767:Px1/v660/998; [store new cave bits]
+!!FU(WOG_30_SetBits):Px1/v660/998; [store new cave bits]
 
 ** end of function
 
@@ -1336,7 +1354,7 @@ ZVSE2
 
 ** function to read cave x1's bits into vx2, location x3
 
-!?FU766;
+!?FU(WOG_30_ReadCaveBits);
 
 !!POx3:H?y1; [read various PO bytes and nybble]
 !!POx3:T?y2;
@@ -1357,7 +1375,7 @@ ZVSE2
 
 ** function to set cave x1's bits equal to x2, location x3
 
-!?FU767;
+!?FU(WOG_30_SetBits);
 
 !!POx3&x1=0:H?y1; [store cave 0 in low 7 bits of PO:H]
 !!VRy1:&128 |x2;
@@ -1407,10 +1425,10 @@ ZVSE2
 
 ** function to initialize cave x16 to random
 
-!?FU770;
+!?FU(WOG_30_RandomizeCaveBits);
 
 !!VRy1:S0 R63; [random cave bits - hi bit always clear]
-!!FU767:Px16/y1/601; [set bits]
+!!FU(WOG_30_SetBits):Px16/y1/601; [set bits]
 
 ** end of function
 
@@ -1432,7 +1450,7 @@ ZVSE2
 
 ** function to handle Hermit caves, x1 cave, x2 cave bits 65432
 
-!?FU772;
+!?FU(WOG_30_HandleHermitCave);
 
 !!VRy1:Sx2 &3; [get requirements in y1 - 0 none 1 sick 2 antisocial 3 ascetic]
 !!VRy2:Sx2 :4 &3; [get lesson in y2 - 0 wealth 1 combat 2 magic 3 voodoo]
@@ -1464,7 +1482,7 @@ ZVSE2
 !!VRz326&v615=1/wy4>0/wy4<3/w68=0:Sz130188;
 !!VRz327:Sz130189;
 !!VRz328:Sz130190;
-!!FU733&v615=1/wy4<3/w68=0:P88/98/616; [get choice in v616 - 0 learn, 1 leave]
+!!FU(WOG_30_GetChoice)&v615=1/wy4<3/w68=0:P88/98/616; [get choice in v616 - 0 learn, 1 leave]
 
 !!IF&v615=1/wy4=0/v616=1/w68=0:M1/z130191;
 !!IF&v615=1/wy4>0/wy4<3/v616=1/w68=0:M1/z130192;
@@ -1557,7 +1575,7 @@ ZVSE2
 !!VRz326&y7=5:Sz130228;
 !!VRz327:Sz130229;
 !!VRz328:Sz130230;
-!!FU733&y7<>0:P6/98/612; [get choice in v612 - 0 heal, 1 leave]
+!!FU(WOG_30_GetChoice)&y7<>0:P6/98/612; [get choice in v612 - 0 heal, 1 leave]
 
 !!VRz326:Sz130231;
 !!VRz327:Sz130232;
@@ -1576,9 +1594,9 @@ ZVSE2
 !!VRz361&y7=5:Sz130238;
 !!VRz360:Sz130239;
 
-!!FU766:Px1/613/998; [read cave's bits into v613]
+!!FU(WOG_30_ReadCaveBits):Px1/613/998; [read cave's bits into v613]
 !!VRv613:&115; [clear hermit requirement bits]
-!!FU767&v612=0:Px1/v613/998; [store new cave bits]
+!!FU(WOG_30_SetBits)&v612=0:Px1/v613/998; [store new cave bits]
 
 !!VRv615&v612=0:S1; [hermit is usable only if healed]
 
@@ -1597,9 +1615,9 @@ ZVSE2
 
 !!IF&v611>1:M1/z130240;
 
-!!FU766:Px1/613/998; [read cave's bits into v613]
+!!FU(WOG_30_ReadCaveBits):Px1/613/998; [read cave's bits into v613]
 !!VRv613:&115; [clear hermit requirement bits]
-!!FU767&v611<2:Px1/v613/998; [store new cave bits]
+!!FU(WOG_30_SetBits)&v611<2:Px1/v613/998; [store new cave bits]
 
 !!VRz360:Sz130241;
 !!VRv615&v611<2:S1; [hermit is usable only if alone]
@@ -1670,7 +1688,7 @@ ZVSE2
 
 !?FU781;
 
-!!FU766:Px16/613/998; [read cave x16's bits into v613]
+!!FU(WOG_30_ReadCaveBits):Px16/613/998; [read cave x16's bits into v613]
 !!VRy1:Sv613 &3; [type of cave in y1]
 !!VRy2:Sv613 :64; [occupied or not in y2]
 !!VRv611&x1>=x16/y2=0/y1<3:+1; [count occupants, including hermit himself]
@@ -1777,7 +1795,7 @@ ZVSE2
 ** 6 - familiar / magog pit -                - 4000 + toys (1000)
 ** 7 - crusader duels       -                - 5000 + tulips (2000)
 
-!?FU784;
+!?FU(WOG_30_HandleMonsterCave);
 
 !!VRy1:Sx2 &7; [get battle type in y1]
 !!VRy2:Sx2 :8 &1; [get battle variant in y2]
@@ -1805,7 +1823,7 @@ ZVSE2
 !!VRz326&y3=0:Sz130264;
 !!VRz327:Sz130265;
 !!VRz328:Sz130266;
-!!FU733&y3=0:P50/98/610; [get choice in v610 - 0 continue, 1 leave]
+!!FU(WOG_30_GetChoice)&y3=0:P50/98/610; [get choice in v610 - 0 continue, 1 leave]
 
 !!IF&y3=0/v610=1:M1/z130267;
 
@@ -2162,7 +2180,7 @@ ZVSE2
 
 ** function to handle Other caves, x1 cave, x2 cave bits 65432
 
-!?FU795;
+!?FU(WOG_30_HandleOtherCave);
 
 !!VRy1:Sx2 &3; [get variant in y1]
 !!VRy2:Sx2 :4 &3; [get cave type in y2 - 0 pool 1 orb 2 cache 3 altar]
@@ -2282,7 +2300,7 @@ ZVSE2
 !!VRz327:Sz130355;
 !!VRz328:Sz130356;
 !!VRv615:S1; [assume no spell cast]
-!!FU733&y1>=y3/y5=0:P124/98/615; [get choice in v615 - 0 cast, 1 don't]
+!!FU(WOG_30_GetChoice)&y1>=y3/y5=0:P124/98/615; [get choice in v615 - 0 cast, 1 don't]
 
 !!IF&y1>=y3/y5=0/v615=1:M1/z130357;
 
