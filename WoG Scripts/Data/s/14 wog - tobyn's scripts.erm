@@ -221,7 +221,7 @@ ZVSE2
 
 ;  resource (Wood+Ore|Mercury|Sulphur|Crystal|Gem|350 Gold)  Mithril   cycling
 ;    w47  =      1       2       3       4     5     6         (7)        8
-;                9      10      11      12    13    14         15        16
+;                9      10      11      12    13    14         15      
 ;
 ; 0 = nothing, 7 = (Mithril, but unused), 17+ not used
 ; 8 = cycling: automatically from lvl 10 on, each weekday gets corrspondant resource, unless chosen manually
@@ -375,35 +375,44 @@ ZVSE2
   !!VRw47&(estatesLvl)=(SKILL_EXPERT)/i^wog_36_enabled^:S15;        init w47 Mithril cycling if Mithril script active and Exp Estates and lvl10+
 !!en;
 
-!!VRw47&w47=16:S15;                    reset w47 Mithril choice unlucky flag (from the day before)
+!!VRw47&w47>15:S15;                    reset w47 Mithril choice unlucky flag (from the day before)
 
   prepare resources according to w47 state
-!!VRy7:S0;                             init resource var (y7)
-!!VRy7&w47>0/w47<8/(heroLvl)>=i^timerWeekDay^:Sw47; lvl<10, check for weekday if to give resource type w47 at all that day
-!!VRy7&w47=8:Si^timerWeekDay^;               lvl 10+  cycling, give respective weekday resource
-!!VRy7&w47>8/w47<15:Sw47 -8;           lvl 10+  give chosen resource type (w47 -8)
-!!FU(WOG_Hero_GetLuckLevel)&w47=15:Pv2332/0/?y-1;           Mithril section: check current luck for that hero
-!!VRy8&w47=15:R9;                      .. set daily chance threshold (9)
-!!VRy8&w47=15/y-1=0:-1;                .. treat 0 luck as 1 luck (10% base chance)
-!!VRy9&y8<y-1:S1;                      .. compare, set (y9=1) if lucky
-!!VRy7&w47=15/y9=1:S7;                 .. set y7 to Mithril if successful
-!!VRy7&w47=15/y9=0/(estatesLvl)>(SKILL_NOT_LEARNED):Si^timerWeekDay^;    .. set y7 to weekday if unsuccessful but Estates
-!!VRw47&w47=15/y9=0:S16;               .. set w47 to 16 if unsuccessful
+!!VR(res:y):S0;                             init resource var (res)
+!!VR(res)&w47>0/w47<8/(heroLvl)>=i^timerWeekDay^:Sw47; lvl<10, check for weekday if to give resource type w47 at all that day - Archer30: why do we check (heroLvl)>=i^timerWeekDay^ here??
+!!VR(res)&w47=8:Si^timerWeekDay^;               lvl 10+  cycling, give respective weekday resource
+!!VR(res)&w47>8/w47<15:Sw47 -8;           lvl 10+  give chosen resource type (w47 -8)
 
-  give resources according to above conditions
-!!OW&y7=1:R(CURRENT_PLAYER)/0/d1 R(CURRENT_PLAYER)/2/d1;           give 1 Wood and 1 Ore
-!!OW&y7=2:R(CURRENT_PLAYER)/1/d1;                    give 1 Mercury
-!!OW&y7>2/y7<6:R(CURRENT_PLAYER)/y7/d1;              give 1 Sulphur, Crystal or Gem
+!!if&w47=15;
+  !!FU(WOG_Hero_GetLuckLevel):Pv2332/0/?(luck:y);           Mithril section: check current luck for that hero
+  !!VR(luck):F1/(INT_MAX);
+  !!VR(random:y):R0/0/10;
 
-!!OW&y7=6/w47<>14:R(CURRENT_PLAYER)/y7/d350;         give 350 Gold - partially managed in FU(WOG_191_Hero_GetEstatesIIBonus)
-
-!!if&y7=7;
-  !!if&i^wog_36_enabled^;
-    !!OW:R(CURRENT_PLAYER)/(RES_MITHRIL)/d1; [give 1 Mithril if active]
+  !!if&(random)<=(luck);
+    !!VR(res):S(RES_MITHRIL);                 .. set (res) to Mithril if successful
   !!el;
-    !!OW:R(CURRENT_PLAYER)/(RES_GOLD)/d350; [give 350 Gold if Mithril inactive (weekday cycle reached sunday)]
+    !!VR(res)&(estatesLvl)>(SKILL_NOT_LEARNED):Si^timerWeekDay^;    .. set (res) to weekday if unsuccessful but Estates
   !!en;
 !!en;
+
+  give resources according to above conditions
+!!OW&(res)=1:R(CURRENT_PLAYER)/(RES_WOOD)/d1 R(CURRENT_PLAYER)/(RES_ORE)/d1;           give 1 Wood and 1 Ore
+!!OW&(res)=2:R(CURRENT_PLAYER)/(RES_MERCURY)/d1;                    give 1 Mercury
+!!OW&(res)>2/(res)<6:R(CURRENT_PLAYER)/(res)/d1;              give 1 Sulphur, Crystal or Gem
+
+!!OW&(res)=6/w47<>14:R(CURRENT_PLAYER)/(res)/d350;         give 350 Gold - partially managed in FU(WOG_191_Hero_GetEstatesIIBonus)
+
+!!if&(res)=7;
+  !!if&i^wog_36_enabled^;
+    !!VR(res):S(RES_MITHRIL);
+    !!OW:R(CURRENT_PLAYER)/(res)/d1; [give 1 Mithril if active]
+  !!el;
+    !!VR(res):S(RES_GOLD);
+    !!OW:R(CURRENT_PLAYER)/(res)/d350; [give 350 Gold if Mithril inactive (weekday cycle reached sunday)]
+  !!en;
+!!en;
+
+!!VRi^wog_191_dailyResPlusOne_%v2332^:S(res) +1;  [global var to show resource got today]
 
     --------------------
 
@@ -448,8 +457,9 @@ ZVSE2
 ;   x2 = click type (= 12 left click, = 14 right click)
 
 !!VR(msgType:y):S(mouseAction) -10;                      if left-click  then init y16:=2 (OK/Cancel buttons)
-!!IF:W(CURRENT_HERO);                              set w var reference to current hero
-!!HE(CURRENT_HERO):S(SKILL_ESTATES)/?(skillLvl:y) E?(heroExp:y)/?(heroLvl:y)/1 X?(specType:y)/?(specSkill:y)/d/d/d/d/d; get Estates expertise (y1), hero experience (y2) and level (y3), skill specialty (y20=0 and y19=13 is Estates)
+!!HE(CURRENT_HERO):N?(hero:y);
+!!IF:W(hero);                              set w var reference to current hero
+!!HE(hero):S(SKILL_ESTATES)/?(skillLvl:y) E?(heroExp:y)/?(heroLvl:y)/1 X?(specType:y)/?(specSkill:y)/d/d/d/d/d; get Estates expertise (y1), hero experience (y2) and level (y3), skill specialty (y20=0 and y19=13 is Estates)
 
 !!if&(skillLvl);
   !!VRw47&w47=0/(heroLvl)<10:S1 R5;             init w47 with random 1..6 for lvl 1..9 and no init
@@ -480,7 +490,7 @@ ZVSE2
   !!en;
 
   ; lvl 10+ and Mithril chosen
-  !!FU(WOG_Hero_GetLuckLevel)&w47>14:P(CURRENT_HERO)/0/?(luckBonus:y);             check current luck of current hero
+  !!FU(WOG_Hero_GetLuckLevel)&w47>=15:P(CURRENT_HERO)/0/?(luckBonus:y);             check current luck of current hero
   !!VR(chance:y):S(luckBonus) *10;                      set daily chance
 
   !!if&(chance)>100;
@@ -503,8 +513,16 @@ ZVSE2
   !!VR(picSub:y):S41 +(skillLvl);                       calculate correct Estates pic (according to expertise)
 
   !!VR(resource:y)&w47<8:Sw47;                    set resource display for lvl 1..9
-  !!VR(resource)|w47=8/w47=16:Si^timerWeekDay^;       if cycling (=8), or unlucky Mithril (=16), set pic to weekday resource
-  !!VR(resource)&w47>8/w47<16:Sw47 -8;          set resource display for lvl 10+ chosen
+  !!VR(resource)&w47=8:Si^timerWeekDay^;       if cycling (=8), or unlucky Mithril (=16), set pic to weekday resource
+  !!VR(resource)&w47>8/w47<15:Sw47 -8;          set resource display for lvl 10+ chosen
+
+  !!if&w47=15;
+    !!if&i^wog_191_dailyResPlusOne_%(hero)^;
+      !!VR(resource):Si^wog_191_dailyResPlusOne_%(hero)^ -1; [Show resource got today]
+    !!el;
+      !!VR(resource):S(NO_PIC_TYPE);
+    !!en;
+  !!en;
 
   !!if&(resource)=1;
     !!VR(pic):S(RES_WOOD);                      if Wood/Ore then set first pic to Wood instead of Estates
@@ -516,6 +534,7 @@ ZVSE2
   !!VR(resource)&(resource)=(RES_MITHRIL)/i^wog_36_enabled^<>(TRUE):S(RES_GOLD);              set gold resource instead of Mithril if Mithril script disabled (needed for weekday=sunday)
   !!VR(resourceNum:y):S1;                            resource amount
   !!VR(resourceNum)&(resource)=(RES_GOLD):S350;                    gold amount 350 instead of 1
+  !!VR(resourceNum)&w47=15/i^wog_191_dailyResPlusOne_%(hero)^=0:S(NO_PIC_TYPE);
 
   !!VRi^wog_estates_ignore_native_calculation^:S(TRUE);
   !!HE(CURRENT_HERO):Z?(hero:y);
@@ -584,7 +603,7 @@ ZVSE2
     !!if&(choice)>-1;
       !!VRw47:S(choice) +9;
     !!el;
-      !!VRw47&-1:S8;            set w47=8 (cycling) if rejected
+      !!VRw47:S8;            set w47=8 (cycling) if rejected
     !!en;
   !!en;
 !!en;
