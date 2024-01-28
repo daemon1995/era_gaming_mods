@@ -34,12 +34,13 @@ ZVSE2
 !!OB998:S;                              // запрещаем посещение скелета
 !!SK998:A?y1;                           // y1 - артефакт у трупа
 
-!!if|-1000/y1>999;
+!!if|-(ERM_FLAG_IS_HUMAN)/y1>999;
   !!OB998:R;
   !!FU:E;                               // при посещении ИИ или если артефакта уже нет разрешаем использование объекта и выходим]
 !!en;
 
-!!UN:Ay1/3/?y2; !!VRy2::4 +1;           // y2 класс артефакта (1/2/3)
+!!UN:Ay1/3/?y2;
+!!VRy2::4 +1;                           // y2 класс артефакта (1/2/3)
 !!SN:T^opt882.m%Y2^/?z2;                // z2 - текст вопроса о сражении
 !!IF:Q1/(PIC_TYPE_MONSTER)/65593/(PIC_TYPE_ART)/y1/(MSG_TYPE_QUESTION)^%Z2^;           // выводим запрос на битву
 !!FU&-1:E;                              // выход, если герой отказался от битвы
@@ -53,8 +54,10 @@ ZVSE2
 
 
 !?FU(OnSetupBattlefield);               // при настройке поля боя
-!!SN:W^opt882.c^/?y2;
-!!FU&y2<1:E;                            // y2 - класс артефакта (1/2/3), выход, если бой не со скелетом
+!#VA(usedY[20]:y);
+
+!!SN:W^opt882.c^/?(newAbilities:y);
+!!FU&(newAbilities)<=0:E;               // класс артефакта (1/2/3), выход, если бой не со скелетом
 
 !!UN:J2/?y4;
 !!VRy4:+y2;                             // y4 - выбранный человеком уровень сложности
@@ -65,56 +68,129 @@ ZVSE2
   !!VRyi:*y5 :100;                      // ...
 !!en;                                   // ...
 
-!!BM21:F?y3;                            // y3 - флаги скелета
-!!VRy3&y2>=1:|(MON_FLAG_NO_RETALIATION);     // безответный удар для treasure-артефактов
-!!VRy3&y2>=2:|(MON_FLAG_ATTACKS_TWICE);      // + двойной удар для minor-артефактов
-!!VRy3&y2>=3:|(MON_FLAG_ATTACKS_ALL_AROUND); // + круговая атака для major-артефактов
-!!BM21:Ay10 Dy11 Sy12 Hy13 U1/y14 U2/y15 Ey16 Ry17 Fy3; // выставляем способности скелету-охраннику
+!!VRy16:F0/5;                          [Restrain the max spells to 5]
+
+; Set up new description for skeleton (only when the battle is visible)
+!!if&i^battle_isVisible^;
+  ; Release (if there is any) and create array for desc string (size undefined)
+  !!SN:Mi^es_882_newDescriptionsList^;
+  !!FU(NewStrArray):P?i^es_882_newDescriptionsList^/(M_TEMP);
+  !!FU(ES_882_SetUpNewDescForSkeleton):P(BATTLE_DEFENDER_STACK_FIRST);
+!!en;
+
+!!BM(BATTLE_DEFENDER_STACK_FIRST):F?(flags:y);
+!!VR(flags)&(newAbilities)>=1:|(MON_FLAG_NO_RETALIATION);     // безответный удар для treasure-артефактов
+!!VR(flags)&(newAbilities)>=2:|(MON_FLAG_ATTACKS_TWICE);      // + двойной удар для minor-артефактов
+!!VR(flags)&(newAbilities)>=3:|(MON_FLAG_ATTACKS_ALL_AROUND); // + круговая атака для major-артефактов
+
+!!BM(BATTLE_DEFENDER_STACK_FIRST):Ay10 Dy11 Sy12 Hy13 U1/y14 U2/y15 Ey16 Ry17 F(flags); // выставляем способности скелету-охраннику
 
 !?FU(OnBeforeBattleAction);
-!!SN:W^opt882.c^/?y2;
-!!FU&y2<1:E;                            // выход, если бой не со скелетом
+!!SN:W^opt882.c^/?(newAbilities:y);
+!!FU&(newAbilities)<1:E;                            // выход, если бой не со скелетом
 
-!!BG:N?y1;
-!!FU&y1<>21:E;                          // выход, если не ход скелета
+!!FU&i^battle_acting_stack^<>(BATTLE_DEFENDER_STACK_FIRST):E; // выход, если не ход скелета                 
 
-!!BM21:E?y2 P?y3;
-!!FU&y2<1:E;                            // выход, если скелет исчерпал заклинания
+!!BM(BATTLE_DEFENDER_STACK_FIRST):E?(spells:y) P?(pos:y);
+!!FU&(spells)<=0:E;                            // выход, если скелет исчерпал заклинания
 
-!!VRy2:-1;
-!!VRy2&y2>4:S4;
-!!BM21:Ey2;                             // снижаем кол-во кастов охранника (максимум 10 кастов)
+!!BM(BATTLE_DEFENDER_STACK_FIRST):Ed-1;        // снижаем кол-во кастов охранника (максимум 5 кастов)
 
 !!SN:T^opt882.b1^/?z2;
 !!MM:Sz2;                               // вывод сообщения о призыве в лог битвы
 !!SN:P^CLONE^;                          // вывод звука Клона
-!!BM21:C65/y3/10/3/0 H?y7 L?y4 F?y5;    // скелет кастует на себя заклинание Клон
-!!VRy7:-y4 :5;                          // y7 - численность призываемых скелетов = 20% от здоровья скелета-охранника
 
-!!re i/21/40;                           // перебор отрядов защищающейся стороны
-  !!BMi:F?y6;
-  !!VRy6:&8388608;          // y6 - признак Клона
+; Cast Clone
+; No need to check if it is possible to summon as the max spell is 5, meaning max at 6 stacks would be created
+!!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_CLONE)/(pos)/10/3/0 H?(hp:y) L?(lostHp:y);    // скелет кастует на себя заклинание Клон
+!!VR(summNum:y):S(hp) -(lostHp) :5;                          // численность призываемых скелетов = 20% от здоровья скелета-охранника
 
-  !!if&y6>0;                            // если найден клон
-    !!BM21:U5/-1;
-    !!BMi:P?y8;           // отвязываем клон от скелета-охранника
+; Look for the stack that was cloned from BM:C
+!!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST); // перебор отрядов защищающейся стороны
+  !!BMi:F?(flags:y);
+  !!VR(isClone:y):S(flags) &(MON_FLAG_CLONE);             // y6 - признак Клона
+
+  !!if&(isClone);                              // если найден клон
+    ; Set no mirror for the first skeleton guardian
+    !!BM(BATTLE_DEFENDER_STACK_FIRST):U5/-1;
+
+    ; Remove the found cloned stack
+    !!BMi:P?(summPos:y);           // отвязываем клон от скелета-охранника
     !!FU(ES_882_RemoveStack):Pi;        // убираем отряд с поля
-    !!BU:S(MON_SKELETON)/y7/y8/1/-1/1 Ey8/?y9;      // и призываем на его место отряд скелетов, y9 - номер отряда
+
+    ; Summon the stack
+    !!BU:S(MON_SKELETON)/(summNum)/(summPos)/(BATTLE_RIGHT)/-1/(TRUE) E(summPos)/?(summStack:y);      // и призываем на его место отряд скелетов, номер отряда
+
     !!SN:P^ANIMDEAD^;                   // вывод звука Поднятия нежити
-    !!BMy9:Fy5 V74;                     // копируем отряду флаги охранника и анимируем Поднятие нежити
-    !!BU:R;                             // обновляем поле боя
+
+    ; Set up new abilities
+    ; Set up new description for skeleton (only when the battle is visible)
+    !!FU(ES_882_SetUpNewDescForSkeleton):P(summStack);
+
+    !!BM(summStack):F?(flags:y);
+    !!VR(flags)&(newAbilities)>=1:|(MON_FLAG_NO_RETALIATION);     // безответный удар для treasure-артефактов
+    !!VR(flags)&(newAbilities)>=2:|(MON_FLAG_ATTACKS_TWICE);      // + двойной удар для minor-артефактов
+    !!VR(flags)&(newAbilities)>=3:|(MON_FLAG_ATTACKS_ALL_AROUND); // + круговая атака для major-артефактов
+    !!BM(summStack):F(flags);
+
+    !!BM(summStack):V74;                         // копируем отряду флаги охранника и анимируем Поднятие нежити
+    !!SN:D;                             // обновляем поле боя
   !!en;
 !!en;
 
 !?FU(ES_882_RemoveStack);               // удаление отряда x1 с поля
-!!UN:C6919200/4/?y1;                    // Менеджер битвы
-!!VRy2:Sx1 *1352 +21708 +y1;            // структура стека
-!!VRy3:Sy2 +234;
-!!UN:Cy3/1/1;                           // указываем, что стек умер
-!!BMx1:F?y4;                            // получаем флаги стека
-!!VRy4:|268435456;                      // ставим флаг "принесён в жертву"
-!!BMx1:N0 Fy4;                          // кол-во: 0, и устанавливаем флаги стеку
-!!SN:E4621680/2/y1/51/1;                // функция "убрать тело", если мертв
-!!SN:E4797616/2/y1/0/1;                 // обновить сетку поля боя
+!#VA(stackId:x);
+
+!!BM(stackId):Z?(stackStruct:y);
+!!UN:C(stackStruct)/234/(UNC_INT8)/1;   // указываем, что стек умер                     
+!!BM(stackId):Fd|(MON_FLAG_SACRIFICED); // ставим флаг "принесён в жертву"
+!!BM(stackId):N0;                       // кол-во: 0
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E4621680/2/(cmbMgr)/51/1;          // функция "убрать тело", если мертв
+!!SN:E4797616/2/(cmbMgr)/0/1;           // обновить сетку поля боя
+
+!?FU(ES_882_SetUpNewDescForSkeleton)&i^battle_isVisible^;
+!#VA(stack:x);
+
+!!BM(stack):F?(flags:y);
+!!VR(abilities[3]:y):C(MON_FLAG_NO_RETALIATION)/(MON_FLAG_ATTACKS_TWICE)/(MON_FLAG_ATTACKS_ALL_AROUND);
+!!VR(addedAbilityCounter:y):S0;
+!!VR(newDesc:z):S^^;
+!!VR(loopEnd:y):Si^opt882.c^ F1/(abilities[SIZE]);
+
+!!re i/0/(loopEnd)/1/-1;
+  !!VR(hasAbility:y):S(flags) &(abilities[i]);
+
+  !!if&(hasAbility)=(FALSE);
+    ; Set up basic text if it's the first ability added
+    !!if&(addedAbilityCounter)=0;
+      !!VR(addedAbilityCounter):+1;
+      !!SN:T^es.882.desc^/?(newDesc);
+    !!en;
+
+    ; Add the text of the ability
+    !!SN:T^es.882.ability.%i^/?(abilityName:z);
+    !!VR(newDesc):+(abilityName) +^%T(es.period)^;
+  !!en;
+!!en;
+
+; If any new ability has been added, set the new text (and set the pointer of desc to a new one from array)
+!!if&(newDesc)<>^^;
+  ; Get stack stucture
+  !!BM(stack):Z?(stackStruct:y);
+  ; Set up new description string
+  !!UN:C(stackStruct)/144/(UNC_INT)/?(descPtr:y);
+  !!SN:B(descPtr)/d/?(desc:z);
+  !!VR(desc):+(newDesc);
+  ; Put the string in the array and get the address of the string
+  !!FU(ES_AllocBattleStr):P(desc)/?(newDescAddr:y);
+  !!SN:B(newDescAddr)/d/?(text:z);
+  ; Apply new description
+  !!UN:C(stackStruct)/144/(UNC_INT)/(newDescAddr);
+!!en;
+
+!?FU(OnAfterBattleUniversal)&i^es_882_newDescriptionsList^;
+!!SN:Mi^es_882_newDescriptionsList^;
+!!VRi^es_882_newDescriptionsList^:S0;
 
 ** end
