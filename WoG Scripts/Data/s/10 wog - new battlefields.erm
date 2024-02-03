@@ -7,13 +7,14 @@ ZVSE2
 ** Jonas Gustafsson, and Timothy Pulver 
 
 ** Rewritten by igrik
-** Updated by Archer30 to support external iamges
+** Updated by Archer30 to support external images
 
 ** New Battlefield pictures will often be used in combat. 
 ** This has no affect on the battles but adds some visual variety.
 
 
 !#DC(WOG_OPT_NEW_BATTLE_FIELDS) = 68;
+!#VRi^wog_68_randomBackground_enabled^:S(FALSE); [Enable random background for a type of battle instead of relying on the subtype of terrain]
 
 
 !?FU(WOG_OPT_SetNewBattleFields)&i^battle_isVisible^; [Executes after OnBeforeBattleUniversal]
@@ -24,7 +25,7 @@ ZVSE2
 !!FU&(mapItem)=(FALSE):E;
 
 !!FU(WOG_MapItem_GetRealType):P(mapItem)/?(meetType:y);
-!!FU&(meetType)=(OBJ_TOWN):E;                    [Exit on battling towns (even without walls)]
+!!FU&(meetType)=(OBJ_TOWN):E;           [Exit on battling towns (even without walls)]
 
 !!BA:P?(x:y)/?(y:y)/?(z:y); 
 !!OB(x)/(y)/(z):U?(meetSubType:y);
@@ -58,51 +59,71 @@ ZVSE2
 !!el;
   !!BU:G?(bonuses:y);                   [есть ли бонусы от спец.земли в битве]
 
-  !!if&(bonuses)=-1;                    [если не модифицируемая битва от типа земли]
+  !!if&(bonuses)=21;                    [cursed ground]
+    !!VR(name):S^Curs^;
+  !!el&(bonuses)=46;                    [magic plains]
+    !!VR(name):S^Magi^;
+  !!el&(bonuses)=227;                   [holy ground]
+    !!VR(name):S^Holy^;
+  !!el&(bonuses)=224;                   [evil fog]
+    !!VR(name):S^Evil^;
+  !!el&(bonuses)=222;                   [clover field]
+    !!VR(name):S^Clov^;
+  !!el&(bonuses)=228;                   [lucid pools]
+    !!VR(name):S^Luci^;
+  !!el&(bonuses)=226;                   [fiery fields]
+    !!VR(name):S^Fier^;
+  !!el&(bonuses)=229;                   [magic clouds]
+    !!VR(name):S^Clou^;
+  ; If there is no overlay or the overlay is not valid, get the background from the type of terrain
+  !!el;
     !!VR(name):S^Gr%(terrType)^;
-  !!el;                                 [N/A by default]
-    !!if&(bonuses)=21;
-      !!VR(name):S^Curs^;
-    !!el&(bonuses)=46;
-      !!VR(name):S^Magi^;
-    !!el&(bonuses)=227;
-      !!VR(name):S^Holy^;
-    !!el&(bonuses)=224;
-      !!VR(name):S^Evil^;
-    !!el&(bonuses)=222;
-      !!VR(name):S^Clov^;
-    !!el&(bonuses)=228;
-      !!VR(name):S^Luci^;
-    !!el&(bonuses)=226;
-      !!VR(name):S^Fier^;
-    !!el&(bonuses)=229;
-      !!VR(name):S^Clou^;
-    !!en;
   !!en;
 !!en;
 
-; Exit if no definition for the name
-!!FU&(name)=^^:E;
-
-; Check out the max available background image index (must be consecutive, can be empty)
-!!VR(availNum:y):S0;
+; Check out the max available background image index (can be empty)
+!!FU(NewIntArray):P?(indexList:y);
 !!SN:F^PcxPngExists^/^Bk%(name).pcx^;
-!!VR(availNum)&v1:+1;
+!!FU(Array_Push)&v1:P(indexList)/-1;
 
-!!re i/0/23;                            [23 - max subtype of Sand, meaning max of 25 images available for one terrain type]
+!!re i/0/99;                            [23 - max subtype of Sand. Max of 101 images available for one terrain type]
   !!SN:F^PcxPngExists^/^Bk%(name)%i.pcx^;
 
-  !!br&v1<>(TRUE);
+  ; Push the found image to the list
+  !!if&v1;
+    !!FU(Array_Push):P(indexList)/i;
+  ; Exit if no file found, only when the index is >= 1 (for normal player's habit, index could start from 1)
+  ; Here we no longer exit to allow more flexible naming
+  *!el&i>=1;
+    *!br;
+  !!en;
 !!en;
 
-!!VR(availNum):+i;
-!!FU&(availNum)=0:E;                    [Exit if no image]
+; Exit if no image
+!!SN:M(indexList)/?(size:y);
+!!FU&(size)=0:E;
 
-!!VR(backImgIndex:y):S(terrSubType) %(availNum);[вычисляем 1 из (availNum) фонов по остатку от деления]
-!!BA:B^BkGr%(terrType)%(backImgIndex).pcx^; [установить новый фон битвы]
+; Choose the image depending on the subtype of terrain or just random, depending on the value of i^wog_68_randomBackground_enabled^
+!!if&i^wog_68_randomBackground_enabled^=(FALSE);
+  !!VR(listIndex:y):S(terrSubType) %(size); [вычисляем 1 из (size) фонов по остатку от деления]
+!!el;
+  !!VR(listIndex):R0/1/(size) -1;
+!!en;
+
+; Get the index of the filename
+!!SN:M(indexList)/(listIndex)/?(index:y);
+
+!!if&(index)=-1;
+  !!VR(suffix:z):S^^;
+!!el;
+  !!VR(suffix):S^%(index)^;
+!!en;
+
+; Change the background
+!!BA:B^Bk%(name)%(suffix).pcx^;         [установить новый фон битвы]
 
 !?FU(WOG_CreateERMHook);
-*!UN:C4603972/1/235;                             [нет проверки на в подземелье (Z=1)]
+*!UN:C4603972/1/235;                    [нет проверки на в подземелье (Z=1)]
 !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(wogOption:y); 
 !!FU&(wogOption)<>(TRUE):E;                       
 
