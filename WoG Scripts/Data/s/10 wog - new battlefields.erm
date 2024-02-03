@@ -7,6 +7,7 @@ ZVSE2
 ** Jonas Gustafsson, and Timothy Pulver 
 
 ** Rewritten by igrik
+** Updated by Archer30 to support external iamges
 
 ** New Battlefield pictures will often be used in combat. 
 ** This has no affect on the battles but adds some visual variety.
@@ -15,12 +16,12 @@ ZVSE2
 !#DC(WOG_OPT_NEW_BATTLE_FIELDS) = 68;
 
 
-!?FU(WOG_OPT_SetNewBattleFields);                [Executes before OnBeforeBattleUniversal, global vars from EEF are not initialised yet!]
+!?FU(WOG_OPT_SetNewBattleFields)&i^battle_isVisible^; [Executes after OnBeforeBattleUniversal]
 !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(wogOption:y); 
 !!FU&(wogOption)<>(TRUE):E;                      
 
 !!FU(WOG_Battle_GetMapItem):P?(mapItem:y);       
-!!FU&(mapItem)=(FALSE):E;                        
+!!FU&(mapItem)=(FALSE):E;
 
 !!FU(WOG_MapItem_GetRealType):P(mapItem)/?(meetType:y);
 !!FU&(meetType)=(OBJ_TOWN):E;                    [Exit on battling towns (even without walls)]
@@ -35,32 +36,72 @@ ZVSE2
   !!VR(meetType):S(OBJ_HERO);
 !!en;
 
+; Get terrain type
+!!TR(x)/(y)/(z):T?(terrType:y)/?(terrSubType:y);
+!!FU&(terrType)>=9:E;                   [Exit if the battle initiates on rocks]
+!!FU&(terrType)=8/i^battle_hero_vs_hero^:E; [Exit if it's a battle between two boats]
+
+; Deal with Creature Banks and Mines
+!!VR(name:z):S^^;
+
 !!if&(meetType)=(OBJ_DRAGON_UTOPIA); 
-  !!BA:B^BkBnUt.pcx^;  !!FU:E;   
+  !!VR(name):S^BnUt^;
+
+!!el&(meetType)=(OBJ_CREATURE_BANK);
+  !!VR(name):S^BnNg^;
+
+!!el&(meetType)=(OBJ_CRYPT);            [N/A by default]
+  !!VR(name):S^BnCr^;
+      
+!!el&(meetType)=(OBJ_MINE)/(meetSubType)=7;
+  !!VR(name):S^GrMn^;
+!!el;
+  !!BU:G?(bonuses:y);                   [есть ли бонусы от спец.земли в битве]
+
+  !!if&(bonuses)=-1;                    [если не модифицируемая битва от типа земли]
+    !!VR(name):S^Gr%(terrType)^;
+  !!el;                                 [N/A by default]
+    !!if&(bonuses)=21;
+      !!VR(name):S^Curs^;
+    !!el&(bonuses)=46;
+      !!VR(name):S^Magi^;
+    !!el&(bonuses)=227;
+      !!VR(name):S^Holy^;
+    !!el&(bonuses)=224;
+      !!VR(name):S^Evil^;
+    !!el&(bonuses)=222;
+      !!VR(name):S^Clov^;
+    !!el&(bonuses)=228;
+      !!VR(name):S^Luci^;
+    !!el&(bonuses)=226;
+      !!VR(name):S^Fier^;
+    !!el&(bonuses)=229;
+      !!VR(name):S^Clou^;
+    !!en;
+  !!en;
 !!en;
 
-!!if&(meetType)=(OBJ_CREATURE_BANK);
- !!BA:B^BkBnNg.pcx^;   !!FU:E;           
+; Exit if no definition for the name
+!!FU&(name)=^^:E;
+
+; Check out the max available background image index (must be consecutive, can be empty)
+!!VR(availNum:y):S0;
+!!SN:F^PcxPngExists^/^Bk%(name).pcx^;
+!!VR(availNum)&v1:+1;
+
+!!re i/0/23;                            [23 - max subtype of Sand, meaning max of 25 images available for one terrain type]
+  !!SN:F^PcxPngExists^/^Bk%(name)%i.pcx^;
+
+  !!br&v1<>(TRUE);
 !!en;
 
-!!if&(meetType)=(OBJ_MINE)/(meetSubType)=7;
-  !!BA:B^BkGr60.pcx^;  !!FU:E;  
-!!en;
+!!VR(availNum):+i;
+!!FU&(availNum)=0:E;                    [Exit if no image]
 
-!!TR(x)/(y)/(z):T?(terrType:y)/?(terrSubType:y); 
+!!VR(backImgIndex:y):S(terrSubType) %(availNum);[вычисляем 1 из (availNum) фонов по остатку от деления]
+!!BA:B^BkGr%(terrType)%(backImgIndex).pcx^; [установить новый фон битвы]
 
-!!if&(terrType)>=0/(terrType)<=7;                [если обычный тип почвы]
-  !!BU:G?(bonuses:y);                            [есть ли бонусы от спец.земли в битве]
-
-  !!if&(bonuses)=-1;                             [если не модифицируемая битва от типа земли]
-    !!VR(backImgIndex:y):S(terrSubType) %4;      [вычисляем 1 из 4 фонов по остатку от деления]
-    !!VR(backImgIndex)&(terrType)=7/v1000=1:+4;  [инферно под землей (есть доп.фоны)]
-    !!SN:F^PcxPngExists^/^BkGr%(terrType)%(backImgIndex).pcx^;
-    !!BA&v1:B^BkGr%(terrType)%(backImgIndex).pcx^;  [установить новый фон битвы]
-  !!en;                                          [конец условия_2]
-!!en;                                            [конец условия_1]
-
-!?FU(WOG_CreateERMHook);                         [функция создания хука (см.1000 wog - base)]
+!?FU(WOG_CreateERMHook);
 *!UN:C4603972/1/235;                             [нет проверки на в подземелье (Z=1)]
 !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(wogOption:y); 
 !!FU&(wogOption)<>(TRUE):E;                       
