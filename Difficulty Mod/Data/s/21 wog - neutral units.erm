@@ -299,7 +299,8 @@ This option is for everyone who wants to have stronger AI players and the diffic
  [x1=base rank, x2=hero's level+1]
 !!BMx16:T?y1 N?y2;                      [Creature type (y1), number (y2)]
 !!FU|y1<0/y2<1:E;                       [Exit if no stack at this number]
-!!FU&y1>=174/y1<=191:E;                 [Exit if it's a Commander]
+!!FU&y1>=(MON_COMMANDER_FIRST_A)/y1<=(MON_COMMANDER_LAST_D):E; [Exit if it's a Commander]
+
 !!MA:Ly1/?y3;                           [Creature level: y3]
 !!VRy3::2 +1;                           [Divide by 2 (dropping fractions) and add 1 to get level divisor (1..4): y3]
 !!VRy4:Sx1 :y3;                         [Divide base rank by level divisor to get final rank: y4]
@@ -664,9 +665,13 @@ This option is for everyone who wants to have stronger AI players and the diffic
 
   ; Set up commander in the last slot
   !!if&y10=(ARMY_SLOT_LAST);
-    !!MA:Oy6/?y7;                       [Town number that creature in slot 0 belongs to: y7]
-    !!VRy1:S(MON_COMMANDER_FIRST_D) +y7;[Set "Commander" in slot 6: y1]
-    !!CB2:G(ARMY_SLOT_LAST)/y1/1; [Set 1 Commander in slot 6]
+    !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?y30;
+
+    !!if&y30=(FALSE);
+      !!MA:Oy6/?y7;                       [Town number that creature in slot 0 belongs to: y7]
+      !!VRy1:S(MON_COMMANDER_FIRST_D) +y7;[Set "Commander" in slot 6: y1]
+      !!CB2:G(ARMY_SLOT_LAST)/y1/1; [Set 1 Commander in slot 6]
+    !!en;
 
   ; Set up new guards in other slots
   !!el;
@@ -748,8 +753,8 @@ This option is for everyone who wants to have stronger AI players and the diffic
 ; Set up CB commanders - for human only
 !?FU(OnBeforeBattleUniversal)&i^Encounter_Type^=2/(ERM_FLAG_IS_HUMAN);
 
-!!BA:M1/6/?y-1/?y2;                     [Check for Commander type (y-1), number (y2)]
-!!FU|y-1<183/y-1>191/y2<1:E;            [Exit if no Commander monsters defending]
+!!BA:M1/(ARMY_SLOT_LAST)/?y-1/?y2;      [Check for Commander type (y-1), number (y2)]
+!!FU|y-1<(MON_COMMANDER_FIRST_A)/y-1>(MON_COMMANDER_LAST_D)/y2<1:E; [Exit if no Commander monsters defending]
 
 !!UN:N3/-1/y-1/0;                       [Commander creature name for setting Commander's screen name: z-1]
 !!VRy-3:Sy-1 -183;                      [Commander type: 0..9: y-3]
