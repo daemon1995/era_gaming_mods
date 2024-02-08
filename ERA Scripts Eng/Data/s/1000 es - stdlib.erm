@@ -187,6 +187,15 @@ ZVSE2
 **** Global variables and arrays ****
 *************************************
 
+; On visiting objects - Note that not all the visiting triggers an battle
+; Neutral battle - currently used in Karmic Battles
+!?OB(OBJ_MONSTER);
+!!VRi^es_isNeutralBattle^:S(TRUE); ** set to True to show that a monster stack is visited
+
+; On Leaving objects
+!$OB(OBJ_MONSTER);
+!!VRi^es_isNeutralBattle^:S(FALSE);
+
 !?FU(OnBeforeBattleUniversal);
 ; Recreate battle strings persistent storage
 !!SN&i^es_battleStrings^:Mi^es_battleStrings^;
@@ -750,3 +759,46 @@ The game may fall at any time.^;
     !!VR(number):+1;
   !!en;
 !!en;
+
+// Play a SPELL animation on multiple stacks at the same time (@ feanor and Archer30)
+!?FU(ES_PlayAnimationOnMultipleStacks);
+!#VA(animation:x);                      [Index of the animation (BM:V) or filename pointer]
+!#VA(stacksList:x);                     [Array of Stack numbers for animation]
+!#VA(playDamagedAnimation:x);           [Optional. Boolean. Whether to play the damaged animation]
+
+!!FU:A?(numArgs:y);
+!!VR(playDamagedAnimation)&(numArgs)<3:S(FALSE);
+
+; Initialise array and variables
+!!FU(NewIntArray):P10/?(stacksForAnimationList:y);
+!!SN:M(stacksList)/?(size:y);
+!!VR(bits[4]:y):C(BIT_0)/(BIT_8)/(BIT_16)/(BIT_24);
+
+; Loop through the array containing stack numbers and set up the array for animation
+!!re i/0/(size)/1/-1;
+  !!SN:M(stacksList)/i/?(stack:y);
+  ; Skip animation for the last stack of each side
+  !!co|(stack)=(BATTLE_ATTACKER_STACK_LAST)/(stack)=(BATTLE_DEFENDER_STACK_LAST);
+
+  ; Fix defender stack number
+  !!VR(stack)&(stack)>(BATTLE_ATTACKER_STACK_LAST):-1;
+
+  ; Set up the array for animation
+  !!VR(slotIndex:y):S(stack) :4;
+  !!VR(bitIndex:y):S(stack) %4;
+
+  *!SN:M(stacksForAnimationList)/(slotIndex)/d|(bits[bitIndex]); [This syntax doesn't work]
+  !!SN:M(stacksForAnimationList)/(slotIndex)/?(value:y);
+  !!VR(value):|(bits[bitIndex]);
+  !!SN:M(stacksForAnimationList)/(slotIndex)/(value);
+!!en;
+
+; Get the address of the array
+!!SN:M(stacksForAnimationList)/?(arrayAddress:y)/0;
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+; first parameter - combatmanager
+; the second parameter is a pointer to an array of forty bytes: one per unit
+; third parameter - animation number
+; fourth parameter - whether to animate the damage (0 - not necessary, 1 - necessary)
+!!SN:E5925584/2/(cmbMgr)/(arrayAddress)/(animation)/(playDamagedAnimation);     [play animation]
