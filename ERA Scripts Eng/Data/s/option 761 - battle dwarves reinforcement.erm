@@ -19,7 +19,22 @@ ZVSE2
 !!VR(fv):*105 :100;                     [увеличиваем FV на 5%]
 !!MA:F(MON_BATTLE_DWARF)/(fv);          [обновляем FV боевых гномов]
 
-!?FU(ES_OnAfterMelee);
+; Set up global var
+!?FU(OnSetupBattlefield);
+!!UN:P761/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!VRi^es_761_dwarfDefIncreased_%i^:S(FALSE);
+!!en;
+
+!?FU(OnBattleRound)&i^battle_round^>=1;
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!VRi^es_761_dwarfDefIncreased_%i^:S(FALSE);
+!!en;
+
+; Trigger after being attacked
+!?FU(ES_OnAfterAttack);
 !#VA(atkStack:x) (defStack:x);
 
 !!UN:P761/?(wogOption:y);               [проверяем включена ли опция 761]
@@ -33,7 +48,13 @@ ZVSE2
 !!BM(defStack):T?(type:y) N?(num:y);
 !!FU(ES_761_CheckIfMonIsEligible):P(type)/?(result:y);
 
-!!if&(result);
+!!if&(result)/i^es_761_dwarfDefIncreased_%(defStack)^=(FALSE);
+  ; Increase defence by 2
+  !!BM(defStack):Dd2;                   [укрепление отряда]
+
+  ; Change the global var
+  !!VRi^es_761_dwarfDefIncreased_%(defStack)^:S(TRUE);
+  
   ; Show battle log and play animation/sound
   !!if&i^battle_isVisible^;
     !!VR(isPlural:y):S(num) -1 B;
@@ -41,12 +62,9 @@ ZVSE2
     !!SN:T^es.761.battleLog^?(battleLog:z)/^mon^/(monName);
     !!MM:S(battleLog);
     
-    !!SN:P^SHIELD^;                   [вывод звука щита]
-    !!BM(defStack):V27;                  [анимация]
+    !!SN:P^SHIELD^;                     [вывод звука щита]
+    !!BM(defStack):V27;                 [анимация]
   !!en;
-
-  ; Increase defence by 2
-  !!BM(defStack):Dd2;                    [укрепление отряда]
 !!en;
 
 // Funciton to check if the targeted monster is eligible for reinforcement
