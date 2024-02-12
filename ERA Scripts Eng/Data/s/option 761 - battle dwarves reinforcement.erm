@@ -19,33 +19,34 @@ ZVSE2
 !!VR(fv):*105 :100;                     [увеличиваем FV на 5%]
 !!MA:F(MON_BATTLE_DWARF)/(fv);          [обновляем FV боевых гномов]
 
-!?FU(OnBattleActionEnd);
+!?FU(ES_OnAfterMelee);
+!#VA(atkStack:x) (defStack:x);
+
 !!UN:P761/?(wogOption:y);               [проверяем включена ли опция 761]
 !!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
 
-!!BG:E?(stack:y) A?(action:y);
+; Exit if it is a retaliation
+!!BG:N?(currStack:y);
+!!FU&(currStack)<>(atkStack):E;
 
 ; Increase the defense of Battle Dwarves if they are hit by melee attack
-!!if&(stack)>(NO_STACK)/(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
-  !!BM(stack):T?(type:y) N?(num:y);
-  !!FU(ES_761_CheckIfMonIsEligible):P(type)/?(result:y);
+!!BM(defStack):T?(type:y) N?(num:y);
+!!FU(ES_761_CheckIfMonIsEligible):P(type)/?(result:y);
 
-  !!if&(result);
-
-    ; Show battle log and play animation/sound
-    !!if&i^battle_isVisible^;
-      !!VR(isPlural:y):S(num) -1 B;
-      !!SN:H^monname^/(type)/(isPlural)/?(monName:z);
-      !!SN:T^es.761.battleLog^?(battleLog:z)/^mon^/(monName);
-      !!MM:S(battleLog);
-      
-      !!SN:P^SHIELD^;                   [вывод звука щита]
-      !!BM(stack):V27;                  [анимация]
-    !!en;
-
-    ; Increase defence by 2
-    !!BM(stack):Dd2;                    [укрепление отряда]
+!!if&(result);
+  ; Show battle log and play animation/sound
+  !!if&i^battle_isVisible^;
+    !!VR(isPlural:y):S(num) -1 B;
+    !!SN:H^monname^/(type)/(isPlural)/?(monName:z);
+    !!SN:T^es.761.battleLog^?(battleLog:z)/^mon^/(monName);
+    !!MM:S(battleLog);
+    
+    !!SN:P^SHIELD^;                   [вывод звука щита]
+    !!BM(defStack):V27;                  [анимация]
   !!en;
+
+  ; Increase defence by 2
+  !!BM(defStack):Dd2;                    [укрепление отряда]
 !!en;
 
 // Funciton to check if the targeted monster is eligible for reinforcement

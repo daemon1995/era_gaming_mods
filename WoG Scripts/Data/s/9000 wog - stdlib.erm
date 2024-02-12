@@ -1001,6 +1001,7 @@ The game may fall at any time.^;
 !!VRi^wog_isCBBattle^:S(FALSE);
 
 ; **************************************************************************************************
+// Archer30: It is recommended to put this section in a general mod like Game Enhancement Mod. They are useful with or without WoG scripts.
 // Gameplay changes
 ; Real terrain type in battle for underground. For example, underground lava will be treated as lava instead of subterranean.
 !?FU(OnGameEnter);
@@ -1014,6 +1015,59 @@ The game may fall at any time.^;
 !!if&(isBank);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-12/4/1;
 !!en;
+
+// Bug fixes
+; HD MOD WAR MACHINES SWAP FIX
+!?FU(WOG_OnBeforeHeroSwap)&1000;
+  !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
+  !!FU&v1<1:E;
+
+  !!FU&i^wog_54_enabled^<1/i^WOG_73_enabled^<1:E;                            [v591 is WM 1, i^WOG_73_enabled^ is WM 3]
+
+  !!UN:C6962576/(UNC_INT32)/?(heroSwapStructure:y);
+
+  !!UN:C(heroSwapStructure)/64/(UNC_INT32)/?(leftHeroStructure:y);
+  !!UN:C(heroSwapStructure)/68/(UNC_INT32)/?(rightHeroStructure:y);
+
+  !!UN:C(leftHeroStructure)/26/(UNC_INT32)/?i^swap_hero_0^;
+  !!UN:C(rightHeroStructure)/26/(UNC_INT32)/?i^swap_hero_1^;
+
+  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+    !!HEi^swap_hero_0^:A2/i/d/?i^WM_Machine_%i_Hero_0^;
+    !!HEi^swap_hero_1^:A2/i/d/?i^WM_Machine_%i_Hero_1^;
+  !!en;
+  
+  !!VRi^WM_Machine_Before_Art_Swap^:S(TRUE);
+
+!?FU(OnUnequipArt)|i^swap_hero_0^/i^swap_hero_1^;
+  !!if&v998>=(ART_BALLISTA)/v998<=(ART_FIRST_AID_TENT)/i^WM_Machine_Before_Art_Swap^;
+    !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
+  !!en;
+
+
+!?FU(WOG_OnUpdateHeroInteractionScreen)&i^WM_Machine_Before_Art_Swap^=(FALSE);
+  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+    !!VR(artUnequip:y):Si *-1;
+    !!if&i^WM_Machine_%i_Hero_0^>i^WM_Machine_%i_Hero_1^;
+      !!HEi^swap_hero_0^:A4/i;
+      !!HEi^swap_hero_1^:A(artUnequip);
+    !!el&i^WM_Machine_%i_Hero_1^>i^WM_Machine_%i_Hero_0^;
+      !!HEi^swap_hero_0^:A(artUnequip);
+      !!HEi^swap_hero_1^:A4/i;
+    !!en;
+
+    !!VRi^WM_Machine_Before_Art_Swap^:S(TRUE);
+  !!en;
+
+!?FU(WOG_OnAfterHeroSwap)&1000;
+  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+    !!VRi^WM_Machine_%i_Hero_0^:S(FALSE);
+    !!VRi^WM_Machine_%i_Hero_1^:S(FALSE);
+  !!en;
+
+  !!VRi^swap_hero_0^:S(FALSE);
+  !!VRi^swap_hero_1^:S(FALSE);
+  !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
 
 ; **************************************************************************************************
 ; Get the real type and subtype of a map object
@@ -1037,11 +1091,8 @@ The game may fall at any time.^;
 !#VA(result:x);
 
 !!VR(result):S(FALSE);
-!!UN:C6919480/4/?(value:y);
-!!VR(address:y):S(value) +128980;
-!!UN:C(address)/1/?(value2:y);              [(value2)=114 -> random map]
-!!VR(result)&(value2)=114:S(TRUE);
-
+!!UN:C(GAME_MANAGER)/4/?(gameMgr:y) C(gameMgr)/128980/1/?(value:y);
+!!VR(result)&(value)=114:S(TRUE);
 
 ; Get current game random seed for VR:R and ingame rands;
 !?FU(WOG_GetRandomSeed);
@@ -1090,58 +1141,6 @@ The game may fall at any time.^;
   !!SN:X?t/0;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4928298;                           [jump over adding near stack as reached target]
 !!en;
-
-; HD MOD WAR MACHINES SWAP FIX
-!?FU(WOG_OnBeforeHeroSwap)&1000;
-  !!FU&i^wog_54_enabled^<1/i^WOG_73_enabled^<1:E;                            [v591 is WM 1, i^WOG_73_enabled^ is WM 3]
-  !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
-
-  !!FU&v1<1:E;
-
-  !!UN:C6962576/(UNC_INT32)/?(heroSwapStructure:y);
-
-  !!UN:C(heroSwapStructure)/64/(UNC_INT32)/?(leftHeroStructure:y);
-  !!UN:C(heroSwapStructure)/68/(UNC_INT32)/?(rightHeroStructure:y);
-
-  !!UN:C(leftHeroStructure)/26/(UNC_INT32)/?i^swap_hero_0^;
-  !!UN:C(rightHeroStructure)/26/(UNC_INT32)/?i^swap_hero_1^;
-
-  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
-    !!HEi^swap_hero_0^:A2/i/d/?i^WM_Machine_%i_Hero_0^;
-    !!HEi^swap_hero_1^:A2/i/d/?i^WM_Machine_%i_Hero_1^;
-  !!en;
-  !!VRi^WM_Machine_Before_Art_Swap^:S(TRUE);
-
-!?FU(OnUnequipArt)|i^swap_hero_0^/i^swap_hero_1^;
-  !!if&v998>=(ART_BALLISTA)/v998<=(ART_FIRST_AID_TENT)/i^WM_Machine_Before_Art_Swap^;
-    !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
-  !!en;
-
-
-!?FU(WOG_OnUpdateHeroInteractionScreen)&i^WM_Machine_Before_Art_Swap^=(FALSE);
-  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
-
-    !!VR(artUnequip:y):Si *-1;
-    !!if&i^WM_Machine_%i_Hero_0^>i^WM_Machine_%i_Hero_1^;
-      !!HEi^swap_hero_0^:A4/i;
-      !!HEi^swap_hero_1^:A(artUnequip);
-    !!el&i^WM_Machine_%i_Hero_1^>i^WM_Machine_%i_Hero_0^;
-      !!HEi^swap_hero_0^:A(artUnequip);
-      !!HEi^swap_hero_1^:A4/i;
-    !!en;
-    !!VRi^WM_Machine_Before_Art_Swap^:S(TRUE);
-
-  !!en;
-
-!?FU(WOG_OnAfterHeroSwap)&1000;
-  !!re i/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
-    !!VRi^WM_Machine_%i_Hero_0^:S(FALSE);
-    !!VRi^WM_Machine_%i_Hero_1^:S(FALSE);
-  !!en;
-
-  !!VRi^swap_hero_0^:S(FALSE);
-  !!VRi^swap_hero_1^:S(FALSE);
-  !!VRi^WM_Machine_Before_Art_Swap^:S(FALSE);
 
 ; **************************************************************************************************
 ; SKILL CLICK FUNCTION (get number of clicked skill in hero screen)
@@ -1576,9 +1575,9 @@ The game may fall at any time.^;
 !!SN:E4810128/2/(cmbMgr)/(animation)/(hex)/(delay)/0;
 
 ; **************************************************************************************************
-; Play a SPELL animation on multiple stacks at the same time (@ feanor and Archer30)
+; Play a SPELL animation on multiple stacks at the same time (@feanor and Archer30)
 !?FU(WOG_PlayAnimationOnMultipleStacks);
-!#VA(animation:x);                      [Index of the animation]
+!#VA(animation:x);                      [Index of the animation (BM:V)]
 !#VA(stacksList:x);                     [Array of Stack numbers for animation]
 !#VA(playDamagedAnimation:x);           [Optional. Boolean. Whether to play the damaged animation]
 
