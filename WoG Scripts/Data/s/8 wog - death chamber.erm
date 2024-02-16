@@ -66,9 +66,10 @@ ZVSE2
 !!if&(notVisited)=(FALSE);
   !!IF:M1/^%T(wog.70.visited)^;
 !!el;
-  !!SN:H^monname^/(MON_POWER_LICH)/1/?(storeName:z) H^monname^/(MON_POWER_LICH)/1/^%T(wog.70.name)^;
-  !!IF:Q3/21/65/2/^%T(wog.70.greeting)^;
-  !!SN:H^monname^/(MON_POWER_LICH)/1/(storeName:z);
+  !!FU(WOG_70_GetUndeadKingMonType):P?(monType:y);
+  !!SN:H^monname^/(monType)/1/?(storeName:z) H^monname^/(monType)/1/^%T(wog.70.name)^;
+  !!IF:Q3/21/(monType)/2/^%T(wog.70.greeting)^;
+  !!SN:H^monname^/(monType)/1/(storeName:z);
 
   !!if&3;
     !!VRi^WOG_70_BattleRound^:S-2;
@@ -84,7 +85,7 @@ ZVSE2
 
     !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/?(battlefields:y) P(WOG_OPT_NEW_BATTLE_FIELDS)/(FALSE); 
 
-    !!HE(CURRENT_HERO):Tv998/v999/v1000/(MON_POWER_LICH)/1 O?(owner:y); **Trigger battle with the Lich King
+    !!HE(CURRENT_HERO):Tv998/v999/v1000/(monType)/1 O?(owner:y); **Trigger battle with the Lich King
 
     !!UN:P(WOG_OPT_NEW_BATTLE_FIELDS)/(battlefields:y); 
 
@@ -176,8 +177,9 @@ ZVSE2
   !!VR(kingStack:y):S(BATTLE_DEFENDER_STACK_FIRST);
   !!BM(kingStack):S50 H(hp) R5000 Fd|(MON_FLAG_ATTACKS_TWICE) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon) Z?(struct:y);
 
-  !!UN:C(struct)/136/4/?(descPtr:y); 
-  *!SN:B(descPtr)/d/^%T(wog.70.name)^;set new stack creature name temp disabled
+  ; set new stack creature name - disabled as it's not working for some reason. Description changing in this way works
+  *!FU(WOG_AllocBattleStr):P^%T(wog.70.name)^/?(newNameAddr:y);
+  *!UN:C(struct)/136/4/(newNameAddr);
 
   !!if&(statsBon)>4;
     !!BM(kingStack):Fd|(MON_FLAG_FLYER) Fd(MON_FLAG_NO_MELEE_PENALTY) Ad(statsBon) Dd(statsBon) U1/d(statsBon) U2/d(statsBon); 
@@ -333,3 +335,9 @@ ZVSE2
 !!FU&(wogOption)<>(TRUE):E;
 
 !!FU(WOG_NewWogObjects_SetHint):P(tileX)/(tileY)/(tileZ)/15/(WOG_OPT_DEATH_CHAMBER);
+
+// Function to get the creature type of the Undead King
+!?FU(WOG_70_GetUndeadKingMonType);
+!#VA(monType:x);
+
+!!VR(monType):S(MON_POWER_LICH);
