@@ -1,7 +1,7 @@
 ZVSE2
 
 ** WARLORD'S BANNER QUICK-SELECT OPTIONS
-** ¡€—“–€≈ Õ¿—“–Œ » «Õ¿Ã≈Õ» œŒÀ Œ¬Œƒ÷¿
+** –ë–´–°–¢–†–´–ï –ù–ê–°–¢–†–û–ö–ò –ó–ù–ê–ú–ï–ù–ò –ü–û–õ–ö–û–í–û–î–¶–ê
 
 ** Option 240 by Timothy Pulver
 ** Rewritten by igrik (30.09.2020)
@@ -57,11 +57,11 @@ ZVSE2
 
 !!HE(hero):B0/?z2; [Hero's name: z2]
 
-!!if&(count)<>(TRUE):;
+!!if&(count)<>(TRUE);
   !!SN:T^wog.240.none^/?(title)/^name^/z2; 
   !!IF:Q1/(MSG_TYPE_ART)/(ART_WARLORDS_BANNER)/(MSG_OK)/(title); 
   !!FU:E;
-!!en:;
+!!en;
 
 !!SN:T^wog.240.title^/?(title)/^name^/z2;
 !!SN:T^wog.240.hp^/?(hp:z);
@@ -73,24 +73,15 @@ ZVSE2
 !!SN:T^wog.240.reduce^/?(reduce:z);
 !!SN:T^wog.240.block^/?(block:z);
 !!SN:T^wog.240.retaliation^/?(retaliation:z);
-!!SN:T^wog.240.cancel^/?z3;
 
-!!IF:G(ERM_RADIO)/2/512/(title)/(hp)/(attack)/(defence)/(damage)/(speed)/(experience)/(reduce)/(block)/(retaliation)/z3/0/0;
-!!FU&v2=512:E; don't change banner option
+; Cannot allocate more z-vars...
+!!SN:T^wog.240.store^/?z3/^name^/z2;
+!!SN:T^wog.240.restore^/?z4/^name^/z2;
 
-!!VR(bits:y):Sv2;
+!!IF:G(ERM_RADIO)/2/2048/(title)/(hp)/(attack)/(defence)/(damage)/(speed)/(experience)/(reduce)/(block)/(retaliation)/z3/z4/^%T(era.buttons.cancel)^;
+!!FU&v2=2048:E; don't change banner option
 
-; initializate local vars
-!!VR(option:y):S(NULL); 
-!!VR(option)&(bits)=1:S0;
-!!VR(option)&(bits)=2:S1;
-!!VR(option)&(bits)=4:S2;
-!!VR(option)&(bits)=8:S3;
-!!VR(option)&(bits)=16:S4;
-!!VR(option)&(bits)=32:S5;
-!!VR(option)&(bits)=64:S6;
-!!VR(option)&(bits)=128:S7;
-!!VR(option)&(bits)=256:S8;
+!!FU(IntLog2):Pv2/?(option:y);
 
 !!FU(WOG_OPT_BANNER_OPTIONS_SetBannerOption):P(hero)/(option);
 
@@ -99,11 +90,31 @@ ZVSE2
 !?FU(WOG_OPT_BANNER_OPTIONS_SetBannerOption);
 ; x1 - hero id
 ; x2 - option type
-!#VA(hero:x) (option:x) (art:y);
-!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1:;
-  !!EX(hero)/i:R?(art)/d/d/d;
-  !!EX(hero)/i&(art)=(TRUE):Rd/d/(option)/d;
-!!en:;
+!#VA(hero:x) (option:x);
+!!VR(currOptions[7]:y):C0;
+
+!!FU(UnpackUnion)&(option)=10:Pi^wog_240_banner_%(hero)^/?(currOptions[0])/4/?(currOptions[1])/4/?(currOptions[2])/4/?(currOptions[3])/4/?(currOptions[4])/4/?(currOptions[5])/4/?(currOptions[6])/8;
+
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1;
+
+  !!if&(option)<>10;
+    !!EX(hero)/i:R?(art:y)/d/?(currOptions[i])/d;
+
+    !!if&(art);
+      !!if&(option)<9;
+        !!EX(hero)/i:Rd/d/(option)/d;
+      !!en;
+    !!en;
+  !!el;
+    !!EX(hero)/i:R?(art)/d/(currOption:y)/d;
+
+    !!if&(art);
+      !!EX(hero)/i:R?(art)/d/(currOptions[i])/d;
+    !!en;
+  !!en;
+!!en;
+
+!!FU(PackUnion)&(option)=9:P(currOptions[0])/4/(currOptions[1])/4/(currOptions[2])/4/(currOptions[3])/4/(currOptions[4])/4/(currOptions[5])/4/(currOptions[6])/8/?i^wog_240_banner_%(hero)^;
 
 ; ==========================================
 
@@ -112,10 +123,10 @@ ZVSE2
 ;?x2 - return: 1-yes, 0-no
 !#VA(hero:x) (result:x) (art:y);
 !!VR(result):S(NULL);
-!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1:;
+!!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1;
   !!EX(hero)/i:R?(art)/d/d/d;
   !!VR(result)&(art)=(TRUE):S(TRUE);
-!!en:;
+!!en;
 
 ; ==========================================
 
@@ -163,7 +174,7 @@ ZVSE2
 !!HE(hero):C0/(slot)/?(monType:y)/?(monCount:y);
 !!FU&(monType)=(NO_MON):E;
 !!EX(hero)/(slot):R?(isArt:y)/?(type:y)/?(option:y)/?(count:y);
-!!if&(isArt)=(TRUE):;
+!!if&(isArt)=(TRUE);
   !!CM:R0;
   !!EX(hero)/(slot)&(count)=(NULL):R(NULL)/(ART_WARLORDS_BANNER)/(NULL)/(NULL);
   !!EX(hero)/(slot)&(count)<>(NULL):R1/(ART_WARLORDS_BANNER)/(option)/d(DECREASE);
@@ -171,7 +182,7 @@ ZVSE2
   !!UN:R(REDRAW_HERO_SCREEN)/(CURRENT_HERO);
   !!VR(wav:z):S^Button.wav^;
   !!SN:P(wav);
-!!en:;
+!!en;
 
 ; ==========================================
 
