@@ -5,7 +5,9 @@ ZVSE2
 ** Name rus.     : Сухопутная навигация
 ** Options       : 773
 
-; The script checks the percentage of water tiles on the surface to decide which mode to go with
+; This script uses two global variables initialised in 1000 es - stdlib.erm
+; i^es_773_landMode^ - If the water area is less than 15% of the map, land mode would be activated and replaces Navigation skills/disable navi artifacts on the map.
+; i^es_773_navigationBonuses_on^ - movement points bonuses for sailing can be disabled with this variable in order to be compatible with mods
 
 
 ** Замена Навигации на Логистику и бан водных заклинаний/артефактов, если воды на карте менее 15%
@@ -124,77 +126,95 @@ ZVSE2
 !!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
 !!FU&y1=0:E;                  [Выход, если опция не включена]
 
-!!HE(CURRENT_HERO):S5/?y1 X?y2/?y3/d/d/d/d/d; [y1 - Уровень навигации героя (0..3), y2=0 и y3=5 для специалиста по Навигации]
-!!VRy1&y2=0/y3=5:+1;          [y1 - Уровень навигации героя с учетом специализации (0..4)
-!!VRy2:S6 -y1 *100;           [y2 - стоимость посадки(высадки) на лодку в ОД (Базовая стоимость 600 ОД и минус 100 ОД за каждый уровень Навигации/Специализацию Навигации)]
-!!HE(CURRENT_HERO):A2/123/d/y3; [y3=1, если на герое Шляпа Морского Капитана]
-!!VRy2&y3=1:S0;               [обнуляем стоимость посадки(высадки) если на герое Шляпа Морского Капитана]
-!!IF:W(CURRENT_HERO);         [выбор текущего героя]
-!!VRw101:-y2;                 [w101 - расчетные ОД героя после посадки]
-!!HE(CURRENT_HERO)&w101>0:Ww101; [возвращаем герою неиспользованные ОД. Если ОД не хватило, в w101 остается "долг ОД" для списания с следующем дне]
+!!VRy1:S0;
 
-!?OB(OBJ_ANCHOR_POINT);       [Высадка из лодки]
-!!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
-!!FU&y1=0:E;                  [Выход, если опция не включена]
+!!if&i^es_773_navigationBonuses_on^;
+  !!HE(CURRENT_HERO):S5/?y1 X?y2/?y3/d/d/d/d/d; [y1 - Hero navigation level (0..3), y2=0 and y3=5 for Navigation specialist]
+  !!VRy1&y2=0/y3=5:+1;                        [y1 - Hero navigation level taking into account specialization (0..4)
+!!en;
 
-!!HE(CURRENT_HERO):W?y1;      [y1 - ОД героя]
-!!IF:W(CURRENT_HERO);         [выбор текущего героя]
-!!VRw101:Sy1;                 [y1 - ОД героя при посадке(высадке) в лодку]
+!!VRy2:S6 -y1 *100;                         [y2 - cost of boarding (disembarking) a boat in MP (Base cost 600 MP and minus 100 MP for each Navigation level/Navigation Specialization)]
+!!HE(CURRENT_HERO):A2/123/d/y3;             [y3=1, if the hero is wearing a Sea Captain Hat]
+!!VRy2&y3=1:S0;                             [we reset the cost of boarding (disembarkation) if the hero is wearing a Sea Captain Hat]
+!!IF:W(CURRENT_HERO);                       [select current hero]
+!!VRw101:-y2;                               [w101 - estimated hero's AP after landing]
+!!HE(CURRENT_HERO)&w101>0:Ww101;            [return unused AP to the hero. If there is not enough AP, the “AP debt” remains in w101 to be written off the next day]
 
-!$OB(OBJ_ANCHOR_POINT);       [Высадка из лодки - пост-триггрер]
-!!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
-!!FU&y1=0:E;                  [Выход, если опция не включена]
 
-!!HE(CURRENT_HERO):S5/?y1 X?y2/?y3/d/d/d/d/d; [y1 - Уровень навигации героя (0..3), y2=0 и y3=5 для специалиста по Навигации]
-!!VRy1&y2=0/y3=5:+1;          [y1 - Уровень навигации героя с учетом специализации (0..4)
-!!VRy2:S6 -y1 *100;           [y2 - стоимость посадки(высадки) на лодку в ОД (Базовая стоимость 600 ОД и минус 100 ОД за каждый уровень Навигации/Специализацию Навигации)]
-!!HE(CURRENT_HERO):A2/123/d/y3; [y3=1, если на герое Шляпа Морского Капитана]
-!!VRy2&y3=1:S0;               [обнуляем стоимость посадки(высадки) если на герое Шляпа Морского Капитана]
-!!IF:W(CURRENT_HERO);         [выбор текущего героя]
-!!VRw101:-y2;                 [w101 - расчетные ОД героя после посадки]
-!!HE(CURRENT_HERO)&w101>0:Ww101; [возвращаем герою неиспользованные ОД. Если ОД не хватило, в w101 остается "долг ОД" для списания с следующем дне]
+!?OB(OBJ_ANCHOR_POINT);                     [Alighting]
+!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
+!!FU&y1=0:E;                                [Exit if option is not enabled]
 
-!?FU(OnEveryDay)&i^timerDay^>1; [каждый день для всех игроков начиная со 2го дня списываем долги по посадке на лодку]
-!!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
-!!FU&y1=0:E;                  [Выход, если опция не включена]
+!!HE(CURRENT_HERO):W?y1;                    [y1 - hero's MP]
+!!IF:W(CURRENT_HERO);                       [select current hero]
+!!VRw101:Sy1;                               [y1 - hero’s M when boarding (disembarking) the boat]
 
-!!OW:H-1/1/0;                 [v1 - количество героев текущего игрока]
-!!DO(ES_773_ManageBoardingMovement)/1/v1/1&v1>0:P; [для каждого героя текущего игрока списываем долги по посадке на лодку]
 
-!?FU(ES_773_ManageBoardingMovement);    [списываем долги по посадке на лодку]
-!!OW:H-1/2/x16;               [v2-номер героя текущего игрока]
-!!IF:Wv2;                     [выбор v2-го героя]
-!!VRw101&w101>0:S0;           [обнуляем w101, если долга нет]
-!!FU&w101>-1:E;               [выход, если долга нет]
+!$OB(OBJ_ANCHOR_POINT);                     [Boat disembarkation - post-trigger]
+!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
+!!FU&y1=0:E;                                [Exit if option is not enabled]
 
-!!HEv2:W?y1;                  [y1 - ОД героя]
-!!VRy2:Sy1 +w101;             [  y2 - ОД героя ]
-!!VRy2&y2<0:S0;               [ после списания ]
-!!HEv2:Wy2;                   [устанавливаем ОД героя]
-!!VRw101:+y1;                 [списываем долг (w101)]
-!!VRw101&w101>-1:S0;          [обнуляем w101, если долга нет]
+!!VRy1:S0;
 
-!?FU(OnEveryDay)&i^timerDay^>1; [каждый день для всех игроков начиная со 2го пересчитываем бонус Навигации (замена на стандартные для Логистики 10/20/30%)]
-!!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
-!!FU&y1=0:E;                  [Выход, если опция не включена]
+!!if&i^es_773_navigationBonuses_on^;
+  !!HE(CURRENT_HERO):S5/?y1 X?y2/?y3/d/d/d/d/d; [y1 - Hero navigation level (0..3), y2=0 and y3=5 for Navigation specialist]
+  !!VRy1&y2=0/y3=5:+1;                        [y1 - Hero navigation level taking into account specialization (0..4)
+!!en;
 
-!!OW:H-1/1/0;                 [v1 - количество героев текущего игрока]
-!!DO(ES_773_RecalcNaviBonus)/1/v1/1&v1>0:P; [для каждого героя текущего игрока пересчитываем бонус Навигации]
+!!VRy2:S6 -y1 *100;                         [y2 - cost of boarding (disembarking) a boat in MP (Base cost 600 MP and minus 100 MP for each Navigation level/Navigation Specialization)]
+!!HE(CURRENT_HERO):A2/123/d/y3;             [y3=1, if the hero is wearing a Sea Captain Hat]
+!!VRy2&y3=1:S0;                             [we reset the cost of boarding (disembarkation) if the hero is wearing a Sea Captain Hat]
+!!IF:W(CURRENT_HERO);                       [select current hero]
+!!VRw101:-y2;                               [w101 - estimated hero's AP after landing]
+!!HE(CURRENT_HERO)&w101>0:Ww101;            [return unused AP to the hero. If there is not enough MP, the MP debt” remains in w101 to be written off the next day]
 
-!?FU(ES_773_RecalcNaviBonus);           [пересчитываем бонус Навигации]
-!!OW:H-1/2/x16;               [v2-номер героя текущего игрока]
-!!HEv2:P?y1/?y2/?y3;          [y1-y3 - координаты героя]
-!!TRy1/y2/y3:T?y4/d/d/d/d/d/d/d; [y4=8, если герой на воде (в лодке)]
-!!FU&y4<>8:E;                 [выход, если герой не на воде]
 
-!!HEv2:S5/?y1 X?y2/?y3/d/d/d/d/d Ed/?y4; [y1 - Уровень навигации героя (0..3), y2=0 и y3=5 для специалиста по Навигации, y4 - уровень героя]
-!!FU&y1=0:E;                  [выход, если навигации у героя нет]
+!?FU(OnEveryDay)&i^timerDay^>1;             [every day for all players starting from the 2nd day we write off debts for boarding the boat]
+!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
+!!FU&y1=0:E;                                [Exit if option is not enabled]
 
-!!VRy5:Sy1 *600;              [y5 - пересчет от уровня Навигации]
-!!VRy6&y2=0/y3=5:Sy1 *30 *y4; [y6 - пересчет от специализации Навигации]
-!!VRy5&y2=0/y3=5:+y6;         [y5 - общий пересчет от уровня Навигации и специализации]
-!!HEv2:W?y6;                  [y6 - текущие ОД героя]
-!!VRy6:-y5;                   [y6 - пересчитанные ОД героя]
-!!HEv2:Wy6;                   [обновляем ОД героя]
+!!OW:H-1/1/0;                               [v1 - number of heroes of the current player]
+!!DO(ES_773_WriteOffMovementDebtFromPreviousTurn)/1/v1/1&v1>0:P; [for each hero of the current player we write off debts for boarding the boat]
+
+!?FU(ES_773_WriteOffMovementDebtFromPreviousTurn); [we write off debts for boarding the boat]
+!!OW:H-1/2/x16;                             [v2-number of the current player's hero]
+!!IF:Wv2;                                   [select v2 hero]
+!!VRw101&w101>0:S0;                         [reset w101 if there is no debt]
+!!FU&w101>-1:E;                             [exit if there is no debt]
+
+!!HEv2:W?y1/1;                              [y1 - hero's MP]
+!!VRy2:Sy1 +w101;                           [y2 - hero's MP]
+!!VRy2&y2<0:S0;                             [after write-off]
+!!HEv2:Wy2;                                 [set the hero's MP]
+!!VRw101:+y1;                               [write off debt (w101)]
+!!VRw101&w101>-1:S0;                        [reset w101 if there is no debt]
+
+
+!?FU(OnEveryDay)&i^timerDay^>1/i^es_773_navigationBonuses_on^; [every day for all players starting from the 2nd we recalculate the Navigation bonus (replacing it with the standard ones for Logistics 10/20/30%)]
+!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
+!!FU&y1=0:E;                                [Exit if option is not enabled]
+
+!!OW:H-1/1/0;                               [v1 - number of heroes of the current player]
+!!DO(ES_773_RecalcNaviBonus)/1/v1/1&v1>0:P; [for each hero of the current player we recalculate the Navigation bonus]
+
+!?FU(ES_773_RecalcNaviBonus);               [we recalculate the Navigation bonus]
+!!OW:H-1/2/x16;                             [v2-number of the current player's hero]
+!!HEv2:P?y1/?y2/?y3;                        [y1-y3 - hero coordinates]
+!!TRy1/y2/y3:T?y4/d/d/d/d/d/d/d;            [y4=8, if the hero is on the water (in a boat)]
+!!FU&y4<>8:E;                               [exit if the hero is not on the water]
+
+!!HEv2:S5/?y1 X?y2/?y3/d/d/d/d/d Ed/?y4;    [y1 - Hero Navigation Level (0..3), y2=0 and y3=5 for Navigation Specialist, y4 - Hero Level]
+!!FU&y1=0:E;                                [exit if the hero has no navigation]
+
+!!VRy5:Sy1 *600;                            [y5 - recalculation from Navigation level]
+!!VRy7:Sy5;
+!!VRy6&y2=0/y3=5:Sy1 *30 *y4;               [y6 - recalculation from Navigation specialization]
+!!VRy8:Sy6;
+!!VRy5&y2=0/y3=5:+y6;                       [y5 - general recalculation from the level of Navigation and specialization]
+
+!!HEv2:W?y6/1;                              [y6 - hero's current MP]
+!*IF:M^y1_NavigationLevel = %y1, y2=%y2 y3=%y3, y7_recalculation from Navigation level = %y7, y8_fromSpecialization = %y6, y5_total = %y5, y6_actualMovement = %y6^;
+!!VRy6:+y5;                                 [y6 - recalculated hero's MP]
+!!HEv2:Wy6;                                 [updating the hero's MP]
 
 ** end
