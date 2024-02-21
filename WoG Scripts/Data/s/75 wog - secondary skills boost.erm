@@ -225,11 +225,34 @@ ZVSE2
     !!en;
 
     !!HE(CURRENT_HERO)&2:M(leftSpell)/1;[learn left spell]
-    !!HE(CURRENT_HERO)&-2:M(rightSpell)/1; [learn right spell - is default;]
-  !!el&i^wog_103_removeEagleEye^;       [if all spells known & Eagle Eye II, Elem. Suppression is disabled]
-    !!VR(eagleEyePic:y):S0 +(eeLvl) +35;          [Get pic for message]
-    !!IF&(showMsg)=1:Q2/20/(eagleEyePic)/1/z103046;
-    !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/0; [Remove eagle eye]
+    !!HE(CURRENT_HERO)&-2:M(rightSpell)/1; [learn right spell - is default]
+
+  ; if all spells known & Eagle Eye II, Elem. Suppression is disabled, check if it is really required to remove Eagle Eye
+  !!el&i^wog_103_removeEagleEye^;
+    ; Check if the hero can advance the level of Wisdom (and learn more spell with Eagle Eye)
+    ; Advanced and Expert Wisdom doesn't count here
+    !!VR(canAdvanceWisdom:y):S(FALSE);
+
+    !!if&(wisLvl)=(SKILL_BASIC);
+      !!VR(canAdvanceWisdom):S(TRUE);
+    !!el&(wisLvl)=(SKILL_NOT_LEARNED);
+      !!VR(counter:y):S0;
+      !!UN:C4881872/(UNC_INT8)/?(skillLimit:y);
+
+      !!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+        !!HE(CURRENT_HERO):Si/?(sslevel:y);
+        !!VR(counter)&(sslevel)>(SKILL_NOT_LEARNED):+1;
+      !!en;
+
+      !!VR(canAdvanceWisdom):S(skillLimit) -(counter) B;
+    !!en;
+
+    ; If it's not possible for the hero to get higher level of Wisdom, remove Eagle Eye
+    !!if&(canAdvanceWisdom)=(FALSE);
+      !!VR(eagleEyePic:y):S0 +(eeLvl) +35;          [Get pic for message]
+      !!IF&(showMsg)=1:Q2/20/(eagleEyePic)/1/z103046;
+      !!HE(CURRENT_HERO):S(SKILL_EAGLE_EYE)/(SKILL_NOT_LEARNED); [Remove eagle eye]
+    !!en;
   !!en;
 **daemon_n: end
 

@@ -81,7 +81,7 @@ ZVSE2
 ** v550-v559 is a bit table also used by the map rules, it must not be changed but may be used elsewhere.
 ** The other variables may be used elsewhere but will be trashed by this code.
 ** Flags used: 2, 602-603
-** Functions Used: 736-776, 780-799, 820-835
+** Functions Used: 736-776, 781-799, 820-835
 
 ** Notes on hero w variables:
 **   w61 4 bits for what Rogue cave positions have been visited this turn
@@ -623,8 +623,7 @@ ZVSE2
 !!UN:P30/?(wogOption:y);                [Check for WoG option]
 !!FU&(wogOption)<>(TRUE):E;             [Exit if its disabled]
 
-!!FU737&i^wog_30_advCaveBattleType^:P;                      [set-up special troop positions]
-!!DO790/0/41/1&i^wog_30_advCaveBattleType^=4:P70/0/0/4;        [turn army to stone]
+!!FU737&i^wog_30_advCaveBattleType^:P;  [set-up special troop positions]
 
 ** end of Troop position/special effect trigger
 
@@ -1628,29 +1627,29 @@ ZVSE2
 ** function to handle ascetic hermit
 
 !?FU776;
+; Check if the hero has any artifact except for spell book and war machines
+; The script used to check war machines too, but conflict with Enhanced War Machiens I (becaue of no way to discard them)
+!!re i/(ART_SLOT_FIRST)/(ART_SLOT_LAST);
+  ; Skip for War Machiens and Spell book
+  !!co&i>=(ART_SLOT_WAR_MACHINE_FIRST)/i<=(ART_SLOT_WAR_MACHINE_LAST);
+  !!co&i=(ART_SLOT_SPELL_BOOK);
 
-!!VRv611:S0; [assume no artifacts]
-!!DO780/4/143/1:P; [count artifacts]
+  !!HE(CURRENT_HERO):A1/?(art:y)/i;
 
-!!IF&v611>0:M1/z130242;
+  !!br&(art)>(NO_ART);
+!!en;
 
-!!VRz360&v611=0:Sz130243;
-!!VRv615&v611=0:S1; [hermit is usable only with no artifacts / war machines]
+!!if&i<=(ART_SLOT_LAST);
+  !!IF:M1/z130242;
+!!el;
+  !!VRz360:Sz130243;
+  !!VRv615:S1; [hermit is usable only with no artifacts]
+!!en;
 
 ** end of function
 
 
 ** skip Palace Of Dreams function numbers 777-779
-
-
-** function to count artifact x16
-
-!?FU780;
-
-!!HE(CURRENT_HERO):A2/x16/?y1/?y2; [check for artifacts / equipped artifacts]
-!!VRv611:+y1; [count artifacts]
-
-** end of function
 
 
 ** treasure chest trigger
@@ -1893,7 +1892,7 @@ ZVSE2
 !!FU788&i^wog_30_advCaveBattleType^=3/v522=1/v997>=1:P1/137/520; [get sharpshooter stack # in v520] [should be v997>=0]
 !!FU786&i^wog_30_advCaveBattleType^=3/v522=1/v997>=1/v520<>-1:Pv520/63/13 Pv520/148/13; [fire walls] [ditto]
 
-*!DO790/0/41/1&i^wog_30_advCaveBattleType^=4/v997=1:P70/0/0/4; [turn army to stone - moved to OnAfterTacticsPhase]
+!!FU(WOG_30_TurnArmyToStone)&i^wog_30_advCaveBattleType^=4/i^battle_round^<=1:P; [turn army to stone for the first 2 rounds]
 !!IF&i^wog_30_advCaveBattleType^=4/v522=1/v997=1:M1/z130286;
 !!BU&i^wog_30_advCaveBattleType^=4/v522=1/v997=1:S7/30/1/0/-1/1; [crusaders arrive]
 !!IF&i^wog_30_advCaveBattleType^=4/v522=1/v997=1:V603/1; [remember that crusaders appeared]
@@ -1976,6 +1975,7 @@ ZVSE2
 ** flag 602 is set if the spell is actually put on anything
 
 !?FU790;
+!#VA(spell:x) (side:x) (isAliveOnly:x) (duration:x);
 
 !!BMx16:I?y1 N?y3 F?i; [get side, qty, flags]
 !!VRi:&16; [alive bit]
@@ -1984,6 +1984,36 @@ ZVSE2
 !!IF&y1=x2/y3>0/i<>0:V602/1; [set flag if cast spell]
 
 ** end of function
+
+
+// Funciton to turn army to stone for the first two rounds
+!?FU(WOG_30_TurnArmyToStone);
+!!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST);
+  !!BMi:T?(type:y) N?(num:y);
+
+  !!if&(type)>(NO_MON)/(num)>0;
+    !!FU(BattleStack_MakeActive):Pi;
+
+    !!br;
+  !!en;
+!!en;
+
+!!FU&i>(BATTLE_DEFENDER_STACK_LAST):E;
+
+!!VR(duration:y):S4 -i^battle_round^;
+
+!!re i/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST);
+  !!BMi:T?(type:y) N?(num:y);
+
+  !!if&(type)>(NO_MON)/(num)>0;
+    !!BMi:M70/(duration)/0;
+  !!en;
+!!en;
+
+!!if&i^battle_isVisible^;
+  !!SN:P^Paralyze^;
+  !!SN:D;
+!!en;
 
 
 ** function to have stack x1 cast spell x2 on player stack x16

@@ -221,14 +221,25 @@ ZVSE2
 ; Multiplayer support
 !?FU(OnBeforeBattleBeforeDataSend)&i^wog_54_enabled^;
 !!IP:Di^battle_owner_1^ Wi^battle_hero_0^/81/83;
-!!IP:V2048/2073;
 
 ; store enabler
 !?FU(OnBeforeBattleUniversal)&i^wog_54_enabled^;
-!!FU(WOG_54_DisableOrRestoreWarMachines):P0/0 P1/0; 
+!!re (side:y)/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!re (slot:y)/13/15;
+    !!VRi^wog_54_%(slot)HasArt_%(side)^:S0;
+  !!en;
+!!en;
+
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!FU(WOG_54_RemoveOrRestoreWarMachinesOnBattle):Pi^battle_hero_%i^/i/0;
+!!en;
 
 ; set machines attributes
 !?FU(OnSetupBattlefield)&i^wog_54_enabled^;
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!FU(WOG_54_RemoveOrRestoreWarMachinesOnBattle):Pi^battle_hero_%i^/i/1;
+!!en;
+
 ; Initialise catapult variables
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!VRi^wog_54_catapult_%i^:S(NO_STACK);
@@ -268,10 +279,6 @@ ZVSE2
 
 ; After battle check & re-set enabler
 !?FU(OnAfterBattleUniversal)&i^wog_54_enabled^; 
-!!FU(WOG_54_DisableOrRestoreWarMachines):P0/1 P1/1;
-!!VRv2048:C0/0/0/0/0/0/0/0/0/0/0/0/0/0/0/0; v2048-v2063
-!!VRv2064:C0/0/0/0/0/0/0/0/0/0; v2064 - v2073
-
 ; Restore the memory value for Arrow Tower Shoot Adjacent
 !!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
 !!UN:C4479001/(UNC_INT)/(MON_ARROW_TOWERS);
@@ -331,7 +338,7 @@ ZVSE2
   !!en;
 !!en;
 
-; Restrain the quantities of First Aid Tents and Ballistas to max of 2 (1 from War Machine artifact, the other from Commander)
+; Place catapult
 !?FU(WOG_54_PlaceCatapult);
 !#VA(side:x);
 
@@ -374,23 +381,6 @@ ZVSE2
     !!en;
   !!en;
 !!en;
-
-!?FU(WOG_54_DisableOrRestoreWarMachines)&i^wog_54_enabled^;
-!!BA:Hx1/?y1;
-!!FU&y1<0:E;
-
-!!HEy1&x1=0/x2=0:A2/4/d/?v2060 A2/5/d/?v2061 A2/6/d/?v2062 Fd/d/d/?v2066 S10/?v2070 Ed/?v2072/1;
-!!HEy1&x1=1/x2=0:A2/4/d/?v2063 A2/5/d/?v2064 A2/6/d/?v2065 Fd/d/d/?v2067 S10/?v2071 Ed/?v2073/1;
-!!FU(WOG_54_ManageWarMachines):P6/y1/4/2 P6/y1/5/3 P6/y1/6/4; call enabler
-!!HEy1&v2=1/x2=0:A-4;
-!!HEy1&v3=1/x2=0:A-5;
-!!HEy1&v4=1/x2=0:A-6;
-!!HEy1&v2=1/x1=0/x2=1/v2060=1:A1/4/13;
-!!HEy1&v3=1/x1=0/x2=1/v2061=1:A1/5/14;
-!!HEy1&v4=1/x1=0/x2=1/v2062=1:A1/6/15;
-!!HEy1&v2=1/x1=1/x2=1/v2063=1:A1/4/13;
-!!HEy1&v3=1/x1=1/x2=1/v2064=1:A1/5/14;
-!!HEy1&v4=1/x1=1/x2=1/v2065=1:A1/6/15;
 
 **** First Aid Tents healing ****
 
@@ -653,23 +643,29 @@ ZVSE2
 %Z2^;
 
 !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
-  !!FU(WOG_54_ManageWarMachines):P6/(heroId)/(warMachine)/1;
-  !!VRz4&v1=0:Sz154033;
-  !!VRz4&v1=1:Sz154034;
-  !!VRz5&v1=0:Sz154035;
-  !!VRz5&v1=1:Sz154036;
+  !!FU(WOG_54_ManageWarMachineStatus):P(heroId)/(warMachine)/?(isDisabled:y);
+
+  !!if&(isDisabled);
+    !!VRz4:Sz154034;
+    !!VRz5:Sz154036;
+  !!el;
+    !!VRz4:Sz154033;
+    !!VRz5:Sz154035;
+  !!en;
 !!en;
 
 !!SN:T^wog.whose%(gender)^/?z8;
 
 !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
   !!IF:Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_QUESTION)/z154039;
-  !!FU(WOG_54_ManageWarMachines)&i^mouse_action^=(MOUSE_LMB_PRESSED)/1:P7/(heroId)/(warMachine)/v1;
+  !!FU(WOG_54_ManageWarMachineStatus)&1:P(heroId)/(warMachine)/(TRUE);
 !!en;
 
 ********************************* Functions ************************************
 
 !?FU(WOG_54_ManageWarMachines)&i^wog_54_enabled^;
+!#VA(mode:x) (hero:x) (warMachineArt:x) (status:x);
+
 * get enabler
 !!VRy1&x1=6:S2000 +x2;
 !!VRy2&x1=6:Svy1; ** get hero ** y2 = get number
@@ -692,6 +688,41 @@ ZVSE2
 !!VRy3&x1=7/x3=6:S1000;
 !!VRvy1&x1=7/x4=0:+y3;
 !!VRvy1&x1=7/x4=1:-y3;
+
+
+!?FU(WOG_54_ManageWarMachineStatus);
+!#VA(hero:x) (wmArt:x) (status:x);
+
+!!FU:S(@status)/?(statusSyntax:y);
+
+!!if&(statusSyntax)=(ARG_SYNTAX_GET);
+  !!VR(status):Si^wog_54_%(hero)_disable%(wmArt)^;
+!!el&(statusSyntax)=(ARG_SYNTAX_SET);
+  !!VRi^wog_54_%(hero)_disable%(wmArt)^:X(TRUE);
+  !!VR(value:y):Si^wog_54_%(hero)_disable%(wmArt)^;
+!!en;
+
+!?FU(WOG_54_RemoveOrRestoreWarMachinesOnBattle);
+!#VA(hero:x) (side:x) (mode:x);
+
+!!re (wmArt:y)/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+  !!VR(slot:y):S(wmArt) +9;
+
+  ; Remove war machine before battle
+  !!if&(mode)=0;
+    !!if&i^wog_54_%(hero)_disable%(wmArt)^;
+      !!HE(hero):A1/?(art:y)/(slot);
+
+      !!if&(art)>(NO_ART);
+        !!VRi^wog_54_%(slot)HasArt_%(side)^:S(art);
+        !!FU(UnequipArtFromSlot):P(hero)/(slot);
+      !!en;
+    !!en;
+  ; Restore war machine
+  !!el;
+    !!HE(hero)&i^wog_54_%(slot)HasArt_%(side)^:A1/i^wog_54_%(slot)HasArt_%(side)^/(slot);
+  !!en;
+!!en;
 
 ************************** Get Z-var for warmachines ***************************
 

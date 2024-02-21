@@ -367,8 +367,7 @@ ZVSE2
 *!FU&(lv)<>0:E;
 
 !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
-!!VR(ptr:y):S(gameMgr) +128980;
-!!UN:C(ptr)/1/?(mapType:y);
+!!UN:C(gameMgr)/128980/1/?(mapType:y);
 
 !!if&(mapType)=114;
   !!UN:J1/74/d;
@@ -383,8 +382,8 @@ ZVSE2
 // Enable combination artifacts and 5th misc slot for RoE/AB maps
 !?FU(OnGameEnter);
 !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
-!!UN:C(gameMgr)/128664/(UNC_INT)/?(mapType:y);
-!!UN&(mapType)<2:C(gameMgr)/128664/(UNC_INT)/2;
+!!UN:C(gameMgr)/128664/(UNC_INT)/?(mapExpansion:y);
+!!UN&(mapExpansion)<2:C(gameMgr)/128664/(UNC_INT)/2;
 
 
 // Divide all the AI values by 15 in order to prevent negative values after gathering massive amount of troops
@@ -650,6 +649,38 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 
 !?FU(gem_OnMonsterPlaceAtMap);
 !!UN:R1;
+
+// Fix rebuilding town (after demolishing) doesn't update the max level of Mage Guild in random maps
+; Note: This hack is only valid for random maps as it can't tell whether the restriction comes from town type or is it from the map author
+; This script would conflict with mods that extends the max level of Mage Guilds in towns
+!?FU(OnAfterBuildTownBuilding);
+!#VA(townId:x) (buildingId:x);
+
+; Exit if not building (demolishing) town hall
+!!FU&(buildingId)<>10:E;
+
+; Exit if not from town screen
+!!FU(H3Dlg_GetCurrentDlgId):P?(result:y);
+!!FU&(result)<>(DLG_TOWN_SCREEN):E;
+
+; Get the town type to decide the max level of Mage Guilds
+!!CA0/(townId):T?(townType:y);
+!!VR(maxLevel:y):S2;
+
+; For Castle, the max level is 4
+!!if&(townType)=(TOWN_CASTLE);
+  !!VR(maxLevel):S3;
+; For the rest of the towns except for Stronghold and Fortress, the max level is 5
+!!el&(townType)<>(TOWN_STRONGHOLD)/(townType)<>(TOWN_FORTRESS);
+  !!VR(maxLevel):S4;
+!!en;
+
+; Allow 4th/5th level of Mage Guild to be built depending on town type
+!!if|(maxLevel)=3/(maxLevel)=4;
+  !!CA0/(townId):B4/3;
+!!en;
+
+!!CA0/(townId)&(maxLevel)=4:B4/4;
 
 ************************************************************************
 ************************************************************************
@@ -1087,9 +1118,8 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
 // Enable the tier 2 dwellings for every tonw in random maps
 !?FU(OnAfterErmInstructions);
-  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(value:y);
-  !!VR(address:y):S(value) +128980;
-  !!UN:C(address)/1/?(mapType:y); [y11=114 ?? ???????? (????[r]andom_maps)] 
+  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+  !!UN:C(gameMgr)/128980/1/?(mapType:y);[114 [r]andom_maps)]
 
   !!if&(mapType)=114;
     !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townsAmount:y);
@@ -1478,32 +1508,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     !!COi:X1/i^gem_cmdExp_%i^;
     !!VRi^gem_cmdExp_%i^:S0;
   !!en;
-
-// Bad Fix: Fix losing commander on turn end of other player's turn after loading a save game during the battle (HD Feature)
-// by Archer30
-; Discussion: http://wforum.heroes35.net/showthread.php?tid=5624&pid=138526#pid138526
-; This fix saves the status of commanders OnEveryDay, updates them on BA53, and restores them on the turn end (4C6CD9) for every player.
-; This script assumes commanders are only killed in a battle. 
-
-!?FU(gem_CreateERMHook);
-!!SN:Ex1/1/5008601/(gem_EndOfTurn);     [trigger on every player's end of turn]
-
-!?FU(OnEveryDay)&i^timerIsAi^;
-!!re (hero:y)/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!CO(hero):D?i^gem_commanderIsDead_%(hero)^;
-!!en;
-
-!?FU(OnAfterBattleUniversal)&i^timerIsAi^;
-!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
-  !!VR(hero:y):Si^battle_hero_%i^;
-  !!CO(hero):D?i^gem_commanderIsDead_%(hero)^;
-!!en;
-
-!?FU(gem_EndOfTurn)&i^timerIsAi^;
-!!re (hero:y)/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!CO(hero):D?(isDead:y);
-  !!CO(hero)&(isDead):Di^gem_commanderIsDead_%(hero)^;
-!!en;
 
 ************************************************************************
 ************************************************************************
