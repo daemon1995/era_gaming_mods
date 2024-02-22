@@ -651,7 +651,7 @@ ZVSE2
 !!if&i^wog_30_advCaveBattleType^;
   !!BA:B12; [subterranean background]
   !!HEi^battle_hero_0^:R4/?i^wog_30_tacticsStatus^ R4/(FALSE); [disable tactics for special battles]
-  !!FU832:Pi^battle_hero_0^; [remove war machines, remember them]
+  !!FU(WOG_30_RemoveOrRestoreWarMachinesOnBattle):Pi^battle_hero_0^/0;
 !!en;
 
 ; Set up extra cast vars
@@ -659,6 +659,8 @@ ZVSE2
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
   !!VRi^wog_30_extraCastSpent_%i^:S0;
 !!en;
+
+!!FU(WOG_30_RemoveOrRestoreWarMachinesOnBattle):Pi^battle_hero_0^/1;
 
 ** end of pre-battle trigger
 
@@ -668,7 +670,6 @@ ZVSE2
 !?FU(OnAfterBattleUniversal)&i^wog_30_advCaveBattleType^;
 !!HEi^battle_hero_0^:R4/i^wog_30_tacticsStatus^; [restore tactics]
 !!VRi^wog_30_tacticsStatus^:S0;
-!!FU833:Pi^battle_hero_0^; [restore war machines]
 !!VRi^wog_30_advCaveBattleType^:S0;
 
 ** end of post-battle trigger
@@ -2505,33 +2506,53 @@ ZVSE2
 ** end of function
 
 
-** function to store war machines in v518 and remove them, hero x1
+** function to store or restore war machines, hero x1
 
-!?FU832;
+!?FU(WOG_30_RemoveOrRestoreWarMachinesOnBattle);
+!#VA(hero:x) (mode:x);
 
-!!VRv518:S0; [assume no war machines]
-!!HEx1:A2/4/?y1/?y2; [count ballistas]
-!!VRv518&y2>0:+1;
-!!HEx1:A2/5/?y1/?y2; [count ammo carts]
-!!VRv518&y2>0:+2;
-!!HEx1:A2/6/?y1/?y2; [count first aid tents]
-!!VRv518&y2>0:+4;
+; Fix compatibility with Enhanced War Machines III
+!!if&i^WOG_73_enabled^;
+  !!IF:W(hero);
 
-!!HEx1:A-4 A-5 A-6; [remove war machines]
+  !!if&(mode)=0;
+    !!VRi^wog_30_w81^:Sw81;
+    !!VRi^wog_30_w82^:Sw82;
+    !!VRi^wog_30_w83^:Sw83;
+  !!en;
+!!en;
 
-** end of function
+; Loop through all the war machine artifacts
+!!re (wmArt:y)/(ART_BALLISTA)/(ART_FIRST_AID_TENT);
+  !!VR(slot:y):S(wmArt) +9;
 
+  ; Remove war machine before battle
+  !!if&(mode)=0;
+    !!HE(hero):A1/?(art:y)/(slot);
 
-** function to restore war machines
+    !!if&(art)>(NO_ART);
+      !!VRi^wog_30_%(slot)HasArt^:S(art);
+      !!FU(UnequipArtFromSlot):P(hero)/(slot);
+    !!en;
+  ; Restore war machine
+  !!el;
+    !!if&i^wog_30_%(slot)HasArt^;
+      !!HE(hero):A1/i^wog_30_%(slot)HasArt^/(slot);
+      !!VRi^wog_30_%(slot)HasArt^:S0;
+    !!en;
+  !!en;
+!!en;
 
-!?FU833;
+; Fix compatibility with Enhanced War Machines III
+!!if&i^WOG_73_enabled^/(mode)=1;
+  !!VRw81:Si^wog_30_w81^;
+  !!VRw82:Si^wog_30_w82^;
+  !!VRw83:Si^wog_30_w83^;
 
-!!HEx1&v518>=4:A1/6/15; [equip first aid tent]
-!!VRv518:&3;
-!!HEx1&v518>=2:A1/5/14; [equip ammo cart]
-!!VRv518:&1;
-!!HEx1&v518>=1:A1/4/13; [equip ballista]
-!!VRv518:S0;
+  !!VRi^wog_30_w81^:S0;
+  !!VRi^wog_30_w82^:S0;
+  !!VRi^wog_30_w83^:S0;
+!!en;
 
 ** end of function
 
