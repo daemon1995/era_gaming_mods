@@ -34,11 +34,6 @@ ZVSE2
 !!MA:X(MON_NOT_USED_2)/132197 F(MON_NOT_USED_2)/650 C(MON_NOT_USED_2)/(RES_GOLD)/1000; [set NU2 flags {catapult flags (132197) + shooter (4)}    NU2 Fight Value 650  ]
 !!MA:A(MON_NOT_USED_2)/10 D(MON_NOT_USED_2)/10 P(MON_NOT_USED_2)/500 N(MON_NOT_USED_2)/2; [NU2 Attack 10 NU2 Defense 10 NU2 HP 500  NU2 Shots 2]
 
-; creature descriptions
-!!SN:H^monname^/(MON_CATAPULT)/2/?(desc:z);
-!!VR(desc):+^%T(wog.54.desc)^;
-!!SN:H^monname^/(MON_CATAPULT)/2/(desc);
-
 ; Stack exp abilities
 !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y); [check if creature experience is enabled]
 !!EA(MON_NOT_USED_2)&(stackExp):O(MON_CATAPULT);
@@ -75,7 +70,8 @@ ZVSE2
   !!HE(hero):S(SKILL_ARTILLERY)/?(skillLvl:y);
   !!IF:W(hero);
   !!VR(ballistaLvl:y):Sw81 +1;
-  !!VR(extDmgPercent:y):S(skillLvl) +(ballistaLvl) *20 -20; artillery + level * 20, +80
+  !!FU(WOG_54_GetWarMachineEfficiency):P(skillLvl)/(ballistaLvl)/?(percent:y);
+  !!VR(extDmgPercent:y):S(percent) -100;
 
   !!if&(extDmgPercent)>0;
     !!VR(finalDmgNew:y):S(extDmgPercent) *(finalDmgConst) :100 +(finalDmg);
@@ -177,11 +173,11 @@ ZVSE2
 
 ; First Aid Tent
 !!if&(currType)=(MON_FIRST_AID_TENT)/(targetType)<>(MON_NOT_USED_2)/(stackSide)=i^battle_current_side^;
-  !!FU(WOG_54_FirstAidTentHeals)|(targetType)<(MON_CATAPULT)/(targetType)>(MON_ARROW_TOWERS):P0/(targetStack);
+  !!FU(WOG_54_FirstAidTentHeals)|(targetType)<(MON_CATAPULT)/(targetType)>(MON_ARROW_TOWERS):P(targetStack);
 !!en;
 
 !?FU(WOG_54_FirstAidTentHeals);
-!#VA(mode:x) (targetStack:x);
+!#VA(targetStack:x);
 
 ; Exit if the target is full
 !!BM(targetStack):L?(lostHp:y) N?(num:y) B?(initNum:y);
@@ -212,9 +208,13 @@ ZVSE2
 !!HE(hero):S(SKILL_FIRST_AID)/?(firstAidLv:y);
 !!IF:W(hero);
 !!VR(tentLv:y):Sw82 +1;
-!!VR(fullHealHp:y):S(firstAidLv) +(tentLv) *20 +80;
+!!FU(WOG_54_GetWarMachineEfficiency):P(firstAidLv)/(tentLv)/?(fullHealHp:y);
 !!VR(coefficient:y):S(firstAidLv) +1 F1/4;
 !!VR(healHp):S(coefficient) *(fullHealHp) :4;
+
+; Multiply the healing points with the number of tents
+*!BMi^battle_current_stack^:N?(num:y);
+*!VR(healHp):*(num);
 
 *********************** Pre-Post Combat and ammo cart **************************
 
@@ -263,7 +263,7 @@ ZVSE2
     !!HEi^battle_hero_%i^:I?(initialMana:y)/1;
     !!FU(WOG_Hero_GetFullSpellPoints):Pi^battle_hero_%i^/?(maxMana:y);
     !!VRi^wog_54_maxMana_%i^:S(maxMana);
-    *!VRi^wog_54_maxMana_%i^:S(initialMana) F0/(maxMana);
+    !!VRi^wog_54_maxMana_%i^:S(initialMana) F0/(maxMana);
   !!en;
 !!en;
 
@@ -546,7 +546,7 @@ ZVSE2
 !!VRy8:Sy6 +1; next level
 !!UN:N2/1/(townType)/(item) N3/2/(warMachineMon)/0; get ballista name & object name
 
-!!FU(WOG_54_GetWarMachineStats):P(warMachineArt)/(hero)/y8; get stats
+!!FU(WOG_54_GetWarMachineStrings):P(warMachineArt)/(hero)/y8; get stats
 
 ; Change artifact name and description
 ; Using z5/z6 is necessary for the ert variable conversion
@@ -587,14 +587,14 @@ ZVSE2
 !!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8/i^wog_54_upgradeCounter_%(townId)^<(WOG_54_UPGRADE_LIMIT):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel)/(owner)/(townId);
 
 !?FU(OnHeroScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside hero screen
-!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_hero_0^/0;
+!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_hero_0^;
 
 !?FU(OnHeroesMeetScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside trade screen
-!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>39/i^mouse_item^<44:Pi^mouse_hero_0^/1;
-!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>58/i^mouse_item^<63:Pi^mouse_hero_1^/1;
+!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>39/i^mouse_item^<44:Pi^mouse_hero_0^;
+!!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>58/i^mouse_item^<63:Pi^mouse_hero_1^;
 
 !?FU(WOG_ShowWarMachineInfo)&i^wog_54_enabled^;
-!#VA(heroId:x) (mode:x);
+!#VA(heroId:x);
 !#VA(usedY[10]:y);
 
 !!VR(clickedSlot:y):Si^mouse_item^;
@@ -618,7 +618,7 @@ ZVSE2
 !!VR(index:y):S(clickedSlot) -65;
 !!VRy6:Sw(index) +1;
 
-!!FU(WOG_54_GetWarMachineStats)&i^mouse_action^=(MOUSE_RMB_PRESSED):P(warMachine)/(heroId)/y6; get stats
+!!FU(WOG_54_GetWarMachineStrings)&i^mouse_action^=(MOUSE_RMB_PRESSED):P(warMachine)/(heroId)/y6; get stats
 *
 !!if&(warMachine)=(ART_CATAPULT);
   !!VRz1&(skillLvl)=0:Sz154021;
@@ -663,6 +663,11 @@ ZVSE2
 
 ********************************* Functions ************************************
 
+!?FU(WOG_54_GetWarMachineEfficiency);
+!#VA(skillLvl:x) (machineLvl:x) (efficiency:x);
+
+!!VR(efficiency):S(skillLvl) +(machineLvl) *20 +80; sec skill level + machine level * 20 +80
+
 !?FU(WOG_54_ManageWarMachineStatus);
 !#VA(hero:x) (wmArt:x) (status:x);
 
@@ -702,8 +707,8 @@ ZVSE2
 
 ************************** Get Z-var for warmachines ***************************
 
-!?FU(WOG_54_GetWarMachineStats)&i^wog_54_enabled^;
-!#VA(art:x) (heroId:x) (nextLvl:x);
+!?FU(WOG_54_GetWarMachineStrings)&i^wog_54_enabled^;
+!#VA(art:x) (heroId:x) (machineLvl:x);
 !#VA(usedY[20]:y);
 
 !!HE(heroId):Ed/?(heroLevel:y)/1;
@@ -739,16 +744,16 @@ ZVSE2
     !!VRz6:S^^;
   !!en;
 
-  !!VRy8:S(nextLvl) *25 +125;
-  !!VRy7:S(skillLvl) +(nextLvl) *20 +80; first aid + level * 20, +80
+  !!VRy8:S(machineLvl) *25 +125;
+  !!FU(WOG_54_GetWarMachineEfficiency):P(skillLvl)/(machineLvl)/?y7;
 
   !!VRz5:Sz154050;
 * ammo cart
 !!el&(art)=(ART_AMMO_CART);
-  !!VRy8:S(nextLvl) *10 +90;
-  !!VRz4&(nextLvl)=1:S^^;
-  !!VRz4&(nextLvl)>1:Sz154051;
-  !!VRx4:S(nextLvl);                    [legacy]
+  !!VRy8:S(machineLvl) *10 +90;
+  !!VRz4&(machineLvl)=1:S^^;
+  !!VRz4&(machineLvl)>1:Sz154051;
+  !!VRx4:S(machineLvl);                    [legacy]
   !!VRz5:Sz154052;
 * Ballista
 !!el&(art)=(ART_BALLISTA);
@@ -761,8 +766,8 @@ ZVSE2
     !!VRz6:S^^;
   !!en;
 
-  !!VRy8:S(nextLvl) *50 +200;
-  !!VRy7:S(skillLvl) +(nextLvl) *20 +80; artillery + level * 20, +80
+  !!VRy8:S(machineLvl) *50 +200;
+  !!FU(WOG_54_GetWarMachineEfficiency):P(skillLvl)/(machineLvl)/?y7;
 
   !!VRz5:Sz154054;
 !!en;
@@ -901,3 +906,71 @@ ZVSE2
     !!en;
   !!en;
 !!en;
+
+// New War Machine description
+; This trigger is for war machine placed after FU(OnSetupBattlefield), doesn't seem to be needed
+*?FU(WOG_BattleStack_InitParams);
+*#VA(stack:x) (side:x);
+
+*!FU(WOG_54_SetUpNewWarMachineDesc):P(stack)/(side);
+
+!?FU(OnSetupBattlefield);
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!BMi:T?(type:y) N?(num:y);
+
+  !!if&(type)>(NO_MON)/(num)>0;
+    !!BMi:I?(side:y);
+    !!FU(WOG_54_SetUpNewWarMachineDesc):Pi/(side);
+  !!en;
+!!en;
+
+!?FU(WOG_54_SetUpNewWarMachineDesc);
+!#VA(stack:x) (side:x);
+
+; Exit if not owned by a hero
+!!FU&i^battle_hero_%(side)^<=(NO_HERO):E;
+
+; Exit if not a war machine/catapult in siege
+!!BM(stack):T?(type:y);
+!!FU|(type)<(MON_CATAPULT)/(type)>(MON_AMMO_CART):E;
+!!FU&(type)=(MON_CATAPULT)/i^wog_isSiege^:E; [Catapultin non-siege only]
+
+; Get the current description
+!!BM(stack):Z?(stackStruct:y);
+!!UN:C(stackStruct)/144/(UNC_INT)/?(descPtr:y);
+!!SN:B(descPtr)/d/?(desc:z);
+
+!!VR(hero:y):Si^battle_hero_%(side)^;
+!!IF:W(hero);
+
+; Set up new description depending on the type of war machine
+!!if&(type)=(MON_CATAPULT);
+  !!FU(WOG_54_GetWarMachineStrings):P(ART_CATAPULT)/(hero)/0;
+  !!VR(newDesc:z):Sz5 +^%T(wog.endl)^ +^%T(wog.54.desc145)^;
+
+!!el;
+  !!if&(type)=(MON_BALLISTA);
+    !!VR(machineLevel:y):Sw81 +1;
+    !!FU(WOG_54_GetWarMachineStrings):P(ART_BALLISTA)/(hero)/(machineLevel);
+    !!VR(newDesc):Sz5;
+  !!el&(type)=(MON_FIRST_AID_TENT);
+    !!VR(machineLevel):Sw82 +1;
+    !!FU(WOG_54_GetWarMachineStrings):P(ART_FIRST_AID_TENT)/(hero)/(machineLevel);
+    !!VR(newDesc):Sz5;
+  !!el&(type)=(MON_AMMO_CART);
+    !!VR(machineLevel):Sw83 +1;
+    !!FU(WOG_54_GetWarMachineStrings):P(ART_AMMO_CART)/(hero)/(machineLevel);
+    !!SN:T^wog.54.desc148^/?(maxManaStr:z)/^mana^/i^wog_54_maxMana_%(side)^;
+    !!VR(newDesc):Sz5 +(maxManaStr);
+  !!en;
+!!en;
+
+!!if&(desc)=^^;
+  !!VR(desc):+(newDesc);
+!!el;
+  !!VR(desc):+^%T(wog.endl)^ +(newDesc);
+!!en;
+
+; Apply new description
+!!FU(WOG_AllocBattleStr):P(desc)/?(newDescAddr:y);
+!!UN:C(stackStruct)/144/(UNC_INT)/(newDescAddr);
