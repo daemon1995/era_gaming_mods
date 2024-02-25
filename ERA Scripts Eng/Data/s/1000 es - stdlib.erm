@@ -828,3 +828,83 @@ The game may fall at any time.^;
 ; third parameter - animation number
 ; fourth parameter - whether to animate the damage (0 - not necessary, 1 - necessary)
 !!SN:E5925584/2/(cmbMgr)/(arrayAddress)/(animation)/(playDamagedAnimation);     [play animation]
+
+// Get adjacent available hexes of a stack
+!?FU(ES_GetAvailAdjacentHexesOfStack);
+!#VA(stack:x);                          [Given stack ID]
+!#VA(adjacentHexesList:x);              [List to store the results]
+!#VA(poses[2]:y);
+
+; Get the basic info of the stack
+!!FU(tum_GetActualStackSide):P(stack)/?(side:y);
+!!BM(stack):P?(poses[0]) F?(flags:y);
+!!VR(poses[1]):S-1;
+
+; Get the second position to check if the given stack is wide
+!!VR(isWide:y):S(flags) &(MON_FLAG_WIDE) B;
+
+!!if&(isWide);
+  !!BM(stack):Z?(stackStruct:y);
+  !!UN:C(stackStruct)/68/4/?(secPosOrientation:y);
+
+  !!if&(secPosOrientation)=0;
+    !!VR(poses[1]):S(poses[0]) -1;
+  !!el&(secPosOrientation)=1;
+    !!VR(poses[1]):S(poses[0]) +1;
+  !!en;
+!!en;
+
+!#VA(inValidHexes[20]:y);
+!!VR(inValidHexes[0]):C16/17/33/34/50/51/67/68/84/85;
+!!VR(inValidHexes[10]):C101/102/118/119/135/136/152/153/169/170;
+
+; Loop through all the adjacent positions
+!!FU(NewIntArray):P?(adjacentHexesList);
+
+!!re i/0/(isWide);
+  !!VR(isOddRow:y):S(poses[i]) :17 %2;
+  !!VR(firstPos:y)&(isOddRow):S(poses[i]) -17;
+  !!VR(firstPos)&(isOddRow)<>(TRUE):S(poses[i]) -16;
+
+  !#VA(loopPoses[6]:y);
+
+  !!re j/0/5;
+    !!if&j=0;
+      !!VR(loopPoses[j]):S(firstPos);
+    !!el&j=1;
+      !!VR(loopPoses[j]):S(poses[i]) +1;
+    !!el&j=2;
+      !!VR(loopPoses[j]):S(firstPos) +34;
+    !!el&j=3;
+      !!VR(loopPoses[j]):S(firstPos) +33;
+    !!el&j=4;
+      !!VR(loopPoses[j]):S(poses[i]) -1;
+    !!el;
+      !!VR(loopPoses[j]):S(firstPos) -1;
+    !!en;
+
+    ; Skip hexex out of range
+    !!co|(loopPoses[j])<1/(loopPoses[j])>185;
+
+    ; Skip occupied position
+    !!BU:E(loopPoses[j])/?(loopStack:y);
+    !!co&(loopStack)>(NO_STACK);
+
+    ; Skip hex with obstacles
+    !!BU:O(loopPoses[j])/?(obastacleFlags:y);
+    !!co&(obastacleFlags)<>0;
+
+    ; Skip invalid hexex
+    !!re k/0/19;
+      !!br&(loopPoses[j])=(inValidHexes[k]);
+    !!en;
+
+    !!co&k<=19;
+
+    ; Push valid hex to the array
+    !!FU(Array_Push):P(adjacentHexesList)/(loopPoses[j]);
+  !!en;
+!!en;
+
+!!FU(Array_SortedUnique):P(adjacentHexesList);
+!!SN:F^ExtendArrayLifetime^/(adjacentHexesList);

@@ -969,26 +969,23 @@ ZVSE2
   !!en;     
 !!en; 
 
-
+; Assassin
+; Archer30: Well, why don't we summon the assassin exactly at the spot he would attack, thus the animation is shorter?
 !?FU(OnBattleRound)&i^battle_round^>=0;
 !!re i/0/1;
   !!VRi^es_795_assassins_acted_%i^:S(FALSE);
 !!en;
 
-; Assassin
-; Archer30: Well, why don't we summon the assassin exactly at the spot he would attack, thus the animation is shorter?
-!?FU(OnBattleRegeneratePhase)&i^battle_round^>=0;
+!?FU(OnBattleRegeneratePhase)&i^battle_round^>=1;
 !!UN:P795/?(wogOption:y);
 !!FU&(wogOption)=(FALSE):E;
 
 !!VRr:R0/0/3;
 !!VR(actSide:y):Sx1 :21;
 !!VR(actHero:y):Si^battle_hero_%(actSide)^;
-!!FU&r:E;
+!!FU&r:E;                               [For testing]
 
-!!if&(actHero)<>(NO_HERO)/i^es_795_assassins_acted_%(actSide:y)^=(FALSE)/   
-i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE);
-
+!!if&(actHero)<>(NO_HERO)/i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE)/i^es_795_assassins_acted_%(actSide:y)^=(FALSE);
   !!VR(oppSide:y):S(actSide) X1;
 
   !!FU(NewIntArray):P?(targetStackPtrs:y);
@@ -997,15 +994,19 @@ i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE);
 
   !!re i/(start:y)/(end:y);(end_value);
     !!BMi:N?n T?t S?s;
+
     !!if&n>0/t<>(NO_MON)/s>0/t<>(MON_FIRST_AID_TENT);
       !!BMi:Z?(stackStruct:y);
       !!FU(ES_996_CheckStackCanAct):P(stackStruct:y)/?(canAct:y);
+
       !!if&(canAct);
         !!FU(Array_Push):P(targetStackPtrs)/(stackStruct);
       !!en;
     !!en;
   !!en;
+
   !!SN:M(targetStackPtrs)/?(size:y);
+
   !!if&(size);
     !!FU(Array_Shuffle):P(targetStackPtrs);
     !!VR(success:y):S(FALSE);
@@ -1013,99 +1014,143 @@ i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE);
 
     !!re (stackIdFromAray:y)/0/(size)/1/-1;
       !!SN:M(targetStackPtrs)/(stackIdFromAray)/?(targetStackPtr:y);
-      !!FU(NewIntArray):P?(availableGexes:y);                                     [prepare array of the hexes]
+      !!FU(NewIntArray):P?(availableHexes:y);                                     [prepare array of the hexes]
       !!UN:C(targetStackPtr)/132/4/?f C(targetStackPtr)/132/4/d~(MON_FLAG_FLYER); [remove flying]
       !!UN:C(targetStackPtr)/696/4/?(bindDuration:y) C(targetStackPtr)/696/4/0;   [and bind spell]
 
-      !!re i/0/(BATTLE_HEX_LAST);                                                 [loop hexes]
-        !!SN:E5390176/(CALLCONV_THISCALL)/(targetStackPtr)/i/0;                   [can stack reach that hex]
-        !!if&v1;
-          !!FU(Array_Push):P(availableGexes)/i;                                   [add into array]
-        !!en;
+      ; Archer's implementation: Search only the adjacenet hexes of the target to summon
+      ; This implementation might be better than daemon's as it reduces the animation time, has less calculation and is less likely to crash
+      !!UN:C(targetStackPtr)/248/4/?(targetStackIdOfSide:y);
+      !!VR(targetStackId:y):S(BATTLE_STACKS_PER_SIDE) *(oppSide) +(targetStackIdOfSide);
+      !!FU(ES_GetAvailAdjacentHexesOfStack):P(targetStackId)/?(adjacentHexesList:y);
+
+      !!SN:M(adjacentHexesList)/?(adjacentListSize:y);
+
+      !!if&(adjacentListSize)>0;
+        !!FU(Array_Shuffle):P(adjacentHexesList);
+        !!SN:M(adjacentHexesList)/0/?(randPos:y);
+        !!VR(success):S(TRUE);
       !!en;
+
+      ; daemon's implementation: Search for the whole battlefield to summon'
+      ; This implementation has been reported buggy in siege battle. The game can crash when assassins' are crossing the moat
+      *!re i/(BATTLE_HEX_FIRST)/(BATTLE_HEX_LAST);                                [loop hexes]
+        *!SN:E5390176/(CALLCONV_THISCALL)/(targetStackPtr)/i/0;                   [can stack reach that hex]
+
+        *!if&v1;
+          *!FU(Array_Push):P(availableHexes)/i;                                   [add into array]
+        *!en;
+      *!en;
+
       !!UN:C(targetStackPtr)/132/4/f C(targetStackPtr)/696/4/(bindDuration:y);    [restore flying and bind duration]
-      !!SN:M(availableGexes)/?(numOfHexes:y);                                     [get array size]
-      !!if&(numOfHexes);                                                          [if not empty]
-        !!VR(numOfHexes):-1;
-        !!VR(randHexIndex:y):R0/0/(numOfHexes);                                   [get random hex]
-        !!SN:M(availableGexes)/(randHexIndex:y)/?(randPos:y);                     [get position]
-        !!VR(success:y):S(TRUE);
-        !!br;
-      !!en;
+
+      ; daemon's implementation: continue
+      *!SN:M(availableHexes)/?(numOfHexes:y);                                     [get array size]
+
+      *!if&(numOfHexes);                                                          [if not empty]
+        *!VR(numOfHexes):-1;
+        *!VR(randHexIndex:y):R0/0/(numOfHexes);                                   [get random hex]
+        *!SN:M(availableHexes)/(randHexIndex:y)/?(randPos:y);                     [get position]
+        *!VR(success:y):S(TRUE);
+
+        *!br;
+      *!en;
     !!en;
 
-    !!FU&(success:y)<>(TRUE):E;                                                                 [end if no targets]
-    !!VRi^es_795_summoned_stack_id^:S(NO_STACK);                                                    [assume summon is failed]
-    !!UN:P758/?(wogOption:y) P758/0;
+    !!FU&(success:y)<>(TRUE):E;         [end if no targets]
 
-    !!SN:E4692528/(CALLCONV_THISCALL)/(cmbMgr:y)/(actSide:y)/(MON_ROGUE)/i^opt795.11.%(actHero:y)^/(randPos:y)/4194304/1; [summmon stack]
+    !!VRi^es_795_summoned_stack_id^:S(NO_STACK); [assume summon is failed]
+    !!UN:P758/?(cutThroats:y) P758/(FALSE); [Disable Cutthroat]
+
+    !!FU(ES_795_GetAssassinMonType):P?(monType:y);
+    !!SN:E4692528/(CALLCONV_THISCALL)/(cmbMgr:y)/(actSide:y)/(monType)/i^opt795.11.%(actHero:y)^/(randPos:y)/4194304/1; [summmon stack]
 
     !!VR(assassinsStackId:y):Si^es_795_summoned_stack_id^;
     !!VRi^es_795_summoned_stack_id^:S(NULL);
-    !!if&(assassinsStackId:y)<>(NO_STACK);                                                   [if not failed]
+
+    !!if&(assassinsStackId:y)<>(NO_STACK); [if not failed]
       !!SN:E4628608/(CALLCONV_THISCALL)/(cmbMgr);
       !!VR(showIt:y):Sv1 X1;
+
       !!if&(showIt:y);
-        !!MM:Sz1;                                                                               [^%T(es.795.singName)^]
-        !!SN:P^CLONE^;                                                                              [play sound]
         !!VRz1:S^%T(es.795.assassins.appear)^;
+        !!MM:Sz1;                       [^%T(es.795.singName)^]
+        !!SN:P^CLONE^;                  [play sound]
       !!en;
+
       !!BM(assassinsStackId:y):Z?(assassinsStack:y) G(BMG_FIELD_LUCK)/0/d;
-      !!UN:C(targetStackPtr)/248/4/?(id:y);
-      !!VR(targetStackId:y):S21 *(oppSide) +(id);
-      !!BM(targetStackId):P?p F?f;
-      !!VRf:&(MON_FLAG_WIDE) B;                  [check mon is wide]
 
-      !#VA(positions[2]:y);
+      ; daemon's implementation: continue
+      *!UN:C(targetStackPtr)/248/4/?(id:y);
+      *!VR(targetStackId:y):S21 *(oppSide) +(id);
+      *!BM(targetStackId):P?p F?f;
+      *!VRf:&(MON_FLAG_WIDE) B;         [f, check mon is wide]
 
-      !!VR(positions[0]):Sp;
-      !!if&(oppSide);
-        !!VR(positions[1]):Sp-1;
-      !!el;
-        !!VR(positions[1]):Sp+1;
-      !!en;
-      !!FU(NewIntArray):P?(nearHeaxesArr:y);
+      *#VA(positions[2]:y);
 
+      *!VR(positions[0]):Sp;
 
-      !!re i/0/f;                                 [if target is wide]
-        !!VR(offset:y):S(positions[i]) *12 +78952;
-        !!VRo:S1 Xf;
-        !!re j/0/5;
-          !!UN:C(cmbMgr)/(offset)/2/?(hexId:y);
-          !!SN:E5390176/(CALLCONV_THISCALL)/(assassinsStack)/(hexId:y)/0; can stack reach hex
-          !!if&v1;/(hexId)>(BATTLE_HEX_FIRST)/(hexId)<>(positions[o]);
-            !!FU(ES_IfHexIsFree):P(hexId)/?(isFree:y);
-            !!if&(isFree)/(hexId)<>(positions[o]);
-              !!FU(Array_Push):P(nearHeaxesArr)/(hexId:y);
-            !!en;
-          !!en;
-          !!VR(offset):+2;
-        !!en;
-      !!en;
-      !!FU(Array_SortedUnique):P(nearHeaxesArr);
-      !!SN:M(nearHeaxesArr)/?(size:y);
+      *!if&(oppSide);
+        *!VR(positions[1]):Sp-1;
+      *!el;
+        *!VR(positions[1]):Sp+1;
+      *!en;
 
-      !!if&(size);
-        !!VR(size):-1;
-        !!VR(randomInd:y):R0/0/(size);
-        !!SN:M(nearHeaxesArr)/(randomInd)/?(positionToMove:y);
-        !!UN:C(cmbMgr)/78544/4/(positionToMove);
-        !!SN:E4479536/(CALLCONV_THISCALL)/(assassinsStack)/(positionToMove:y)/0; [move to position;]
-      !!en;
+      *!FU(NewIntArray):P?(nearHeaxesArr:y);
+
+      *!re i/0/f;                                 [if target is wide]
+        *!VR(offset:y):S(positions[i]) *12 +78952;
+        *!VRo:S1 Xf;
+
+        *!re j/0/5;
+          *!UN:C(cmbMgr)/(offset)/2/?(hexId:y);
+          *!SN:E5390176/(CALLCONV_THISCALL)/(assassinsStack)/(hexId:y)/0; can stack reach hex
+
+          *!if&v1;/(hexId)>(BATTLE_HEX_FIRST)/(hexId)<>(positions[o]);
+            *!FU(ES_IfHexIsFree):P(hexId)/?(isFree:y);
+
+            *!if&(isFree)/(hexId)<>(positions[o]);
+              *!FU(Array_Push):P(nearHeaxesArr)/(hexId:y);
+            *!en;
+          *!en;
+
+          *!VR(offset):+2;
+        *!en;
+      *!en;
+
+      *!FU(Array_SortedUnique):P(nearHeaxesArr);
+      *!SN:M(nearHeaxesArr)/?(size:y);
+
+      *!if&(size);
+        *!VR(size):-1;
+        *!VR(randomInd:y):R0/0/(size);
+        *!SN:M(nearHeaxesArr)/(randomInd)/?(positionToMove:y);
+        *!UN:C(cmbMgr)/78544/4/(positionToMove);
+        *!SN:E4479536/(CALLCONV_THISCALL)/(assassinsStack)/(positionToMove:y)/0; [move to position;]
+      *!en;
 
       !!UN:C(assassinsStack)/136/4/?(singlDescPtr:y) C(assassinsStack)/140/4/?(multDescPtr:y);
       !!SN:B(singlDescPtr)/d/?(storeS:z) B(multDescPtr)/d/?(storeP:z);
       !!SN:B(singlDescPtr)/d/^%T(es.795.assassins.singName)^ B(multDescPtr)/d/^%T(es.795.assassins.plurName)^;
 
-      !!SN:E4478848/(CALLCONV_THISCALL)/(assassinsStack)/(positions[0])/0;     [make attack to position;]
+      ; Archer's implementation: continue
+      ; Get BM:P value as the position to attack
+      ; There is no point getting another hex for wide unit as Assassins don't have Breath/Strike all Around
+      !!BM(targetStackId):P?(attackPos:y);
+      !!SN:E4478848/(CALLCONV_THISCALL)/(assassinsStack)/(attackPos)/0; [make attack to position]
+
+      ; Daemon's implementatoin: continue
+      ; (positions[0]) might be incorrect as it can be (positions[1]) too?
+      *!SN:E4478848/(CALLCONV_THISCALL)/(assassinsStack)/(positions[0])/0;     [make attack to position]
+
       !!SN:B(singlDescPtr)/d/(storeS:z) B(multDescPtr)/d/(storeP:z);
 
-      !!BM(assassinsStackId:y): P?p;
+      !!BM(assassinsStackId:y):P?p;
       !!BM(assassinsStackId:y):Fd|268435456 Fd|1073741824;
       !!UN:C(assassinsStack:y)/234/1/1;                                        [указываем, что отряд умер]
       !!VRi^es_795_assassins_acted_%(actSide:y)^:S(TRUE);
 
-      !!if&(showIt:y);
+      !!if&(showIt);
         !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
         !!SN:E4810128/2/(cmbMgr:y)/50/p/40/0;                                  [animate]
         !!VRz1:S^%T(es.795.assassins.disappear)^;
@@ -1115,24 +1160,29 @@ i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE);
       !!BM(assassinsStackId:y):B0 N0;
 
       !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/51/1;                       [remove body]
-
-
     !!en;
-    !!UN:P758/(wogOption:y);
+
+    !!UN:P758/(cutThroats);
   !!en;
 !!en;
 
-
 !?FU(ES_BattleStack_InitParams)&i^es_795_summoned_stack_id^=(NO_STACK);
 !!VRi^es_795_summoned_stack_id^:Sx1;
-!!VR(monFlags:y):S(MON_FLAG_NO_MORALE) |(MON_FLAG_NO_RETALIATION) |(MON_FLAG_FIRE_IMMUNITY);
-!!BMx1:Sd100 Fd|(monFlags:y) A10 D10 H20 L0 U1/5 U2/7 G(SPELL_ANTI_MAGIC)/10/(SKILL_EXPERT); [параметры ассасинов 10ат/10зщ/20зд/10ск/5-7ур]
+!!VR(monFlags:y):S(MON_FLAG_NO_MORALE) |(MON_FLAG_NO_RETALIATION) |(MON_FLAG_FIRE_IMMUNITY); [Assassins have only 3 flags to reduce complexity (no breath/strike all around from Rogues)]
+!!BMx1:Sd100 F(monFlags) A10 D10 H20 L0 U1/5 U2/7 G(SPELL_ANTI_MAGIC)/10/(SKILL_EXPERT); [параметры ассасинов 10ат/10зщ/20зд/10ск/5-7ур]
 !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
 !!SN:E4628608/(CALLCONV_THISCALL)/(cmbMgr);
+
 !!if&v1=0;
   !!BMx1:P?p;
   !!SN:E4810128/2/(cmbMgr:y)/50/p/40/0;    [вывод анимации]
 !!en;
+
+// Function to get the creature type of the Assassin
+!?FU(ES_795_GetAssassinMonType);
+!#VA(monType:x);
+
+!!VR(monType):S(MON_ROGUE);
 
 
 !?FU(OnHeroScreenMouseClick);           [Клик в окне героя]
@@ -1171,8 +1221,6 @@ i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE);
 !?FU(OnAfterBattleUniversal);
 !!UN:P795/?y1;
 !!FU&y1=0:E;                            [выход если опция 795 не включена]
-
-
 
 !!BA:H0/?y1 H1/?y2;
 !!FU&y2<1:E;                            // y1/y2 - атакующий/защищающийся герои, выход, если не битва двух героев
