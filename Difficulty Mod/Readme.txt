@@ -67,6 +67,11 @@ You can conduct the priority order for equipping by reading the code. The lower 
 Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
 Changelog:
+1.041
+- Now CB difficulty settings also work on TUM CBs
+- Important fix for MP hotseat gaming with Neutral Commander boost option enabled, stats of defending commander wont be overwritten by that script anymore
+
+
 1.04
 - slightly reduced the health of commanders in creature banks on all levels.
 - slightly increased the speed of battle commanders in lategame with very high amount of HP
