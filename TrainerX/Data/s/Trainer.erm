@@ -2745,7 +2745,9 @@ ZVSE2
 
 ; Close the commander trainer dialogue
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=12/i^mouse_action^=(MOUSE_LMB_RELEASED);
-!!VR(hasLeveledUp:y):S(FALSE);
+; No longer check if the commander has leveled up as it may have false positive (when exp overflows)
+; No longer use SN:E7771729 as it results in negative exp when the level for Paladin is 50
+*!VR(hasLeveledUp:y):S(FALSE);
 !!OW:C?(currPlayer:y)/?(interactPlayer:y); [It is not possible to activate level up screen if the hero doesn't belong to the player using tranier]
 
 !!if&(interactPlayer)=i^trainer_player^;
@@ -2753,26 +2755,29 @@ ZVSE2
   !!CO(cmd):X2/?(lv:y);
 
   !!if&i^trainer_cmdLv^<>(lv);          [if commander's lv was changed]
+    ; Calculate the commander's exp by using the hero's formula
     !!FU(trainer_GetExpRequirementOfLevel):Pi^trainer_cmdLv^/?(expNew:y);
 
     ; Set the level if the new level is lower
-    !!if&i^trainer_cmdLv^<(lv);
+    *!if&i^trainer_cmdLv^<(lv);
       !!CO(cmd):X1/(expNew);
       !!CO(cmd):X2/i^trainer_cmdLv^;
-    ; activate level up process if the level is higher
-    !!el&i^trainer_cmdLv^>(lv);
-      !!VR(npcStruct:y):S296 *(cmd) +42344640;
-      !!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(expNew)/(FALSE);
+
+    ; activate the level up process if the level is higher
+    *!el&i^trainer_cmdLv^>(lv);
+      *!VR(npcStruct:y):S296 *(cmd) +42344640;
+      *!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(expNew)/(FALSE);
 
       !!FU(trainer_UpdateCommanderPrimSkills):P(cmd);
       !!FU(trainer_UpdateCommanderArts):P(cmd);
 
-      !!VR(hasLeveledUp):S(TRUE);
-    !!en;
+      *!VR(hasLeveledUp):S(TRUE);
+    *!en;
   !!en;
 !!en;
 
-!!DL(TRAINER_CMD_DLG)&(hasLeveledUp)<>(TRUE):C1;
+*!DL(TRAINER_CMD_DLG)&(hasLeveledUp)<>(TRUE):C1;
+!!DL(TRAINER_CMD_DLG):C1;
 
 ; Show commander screen
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^mouse_item^=28;
@@ -2966,6 +2971,7 @@ ZVSE2
 
 !?FU(trainer_HandleHooks);
 !#VA(doesSetHook:x);
+
 // daemon_n's scrolling support, mousewheel events
   !!VRi^trainer_dlg_item^:S(NULL);              [clear variables data]
   !!VRi^trainer_Dlg_mouseX^:S(NULL);

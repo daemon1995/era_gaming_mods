@@ -4,7 +4,7 @@ ZVSE2
 * Updated: Febrary 26, 2012 by rennyo
 * Further Updated: September 15, 2004 by Timothy to change local y variables
 * used in triggers to y- variables.
-* Updated by Archer30 and daemon_n on Jan 2024
+* Rewritten by Archer30 and daemon_n
 
 *War Machine script 0.9 by Overlord
 *Reserved: v2000-v2073, FU903-FU927, w81-83
@@ -23,8 +23,14 @@ ZVSE2
 *increases hit, with ballistics: shoot ability with 2,4 or 8 shoots
 *
 
+
 !#DC(WOG_54_UPGRADE_LIMIT) = 3;
 !#UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?i^wog_54_enabled^; [Check if script is enabled]
+
+; Set up hook for disabling the placement of Catapult
+; Disabled as this disabling war machine feature is to compensate not being able to swap war machine at the end. Catapult in siege should always appear
+!?FU(WOG_CreateERMHook)&i^wog_54_enabled^;
+*!SN:Ex1/1/4600657/(WOG_54_OnPlaceCatapult);
 
 !?FU(OnAfterErmInstructions)&i^wog_54_enabled^;
 !!SN:H^monname^/(MON_CATAPULT)/0/?(single:z) H^monname^/(MON_CATAPULT)/1/?(plural:z);
@@ -213,8 +219,13 @@ ZVSE2
 !!VR(healHp):S(coefficient) *(fullHealHp) :4;
 
 ; Multiply the healing points with the number of tents
-*!BMi^battle_current_stack^:N?(num:y);
-*!VR(healHp):*(num);
+; Every additional tent raise the current heal hp by 10%
+!!BMi^battle_current_stack^:N?(num:y);
+
+!!if&(num)>1;
+  !!VR(extraHealHp:y):S(num) -1 *(healHp) :10;
+  !!VR(healHp):+(extraHealHp);
+!!en;
 
 *********************** Pre-Post Combat and ammo cart **************************
 
@@ -232,6 +243,13 @@ ZVSE2
 
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
   !!FU(WOG_54_RemoveOrRestoreWarMachinesOnBattle):Pi^battle_hero_%i^/i/0;
+!!en;
+
+; Disable the placement Catapult in siege if needed
+!?FU(WOG_54_OnPlaceCatapult);
+!!if&i^wog_54_%i(battle_hero_0)_disable%(ART_CATAPULT)^;
+  !!SN:X?t/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4600715;
 !!en;
 
 ; set machines attributes
@@ -312,6 +330,9 @@ ZVSE2
   !!BMi:T?(type:y) N?(num:y);
 
   !!if&(type)>=(MON_CATAPULT)/(type)<=(MON_AMMO_CART)/(num)>0;
+    ; Don't set the attribute of Catapult in Siege
+    !!co&(type)=(MON_CATAPULT)/i^wog_isSiege^;
+
     !!BMi:I?(side:y);
 
     !!if&i^battle_hero_%(side)^>(NO_HERO);
@@ -338,12 +359,16 @@ ZVSE2
   !!en;
 !!en;
 
-; Place catapult
+; Place catapult in non-siege
 !?FU(WOG_54_PlaceCatapult);
 !#VA(side:x);
 
 !!if&i^battle_hero_%(side)^>(NO_HERO);
-  !!HEi^battle_hero_%(side)^:S(SKILL_BALLISTICS)/?(ballisticsLv:y);
+  ; Exit if disabling catapults
+  !!VR(hero:y):Si^battle_hero_%(side)^;
+  !!FU&i^wog_54_%(hero)_disable%(ART_CATAPULT)^:E;
+
+  !!HE(hero):S(SKILL_BALLISTICS)/?(ballisticsLv:y);
 
   !!if&(ballisticsLv)>(SKILL_NOT_LEARNED);
     !!if&(side)=(BATTLE_LEFT);
@@ -538,6 +563,7 @@ ZVSE2
 
 !?FU(WOG_54_UpgradeWarMachine);
 !#VA(townType:x) (item:x) (hero:x) (warMachineArt:x) (warMachineMon:x) (index:x) (machineLevel:x) (heroLevel:x) (owner:x) (townId:x);
+!#VA(usedY[40]:y);
 
 !!HE(hero):B0/?z3;
 
@@ -546,18 +572,30 @@ ZVSE2
 !!VRy8:Sy6 +1; next level
 !!UN:N2/1/(townType)/(item) N3/2/(warMachineMon)/0; get ballista name & object name
 
+; Set up war machien art desc in z5
 !!FU(WOG_54_GetWarMachineStrings):P(warMachineArt)/(hero)/y8; get stats
 
 ; Change artifact name and description
 ; Using z5/z6 is necessary for the ert variable conversion
-!!VRz5:Sz154016;
-!!VRz6:Sz154015;
+!!VRz5:Sz154015;
+!!VRz6:Sz154016;
 !!SN:H^art^/(warMachineArt)/0/?z30 H^art^/(warMachineArt)/1/?z31;
-!!SN:H^art^/(warMachineArt)/0/z5 H^art^/(warMachineArt)/1/z6;
+!!SN:H^art^/(warMachineArt)/0/z6 H^art^/(warMachineArt)/1/z5;
 
-!!MA:C(warMachineMon)/(RES_GOLD)/?y31; y31 = gold cost
-!!VRy7:Sy31 *y8 :5; gold cost is level * machine / 5
+; Get the cost of the machine
+!!MA:C(warMachineMon)/(RES_GOLD)/?(warMachineCost:y); gold cost
+; Get divider
+!!VR(divider:y):S5;
 
+!!if&(warMachineMon)=(MON_FIRST_AID_TENT);
+  !!VR(divider):S3;
+!!el&(warMachineMon)=(MON_AMMO_CART);
+  !!VR(divider):S4;
+!!en;
+
+!!VRy7:S(warMachineCost) *y8 :(divider); gold cost is level * machine / divider
+
+; Set up dialogue
 !!VR(msgType:y):S(MSG_TYPE_QUESTION); set to choices
 !!VRz4:S^^;
 
@@ -565,8 +603,8 @@ ZVSE2
 
 !!if|y11<y7/y9<y8/i^wog_54_upgradeCounter_%(townId)^>=(WOG_54_UPGRADE_LIMIT);
   !!VR(msgType):S(MSG_TYPE_MES); set to message with no choice
-  !!VRz4&y11<y7:Sz154017;                 [Not enough money]
-  !!VRz4&y9<y8:Sz154018;                  [Level is too low]
+  !!VRz4&y11<y7:Sz154017;               [Not enough money]
+  !!VRz4&y9<y8:Sz154018;                [Level is too low]
 
   !!SN&i^wog_54_upgradeCounter_%(townId)^>=(WOG_54_UPGRADE_LIMIT):T^wog.54.soldOut^/?z4/^limit^/(WOG_54_UPGRADE_LIMIT); [Sold out]
 !!en;
@@ -576,15 +614,23 @@ ZVSE2
 !!SN:H^art^/(warMachineArt)/0/z30 H^art^/(warMachineArt)/1/z31;
 !!FU&-1:E; stop function
 
-!!VRy30:Sy11 -y7;
-!!OW:R(owner)/(RES_GOLD)/y30;           [new money]
-!!UN:R4/(CURRENT_TOWN);
+!!VR(newGold:y):Sy11 -y7;
+!!OW:R(owner)/(RES_GOLD)/(newGold);
+!!SN:D;
 !!VRw(index):+1;                        [add level to W var for machine]
 !!VRi^wog_54_upgradeCounter_%(townId)^:+1; [add 1 to the upgrade counter of the town]
 
-; Check if it is eligible for the next level
-!!VRy7:Sy31 *y8 :5;
-!!FU(WOG_54_UpgradeWarMachine)&y30>=y7/y9>y8/i^wog_54_upgradeCounter_%(townId)^<(WOG_54_UPGRADE_LIMIT):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel)/(owner)/(townId);
+; Check the condition again and see whether to execute the recursion
+!!FU&i^wog_54_upgradeCounter_%(townId)^>=(WOG_54_UPGRADE_LIMIT):E;
+
+!!VR(newMachineLevel:y):Sy8 +1;
+!!FU&(heroLevel)<(newMachineLevel):E;
+
+!!VR(newCost:y):S(warMachineCost) *(newMachineLevel) :(divider);
+!!FU&(newGold)<(newCost):E;
+
+; Execute the function again if the condition is satisfied
+!!FU(WOG_54_UpgradeWarMachine):P(townType)/(item)/(hero)/(warMachineArt)/(warMachineMon)/(index)/y8/(heroLevel)/(owner)/(townId);
 
 !?FU(OnHeroScreenMouseClick)&i^wog_54_enabled^/i^mouse_action^<>(MOUSE_LMB_RELEASED); inside hero screen
 !!FU(WOG_ShowWarMachineInfo)&i^mouse_item^>14/i^mouse_item^<19:Pi^mouse_hero_0^;
@@ -621,22 +667,25 @@ ZVSE2
 !!FU(WOG_54_GetWarMachineStrings)&i^mouse_action^=(MOUSE_RMB_PRESSED):P(warMachine)/(heroId)/y6; get stats
 *
 !!if&(warMachine)=(ART_CATAPULT);
-  !!VRz1&(skillLvl)=0:Sz154021;
-  !!VRz1&(skillLvl)=1:Sz154022;
-  !!VRz1&(skillLvl)=2:Sz154023;
-  !!VRz1&(skillLvl)=3:Sz154024;
+  !!VRz1&(skillLvl)=(SKILL_NOT_LEARNED):Sz154021;
+  !!VRz1&(skillLvl)=(SKILL_BASIC):Sz154022;
+  !!VRz1&(skillLvl)=(SKILL_ADVANCED):Sz154023;
+  !!VRz1&(skillLvl)=(SKILL_EXPERT):Sz154024;
+  !!SN:T^wog.54.descCatapult0^/?z2;
+  !!VRz2&(skillLvl)>(SKILL_NOT_LEARNED):+^%T(wog.54.descCatapult1)^ +z5;
+
+!!el&(warMachine)=(ART_BALLISTA);
+  !!VRz1:Sz154025;
+  !!VRz2:Sz154029;
+
+!!el&(warMachine)=(ART_AMMO_CART);
+  !!VRz1:Sz154026;
+  !!VRz2:Sz154030;
+
+!!el&(warMachine)=(ART_FIRST_AID_TENT);
+  !!VRz1:Sz154027;
+  !!VRz2:Sz154031;
 !!en;
-
-!!VRz1&(warMachine)=(ART_BALLISTA):Sz154025;
-!!VRz1&(warMachine)=(ART_AMMO_CART):Sz154026;
-!!VRz1&(warMachine)=(ART_FIRST_AID_TENT):Sz154027;
-
-!!VRz2&(warMachine)=3:Sz154028;
-!!VRz2&(warMachine)=4:Sz154029;
-
-!!VRz2&(warMachine)=5:Sz154030;
-
-!!VRz2&(warMachine)=6:Sz154031;
 
 !!IF&i^mouse_action^=(MOUSE_RMB_PRESSED):Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_POPUP)^%Z1
 
@@ -677,7 +726,6 @@ ZVSE2
   !!VR(status):Si^wog_54_%(hero)_disable%(wmArt)^;
 !!el&(statusSyntax)=(ARG_SYNTAX_SET);
   !!VRi^wog_54_%(hero)_disable%(wmArt)^:X(TRUE);
-  !!VR(value:y):Si^wog_54_%(hero)_disable%(wmArt)^;
 !!en;
 
 !?FU(WOG_54_RemoveOrRestoreWarMachinesOnBattle);
@@ -718,22 +766,21 @@ ZVSE2
   !!HE(heroId):S(SKILL_BALLISTICS)/?(skillLvl:y) Ed/?(heroLevel:y)/1;
 
   !!if&(skillLvl)>(SKILL_NOT_LEARNED);
-    !!VR(hp:y):S(skillLvl) *(skillLvl) *50 +550;
-    !!VRy10:S1;
+    !!VR(basicHp:y):S(skillLvl) *(skillLvl) *50 +550;
+    !!VR(shots:y)&(skillLvl)=(SKILL_BASIC):S2;
+    !!VR(shots)&(skillLvl)=(SKILL_ADVANCED):S4;
+    !!VR(shots)&(skillLvl)=(SKILL_EXPERT):S8;
 
-    !!re i/1/(skillLvl);
-      !!VRy10:*2;
-    !!en;
-
+    !!VRy10:S(shots);
     !!VRz3:Sz154047;
+    !!VR(hp:y):S(heroLevel) *50 +(basicHp) -50;
+    !!VRy8:S(hp);
+    !!VRz5:Sz154048;
   !!el;
-    !!VR(hp:y):S500;
     !!VRz3:S^^;
+    !!VRz5:S^^;
   !!en;
 
-  !!VRy8:S(heroLevel) *50 +(hp) -50;
-
-  !!VRz5:Sz154048;
 * first aid tent
 !!el&(art)=(ART_FIRST_AID_TENT);
   !!HE(heroId):S(SKILL_FIRST_AID)/?(skillLvl);
@@ -753,7 +800,7 @@ ZVSE2
   !!VRy8:S(machineLvl) *10 +90;
   !!VRz4&(machineLvl)=1:S^^;
   !!VRz4&(machineLvl)>1:Sz154051;
-  !!VRx4:S(machineLvl);                    [legacy]
+  !!VRx4:S(machineLvl);                 [legacy]
   !!VRz5:Sz154052;
 * Ballista
 !!el&(art)=(ART_BALLISTA);
@@ -909,12 +956,12 @@ ZVSE2
 
 // New War Machine description
 ; This trigger is for war machine placed after FU(OnSetupBattlefield), doesn't seem to be needed
-*?FU(WOG_BattleStack_InitParams)&i^battle_isVisible^;
+*?FU(WOG_BattleStack_InitParams)&i^battle_isVisible^/i^wog_54_enabled^;
 *#VA(stack:x) (side:x);
 
 *!FU(WOG_54_SetUpNewWarMachineDesc):P(stack)/(side);
 
-!?FU(OnSetupBattlefield)&i^battle_isVisible^;
+!?FU(OnSetupBattlefield)&i^battle_isVisible^/i^wog_54_enabled^;
 !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
   !!BMi:T?(type:y) N?(num:y);
 
@@ -935,24 +982,27 @@ ZVSE2
 !!FU|(type)<(MON_CATAPULT)/(type)>(MON_AMMO_CART):E;
 !!FU&(type)=(MON_CATAPULT)/i^wog_isSiege^:E; [Catapultin non-siege only]
 
-; Get the current description
+; Get the stack struct
 !!BM(stack):Z?(stackStruct:y);
-!!UN:C(stackStruct)/144/(UNC_INT)/?(descPtr:y);
-!!SN:B(descPtr)/d/?(desc:z);
 
 !!VR(hero:y):Si^battle_hero_%(side)^;
 !!IF:W(hero);
 
 ; Set up new description depending on the type of war machine
+; For Catapult we don't need the current description
 !!if&(type)=(MON_CATAPULT);
   !!FU(WOG_54_GetWarMachineStrings):P(ART_CATAPULT)/(hero)/0;
-  !!VR(newDesc:z):Sz5 +^%T(wog.endl)^ +^%T(wog.54.desc145)^;
+  !!VR(desc:z):Sz5 +^%T(wog.endl)^ +^%T(wog.54.desc145)^;
 
 !!el;
+  ; Get the current description of the other machines
+  !!UN:C(stackStruct)/144/(UNC_INT)/?(descPtr:y);
+  !!SN:B(descPtr)/d/?(desc);
+
   !!if&(type)=(MON_BALLISTA);
     !!VR(machineLevel:y):Sw81 +1;
     !!FU(WOG_54_GetWarMachineStrings):P(ART_BALLISTA)/(hero)/(machineLevel);
-    !!VR(newDesc):Sz5;
+    !!VR(newDesc:z):Sz5;
   !!el&(type)=(MON_FIRST_AID_TENT);
     !!VR(machineLevel):Sw82 +1;
     !!FU(WOG_54_GetWarMachineStrings):P(ART_FIRST_AID_TENT)/(hero)/(machineLevel);
@@ -963,12 +1013,12 @@ ZVSE2
     !!SN:T^wog.54.desc148^/?(maxManaStr:z)/^mana^/i^wog_54_maxMana_%(side)^;
     !!VR(newDesc):Sz5 +(maxManaStr);
   !!en;
-!!en;
 
-!!if&(desc)=^^;
-  !!VR(desc):+(newDesc);
-!!el;
-  !!VR(desc):+^%T(wog.endl)^ +(newDesc);
+  !!if&(desc)=^^;
+    !!VR(desc):+(newDesc);
+  !!el;
+    !!VR(desc):+^%T(wog.endl)^ +(newDesc);
+  !!en;
 !!en;
 
 ; Apply new description
