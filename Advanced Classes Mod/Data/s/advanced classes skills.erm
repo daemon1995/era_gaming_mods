@@ -16094,7 +16094,7 @@ x9=returns skill value
 *!VR(finalDmgNew:y):S(finalDmgConst) *20 :100 +(finalDmg);
 ****************************************************************************************************
 // Reduce damage to the secondary targets of Strike all Around attacks for commanders
-; Author:   Archer30
+// by Archer30
 
 ; Commanders now deal reduced damage to secondary targets of their strike all around attacks
 ; For the main target, the damage would still be 100%
@@ -34452,6 +34452,62 @@ x1=hero number, x2=acting side, x3=returns number of extra casts for this combat
 !!VRy10:S0+y2+y3+y4+y5+y6+y7+y8+y9;     [sum up all values]
 !!VRx3:Sy10;                            [return in x3]
 
+****************************************************************************************************
+// Set up campaign carry over feature
+// by Archer30
+
+!?FU(OnWinGame);
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+!!VR(filePath:z):S^Runtime/advanced classes transfer.ini^;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  ; Additional secondary skill levels
+  !!VR(masterSkillsFlags:y):S0;
+  !!VR(grandMasterSkillsFlags:y):S0;
+
+  !!re (ss:y)/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+    ; Set the status of Master/Grandmaster of every secondary skills in the array
+    !!SN:Mi^acm_SkillNames_ArrayId^/(ss)/?(ssName:z);
+
+    !!if|i^H3_%(ssName)_0_Hero%i^/i^H3_%(ssName)_1_Hero%i^;
+      !!VR(ssBit:y):S1 Sd<<(ss);
+      !!VR(grandMasterSkillsFlags)&i^H3_%(ssName)_1_Hero%i^:+(ssBit);
+      !!VR(masterSkillsFlags)&i^H3_%(ssName)_0_Hero%i^:+(ssBit);
+    !!en;
+  !!en;
+
+  !!FU(WriteIniInts):P(filePath)/^master^/^%i^/(masterSkillsFlags) P(filePath)/^grandmaster^/^%i^/(grandMasterSkillsFlags);
+!!en;
+
+!!FU(SaveIni):P(filePath);
+
+!?FU(OnTransferHero);
+!#VA(hero:x);
+
+!!VR(filePath:z):S^Runtime/advanced classes transfer.ini^;
+!!FU(ReadIniInts):P(filePath)/^master^/^%(hero)^/?(masterSkillsFlags:y)/0 P(filePath)/^grandmaster^/^%(hero)^/?(grandMasterSkillsFlags:y)/0;
+
+!!if|(masterSkillsFlags)/(grandMasterSkillsFlags);
+  ; Additional secondary skills levels
+  !!re (ss:y)/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
+    !!SN:Mi^acm_SkillNames_ArrayId^/(ss)/?(ssName:z);
+    !!VR(ssBit:y):S1 Sd<<(ss);
+    !!VRi^H3_%(ssName)_0_Hero%(hero)^:S(masterSkillsFlags) &(ssBit) B;
+    !!VRi^H3_%(ssName)_1_Hero%(hero)^:S(grandMasterSkillsFlags) &(ssBit) B;
+  !!en;
+!!en;
+
+; Remove ini OnAfterErmInstructions as there is no OnTransferHero on the victory of the the last zone of a campaign
+!?FU(OnAfterErmInstructions);
+!!VR(filePath:z):S^Runtime/advanced classes transfer.ini^;
+!!FU(FileExists):P(filePath)/?(result:y);
+
+!!if&(result);
+  !!FU(ClearIniCache):P(filePath);
+  !!FU(DeleteFile):P(filePath)/?(result);
+!!en;
 
 ********************************************************************************
 
