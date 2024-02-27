@@ -16093,21 +16093,16 @@ x9=returns skill value
 !!en; 
 *!VR(finalDmgNew:y):S(finalDmgConst) *20 :100 +(finalDmg);
 ****************************************************************************************************
+// Reduce damage to the secondary targets of Strike all Around attacks for commanders
 ; Author:   Archer30
-; Engine:   ERM 2.0+
-; Requires: ERA 3.3+, Era Erm Framework
 
 ; Commanders now deal reduced damage to secondary targets of their strike all around attacks
 ; For the main target, the damage would still be 100%
 
 
-; ============== SETTINGS ==============
-!#VRi^redstrik_damagePercent^:S50;      [Percentage of damage commanders deal to secondary targets of their Strike all around attacks]
-; ============ END SETTINGS ============
-
-
 !?FU(OnMonsterPhysicalDamage);
-!!VRi^redstrik_damagePercent^:S50;      [Percentage of damage commanders deal to secondary targets of their Strike all around attacks]
+!!VRi^acm_Redstrik_damagePercent^:S50;      [Percentage of damage commanders deal to secondary targets of their Strike all around attacks]
+
 ; Get the type of MF damage
 !!UN:C42149568/(UNC_INT)/?(dmgTypeValue:y);
 
@@ -16125,7 +16120,7 @@ x9=returns skill value
   !!VR(attackers[2]:y):Ci^battle_acting_stack^/(targetStack);
 
   !!re i/0/1;
-    !!FU(redstrik_GetActualStackSide):P(attackers[i])/?(actualSide:y);
+    !!FU(acm_Redstrik_GetActualStackSide):P(attackers[i])/?(actualSide:y);
 
     !!if&(actualSide)<>(defSide);
       !!VR(atkStack:y):S(attackers[i]);
@@ -16140,7 +16135,7 @@ x9=returns skill value
   !!if&(atkType)>=(MON_COMMANDER_FIRST_A)/(atkType)<=(MON_COMMANDER_LAST_D);
     ; Calculate and the new damage based on basic damage
     !!MF:D?(basicDmg:y);
-    !!VR(dmgReduced:y):S100 -i^redstrik_damagePercent^ *(basicDmg) :100;
+    !!VR(dmgReduced:y):S100 -i^acm_Redstrik_damagePercent^ *(basicDmg) :100;
 
     !!if&(dmgReduced)>0;
       !!MF:F?(finalDmg:y);
@@ -16158,11 +16153,8 @@ x9=returns skill value
   !!en;
 !!en;
 
-****************************************
-**** Get the actual side of a stack ****
-****************************************
 ; The stack size would be reverted if the stack is hypnotized
-!?FU(redstrik_GetActualStackSide);
+!?FU(acm_Redstrik_GetActualStackSide);
 !#VA(stack:x) (side:x);
 
 !!BM(stack):I?(side) G(SPELL_HYPNOTIZE)/?(hypnotizeTurns:y)/d;
@@ -27012,16 +27004,51 @@ By clicking on the Blacksmith or Mage Guild you can buyupgrades or enchantment f
 Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith or Mage Guild
 !?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^dlg_action^=(DLG_CMD_TYPE_DEFAULT)/i^mouse_flags^=(MOUSE_FLAG_RMB);
 
-  !!CA-1:H1/?y5;                        [town Visitor]
+  !!CA(CURRENT_TOWN):H1/?y5;            [town Visitor]
   !!FU|y5<0/y5>155:E;
+
   !!if&i^mouse_item^>=0/i^mouse_item^<=4|i^mouse_item^=16;
     !!VR(itemAction:y):Si^mouse_item^ -4 F0/1 X1;
     !!SN:W^WM_Upgrade_Hero^/y5;
+
+    !!UN:P(WOG_OPT_DISABLE_TOWN_DEMOLISHING)/?y1;
+
+    ; If demolishing town building is possible, avoid opening the DL when the town hall is not available (logical sense)
+    !!if&y1<>(TRUE);
+      !!CA(CURRENT_TOWN):B3/10;         [10 - town hall]
+      !!FU&-1:E;
+    !!en;
+
     !!FU(Warmachine_Upgrade_Town):Py5/(itemAction:y); [Jump to Warmachine Function for Upgrades]
     !!SN:W^WM_Visit_Purchased^/0;
-    !!UN:P(WOG_OPT_DISABLE_TOWN_DEMOLISHING)/?y1;
+
+    ; If demolishing building is disabled, disbale standard mouseclick
     !!if&y1;
       !!CM:R0;
+    ; If Demolishing building is possible set detailed conditoins
+    !!el;
+      ; For Mage Guild
+      !!if&i^mouse_item^>=0/i^mouse_item^<=4;
+        ; Check if Grail is built
+        !!CA(CURRENT_TOWN):B3/26;
+
+        ; If Grail is built, it is not possible to demolish mage guild so we disable standard action here
+        !!if&1; 
+          !!CM:R0;
+        !!el;
+          ; Check if any dwelling is built
+          !!re i/30/36;
+            !!CA(CURRENT_TOWN):B3/i;
+
+            !!br&1;
+          !!en;
+
+          ; If any building is built, disable standard action
+          !!CM&i<=36:R0;
+        !!en;
+      !!en;
+
+      ; There is no demolishing requirement for Blacksmith
     !!en;
   !!en;
 
