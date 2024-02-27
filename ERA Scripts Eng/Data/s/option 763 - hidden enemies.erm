@@ -90,8 +90,14 @@ ZVSE2
 !!VRy4:Sv1;                   [y4 - номер героя]
 *** спавн героя y4 в координатах y1/y2/y3
 !!OW:Ix1/d/?y5;               [y5=1, если игрок еще не активирован]
-!!OW&y5=1:Tx1/6 Ix1/1/0 Dx1/128 Tx1/6; [активируем нового ИИ-игрока в 6м союзе,без ограничений на жизнь без городов]
-!!OW&y5=1:Rx1/0/30 Rx1/2/30 Rx1/1/10 Rx1/3/10 Rx1/4/10 Rx1/5/10 Rx1/6/30000; [даем новому игроку ресурсы на развитие(30/30/10/10/10/10/30000)]
+
+!!if&y5=1;
+  !!OW:Ix1/1/0 Dx1/128; Tx1/6; [активируем нового ИИ-игрока в 6м союзе,без ограничений на жизнь без городов]
+  !!FU(ES_763_GetHiddenEnemiesAlliance):Px1/?y30;
+  !!OW:Tx1/y30;
+  !!OW:Rx1/0/30 Rx1/2/30 Rx1/1/10 Rx1/3/10 Rx1/4/10 Rx1/5/10 Rx1/6/30000; [даем новому игроку ресурсы на развитие(30/30/10/10/10/10/30000)]
+!!en;
+
 !!HEy4:Py1/y2/y3 Ox1;         [помещаем героя на карту и меняем владельца]
 !!OW:Ax1/y4;                  [активируем героя]
 !!VRv2:+1;                    [инкремент счетчика размещенных героев]
@@ -170,6 +176,63 @@ ZVSE2
 !!if&x1>0/v1=x1;              [если найдено искомое заклинание для выбора]
   !!VRv1:Sx16;                [сохраняем номер выбранного заклинания в v1]
   !!VRx16:S1000;              [прерываем цикл]
-!!en; 
+!!en;
+
+!?FU(ES_763_GetHiddenEnemiesAlliance);
+!#VA(excludePlayer:x) (result:x);
+
+; If the alliance has been set, set it
+!!if&i^es_763_hiddenAlliancePlusOne^;
+  !!VR(result):Si^es_763_hiddenAlliancePlusOne^ -1;
+
+  !!FU:E;
+!!en;
+
+; If the alliance hasn't been set yet, get a new value
+!!FU(NewIntArray):P?(occupiedAlliancesList:y);
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!co&i=(excludePlayer);
+
+  ; Get all the occupied team ID
+  !!OW:Ii/?(isAi:y)/?(hasLost:y);
+
+  !!if&(hasLost)<>(TRUE);
+    !!OW:Ti/?(team:y);
+    !!FU(Array_Push):P(occupiedAlliancesList)/(team);
+  !!en;
+!!en;
+
+!!FU(Array_SortedUnique):P(occupiedAlliancesList);
+
+; Get all the unoccupied team ID
+; If all the team has been occupied, set the hidden enemy as no alliance
+!!SN:M(occupiedAlliancesList)/?(size:y);
+
+; failed safe: set the team as 8 - usually won't be occupied and is available
+; This should not happen though
+!!if&(size)>=7;
+  !!VR(result):S8;
+
+  !!FU:E;
+!!en;
+
+; Get an unoccupied team
+!!re i/7/0/-1;                          [reverse order]
+  !!re j/0/(size)/1/-1;
+    !!SN:M(occupiedAlliancesList)/j/?(team:y);
+
+    !!br&(team)=i;
+  !!en;
+
+  !!if&j<(size);
+    !!co;
+  !!el;
+    !!br;
+  !!en;
+!!en;
+
+!!VR(result):Si;
+!!VRi^es_763_hiddenAlliancePlusOne^:S(result) +1;
 
 ** end
