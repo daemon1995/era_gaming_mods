@@ -724,14 +724,19 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 !!FU(UpdateBattleVars):P;
 
 ** Shackles of war (retreat vs neutrals bttles with SW)
-!?BG0&i^battle_hero_1^<(HERO_FIRST);
+!?FU(OnBeforeBattleAction)|i^battle_hero_1^<=(NO_HERO)/i^wog_72_randHeroActive^; [Works when the defender has no hero OR is a random hero (WoG Scripts)]
 !!BG:A?(actionType:y);
+
 !!if&(actionType)=(BATTLE_ACTION_RETREAT);
-  !!UN:C4689325/1/(ART_GRAIL);           [replace checked artId on hero to Grail from Shakles]
+  !!UN:C4689325/1/(ART_GRAIL);          [replace checked artId on hero to Grail from Shakles]
 !!en;
 
 !?FU(OnAfterBattleUniversal);
-!!UN:C4689325/1/(ART_SHACKLES_OF_WAR);           [setback correct art id ]
+!!UN:C4689325/1/(ART_SHACKLES_OF_WAR);           [set back correct art id]
+
+!?FU(OnGameLeave);
+!!UN:C4689325/1/(ART_SHACKLES_OF_WAR);           [set back correct art id]
+
 !?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
 !!BU:Ei^mouse_battleHex^/?(stackId:y);
 
@@ -1470,63 +1475,18 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
 // Fix crash after battling the guards of demolished dwelling with Succubus
 // by Archer30
+; Disable Succubus's Charming in battle against own creatures
 ; Discussion: http://wforum.heroes35.net/showthread.php?tid=4218&pid=138678#pid138678
 !?FU(WOG_CreateERMHook);
-; First implementation - disabled
-*!SN:Ex1/1/7785291/(gem_OnSuccubusCharming);  76CB4B
-
-; Second implementation
 !!SN:Ex1/1/7387896/(gem_OnDemolishDwellBattle); 70BAF8
 
 ; Temporarily disable Succubus Charming in a battle of demolishing dwelling
 !?FU(gem_OnDemolishDwellBattle);
-!!UN:C7710229/2/?i^gem_demolishPatch1^ C7710231/2/?i^gem_demolishPatch2^ C7710233/1/?i^gem_demolishPatch3^;
-!!UN:C7710229/2/7659 C7710231/2/(OPCODE_NOP_2) C7710233/1/(OPCODE_NOP_1);
+!!UN:C7785332/2/?i^gem_demolishPatch^ C7785332/2/(OPCODE_NOP_2); 76CB74
 
-!?FU(OnAfterBattleUniversal)&i^gem_demolishPatch1^;
-!!UN:C7710229/2/i^gem_demolishPatch1^ C7710231/2/i^gem_demolishPatch2^ C7710233/1/i^gem_demolishPatch3^;
-!!VRi^gem_demolishPatch1^:S0;
-!!VRi^gem_demolishPatch2^:S0;
-!!VRi^gem_demolishPatch3^:S0;
-
-; First implementation - disabled
-; Disable as any hook placed in Charming foo (@76CB4B) results in crashes after a normal battle - why though?
-; Neutral battle
-*?OB(OBJ_MONSTER);
-*!VRi^gem_isNeutralBattle^:S(TRUE); ** set to True to show that a monster stack is visited
-
-; On Leaving objects
-*$OB(OBJ_MONSTER);
-*!VRi^gem_isNeutralBattle^:S(FALSE);
-
-; Here we must check the hero is not visiting a neutral stack as the battle could happen between a hero at a town entrance and a neutral stack nearby
-!?FU(gem_OnSuccubusCharming)&i^gem_isNeutralBattle^<>(TRUE);
-!!FU:E;
-
-!#VA(hook:x);
-
-!!UN:P904/(TRUE) P905/(FALSE);
-
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
-!!UN:C(ebp)/16/4/?(heroStruct:y);
-!!FU&(heroStruct)=0:E;
-
-!!UN:C(heroStruct)/26/4/?(heroId:y);
-!!HE(heroId):P?(x:y)/?(y:y)/?(z:y);
-
-; Check if it is a battle in a town - here we assume the battle happens at the same location with the hero
-!!UN:P904/(TRUE) P905/(FALSE);
-!!CA(x)/(y)/(z):T?(townType:y);
-
-!!UN:P905/?(hasError:y);
-
-; If there is no error (means this battle happens in a town), set the charm rate to 0
-!!if&(hasError)<>(TRUE);
-  !!SN:X?t/0;
-  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/7785758;
-!!en;
-
-!!UN:P904/(FALSE) P905/(FALSE);
+!?FU(OnSetupBattlefield)&i^gem_demolishPatch^; [Should not be at FU(OnBeforeBattleUniversal), won't trigger]
+!!UN:C7785332/2/i^gem_demolishPatch^;
+!!VRi^gem_demolishPatch^:S0;
 
 
 // Fix Brute's Gold bonus overflowing

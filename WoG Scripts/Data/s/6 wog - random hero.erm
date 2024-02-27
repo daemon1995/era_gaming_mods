@@ -9,15 +9,22 @@ ZVSE2
 ; The chance would become 100% if i^Random_Neutral_Hero^ is TRUE
 
 
-// Disable double object removal sound
-// by daemon_n
+// Hooks
 ; Here we do not check option as the option can possibly be enabled after starting the game
 !?FU(WOG_CreateERMHook);
-!!SN:Ex1/1/4908283/(WOG_72_AfterDefeatedHero);  
+!!SN:Ex1/1/4685559/(WOG_OnAfterSetSurrenderButton); [Trigger After Surrender button got set]
+!!SN:Ex1/1/4908283/(WOG_72_OnAfterDefeatHero);
 
-!?FU(WOG_72_AfterDefeatedHero)&i^wog_72_randHeroActive^;  
+// Disable double object removal sound
+// by daemon_n
+!?FU(WOG_72_OnAfterDefeatHero)&i^wog_72_randHeroActive^;
 !!SN:X?t/0;
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4908292;
+
+// Disable Surrender button when fighting with random heroes
+!?FU(WOG_OnAfterSetSurrenderButton)&i^wog_72_randHeroActive^;
+!!FU(H3Dlg_GetCurrentDlg):P?(currDlg:y);
+!!FU(H3Dlg_SendCmdToItem):P(currDlg)/2001/5/4096;
 
 // Manage variables before the battle, generates the neutral hero
 !?FU(OnBeforeBattle)&i^wog_isNeutralBattle^/(ERM_FLAG_IS_HUMAN);
@@ -76,28 +83,3 @@ ZVSE2
 
 !?FU(OnAfterLoadGame)&i^wog_72_randHeroActive^;
 !!VRi^wog_72_randHeroActive^:S(FALSE);
-
-// Disable Surrender in battle with neutral creatures
-; Note: It's not possible to surrender in quick combat in heroes 3
-; The timing cannot be earlier at OnSetupBattlefield. It doesn't work.
-; Both FU(OnBattlefieldVisible) and FU(OnAfterTacticsPhase) are required
-!?FU(OnBattlefieldVisible)&i^wog_72_randHeroActive^/i^battle_isVisible^;
-!!FU(WOG_72_DisableSurrenderButton):P;
-
-!?FU(OnAfterTacticsPhase)&i^wog_72_randHeroActive^/i^battle_isVisible^;
-!!FU(WOG_72_DisableSurrenderButton):P;
-
-!?FU(WOG_72_DisableSurrenderButton);
-!!FU(H3Dlg_GetCurrentDlg):P?(dlgObj:y);
-!!SN:E6288816/2/(dlgObj)/2001;
-
-!!if&v1;
-  !!VR(itemStructure:y):Sv1;
-
-  ; Set disabled frame
-  !!UN:C(itemStructure)/60/(UNC_INT)/2; [Frame #2 as disabled]
-  ; Set disabled
-  !!SN:E6287104/2/(itemStructure)/(FALSE);
-  ; Refresh
-  !!SN:E6288864/2/(dlgObj)/1/2001/2001; [update onlyItem]
-!!en;
