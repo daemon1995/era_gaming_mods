@@ -22,6 +22,7 @@ ZVSE2
 ** Last Updated: November 1, 2004
 * updated by JHV Dec. 15, 2012 to allow some Neutral Monster Boost parameters to
 * be read from Data/NeutBst.txt
+** Last Updated: Feb 2024 by Archer30 and daemon_n
 
 ** Function(s) used: FU1000-FU1003, FU5400-FU5413
 
@@ -220,14 +221,89 @@ Recommendations for Neutral Units Bonuses:
 
 
  [Battlefield Setup Trigger]
-; Archer30: It is not very ideal to have stack exp and bonus stats setting up on ! ? BR for these reasons:
-; ! !EA resets any stats setting up by other scripts (when using ! !BM) . This could lead to compatibility issue if there is another script trying to give additional stats to the neutral creatures.
-; Both ! !EA and ! !BM setting up on ! ?BR means the player has no chance to know what exactly the stats of the neutral would be before Tactic phase. It could be confusing.
+; Here we use two different methods to add the bonuses
+; For stack exp, they are added when the stack is genereated on FU(WOG_BattleStack_InitParams)
+; For other bonuses, we set at the start of battle on FU(OnAfterTacticsPhase) and FU(OnCombatRound)
+
+// Set up neutral experience
+!?FU(OnBeforeBattleUniversal)&i^Encounter_Type^>0/i^battle_human_0^;
+!!UN:P231/?(neutralExp:y); [Check if Neutral Stack Experience is enabled]
+
+!!if&(neutralExp:y);
+  ; Turn on stack experience if not enabled yet
+  !!UN:P(WOG_OPT_STACK_EXPERIENCE)/1;
+  !!VRy-1:Si^timerDay^ -1; [Subtract 1 from current day: y2]
+  !!UN:J2/?y2; [Player chosen difficulty level: y2]
+
+  ; If neutral stack exp difficulty has not been selected, define the interval with game difficulty
+  !!if&i^Stack_Exp_Rate^=0;
+    !!VRy-3&y2=0:S14; [Easy interval (14): y-3]
+    !!VRy-3&y2=1:S7; [Normal interval (7): y-3]
+    !!VRy-3&y2=2:S5; [Hard interval (5): y-3]
+    !!VRy-3&y2=3:S4; [Expert interval (4): y-3]
+    !!VRy-3&y2=4:S3; [Impossible interval (3): y-3]
+  ; Overrides interval value if any neutral stack exp difficulty is selected
+  !!el;
+    !!VRy-3:Si^Stack_Exp_Rate^;
+  !!en;
+
+  !!VRi^wog_231_base_exp_rank^:Sy-1 :y-3; [Base rank for this date and difficulty: y-4]
+
+  !!HEi^battle_hero_0^:E?(exp:y)/?i^wog_231_hero_lvl^/1; [Hero's experience level: y-6 (y7 isn't used but avoids a bug)]
+  !!VRi^wog_231_hero_lvl^:+y2 F1/(INT_MAX); [Hero's level +game difficulty: y-6, cannot be negative]
+!!en;
+
+; Restore stack exp option after battle
+!?FU(OnAfterBattleAction)&i^wog_231_base_exp_rank^;
+!!BU:C?(battleIsEnded:y);
+!!FU&(battleIsEnded)<>(TRUE):E;
+
+!!UN:P231/?(neutralExp:y);
+!!FU&(neutralExp)<>(TRUE):E;
+
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/i^wog_900_enabled^;
+
+!?FU(OnAfterBattleUniversal)&i^wog_231_base_exp_rank^;
+!!VRi^wog_231_base_exp_rank^:S0;
+!!VRi^wog_231_hero_lvl^:S0;
+
+!?FU(WOG_BattleStack_InitParams)&i^wog_231_base_exp_rank^;
+!#VA(stackId:x) (side:x);
+
+!!if&(side)=(BATTLE_RIGHT);
+  !!FU5401&i^Encounter_Type^<>3:Px1/i^wog_231_base_exp_rank^/i^wog_231_hero_lvl^;
+!!en;
+
+ [Add ranks to Neutral Stacks if option enabled]
+!?FU5401;
+ [x1=stack Id, x2=base rank, x3=hero's level+1]
+!!BMx1:T?y1 N?y2; [Creature type (y1), number (y2)]
+!!FU|y1<0/y2<1:E; [Exit if no stack at this number]
+!!FU&y1>=(MON_COMMANDER_FIRST_A)/y1<=(MON_COMMANDER_LAST_D):E; [Exit if it's a Commander]
+
+!!MA:Ly1/?y3; [Creature level: y3]
+!!VRy3::2 +1; [Divide by 2 (dropping fractions) and add 1 to get level divisor (1..4): y3]
+!!VRy4:Sx2 :y3; [Divide base rank by level divisor to get final rank: y4]
+!!FU&y4<1:E; [Exit if no ranks added]
+!!VRy5:Sx1 *-1 -1; [Negative stack index: y5]
+!!VRy4&y4>x3:Sx3; [If rank is higher than hero's level+game difficulty, set it to hero's level+game difficulty]
+!!EAy5:Ey4/12/d/d; [Set stack to rank y4]
+
 
 *New option form Dif mod that provides the same scaling to usually only neutrals get, also to AI players. 
 This option is for everyone who wants to have stronger AI players and the difficulty not just comes from the amount of units.
-!?FU(OnCombatRound)&i^battle_round^=0/(ERM_FLAG_IS_HUMAN);
 
+!?FU(OnAfterTacticsPhase)&i^Encounter_Type^>=1/(ERM_FLAG_IS_HUMAN);[Edit: Moved Trigger from BF to OnCombatRound and to OnAfterTacticsPhase in order to have corrected first unit set]
+!!BA:O?y2/?y3;
+!!FU&y3>(NO_HERO):E;                    [Exit if Enemy Hero at Neutrals and its not from Random Hero]
+
+!!UN:P231/?v1;                          [Check if Neutral Stack Experience is enabled: v1]
+
+!!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
+!!DO1000/21/41/1&v2=1/i^Health_Grow_Enable^:P; [Add Att, Def, HP, only Run when selected and not for AI]
+!!DO(Dif_Mod_Static_Boost)/21/41/1&i^Dif_Mod_Neutral_boost^:P; [Add Att, Def, HP, and speed]
+
+!?FU(OnCombatRound)&i^battle_round^=0/(ERM_FLAG_IS_HUMAN);
 !!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
 !!BA:O?y2/?y3;
 !!OW:Iy2/?y5;                           [Attacker Owner check for AI]
@@ -239,75 +315,6 @@ This option is for everyone who wants to have stronger AI players and the diffic
 !!VRy10&y7=1:S21; !!VRy11&y7=1:S41;     [If Defender is AI]
 !!DO1000/y10/y11/1&v2=1/i^Health_Grow_Enable^/i^Dif_Mod_AI_Scaling^:P; [Add Att, Def, HP]
 
-
-!?FU(OnAfterTacticsPhase)&i^Encounter_Type^>=1/(ERM_FLAG_IS_HUMAN);[Edit: Moved Trigger from BF to OnCombatRound and to OnAfterTacticsPhase in order to have corrected first unit set]
-
-!!FU(WOG_231_SetBonuses):P;
-
-
-!?FU(WOG_231_SetBonuses);
-
-!!BA:O?y2/?y3;
-!!FU&y3>(NO_HERO):E;                    [Exit if Enemy Hero at Neutrals and its not from Random Hero]
-
-!!UN:P231/?v1;                          [Check if Neutral Stack Experience is enabled: v1]
-
- [Add experience ranks to neutral stacks but not AI battles or Death Chambers]
-!!FU5400&v1=1/i^Encounter_Type^<>3:P;
-
-!!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
-!!DO1000/21/41/1&v2=1/i^Health_Grow_Enable^:P; [Add Att, Def, HP, only Run when selected and not for AI]
-!!DO(Dif_Mod_Static_Boost)/21/41/1&i^Dif_Mod_Neutral_boost^:P; [Add Att, Def, HP, and speed]
-
-
-; Restore stack exp option after battle
-!?FU(OnAfterBattleAction);
-!!BU:C?(battleIsEnded:y);
-!!FU&(battleIsEnded)<>(TRUE):E;
-
-!!UN:P231/?(neutralExp:y);
-!!FU&(neutralExp)<>(TRUE):E;
-!!UN:P(WOG_OPT_STACK_EXPERIENCE)/i^wog_900_enabled^;
-
-
- [Add experience ranks to neutral stacks]
-!?FU5400;
-; Turn on stack experience if not enabled yet
-!!UN:P(WOG_OPT_STACK_EXPERIENCE)/1;
-
-!!VRy-1:Sc0;                            [Current day: y-1]
-!!VRy-1:-1;                             [Subtract 1 from current day: y-1]
-!!UN:J2/?y2;                            [Player chosen difficulty level: y2]
-!!SN:W^Stack_Exp_Rate^/?y10;
-!!VRy10&y10=0:Sy2;
-!!VRy-3&y2=0:Sy10;                      [Easy interval (14): y-3]
-!!VRy-3&y2=1:Sy10;                      [Normal interval (7): y-3]
-!!VRy-3&y2=2:Sy10;                      [Hard interval (5): y-3]
-!!VRy-3&y2=3:Sy10;                      [Expert interval (4): y-3]
-!!VRy-3&y2=4:Sy10;                      [Impossible interval (3): y-3]
-!!VRy-3&y-3=0:S1;                       [fix]
-!!VRy-4:Sy-1 :y-3;                      [Base rank for this date and difficulty: y-4]
-!!VRy-4&y-4=0:S1;                       [fix]
-!!BA:H0/?y-5;                           [Attacking hero number: y-5]
-!!HEy-5:E?y-7/?y-6/1;                   [Hero's experience level: y-6 (y7 isn't used but avoids a bug)]
-!!VRy-6:+y2;                            [Hero's level +game difficulty: y-6]
-!!DO5401/21/41/1&y-4>0:Py-4/y-6;
-
-
- [Add ranks to Neutral Stacks if option enabled]
-!?FU5401;
- [x1=base rank, x2=hero's level+1]
-!!BMx16:T?y1 N?y2;                      [Creature type (y1), number (y2)]
-!!FU|y1<0/y2<1:E;                       [Exit if no stack at this number]
-!!FU&y1>=(MON_COMMANDER_FIRST_A)/y1<=(MON_COMMANDER_LAST_D):E; [Exit if it's a Commander]
-
-!!MA:Ly1/?y3;                           [Creature level: y3]
-!!VRy3::2 +1;                           [Divide by 2 (dropping fractions) and add 1 to get level divisor (1..4): y3]
-!!VRy4:Sx1 :y3;                         [Divide base rank by level divisor to get final rank: y4]
-!!FU&y4<1:E;                            [Exit if no ranks added]
-!!VRy5:Sx16 *-1 -1;                     [Negative stack index: y5]
-!!VRy4&y4>x2:Sx2;                       [If rank is higher than hero's level+game difficulty, set it to hero's level+game difficulty]
-!!EAy5:Ey4/12/d/d;                      [Set stack to rank y4]
 
  [Add Attack, Defense, Health, Bless and Precision to stacks]
 !?FU1000;
