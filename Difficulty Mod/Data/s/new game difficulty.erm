@@ -2548,6 +2548,106 @@ x1=Spell Number, x2=Duration, x3=Level
 
 
 ********************************************************************************
+
+// New implementation by Archer30
+!?FU(OnAfterErmInstructions);
+!!FU(NewIntArray):P90/?i^Anzahl_Abilities_List^/(M_STORED);
+
+!!SN:Vi^Anzahl_Abilities_List^/0/102/68/1/76/29/30/76/29/30/106/16/50;
+!!SN:Vi^Anzahl_Abilities_List^/12/99/78/100/102/70/1/102/99/1/102/82/1;
+!!SN:Vi^Anzahl_Abilities_List^/24/101/61/100/108/114/25/102/98/1/75/15/75;
+!!SN:Vi^Anzahl_Abilities_List^/36/102/115/1/102/66/1/102/65/1/102/69/1;
+!!SN:Vi^Anzahl_Abilities_List^/48/102/114/1/106/15/50/107/15/50/107/21/25;
+!!SN:Vi^Anzahl_Abilities_List^/60/75/50/50/106/52/50/106/45/50/119/109/1;
+!!SN:Vi^Anzahl_Abilities_List^/72/97/74/20/75/17/25/119/69/1/115/30/0;
+!!SN:Vi^Anzahl_Abilities_List^/84/103/37/50/87/43/30;
+
+; Only available on BF in this script! It looks like there are other EA blocking the functionality of this
+; Currently disabled until it's tested by Perry
+!?FU(OnSetupBattlefield)&i^Anzahl_Abilities^; [Must be later than other scripts setting EA bonuses]
+!!FU:E;
+
+!!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST);
+  !!BMi:N?(num:y);
+
+  !!if&(num)>0;
+    !!BMi:I?(side:y);
+
+    !!FU(diff_SetUpStackExpAbilities):Pi/(side);
+  !!en;
+!!en;
+
+!?FU(diff_SetUpStackExpAbilities)&i^Anzahl_Abilities^;
+*?FU(WOG_BattleStack_InitParams)&i^Anzahl_Abilities^;
+!#VA(stackId:x) (side:x);
+
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpOn:y);
+!!FU&(stackExpOn)<>(TRUE):E;
+
+; Exit if not from the right side, or not neutral fight
+!!FU&(side)<>(BATTLE_RIGHT):E;
+!!FU&i^battle_owner_1^>(NO_PLAYER)/i^wog_72_randHeroActive^<>(TRUE):E;
+
+; Exit if no Monster
+!!BM(stackId):T?(type:y);
+!!FU&(type)<=(NO_MON):E;
+
+; Exit for special monsters
+!!FU|(type)=(MON_NOT_USED_1)/(type)=(MON_NOT_USED_2)/(type)=(MON_NOT_USED_3)/(type)=(MON_NOT_USED_4):E; [Exclue not used]
+!!FU&(type)>=(MON_CATAPULT)/(type)<=(MON_ARROW_TOWERS):E; [Execlude Warmachines]
+!!FU&(type)>=(MON_EMISSARY_OF_WAR)/(type)<=(MON_EMISSARY_OF_LORE):E; [Exlude emmissaries]
+!!FU&(type)>=(MON_COMMANDER_FIRST_A)/(type)<=(MON_COMMANDER_LAST_D):E; [Exclude commanders]
+
+; Exit if there is no available slot
+!!VR(eaStack:y):S(stackId) +1 *-1;
+!!EA(eaStack):F0/?(availSlot:y);
+!!FU&(availSlot)=-1:E;
+
+!!BM(stackId):E?(spells:y);
+
+!!FU(NewIntArray):P?(availAbilitiesList:y);
+
+!!re i/0/29;
+  !!VR(typeIndex:y):Si *3;
+  !!VR(subtypeIndex:y):S(typeIndex) +1;
+
+  !!SN:Mi^Anzahl_Abilities_List^/(typeIndex)/?(type:y) Mi^Anzahl_Abilities_List^/(subtypeIndex)/?(subtype:y);
+
+  ; Skip Rebirh if it's too effective
+  !!if&(type)=102/(subtype)=114/(spells)>3;
+    !!co;
+  !!en;
+
+  ; Get the slot of the ability, or returned the first empty slot
+  !!EA(eaStack):F(type)/(subtype)/?(slot:y);
+
+  ; If it returend the first empty slot, which means the ability is not avaialble for the given monster, add the ability
+  !!if&(availSlot)=(slot);
+    !!FU(Array_Push):P(availAbilitiesList)/i;
+  !!en;
+!!en;
+
+!!FU(Array_Shuffle):P(availAbilitiesList);
+
+!!re i/1/i^Anzahl_Abilities^;
+  !!SN:M(availAbilitiesList)/?(size:y);
+  !!FU&(size)=0:E;
+
+  !!EA(eaStack):F0/?(availSlot);
+  !!FU&(availSlot)=-1:E;
+
+  !!FU(Array_Pop):P(availAbilitiesList)/?(abilityIndex:y);
+  !!VR(typeIndex):S(abilityIndex) *3;
+  !!VR(subtypeIndex):S(typeIndex) +1;
+  !!VR(valueIndex:y):S(subtypeIndex) +1;
+  !!SN:Mi^Anzahl_Abilities_List^/(typeIndex)/?(type);
+  !!SN:Mi^Anzahl_Abilities_List^/(subtypeIndex)/?(subtype);
+  !!SN:Mi^Anzahl_Abilities_List^/(valueIndex)/?(value:y);
+
+  !!EA(eaStack):B(availSlot)/1/(type)/(subtype)/(value)/(value)/(value)/(value)/(value)/(value)/(value)/(value)/(value)/(value)/(value);
+!!en;
+
+// Old implementation
 !?FU(OnCombatRound)&v997=0/1000;        [Switched to BA from BF because of EA bug overriding HP]
 
 !!FU:E;                                 [Disabled because it bugs]
