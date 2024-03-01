@@ -8,9 +8,8 @@ ZVSE2
 ** September 16, 2004 to correct some y variables that should have been y- variables.
 ** Special thanks to Fnord for help with bug fixing and script maintenance
 ** Artifact descriptions transferred to script75 on Jul. 18. 2004 by Hermann the Weird
-** Updated Nov 2022 by Archer30
 ** Updated Jan 2023 by daemon_n with perfect optimization and nativization kek 
-
+** Updated Feb 2024 by Archer30
 
 
 ** Improves many weak artifacts
@@ -286,7 +285,19 @@ ZVSE2
 
 ** function to handle creature artifacts for a hero who has one
 !?FU(WOG_71_UpgradeMonsterWithArtifact);                          x2=artifact number  x3=creature type
-!#VA(hero:x) (artifact:x) (monster:x);
+!#VA(hero:x) (art:x) (monster:x);
+
+!!VR(index:y)&(art)=(ART_CENTAUR_AXE):S0;
+!!VR(index)&(art)=(ART_SHIELD_OF_THE_DWARVEN_LORDS):S1;
+!!VR(index)&(art)=(ART_HELM_OF_THE_ALABASTER_UNICORN):S2;
+!!VR(index)&(art)=(ART_BREASTPLATE_OF_PETRIFIED_WOOD):S3;
+!!VR(index)&(art)=(ART_AMULET_OF_THE_UNDERTAKER):S4;
+!!VR(index)&(art)=(ART_VAMPIRES_COWL):S5;
+!!VR(index)&(art)=(ART_DEAD_MANS_BOOTS):S6;
+
+!!VR(bit:y):S1 Sd<<(index);
+!!VR(isDisabled:y):Si^wog_71_disabledUpgrades^ &(bit);
+!!FU&(isDisabled):E;
 
 !!VR(monCount:y):S0;
 
@@ -300,11 +311,11 @@ ZVSE2
     !!HE(hero):B0/?(heroName:z);                  [get hero name]
     !!HE(hero):R2/?(gender:y);          [get hero sex]
     !!SN:T^wog.whose%(gender)^/?(whose:z);     
-    !!SN:H^art^/(artifact)/0/?(artName:z);       [get artifact name]
+    !!SN:H^art^/(art)/0/?(artName:z);       [get artifact name]
     !!VR(isPlural:y):S(monCount) -1 B;  [get creature name]
     !!SN:H^monname^/(monster)/(isPlural)/?(monName:z);
     !!SN:T^wog.71.upgrade^/?(msg:z)/^monName^/(monName:z)/^heroName^/(heroName)/^whose^/(whose)/^artName^/(artName);
-    !!IF:Q1/(PIC_TYPE_ART)/(artifact)/(MSG_TYPE_MES)/(msg:z);
+    !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_MES)/(msg:z);
   !!en;
 
   !!VR(upgMon:y):S(monster) +1;         [set for upgrade]
@@ -438,4 +449,80 @@ ZVSE2
   !!en;
 
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(value);
+!!en;
+
+// Enable/Disable artifact creature upgrades on Monday
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/999;
+!!UN:P71/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VR(slot:y):S(NO_ART_SLOT);
+!!VR(item:y):Si^mouse_item^;
+
+!!if&(item)>=2/(item)<=14|(item)=20;
+  !!VR(slot):S(item) -2;
+!!en;
+
+!!FU&(slot)=(NO_ART_SLOT):E;
+
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU(WOG_71_PrepareToDisableArt):P(hero)/(slot);
+
+!?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/999;
+!!UN:P71/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VR(hero:y):S(NO_HERO);
+!!VR(item:y):Si^mouse_item^;
+
+!!if&(item)>=27/(item)<=39|(item)=45;
+  !!VR(slot:y):S(item) -27;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=46/(item)<=58|(item)=64;
+  !!VR(slot):S(item) -46;
+  !!CM:H?(otherHero)/?(hero);
+!!en;
+
+!!FU&(hero)=(NO_HERO):E;
+
+!!FU(WOG_71_PrepareToDisableArt):P(hero)/(slot);
+
+!?FU(WOG_71_PrepareToDisableArt);
+!#VA(hero:x) (slot:x);
+
+!!HE(hero):A1/?(art:y)/(slot);
+
+; This script works for all 7 artifact upgrades, but here we enable only Dead Man's Boots 
+; as it seems to be the only case we want to disable (cause raising Skeletons are sometimes stronger)
+; Note that right-click menu here could conflict with the interaction of combination artifacts
+; It is allowed only for Dead man's boots also for this reason
+*!if|(art)=(ART_CENTAUR_AXE)/(art)=(ART_SHIELD_OF_THE_DWARVEN_LORDS)/(art)=(ART_HELM_OF_THE_ALABASTER_UNICORN)/(art)=(ART_BREASTPLATE_OF_PETRIFIED_WOOD)
+  /(art)=(ART_AMULET_OF_THE_UNDERTAKER)/(art)=(ART_VAMPIRES_COWL)/(art)=(ART_DEAD_MANS_BOOTS);
+!!if&(art)=(ART_DEAD_MANS_BOOTS);
+
+  !!CM:R0;
+
+  !!VR(index:y)&(art)=(ART_CENTAUR_AXE):S0;
+  !!VR(index)&(art)=(ART_SHIELD_OF_THE_DWARVEN_LORDS):S1;
+  !!VR(index)&(art)=(ART_HELM_OF_THE_ALABASTER_UNICORN):S2;
+  !!VR(index)&(art)=(ART_BREASTPLATE_OF_PETRIFIED_WOOD):S3;
+  !!VR(index)&(art)=(ART_AMULET_OF_THE_UNDERTAKER):S4;
+  !!VR(index)&(art)=(ART_VAMPIRES_COWL):S5;
+  !!VR(index)&(art)=(ART_DEAD_MANS_BOOTS):S6;
+
+  !!VR(bit:y):S1 Sd<<(index);
+  !!VR(isDisabled:y):Si^wog_71_disabledUpgrades^ &(bit);
+
+  !!if&(isDisabled)=(FALSE);
+    !!VR(stat:z):S^%T(wog.102.on)^;
+    !!VR(rstat:z):S^%T(wog.102.off)^;
+  !!el;
+    !!VR(stat):S^%T(wog.102.off)^;
+    !!VR(rstat):S^%T(wog.102.on)^;
+  !!en;
+
+  !!SN:H^art^/(art)/1/?(artDesc:z) T^wog.71.switch^/?(msg:z)/^art_name^/(artDesc)/^stat^/(stat)/^rstat^/(rstat);
+
+  !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_QUESTION)/(msg);
+  !!VRi^wog_71_disabledUpgrades^&1:X(bit);
 !!en;
