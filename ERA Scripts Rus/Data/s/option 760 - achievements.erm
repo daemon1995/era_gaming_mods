@@ -765,7 +765,7 @@ ZVSE2
 !!SN:W^opt760.10.0^/y4;                 // шанс получить порчу у атакующей стороны
 !!SN:W^opt760.10.1^/y3;                 // шанс получить порчу у защищающейся стороны
 
-!?FU(OnBattleRound);                    // в начале каждого раунда
+!?FU(OnBattleRound)&i^battle_round^>=0; // в начале каждого раунда
 !!UN:P760/?y1;
 !!FU&y1=0:E;                            // выход, если опция не включена
 
@@ -823,7 +823,7 @@ ZVSE2
 ** Достижение 11: Защитник Городские башни имеют 5% шанс отравить отряд врага
 ** Достижение 12: Захватчик Катапульта после выстрела имеет 10% шанс получить второй ход.
 
-!?FU(OnBattleRound)&v997=0;             // в начале нулевого раунда
+!?FU(OnBattleRound)&i^battle_round^=0;  // в начале нулевого раунда
 !!UN:P760/?y1;
 !!FU&y1=0:E;                            // выход, если опция не включена
 
@@ -992,39 +992,42 @@ ZVSE2
   !!SN:W^opt760.13.0^/y4;               // установка шанса оцепенения отрядов атакующего
 !!en; 
 
-!?FU(OnBattleRegeneratePhase);          // фаза регенерации
-!!UN:P760/?y1;
-!!FU&y1=0:E;                            // выход, если опция не включена
+!?FU(OnBeforeBattleAction)&i^battle_hero_vs_hero^;
+!!UN:P760/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!BA:H1/?y1;
-!!FU&y1<0:E;                            // выход, если не битва двух героев
+; Exit if not walking or shooting
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_WALK_AND_ATTACK)/(action)<>(BATTLE_ACTION_SHOOT):E;
 
-!!SN:X?y1;                              // y1 - номер отряда
-!!BMy1:T?y2 F?y5;                       // y2/y5 - тип/флаги отряда
-!!FU&y2>=150/y2<=158:E;                 // оцепенение не действует на существ "8го уровня"
-!!FU&y2>=132/y2<=135:E;                 // оцепенение не действует на "реликтовых драконов"
+; Exit if not alive
+!!BMi^battle_acting_stack^:F?(flags:y);
+!!VR(isAlive:y):S(flags) &(MON_FLAG_ALIVE);
+!!FU&(isAlive)=0;
 
-!!VRy3:Sy5 &16;
-!!FU&y3=0:E;                            // оцепенение не действует на нажить и элементалей
+; Check acted flag for mod compatibility
+!!VR(isActed:y):S(flags) &(MON_FLAG_ACTED);
+!!FU&(isActed):E;
 
-!!VRy3:Sy5 &8388608;
-!!FU&y3>0:E;                            // оцепенение не действует на клонов
+; Exit if the creature is stronger than the weakest level 8
+!!BMi^battle_acting_stack^:T?(type:y);
+!!MA:F(MON_BLOOD_DRAGON)/?(bloodFv:y) F(type)/?(fv:y);
+!!FU&(fv)>=(bloodFv):E;
 
-!!VRy2:S0 R99;                          // y2 - случайное число
-!!SN:W^opt760.13.0^/?y3;                // y3 шанс оцепенения отрядов атакующего
-!!SN:W^opt760.13.1^/?y4;                // y4 шанс оцепенения отрядов защищающегося
-!!FU&y1<21/y3<=y2:E;                    // выход если оцепенение не сработало для отряда атакующего
-!!FU&y1>20/y4<=y2:E;                    // выход если оцепенение не сработало для отряда защищающегося
-!!VRy5:|67108864 |536870912;            // добавление флагов "уже ходил" и "не меняет цвет"
-!!BMy1:Fy5 R0 G74/?i/?j;
-!!BMy1&i<1:M74/1/1;                     // оцепеневший отряд теряет ход и возможность контратаковать
-!!SN:Xd/d/1;                            // блок регенерации отряда
+; Exit if not lucky
+!!VR(random:y):R0/0/99;
+!!FU&i^battle_acting_side^=(BATTLE_LEFT)/i^opt760.13.0^<=(random):E;                    // выход если оцепенение не сработало для отряда атакующего
+!!FU&i^battle_acting_side^=(BATTLE_RIGHT)/i^opt760.13.1^<=(random):E;                    // выход если оцепенение не сработало для отряда защищающегося
+
+; Set the destination to -1 so the monster won't attack (but will still walk)
+!!BG:D-1;
+!!BMi^battle_acting_stack^:Fd|(MON_FLAG_ACTED);
 
 !!if&i^battle_isVisible^;               // для нетеоретической битвы
-  !!SN:T^opt760.b13^/?z1;               // z1 - текст сообщения об оцепенении
-  !!MM:Sz1;
+  !!SN:T^opt760.b13^/?(msg:z);          // текст сообщения об оцепенении
+  !!MM:S(msg);
   !!SN:P^FEAR^;
-  !!BMy1:V15;                           // вывод текста в лог битвы, звук и анимация страха
+  !!BMi^battle_acting_stack^:V15;       // вывод текста в лог битвы, звук и анимация страха
 !!en; 
 
 !?FU(OnBeforeBattleAction);             // перед действием в бою
