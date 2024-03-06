@@ -5360,13 +5360,44 @@ Exp_Health_Set
 !!DL:C1;
 
 
-**** disable unecessary right-click msg on system option if diff mod is enabled - Archer
-
+// disable the unecessary right-click msg on system option if diff mod is enabled by Archer30
 !?FU(OnAdventureMapRightMouseClick);
 !!CM:I?(location:y);                    [clicked location]
-!!UN:J8/1/^Difficulty Mod.pac^;         [check if diff mod is enabled]
-!!CM&(location)=10/1:R0;                [disable right-click standard action on system option if true]
 
+!!if&(location)=10;
+  !!UN:J8/1/^Difficulty Mod.pac^;       [check if diff mod is enabled]
+  !!CM&1:R0;                            [disable right-click standard action on system option if true]
+!!en;
+
+
+// Manage the growth of Perry's CB template by Archer30
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^;
+!!UN:P235/?(bankGrowth:y);
+
+!!re i/0/99;                            [99 - the max number to loop, currently TUM has 62 banks, this should be enough for a while]
+  !!if&i<10;
+    !!VR(indexStr:z):S^00%i^;
+  !!el&i>=10/i<100;
+    !!VR(indexStr):S^0%i^;
+  !!en;
+
+  // At least 10% growth if revisiting is possible
+  ; If Difficulty mod is enabled, set the growth to the value in Diff mod
+  !!if&(bankGrowth);
+    !!VR(growth:y):S10;
+
+    ; variable from Difficulty mod
+    !!if&i^Guarded_Object_growth_Rate^>100;
+      !!VR(growth):Si^Guarded_Object_growth_Rate^ -100;
+    !!en;
+
+    !!VRi^CB_%(indexStr)_Custom_Growth^:S(growth);
+  // Disable revisiting if CB growth wog option is disabled
+  ; 7 - to prevent affecting dwelling banks from TUM. They will be reset no matter what
+  !!el;
+    !!VRi^CB_%(indexStr)_Revisit^&i^CB_%(indexStr)_Revisit^>7:S0;
+  !!en;
+!!en;
 
 ****************************************************************************************************
 
@@ -5417,34 +5448,4 @@ AI neutral players or heroes gets Stronger Commander in battle
       !!VRy20:S20R60; !!VRy16:*y20:100+1; !!VRy16&y16<4:S4; !!BMi:Sy16; [Set Speed 4 is minimum speed]
     !!en;
  !!en;
-!!en;
-
-// Manage the growth of Perry's CB template
-// by Archer30
-!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^;
-!!UN:P235/?(bankGrowth:y);
-
-!!re i/0/99;                            [99 - the max number to loop, currently TUM has 62 banks, this should be enough for a while]
-  !!if&i<10;
-    !!VR(indexStr:z):S^00%i^;
-  !!el&i>=10/i<100;
-    !!VR(indexStr):S^0%i^;
-  !!en;
-
-  // At least 10% growth if revisiting is possible
-  ; If Difficulty mod is enabled, set the growth to the value in Diff mod
-  !!if&(bankGrowth);
-    !!VR(growth:y):S10;
-
-    ; variable from Difficulty mod
-    !!if&i^Guarded_Object_growth_Rate^>100;
-      !!VR(growth):Si^Guarded_Object_growth_Rate^ -100;
-    !!en;
-
-    !!VRi^CB_%(indexStr)_Custom_Growth^:S(growth);
-  // Disable revisiting if CB growth wog option is disabled
-  ; 7 - to prevent affecting dwelling banks from TUM. They will be reset no matter what
-  !!el;
-    !!VRi^CB_%(indexStr)_Revisit^&i^CB_%(indexStr)_Revisit^>7:S0;
-  !!en;
 !!en;
