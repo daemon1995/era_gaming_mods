@@ -1,7 +1,7 @@
 ﻿ЭТО ЛИШЬ МОД РУСИФИКАЦИИ
 ОН ТРЕБУЕТ ОРИГИНАЛЬНЫЙ МОД "Advanced Classes Mod" ДЛЯ РАБОТЫ
 
-Advanced Classes Mod 1.09
+Advanced Classes Mod 1.091
 
 Мод создан Perry R, для игры "Герои Меча и Магии 3" ERA 3.9
 при содействии AlfWithCake, anti-victor, daemon_n и Sandris
