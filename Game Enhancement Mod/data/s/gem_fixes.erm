@@ -7,6 +7,99 @@ ZVSE2
 ************************************************************************
 ************************************************************************
 
+// Flexible cheats input
+// by Archer30
+; This script enables good old HoMM 3 cheats for ERA
+; It also allows using cheats when the input is mixing with unrelated characters. The first word of the input would be checked and decide whether it's a cheat code input.
+; Cheats that works for both adventure map and battlefield in SoD now also works the same in ERA
+!?FU(gem_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/4205107/(gem_OnDecryptInputString); 00402A33
+
+!?FU(gem_OnDecryptInputString);
+!#VA(hook:x);
+
+; Exit if it is not a place to use cheats
+!!FU(H3Dlg_GetCurrentDlgId):P?(dlgId:y);
+!!FU&(dlgId)<>(DLG_ADVMAP)/(dlgId)<>(DLG_BATTLE):E;
+
+; Get the input
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/8/4/?(ptr:y);
+!!SN:B(ptr)/d/?(input:z);
+
+; Catch only the first word of the input to check if they match any cheats
+!!VR(firstWord:z):M2/(input)/0;
+; Convert the first word to lower case for the next step
+!!FU(StrToLower):P(firstWord)/?(str:z);
+
+; Make old cheats work by converting them to new ones
+!!VR(newStr:z):S^^;
+
+; Check mappings
+; For adventure map
+!!if&(dlgId)=(DLG_ADVMAP);
+  !!OW:Ai^timerOwner^/?(hero:y);
+
+  !!if&(hero)>(NO_HERO);
+    !!if|(str)=^nwcmuchrejoicing^/(str)=^nwcmorpheus^/(str)=^wogfellowship^; [Full Morale on Hero. No AB]
+      !!VR(newStr):S^wogfellowship^;
+    !!el|(str)=^nwcigotbetter^/(str)=^nwcquigon^/(str)=^nwcneo^/(str)=^woggandalfwhite^; [Gain +1 Level for Hero]
+      !!VR(newStr):S^woggandalfwhite^;
+    !!el|(str)=^nwcantioch^/(str)=^nwcr2d2^/(str)=^nwclotsofguns^/(str)=^wogoliphaunt^; [All War Machines]
+      !!VR(newStr):S^wogoliphaunt^;
+    !!el|(str)=^nwctim^/(str)=^nwcmidichlorians^/(str)=^nwcthereisnospoon^/(str)=^wogsaruman^/(str)=^woggandalf^; [999 Mana and All Spells]
+      !!VR(newStr):S^wogsaruman^;
+    !!el|(str)=^nwcfleshwound^/(str)=^nwcdarthmaul^/(str)=^nwcagents^/(str)=^wogpathofthedead^; [Fill Each Slot with 10 Black Knights]
+      !!VR(newStr):S^wogpathofthedead^;
+    !!el|(str)=^nwcavertingoureyes^/(str)=^nwcpadme^/(str)=^nwctrinity^/(str)=^woggaladriel^; [Fill Your Army with Archangels]
+      !!VR(newStr):S^woggaladriel^;
+    !!el|(str)=^nwccoconuts^/(str)=^nwcpodracer^/(str)=^nwcnebuchadnezzar^/(str)=^wogshadowfax^; [Unlimited Movement for Hero]
+      !!VR(newStr):S^wogshadowfax^;
+    !!el|(str)=^nwccastleanthrax^/(str)=^nwcfollowthewhiterabbit^/(str)=^wogbilbo^; [Full Luck on Your Hero. No AB]
+      !!VR(newStr):S^wogbilbo^;
+    !!en;
+  !!en;
+
+  !!if|(str)=^nwcsirrobin^/(str)=^nwcbluepill^/(str)=^wogdarklord^/(str)=^wogdenethor^; [Instant lose. No AB]
+    !!VR(newStr):S^wogdarklord^;
+  !!el|(str)=^nwcalreadygotone^/(str)=^nwcprophecy^/(str)=^nwcoracle^/(str)=^wogpalantir^; [Show Full Grail Map]
+    !!VR(newStr):S^wogpalantir^;
+  !!el&(str)=^nwcignoranceisbliss^;     [Hide Full Map. No RoE, AB]
+    !!VR(newStr):S^wogmordor^;
+  !!el|(str)=^nwctrojanrabbit^/(str)=^nwcredpill^/(str)=^wogonering^/(str)=^wogfrodo^; [Instant Win. No AB]
+    !!VR(newStr):S^wogonering^;
+  !!el|(str)=^nwcshrubbery^/(str)=^nwcwatto^/(str)=^nwctheconstruct^/(str)=^wogisengard^; [100,000 Gold and 100 of Every Resource]
+    !!VR(newStr):S^wogisengard^;
+  !!el|(str)=^nwconlyamodel^/(str)=^nwccoruscant^/(str)=^nwczion^/(str)=^wogminastirith^; [All Buildings]
+    !!VR(newStr):S^wogminastirith^;
+  !!el|(str)=^nwcgeneraldirection^/(str)=^nwcrevealourselves^/(str)=^nwcwhatisthematrix^/(str)=^wogeyeofsauron^; [Reveal Full Map]
+    !!VR(newStr):S^wogeyeofsauron^;
+  !!el&(str)=^nwcphisherprice^;         [Alternate Color Scheme - not working? Disabled for now. No AB]
+    !!FU:E;
+
+    !!VR(newStr):S^wogsarumanofmanycolors^;
+  !!en;
+
+; For battle
+!!el&(dlgId)=(DLG_BATTLE);
+  !!if&i^battle_hero_%i(battle_current_side)^>(NO_HERO);
+    !!if|(str)=^nwctim^/(str)=^nwcmidichlorians^/(str)=^nwcthereisnospoon^/(str)=^wogsaruman^/(str)=^woggandalf^; [999 Mana and All Spells]
+      !!VR(newStr):S^woggandalf^;
+    !!en;
+  !!en;
+
+  !!if|(str)=^nwcsirrobin^/(str)=^nwcbluepill^/(str)=^wogdarklord^/(str)=^wogdenethor^; [Instant lose. No AB]
+    !!VR(newStr):S^wogdenethor^;
+  !!el|(str)=^nwctrojanrabbit^/(str)=^nwcredpill^/(str)=^wogonering^/(str)=^wogfrodo^; [Instant Win. No AB]
+    !!VR(newStr):S^wogfrodo^;
+  !!en;
+!!en;
+
+!!SN&(newStr)<>^^:B(ptr)/d/(newStr);
+
+
 // Assemble/Disassemble artifacts overhaul
 // by Archer30
 ; On hero screen:
