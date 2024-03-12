@@ -66,6 +66,15 @@ Dialogues: 30-32
  [Continue only if not AI player]
 !!FU&-(ERM_FLAG_IS_HUMAN):E;
 
+; Check if it is possible to place a monster stack on the map
+!!VR(monX:y):Sv998 -1;
+!!VR(monY:y):Sv999 +1;
+!!UN:X?(size:y)/?(layer:y);
+!!FU|(monX)<0/(monX)>=(size)/(monY)<0/(monY)>=(size):E;
+
+!!OB(monX)/(monY)/v1000:T?(objType:y);
+!!FU&(objType)<>(OBJ_STUB)/(objType)<>(OBJ_MONSTER):E;
+
  [Set up new text for artifacts used as dialogue box pictures]
 !!VRz210:Sz121001;
 !!VRz211:Sz121002;
@@ -85,13 +94,11 @@ Dialogues: 30-32
 !!UN:A(ART_TITANS_GLADIUS)/9/0;
 !!UN:A(ART_TITANS_GLADIUS)/10/0;
 
- [Check if a monster is already present at the Guild]
-!!VR(entranceX:y):Sv998 -1;
-!!OB(entranceX)/v999/v1000:T?(objType:y);
-
  [If player chooses "hire freelancers", call Function 1400 unless a monster's already there or the map is full of wandering monsters]
 !!if&-2;
-  !!if&(objType)<>(OBJ_MONSTER);
+  !!OB(monX)/(monY)/v1000:T?(objType:y);
+
+  !!if&(objType)=(OBJ_STUB);
     ; Check if there are more than enough wandering monsters on the map
     !!FU(WOG_GetNumberOfAvailWanderingMonsters):P?(availWM:y);
 
@@ -572,17 +579,18 @@ Dialogues: 30-32
 
  [Determine location for wandering monster to appear - object location with x = x - 1]
 !!VR(monX:y):Sv998 -1;
+!!VR(monY:y):Sv999 +1;
 
  [Place new monster]
-!!UN:I(monX)/v999/v1000/(OBJ_MONSTER)/v222;
+!!UN:I(monX)/(monY)/v1000/(OBJ_MONSTER)/v222;
 
  [Set wandering monster numbers, hostility rating, set to grow and message text]
-!!MO(monX)/v999/v1000:Gv223 R1 U1 O0;
+!!MO(monX)/(monY)/v1000:Gv223 R1 U1 O0;
 !!VRz1:H49;
-!!MO(monX)/v999/v1000&v1<>-1/49:Mz1;
+!!MO(monX)/(monY)/v1000&v1<>-1/49:Mz1;
 
  [Convert monster to wandering monster]
-!!MW:M(monX)/v999/v1000/?(wanderMon:y);
+!!MW:M(monX)/(monY)/v1000/?(wanderMon:y);
 
 ; Note: Be very careful with MW:A - they don't work as described in Erm Help!
 ; If you set the last parametre to 2, the monster will chase the hirer instead, reason is yet to be found.
@@ -662,7 +670,10 @@ Dialogues: 30-32
 
     ; Set the monster to flee if it is a betrayal
     !!VR(hiredPlayer:y):S(hiredPlayerPlusOne) -1;
-    !!FU1409:P(mwId)/(hiredPlayer);
+    !!FU1409:P(mwId)/(hiredPlayer)/?(result:y);
+
+    ; New implementation
+    *!SN&(result):Q;
   !!en;
 !!en;
 
@@ -671,7 +682,9 @@ Dialogues: 30-32
  [Start of attacking a Freelancer's Guild wandering monster]
  [x1=wandering monster #, x2=player colour+1]
 !?FU1409;
-!#VA(mwId:x) (hiredPlayer:x);
+!#VA(mwId:x) (hiredPlayer:x) (result:x);
+
+!!VR(result):S(FALSE);
 
  [Get player team that sent the WM]
 !!OW:T(hiredPlayer)/?(hiredTeam:y);
@@ -705,6 +718,18 @@ Dialogues: 30-32
   !!en;
 
   !!MO998:Mz121081;
+
+  ; New implementation
+  ; It seems this implementation has a chance to conflict with Mixed Neutrals
+  *!if&(ERM_FLAG_IS_HUMAN);
+    *!IF:M^%z121081^;
+    *!SN:P^killfade^;
+  *!en;
+
+  *!OB998:S;
+  *!UN:Ov998/v999/v1000/1;
+  *!VR(result):S(TRUE);
+
   !!VRi^wog_21_betrayed^:S(TRUE);
 
  [Change number of monsters to 0 and delete their wandering monster message]
@@ -714,9 +739,12 @@ Dialogues: 30-32
 
 ; The trigger has to be OnBeforeBattle to be compatible with Henchmen script
 !?FU(OnBeforeBattle)&i^wog_21_betrayed^;
-!!VRi^wog_21_betrayed^:S(FALSE);
 !!BA:D1;                                [Cancel the battle]
 !!SN:Q;                                 [Cancel the process of selectig a henchman (if applicable)]
+
+!?FU(OnBeforeBattleUniversal)&i^wog_21_betrayed^;
+!!SN:Q;
+!!VRi^wog_21_betrayed^:S(FALSE);
 
 !?FU(OnAfterLoadGame);
 !!VRi^wog_21_betrayed^:S(FALSE);
