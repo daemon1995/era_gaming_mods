@@ -377,9 +377,15 @@ Enable Artefact to appear on the map
 
 !!if&y1;
   !!SN:Ay1/^SetHook^/?y2;
+
+  !!SN&i^Alternative_Necromancy_Mod^:Ey2/1/5127891/(ACM_OnDetermineNecromancyMon);
   !!SN:Ey2/1/5128029/(Necro_ChangePower_1); [Change the power Necromancy when the hero learns M/GM Neromany by daemon_n]
-  !!SN:Ey2/1/5128574/(Necro_ChangePower_2); [Divide Necromancy power by 2]
+  !!SN&i^Alternative_Necromancy_Mod^:Ey2/1/5128011/(Necro_ChangePower_2); [Get the hero Id for Custom Necromancy] 4E3F4B
+  !!SN:Ey2/1/5128574/(Necro_ChangePower_3); [Divide Necromancy power by 2]
 !!en;
+
+; Change the Necromancy rate of Soul Prism to 0.4 (as it would be divided by 2 later)
+!!UN:C5128477/1/176;
 
 !!FU(Set_SS_Skill_Name_and_Text):P;     [Set Secondary Skill Descriptions and Names]
 
@@ -419,7 +425,7 @@ Enable Artefact to appear on the map
 !!UN:C7779071/2/37008;                  [Fix commander cast from Hawaiing]
 
 thanks to Archer :)
-!!UN:C5137159/0/(UNC_UINT16)/?(value:y);[Check for Third Upgrade Mod and disable hook if present to prevent zero Exp bug because Amethyst hooks at the same spot]
+!!UN:C5137159/0/(UNC_UINT16)/?(value:y);[Check for Third Upgrade Mod and disable hook if presented to prevent zero Exp bug because Amethyst hooks at the same spot]
 !!if&(value)=19085;                     [19085 - the value without TUM]
   !!UN:C5137159/0/(UNC_UINT16)/51505;   [Make Damage Spell Specialist always do 3% more damage per level]
   !!UN:C5137159/2/(UNC_UINT8)/65;       [Code provided by Berserker]
@@ -437,7 +443,122 @@ It simply skips the condition of "don't check resistance when it's a monster spe
 this should make creature casts respecting dwarv type golem resistance
 !!UN:C5899743/(UNC_INT16)/(OPCODE_NOP_2);[5A05DF by Archer]
 
+; Building - Necromancy Amplifier
+!!UN:C6977844/4/?(ptr:y);
+!!SN:B(ptr)/d/?(desc:z);
+!!FU(ACM_SetDividedNecromancyDesc):P(desc)/10/?(newDesc:z);
+!!SN&(newDesc)<>^^:B(ptr)/d/(newDesc);
 
+// Function to divide a number before % by 2 by Archer30
+; Here we assume all the percentage is belowe 100% (max at 2 characters for the number)
+; We also assume that there is the first % we found is next to the number we needed
+!?FU(ACM_SetDividedNecromancyDesc);
+!#VA(descPtr:x) (number:x) (newDescPtr:x);
+
+!!VR(newDescPtr):Z^^;
+!!VR(numberStr:z):S^%(number)^;
+!!SN:K(numberStr)/?(numberSize:y);
+!!SN:Kz(descPtr)/?(size:y);
+
+!!re i/0/(size)/1/-1;
+  !!SN:Kz(descPtr)/i/?(character:z);
+
+  !!if&(character)=^%^;
+    !!VR(numbersInSentence[2]:y):C0/0;
+    !!VR(index:y):Si -1;
+
+    !!SN:Kz(descPtr)/(index)/?(character);
+    !!FU(ACM_CheckIfCharacterIsNumber):P(character)/?(result:y);
+
+    !!if&(result);
+      !!VR(numbersInSentence[1]):V(character);
+
+      !!if&(numberSize)>1;
+        !!VR(index): -1;
+        !!SN:Kz(descPtr)/(index)/?(character);
+        !!FU(ACM_CheckIfCharacterIsNumber):P(character)/?(result:y);
+        !!VR(numbersInSentence[0])&(result):V(character);
+      !!en;
+
+      ; Two character number
+      !!if&(numberSize)>1/(result);
+        !!VR(numbersInSentenceStr:z):S^%(numbersInSentence[0])%(numbersInSentence[1])^;
+      ; One character number
+      !!el;
+        !!VR(numbersInSentenceStr):S^%(numbersInSentence[1])^;
+      !!en;
+
+      !!VR(numbersInSentenceFinal:y):V(numbersInSentenceStr);
+      
+      ; If the number before % is the same with the number provided, divide it by 2
+      !!if&(number)=(numbersInSentenceFinal);
+        !!VR(numberFloat:e):S(number);
+        !!VR(numberFloat)::2;
+        !!VR(numberStr):S^%(numberFloat)^;
+        !!FU(ACM_OptimiseFloatNumberString):P(numberStr)/?(numberStr);
+
+        *!VR(index:y):-1;
+
+        !!FU(Substr):Pz(descPtr)/0/(index)/?(str1:z);
+        !!VR(lastInd:y):S(size) -1;
+        !!FU(Substr):Pz(descPtr)/i/(lastInd)/?(str2:z);
+
+        !!VR(newDesc:z):S^%(str1)%(numberStr)%(str2)^;
+        !!VR(newDescPtr):Z(newDesc);
+
+      ; Exit if the number before % is differnt from the number provided (this means Necromancy has already been customised)
+      !!el;
+        !!FU:E;
+      !!en;
+
+    ; Exit the function if the character before % is not even a number (something's seriously wrong)
+    !!el;
+      !!FU:E;
+    !!en;
+
+    !!br;
+  !!en;
+!!en;
+
+!?FU(ACM_CheckIfCharacterIsNumber);
+!#VA(charPtr:x) (result:x);
+
+!!VR(result):S(FALSE);
+
+!!re i/0/9;
+  !!br&z(charPtr)=^%i^;
+!!en;
+
+!!VR(result)&i<=9:S(TRUE);
+
+!?FU(ACM_OptimiseFloatNumberString);
+!#VA(strPtr:x) (result:x);
+
+!!VR(result):Z^^;
+!!SN:Kz(strPtr)/?(size:y);
+!!VR(pointPos:y):S0;
+
+!!re i/0/(size)/1/-1;
+  !!SN:Kz(strPtr)/i/?(character:z);
+
+  !!VR(pointPos)&(character)=^.^:Si;
+
+  ; If 0 is found, check if it is the first character after decimal point
+  !!if&(pointPos)>0/(character)=^0^;
+    !!VR(difference:y):Si -(pointPos);
+    !!VRi&(difference)=1:-1;
+
+    !!br;
+  !!en;
+!!en;
+
+!!if&i<(size);
+  !!FU(Substr):Pz(strPtr)/0/i/?(newStr:z);
+  !!VR(result):Z(newStr);
+!!en;
+
+
+// Necromancy features by Archer30
 *Set Necromancy value according to Expert/Master/Grandmaster skill level
 !?FU(Necro_ChangePower_1);
 ; Note that with this hook, part of the lines are eaten so we need to manually put them back
@@ -469,25 +590,51 @@ this should make creature casts respecting dwarv type golem resistance
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5128496; 4E4130
 !!en;
 
-
 *At battle end change the Necromancy value depending on certain options
+; Note that Alternative Necromancy will overrides Cloak of the Undead King and restrain the rate of Necromancy, even if the raised creature is weaker than default
 !?FU(Necro_ChangePower_2);
+!#VA(hook:x);
 
-!!BA:H0/?y1;                            [Get hero number of current combat]
-!!SN:W^H3_Necromancy_Choice_%Y1^/?y10;  [check if alternative necro option was set to raise a different creature]
-!!VRy2:Sx1 +8;  !!UN:Cy2/4/?y3;
-!!VRy4:Sy3 -4;  !!UN:Cy4/4/?y5;
-!!SN:X?y9 Xy5 X?e5 Xy9;                 [get fct parameters]
-!!VRe5::2;                              [divide necromancy by 2, including Artifacts and Necro Amplifier]
-!!if&y10>56;                            [if anything higher than skeletons was selected]
-  !!VRe5&y10=58:S10:100;                [set to 10%]
-  !!VRe5&y10=60:S7:100;                 [set to 7%]
-  !!VRe5&y10=62:S4:100;                 [set to 4%]
-  !!VRe5&y10=64:S3:100;                 [set to 3%]
-  !!VRe5&y10=66:S2:100;                 [set to 2%]  
+!!VRi^acm_altNecro_customMon^:S0;
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/?(heroStruct:y);
+!!UN:C(heroStruct)/26/4/?(heroId:y);
+
+; QoL: If the hero has Cloak of the Undead King but also choose an option that raises the same creature, the rate of necromancy won't be reduced
+!!FU(ACM_GetDefaultNecromancyMon):P(heroId)/?(defaultMon:y);
+!!VRi^acm_altNecro_customMon^&i^H3_Necromancy_Choice_%(heroId)^<>(defaultMon):Si^H3_Necromancy_Choice_%(heroId)^;
+
+!?FU(Necro_ChangePower_3);
+!#VA(hook:x);
+
+; Get current power
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/-4/4/?(power:y);
+
+; Get the latest power in float
+!!SN:X?t X(power) X?(powerFloat:e) Xt;  [get fct parameters]
+!!VR(powerFloat)::2;
+
+; Fix the power if Necromancy is customised
+!!if&i^acm_altNecro_customMon^>(MON_SKELETON); [if anything higher than skeletons was selected - Alternative Necromancy]
+  !!VR(customMon:y):Si^acm_altNecro_customMon^;
+  !!VRi^acm_altNecro_customMon^:S0;
+
+  !!VR(maxPowerFloat:e)&(customMon)=58:S10; [set to 10%]
+  !!VR(maxPowerFloat)&(customMon)=60:S7; [set to 7%]
+  !!VR(maxPowerFloat)&(customMon)=62:S4; [set to 4%]
+  !!VR(maxPowerFloat)&(customMon)=64:S3; [set to 3%]
+  !!VR(maxPowerFloat)&(customMon)=66:S2; [set to 2%]
+
+  ; Restrain the current power to the given value
+  !!VR(powerFloat):*100 F0/(maxPowerFloat) :100;
 !!en;
-!!SN:X?y9 Xe5 X?y5 Xy9;
-!!UN:Cy4/4/y5;
+
+; Convert to Int
+!!SN:X?t X(powerFloat) X?(power) Xt;    [get fct parameters]
+
+; Set
+!!UN:C(ebp)/-4/4/(power);
 
 
 *When clicked on hero name the player sees the prefered class of that hero, if he is mage, warrior or adventurer
@@ -4457,44 +4604,79 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
     !!HEy1:Sv4/?y5/1;
     !!FU&y5<>12:E;                      [Exit if no Necromancy]
 
+    !!FU(ACM_GetDefaultNecromancyMon):P(CURRENT_HERO)/?y30;
+    !!SN:H^monname^/y30/1/?z30;
     !!SN:T^AC_Misc.Necromancy_Text^/?z1;[set text in header]
-    !!SN:T^AC_Misc.Necromancy_Creature_1^/?z2; [56] Skeletons]
+    !!SN:T^AC_Misc.Necromancy_Creature_1^/?z2/^mon^/z30; [default monster]
     !!SN:T^AC_Misc.Necromancy_Creature_3^/?z3; [58] Walking Dead]
     !!SN:T^AC_Misc.Necromancy_Creature_5^/?z4; [60] Wight]
     !!SN:T^AC_Misc.Necromancy_Creature_15^/?z5; [62] Vampires]
     !!SN:T^AC_Misc.Necromancy_Creature_16^/?z6; [64] Liches]
     !!SN:T^AC_Misc.Necromancy_Creature_17^/?z7; [66  Black Knight]
 
-    !!IF:G1/3/0/1/2/3/4/5/6/7/0/0/0/0/0/;[Show Choice Dialouge]
-    !!SN&v3=1:W^H3_Necromancy_Choice_%Y1^/56;
-    !!SN&v3=2:W^H3_Necromancy_Choice_%Y1^/58;
-    !!SN&v3=4:W^H3_Necromancy_Choice_%Y1^/60;
-    !!SN&v3=8:W^H3_Necromancy_Choice_%Y1^/62;
-    !!SN&v3=16:W^H3_Necromancy_Choice_%Y1^/64;
-    !!SN&v3=32:W^H3_Necromancy_Choice_%Y1^/66;
-    *!CM:R0;                            [Disable standard reaction]
+    ; Set default option based on the current selection
+    !!VRy32:S0;
+    !!VRy31:Si^H3_Necromancy_Choice_%y1^;
+
+    !!if&y31<=56;
+      !!VRy32:S1;
+    !!el&y31=58;
+      !!VRy32:S2;
+    !!el&y31=60;
+      !!VRy32:S4;
+    !!el&y31=62;
+      !!VRy32:S8;
+    !!el&y31=64;
+      !!VRy32:S16;
+    !!el&y31=66;
+      !!VRy32:S32;
+    !!en;
+
+    !!IF:G1/3/y32/1/2/3/4/5/6/7/^%T(era.buttons.cancel)^/0/0/0/0/;[Show Choice Dialouge]
+
+    !!SN&v3=1:W^H3_Necromancy_Choice_%y1^/0;
+    !!SN&v3=2:W^H3_Necromancy_Choice_%y1^/58;
+    !!SN&v3=4:W^H3_Necromancy_Choice_%y1^/60;
+    !!SN&v3=8:W^H3_Necromancy_Choice_%y1^/62;
+    !!SN&v3=16:W^H3_Necromancy_Choice_%y1^/64;
+    !!SN&v3=32:W^H3_Necromancy_Choice_%y1^/66;
+    !!CM:R0;                            [Disable standard reaction]
   !!en;
 !!en;
 
-; Change the type of Necromancy creature for Alternative Necromancy by Archer30
-!?FU(OnGameEnter); 
-!!SN:L^EraPlugins\erm_hooker.era^/?y1;
-!!FU&y1=0:E;
+!?FU(ACM_GetDefaultNecromancyMon);
+!#VA(hero:x) (result:x);
 
-!!SN:Ay1/^SetHook^/?y2;
-!!SN&i^Alternative_Necromancy_Mod^:Ey2/1/5127891/(ACM_OnDetermineNecromancyMon);
+!!HE(hero):A2/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(has:y)/?(equipped:y);
 
+!!if&(equipped)=0;
+  !!VR(result):S(MON_SKELETON);
+!!el;
+  !!HE(hero):S(SKILL_NECROMANCY)/?(level:y);
+  
+  !!if&(level)=(SKILL_BASIC);
+    !!VR(result):S(MON_WALKING_DEAD);
+  !!el&(level)=(SKILL_ADVANCED);
+    !!VR(result):S(MON_WIGHT);
+  !!el;
+    !!VR(result):S(MON_LICH);
+  !!en;
+!!en;
+
+
+// Change the type of Necromancy creature for Alternative Necromancy by Archer30
 !?FU(ACM_OnDetermineNecromancyMon);     [Also works for AI]
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/(UNC_INT)/?(heroStruct:y) C(heroStruct)/26/(UNC_INT)/?(hero:y);
 
 ; Change Necromancy raising monster only if it's been set other than Skeletons
 ; This means if it's set to Skeletons from the dialog, Cloak of Undead will work as usual
 ; Ideally the dialog should have "Skeletons" replaced with "Default" to be more exact.
-!!if&i^H3_Necromancy_Choice_%(hero)^>56;
+!!if&i^H3_Necromancy_Choice_%(hero)^>(MON_SKELETON);
   !!SN:X?y99/(FALSE);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/(UNC_INT)/i^H3_Necromancy_Choice_%(hero)^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5127998;
 !!en;
+
 
 !?FU(OnBeforeBattleUniversal);
 
@@ -8646,7 +8828,7 @@ x1=Creature, x2=Hero Number, x3 Returns first upgrade, x4 Returns second upgrade
 
 for later
 ; Discussion: https://discord.com/channels/665742159307341827/1196491118704083065/1209791423998595092
-; Archer30: This script needs to be updated if Maiko finally wants to upgrade TUM 2.17 someday. FU(tum_GetTownMon) is deprecated.
+; Archer30: This script needs to be updated if Maiko finally wants to upgrade TUM after 2.17 someday. FU(tum_GetTownMon) is deprecated.
 !?FU(Set_Creature_Upgrades_TUM);
 !#VA(mon:x) (hero:x) (upgMon:x) (thirdUpgMon:x);
 
