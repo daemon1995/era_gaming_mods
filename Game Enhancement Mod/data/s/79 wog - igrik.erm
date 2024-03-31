@@ -546,7 +546,6 @@ ZVSE2
       !!en;
     !!en;
 
-
   !!el;
     !!VRi^gem_isFirstApril^:S(FALSE);
   !!en;
@@ -554,14 +553,64 @@ ZVSE2
 *!VRi^gem_isFirstApril^:S(TRUE);
 
 !?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^gem_isFirstApril^/i^mouse_item^>=7/i^mouse_item^<=9;
-  !!SN:P^gemRick.wav^;
+  *!SN:P^gemRick.wav^;
+
+!?FU(gem_TownDlg_BeforeSmallCreatureBarDefSet)&i^gem_isFirstApril^;
+
+  // lvl 0 creatures looks like sth
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-28/4/?(dwId:y);
+  !!VRr:R0/0/9;
+  !!if&r=0;
+    !#VA(mons[7]:y);
+    !!VR(mons[0]):C(MON_HORNED_DEMON)/(MON_HELL_BARON)/(MON_PHOENIX)/(MON_ARCHER)/(MON_TROLL)/(MON_AZURE_DRAGON)/(MON_BALLISTA);
+    !!VRr:R0/0/6;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/(mons[r]);
+  !!en;
+
+
+!?FU(gem_OnScreenLogDrawText)&i^gem_isFirstApril^/i^gem_several_PC^=(FALSE);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(textPtr:y);
+  !!SN:B(textPtr)/d/^4 8 15 16 23 42^; // some LOST
+
+
+
+
+
+!?FU(OnEveryDay)&i^gem_isFirstApril^/x1=1/i^timerOnce^;
+!!UN:U63/50/?n;                         [count skulls]
+!!re i/1/n;                             [iterate]
+  !!UN:U63/50/i/2;                      [put coords to v2/v3/v4]
+  !!TRv2/v3/v4:T?t/?s/d/d/d/d/d/d;      [check terrain]
+  !!co|t=4/t>7;                         [skipp bad/same]
+  !!VR(x:y):Sv2-1;                      [loop rectangle]
+  !!re j/0/2;
+    !!VR(y:y):Sv3-1;
+    !!re k/0/1;                         [(]
+      !!TR(x)/(y)/v4:T4/11/d/d/d/d/d/d; [set swamp]
+      !!VR(y):+1; 
+    !!en;
+    !!VR(x):+1; 
+  !!en;
+!!en;
 
 !?FU(gem_CreateERMHook)&i^gem_isFirstApril^;
 
-  *!SN:Ex1/1/4445675/(gem_BeforeBattleStackInit);
-  *!SN:Ex1/1/4681699/(gem_BeforeBattleSetWinner);
+  !!re i/0/7;set new Skull def
+    !!SN:R^skull.def:0_%i.png^/^Data\Defs\shreckul.def\0_0.png^;
+  !!en;
+
+  !!SN:Ex1/1/5129033/(gem_OnHeroScoutingGetBonus);
+
+  !!SN:Ex1/1/4598228/(gem_BeforeCombatDlgShow);
+  !!SN:Ex1/1/6054985/(gem_TownDlg_BeforeSmallCreatureBarDefSet);
+  !!SN:Ex1/1/5590326/(gem_OnScreenLogDrawText);
+
   !!SN:Ex1/1/7760962/(gem_BeforeSpellCostReduction);
   !!SN:Ex1/1/5905747/(gem_AfterSacrificeResurrect);
+
+  !!SN:Ex1/1/5896749/(gem_CombatDlg_AtCastingMouseMove);
+  !!SN:Ex1/1/4799534/(gem_CombatDlg_BeforeCursorShadowDrawing);
+  !!SN:Ex1/1/4799639/(gem_CombatDlg_AfterCursorShadowDrawing);
 
   !!UN:C4457342/1/1/(SPELL_FRENZY) C4457357/6/4/(SPELL_FRENZY); [unicorns casts frenzy]
   !!UN:C5127993/1/4/(MON_PEASANT);
@@ -579,7 +628,59 @@ ZVSE2
   !!re i/0/5;
     !!UN:C4447553/i/1/(OPCODE_NOP_1);   [no more "unaffected by morale"]
   !!en;
-  !!UN:C4447709/1/4/-3;
+  !!UN:C4447709/1/4/-3; // minotaures - 3 morale
+
+!?FU(gem_BeforeCombatDlgShow);&i^gem_isFirstApril^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(dlg:y);
+!!if&(dlg);
+  !!FU(gem_New):P52/?(pcx:y);
+  !!if&(pcx);
+    !!UN:C(dlg)/32/4/?(dlgW:y) C(dlg)/36/4/?(dlgH:y);
+    !!VR(dlgW):-65; 
+    !!VR(dlgH):-67; 
+    !!SN:E4521888/(CALLCONV_THISCALL)/(pcx:y)/(dlgW)/(dlgH)/65/67/20202/^b_toasty.pcx^/2048;           [create bg picture]
+    !!SN:E6287984/(CALLCONV_THISCALL)/(dlg:y)/(pcx:y)/-1;                                 [ad bg picture]
+    !!UN:C(pcx)/24/2/d65; //shit right
+    !!UN:C(pcx)/28/2/0; // set wisth 0 to hide
+    !!VRi^gem_CombatDlg_DlgPcx_Toasty^:S(pcx);
+  !!en;  
+!!en;
+
+!#DC(GEM_COMBAT_DLG_TOASTY_LENGTH) = 565;
+!#DC(GEM_COMBAT_DLG_PROC_HOOK_ADDRESS) = 4667952;
+
+
+
+!?FU(gem_OnHeroScoutingGetBonus)&i^gem_isFirstApril^/i^timerIsAi^=(FALSE);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?s; [get current scouting area]
+!!VRr:R0/1/s;                            [set minmax]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/r;  [set new scouting area (base one)]
+
+!?FU(gem_CombatManager_Proc)&i^gem_CombatDlg_ToastyCounter^;
+!!if&i^gem_CombatDlg_DlgPcx_Toasty^;
+  !!VR(needUpdate:y):S(TRUE);
+
+  !!VR(dlgPcx:y):Si^gem_CombatDlg_DlgPcx_Toasty^;
+  !!UN:C(dlgPcx)/24/2/?(currX:y) C(dlgPcx)/28/2/?(currW:y);
+  !!if&i^gem_CombatDlg_ToastyCounter^>=500;
+    !!UN:C(dlgPcx)/24/2/d-1 C(dlgPcx)/28/2/d1; //shit left
+  !!el&i^gem_CombatDlg_ToastyCounter^<=65;
+    !!UN:C(dlgPcx)/24/2/d1 C(dlgPcx)/28/2/d-1; //shit right
+  !!el;
+    !!VR(needUpdate:y):S(FALSE);
+  !!en;
+
+  !!if&(needUpdate)>0;
+    !!UN:C(dlgPcx)/4/4/?(dlg:y) C(dlgPcx)/16/2/?(itemId:y); C(dlgPcx)/24/2/d-1;
+    !!SN:E6288864/2/(dlg)/1/2000/7000;65535; [update currentDlg;]
+    !!SN:E6288864/2/(dlg)/1/(itemId)/(itemId); [update onlyItem;]
+  !!en;
+!!en;
+
+!!VRi^gem_CombatDlg_ToastyCounter^:-1;
+!!if&i^gem_CombatDlg_ToastyCounter^=0;
+  !!FU(gem_UnsetHookAt):P(GEM_COMBAT_DLG_PROC_HOOK_ADDRESS)/(gem_CombatManager_Proc);
+!!en;
 
 
 !?FU(OnStackToStackDamage)&i^gem_isFirstApril^;
@@ -593,6 +694,13 @@ ZVSE2
 !!en;
 
 
+!?FU(gem_FirstApril_PlayToasty);
+!!if&i^battle_isVisible^;
+  !!VRi^gem_CombatDlg_ToastyCounter^:S(GEM_COMBAT_DLG_TOASTY_LENGTH);
+  !!FU(gem_SetHookAt):P(GEM_COMBAT_DLG_PROC_HOOK_ADDRESS)/(gem_CombatManager_Proc);
+  !!SN:P^gemToast.wav^;
+!!en;
+
 !?FU(OnBeforeBattleAction)&i^gem_isFirstApril^/i^battle_human_%i(battle_acting_side)^;
 !!BG:A?(action:y);
 !!if&(action)=(BATTLE_ACTION_SHOOT);
@@ -600,15 +708,106 @@ ZVSE2
   !!VRr:R0/0/3;
 
   !!FU&r:E;
+
   !!BG:E?(target:y);
   !!BM(target:y):I?(side:y);
   !!BMi^battle_acting_stack^:T?t;
   !!VR(side)&t=(MON_BALLISTA):X1;
-  !!FU(gem_SelectRandomTarget):P(side:y)/i^battle_acting_stack^/?(target);
-  !!BM(target):P?p;
-  !!SN:P^gemToast.wav^;
-  !!BG:Dp;
+  !!FU(gem_SelectRandomTarget):P(side:y)/i^battle_acting_stack^/?(newTarget:y);
+  !!if&(newTarget)<>(target);
+    !!BM(newTarget):P?p;
+    !!FU(gem_FirstApril_PlayToasty):P;
+    !!BG:Dp;
+  !!en;
 !!en;
+
+
+
+!#DC(GEM_CURSOR_NUMBER) = 4;
+
+
+
+!?FU(gem_CombatDlg_AtCastingMouseMove);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?i^gem_CombatManager_MouseSpellId^;
+
+!?FU(OnBeforeBattleUniversal);
+!!re i/0/(GEM_CURSOR_NUMBER)/1/-1;(end_value);
+  !!SN:E5614096/(CALLCONV_THISCALL)/^gemCurs%i.pcx^;
+  !!VRi^gem_CombatManager_NewCursorShadow_%i^:Sv1;
+!!en;
+
+!?FU(gem_CombatDlg_AfterCursorShadowDrawing);
+!!VRi^gem_CombatManager_MouseSpellId^:S(NULL);
+
+!?FU(gem_CombatDlg_BeforeCursorShadowDrawing);
+
+!!if&i^gem_CombatManager_MouseSpellId^;
+  !!SSi^gem_CombatManager_MouseSpellId^:S?t;
+  !!FU(IntLog2):Pt/?l;
+!!en;
+
+!!VR(pcx:y):Si^gem_CombatManager_NewCursorShadow_%l^;
+
+!!if&(pcx);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(cmbMgr:y) C(cmbMgr)/21424/4/?(combatPcx:y) C(combatPcx)/48/4/?(buffer:y); C(edi)/81912/4/i^gem_CombatManager_NewCursorShadow^;?(pcx:y);
+  !!UN:C(pcx)/36/4/?(w:y) C(pcx)/40/4/?(h:y) C(combatPcx)/44/4/?(scanLine:y) C(combatPcx)/36/4/?(dW:y) C(combatPcx)/40/4/?(dH:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(it:y);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(eax:y);
+  !!VR(hexPtr:y):S(it)*4 +(eax);
+  !!UN:C(hexPtr)/4/?(hexId:y); C(hex)/6/2/?(xy:y);
+  !!VR(hexOffset:y):S(hexId) *112 + 452 +(cmbMgr);
+  !!UN:C(hexOffset)/4/2/?(x:y) C(hexOffset)/6/2/?(y:y);
+
+  !!SN:E4513664/(CALLCONV_THISCALL)/(pcx:y)/0/0/45/52/(buffer)/(x)/(y)/(dW:y)/(dH:y)/(scanLine)/0; draw pcx16 to pcx16
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4799596;
+!!en;
+
+!?FU(gem_CursorShadow_Delete);
+!!re i/0/(GEM_CURSOR_NUMBER)/1/-1;(end_value);
+  !!co&i^gem_CombatManager_NewCursorShadow_%i^=0;
+  !!SN:E4513008/(CALLCONV_THISCALL)/i^gem_CombatManager_NewCursorShadow_%i^/1;
+  !!VRi^gem_CombatManager_NewCursorShadow_%i^:S(NULL);
+!!en;
+
+!?FU(OnAfterBattleUniversal);
+!!FU(gem_CursorShadow_Delete);
+
+!?FU(OnGameLeave);
+!!FU(gem_CursorShadow_Delete);
+
+
+
+
+
+!?FU(OnAfterBattleUniversal)&i^gem_CombatDlg_ToastyCounter^;
+!!VRi^gem_CombatDlg_ToastyCounter^:S(NULL);
+!!VRi^gem_CombatDlg_DlgPcx_Toasty^:S(NULL);
+
+!!FU(gem_UnsetHookAt):P(GEM_COMBAT_DLG_PROC_HOOK_ADDRESS)/(gem_CombatManager_Proc);
+
+
+
+!?FU(OnBeforeBattleAction)&i^gem_isFirstApril^;
+!!BG:A?(actionType:y);
+!!VRr:R0/0/14;
+!!if&(actionType)=(BATTLE_ACTION_HERO_CAST)/r=0;
+  !!VRi^gem_CastingSpell^:S(TRUE);
+!!en;
+
+!?FU(OnMagicCorrectedResistance)&i^gem_CastingSpell^;
+!!MR:N?s F?f;
+!!BMs:Z?s;
+!!SN:E4468128/(CALLCONV_THISCALL)/s/0; [stack full health]
+!!if&f>=v1;
+  
+  !!SN:E5875568/(CALLCONV_THISCALL)/^gemNani.wav^;
+  !!SN:E5874112/(CALLCONV_STDCALL)/v1/-1;/v1/v1;
+  !!SN:E5212752/(CALLCONV_THISCALL)/3000;
+!!en;
+
+!?FU(OnBattleActionEnd);
+!!VRi^gem_CastingSpell^:S(FALSE);
 
 !?FU(gem_SelectRandomTarget);
 !#VA(side:x) (activeStack:x) (result:x);
@@ -622,6 +821,7 @@ ZVSE2
     !!FU(Array_Push):P(targets)/i;
   !!en;
 !!en;
+
 !!SN:M(targets)/?(size:y);
 !!VR(size):-1;
 !!VR(rnd:y):R0/0/(size);
@@ -643,6 +843,4 @@ ZVSE2
 !!if|(day)<>1/(month)<>4;
   !!VRi^gem_isFirstApril^:S(FALSE);
 !!en;
-
-
 
