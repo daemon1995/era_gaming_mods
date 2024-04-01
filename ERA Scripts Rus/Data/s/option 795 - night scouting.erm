@@ -880,15 +880,6 @@ ZVSE2
 !!VRy4&y5<>y1:S0;             [обнуление кол-ва защищавшихся, если отряд тругого типа]
 !!SN:W^opt795.10.dc^/y4;      [обновление кол-ва защищавшихся]
 
-!?FU(OnBattleStackObtainsTurn);
-*!SN:W^opt795.10.dt^/?y1 W^opt795.10.dc^/?y2 W^opt795.10.ds^/?y3;
-*!FU&y2=0:E;                  [выход, если не конфликт]
-
-*!SN:X?y4/?y5;
-*!VRy4:*21 +y5;               [y4 - номер отряда]
-*!BMy4:T?y5;                  [y5 - тип отряда]
-*!FU|y5<>y1/y4<>y3:E;         [выход, если отряд не "защищающийся"]
-
 ; Restore variables on battle replay
 !?FU(OnBattleReplay)&i^opt795.10.dc1^;
 !!VRi^opt795.10.dc^:Si^opt795.10.dc1^;
@@ -980,12 +971,13 @@ ZVSE2
 !!UN:P795/?(wogOption:y);
 !!FU&(wogOption)=(FALSE):E;
 
-!!VRr:R0/0/3;
 !!VR(actSide:y):Sx1 :21;
 !!VR(actHero:y):Si^battle_hero_%(actSide)^;
-!!FU&r:E;                               [For testing]
 
-!!if&(actHero)<>(NO_HERO)/i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^=(FALSE)/i^es_795_assassins_acted_%(actSide:y)^=(FALSE);
+
+!!if&(actHero)<>(NO_HERO)/i^opt795.11.%(actHero:y)^>0/i^opt795.11.f%(actHero:y)^/i^es_795_assassins_acted_%(actSide:y)^=(FALSE);
+  !!VRr:R0/0/3;
+  !!FU&r:E;                               [For testing]
   !!VR(oppSide:y):S(actSide) X1;
 
   !!FU(NewIntArray):P?(targetStackPtrs:y);
@@ -1185,33 +1177,33 @@ ZVSE2
 !!VR(monType):S(MON_ROGUE);
 
 
-!?FU(OnHeroScreenMouseClick);           [Клик в окне героя]
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_flags^=(NO_MOUSE_FLAGS);           [Клик в окне героя]
 !!UN:P795/?y1;
 !!FU&y1=0:E;                            [выход если опция 795 не включена]
 
-!!CM:I?y1 F?y2 S?y3;                    [y1-y3 - параметры клика]
 !!SN:F^GetButtonID^/^assasins^;
-!!VRy4:Sv1;                             [y4 - ID кнопки "assasins"]
-!!FU|y1<>y4/y2<>0/y3<>13:E;             [выход если не отпущена ЛКМ на кнопке ассасинов]
+!!if&v1=i^mouse_item^;
+  
+  !!HE(CURRENT_HERO):N?h;
+  !!VR(assassinsNum:y):Si^opt795.11.%h^;
+  !!if&(assassinsNum:y)<1;                              [вывод информации об ассасинах героя и запрос роспуска, если ассасины есть]
+    !!IF:M1/^%T(es.795.assassins.noUnits)^;                           // 
+  !!el;                                   // 
+    !!SN:T^es.795.assassins.header^/?(msg:z)/^num^/(assassinsNum:y);
 
-!!HE(CURRENT_HERO):N?y1;
-!!SN:W^opt795.11.%Y1^/?y2;              [y2 - количество ассасинов у героя]
+    !!if&i^opt795.11.f%h^=0;
+      !!VR(add:z):S^%T(es.795.assassins.allow)^;
+    !!el;
+      !!VR(add:z):S^%T(es.795.assassins.restrict)^;
+    !!en;
 
-!!if&i^opt795.11.%Y1^<1;                              [вывод информации об ассасинах героя и запрос роспуска, если ассасины есть]
-  !!IF:M1/^%T(es.795.assassins.noUnits)^;                           // 
-!!el;                                   // 
-  !!SN:T^es.795.assassins.header^/?(msg:z)/^num^/i^opt795.11.%Y1^;
-
-  !!if&i^opt795.11.f%Y1^;
-    !!VR(add:z):S^%T(es.795.assassins.allow)^;
-  !!el;
-    !!VR(add:z):S^%T(es.795.assassins.restrict)^;
+    !!VR(msg):+^%T(es.endl)%T(es.endl)^ +(add);
+    !!IF:Q1/(msg);текст сообщения
+    !!VRi^opt795.11.f%h^&1:X(TRUE);
   !!en;
 
-  !!VR(msg):+^%T(es.endl)%T(es.endl)^ +(add);
-  !!IF:Q1/(msg);текст сообщения
-  !!VRi^opt795.11.f%Y1^&1:X(TRUE);
 !!en;
+
 
 
 !?FU(OnAfterBattleUniversal);
