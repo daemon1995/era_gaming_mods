@@ -107,19 +107,25 @@ ZVSE2
 
 !?FU(ES_776_StoreAndChangeMagicSchoolLvl);
 !#VA(heroId:x) (value:x);
+!#VA(skillLvl[4]:y);
 
-!!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
-  !!HE(heroId):Si/?i^es_776_%i_lvl^;
-  !!VR(newLevel:y):Si^es_776_%i_lvl^ -(value) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
-  !!HE(heroId):Si/(newLevel:y);
+!!re (ss:y)/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+  !!VR(index:y):S(ss) -(SKILL_FIRE_MAGIC);
+  !!HE(heroId):S(ss)/?(skillLvl[index]);
+  !!VR(newLevel:y):S(skillLvl) -(value) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
+  !!HE(heroId):S(ss)/(newLevel:y);
 !!en;
 
-!?FU(ES_776_RestoreMagicSchoolLvl);
-!#VA(heroId:x);
+!!FU(PackUnion):P(heroId)/8/(skillLvl[0])/6/(skillLvl[1])/6/(skillLvl[2])/6/(skillLvl[3])/6/?i^es_776_heroIdAndSSLevel^;
 
-!!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
-  !!HE(heroId):Si/i^es_776_%i_lvl^;
-  !!VRi^es_776_%i_lvl^:S0;
+!?FU(ES_776_RestoreMagicSchoolLvl);
+!#VA(skillLvl[4]:y);
+
+!!FU(UnpackUnion):Pi^es_776_heroIdAndSSLevel^/?(heroId:y)/8/?(skillLvl[0])/6/?(skillLvl[1])/6/?(skillLvl[2])/6/?(skillLvl[3])/6;
+
+!!re (ss:y)/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+  !!VR(index:y):S(ss) -(SKILL_FIRE_MAGIC);
+  !!HE(heroId):S(ss)/(skillLvl[index]);
 !!en;
 
 !?FU(ES_776_Hero_GetSuppressionPower);
@@ -159,14 +165,11 @@ ZVSE2
   !!en;
 
   !!FU(ES_776_StoreAndChangeMagicSchoolLvl):Pi^battle_hero_%(side)^/(valueToDecrease:y);
-  !!VRi^es_776_need_to_restore_skills^:S(side) +1;
 !!en;
 
-!?FU(OnAfterBattleAction)&i^es_776_need_to_restore_skills^;
+!?FU(OnAfterBattleAction)&i^es_776_heroIdAndSSLevel^;
 !!BU:C?(battleIsEnded:y);               [если бой закончен]
 !!FU&(battleIsEnded)<>(TRUE):E;         [выход, если бой не закончен]
 
-!!VR(side:y):Si^es_776_need_to_restore_skills^ -1;
-!!FU(ES_776_RestoreMagicSchoolLvl):Pi^battle_hero_%(side)^;
-
-!!VRi^es_776_need_to_restore_skills^:S(FALSE);
+!!FU(ES_776_RestoreMagicSchoolLvl):P;
+!!VRi^es_776_heroIdAndSSLevel^:S0;
