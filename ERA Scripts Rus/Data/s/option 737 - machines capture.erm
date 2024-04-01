@@ -2,44 +2,44 @@ ZVSE2
 ** Author orig.  : Algor
 ** Rewritten by  : Archer30
 ** Fully Rewritten by  : daemon_n
-now it is simple as life
+now it is simple as life 
 
 ** Name          : Machines capture
-** Name rus.     : «ахват боевых машин
 ** Options       : 737
 
-** ѕобедивший герой после бо€ получает уцелевшие машины врага (ѕодводу/ѕалатку/Ѕаллисту)
-** если у него есть свободное место дл€ них. ≈сли места нет - машины разрушаютс€.
-** ѕри капитул€ции машины остаютс€ у побежденного.
-** Ќенужна€ машина может быть разрушена.
+** After the battle, the victorious hero receives the surviving enemy vehicles (cart/tent/ballista)
+** if he has free space for them. If there is no space, the cars remain with the vanquished.
+** In case of capitulation, the vehicles remain with the vanquished.
+** Unnecessary machines can be destroyed.
 
-!?FU(OnStartOrLoad);
-  !!UN:P737/?i^ES_737_enabled^;
-  !!if&i^ES_737_enabled^;
-    !!FU(ES_737_Run):P1;
+!?FU(ES_CreateERMHook);
+!!UN:P737/?(isEnabled:y);
+!!VRi^ES_737_enabled^:S(isEnabled); // needed for Hero Screen LMB proc
+!!if&(isEnabled);
+  !!SN:Ex1/(CALLCONV_CDECL)/4627646/(ES_737_CombatManager_OnLoserHeroEquippedArtIteration); 469CBE
+!!en;
+
+
+!?FU(ES_737_CombatManager_OnLoserHeroEquippedArtIteration);469CBE
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(artId:y); // get art id from stack
+
+!!if&(artId)>=(ART_BALLISTA)/(artId)<=(ART_FIRST_AID_TENT);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-8/4/?(heroWinner:y);// get hero ptr from stack
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(artPtr:y); // get art ptr from stack
+
+  !!SN:E5124832/(CALLCONV_THISCALL)/(heroWinner)/(artPtr)/(TRUE)/(FALSE); // add art to hero. ask for combo. don't check winconditions
+  !!VRv1:&1;
+  !!if&v1; // if equipp success
+    !!VR(returnAddress:y):S4627685; //return to adding art into "remove/add" list
+  !!el;
+    !!VR(returnAddress:y):S4627711; //return to next loop it
   !!en;
-
-!?FU(OnGameLeave)&i^ES_737_enabled^;
-  !!FU(ES_737_Run):P0;
-4627754
-!?FU(ES_737_Run);
-  !#VA(start:x);
-  !!re i/0/2;
-    !!if&(start);
-      !!VR(artId:y):S(ART_CATAPULT);
-    !!el;
-      !!VR(artId:y):Si +(ART_BALLISTA);
-    !!en;
-
-    *!VR(offs:y):Si*9;
-    *!UN:C4627788/(offs:y)/1/(artId); removed - this is backack
-
-    !!VR(offs:y):Si*5;
-    !!UN:C4627648/(offs:y)/1/(artId);
-  !!en;
+  !!SN:X?y99/0;// indicate that function return address is custom 
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/(returnAddress);// set new return address
+!!en;
 
 
-!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^>=15/i^mouse_item^<=17/i^key_ctrl^/999/i^ES_737_enabled^; [клик в окне геро€]
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^>=15/i^mouse_item^<=17/i^mouse_flags^=(MOUSE_FLAG_CTRL)/999/i^ES_737_enabled^; [клик в окне геро€]
   ; Set up variables
   !!VR(warMachine:y):Si^mouse_item^ -11;
 
