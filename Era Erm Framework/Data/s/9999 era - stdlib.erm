@@ -2829,3 +2829,56 @@ ZVSE2
 
 !!VRv1:S(savedV1);
 ; =============== TEXT ==================
+
+; ============= H3QUEST =================
+!?FU(H3Quests_RefreshData);
+!#VA(forceRefreshText:x);
+; change text and pictures for the quests guards/seerhuts/questlogs to actual one
+; call that function after all replacemnent procedures; By default game executes that once at the end of new day
+; also makes sense to affect the quest messages after changing hero/artifact/creature names
+!!UN:C(GAME_MANAGER)/4/?(gameMgr:y); // get combat
+!!VR(questsVector:y):S(gameMgr) +129904 +176; // game mgr +0x1FB70 mainStructList +0xB0 H3Vector<H3Quests*>
+!!UN:C(questsVector)/4/4/?(first:y) C(questsVector)/8/4/?(end:y); // get vetor'start/end
+!!VR(size:y):S(end) -(first) Sd>>2; // take size
+
+!!if&(size);
+  !!VR(savedV1:y):Sv1; // save v1
+
+  !!re i/0/(size)/1/-1; // loop all H3Quests*
+    !!VR(needToRefreshText:y):S(forceRefreshText);
+    !!VR(offset:y):Si Sd<<2;
+
+    !!UN:C(first)/(offset)/4/?(quest:y); // take Quest*
+    !!UN:C(quest)/4/?(virtTable:y); // get Quest VTable
+
+    !!UN:C(virtTable)/32/4/?(typeFunc:y); // get Quest Type Function addres
+
+    !!SN:E(typeFunc)/(CALLCONV_THISCALL)/(quest);
+    !!VR(questType:y):Sv1;
+    !!if&(questType)=(QUEST_TYPE_DEFEAT_MONSTER);
+      !!UN:C(quest)/68/4/?(packedCoords:y); // get target mon mixed pos
+      !!UN:C(quest)/72/4/?q; get assumed mon type at coordinates
+
+      !#VA(x:y) (y:y) (z:y);
+      !!SN:E7413577/1/?(x)/?(y)/?(z)/(packedCoords); // unpack mon pos
+      !!OB(x)/(y)/(z):T?t U?s; // get real mon type at coordinates
+
+      !!if&t=(OBJ_MONSTER)/s<>(NO_MON)/s<>q; if they are different
+        !!UN:C(quest)/72/4/s; set new quest mon type
+        !!VR(needToRefreshText):S(TRUE);
+      !!en;
+    !!en;
+
+    !!if&(needToRefreshText);
+      !!re k/0/2; loop quest's messages
+        !!VR(propString:y):Sk*16 +8 +(quest); take str pointers
+        !!SN:E4210928/(CALLCONV_THISCALL)/(propString); clear original strings 0x4040F0
+      !!en;
+      !!UN:C(virtTable)/56/4/?(setTextFunct:y);
+      !!SN:E(setTextFunct)/(CALLCONV_THISCALL)/(quest); set text function
+    !!en;
+  !!en;   
+  !!VRv1:S(savedV1:y); // restore v1
+!!en;
+; ============= H3QUEST END =================
+
