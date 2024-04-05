@@ -448,7 +448,7 @@ ZVSE2
       !!VR(ps:y):Si^trainer_maxPrimSkillValue^ -10;
       !!HE(hero):F(ps)/(ps)/(ps)/(ps);
 
-      ; Secondary Skills - disabled as it's sometimes annoying (like Resistance)
+      ; Secondary Skills - disabled as it's sometimes annoying (Resistance for example)
       *!re (ss:y)/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
         *!HE(hero):S(ss)/(SKILL_EXPERT);
 
@@ -3756,8 +3756,9 @@ ZVSE2
     
   ; Kill hero
   !!if&(obj)=(OBJ_HERO);
-    !!HE(x)/(y)/(z):O(NO_OWNER);
-    !!HE(x)/(y)/(z):K;                  [Secure the kill]
+    !!HE(x)/(y)/(z):N?(hero:y);
+    !!HE(hero):O(NO_OWNER);
+    !!HE(hero):K;                       [Secure the kill]
     !!UN:L(x)/(y)/(z)/10;
   ; Delete obelisk only if visited
   !!el&(obj)=(OBJ_OBELISK);
@@ -3765,6 +3766,22 @@ ZVSE2
     !!MT(x)/(y)/(z):N?(obelisk:y);
     !!UN:L(player)/(obelisk)/?(isVisited:y); [This syntax is different from UN:L + map coordniates]
     !!UN&(isVisited):O(x)/(y)/(z);
+  !!en;
+
+  ; Complete seer huts quests when removing heroes and monsters
+  ; Not working
+  !!if|(obj)=(OBJ_HERO)/(obj)=(OBJ_MONSTER);
+    !!OW:C?(currPlayer:y)/?(interactPlayer:y);
+
+    !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+    !!VR(ptr:y):S(gameMgr) +129904;     [lea     ecx, [eax+1FB70h]. Don't use UN:C here (only mov for UN:C)]
+
+    !!if&(obj)=(OBJ_HERO);
+      !!SN:E5268336/(CALLCONV_THISCALL)/(ptr)/(hero)/(interactPlayer);
+    !!el;
+      !!FU(trainer_PackedCoords):P(x)/(y)/(z)/?(packedCoords:y);
+      !!SN:E5268400/(CALLCONV_THISCALL)/(ptr)/(packedCoords)/(interactPlayer); 5063B0
+    !!en;
   !!en;
 
   ; Manage the compatibility with Mixed Neutral - Troops can be left patch
