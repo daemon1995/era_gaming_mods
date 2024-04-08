@@ -5,6 +5,8 @@ ZVSE2
 ** Reworked to support the mod "10 Secondary Skills" от igrik'а - Algor
 ** Rewritten in ERM 2 to support "Warfare" WoG-option - daemon_n
 ** fixed warfare blinks, fixed empty page display
+** Added Tactics button correction by Archer30
+
 
 !#UN:P182/(FALSE);                      [Disable Display Hidden Skills as it's no longer needed]
 
@@ -131,3 +133,26 @@ ZVSE2
 !!VRi^sss_do_not_update_screen^:S(TRUE);
 !!UN:R3/-1;                             // обновление окна текущего героя
 !!VRi^sss_do_not_update_screen^:S(FALSE);
+
+
+// Tactics button correction
+; If Tactics skill is not in the current page, Tactics button would be disabled. 
+; This script fixes it. Now it checks whether the hero learns Tactics instead of just current page.
+!?FU(OnGameEnter);
+!!SN:L^erm_hooker.era^/?(hooker:y);
+!!FU&(hooker)=0:E;
+
+!!SN:A(hooker)/^SetHook^/?(setHook:y);
+!!SN:E(setHook)/1/5120026/(sss_OnDisableTacticsButton);
+
+!?FU(sss_OnDisableTacticsButton);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(heroStruct:y);
+!!UN:C(heroStruct)/26/4/?(heroId:y);
+!!HE(heroId):S(SKILL_TACTICS)/?(tacticsLevel:y);
+
+!!if&(tacticsLevel)>(SKILL_NOT_LEARNED);
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5120036;
+!!en;
