@@ -92,16 +92,16 @@ ZVSE2
 !!BM(BATTLE_DEFENDER_STACK_FIRST):E?(spells:y) P?(pos:y);
 !!FU&(spells)<=0:E;                            // выход, если скелет исчерпал заклинания
 
-!!BM(BATTLE_DEFENDER_STACK_FIRST):Ed-1;        // снижаем кол-во кастов охранника (максимум 5 кастов)
-
 !!SN:T^opt882.b1^/?z2;
 !!MM:Sz2;                               // вывод сообщения о призыве в лог битвы
 !!SN:P^CLONE^;                          // вывод звука Клона
 
-; Cast Clone
+; Summon Skeletons
 ; No need to check if it is possible to summon as the max spell is 5, meaning max at 6 stacks would be created
 !!BM(BATTLE_DEFENDER_STACK_FIRST):C(SPELL_CLONE)/(pos)/10/3/0 H?(hp:y) L?(lostHp:y);    // скелет кастует на себя заклинание Клон
 !!VR(summNum:y):S(hp) -(lostHp) :5;                          // численность призываемых скелетов = 20% от здоровья скелета-охранника
+; Set the global var for reducing spell later
+!!VRi^es_882_summonedSkeletons^:S(TRUE);
 
 ; Look for the stack that was cloned from BM:C
 !!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST); // перебор отрядов защищающейся стороны
@@ -135,6 +135,12 @@ ZVSE2
     !!SN:D;                             // обновляем поле боя
   !!en;
 !!en;
+
+; Reduce one spell OnBattleActionEnd
+; Warniing: For some reason, reducing OnBeforeBattleAction doesn't work correclty when there is only one spell left
+!?FU(OnBattleActionEnd)&i^es_882_summonedSkeletons^;
+!!BM(BATTLE_DEFENDER_STACK_FIRST):Ed-1;        // снижаем кол-во кастов охранника (максимум 5 кастов)
+!!VRi^es_882_summonedSkeletons^:S(FALSE);
 
 !?FU(ES_882_RemoveStack);               // удаление отряда x1 с поля
 !#VA(stackId:x);
