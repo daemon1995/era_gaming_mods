@@ -120,15 +120,14 @@ ZVSE2
 
 ; Sacrifce the target, manage flags and memory
 !!BM(victimStack):Fd(MON_FLAG_SACRIFICED) Fd(MON_FLAG_NO_COLORING) Fd(MON_FLAG_CLONE); [добавление флагов "Принесен в жертву", "Клон", "Не меняет цвет при клонироании" жертвенному отряду]
-!!UN:C6919200/4/?(value:y);                [combatmanager]
-!!VR(devilPtr:y):S(devilStack) *1352 +21708 +(value); [отряд Архидьяволов/Баронов для атаки]
-!!VR(victimPtr:y):S(victimStack) *1352 +21708 +(value); [жертвенный отряд для атаки]
+!!BM(devilStack):Z?(devilStruct:y);
+!!BM(victimStack):Z?(victimStruct:y);
 
 ; Play sound and lure attack animation
 !!UN:C4462626/1/1;                         [анимациия атаки "подманивание"]
 !!SN:P^SACRIF1.wav^;                       [воспроизведение звука]
 !!BM(victimStack):V51;                     [анимация "Жертва" на жертвенном отряде]
-!!SN:E4461360/2/(devilPtr)/(victimPtr)/2;  [Атака Архидьяволов/Баронов]
+!!SN:E4461360/2/(devilStruct)/(victimStruct)/2; [Атака Архидьяволов/Баронов]
 
 ; Show battle log
 !!SN:H^monname^/(victimType)/1/?(victimName:z);
@@ -144,6 +143,12 @@ ZVSE2
 
 ; restore attack animation
 !!UN:C4462626/1/13;                        [анимациия атаки по умолчанию]
+
+; Set as acted
+!!BM(devilStack):Fd|(MON_FLAG_ACTED);
+
+; Update the next stack turn (in case the next stack is sacrificed)
+!!FU(ES_UpdateNextStackTurn):P;
 
 ; Skip this turn
 !!BG:A(BATTLE_ACTION_SKIP);                [пропуск хода отрядом]
@@ -207,6 +212,9 @@ ZVSE2
     !!en;
   !!en;
 !!en;
+
+; Update the next stack turn (in case the next stack is sacrificed)
+!!FU(ES_UpdateNextStackTurn):P;
 
 // Funciton to check if the targeted monster is eligible for devil sacrificing
 !?FU(ES_759_CheckIfMonIsEligible);
