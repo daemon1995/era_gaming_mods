@@ -449,6 +449,17 @@ this should make creature casts respecting dwarv type golem resistance
 !!FU(ACM_SetDividedNecromancyDesc):P(desc)/10/?(newDesc:z);
 !!SN&(newDesc)<>^^:B(ptr)/d/(newDesc);
 
+
+; Author:   SadnessPower (robertomaest1@gmail.com)
+; Engine:   ERM 2.0+;
+; Buff the Landmine spell by doing these changes:
+; - Now the spell can be cast if there are native terrain creatures on enemy stack
+; - Native terrain creatures will see landmine as normal but will take damage from mines
+!!UN:C5894160/1/235;                    [0059F010 - Skip terrain check on spell cast]
+!!UN:C5897912/1/235;                    [0059FEB8 - Skip monster native terrain check while moving]
+!!UN:C5897913/1/18;
+
+
 // Function to divide a number before % by 2 by Archer30
 ; Here we assume all the percentage is belowe 100% (max at 2 characters for the number)
 ; We also assume that there is the first % we found is next to the number we needed
@@ -2468,7 +2479,7 @@ Close Dialouge
 !!FU(acm_DlgItemPosition):P45/?(x:y)/?(y:y)/(heroDlg) P45/(x)/(y)/(customDlg);
 
 !!VRz-3&y1=152:S^Roland.pcx^;           [Special Heroes get Special Pictures]
-!!VRz-3&y1=146:S^Catherine.pcx^;        [Special Heroes get Special Pictures]
+!!VRz-3&y1=146:S^Catherin.pcx^;        [Special Heroes get Special Pictures]
 !!VRz-3&y1=74:S^Sandro.pcx^;            [Special Heroes get Special Pictures]
 !!DL667|y1=152/y1=146/y1=74:A19/11/z-3/1;[show big picture]
 
@@ -3490,11 +3501,10 @@ Creature speed   Base movement
 !?FU(ACM_Monster_Agression);
 
 !!VRv2&x16=1:S-1;
-!!UN:U54/-1/-1/1;
+!!UN:U54/-1/-1/2;
 !!MOv2/v3/v4:R?y1/1;                    [Get the Agression for all Monsters]
 !!FU&y1=0:E;                            [Exit]
 !!MOv2/v3/v4:R10/1;                     [Set all Monster to never Join at Map Start]
-
 
 !?FU(OnAfterBattleUniversal);           [After Combat]
 
@@ -4637,6 +4647,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !?FU(ACM_GetDefaultNecromancyMon);
 !#VA(hero:x) (result:x);
 
+!!FU&(hero)<0:E;                        [Exit if no hero]
 !!HE(hero):A2/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(has:y)/?(equipped:y);
 
 !!if&(equipped)=0;
@@ -7437,6 +7448,17 @@ x1=hero number, x2=returns value
 You find a shortcut out of the battlefield (+%Y3 movement points)^;
 !!en;
 
+
+
+!?OB12; Campfire
+
+!!FR998:B?y1/?y2;
+!!IF:L^%Y1 and %Y2^;
+!!VRy2:*2;
+!!IF:L^%Y1 and Neu: %Y2^;
+!!FR998:By1/y2;
+
+
 *******************Master and Grandmaster Adventurer****************************
 *Taking Cities gives Gold at Master level
 *Taking Cities at Grandmaster Level immiditaly increases the number of creatures to hire in that city
@@ -8438,7 +8460,7 @@ Change Heroes Speciali Descriptions
 !!en;
 
 
-!?CM2&1000;                             [Show Correct Info for Estate Specialists] Test
+!?CM2&1000;                             [Show Correct Info for Estate Specialists]
 !!CM:F?v3 I?v4 S?v5 T?v6;               [where we click and click subtype]
 !!FU|v4<>118/v6<>512/v5=13:E;           [If not Specialty Icon Clicked Exit]
 !!if|v3=512/v3=0;                       [if right or left click]
@@ -10820,7 +10842,7 @@ Close Dialouge
 !!SN:W^Prevent_Com_Cast_Flag^/1;
 
 
-!?FU(OnBeforeBattleUniversal);          [Set new Spells to cast for Commander]
+!?FU(OnSetupBattlefield);               [Set new Spells to cast for Commander]
 
 !!SN:W^Att_Com_Regeneration_ability^/0;
 !!SN:W^Def_Com_Regeneration_ability^/0;
@@ -16028,8 +16050,8 @@ All changes to these parameters should be done here. Values can be called anytim
 
   *Commander Balance 
   !!COx1&x1>=0:B1/6/?y1;                [check Strikes All Around ability]
-  !!VRy52&x1>=0/y1=1:-15;               [-10% Damage if ability is active]
-  !!VRy50&x1>=0/y1=1:-15;               [-10% Attack if ability is active]
+  !!VRy52&x1>=0/y1=1:-10;               [-10% Damage if ability is active]
+  !!VRy50&x1>=0/y1=1:-10;               [-10% Attack if ability is active]
 
   !!COx1&x1>=0:B1/9/?y1;                [check Attack Twice ability]
   !!VRy52&x1>=0/y1=1:-15;               [-15% Damage if ability is active]
@@ -16196,7 +16218,10 @@ x9=returns skill value
 !!en;
 
 !!VRy10&x1=16:Sx3:25 +1;                [King]
-!!VRy10&x1=17:S100;                     [Prospector]
+
+!!SN&x1=17/x7=0:W^Att_Prospector_Res_Chance^/?y10; [Prospector]
+!!SN&x1=17/x7=1:W^Def_Prospector_Res_Chance^/?y10; [Prospector]
+
 !!VRy10&x1=18:Sx3+ 10;                  [Lich]
 !!VRy10&x1=19:S25;                      [Vampire]
 !!VRy10&x1=21:Sx3*2+ 10;                [Paladin]
@@ -16225,7 +16250,7 @@ x9=returns skill value
 !!en;
 
 !!if&x1=28;                             [Necromant]
-  !!SN&x7=0:W^Att_Commander_Summon_Stats^/?y15; [damage is increased based on the walking distance in combats]
+  !!SN&x7=0:W^Att_Commander_Summon_Stats^/?y15;
   !!SN&x7=1:W^Def_Commander_Summon_Stats^/?y15;
   !!VRy10:Sx3:10 +3;                    [Necromant]
 !!en;
@@ -16259,9 +16284,9 @@ x9=returns skill value
 
   *Commander classes section
   !!FU(Check_Com_Masteries):Py99/0/?y15/0/?y10/0/0/0/0/0/?y44/?y45; [Pass Hero Number and return current com class and Passive Modifier]
-  !!if&y2>=174/y2<=191;                 [if any commander]    
+  !!if&y2>=174/y2<=191;                 [if any commander]
     !!if&y10=11;                        [If Dragonslayer Commander Class]
-      !!BMx2:T?y5;                      [get creature type]
+      !!BMx2&x2>=0/x2<=41:T?y5; !!FU|y5<0/y5>999:E; [get creature type and exit if not correct]
       !!MA:Ly5/?y6; !!FU&y6<6:E;        [Get level of attacked stack and Exit if it was not level 7 creature]
       !!FU(Set_Com_Battle_Description):P11/y99/y15/0/0/0/y3/0/?y16;      
       !!VRy16:+100;                     [2% damage increase per kill count]
@@ -16521,7 +16546,16 @@ Golem Type MR
 !!en;
 
 
-!?MF1;
+On Battle Start set chance to generate Res to 100%
+
+!#SN:W^Att_Prospector_Res_Chance^/100;
+!#SN:W^Def_Prospector_Res_Chance^/100;
+
+!?BF;
+!!SN:W^Att_Prospector_Res_Chance^/100;
+!!SN:W^Def_Prospector_Res_Chance^/100;
+
+!?MF1; 
 *Commander Scouts generate Resources with attacks in combat 50% chance
 !!UN:C42149568/4/?y10;                  [Get Physical Damage type]
 !!if|y10=4462398/y10=4455011/y10=4456676;[Only run when melee or shooting damage]
@@ -16534,19 +16568,32 @@ Golem Type MR
     !!SN:W^Scout_Mastery_Attacking_Stack^/y4;
     !!BMy1:I?y5 T?y6;                   [Side index as for heroes (0:left, 1:right) and creature Type]
     !!BA:Hy5/?y99;
-    !!FU(Check_Com_Masteries):Py99/?y40/0/0/?y41; [Pass Hero Number and return if Commander Mastery is enabled] 
-    !!VRy60:S0R2;                       [33% chance to generate ressource]
-    !!FU|y99<0/y7<=0/y41<>17/y60=0:E;    [Get Hero and exit if none or zero damage dealt, or no Scout Class Commander]
+    !!FU(Check_Com_Masteries):Py99/?y40/?y42/0/?y41; [Pass Hero Number and return if Commander Mastery is enabled]
+    !!SN&y5=0:W^Att_Prospector_Res_Chance^/?y61;
+    !!SN&y5=1:W^Def_Prospector_Res_Chance^/?y61;
+    !!VRy60:S0R99;                      [33% chance to generate ressource]    
+    !!SN:W^Scout_Mastery_Attacking_Stack^/y4;
+    !!SN:W^Scout_Mastery_Attacking_Stack^/y4;    
+    !!FU|y99<0/y7<=0/y41<>17/y60>y61:E; [Get Hero and exit if none or zero damage dealt, or no Scout Class Commander]
     !!if&y6>=174/y6<=191;               [If any Commander is striking]
       !!HEy99:O?y8;                     [Get Hero Owner]
       !!VRy9:S0R5;                      [Generate random resource type]
-      !!VRy10:S1R1; !!VRy10&y40=1:+1;   [If Mastery enabled increase amount by +1;]
+      !!VRy10:S1R1; !!VRy10&y40=1:+1;   [If Mastery enabled increase amount by +1]
+      !!VRy42:+100;                     [current kill count +100 to make percentage based]
+      !!VRy10:*y42:100;                 [Increase Res amount based on Kill Count]
       !!VRy10&y9=6:*100;                [Generate Res amount and increase if Gold]
       !!OW:Ry8/y9/dy10;                 [Add resources to player]
       !!VRz2:S^~>SMALRES.def:%Y9^;      [LOL smart trick Perry ;-)]
       !!SN&i^battle_isVisible^:T^AC_Misc.Com_Scout_Res^/?z1/^amount^/y10/^resources^/z2; [Get String]
-      !!BU&i^battle_isVisible^:Mz1;                [Show Message in Battle Log]
-      !!SN:W^Scout_Res_Player_%Y8_Res_%Y9^/dy10; 
+      !!BU&i^battle_isVisible^:Mz1;     [Show Message in Battle Log]
+      !!SN:W^Scout_Res_Player_%Y8_Res_%Y9^/dy10;
+      !!SN&y5=0:W^Att_Prospector_Res_Chance^/d-10; [reduce chance for next attack by 10%]
+      !!SN&y5=1:W^Def_Prospector_Res_Chance^/d-10;
+      !!SN&y5=0:W^Att_Prospector_Res_Chance^/?y61; [get current chance]
+      !!SN&y5=1:W^Def_Prospector_Res_Chance^/?y61;
+      !!VRy61&y61<20:S20;               [chance cannot be below 20% with each attack]
+      !!SN&y5=0:W^Att_Prospector_Res_Chance^/y61; [set chance]
+      !!SN&y5=1:W^Def_Prospector_Res_Chance^/y61;       
     !!en;
   !!en;
 !!en;
@@ -16934,7 +16981,7 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
 !!VRy20&y93>=2:S20;                     [With 2 set pieces give a 20% chance]
 !!VRy20&y93=4:S+30;                     [With 4 set pieces give a 50% chance]
 
-!!if&y10<y20;                          [If roll is successful]
+!!if&y10<y20;                           [If roll is successful]
 !!VRy2:S1R23;                           [Generate Random Number from 1-24]
   !!SN&y2=1:W^Ballista_Fireball_Attack_%Y1^/?y3; !!SN&y2=1/y3=0:W^Ballista_Fireball_Attack_%Y1^/1; !!SN&y2=1/y3=0:T^AC_Warmachine.Bal_Ench_1^/?z-1; !!SN&y2=1/y3=0:T^AC_Warmachine.Bal_Ench_1_Description^/?z2;
   !!SN&y2=2:W^Ballista_Magic_Arrow_%Y1^/?y3; !!SN&y2=2/y3=0:W^Ballista_Magic_Arrow_%Y1^/1; !!SN&y2=2/y3=0:T^AC_Warmachine.Bal_Ench_2^/?z-1; !!SN&y2=2/y3=0:T^AC_Warmachine.Bal_Ench_2_Description^/?z2;
@@ -16962,7 +17009,7 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
   !!SN&y2=24:W^WM_Versatility_%Y1^/?y3; !!SN&y2=24/y3=0:W^WM_Versatility_%Y1^/1; !!SN&y2=24/y3=0:T^AC_Warmachine.All_Upg_3^/?z-1; !!SN&y2=24/y3=0:T^AC_Warmachine.All_WM_Upg_3_Description^/?z2;
 
   !!SN:Iz2/?z2;                         [Interpolate String]
-  !!if&y3=0;                           [When the upgrade is unknown to the hero display the text]
+  !!if&y3=0;                            [When the upgrade is unknown to the hero display the text]
     !!SN:T^AC_Warmachine.Champions_Honor_Set_WM^/?z3;
     !!IF:M^%Z3
 
@@ -16974,7 +17021,7 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
 !!VRy10:S0R100;
 !!VRy20:S0;
 !!VRy20&y93>=3:S20;                     [With 3 set pieces give a 20% chance for extra Prim Skill]
-!!if&y10<y20;                          [If roll is successful]
+!!if&y10<y20;                           [If roll is successful]
   !!VRy96:S1R3;
   !!SN:T^AC_Warmachine.Champions_Honor_Set_Skill^/?z21;
   !!IF&y96=1:Q2/31/1/1^%Z21^;
@@ -24593,7 +24640,7 @@ ERMS_ScriptAuthor=PerryR
 
 
 ********************************************************************************
-!?BF&1000;                              [Prepare Battle]
+!?BF;                                   [Prepare Battle]
 !!BH0:N?y2;                             [For Attacker]
 !!if&y2>=0;
   !!HEy2:X?y11/?y12/?y13/?y14/?y15/?y16/?y17; [Check Hero Speciality]
@@ -24674,7 +24721,7 @@ ERMS_ScriptAuthor=PerryR
 
 
 ********************************************************************************
-!?FU(OnAfterBattleUniversal)&1000;      [Give Back Hero Spells after Fight]
+!?FU(OnAfterBattleUniversal);           [Give Back Hero Spells after Fight]
 
 !!BA:H0/?y2;                            [For Attacker]
 !!SN:W^Magic_Specialists_Att_Spells_Saved^/?y1;
@@ -31719,8 +31766,12 @@ New Commanders Section
 !?CM4;
 
 !!CM:D?y1;                              [Get Battlefield position with click]
-!!if&y1>=0/y1<=186;                     [If a valid battlefield position]
-  !!BU:Ey1/?y2; !!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
+!!FU(ACM_Set_Com_Desc_in_battle):Dy1;   [execute function remotely]
+!!FU(ACM_Set_Com_Desc_in_battle):Py1;   [execute function locally]
+
+!?FU(ACM_Set_Com_Desc_in_battle);
+!!if&x1>=0/x1<=186;                     [If a valid battlefield position]
+  !!BU:Ex1/?y2; !!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
   !!BMy2:T?y3 I?y4;                     [get monster type and side index]
   !!BHy4:N?y5;                          [Get hero or commander ID]
   !!if&y3>=174/y3<=191/y5>=0;           [if any commander and a hero]
@@ -34276,7 +34327,7 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
 !!FU:E;
 !!HE-1:N?y99; 
 !!SN:W^ACM_Commander_Hero_ID^/y99;
-*!SN:W^Commander_Kill_Counter_%Y99^/125;
+!!SN:W^Commander_Kill_Counter_%Y99^/200;
 *!FU:E;
 !!FU(Check_Com_Masteries):Py99/0/0/0/?y98; [Pass Hero Number and return current class]
 !!FU(ACM_Select_Commander_Role)&999:Py99;[Call DL to select Commander class on first kill. Pass current hero-y10 and commander ID-y2 if Human]
@@ -34290,11 +34341,11 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
 !!CM:F?v3 I?v4 S?v5;                    [where we click and click subtype]
 !!if&v3=512;                            [if right click and kingdom overview icon are clicked]
 
-  !!IF:M^Now Fighter^;
+  !!IF:M^Now Commander_Necromant_^;
 
   !!SN:W^ACM_Commander_Hero_ID^/?y99;
   
-  !!SN:W^Commander_Fighter_%Y99^/1;     [Check if options have already been activated]
+  !!SN:W^Commander_Fighter_%Y99^/0;     [Check if options have already been activated]
   !!SN:W^Commander_Ranger_%Y99^/0;
   !!SN:W^Commander_Defender_%Y99^/0;
   !!SN:W^Commander_Caster_%Y99^/0;
@@ -34321,7 +34372,7 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
   !!SN:W^Commander_Arcanist_%Y99^/0;
   !!SN:W^Commander_General_%Y99^/0; 
   !!SN:W^Commander_Lancer_%Y99^/0; 
-  !!SN:W^Commander_Necromant_%Y99^/0; 
+  !!SN:W^Commander_Necromant_%Y99^/1; 
   !!SN:W^Commander_Ancient_%Y99^/0; 
 !!en;
 
