@@ -350,6 +350,7 @@ ZVSE2
 
 !?FU(WOG_102_HandleArtifacts);
 !#VA(surcoatBonus:x);                       [Bonuses provided by Surcoat Of Counterpoise]
+!#VA(usedY[10]:y);
 
 !!VRv608:Sv613 +v614 +v615 +v616 +v617 +v618 +v619 +v620 +v621 +v622 +v623;
 !!VRv608:+v624 +v628;
@@ -371,20 +372,28 @@ ZVSE2
 !!IF:V5/0;
 !!IF&v603=0:V5/1; [use flag 5 to mean we've got a human player's hero]
 
-!!IF&5/(surcoatBonus)>0:M1/z102023;
+!!if&5/(surcoatBonus)>0;
+  !!VR(surcoatActive:y):Sv613 +v614 +v615 +v616 +v617 +v620 +v623 +v624;
+  !!IF&(surcoatActive):M1/z102023;
+!!en;
+
 !!VRv631:S1;
 !!VRv631&(surcoatBonus)>0:S2; [some effects will be multiplied by v631 - doubled for Surcoat]
 
+; Dead Man's Boots
 !!if&v614>0;
   !!IF&5:Q1/8/56/1/z102033;
   !!HEv600:A56; [give Dead Man's Boots]
   !!HEv600&(surcoatBonus)>0:A56; [another pair for Surcoat]
 !!en;
 
-!!VRy1:S1000;
-!!VRy1:*v631; [Surcoat factor]
-!!IF&5/v615>0:Q1/17/y1/1/z102034;
-!!HEv600&v615>0:Edy1; [give 1000 experience]
+; Pendant Of Total Recall
+!!if&v615>0;
+  !!VRy1:S1000;
+  !!VRy1:*v631; [Surcoat factor]
+  !!IF&5:Q1/17/y1/1/z102034;
+  !!HEv600:Edy1; [give 1000 experience]
+!!en;
 
 ; Emblem of Cognizance
 !!if&v616>0;
@@ -407,82 +416,125 @@ ZVSE2
   !!en;
 !!en;
 
-!!IF&5/v617>0:M1/z102036;
-!!VRy1:S30; [area]
-!!VRy1&(surcoatBonus)>0:S42; [double area for Surcoat - 30 times square root of 2]
-
+; Stoic Watchman
 !!if&v617>0;
+  !!IF&5:M1/z102036;
+  !!VRy1:S30; [area]
+  !!VRy1&(surcoatBonus)>0:S42; [double area for Surcoat - 30 times square root of 2]
   !!UN:Sv604/v605/v606/i^timerOwner^/y1; [reveal area]
-  !!UN:R1; [redraw screen]
+  !!SN&5:D; [redraw screen]
 !!en;
 
+; Pendant of Second Sight
 !!if&v618>0;
-  !!IF&5:M1/z102037;
-  !!HEv600:C1/2/3/d; [turn archers to marksmen]
-  !!HEv600:C1/18/19/d; [turn wood elves to grand elves]
-  !!HEv600:C1/28/29/d; [turn gremlins to master gremlins]
-  !!HEv600:C1/44/45/d; [turn gogs to magogs]
-  !!HEv600:C1/74/75/d; [turn beholders to evil eyes]
-  !!HEv600:C1/88/89/d; [turn orcs to orc chieftans]
-  !!HEv600:C1/100/101/d; [turn lizard men to lizard warriors]
-  !!HEv600:C1/112/127/d; [turn air elementals to storm elementals]
-!!en;
+  !!VR(upgraded:y):S(FALSE);
+  !!VR(mons[8]:y):C(MON_ARCHER)/(MON_WOOD_ELF)/(MON_GREMLIN)/(MON_GOG)/(MON_BEHOLDER)/(MON_ORC)/(MON_LIZARDMAN)/(MON_AIR_ELEMENTAL);
 
-!!FU612&v619>0:P;     [Call function if Pendant of Holiness equipped]
+  !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+    !!HEv600:C0/i/?(type:y)/?(num:y);
+    !!co&(num)<=0;
 
-!!if&5/v620>0;
-  !!IF:Q2/z102040;
-  !!IF&-2:M1/z102041;
-  !!IF&2:M1/z102042;
-!!en;
+    !!re j/0/7;
+      !!br&(type)=(mons[j]);
+    !!en;
 
-!!VRy1:S1700; [about a day's movement]
-!!VRy1:*v631; [Surcoat factor]
-
-!!if&5;
-  !!if&v620>0/2;
-    !!HEv600:Wdy1; [add movement]
-    !!HEv600:A3/59/1/1; [remove Boots Of Polarity]
+    !!if&j<=7;
+      !!VR(upgraded):S(TRUE);
+      !!FU(GetUpgradedMonster):P(mons[j])/?(upgMon:y);
+      !!HEv600:C0/i/(upgMon)/d;
+    !!en;
   !!en;
 
-  !!if&v621>0;
-    !!VRv26:S14 R3; [pick a random magic skill]
-    !!UN:N4/z329/v26; [get name of skill]
-    !!IF:Q2/z102043;
+  !!IF&5/(upgraded):M1/z102037;
+!!en;
 
-    !!if&-2;
-      !!IF:M1/z102044;
-    !!el;
+; Pendant of Holiness
+!!FU(WOG_102_LearnPendantOfHolinessSpell)&v619>0:P;     [Call function if Pendant of Holiness equipped]
+
+
+!!if&5;
+  ; Boots Of Polarity (works only for human player)
+  !!if&v620>0;
+    !!IF:Q2/z102040;
+    !!IF&-2:M1/z102041;
+    !!IF&2:M1/z102042;
+
+    !!if&2;
+      !!VRy1:S1700; [about a day's movement]
+      !!VRy1:*v631; [Surcoat factor]
+
+      !!HEv600:Wdy1; [add movement]
+      !!HEv600:A3/59/1/1; [remove Boots Of Polarity]
+    !!en;
+  !!en;
+
+  ; Garniture Of Interference (works only for human player)
+  !!if&v621>0;
+    ; Check if the hero can learn a new skill
+    !!FU(WOG_GetNumberOfSecSkills):Pv600/?(numSkills:y);
+    !!UN:C4881872/1/?(skillLimit:y);
+
+    ; Get all the available choice of the hero
+    !!FU(NewIntArray):P?(availMagicSkillsList:y);
+
+    !!re i/(SKILL_FIRE_MAGIC)/(SKILL_EARTH_MAGIC);
+      !!HEv600:Si/?(skillLvl:y);
+      !!co&(skillLvl)<=(SKILL_NOT_LEARNED)/(numSkills)>=(skillLimit);
+
+      !!FU(Array_Push)&(skillLvl)<(SKILL_EXPERT):P(availMagicSkillsList)/i;
+    !!en;
+
+    !!SN:M(availMagicSkillsList)/?(size:y);
+
+    ; If the hero can learn (upgrade) any magic skill, pick one randomly
+    !!if&(size)>0;
+      !!VR(random:y):R0/1/(size) -1;
+      !!SN:M(availMagicSkillsList)/(random)/?v26;
       !!HEv600:Sv26/?v27; [get level in that skill]
 
-      !!if&v27=3;
-        !!IF:M1/z102045;
-      !!el&v27<3;
-        !!VRv24:Sv26 *3 +3 +v27; [get picture number of skill at level given]
-        !!IF:Q1/20/v24/1/z102046;
-        !!HEv600:A3/57/1/1; [remove Garniture Of Interference]
+      !!SN:H^secskill^/v26/0/?z329; [get name of skill]
+      !!VRv24:Sv26 *3 +3 +v27; [get picture number of skill at level given]
+      !!IF:Q2/(PIC_TYPE_SEC_SKILL)/v24/(MSG_TYPE_QUESTION)/z102043;
+
+      !!if&-2;
+        !!IF:M1/z102044;
+      !!el;
+        !!IF:Q1/(PIC_TYPE_SEC_SKILL)/v24/(MSG_TYPE_MES)/z102046;
+        !!HEv600:A3/(ART_GARNITURE_OF_INTERFERENCE)/1/1; [remove Garniture Of Interference]
         !!HEv600:Sv26/d1; [give skill]
       !!en;
     !!en;
   !!en;
-
-  !!IF&v622>0:Q1/34/v631/1/z102047;
 !!en;
 
-!!HEv600&v622>0:Fd/d/d/dv631; [+1 knowledge]
+; Pendant Of Dispassion
+!!if&v622>0;
+  !!IF&5:Q1/34/v631/1/z102047;
+  !!HEv600:Fd/d/d/dv631; [+1 knowledge]
+!!en;
 
+; Pendant Of Free Will
 !!if&v623>0;
-  !!IF&5:M1/z102048;
+  !!VR(upgraded):S(FALSE);
+  !!VR(mons[0]):C(MON_PEASANT)/(MON_GOLD_GOLEM)/(MON_IRON_GOLEM)/(MON_STONE_GOLEM);
+  !!VR(upgMons[4]:y):C(MON_ROGUE)/(MON_DIAMOND_GOLEM)/(MON_GOLD_GOLEM)/(MON_IRON_GOLEM);
+  !!VR(upgMons[2])&(surcoatBonus):C(MON_DIAMOND_GOLEM)/(MON_GOLD_GOLEM); [If Surcoat is active, change the upgrade type (upgrading twice)]
 
-  !!HEv600:C1/139/143/d; [turn peasants to rogues]
-  !!HEv600:C1/116/117/d; [turn gold golems to diamond golems]
-  !!HEv600:C1/33/116/d; [turn iron golems to gold golems]
-  !!HEv600:C1/32/33/d; [turn stone golems to iron golems]
+  !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+    !!HEv600:C0/i/?(type)/?(num);
+    !!co&(num)<=0;
 
-  !!if&(surcoatBonus)>0;
-    !!HEv600:C1/116/117/d; [turn gold golems to diamond golems, again for Surcoat]
-    !!HEv600:C1/33/116/d; [turn iron golems to gold golems, again for Surcoat]
+    !!re j/0/3;
+      !!br&(type)=(mons[j]);
+    !!en;
+
+    !!if&j<=3;
+      !!VR(upgraded):S(TRUE);
+      !!HEv600:C0/i/(upgMons[j])/d;
+    !!en;
   !!en;
+
+  !!IF&5/(upgraded):M1/z102048;
 !!en;
 
 ; Diplomat's Ring (works only for human players)
@@ -719,7 +771,7 @@ ZVSE2
 
 ** end of function
 
-!?FU612;     [Function for Pendant of Holiness]
+!?FU(WOG_102_LearnPendantOfHolinessSpell);     [Function for Pendant of Holiness]
 
 !!HEv600:A2/0/?v24/?v25; [check for spell book]
 

@@ -70,12 +70,12 @@ ZVSE2
 !!UN:P795/?y1;
 !!FU&y1=0:E;   [выход если опция не включена]
 
-** генерация события (до 1го события за каждого игрока на каждом ходу)
+** event generation (up to 1 event for each player on each turn)
 !!UN:X?(mapSize:y)/?(twoLvlMap:y);                [y1/y2 - размер/этажность карты]
 !!VR(mapSize):-1;                    [y1 - макс. координата]
 !!FU7916:P(mapSize)/(twoLvlMap);              [генерация события]
-** обнаружение событий для каждого героя текущего игрока
 
+** detect events for each hero of the current player
 !#VA(hero[8]:y);
 !!OW:Oi^timerOwner^/?(hrOnMap:y)/?(hero[0])/?(hero[1])/?(hero[2])/?(hero[3])/?(hero[4])/?(hero[5])/?(hero[6])/?(hero[7]);
 
@@ -86,16 +86,24 @@ ZVSE2
       !!HE(hero[i]):P?(x:y)/?(y:y)/?(z:y) O?(checkOwner:y);
 
       !!if&(x)>-1/(y)>-1/(checkOwner)=i^timerOwner^;
-        !!HE(hero[i]):S(SKILL_SCOUTING)/?(area:y) A2/(ART_SPECULUM)/d/?(hasSpec:y) A2/(ART_SPYGLASS)/d/?(hasSpy:y);
-        !!VR(area)&(hasSpec):+1;
-        !!VR(area)&(hasSpy):+1;
-        !!VR(area):*4 +5;
-
-        !!DO(ES_795_SearchEventForPlayerHero)/1/(area)/1:Pi^timerOwner^/i^timerIsAi^/(mapSize)/(hero[i])/(x)/(y)/(z);
+        !!HE(hero[i]):S(SKILL_SCOUTING)/?(radius:y);
+        !!FU(ES_795_GetArtNightScoutingRadius):P(hero[i])/?(artRadius:y); [Here we use a function for mod compatibility]
+        !!VR(radius):+(artRadius) *4 +5;
+        
+        !!DO(ES_795_SearchEventForPlayerHero)/1/(radius)/1:Pi^timerOwner^/i^timerIsAi^/(mapSize)/(hero[i])/(x)/(y)/(z);
       !!en;
     !!en;
   !!en;
 !!en;
+
+; Function for mod compatibility
+!?FU(ES_795_GetArtNightScoutingRadius);
+!#VA(hero:x) (result:x);
+
+!!VR(result):S0;
+!!HE(hero):A2/(ART_SPECULUM)/d/?(hasSpec:y) A2/(ART_SPYGLASS)/d/?(hasSpy:y);
+!!VR(result)&(hasSpec):+1;
+!!VR(result)&(hasSpy):+1;
 
 !?FU(ES_795_SearchEventForPlayerHero);
 !#VA(player:x) (isAi:y) (size:x) (heroId:y) (x:x) (y:x) (z:x);
@@ -156,7 +164,7 @@ ZVSE2
   !!SN:W^o795.%Y1.%Y2.%Y3.P5^/?y9;  [...]
 
   !!VRv1:Sy4 +8000;                 [v1 - номер функции обработчика события]
-  !!FUv1:Px1/x4/x2/y1/y2/y3/y5/y6/y7/y8/y9; [Handler function call - FU8000, FU8001, FU8002, FU8003, FU8004, FU8005, FU8006, FU8007, FU8008, FU8009]
+  !!FUv1:Px1/x4/x2/y1/y2/y3/y5/y6/y7/y8/y9; [Handle function call - FU8000, FU8001, FU8002, FU8003, FU8004, FU8005, FU8006, FU8007, FU8008, FU8009]
 
   !!SN:W^o795.%Y1.%Y2.%Y3.T^/?y10;  [y10 - тип события]
   !!VRx16&y10=0:S100500;            [прерывание поиска событий, если событие активировано]
@@ -652,7 +660,7 @@ ZVSE2
   !!IF:M1/1;                  [вывод сообщения]
 !!en; 
 
-!?FU8007;                               // Барахольщик - предлагает за случайный артефакт в рюкзаке героя наиболее необходимые ему ресурсы по случайно заданному курсу
+!?FU8007;                               // hoarder - offers the most necessary resources for a random artifact in the hero’s backpack at a randomly set rate
 ** x1 - игрок, x2 - герой, x3 - 0/1=Человек/ИИ, x4-x6 - координаты события, x7-x11 - параметры события
 ** P1 = размер группы, P2 = стоимость групы
 ** проверка условия срабатывания
