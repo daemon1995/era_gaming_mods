@@ -35,21 +35,21 @@ ZVSE2
 !!VR(random:y):R0/1/100;                [Random number: 1-100]
 !!FU&(random)>25:E;                     [Only a 25% chance of monster would be replaced]
 
-!!MO(x)/(y)/(z):R?(aggression:y)/1;     [Check monster's aggression]
-!!FU&(aggression)=0:E;                  [Skip if monster is set to always join]
+!!FU(WOG_CheckIfMonIsEligibleToBeRepalced):P(x)/(y)/(z)/?(result:y);
+!!FU&(result)<>(TRUE):E;
 
-!!FU|(mon)>129/(mon)=116/(mon)=117:E;   [выход, если существо - нейтрал]
+!!FU|(mon)>(MON_ENERGY_ELEMENTAL)/(mon)=(MON_GOLD_GOLEM)/(mon)=(MON_DIAMOND_GOLEM):E;   [exit if the creature is neutral]
 
-!!MO(x)/(y)/(z):G?(num:y);              [кол-во существ]
-!!MA:L(mon)/?(lv:y);                    [уровень существа (0..6)]
-!!VR(lv):*-1 +6;                        [уровень существа (6..0)]
-!!VR(lv)&(lv)>3:S3;                     [макс. кол-во уровней для повышения (0..3)]
-!!VR(typeOffset:y):S0 R(lv) *2;         [кол-во "номеров" для повышения (0/2/4/6)]
-!!FU&(typeOffset)=0:E;                  [выход, если уровень существ не повышеается]
+!!MO(x)/(y)/(z):G?(num:y);              [number of creatures]
+!!MA:L(mon)/?(lv:y);                    [creature level (0..6)]
+!!VR(lv):*-1 +6;                        [creature level (6..0)]
+!!VR(lv)&(lv)>3:S3;                     [Max. number of levels to increase (0..3)]
+!!VR(typeOffset:y):S0 R(lv) *2;         [number of “numbers” for promotion (0/2/4/6)]
+!!FU&(typeOffset)=0:E;                  [exit if the level of creatures does not increase]
 
-!!VR(newMon:y):S(mon) +(typeOffset); [(newMon) - новый тип существа]
+!!VR(newMon:y):S(mon) +(typeOffset); [(newMon) - new type of creature]
 
-!!if&(mon)>97/(mon)<130;  [нестандартные номера существ]
+!!if&(mon)>=(MON_GNOLL)/(mon)<=(MON_ENERGY_ELEMENTAL);  [нестандартные номера существ]
   !!VR(newMon)&(mon)=98/(newMon)=102:S106;   [...]
   !!VR(newMon)&(mon)=99/(newMon)=103:S107;   [...]
   !!VR(newMon)&(mon)=104/(newMon)=110:S102;  [...]
@@ -92,14 +92,19 @@ ZVSE2
   !!VR(newMon)&(mon)=121/(newMon)=123:S131;  [...]
 !!en;                                   [...]
 
+; Get the quantity depending on Fv
 !!MA:F(mon)/?(fv:y) F(newMon)/?(newFv:y); [FV старого и нового существа]
 !!VR(newNum:y):S(num) *(fv) :(newFv);   [кол-во новых существ]
 !!VR(totalFv:y):S(num) *(fv);           [FV старого отряда]
 !!VR(newTotalFv:y):S(newNum) *(newFv);  [FV нового отряда]
 !!VR(tripleFvGap:y):S(totalFv) -(newTotalFv) *3; [утроенное "потерянное" FV]
 !!VR(newNum)&(tripleFvGap)>=(newFv):+1 F1/(INT_MAX); [кол-во новых существ, с округлением вверх от 1/3]
+
+; Replace
 !!UN:O(x)/(y)/(z)/0;                    [удаление старого существа]
 !!UN:I(x)/(y)/(z)/(OBJ_MONSTER)/(newMon)/(OBJ_MONSTER)/(newMon)/-1/0; [установка нового существа]
+
+; Set new quantity
 !!MO(x)/(y)/(z):G(newNum);
 
 **end
