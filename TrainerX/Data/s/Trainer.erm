@@ -448,17 +448,6 @@ ZVSE2
       !!VR(ps:y):Si^trainer_maxPrimSkillValue^ -10;
       !!HE(hero):F(ps)/(ps)/(ps)/(ps);
 
-      ; Secondary Skills - disabled as it's sometimes annoying (Resistance for example)
-      *!re (ss:y)/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST);
-        *!HE(hero):S(ss)/(SKILL_EXPERT);
-
-        *!if&i^Advanced_Classes_Mod_Active^;
-          *!SN:Mi^acm_SkillNames_ArrayId^/(ss)/?z10;
-          *!VR(skillMasterOn:y):Si^H3_%z10_0_Hero%(hero)^;
-          *!VR(skillGrandMasterOn:y):Si^H3_%z10_1_Hero%(hero)^;
-        *!en;
-      *!en;
-
       ; Spells
       !!re (spell:y)/(SPELL_FIRST)/(SPELL_LAST_WOG);
         !!co&(spell)=(SPELL_TITANS_LIGHTNING_BOLT);
@@ -476,6 +465,7 @@ ZVSE2
     !!UN:X?(size:y)/?(hasTwoLv:y); get map size
     !!UN:S0/0/0/(player)/356;
     !!UN&(hasTwoLv)>0:S0/0/1/(player)/356;
+
     ; Resources
     !!re i/(RES_FIRST)/(RES_LAST_WOG);
       !!co&i=(RES_MITHRIL)/i^mithril_on^<>(TRUE);
@@ -487,6 +477,57 @@ ZVSE2
       !!en;
 
       !!OW:R(player)/i/(resNum);
+    !!en;
+
+    ; Sound
+    !!SN:P^VIEW^;
+
+  ; Alt Click - Reversal God Mod
+  !!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
+    !!if&(hero)>(NO_HERO);
+      ; Troops
+      !!re (slot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+        !!HE(hero):C0/(slot)/(NO_MON)/0;
+      !!en;
+
+      ; Movement points
+      !!HE(hero):W0/(TRUE);
+      ; Mana
+      !!HE(hero):I0/(TRUE);
+
+      ; Fly
+      !!HE(hero):Z?(heroStruct:y);
+      !!UN:C(heroStruct)/274/(UNC_INT)/-1;
+
+      ; Primary Skills
+      !!HE(hero):F0/0/1/1;
+
+      ; Spells
+      !!re (spell:y)/(SPELL_FIRST)/(SPELL_LAST_WOG);
+        !!HE(hero):M(spell)/(FALSE);
+      !!en;
+
+      ; Spell book
+      !!FU(UnequipArtFromSlot):P(hero)/(ART_SLOT_SPELL_BOOK);
+    !!en;
+
+    ; Hide the whole map for all the players (should be hiding the whole map for the current player)
+    *!UN:X?(size:y)/?(hasTwoLv:y); get map size
+
+    *!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+      *!OW:Ii/?(isAi:y)/?(hasLost:y);
+
+      *!if&(hasLost)<>(TRUE);
+        *!UN:H0/0/0/(player)/356;
+        *!UN&(hasTwoLv)>0:H0/0/1/i/356;
+      *!en;
+    *!en;
+
+    ; Resources
+    !!re i/(RES_FIRST)/(RES_LAST_WOG);
+      !!co&i=(RES_MITHRIL)/i^mithril_on^<>(TRUE);
+
+      !!OW:R(player)/i/0;
     !!en;
 
     ; Sound
@@ -3770,19 +3811,19 @@ ZVSE2
 
   ; Complete seer huts quests when removing heroes and monsters
   ; Not working
-  !!if|(obj)=(OBJ_HERO)/(obj)=(OBJ_MONSTER);
-    !!OW:C?(currPlayer:y)/?(interactPlayer:y);
+  *!if|(obj)=(OBJ_HERO)/(obj)=(OBJ_MONSTER);
+    *!OW:C?(currPlayer:y)/?(interactPlayer:y);
 
-    !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
-    !!VR(ptr:y):S(gameMgr) +129904;     [lea     ecx, [eax+1FB70h]. Don't use UN:C here (only mov for UN:C)]
+    *!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+    *!VR(ptr:y):S(gameMgr) +129904;     [lea     ecx, [eax+1FB70h]. Don't use UN:C here (only mov for UN:C)]
 
-    !!if&(obj)=(OBJ_HERO);
-      !!SN:E5268336/(CALLCONV_THISCALL)/(ptr)/(hero)/(interactPlayer);
-    !!el;
-      !!FU(trainer_PackedCoords):P(x)/(y)/(z)/?(packedCoords:y);
-      !!SN:E5268400/(CALLCONV_THISCALL)/(ptr)/(packedCoords)/(interactPlayer); 5063B0
-    !!en;
-  !!en;
+    *!if&(obj)=(OBJ_HERO);
+      *!SN:E5268336/(CALLCONV_THISCALL)/(ptr)/(hero)/(interactPlayer);
+    *!el;
+      *!FU(trainer_PackedCoords):P(x)/(y)/(z)/?(packedCoords:y);
+      *!SN:E5268400/(CALLCONV_THISCALL)/(ptr)/(packedCoords)/(interactPlayer); 5063B0
+    *!en;
+  *!en;
 
   ; Manage the compatibility with Mixed Neutral - Troops can be left patch
   !!VRi^mix_isLeftTroops_%(x)_%(y)_%(z)^&(obj)=(OBJ_MONSTER):S(FALSE);
@@ -3796,19 +3837,24 @@ ZVSE2
   !!FU(trainer_ObjScannerPlaceObj)|(obj)=(OBJ_STUB)/(obj)=(OBJ_ANCHOR_POINT):P(x)/(y)/(z);
 !!en;
 
+; Get the object type under the hero (if there is one) for the remaining options
+!!if&(obj)=(OBJ_HERO);
+  !!HE(x)/(y)/(z):Z?(heroStruct:y);
+  !!UN:C(heroStruct)/12/(UNC_INT)/?(obj:y); [Get object type under the hero]
+!!en;
+
+; Events
 !!if&i^trainer_objChoice^=5/(obj)=(OBJ_EVENT); [disable event for current human player]
   !!OW:C?(currPlayer:y);
   !!LE(x)/(y)/(z):D(currPlayer)/1;      [LE:D get syntax doesn't work, damn]
   !!SN:P^trn_quest.wav^;
-!!en;
-
-!!if&i^trainer_objChoice^=6/(obj)=(OBJ_EVENT); [disable event for current human player]
+!!el&i^trainer_objChoice^=6/(obj)=(OBJ_EVENT); [disable event for current human player]
   !!OW:C?(currPlayer:y);
   !!LE(x)/(y)/(z):D(currPlayer)/0;      [LE:D get syntax doesn't work, damn]
   !!SN:P^trn_quest.wav^;
-!!en;
 
-!!if&i^trainer_objChoice^=7/(obj)=(OBJ_TOWN);
+; Towns
+!!el&i^trainer_objChoice^=7/(obj)=(OBJ_TOWN);
   !!FU(trainer_ObjScannerBuildings):P(x)/(y)/(z)/(TRUE);
 !!el&i^trainer_objChoice^=8/(obj)=(OBJ_TOWN);
   !!FU(trainer_ObjScannerBuildings):P(x)/(y)/(z)/(FALSE);
