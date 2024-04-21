@@ -252,22 +252,16 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 ** first aid
 !!if&i^wog_204_enabled^;
-  !!VRv7040:C0/0/0/0/0/0/0;                   [no creatures to resurrect after battle attacker]
-  !!VRv7047:C0/0/0/0/0/0/0;                   [no creatures to resurrect after battle defender]
-  !!BA:M0/0/?y-1/?v7040;                      [save qty in each of attacking hero's slots for after battle]
-  !!BA:M0/1/?y-1/?v7041;                      [to determine qty lost for first aid skill]
-  !!BA:M0/2/?y-1/?v7042;
-  !!BA:M0/3/?y-1/?v7043;
-  !!BA:M0/4/?y-1/?v7044;
-  !!BA:M0/5/?y-1/?v7045;
-  !!BA:M0/6/?y-1/?v7046;
-  !!BA:M1/0/?y-1/?v7047;                      [save qty in each of defending hero's slots for after battle]
-  !!BA:M1/1/?y-1/?v7048;                      [to determine qty lost for first aid skill]
-  !!BA:M1/2/?y-1/?v7049;
-  !!BA:M1/3/?y-1/?v7050;
-  !!BA:M1/4/?y-1/?v7051;
-  !!BA:M1/5/?y-1/?v7052;
-  !!BA:M1/6/?y-1/?v7053;
+  !!SN:Mi^wog_204_monList_0^ Mi^wog_204_monList_1^;
+  !!FU(NewIntArray):P14/?i^wog_204_monList_0^/(M_TEMP) P14/?i^wog_204_monList_1^/(M_TEMP);
+
+  !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+    !!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+      !!BA:Mi/j/?(type:y)/?(num:y);
+      !!VR(index:y):Sj *2;
+      !!SN:Vi^wog_204_monList_%i^/(index)/(type)/(num);
+    !!en;
+  !!en;
 !!en;
 
 ** mysticism
@@ -563,7 +557,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
 
 ** start of battle end trigger
-!?FU(OnAfterBattleUniversal)|i^wog_204_enabled^/i^wog_207_enabled^/i^wog_202_enabled^;                     [Continue trigger if any skills are enabled]
+!?FU(OnAfterBattleUniversal)|i^wog_204_enabled^/i^wog_207_enabled^; [Continue trigger if any skills are enabled]
 ** first aid
 !!if&i^wog_204_enabled^;
   !!HEi^battle_hero_0^:O?(owner:y);     [get attacking hero's owner]
@@ -705,22 +699,34 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!VRy2:R0/0/6;                                      [random slot # to start search from]
 !!VRv2:S7;                                          [7 = slot not found]
 !!DO7003/0/6/1:P(side)/y1/y2;                       [heal next slot with >= 1 monster killed]
+
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!SN:Mi^wog_204_monList_%i^;
+  !!VRi^wog_204_monList_%i^:S0;
+!!en;
 ** end of function
 
 
 ** function to find slot where at least 1 cr was lost
 !?FU7003;           x1=side x2=hp healed  x3=slot
+!#VA(side:x) (hpHealed:x) (slot:x);
+!#VA(usedY[10]:y);
 
 !!VRy4:Sx3 %7;                                      [get an actual slot number]
-!!BA&x1=(BATTLE_LEFT):M0/y4/?y5/?y6;                            [get y5 type and y6 qty in slot y3 :attacker]
-!!BA&x1=(BATTLE_RIGHT):M1/y4/?y5/?y6;                            [get y5 type and y6 qty in slot y3 :defender]
-!!VRy1&x1=(BATTLE_LEFT):S7040 +y4;                              [get variable # of previous qty :attacker]
-!!VRy1&x1=(BATTLE_RIGHT):S7047 +y4;                              [get variable # of previous qty :defender]
-!!VRy7:Svy1;                                        [get previous qty]
-!!VRy7:-y6;                                         [subtract current qty to get qty lost]
+!!BA:Mx1/y4/?y5/?y6;                                [get y5 type and y6 qty in slot y3]
 
-!!FU7004&v2=7/y7>0/y6>0:Px1/x2/x3/y4/y5/y6/y7;      [try to heal stack if some lost but some left]
-!!VRx3:+1;                                          [next slot]
+!!VR(index:y):Sy4 *2;
+!!SN:Mi^wog_204_monList_%(side)^/(index)/?(prevType:y);
+
+!!if&(prevType)=y5;
+  !!VR(index):+1;
+  !!SN:Mi^wog_204_monList_%(side)^/(index)/?y7;       [get previous qty]
+
+  !!VRy7:-y6;                                         [subtract current qty to get qty lost]
+  !!FU7004&v2=7/y7>0/y6>0:Px1/x2/x3/y4/y5/y6/y7;      [try to heal stack if some lost but some left]
+!!en;
+
+!!VRx3:+1;                                            [next slot]
 ** end of function
 
 
@@ -740,6 +746,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!BA&x1=(BATTLE_LEFT)/y5>0:M0/x4/?x5/dy5;                       [restore y5 creatures attacker]
 !!BA&x1=(BATTLE_RIGHT)/y5>0:M1/x4/?x5/dy5;                       [restore y5 creatures defender]
 
+; Show msg when the current player is the same as the interacting player
 !!OW:C?y31/?y32;
 
 !!if&y30=y32;
@@ -747,7 +754,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!IF&y5>1:Q2/(PIC_TYPE_MONSTER)/x5/1/z148008;
 !!en;
 
-!!SN:D;                                            [redraw screen to show revived creatures]
+!!SN:D;                                             [redraw screen to show revived creatures]
 !!VRv2&y5>0:Sx4;                                    [note that we healed a stack if we did]
 ** end of function
 
