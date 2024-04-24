@@ -10,6 +10,10 @@ ZVSE2
 ; Kill depending on target level: 36/22/11/8/6/4/2 : 10 * Gorgons count
 ; GorgDeathMode: boolean (0 - normal mode, 1 - distant attack)
 
+; Currently the check of whether the target is a henchman is disabled. 
+; This brings better compatibility but at the same time, it makes henchmen and other speical creatures much more vulnerable.
+; Define in FU(ES_995_CheckIfStackAffectedByDeathStare) to exclue any stack from the Ranged Death Stare effect
+
 
 !?FU(OnBattleMouseHint);
 !!UN:P995/?y1;
@@ -59,49 +63,67 @@ ZVSE2
 !!FU&y51<>0:E;
 
 !!BMy1:N?y30;
-!!UN:P49/?y99;
-!!VRy70:Sy2+7207 Svy70;
 
-!!if&y1=y70/y99=1;
-  !!BHy2:N?y71;
-  !!IF:Wy71;
+; Henchmen, for the current side
+*!UN:P49/?y99;
 
-  !!if&w118>-1/w119=1;
-    !!FU(hench_GetHenchExpPerLevel):Py3;
-    !!HEy71:E?y72/?y73/1;
-    !!VRy74:Sy73 -1 *10 +w117 +c;
-    !!VRy75:Sy74 :i^hench_expPerLevel^ +1;
-    !!VRy30:Sy75;
-  !!en;
-!!en;
+*!if&y99/y1=i^hench_stack_%y2^;
+  *!BHy2:N?y71;
+  *!IF:Wy71;
+
+  *!if&w118>-1/w119=1;
+    *!FU(hench_GetHenchExpPerLevel):Py3;
+    *!HEy71:E?y72/?y73/1;
+    *!VRy74:Sy73 -1 *10 +w117 +c;
+    *!VRy75:Sy74 :i^hench_expPerLevel^ +1;
+    *!VRy30:Sy75;
+  *!en;
+*!en;
 
 !!BMy6:T?y31;
+
+; Exit if the target is a commander
+!!FU(ES_CheckIfMonsterIsValid):Py31/?y82;
+!!FU&y82<>(TRUE):E;
+
+!!MA:Ly31/?y32;
+
+; Exit if the target is level 8+
+!!if&y32=(MON_MAX_LEVEL);
+  !!MA:F(MON_BLOOD_DRAGON)/?y80 Fy31/?y81;
+  !!FU&y81>=y80:E;;
+!!en;
+
+; Exit if the target is just special (for 3rd party scripts)
+!!FU(ES_995_CheckIfStackAffectedByDeathStare):Py6/?y83;
+!!FU&y83<>(TRUE):E;
+
 !!VRy33:S600+y32;
 !!VRv600:C36/22/11/8/6/4/2;
 !!VRy33:Svy33*y30;
 !!BMy6:H?y34 L?y35 N?y36;
 !!VRy37:Sy36*y34-y35;
 !!VRy38:Sy34*y33:10;
-!!UN:P49/?y99;
-!!VRy98:S1-y2;
-!!VRy70:Sy98+7207 Svy70;
 
-!!if&y6=y70/y99=1;
-  !!BHy98:N?y71;
-  !!IF:Wy71;
+; Henchmen, for the tageting side
+*!VRy98:Sy2 X(TRUE);
 
-  !!if&w118>-1/w119=1/y71>=0;
-    !!FU(hench_GetHenchExpPerLevel):Py31;
-    !!HEy71:E?y72/?y73/1;
-    !!VRy74:Sy73 -1 *10 +w117 +c;
-    !!VRy75:Sy74 *100 :i^hench_expPerLevel^ +100;
-    !!VRy38:Sy34 *100 :y75 * y33 :10;
-  !!en;
-!!en;
+*!if&y99/y6=i^hench_stack_%y98^;
+  *!BHy98:N?y71;
+  *!IF:Wy71;
 
-!!if&y31>=174/y31<=191;
-  !!VRy38:Sy30*44;
-!!en;
+  *!if&w118>-1/w119=1/y71>=0;
+    *!FU(hench_GetHenchExpPerLevel):Py31;
+    *!HEy71:E?y72/?y73/1;
+    *!VRy74:Sy73 -1 *10 +w117 +c;
+    *!VRy75:Sy74 *100 :i^hench_expPerLevel^ +100;
+    *!VRy38:Sy34 *100 :y75 * y33 :10;
+  *!en;
+*!en;
+
+*!if&y31>=174/y31<=191;
+  *!VRy38:Sy30*44;
+*!en;
 
 !!VRy39:Sy37-y38;
 !!VRy39&y39<0:S0;
@@ -111,23 +133,9 @@ ZVSE2
 !!VRy42:Sy36-y40;
 !!VRy43:Sy38:y34;
 !!VRy43&y43<y42:Sy42;
-!!VRz1:S^%Y42^;
 
-!!if&y42=y36;
-  !!VRz2:S^{~0F2223E}%Z1{~}^;
-  !!VRz1:Sz2;
-!!en;
-
-!!VRz3:S^%Y38^;
-
-!!if&y42=y36;
-  !!VRz2:S^{~0F2223E}%Z3{~}^;
-  !!VRz3:Sz2;
-!!en;
-
-!!VRz4:S^%Z1  (%Z3)^;
-!!VRz1&y42=y36:S^^;
-!!UN:R5/4/84;
+!!SN:T^es.995.hint^/?z4/^dmg^/y38/^kill^/y42;
+!!UN:R5/4/(ART_SPIRIT_OF_OPPRESSION);
 !!MM:Mz4;
 
 !?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_PRESSED);
@@ -186,50 +194,65 @@ ZVSE2
 !!FU&y51<>0:E;
 
 !!BMy1:N?y30;
-!!UN:P49/?y99;
-!!VRy70:Sy2+7207 Svy70;
 
-!!if&y1=y70/y99=1;
-  !!BHy2:N?y71;
-  !!IF:Wy71;
+*!UN:P49/?y99;
 
-  !!if&w118>-1/w119=1;
-    !!FU(hench_GetHenchExpPerLevel):Py3;
-    !!HEy71:E?y72/?y73/1;
-    !!VRy74:Sy73 -1 *10 +w117 +c;
-    !!VRy75:Sy74 :i^hench_expPerLevel^ +1;
-    !!VRy30:Sy75;
-  !!en;
-!!en;
+*!if&y99/y1=i^hench_stack_%y2^;
+  *!BHy2:N?y71;
+  *!IF:Wy71;
+
+  *!if&w118>-1/w119=1;
+    *!FU(hench_GetHenchExpPerLevel):Py3;
+    *!HEy71:E?y72/?y73/1;
+    *!VRy74:Sy73 -1 *10 +w117 +c;
+    *!VRy75:Sy74 :i^hench_expPerLevel^ +1;
+    *!VRy30:Sy75;
+  *!en;
+*!en;
 
 !!BMy6:T?y31;
+
+; Exit if the target is a commander
+!!FU(ES_CheckIfMonsterIsValid):Py31/?y82;
+!!FU&y82<>(TRUE):E;
+
 !!MA:Ly31/?y32;
+
+; Exit if the target is level 8+
+!!if&y32=(MON_MAX_LEVEL);
+  !!MA:F(MON_BLOOD_DRAGON)/?y80 Fy31/?y81;
+  !!FU&y81>=y80:E;
+!!en;
+
+; Exit if the target is just special (for 3rd party scripts)
+!!FU(ES_995_CheckIfStackAffectedByDeathStare):Py6/?y83;
+!!FU&y83<>(TRUE):E;
+
 !!VRy33:S600+y32;
 !!VRv600:C36/22/11/8/6/4/2;
 !!VRy33:Svy33*y30;
 !!BMy6:H?y34 L?y35 N?y36;
 !!VRy37:Sy36*y34-y35;
 !!VRy38:Sy34*y33:10;
-!!UN:P49/?y99;
-!!VRy98:S1-y2;
-!!VRy70:Sy98+7207 Svy70;
 
-!!if&y6=y70/y99=1;
-  !!BHy98:N?y71;
-  !!IF:Wy71;
+*!VRy98:Sy2 X(TRUE);
 
-  !!if&w118>-1/w119=1/y71>=0;
-    !!FU(hench_GetHenchExpPerLevel):Py31;
-    !!HEy71:E?y72/?y73/1;
-    !!VRy74:Sy73 -1 *10 +w117 +c;
-    !!VRy75:Sy74 *100 :i^hench_expPerLevel^ +100;
-    !!VRy38:Sy34 *100 :y75 * y33 :10;
-  !!en;
-!!en;
+*!if&y99/y6=i^hench_stack_%y98^;
+  *!BHy98:N?y71;
+  *!IF:Wy71;
 
-!!if&y31>=174/y31<=191;
-  !!VRy38:Sy30*44;
-!!en;
+  *!if&w118>-1/w119=1/y71>=0;
+    *!FU(hench_GetHenchExpPerLevel):Py31;
+    *!HEy71:E?y72/?y73/1;
+    *!VRy74:Sy73 -1 *10 +w117 +c;
+    *!VRy75:Sy74 *100 :i^hench_expPerLevel^ +100;
+    *!VRy38:Sy34 *100 :y75 * y33 :10;
+  *!en;
+*!en;
+
+*!if&y31>=174/y31<=191;
+  *!VRy38:Sy30*44;
+*!en;
 
 !!VRy39:Sy37-y38;
 !!VRy39&y39<0:S0;
@@ -244,7 +267,7 @@ ZVSE2
   !!BMy6:N0 L0;
 !!en;
 
-!!SN:T^es.995.kill^/?z1/^dmg^/y38/^killed^/y42;
+!!SN:T^es.995.battleLog^/?z1/^dmg^/y38/^kill^/y42;
 !!MM:Sz1;
 !!SN:P^deathstr.wav^;
 !!BMy6:V80 Ky38;
@@ -285,5 +308,11 @@ ZVSE2
 
 !!VR(result):S(FALSE);
 !!VR(result)&(mon)=(MON_MIGHTY_GORGON):S(TRUE);
+
+// Function to check if the targeted stack can be affected ranged death stare (for 3rd party scripts)
+!?FU(ES_995_CheckIfStackAffectedByDeathStare);
+!#VA(stack:x) (result:x);
+
+!!VR(result):S(TRUE);
 
 ** end
