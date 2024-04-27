@@ -271,6 +271,7 @@ Dialogues: 3
 
 !?FU(WOG_44_ChooseImprovementType);
 !#VA(mon:x) (monInd:x);
+!#VA(usedY[40]:y);
 
 !!SN:H^monname^/(mon)/0/?z3 H^monname^/(mon)/1/?z4;
 
@@ -370,19 +371,44 @@ Dialogues: 3
 !!FU(WOG_44_ChooseSpecialAbility)&v3=10:P(mon)/y32/?v5; [Give choice of Special Bonus] - The choice returns in v5
 
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!FU(WOG_44_PayForBonus)&v3>=2:P(mon)/y15/(monInd)/?y34;  [Ask player to pay for Bonus: y34=1 if player pays]
+  !!FU(WOG_44_PayForBonus)&v3>=2:P(mon)/y15/(monInd)/?y34;  [Ask player to pay for Bonus and also sacrifice some creatures: y34=1 if player pays]
 !!el;
   !!VRy34:S(TRUE); [Set y34 to 1 if AI]
 !!en;
 
 !!if&y34;
+  ; Initialise variables for changing Fight Value and Ai Value later
+  !!VR(additionalValue:y):S0;
+
   ; If chose a stats
   !!if&v3>=2/v3<=9;
     !!VRy9:Syv3; [Bonus amount: y9]
-    !!FU(WOG_44_AddBonusByCreatureType):P(mon)/y9; [Add bonus to creature type if player paid for it]
+    !!FU(WOG_44_AddNormalBonus):P(mon)/y9; [Add bonus to creature type if player paid for it]
+
+    !!if&y9<>7/v9<>8;                   [Increase value except for growth and 24 shots]
+      !!VR(additionalValue):S5;
+    !!en;
   ; If chose a special ability
   !!el&v3=10/v5>0;
     !!FU(WOG_44_AddSpecialAbility):P(mon)/v5; [Special]
+
+    !!if|v5>=3/v5<=5/v5>=9/v5<=11;
+      !!VR(additionalValue):S5;
+    !!el;
+      !!VR(additionalValue):S10;
+    !!en;
+  !!en;
+
+  ; Adjust Fight value and AI value
+  !!if&(additionalValue)>0;
+    !!MA:F(mon)/?(fv:y);
+    !!VR(newFv:y):S100 +(additionalValue) *(fv) :100;
+    !!MA:I(mon)/?(av:y);
+    !!VR(newAv:y):S100 +(additionalValue) *(av) :100;
+
+    !!if&(newFv)>(fv)/(newAv)>(av);                    [Overflow check]
+      !!MA:F(mon)/(newFv) I(mon)/(newAv);
+    !!en;
   !!en;
 
   !!if&i^wog_44_isNewSpecies^;
@@ -504,7 +530,7 @@ Dialogues: 3
 
  [Calculate number of creatures that must be left: y7]
 !!MA:G(mon)/?y6; [Growth of creature: y6]
-!!VRy10:Sy6 :2; [50% of growth (rounded down): y10]
+!!VRy10:Sy6 :2 F1/(INT_MAX); [50% of growth (mimimum 1): y10]
 !!VRy7:Sy6 +y10; [150% of growth (rounded down): y7]
 
 !!if&y7=1;
@@ -578,7 +604,7 @@ Dialogues: 3
  [Add bonus to creature type]
  [(mon)=creature type, v3=bonus type, x1=bonus amount]
 
-!?FU(WOG_44_AddBonusByCreatureType);
+!?FU(WOG_44_AddNormalBonus);
 !#VA(mon:x) (bonusAmount:x);
 
 !!MA&v3=2:A(mon)/d(bonusAmount); [Attack bonus]
@@ -609,7 +635,7 @@ Dialogues: 3
      [Determine which box was checked - store result in (specialAbility)]
     !!FU(IntLog2):Pv368/?(specialAbility);
     !!VR(specialAbility):+1;
-    !!VR(specialAbility)&(specialAbility)>10:S-1;
+    !!VR(specialAbility)&(specialAbility)>11:S-1;
   !!en;
 !!el;
   !!if&(numAbilities)=0;
@@ -882,7 +908,7 @@ Dialogues: 3
   !!SN:T^wog.44.ability.%(specialAbility)^/?(abilityText:z);
 
   ; Fix the text if the ability is Strikes Twice and the monster is a shooter
-  !!if&(specialAbility)=5;
+  !!if&(specialAbility)=6;
     !!MA:X(mon)/?(monFlags:y);
     !!VR(canShoot:y):S(monFlags) &(MON_FLAG_SHOOTER);
     !!SN&(canShoot):T^wog.44.ability.%(specialAbility)a^/?(abilityText);
