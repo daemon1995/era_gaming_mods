@@ -90,7 +90,7 @@ Dialogues: 3
 !!VRi^wog_44_bonusBought^:S0; [Initialize bonus bought variable to 0]
 
 !!if&(ERM_FLAG_IS_HUMAN);
-  !!IF:Q2/5/7/2/z144003;
+  !!IF:Q2/(PIC_TYPE_RES_GEMS)/7/(MSG_TYPE_QUESTION)/z144003;
   !!VRz9:S^^;
 !!el;
   !!IF:V2/1; [Set flag 2 to true for AI]
@@ -122,8 +122,6 @@ Dialogues: 3
       !!en;
     !!en;
 
-     [Initialize Flag 5 to False for the event of returning gems]
-    !!IF:V5/0;
     !!FU(WOG_44_ChooseSpeciesMain):P; [Choose species to improve]
   !!en;
 !!en;
@@ -251,18 +249,19 @@ Dialogues: 3
 !!en;
 
 ; Give back some gems if the Wizard did not help
-!!if&(ERM_FLAG_IS_HUMAN)/4/-5;
-  ; Give back 6 gems if nothing bought
-  !!if&i^wog_44_bonusBought^=0;
-    !!IF:Q1/(PIC_TYPE_RES_GEMS)/6/(MSG_TYPE_MES)/z144015;
+!!if&(ERM_FLAG_IS_HUMAN)/4;
+  !!if|i^wog_44_bonusBought^=0/i^wog_44_bonusBought^=2;
+    ; Give back 6 gems if nothing bought
+    !!if&i^wog_44_bonusBought^=0;
+      !!IF:Q1/(PIC_TYPE_RES_GEMS)/6/(MSG_TYPE_MES)/z144015;
 
-  ; If player bought "24 shots" and nothing else
-  !!el&i^wog_44_bonusBought^=2;
-    !!IF:Q1/(PIC_TYPE_RES_GEMS)/6/(MSG_TYPE_MES)/z144016;
+    ; Or if player bought "24 shots"
+    !!el&i^wog_44_bonusBought^=2;
+      !!IF:Q1/(PIC_TYPE_RES_GEMS)/6/(MSG_TYPE_MES)/z144016;
+    !!en;
+    
+    !!OW:R(CURRENT_PLAYER)/(RES_GEMS)/d6; [Give back 6 gems if nothing bought or only "24 shots" bought]
   !!en;
-
-  !!IF:V5/1; [Set Flag 5 to True]
-  !!OW:R(CURRENT_PLAYER)/(RES_GEMS)/d6; [Give back 6 gems if nothing bought or only "24 shots" bought]
 !!en;
 
 -----------------------------------------------------------------------
@@ -519,10 +518,12 @@ Dialogues: 3
     !!FU(WOG_Player_CheckEnoughResources):P?y36/(CURRENT_PLAYER)/y33/y34/y33/y34/y34/y34;
     !!OW:R(CURRENT_PLAYER)/y1/dy2;
 
+    ; Set up the latest cost picture array
+    !!VRy38:Sy1 *2 +1;                        [Get the index of resources amount]
+    !!SN:My35/y38/dy2;
+
     ; If not enough resources for the extra costs (plus the original costs), ask if want to check out the other creatures
     !!if&y36<>(TRUE);
-      !!VRy1:*2 +1;                        [Get the index of resources amount]
-      !!SN:My35/y1/dy2;
       !!FU(PrepareMultiPicDialog):Py35;
       !!IF:N(MSG_TYPE_QUESTION)/^%T(wog.44.extra_notEnough)^/?y37;
       !!IF&y37=(FALSE):V4/(FALSE);
@@ -564,8 +565,8 @@ Dialogues: 3
     !!DO(WOG_44_RemoveCreatures)/0/6/1:P(mon)/y7; [Remove the creatures (if enough)]
 
     !!if&y33>0/y34>0;                   [if there is extra cost]
-      !!IF:N(PIC_TYPE_MONSTER)/y5/y1/y2/(PIC_TYPE_RES_WOOD)/y33/(PIC_TYPE_RES_MERCURY)/y34/(PIC_TYPE_RES_ORE)/y33/
-    (PIC_TYPE_RES_SULFUR)/y34/(PIC_TYPE_RES_CRYSTAL)/y34/(PIC_TYPE_RES_GEMS)/y34;
+      !!FU(Array_Push):Py35/(PIC_TYPE_MONSTER)/y5; [Add the monster picture at the end of the cost picture array]
+      !!FU(PrepareMultiPicDialog):Py35;
       !!IF:N(MSG_TYPE_MES)/z144041;
     !!el;
       !!IF:Q1/(PIC_TYPE_MONSTER)/y5/y1/y2/(MSG_TYPE_MES)/z144041;
