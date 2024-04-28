@@ -1,11 +1,11 @@
 ZVSE2
 
 ********************************************************************************
-                 Advanced Classes Mod 1.08 for ERA 3.x
+                 Advanced Classes Mod 1.09 for ERA 3.x
 ********************************************************************************
 
-A Mod by Perry R. 2016-2022.
-Contributors: Berserker and Daemon.
+A Mod by Perry R. 2016-2024.
+Contributors: Credits in the readme.txt
 
 Content:
 
@@ -6954,7 +6954,7 @@ Druid                  : Heals two squads after combat, Flat Damage Block, 1 ext
 !!SN:W^Grandmaster_Warrior_Hero%Y1^/?y7;
 !!SN:W^Master_Mage_Hero%Y1^/?y5;        [Battlemages cannot get this bonus]
 !!SN:W^Master_Adventurer_Hero%Y1^/?y6;
-!!FU(Count_Set_Pieces_2):Py1/0/0/0/?y90;   [Count Warrior Set Pieces function X5]          [Count Set Pieces function]
+!!FU(Count_Set_Pieces_2):Py1/0/0/0/?y90;[Count Warrior Set Pieces function X5]          [Count Set Pieces function]
 !!VRy10:S100;                           [Normal Damage]
 !!VRy10&y4=1:S115;                      [+15% damage increase for Master Warrior]
 !!VRy10&y7=1:S120;                      [+20% damage increase for Grandmaster Warrior]
@@ -6969,7 +6969,7 @@ Druid                  : Heals two squads after combat, Flat Damage Block, 1 ext
 !!SN:W^Grandmaster_Warrior_Hero%Y2^/?y7;
 !!SN:W^Master_Mage_Hero%Y2^/?y5;        [Battlemages cannot get this bonus]
 !!SN:W^Master_Adventurer_Hero%Y2^/?y6;
-!!FU(Count_Set_Pieces_2):Py2/0/0/0/?y90;   [Count Warrior Set Pieces function X5]          [Count Set Pieces function]
+!!FU(Count_Set_Pieces_2):Py2/0/0/0/?y90;[Count Warrior Set Pieces function X5]          [Count Set Pieces function]
 !!VRy10:S100;                           [Normal Damage]
 !!VRy10&y4=1:S115;                      [+15% damage increase for Master Warrior]
 !!VRy10&y7=1:S120;                      [+20% damage increase for Grandmaster Warrior]
@@ -7230,8 +7230,10 @@ x1=Hero level, x2 returns crit chance, x3 returns crit damage
 
 
 ********************************************************************************
-** start of battle-start trigger
-!?FU(OnBattlefieldVisible)&1000;        [On Battle Field Start]
+Arcane Prophet Grandmaster Mage ability
+Randomly before battle a spell is choosen that will deal significantly more damage during the combat
+
+!?FU(OnBeforeBattleUniversal);
 
 !!BA:H0/?y1;                            [get attacking hero #]
 !!SN:W^Grandmaster_Mage_Hero%Y1^/?y11;
@@ -7240,56 +7242,59 @@ x1=Hero level, x2 returns crit chance, x3 returns crit damage
 !!BA:H1/?y2;                            [get defending hero #]
 !!FU&y2=-2:E;                           [Exit if no defending Hero]
 !!SN:W^Grandmaster_Mage_Hero%Y2^/?y11;
+!!FU(Mage_Skill_Fkt_1)&y11=1:Py2/1;     [wenn mysticism beim angreifer vorhanden dann reiche x1=10 an function (Mystik_Skill_Fkt_0) weiter]
+
+
+!?FU(OnBattlefieldVisible); 
+
+!!BA:H0/?y1;                            [get attacking hero #]
+!!SN:W^Grandmaster_Mage_Hero%Y1^/?y11;
+!!FU(Mage_Skill_Fkt_1)&y11=1:Py1/2;     [wenn mysticism beim angreifer vorhanden dann reiche x1=10 an function (Mystik_Skill_Fkt_0) weiter]
+
+!!BA:H1/?y2;                            [get defending hero #]
+!!FU&y2=-2:E;                           [Exit if no defending Hero]
+!!SN:W^Grandmaster_Mage_Hero%Y2^/?y11;
 !!FU(Mage_Skill_Fkt_1)&y11=1:Py2/2;     [wenn mysticism beim angreifer vorhanden dann reiche x1=10 an function (Mystik_Skill_Fkt_0) weiter]
 
+
 !?FU(Mage_Skill_Fkt_1);
-!!HEx1:A2/73/?y2/?y3 A2/74/?y4/?y5 A2/75/?y6/?y7 S8/?y8 A2/138/?y30/?y31; [check for Charm of Mana, Talisman of Mana, Mystic Orb of Mana, Mysticism skill level, Wizards Well]
-!!VRy8:S3;                              [40%  50%  60%  chance je nach Mysticism skill level]   Changes always set to 3]
-!!VRy8&y3=1:+1;                         [Charm of Mana Bonus  10% Bonus]
-!!VRy8&y5=1:+2;                         [Talisman of Mana Bonus  20% Bonus]
-!!VRy8&y31=1:+3;                        [Wizards Well Bonus  +30% Chance]
+!!HEx1:A2/73/?y2/?y3 A2/74/?y4/?y5 A2/75/?y6/?y7 S8/?y8 A2/138/?y30/?y31 B0/?z1 O?y32; [check for Charm of Mana, Talisman of Mana, Mystic Orb of Mana, Mysticism skill level, Wizards Well, get hero's name]
 
-!!VRy10:S0R10;                          [do coin flip for stronger spell in combat]
-
-!!FU&y10>y8:E;                          [exit the function  if random value is bigger than 3]
-
-!!HEx1:B0/?z1;                          [get hero's name]
-!!VRy20:S15 R8;                         [choose Spell which will deal more dmg]
-
-!!if&i^battle_isVisible^;
-  !!SN:T^AC_Misc.Arkane Prophet^/?z2 Iz2/?z2;
-  !!IF:Q2/9/y20/1/z2;                   [Show Message]
+!!if&x2=1;                              [Only run before battle start and save variables]
+  !!VRy8:S3;                            [Set base chance to 30%]
+  !!VRy8&y3=1:+1;                       [Charm of Mana Bonus adds 10% Bonus]
+  !!VRy8&y5=1:+2;                       [Talisman of Mana Bonus adds 20% Bonus]
+  !!VRy8&y31=1:+3;                      [Wizards Well Bonus adds +30% Chance]
+  !!VRy10:S0R10;                        [do coin flip for stronger spell in combat]
+  !!FU&y10>y8:E;                        [exit the function  if random value is bigger than chance]
+  !!VRy15:S10 R90;                      [Roll for 10% til 100% damage increase]
+  !!VRy15&y7=1:+40;                     [check for Mystic Orb of Mana  if yes increase damage +40%]
+  !!VRy15&y31=1:+40;                    [check for Wizards Well  if yes increase damage +40%]
+  !!VRy20:S15 R8;                       [choose Spell which will deal more dmg]
+  !!HEx1:My20/?y22;                     [Check if the hero knows the spell]
+  !!FU&y22=0:E;                         [Exit if the hero has not learned the spell]
+  !!SN:W^Arcane_Prophet_Spell_%X1^/y20; [Save Spell by Hero ID]
+  !!SN:W^Arcane_Prophet_Spell_Damage%X1^/y15; [Save Spell damage by Hero ID]
 !!en;
-!!SN&x2=1:W^Mage_Spell_Enhancement_0^/y20; [Save for Attacker]
-!!SN&x2=2:W^Mage_Spell_Enhancement_1^/y20; [Save for Defender]
 
-********************************************************************************
-!?MR1&1000;                             [Arkane_Prophet]
+!!OW:Iy32/?y33;                         [Added get if owner is AI]
 
-!!BG:Q?y1;                              [Get acting side]
-!!SN&y1=0:W^Mage_Spell_Enhancement_0^/?y20; [Save for Attacker]
-!!SN&y1=1:W^Mage_Spell_Enhancement_1^/?y20; [Save for Defender]
-!!FU&y20=0:E;
+!!SN:W^Arcane_Prophet_Spell_%X1^/?y20;  [Check Spell by Hero ID]
+!!SN:W^Arcane_Prophet_Spell_Damage%X1^/?y15; [Check Spell damage by Hero ID]
+!!if&x2=2/y20>0;                        [if a spell was selected]
+  !!if&i^battle_isVisible^/y33=0;       [If visible and battle has already started and is not AI]
+    !!SN:T^AC_Misc.Arkane Prophet^/?z2/^damage^/y15 Iz2/?z2; [get text string in z2]
+    !!IF:Q2/9/y20/1/z2;                 [Show Message]
+  !!en;
+!!en;
 
-!!BG:A?y1;                              [Aktion in y1]
-!!FU&y1<>1:E;                           [Exit if no Hero cast]
-!!MR:F?y14;                             [Speichere DMG in y3]
-!!BG:H?y4;                              [Number of a hero owner (-1=no hero)   in y4]
-!!FU&y4=-1:E;
-!!BG:S?y11;                             [Falls Aktion ein Cast ist dann Speichere Spellnummer in y2]
-!!FU&y11<>y20:E;                        [Exit if not choosen spell]
-!!HEy4:A2/75/?y6/?y7 A2/138/?y30/?y31;  [check for  Mystic Orb of Mana and Wizards Well]
-
-!!VRy15:S110 R90;                       [Roll for 10 til 100% damage increase]
-!!VRy15&y7=1:+40;                       [check for  Mystic Orb of Mana  if yes increase damage +40%]
-!!VRy15&y31=1:+40;                      [check for  Wizards Well  if yes increase damage +40%]
-!!VRy14:*y15:100;                       [spell dmg + 1 bis 130% wenn v1159 gleich dem gecasteten spell ist]
-!!MR:Fy14;                              [neuen  spell dmg setzen mit y14]
-
-
-!?FU(OnAfterBattleUniversal);
-!!SN:W^Mage_Spell_Enhancement_0^/0;     [Reset for Attacker]
-!!SN:W^Mage_Spell_Enhancement_1^/0;     [Reset for Defender]
+!?FU(OnAfterBattleUniversal);           [Reset Arcane Prophet variables after combat]
+!!BA:H0/?y1;                            [get attacking hero #]
+!!SN:W^Arcane_Prophet_Spell_%Y1^/0;     [reset variable after combat]
+!!SN:W^Arcane_Prophet_Spell_Damage%Y1^/0;[reset variable after combat]
+!!BA:H1/?y1;                            [get defending hero #]
+!!SN:W^Arcane_Prophet_Spell_%Y1^/0;     [reset variable after combat]
+!!SN:W^Arcane_Prophet_Spell_Damage%Y1^/0;[reset variable after combat]
 
 
 *************************Elemental Resistance*******************************************************
@@ -7451,7 +7456,7 @@ You find a shortcut out of the battlefield (+%Y3 movement points)^;
 
 
 !?OB12; Campfire
-
+!!FU:E; Test
 !!FR998:B?y1/?y2;
 !!IF:L^%Y1 and %Y2^;
 !!VRy2:*2;
@@ -7463,43 +7468,43 @@ You find a shortcut out of the battlefield (+%Y3 movement points)^;
 *Taking Cities gives Gold at Master level
 *Taking Cities at Grandmaster Level immiditaly increases the number of creatures to hire in that city
 
-!?OB98&1000;
+!?OB98;                                 [Trigger when visiting a town]
 
-!!CA998:O?y1;
-!!if&y1<0;                             [If Neutral Town]
-!!HE-1:N?y1;
-!!HEy1:O?y2;
+!!CA998:O?y1;                           [check town owner]
+!!if&y1<0;                              [If Neutral Town]
+!!HE-1:N?y1;                            [get current hero ID]
+!!HEy1:O?y2;                            [get hero owner]
 !!SN:W^Master_Adventurer_Hero%Y1^/?y20;
 !!SN:W^Master_Warrior_Hero%Y1^/?y21;
 !!SN:W^Master_Mage_Hero%Y1^/?y22;
-!!if&y20=1/y21=0/y22=0;                [If Master Adventurer and not Hybrid Class]
-!!CA998:H0/?y3 H1/?y4 M2/0/?y5/d M2/1/?y6/d M2/2/?y7/d M2/3/?y8/d M2/4/?y9/d M2/5/?y10/d M2/6/?y11/d;
-!!FU(Town_Plunder)&y3=-1/y4=-1/y5=-1/y6=-1/y7=-1/y8=-1/y9=-1/y10=-1/y11=-1:Py1/y2/v998/v999/v1000;
+!!if&y20=1/y21=0/y22=0;                 [If Master Adventurer and not Hybrid Class]
+  !!CA998:H0/?y3 H1/?y4 M2/0/?y5/d M2/1/?y6/d M2/2/?y7/d M2/3/?y8/d M2/4/?y9/d M2/5/?y10/d M2/6/?y11/d;
+  !!FU(Town_Plunder)&y3=-1/y4=-1/y5=-1/y6=-1/y7=-1/y8=-1/y9=-1/y10=-1/y11=-1:Py1/y2/v998/v999/v1000;
 !!en;
 !!en;
 
-!!CA998:O?y1;
+!!CA998:O?y1;                           [check town owner]
 !!FU&y1<0:E;                            [If Town under controll]
-!!HE-1:O?y2;
-!!OW:Ty1/?y3 Ty2/?y4;
-!!FU&y3=y4:E;
-!!HE-1:N?y1;
+!!HE-1:O?y2;                            [get hero owner]
+!!OW:Ty1/?y3 Ty2/?y4; 
+!!FU&y3=y4:E;                           [exit if it is your own town]
+!!HE-1:N?y1;                            [get the current hero ID]
 !!SN:W^Master_Adventurer_Hero%Y1^/?y20;
 !!SN:W^Master_Warrior_Hero%Y1^/?y21;
 !!SN:W^Master_Mage_Hero%Y1^/?y22;
-!!if&y20=1/y21=0/y22=0;                [If Master Adventurer and not Hybrid Class]
-!!CA998:H0/?y3 H1/?y4 M2/0/?y5/d M2/1/?y6/d M2/2/?y7/d M2/3/?y8/d M2/4/?y9/d M2/5/?y10/d M2/6/?y11/d;
-!!FU(Town_Plunder)&y3=-1/y4=-1/y5=-1/y6=-1/y7=-1/y8=-1/y9=-1/y10=-1/y11=-1:Py1/y2/v998/v999/v1000;
+!!if&y20=1/y21=0/y22=0;                 [If Master Adventurer and not Hybrid Class]
+  !!CA998:H0/?y3 H1/?y4 M2/0/?y5/d M2/1/?y6/d M2/2/?y7/d M2/3/?y8/d M2/4/?y9/d M2/5/?y10/d M2/6/?y11/d;
+  !!FU(Town_Plunder)&y3=-1/y4=-1/y5=-1/y6=-1/y7=-1/y8=-1/y9=-1/y10=-1/y11=-1:Py1/y2/v998/v999/v1000;
 !!en;
 
 
-!?FU(OnAfterBattleUniversal)&1000;
+!?FU(OnAfterBattleUniversal);
 
 !!BA:H0/?y1;
 !!SN:W^Master_Adventurer_Hero%Y1^/?y20;
 !!SN:W^Master_Warrior_Hero%Y1^/?y21;
 !!SN:W^Master_Mage_Hero%Y1^/?y22;
-!!if&y20=1/y21=0/y22=0;                [If Master Adventurer and not Hybrid Class]
+!!if&y20=1/y21=0/y22=0;                 [If Master Adventurer and not Hybrid Class]
 !!BA:S?y80;
 !!FU&y80=0:E;                           [Exit if no Siege]
 !!HEy1:O?y2;
@@ -7515,17 +7520,25 @@ You find a shortcut out of the battlefield (+%Y3 movement points)^;
 x1=Hero Number
 x2=Hero Owner
 x3-x5=Town Coordinates
+
+!!VRy99:Sc;                             [Get Current Day in y99]
+!!SN:W^Town_Plunder_%X3_%X4_%X5_Cooldown^/?y98; [set this town to current gameday]
+!!FU&y99<y98:E;                         [Exit if plunder would happen on the same town within two weeks]
+
 !!SN:W^Grandmaster_Adventurer_Hero%X1^/?y20;
 !!VRy15:S8000;                          [Set Golf Bonus for Master Adventurer]
 !!VRy15&y20=1:S15000;                   [Set Golf Bonus for Grandmaster Adventurer]
 !!SN:T^AC_Misc.Town_Plunder^/?z1/^gold^/y15;
-!!IF:M1/z1;
-!!OW:Rx2/6/dy15;
+!!IF&1000:M1/z1;                        [show message]
+!!OW:Rx2/6/dy15;                        [increase players resources]
+
+!!VRy99:+14;                            [Add two weeks cooldown]
+!!SN:W^Town_Plunder_%X3_%X4_%X5_Cooldown^/y99; [set this town to current gameday]
 
 *Level 1*                      *Level 2*                      *Level 3*                      *Level 4*                     *Level 5*                     *Level 6*                     *Level 7*
 !!VRy21:S40; !!VRy22:S30; !!VRy23:S25; !!VRy24:S20; !!VRy25:S15; !!VRy26:S10; !!VRy27:S2; [Master]
 
-!!if&y20=1;                            [if Grandmaster]
+!!if&y20=1;                             [if Grandmaster]
 !!VRy21:S80; !!VRy22:S40; !!VRy23:S35; !!VRy24:S30; !!VRy25:S25; !!VRy26:S15; !!VRy27:S4; [Grandmaster]
 !!en;
 **Y21 bis Y27  is level 1 til 7
@@ -7565,28 +7578,27 @@ x3-x5=Town Coordinates
 !!CAx3/x4/x5&-1:B3/36;                  [dwelling 7]
 !!CAx3/x4/x5&1:M1/6/dy27/d0;
 
-!!SN:D;                                 [Added SN:D command. It's used to redraw hero, heroes meeting, adventure map and town screens.]
+!!SN&1000:D;                            [Added SN:D command. It's used to redraw hero, heroes meeting, adventure map and town screens.]
 
 
 ************************Grandmaster Adventurer**********************************
 *+3% Creature Growth per Week*
 
-!?FU(OnEveryDay)&i^timerDay^>1/i^timerWeekDay^=1/i^timerIsAi^=0;
+!?FU(OnEveryDay)&i^timerDay^>1/i^timerWeekDay^=1;
 !!OW:C?y1;
 !!DO(AC_Function_20)/0/155/1:Py1;
-
 
 !?FU(AC_Function_20);
 !!HEx16:O?y1;                           [Checke Hero Owner]
 !!FU&y1=-1:E;                           [Exit if none]
-!!HEx16:O?y1;
-!!FU&y1<>x1:E;
+!!HEx16:O?y1;                           [check hero owner]
+!!FU&y1<>x1:E;                          [exit if not current player]
 !!SN:W^Master_Adventurer_Hero%X16^/?y10;
 !!SN:W^Grandmaster_Adventurer_Hero%X16^/?y11;
 !!DO(AC_Function_21)/0/6/1&y10=1/y11=1:Px16/3; [Pass Hero and Skilllevel]
 
 !?FU(AC_Function_21);
-!!HEx1:C0/x16/?y1/?y2;
+!!HEx1:C0/x16/?y1/?y2;                  [Get hero creatures]
 !!FU|y2<1/y1<0:E;                       [Exit if no creature in slot]
 !!FU(Count_Set_Pieces_2):Px1/0/0/0/0/?y92; [Check for  Sets]
 !!SN&y92=3:W^Adventurer_Set_Count_Hero%X1^/?y10;
@@ -7641,7 +7653,7 @@ x3-x5=Town Coordinates
 !!CM:F?y1 I?y2 S?y3;
 !!FU|y1<>512/y2<>0/y3<>14:E;            [right-click empty space in hero screen]
 !!HE-1:N?y4;                            [get hero number]
-*!FU(ACM_Select_Commander_Role):Py4;
+*!FU(ACM_Select_Commander_Role):Py4;    Testing code
 !!SN:W^Grandmaster_Adventurer_Hero%Y4^/?y1; [check if grandmaster adventurere]
 !!FU&y1=0:E;                            [Exit if no GM Adv]
 
@@ -7832,7 +7844,7 @@ Level 7 units: %Y16
   !!HEy1:B0/?z2;                        [get hero name]
   !!DO(AC_Function_38)/21/41/1:P90;     [Run if Battlemage]
   !!SN:T^AC_Misc.Warcry ability^/?z1/^damage^/10/^name^/z2;
-  !!BU&i^battle_isVisible^:Mz1;                    [Show Message in Battlelog]
+  !!BU&i^battle_isVisible^:Mz1;         [Show Message in Battlelog]
 !!en;
 
 !!BA:H1/?y1;                            [Defender]
@@ -7843,7 +7855,7 @@ Level 7 units: %Y16
   !!HEy1:B0/?z2;                        [get hero name]
   !!DO(AC_Function_38)/0/20/1:P90;      [Run if Battlemage]
   !!SN:T^AC_Misc.Warcry ability^/?z1/^damage^/10/^name^/z2;
-  !!BU&i^battle_isVisible^:Mz1;                    [Show Message in Battlelog]
+  !!BU&i^battle_isVisible^:Mz1;         [Show Message in Battlelog]
 !!en;
 
 !?FU(AC_Function_38);                   [decrease Units Stats]
@@ -7865,7 +7877,7 @@ Ranged units get +50 speed to act first in battle
 !!if&y9=1/y10=1;
   !!HEy1:B0/?z2;                        [get hero name]
   !!SN:T^AC_Misc.First Shot^/?z1/^name^/z2;
-  !!BU&i^battle_isVisible^:Mz1;                    [Show Message in Battlelog]
+  !!BU&i^battle_isVisible^:Mz1;         [Show Message in Battlelog]
 !!en;
 
 !!BA:H1/?y1;                            [Defender]
@@ -7875,7 +7887,7 @@ Ranged units get +50 speed to act first in battle
 !!if&y9=1/y10=1;
   !!HEy1:B0/?z2;                        [get hero name]
   !!SN:T^AC_Misc.First Shot^/?z1/^name^/z2;
-  !!BU&i^battle_isVisible^:Mz1;                    [Show Message in Battlelog]
+  !!BU&i^battle_isVisible^:Mz1;         [Show Message in Battlelog]
 !!en;
 
 
@@ -8002,6 +8014,7 @@ Hunter gets +50% MR in first Battle Round, also works for AI
 
 *********************************Druid*****************************************
 Druid can transfer spells (buffs) on his troops to the next combat
+The chance is random and can happen for max 3 stacks. The duration of the transfered buff is up to two rounds
 
 !?PI;
 !!DO(Remember_Spells_Fkt_0)/0/155/1:P;  [Set all Hero Vars to -1 at game start]
@@ -8010,7 +8023,6 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !?FU(OnAfterBattleUniversal)&1000;
 
 !!BH0:N?y10;                            [Save Attacking Hero]
-*!HEy10&y10>=0:S18/?y15;                                                        [Check for Scholar]
 !!SN:W^Master_Mage_Hero%Y10^/?y40;
 !!SN:W^Master_Adventurer_Hero%Y10^/?y41;
 !!VRy15&y40=1/y41=1:S1;
@@ -8024,7 +8036,6 @@ Druid can transfer spells (buffs) on his troops to the next combat
 
 !!BH1:N?y11;                            [Save Defending Hero]
 !!FU&y11<0:E;                           [Exit if none]
-*!HEy11&y11>=0:S18/?y16;                                                        [Check for Scholar]
 !!SN:W^Master_Mage_Hero%Y11^/?y40;
 !!SN:W^Master_Adventurer_Hero%Y11^/?y41;
 !!VRy16&y40=1/y41=1:S1;
@@ -8049,7 +8060,6 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!SN&y5=1:W^Creature_Stack_Choice1^/x16;
 !!SN&y5=2:W^Creature_Stack_Choice2^/x16;
 !!SN&y5=3:W^Creature_Stack_Choice3^/x16;[Stop if three Stacks were choosen]
-*!IF:M^x16 is %X16 and y5 is %Y5^;
 !!VRx16&y5=3/x2=1:S8;
 !!VRx16&y5=3/x2=2:S29;
 !!DO(Remember_Spells_Fkt_2)/27/58/1:Px1;[Run Loop throug all Spells with heronumber]
@@ -8061,22 +8071,45 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!SN:W^Creature_Numerator1^/?y3;
 !!if&x16<>35/x16<>37/x16<>38/x16<>39/x16<>40/x16<>42/x16<>45/x16<>47/x16<>50/x16<>52/x16<>54; [Skip beneficial spells]
 !!if&y3>=0/y3<=41;
-!!BMy3:Gx16/?y1/?y2;                    [check for active spells Duration Y1 and Power Y2 and Type Y3]
-!!BMy3:T?y4;
-!!SN:W^Hero%X1_Monster%Y3_Spell%X16_Duration^/y1; [Save in Var]
-!!SN:W^Hero%X1_Monster%Y3_Spell%X16_Power^/y2; [Save in Var]
-!!SN:W^Hero%X1_Monster%Y3_Spell%X16_Type^/y4; [Save in Var]
+  !!BMy3:Gx16/?y1/?y2;                  [check for active spells Duration Y1 and Power Y2 and Type Y3]
+  !!BMy3:T?y4;
+  !!SN:W^Hero%X1_Monster%Y3_Spell%X16_Duration^/y1; [Save in Var]
+  !!SN:W^Hero%X1_Monster%Y3_Spell%X16_Power^/y2; [Save in Var]
+  !!SN:W^Hero%X1_Monster%Y3_Spell%X16_Type^/y4; [Save in Var]
 !!en;
 !!en;
 
 ********************************************************************************
-**Battle Start Handling**
-!?FU(OnCombatRound)&v997=0/1000;             
+!?FU(OnBattleReplay); Reset variables for Druid Concentration Perk
+!!BH0:N?y10;
+!!SN:W^Hero%Y10_Number_Saved_Side0_Replay^/?y1;
+!!SN:W^Hero%Y10_Number_Saved_Side0^/y1;
+!!SN:W^Hero%Y10_Number_Saved_Side1_Replay^/?y1;
+!!SN:W^Hero%Y10_Number_Saved_Side1^/y1;
 
+!!BH1:N?y11;
+!!SN&y11>=0:W^Hero%Y11_Number_Saved_Side0_Replay^/?y1;
+!!SN&y11>=0:W^Hero%Y11_Number_Saved_Side0^/y1;
+!!SN&y11>=0:W^Hero%Y11_Number_Saved_Side1_Replay^/?y1;
+!!SN&y11>=0:W^Hero%Y11_Number_Saved_Side1^/y1;
+
+!!SN:W^Remember_Spells_Counter0_Replay^/?y1; [Set Counter to zero]
+!!SN:W^Remember_Spells_Counter0^/y1;    [Set Counter to zero]
+
+*!SN:W^Hero%Y10_Number_Saved_Side0_Replay^/?y1;
+*!SN:W^Hero%Y10_Number_Saved_Side1_Replay^/?y1;
+*!SN&y11>=0:W^Hero%Y11_Number_Saved_Side0_Replay^/?y1;
+*!SN&y11>=0:W^Hero%Y11_Number_Saved_Side1_Replay^/?y1;
+
+
+**Battle Start Handling**
+!?FU(OnCombatRound)&v997=0;
 !!BU:T?y99;                             [Check battle has tactics phase]
 !!VRy99&y99=1:S3;                       [Set duration of spells in new combat round with tactics]
 !!VRy99&y99=0:S2;
 
+!!SN:W^Remember_Spells_Counter0^/?y1;   [Set Counter to zero]
+!!SN:W^Remember_Spells_Counter0_Replay^/y1; [Set Counter to zero]
 !!SN:W^Remember_Spells_Counter0^/0;     [Set Counter to zero]
 
 !!BH0:N?y10;
@@ -8087,8 +8120,8 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!SN&y11>=0:W^RememberSpells_Defender_Owner_Start^/y31;
 
 !!SN:W^Hero%Y10_Number_Saved_Side0^/?y1;
+!!SN:W^Hero%Y10_Number_Saved_Side0_Replay^/y1;
 !!if&y1>=0;
-*!HEy10&y10>=0:S18/?y12;
 !!SN:W^Master_Mage_Hero%Y10^/?y40;
 !!SN:W^Master_Adventurer_Hero%Y10^/?y41;
 !!VRy12&y40=1/y41=1:S3;
@@ -8098,8 +8131,8 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!en;
 
 !!SN:W^Hero%Y10_Number_Saved_Side1^/?y1;
+!!SN:W^Hero%Y10_Number_Saved_Side1_Replay^/y1;
 !!if&y1>=0;
-*!HEy10&y10>=0:S18/?y12;
 !!SN:W^Master_Mage_Hero%Y10^/?y40;
 !!SN:W^Master_Adventurer_Hero%Y10^/?y41;
 !!VRy12&y40=1/y41=1:S3;
@@ -8109,8 +8142,8 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!en;
 
 !!SN&y11>=0:W^Hero%Y11_Number_Saved_Side0^/?y1;
+!!SN&y11>=0:W^Hero%Y11_Number_Saved_Side0_Replay^/y1;
 !!if&y1>=0;
-*!HEy11&y11>=0:S18/?y12;
 !!SN:W^Master_Mage_Hero%Y11^/?y40;
 !!SN:W^Master_Adventurer_Hero%Y11^/?y41;
 !!VRy12&y40=1/y41=1:S3;
@@ -8120,8 +8153,8 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!en;
 
 !!SN&y11>=0:W^Hero%Y11_Number_Saved_Side1^/?y1;
+!!SN&y11>=0:W^Hero%Y11_Number_Saved_Side1_Replay^/?y1;
 !!if&y1>=0;
-*!HEy11&y11>=0:S18/?y12;
 !!SN:W^Master_Mage_Hero%Y11^/?y40;
 !!SN:W^Master_Adventurer_Hero%Y11^/?y41;
 !!VRy12&y40=1/y41=1:S3;
@@ -8177,7 +8210,7 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!if|y3=y10/y3=y11/y3=y12;
 !!BMy3:Mx16/x4/y2;                      [Apply spells]
 !!VRz-1:S^PRAYER.wav^;                  [Play prayer sound if at least one stack transferd buffs]
-!!SN:Pz-1;
+!!SN&^battle_isVisible^:Pz-1;
 !!en;
 !!en;
 !!en;
@@ -8201,7 +8234,7 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!if|y3=y10/y3=y11/y3=y12;
 !!BMy3:Mx16/x4/y2;                      [Apply spells]
 !!VRz-1:S^PRAYER.wav^;
-!!SN:Pz-1;
+!!SN&^battle_isVisible^:Pz-1;
 !!en;
 !!en;
 !!en;
@@ -8224,7 +8257,7 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!if|y3=y10/y3=y11/y3=y12;
 !!BMy3:Mx16/x4/y2;                      [Apply spells]
 !!VRz-1:S^PRAYER.wav^;
-!!SN:Pz-1;
+!!SN&^battle_isVisible^:Pz-1;
 !!en;
 !!en;
 !!en;
@@ -8248,7 +8281,7 @@ Druid can transfer spells (buffs) on his troops to the next combat
 !!if|y3=y10/y3=y11/y3=y12;
 !!BMy3:Mx16/x4/y2;                      [Apply spells]
 !!VRz-1:S^PRAYER.wav^;
-!!SN:Pz-1;
+!!SN&^battle_isVisible^:Pz-1;
 !!en;
 !!en;
 !!en;
@@ -9548,13 +9581,15 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!SN:W^Brute_Attacking_Stack^/?y50;
   !!VRy1&y4=y1/y50>=0/y50<=41:Sy50;     [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
   !!SN:W^Brute_Attacking_Stack^/y4;
-  !!BMy1:T?y2;                          [Creature Type]
+  !!BMy1:T?y2 I?y12;                    [Creature Type and side]
   !!if&y2>=174/y2<=191;                 [if any commander]
   !!SN:W^ACM_Com_%Y5_Passive_6^/?y70;   [Check for 2Supporter ability]
   !!if|y2=179/y2=188/y70=1;             [if Brute]
-  !!SN:W^Brute_Gold^/?y11;              [Check current gold for that combat]
+  !!SN&y12=0:W^Brute_Gold_Att^/?y11;    [Check current gold for that combat]
+  !!SN&y12=1:W^Brute_Gold_Def^/?y11;    [Check current gold for that combat]
   !!if&y11>=1000000;                    [Limit the max amount of gold per combat to 1 Million]
-    !!SN:W^Brute_Gold^/1000000;
+    !!SN&y12=0:W^Brute_Gold_Att^/1000000;[set limit]
+    !!SN&y12=1:W^Brute_Gold_Def^/1000000;
     !!FU:E;                             [Exit]
   !!en;  
   !!BG:H?y5;                            [Get Hero]
@@ -9574,9 +9609,12 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!SN:W^Commander_Aktion^/?y50;        [Check if Melee or Shooting]
   !!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y43; [Pass Hero Number and return Passive Modifier]
   !!VRy10:*y43:100;                     [Increase Gold gain by passive modifier]
-  !!SN&y7>=y10:W^Brute_Gold^/dy10;      [If damage is smaller than complete HP of stack add to generated Gold]
-  !!SN&y10>=y7:W^Brute_Gold^/dy7;       [If damage dealt is higher than full stack just add HP of full stack left]
-  !!SN:W^Brute_Gold^/?y11;              [Save Gold to show after Combat]
+  !!SN&y7>=y10/y12=0:W^Brute_Gold_Att^/dy10; [If damage is smaller than complete HP of stack add to generated Gold]
+  !!SN&y10>=y7/y12=0:W^Brute_Gold_Att^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
+  !!SN&y7>=y10/y12=1:W^Brute_Gold_Def^/dy10; [If damage is smaller than complete HP of stack add to generated Gold]
+  !!SN&y10>=y7/y12=1:W^Brute_Gold_Def^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
+  !!SN&y12=0:W^Brute_Gold_Att^/?y11;    [Save Gold to show after Combat]
+  !!SN&y12=1:W^Brute_Gold_Def^/?y11;    [Save Gold to show after Combat]
 
   !!BA:Q?f;
   !!SN&i^battle_isVisible^:T^AC_Misc.Brute^/?z1/^gold^/y11;
@@ -9591,7 +9629,7 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !!BG:A?y1;
 !!FU&y1<>10:E;
 !!BG:N?y1;                              [Current Stack]
-!!BMy1:T?y2;                            [Creature Type]
+!!BMy1:T?y2 I?y12;                      [Creature Type and side]
 !!if|y2=179/y2=188;                     [if Brute]
   !!BG:H?y5;                            [Get Hero]
   !!HEy5&y5>=0:O?y56;                   [Get Hero Color]
@@ -9605,10 +9643,12 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!FU(ACM_Calc_Commander_Spell_damage):Py5/?y20/15/1/y3; [Pass Hero Number and return spell damage in y20, Pass Spell Number and Battle State 1=In Fight, 0=No Fight, TargetCreature]
   !!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y43; [Pass Hero Number and return Passive Modifier]
   !!VRy20:*y43:100;                     [Spell Damage + passive modifier to get correct Gold amount]
-  !!SN&y7>=y20:W^Brute_Gold^/dy20;      [If damage is smaller than complete HP of stack add to generated Gold]
-  !!SN&y20>=y7:W^Brute_Gold^/dy7;       [If damage dealt is higher than full stack just add HP of full stack left]
-  !!SN:W^Brute_Gold^/?y11;              [Save Gold to show after Combat]
-
+  !!SN&y7>=y20/y12=0:W^Brute_Gold_Att^/dy20; [If damage is smaller than complete HP of stack add to generated Gold]
+  !!SN&y20>=y7/y12=0:W^Brute_Gold_Att^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
+  !!SN&y7>=y20/y12=1:W^Brute_Gold_Def^/dy20; [If damage is smaller than complete HP of stack add to generated Gold]
+  !!SN&y20>=y7/y12=1:W^Brute_Gold_Def^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
+  !!SN&y12=0:W^Brute_Gold_Att^/?y11;    [Save Gold to show after Combat]
+  !!SN&y12=1:W^Brute_Gold_Def^/?y11;    [Save Gold to show after Combat]
   !!BA:Q?f;
   !!SN&i^battle_isVisible^:T^AC_Misc.Brute^/?z1/^gold^/y11;
   !!BU&i^battle_isVisible^:Mz1;
@@ -9618,23 +9658,27 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !?FU(OnAfterBattleUniversal);
 
 !!BA:H0/?y1;                            [Attacker Hero Number]
-!!SN:W^Brute_Gold^/?y2;                 [If Alive]
-!!FU|y1<0/y2=0:E;
-!!HEy1:O?y25;                           [(Check hero owner)]
-!!OW:C?y26;                             [(Check current player)]
-!!FU&y25<>y26:E;                        [(Abort if not the same)]
-!!CO-1:D?y4;                            [Check if Commander of Hero is still alive]
+!!FU(Brute_Gold_Passive_msg):Py1/0;
+!!BA:H1/?y1;                            [Defender Hero Number]
+!!FU(Brute_Gold_Passive_msg)&y1>=0:Py1/1;
+
+
+!?FU(Brute_Gold_Passive_msg);
+!!SN&x2=0:W^Brute_Gold_Att^/?y2;        [Check if Gold was generated for Attacker this combat]
+!!SN&x2=1:W^Brute_Gold_Def^/?y2;        [Check if Gold was generated for Defender this combat]
+!!FU|x1<0/y2=0:E;                       [Exit if no hero of no gold was generated]
+!!HEx1:O?y25;                           [Check hero owner]
+!!OW:C?y26;                             [Check current player]
+*!FU&y25<>y26:E;                        [Abort if not the same]
+!!COx1:D?y4;                            [Check if Commander of Hero is still alive]
 !!FU&y4=1:E;                            [Exit if hes not]
 !!if&y4=0;                              [If commander alive]
-  !!CO-1:X2/?y30;                       [Get Commander Level]
-  *!FU(Check_Com_Masteries):Py1/0/0/0/0/0/0/0/0/0/0/?y43; [Pass Hero Number and return Passive Modifier]
-  *!VRy2:*y43:100;                        [Add passive modifier]
   !!SN:T^AC_Misc.Gained Gold^/?z1/^gold^/y2;
   !!SN:W^Message_Flag^/?y20;            [Set Flag if Human Player]
-  !!IF&1000/y20=1/999:M^%Z1^;           [Display text to humans and if value is bigger zero]
+  !!IF&1000/y20=1/999/y25=y26:M^%Z1^;   [Display text to humans and if value is bigger zero]
   !!OW:Ry25/6/dy2;                      [Add gold to current player]
-  !!UN&1000:R2;                         [Redraw Screen to show new value of gold]
-  !!SN:W^Total_Brut_Com_Gold_%Y1^/dy2;  [gained gold from Brute Commander]
+  !!UN&1000/y25=y26:R2;                 [Redraw Screen to show new value of gold]
+  !!SN:W^Total_Brut_Com_Gold_%X1^/dy2;  [gained gold from Brute Commander]
 !!en;
 
 !?FU(OnBeforeBattleUniversal);
@@ -10892,7 +10936,7 @@ Close Dialouge
 !!SN&v7083>-1/v7084=4096:W^Att_Com_Poison_ability^/1;
 !!SN&v7085>-1/v7086=4096:W^Def_Com_Poison_ability^/1;
 
-!!SN:W^Brute_Gold^/0;
+!!SN:W^Brute_Gold_Att^/0; !!SN:W^Brute_Gold_Def^/0;
 !!SN:W^Paladin_Experience^/0;
 
 !?FU(OnCombatRound)&v997=0;             [On First visible combat round]
@@ -11683,7 +11727,7 @@ Here all variables should be reset before a repeated fight
 !!SN:W^Double_Cast_Defender^/0;
 !!SN:W^Master_Mage_Extra_Cast_att^/0;
 !!SN:W^Master_Mage_Extra_Cast_def^/0;
-!!SN:W^Brute_Gold^/0;
+!!SN:W^Brute_Gold_Att^/0; !!SN:W^Brute_Gold_Def^/0;
 !!SN:W^Paladin_Experience^/0;
 !!SN:W^Event_Counter^/0;
 !!SN:W^Temple_Guarding_Casts^/0;
@@ -12036,6 +12080,14 @@ Spell Trainer Damage Spells
   !!SN:W^SpellTrainerHero%X1_Spell%X5^/?y10;
   !!VRy10:*y2;                          [Damage Spells Upgrades times Increment]
   !!VRy99:+y10;                         [Set increased damage]
+!!en;
+******
+
+Arcane Prophet ability
+!!SN:W^Arcane_Prophet_Spell_%X1^/?y20; 
+!!if&y20=x5/y20>0;
+  !!SN:W^Arcane_Prophet_Spell_Damage%X1^/?y15; [Save Spell by Hero ID]
+  !!VRy99:+y15;                         [Set increased damage]
 !!en;
 ******
 
@@ -19698,7 +19750,7 @@ Undead stacks heal and with next attack^;                                       
 !!BMy1:I?y2;                            [Side index as for heroes (0:left, 1:right)]
 !!BG:Q?y40;
 
-!!if&y2=y40;                           [so it only works for attacking not defending]
+!!if&y2=y40;                            [so it only works for attacking not defending]
 !!BMy1:G49/?y13/?y14;                   [check for Mirth Duration]
 !!FU&y13=0:E;                           [Exit if no Mirth]
 
@@ -22307,11 +22359,11 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !!HE-1:N?y1;
 !!FU(H3_Set_Spell_Descriptions)&1000/y1>=0/y1<=155:Py1/3;
 
-!?FU(OnBattleRegeneratePhase)&1000;     [Set spells in Combat]
+!?FU(OnBattleRegeneratePhase);          [Set spells in Combat]
 !!SN:X?y1/?y2/0;                        [get who moves]
 !!VRy2:Sy1:21;                          [get side]
 !!BHy2:N?y1;                            [get owner]
-!!FU(H3_Set_Spell_Descriptions)&1000/y1>=0/y1<=155:Py1/y2;
+!!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/y2;
 
 !?CM1;                                  [town screen click]
 !!CM:I?y1;
@@ -22324,6 +22376,20 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !!OW:A-1/?y1;
 !!FU(H3_Set_Spell_Descriptions)&1000/y1>=0/y1<=155:Py1/3; [When clicked on Cast Spell Button on Adventure Screen]
 !!en;
+
+*?CM4;
+*!CM:D?y1 I?y2;                         [Get Battlefield position with click]
+*!if&y2=2008;                           [if right clicked on spell book in battle]
+  *!BG:Q?y2;
+  *!BHy2:N?y1;                          [get owner]
+  *!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/y2;
+*!en;
+
+!?FU(OnCombatRound);
+!!BG:Q?y2;
+!!BHy2:N?y1;                            [get owner]
+!!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/y2;
+
 
 *?OB54&1000;                       [When visiting a Monster, this is done so that spells applied to a monster have the normal power]
 *!VRz1:S^SPTRAITS.TXT^;            [Normal Sptraits]
@@ -22411,12 +22477,13 @@ Counterstrike: Increases retaliation damage based on your Spell Power
     !!VRy24:Sy5*y2+y3*y99:100;
 
     !!VRy24:Sy24-y23+y3;
-    *!IF&i=15:L^now %Vi y23 is%Y23    Total:%Y24  Readout y3:%Y3  and power is y5:%Y5  and SP is:%Y2  y99 is %Y99^;
+    *!IF&i=19:L^now %Vi y23 is%Y23    Total:%Y24  Readout y3:%Y3  and power is y5:%Y5  and SP is:%Y2  y99 is %Y99^;
+    *!IF&i=19:L^y99 is %Y99^;
     !!if|i=11/i=13;
       !!SN&i=13:W^Hero%X1_Fire Wall_Upgrade^/?y23; !!VRy24&i=13:Sy23*50+y3; [Exception for Landmine]
       !!SN&i=11:W^Hero%X1_Land Mine_Upgrade^/?y23; !!VRy24&i=11:Sy23*35+y3; [Exception for Fire Wall]
     !!en;
-    !!SSi:Ey26/y24;
+    !!SSi:Ey26/y24; Set new Spell damage
   !!en;
 !!en;
 
@@ -27225,7 +27292,6 @@ Weakness, Stone Skin, Prayer, Mirth, Sorrow, Fortune, Misfortune, Haste, Slow, S
 !!SN:W^Duration_Mod_Hero_Id^/y3;        [Save hero id]
 
 ------------------------------------------------------------------------------------------------------------------------
-
 !?BG1;                                  [After action]
 !!SN:W^Spell_Duration_Mod^/?y1;
 !!FU&y1=0:E;                            [Exit if Mod not active]
@@ -27246,6 +27312,7 @@ Weakness, Stone Skin, Prayer, Mirth, Sorrow, Fortune, Misfortune, Haste, Slow, S
 !!if&y3>-1/y3<187;                      [If casted spell is not mass and current stack is the target]
   !!BU:Ey3/?y1;                         [Get stack id standing on hex]
   !!BMy1&y1>=0:Gy2/?y3/?y4;             [Get current duration and power of the spell]
+  !!FU&y3=0:E; <-- SadnessPower fix     [Exit if duration is 0 (spell has been resisted)]
   *!BMy1&y3=y7/y1>=0:Gy2/y6/y4;         
   !!BMy1&y1>=0:Gy2/y6/y4;               [Set duration if spell target valid, because according to TheInvisible1966 it sometimes fails to set propper duration]
 !!en;
@@ -34123,11 +34190,11 @@ Spell Channeling enabled or not
   !!BHy10:M?y18;                        [check if cast available]
   !!VRz2&y18=0:S^active^;               [set text]
   !!VRz2&y18=1:S^disabled^;
-  !!SN&y10=0:W^Mage_Spell_Enhancement_0^/?y20; [Save for Defender]
-  !!SN&y10=1:W^Mage_Spell_Enhancement_1^/?y20; [Save for Defender]
+  !!SN:W^Arcane_Prophet_Spell_%Y99^/?y20;[Check Spell by Hero ID]
+  !!SN:W^Arcane_Prophet_Spell_Damage%Y99^/?y15; [Check Spell damage by Hero ID]
   !!VRz3&y20=0:S^None^;
   !!SN&y20>0:H^spell^/y20/(SPELL_TEXT_NAME)/?z3;
-  !!SN:T^AC_Misc.Spell_Book_Description^/?z12/^Crit1^/y11/^Crit2^/y12/^pierce^/y14/^MR^/y15/^casts^/y17/^rcast^/z2/^chan^/y16/^ArPro^/z3/^name^/z4; [set text]
+  !!SN:T^AC_Misc.Spell_Book_Description^/?z12/^Crit1^/y11/^Crit2^/y12/^pierce^/y14/^MR^/y15/^casts^/y17/^rcast^/z2/^chan^/y16/^ArPro^/z3/^damage^/y15/^name^/z4; [set text]
   !!IF&1000/999:M^%Z12^;                [Show message]
 !!en;
 
