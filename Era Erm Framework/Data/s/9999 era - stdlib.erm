@@ -169,9 +169,6 @@ ZVSE2
 
 !?FU(OnBattleScreenMouseClick);
 !!FU(EnterMouseEvent):P;
-!!OW:C?t/?(activePcPlayer:y);
-!!VRi^battle_isThisPcActive^:S(FALSE);
-!!VRi^battle_isThisPcActive^&i^battle_owner_%i(battle_current_side)^=(activePcPlayer):S(TRUE);
 
 !?FU(OnAdventureMapLeftMouseClick);
 !!FU(EnterMouseEvent):P;
@@ -187,9 +184,6 @@ ZVSE2
 
 !?FU(OnBattleMouseHint);
 !!FU(EnterMouseEvent):P;
-!!OW:C?t/?(activePcPlayer:y);
-!!VRi^battle_isThisPcActive^:S(FALSE);
-!!VRi^battle_isThisPcActive^&i^battle_owner_%i(battle_current_side)^=(activePcPlayer):S(TRUE);
 
 !?FU(OnTownMouseHint);
 !!FU(EnterMouseEvent):P;
@@ -256,24 +250,23 @@ ZVSE2
 !#VA(activeStack:x);
 !!BM(activeStack:x):I?i^battle_current_side^;
 !!VRi^battle_current_stack^:S(activeStack);
+!!VRi^battle_isActingSideUiUser^:Si^battle_localHuman_%i(battle_current_side)^;
 
 !?FU(OnBattleStackObtainsTurn);
 !#VA(stackSide:x) (stackInd:x);
 !!VRi^battle_current_side^:S(stackSide);
 !!VRi^battle_current_stack^:S(stackSide) *(BATTLE_STACKS_PER_SIDE) +(stackInd);
-!!BMi^battle_current_stack^:G(SPELL_HYPNOTIZE)/?(isHypno:y)/?y99;
-!!if&(isHypno);
-  !!VRi^battle_current_side^:X1;
-!!en;
+
+!!BMi^battle_current_stack^:G(SPELL_HYPNOTIZE)/?(isHypnotized:y)/?t;
+!!VRi^battle_current_side^&(isHypnotized):X1;
+
+!!VRi^battle_isActingSideUiUser^:Si^battle_localHuman_%i(battle_current_side)^;
 
 !?FU(OnBeforeBattleAction);
 !!BG:N?i^battle_acting_stack^ Q?i^battle_acting_side^;
-!!if&i^battle_isNetwork^=0/i^battle_hasHuman^;
-  !!UN:C6916044/4/?i^battle_isQuick^;
-  !!if&i^battle_isQuick^;
-    !!VRi^battle_isVisible^:S(FALSE);
-  !!en;
-!!en;
+!!BA:Q?i^battle_isQuick^; can be changed during battle (!)
+!!VRi^battle_isVisible^:Si^battle_aiOnly^ |i^battle_isQuick^ X(TRUE);
+!!VRi^battle_isActingSideUiUser^:Si^battle_localHuman_%i(battle_current_side)^;
 ; ======== END EVENTS ========
 
 
@@ -421,6 +414,147 @@ ZVSE2
 !!en; re
 
 !!SN:M(list)/(newListSize);
+!!VRs^temp^:S^^;
+
+!?FU(Array_Move);
+; Copies part of the array into another part of the array, overwriting existing values in a smart way.
+; The parts may have overlapping indexes. The size of array never changes.
+; Example: X X X [A B C] X X {X X X} => X X X [A B C] X X {A B C}
+; Example: X X X [A {B C] X} X X X X => X X X [A {A B] C} X X X X
+!#VA(list:x);    Array ID.
+!#VA(offset:x);  Index to start copy from.
+!#VA(length:x);  Number of items to copy.
+!#VR(destInd:x); Position in array to copy items to (overwriting existing values).
+
+!!VR(listSize:y):S-1;
+!!SN:M(list)/?(listSize)/?(itemsType:y)/d;
+!!FU&(listSize)<0:E;
+
+!!FU:A?(numArgs:y);
+
+!!if&(numArgs)<(@destInd);
+  !!SN:F^ShowErmError^/^Array_Move: invalid number of function arguments^;
+  !!FU:E;
+!!en;
+
+!!FU|(offset)>=(listSize)/(destInd)>=(listSize)/(offset)=(destInd)/(length)=0:E;
+
+!!if&(offset)<0;
+  !!SN:F^ShowErmError^/^Array_Move: invalid 'offset' argument: %(offset)^;
+  !!FU:E;
+!!en;
+
+!!if&(length)<0;
+  !!SN:F^ShowErmError^/^Array_Move: invalid 'length' argument: %(length)^;
+  !!FU:E;
+!!en;
+
+!!if&(destInd)<0;
+  !!SN:F^ShowErmError^/^Array_Move: invalid 'destInd' argument: %(destInd)^;
+  !!FU:E;
+!!en;
+
+!!VR(maxSrcChunkLength:y):S(listSize) -(offset);
+!!VR(maxDstChunkLength:y):S(listSize) -(destInd);
+!!VR(length):F0/(maxSrcChunkLength) F0/(maxDstChunkLength);
+
+!!if&(itemsType)=(M_INT);
+  !!SN:M(list)/?(listAddr:y)/0;
+  !!VR(srcAddr:y):S(offset) *(SIZEOF_INT) +(listAddr);
+  !!VR(dstAddr:y):S(destInd) *(SIZEOF_INT) +(listAddr);
+  !!VR(numBytesToCopy:y):S(length) *(SIZEOF_INT);
+  !!SN:K(numBytesToCopy)/(srcAddr)/(dstAddr)/1;
+!!el;
+  !!VR(srcChunkEndInd:y):S(offset) +(length) -1;
+
+  !!VR(srcInd:y):S(offset);
+  !!VR(dstInd:y):S(destInd);
+  !!VR(step:y):S1;
+
+  ; If source and destination chunks overlap and we need to copy left part to the right, then we need to reverse copying order (from chunks end to start)
+  ; Otherwise source chunk would overwrite itself
+  !!if&(offset)<(destInd)/(srcChunkEndInd)>=(destInd);
+    !!VR(srcInd):+(length) -1;
+    !!VR(dstInd):+(length) -1;
+    !!VR(step):S-1;
+  !!en;
+
+  !!re i/1/(length);
+    !!SN:M(list)/(srcInd)/?s^temp^ M(list)/(dstInd)/s^temp^;
+    !!VR(srcInd):+(step);
+    !!VR(dstInd):+(step);
+  !!en;
+!!en; else
+
+!!VRs^temp^:S^^;
+
+!?FU(Array_Splice);
+; Deletes specified number of items from start index and inserts new items in the same position afterwards.
+; The function can be used for items deletion, insertion or replacement.
+!#VA(list:x);              ID of array to perform splicing in.
+!#VA(startIndex:x);        Index of first item to delete. If it's negative, it means "from array end". Thus -1 is the last array item.
+!#VA(numItemsToDelete:x);  Optional. Number of items to delete.
+;                          If not specified, all items are deleted from start index till array end.
+;                          If it is positive, then that many elements will be removed.
+;                          If it is negative, then the end of the removed portion will be that many elements from the end of the array.
+;                          If it is zero, no elements will be removed.
+!#VA(firstItemToInsert:x); ... Up to 13 arguments to insert in the position of deleted items.
+
+!!VR(listSize:y):S-1;
+!!SN:M(list)/?(listSize)/?(itemsType:y)/d;
+!!FU&(listSize)<0:E;
+
+!!FU:A?(numArgs:y);
+
+!!if&(numArgs)<(@startIndex);
+  !!SN:F^ShowErmError^/^Array_Splice: invalid number of function arguments^;
+  !!FU:E;
+!!en;
+
+!!VR(startIndex)&(startIndex)<0:+(listSize);
+!!VR(startIndex):F0/(listSize);
+
+!!VR(maxItemsToDelete:y):S(listSize) -(startIndex);
+!!VR(numItemsToDelete)&(numArgs)<(@numItemsToDelete):S(listSize);
+!!VR(numItemsToDelete)&(numItemsToDelete)<0:S(listSize) +(numItemsToDelete) -(startIndex);
+!!VR(numItemsToDelete):F0/(maxItemsToDelete);
+
+!!VR(numInsertions:y):S(numArgs) -(@firstItemToInsert) +1;
+!!VR(listSizeDiff:y):S(numInsertions) -(numItemsToDelete);
+!!VR(newListSize:y):S(listSize) +(listSizeDiff);
+
+; Determine, where to move the right (tail) part of array
+!!VR(chunkStartInd:y):S(startIndex) +(numItemsToDelete);
+!!VR(chunkDestInd:y):S(chunkStartInd) +(listSizeDiff);
+
+; The number of deleted items is greater, than the number of inserted ones. We should shift tail items to the left BEFORE array is shrinked
+; L L L [insert 1] [insert 2] [deleted 3] [deleted 4] R R R R => L L L [insert 1] [insert 2] R R R R [garbage] [garbage]
+!!FU(Array_Move)&(listSizeDiff)<0:P(list)/(chunkStartInd)/(listSize)/(chunkDestInd);
+
+; Perform array resize only if its length actually changed
+!!SN&(listSizeDiff)<>0:M(list)/(newListSize);
+
+; The number of inserted items is greater, than the number of deleted ones. We should shift tail items to the right AFTER array is expanded
+; L L L [replaced 1] [replaced 2] [R vs insert 3] [R vs insert 4] R R => L L L [replaced 1] [replaced 2] [insert 3] [insert 4] R R R R
+!!FU(Array_Move)&(listSizeDiff)>0:P(list)/(chunkStartInd)/(listSize)/(chunkDestInd);
+
+; Write inserted/replaced items
+!!if&(numInsertions)>0;
+  !!VR(endIndex:y):S(startIndex) +(numInsertions) -1;
+  !!VR(insertedItemPtr:y):S(@firstItemToInsert);
+
+  !!re i/(startIndex)/(endIndex);
+    !!if&(itemsType)=(M_INT);
+      !!SN:M(list)/i/x(insertedItemPtr);
+    !!el;
+      !!VR(strPtr:y):Sx(insertedItemPtr);
+      !!SN:M(list)/i/z(strPtr);
+    !!en;
+
+    !!VR(insertedItemPtr):+1;
+  !!en;
+!!en;
+
 !!VRs^temp^:S^^;
 
 !?FU(Array_Copy);
@@ -1629,7 +1763,7 @@ ZVSE2
 
 !?FU(ScanDir);
 ; Reads directory contents, filling specified list with file names.
-; Example: P^Np3^/(fileList)/(SCAN_FILES_ONLY);
+; Example: P^Mp3^/(fileList)/(SCAN_FILES_ONLY);
 !#VA(dirPathPtr:x); Absolute or relative path to directory to scan.
 !#VA(fileList:x);   ID of array to store file names in.
 !#VA(itemsType:x);  OPT. Type of items to collect: files, directories or both. One of SCAN_XXX constants. Default: SCAN_FILES_AND_DIRS.
@@ -2400,13 +2534,15 @@ ZVSE2
 !!SN:E4607760/(CALLCONV_THISCALL)/(combatMan)/(stackSide)/(stackInd);
 
 !?FU(ActivateNextStack);
-; Finds and activates next stack. Returns TRUE on success and FALSE if nobody can move in this round.
-; TRUE is returned before round end and before waiting phase start
+; Finds and activates next stack. Returns TRUE on success and FALSE if nobody can move in this phase.
+; TRUE is returned before round end and before waiting phase start.
 !#VA(result:x);
 
-!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
-!!SN:E4607072/(CALLCONV_THISCALL)/(cmbMgr)/(TRUE);
-!!VR(result)&(result)<>0:Sv1 &1;
+!!UN:C(COMBAT_MANAGER)/4/?(combatManager:y);
+!!VR(savedV1:y):Sv1;
+!!SN:E4607072/(CALLCONV_THISCALL)/(combatManager)/(TRUE);
+!!VR(result)&(result)<>0:Sv1 &(BITS_1_MASK);
+!!VRv1:S(savedV1);
 
 !?FU(UpdateBattleVars);
 ; Updates global variables with most of "OnBeforeBattle/Universal" event parameters.
@@ -2892,7 +3028,7 @@ ZVSE2
       !!UN:C(virtTable)/56/4/?(setTextFunct:y);
       !!SN:E(setTextFunct)/(CALLCONV_THISCALL)/(quest); set text function
     !!en;
-  !!en;   
+  !!en;
   !!VRv1:S(savedV1:y); // restore v1
 !!en;
 ; ============= H3QUEST END =================
