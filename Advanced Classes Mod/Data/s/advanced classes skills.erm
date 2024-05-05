@@ -372,7 +372,15 @@ Enable Artefact to appear on the map
 
 
 ********************************************************************************
-!?FU(OnGameEnter);                      [At gamestart]
+
+!?FU(OnStartOrLoad);                    [At game start 1]
+!!SN:L^erm_hooker.era^/?(hooker:y);
+!!FU&(hooker)=0:E;
+
+!!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
+!!FU(ACM_CreateERMHook):P(hookingFuncAddress);
+
+!?FU(OnGameEnter);                      [At game start 2]
 !!SN:L^EraPlugins\erm_hooker.era^/?y1;
 
 !!if&y1;
@@ -22357,49 +22365,78 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 **Set in Battle
 **Set when click cast spell on Adv.Map
 
-!?CM2;                                  [Spell Book Click]
-!!CM:S?y1 T?y2 I?y3;
-!!FU|y1<>12/y2<>512/y3<>19:E;           [When Left Click on the Spell Book]
-!!HE-1:N?y1;
-!!FU(H3_Set_Spell_Descriptions)&1000/y1>=0/y1<=155:Py1/3;
+; Opening and closing spell book hooks by Archer30
+; The following script manipulates spell details (SS:C, SS:E etc) when opening and closing spell book, also on every stack turn in the battle
+; Spell details are restored after battle or closing spell book (if not in battle)
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
 
-!?FU(OnBattleRegeneratePhase);          [Set spells in Combat]
-!!SN:X?y1/?y2/0;                        [get who moves]
-!!VRy2:Sy1:21;                          [get side]
-!!BHy2:N?y1;                            [get owner]
-!!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/y2;
+!!SN:E(setHook)/1/5882167/(ACM_OnOpenSpellBook); 59C137
+!!SN:E(setHook)/1/5885016/(ACM_OnCloseSpellBook); 59CC58
 
+!?FU(ACM_OnOpenSpellBook);
+!#VA(hook:x);
+
+; Get Hero Id
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y);
+!!UN:C(ebx)/26/4/?(heroId:y);
+
+; Detemine the side variable depending on whether it's in a battle
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/?(edx:y); [3rd parametre]
+
+!!if&(edx)=(NULL);
+  !!VR(side:y):S3;                      [Set side to 3 if not in a battle]
+  !!VRi^acm_isNonCombatSpellBookOpened^:S(TRUE);
+!!el;
+  !!VR(side):Si^battle_current_side^;
+!!en;
+
+; Get the type of terrain
+; Here this parameter is not used as it seems Perry's function handles it
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(terrain:y); [BU:G value, -1 for no terrain overlay]
+*!IF:M^%(terrain)^;
+
+!!FU(H3_Set_Spell_Descriptions):P(heroId)/(side);
+
+; Restore spell details when closing spell book (only when not in battle)
+!?FU(ACM_OnCloseSpellBook)&i^acm_isNonCombatSpellBookOpened^;
+!!VRi^acm_isNonCombatSpellBookOpened^:S(FALSE);
+!!FU(ACM_RestoreOriginalSpellValue):P;
+
+; Restore spell details when exiting battle
+!?FU(OnAfterBattleUniversal);
+!!FU(ACM_RestoreOriginalSpellValue):P;
+
+!?FU(OnBattleStackObtainsTurn);         [Set spells in Combat]
+!!BHi^battle_current_side^:N?y1;        [get owner]
+!!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/i^battle_current_side^;
+
+; Mage Guild
 !?CM1;                                  [town screen click]
 !!CM:I?y1;
 !!FU&y1>5:E;                            [0-5 mage guild click]
-!!FU(H3_Set_Spell_Descriptions_Orginal)&1000:P;
-
-!?CM5;                                  [Left Click Adventure Screen]
-!!CM:I?y2;
-!!if&y2=8;
-!!OW:A-1/?y1;
-!!FU(H3_Set_Spell_Descriptions)&1000/y1>=0/y1<=155:Py1/3; [When clicked on Cast Spell Button on Adventure Screen]
-!!en;
-
-*?CM4;
-*!CM:D?y1 I?y2;                         [Get Battlefield position with click]
-*!if&y2=2008;                           [if right clicked on spell book in battle]
-  *!BG:Q?y2;
-  *!BHy2:N?y1;                          [get owner]
-  *!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/y2;
-*!en;
-
-!?FU(OnCombatRound);
-!!BG:Q?y2;
-!!BHy2:N?y1;                            [get owner]
-!!FU(H3_Set_Spell_Descriptions)&y1>=0/y1<=155:Py1/y2;
-
+!!FU(H3_Set_Spell_Descriptions_Orginal):P;
 
 *?OB54&1000;                       [When visiting a Monster, this is done so that spells applied to a monster have the normal power]
 *!VRz1:S^SPTRAITS.TXT^;            [Normal Sptraits]
 *!UN:C5890966/4/9597928;
 *!SN:E5890960/1;
 *!UN:C5890966/4/6849372;
+
+!?FU(ACM_RestoreOriginalSpellValue);
+!!re i/0/69;
+  !!SN:W^H3_Normal_Spell_%i_Cost^/?t;    !!SSi:C0/t;
+  !!SN:W^H3_Basic_Spell_%i_Cost^/?t;     !!SSi:C1/t;
+  !!SN:W^H3_Advanced_Spell_%i_Cost^/?t;  !!SSi:C2/t;
+  !!SN:W^H3_Expert_Spell_%i_Cost^/?t;    !!SSi:C3/t;
+
+  !!if|i=11/i=13/i=15/i=16/i=17/i=18/i=19/i=20/i=21/i=22/i=23/i=24/i=25/i=26/i=57;
+    !!SN:W^H3_Normal_Spell_%i_Effect^/?t;   !!SSi:E0/t; [Normal]
+    !!SN:W^H3_Basic_Spell_%i_Effect^/?t;    !!SSi:E1/t; [Basic]
+    !!SN:W^H3_Advanced_Spell_%i_Effect^/?t; !!SSi:E2/t; [Advanced]
+    !!SN:W^H3_Expert_Spell_%i_Effect^/?t;   !!SSi:E3/t; [Expert]
+  !!en;
+!!en;
 
 !?FU(H3_Set_Spell_Descriptions);
 
@@ -22434,19 +22471,7 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !!VRy1:+y31;
 
 [Restore original spell value]
-!!re i/0/69;
-  !!SN:W^H3_Normal_Spell_%i_Cost^/?t;    !!SSi:C0/t;
-  !!SN:W^H3_Basic_Spell_%i_Cost^/?t;     !!SSi:C1/t;
-  !!SN:W^H3_Advanced_Spell_%i_Cost^/?t;  !!SSi:C2/t;
-  !!SN:W^H3_Expert_Spell_%i_Cost^/?t;    !!SSi:C3/t;
-
-  !!if|i=11/i=13/i=15/i=16/i=17/i=18/i=19/i=20/i=21/i=22/i=23/i=24/i=25/i=26/i=57;
-    !!SN:W^H3_Normal_Spell_%i_Effect^/?t;   !!SSi:E0/t; [Normal]
-    !!SN:W^H3_Basic_Spell_%i_Effect^/?t;    !!SSi:E1/t; [Basic]
-    !!SN:W^H3_Advanced_Spell_%i_Effect^/?t; !!SSi:E2/t; [Advanced]
-    !!SN:W^H3_Expert_Spell_%i_Effect^/?t;   !!SSi:E3/t; [Expert]
-  !!en;
-!!en;
+!!FU(ACM_RestoreOriginalSpellValue):P;
 
 *Change Spell Point Costs for all Spells (replaces SPTRAITS, should be safer to use but just guessing) at least fixes the bug that the ballista is calles SPTRAITS in battle
 !!re i/0/69;
@@ -27410,7 +27435,7 @@ Warmachine Upgrades and Enchantments. Call DL in Town Screen when clicking Smith
     !!FU(Warmachine_Upgrade_Town):P(visitHero)/(itemAction); [Jump to Warmachine Function for Upgrades]
     !!SN:W^WM_Visit_Purchased^/0;
     ; If demolishing building is disabled, disbale standard mouseclick
-    !!if&y1;
+    !!if&(demolishTown);
       !!CM:R0;
     ; If Demolishing building is possible set detailed conditoins
     !!el;
