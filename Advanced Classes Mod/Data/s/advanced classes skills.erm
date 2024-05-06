@@ -6130,19 +6130,25 @@ gives +50/100/150/250/500 HP to Ballista WM
     !!SN&y60=1:W^Tent_Capacity_Def^/?y21;
     !!SN&y60=0/y21<=0:W^Tent_Capacity_Att^/0; [If below zero set zero]
     !!SN&y60=1/y21<=0:W^Tent_Capacity_Def^/0;
-    !!VRz1&i^battle_isVisible^/1000/y13>0:S^{Overheal: +{~r}%Y13{~} creatures!}^;
-    !!BU&i^battle_isVisible^/1000/y13>0:Mz1;
+
+    !!if&i^battle_isVisible^/y13>0;
+      !!SN:T^AC_Warmachine.Tent_Overheal^/?z1/^num^/y13;
+      !!BU:Mz1;
+    !!en;
   !!en;
     *!IF:M^%Y8 %Y9 %Y10 Number:%Y13 Chance:%Y16 Roll:%Y15
     New Capacity is %Y21 and deduceted amount is %Y20^;
 !!en;
 !!en;
 
-!!VRz1&y21<=0/y60=0:S^{Attacker Heal Capacity depleted}^;
-!!VRz1&y21<=0/y60=1:S^{Defender Heal Capacity depleted}^;
-!!BU&i^battle_isVisible^/1000/y21<=0:Mz1;
+!!if&i^battle_isVisible^/y21<=0;
+  !!VRz2:S^^;
+  !!HEi^battle_hero_%y60^&i^battle_hero_%y60^>(NO_HERO):B0/?z2;
+  !!SN:H^monname^/(MON_FIRST_AID_TENT)/0/?z3;
+  !!SN:T^AC_Warmachine.Tent_Depleted^/?z1/^hero^/z2/^tent^/z3;
+  !!MM:Sz1;
+!!en;
 
-!!BA:Q?f;
 !!BU&i^battle_isVisible^:R;
 
 !!SN:W^Tent_Gold_Gain_%Y61^/?y1;
@@ -6366,50 +6372,37 @@ Before the interaction of the hero with the hero
 
 
 *Grandmaster Scholar allows to teach 5th level spells*
-!?FU(OnBeforeHeroInteraction)&1000;
-!!SN:X?y1/?y2;                          [the number of the initiator hero, the number of the target hero.]
+; by Archer30
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
 
-!!HEy1:O?y5 B0/?z1;                     [Get Hero Owner and Hero name]
-!!HEy2:O?y6 B0/?z2;
-!!FU&y5<>y6:E;                          [Exit if heroes not from the same player]
+!!SN:E(setHook)/1/4859479/(ACM_OnScholarTeachSpells); 4A25E2
 
-!!HEy1:S18/?y5 S7/?y7;                  [Get 18 Scholar Level and 7  Wisdom ]
-!!HEy2:S18/?y6 S7/?y8;
-!!FU&y5<=2/y6<=2:E;                     [Exit if no hero has Scholar Expert]
-!!FU&y7<=2/y8<=2:E;                     [Exit if no hero has Wisdom Expert]
+!?FU(ACM_OnScholarTeachSpells);
+!#VA(hook:x);
 
-!!SN:W^H3_Scholar_0_Hero%Y1^/?y11;      [Checke ob der Held Master Scholar hat und Speichere in y11]
-!!SN:W^H3_Scholar_1_Hero%Y1^/?y12;      [Checke ob der Held Grandmaster Scholar hat und Speichere in y12]
-!!SN:W^H3_Scholar_0_Hero%Y2^/?y13;      [Checke ob der Held Master Scholar hat und Speichere in y11]
-!!SN:W^H3_Scholar_1_Hero%Y2^/?y14;      [Checke ob der Held Grandmaster Scholar hat und Speichere in y12]
-!!IF:V1/0 V2/0;                         [Set flags 1 and 2 to false]
+; Get the max scholar level between 2 heroes
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(maxLevel:y);
 
-!!if|y12=1/y14=1;                       [if one of the Heroes has Grandmaster Scholar]
-  !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);[Loop all Spells]
-    !!SSi:L?y21;                        [get spell level]
-    !!if&y21=5;                         [Only for 5th level spells]
-      !!HEy1:M=i/1;                     [Check all spells from left hero]
-      !!VRy20:S0;
-      !!VRy20&1:S1;                     [set to 1 if flag is true]
-      !!HEy2:M=i/1;                     [Check all spells from right hero]
-      !!VRy30:S0;
-      !!VRy30&1:S1;                     [set to 1 if flag is true]
-      !!if&y20=1/y30=0/y8=3;
-        !!HEy2:Mi/1;                    [Learn the spell to the right hero, If left hero knows the spells and right hero doesnt and has Expert Wisdom]
-        !!IF:V1/1;                      [Set conditional Flag 1 to true to show message after loop]
-      !!en;
-      !!if&y20=0/y30=1/y7=3;
-        !!HEy1:Mi/1;                    [Learn the spell to the left hero, If right hero knows the spells and left hero doesnt and has Expert Wisdom]
-        !!IF:V2/1;                      [Set conditional Flag 2 to true to show message after loop]
-      !!en;
-    !!en;
+; If the max scholar is Expert, check if Grandmaster Scholar is learned by any of the heroes
+!!if&(maxLevel)=(SKILL_EXPERT);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDI)/4/?(heroStruct1:y);
+  !!UN:C(heroStruct1)/26/4/?(heroId1:y);
+
+  ; Here we assume checking i^H3_Scholar_1_Hero_%(heroId)^ is enough to prove that the hero learns Grandmaster Scholar
+  !!if&i^H3_Scholar_1_Hero%(heroId1)^;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/4; [Set Scholar level as +1 (a.k.a. 4)]
+
+    !!FU:E;
+  !!en;
+
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(heroStruct2:y);
+  !!UN:C(heroStruct2)/26/4/?(heroId2:y);
+
+  !!if&i^H3_Scholar_1_Hero%(heroId2)^;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/4;
   !!en;
 !!en;
-
-!!SN&1:T^AC_Misc.GM_Scholar_Teach^/?s^Text^/^H1name^/z1/^H2name^/z2; [Get string]
-!!SN&2:T^AC_Misc.GM_Scholar_Teach^/?s^Text^/^H2name^/z1/^H1name^/z2;
-!!IF|1/2:M^%S(Text)^;                   [Show Message Text that spells were teached]
-
 
 ******************Sorcery Offense Armorer Archery*******************************
 [Set Secondary Skill Percents]
@@ -32680,26 +32673,30 @@ Can shot muliable targets at once, depending on kill count
 One extra shot is fired after the commander is shooting.
 
 !?FU(ACM_OnAfterShoot);
+!#VA(atkStack:x) (defStack:x);
 
 !!BA:Q?y1; !!FU&y1=1:E;                 [Exit in Quick Combat]
+
 !!VRy1:Sx1;                             [acting stack]
 !!BMx1:I?y2;                            [Acting Side Monster]
 !!BA:Hy2/?y99;                          [Current Hero]
 !!FU&y99<0:E;                           [Exit if none]
+
 !!BMx1:T?y3 P?y9;                       [Get Creature Number and current battlefield position]
 !!if&y3>=174/y3<=191;                   [if any commander]
   !!FU(Check_Com_Masteries):Py99/0/0/0/?y10; [Pass Hero Number and return current com class and kill count]
   !!FU&y10<>22:E;                       [Exit if wrong com class]
+
   !!SN&y2=0:W^ACM_Marksmen_Shots_Att^/?y20;
   !!SN&y2=1:W^ACM_Marksmen_Shots_Def^/?y20;
   !!FU&y20=0:E;                         [exit if no extra shot is available]
   !!SN&y2=0:W^ACM_Marksmen_Shots_Att^/d-1; [reduce number of extra shots by 1]
   !!SN&y2=1:W^ACM_Marksmen_Shots_Def^/d-1; [reduce number of extra shots by 1]
-  !!FU(AC_Function_55):Py2/?y10;        [return a random enemy stack]
-  !!BMy10:N?y11; !!FU&y11=0:E;          [Get number and exit if stack is dead]
-  !!FU(BattleStack_Shoot)&y10>=0/y10<=41:Py1/y10; [call fct from stdlib that gives extra attack and pass attacker and target stack]
-!!en;
 
+  !!BMx2:I?y30;
+  !!FU(ACM_GetRandomLivingStackFromSide):Py30/?y10/(NO_STACK)/(TRUE)/(FALSE);
+  !!FU(BattleStack_Shoot)&y10>(NO_STACK):Py1/y10; [call fct from stdlib that gives extra attack and pass attacker and target stack]
+!!en;
 
 !?FU(OnCombatRound)&v997>=0;
 Refills Marksman extra shots depending on kill count and mastery
@@ -32718,6 +32715,56 @@ Refills Marksman extra shots depending on kill count and mastery
 !!if&y10=22;
   !!FU(Set_Com_Battle_Description):Py10/y2/y20/0/y3/0/1/0/?y21; [get amount of additional targets to shot in y21]
   !!SN:W^ACM_Marksmen_Shots_Def^/y21;   [starts every battle round with one extra shot]
+!!en;
+
+// Get a valid stack from a side
+; by Archer30
+; This is better than FU(AC_Function_55) as it consideres stack to ignore/living status, also possible to ignore blind/stoned/paralysed stacks
+!?FU(ACM_GetRandomLivingStackFromSide);
+!#VA(side:x);                           [Side of the stack]
+!#VA(result:x);                         [Return value. Random stack number of the side]
+!#VA(exceptionStack:x);                 [Optional. Stack number not counting as a valid result]
+!#VA(ignoreControlled:x);               [Optional. Boolean. Ignore controlled (Blind, Stone and Paralysis) units]
+!#VA(isFromArmy:x);                     [Optional. Boolean. Value for setting whether only stacks from a hero's army are considered as valid]
+
+; Initialization
+!!VR(result):S(NO_STACK);
+!!FU:A?(numArgs:y);
+!!VR(exceptionStack)&(numArgs)<3:S(NO_STACK);
+!!VR(ignoreControlled)&(numArgs)<4:S(FALSE);
+!!VR(isFromArmy)&(numArgs)<5:S(FALSE);
+
+; Set up a local array for all the living stacks of the side
+!!FU(NewIntArray):P?(livingStacks:y);    [Create the array]
+!!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
+!!VR(lastStack:y):S(firstStack) +20;
+
+; Loop through all the stacks, add any valid stack number to the array
+!!re i/(firstStack)/(lastStack);
+  !!BMi:T?(type:y) N?(num:y);
+
+  !!if&(type)>(NO_MON)/(type)<>(MON_ARROW_TOWERS)/(num)>0/i<>(exceptionStack);
+    !!if&(ignoreControlled);
+      !!BMi:G(SPELL_BLIND)/?(blindTurns:y)/d G70/?(stoneTurns:y)/d G74/?(paralyzeTurns:y)/d;
+      !!co|(blindTurns)>0/(stoneTurns)>0/(paralyzeTurns)>0;
+    !!en;
+
+    !!if&(isFromArmy);
+      !!BMi:O?(armySlot:y);
+      !!FU(Array_Push)&(armySlot)>-1:P(livingStacks)/i; [Push the found stack id to the end of the array]
+    !!el;
+      !!FU(Array_Push):P(livingStacks)/i;
+    !!en;
+  !!en;
+!!en;
+
+; Check if the array has at least one item
+!!SN:M(livingStacks)/?(size:y);
+
+; Return a random item from he array if applicable
+!!if&(size)>0;
+  !!FU(Array_Shuffle):P(livingStacks);  [Shuffle the array]
+  !!FU(Array_Pop):P(livingStacks)/?(result); [Get the last item of the array and remove the item from the array]
 !!en;
 
 
@@ -34016,12 +34063,6 @@ kill count you get +4% of a random attribute
 
 
 ****************************************************************************************************
-!?FU(OnStartOrLoad);
-!!SN:L^erm_hooker.era^/?(hooker:y);
-!!FU&(hooker)=0:E;
-
-!!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
-!!FU(ACM_CreateERMHook):P(hookingFuncAddress);
 
 !?FU(ACM_CreateERMHook);
 !#VA(address:x);
