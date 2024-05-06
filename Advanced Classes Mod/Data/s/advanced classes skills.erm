@@ -704,6 +704,26 @@ this should make creature casts respecting dwarv type golem resistance
   !!FU(acm_Dlg_ClassTable_Prepare):P;
 !!en;
 
+// Press hotkeys from hero screen for different features
+; by Archer30
+!?FU(OnKeyPressed_HeroScreen)|i^key^=(KEY_A)/i^key^=(KEY_W)/i^key^=(KEY_E)/i^key^=(KEY_R);
+!#VA(key:x) (preventDefault:x);
+
+; For R, exit if spell trainer isn't enabled
+!!FU&i^key^=(KEY_R)/i^Spell_Trainer_Mod^<>(TRUE):E;
+
+!!VR(preventDefault):S(TRUE);
+
+!!if&i^key^=(KEY_W);
+  !!FU(acm_Dlg_ClassTable_Prepare):P;
+!!el&i^key^=(KEY_A);
+  !!FU(acm_Dlg_HeroClass_Prepare):P;
+!!el&i^key^=(KEY_E);
+  !!FU(ACM_OpenBonusTable):P;
+!!el&i^key^=(KEY_R);
+  !!FU(ACM_OpenSpellTrainerTable):P;
+!!en;
+
 ********************************************************************************
 !?FU(acm_Dlg_ClassTable_Prepare);[When clicked on Hero Portrait]
   !!SN:W^Adept_Level_Global_Value^/?y90;
@@ -2157,10 +2177,13 @@ Close Dialouge
 !!SN:W^Master_Level_Global_Value^/?y92; [Read out global values for Master rank]
 !!SN:W^Grandmaster_Level_Global_Value^/?y93; [Read out global values for GM rank]
 
-!!SN&y10<y92/y20<y92/y30<y92:T^AC_Misc.No_advance^/?z1;
-!!IF&y10<y92/y20<y92/y30<y92:M1/z1;
-!!CM&y10<y92/y20<y92/y30<y92:R0;
-!!FU&y10<y92/y20<y92/y30<y92:E;         [If no requirements met Exit Fkt]
+!!if&y10<y92/y20<y92/y30<y92;
+  !!SN:T^AC_Misc.No_advance^/?z1;
+  !!IF:M1/z1;
+  !!CM:R0;
+  !!FU:E;                               [If no requirements met Exit Fkt]
+!!en;
+
 !!CM:R0;
 
 * PREPARE ADVANCED LEVELS DIALOGUE
@@ -13073,6 +13096,9 @@ Show Bonus Table when clicking on Experience Icon in Hero Screen
 !!FU|y1<>14/y2<>512/y3<>119:E;          [When rightclick on Knowledge Icon show Bonus list]
 !!CM:R0;
 
+!!FU(ACM_OpenBonusTable):P;
+
+!?FU(ACM_OpenBonusTable);
 !!DL89:N^ACMList.txt^;
 
 !!HE-1:N?y4;                            [Get current hero number]
@@ -13341,8 +13367,11 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 !!SN:T^AC_Misc.Commander_Opt_Expl_Masteries^/?z11;
 !!VRz12:S^%Z10
 %Z11^;
-!!IF&z1=z10:M^%Z12^; 
-!!FU&z1=z10:E;                          [If no class was selected so far show simple text and exit]
+
+!!if&z1=z10;
+  !!IF:M0/(MSG_TYPE_POPUP)/^%Z12^; 
+  !!FU:E;                          [If no class was selected so far show simple text and exit]
+!!en;
 
 !!FU(Check_Com_Masteries):P-1/0/0/0/?y40/?y90/?y91/?y92/?y93/?y20/?y21/?y22/?y23/?y24/y50/0; [Get commander class modifier from function]
 !!FU(Check_Com_Masteries):P-1/0/0/0/?y40/?y86/?y87/d/d/d/d/d/d/d/y50/1; [Get commander class modifier from function]
@@ -29010,8 +29039,9 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!HE-1:N?y99;                           [Get current hero #]
 
 !!SN:W^Spell_Trainer_Mod^/?y1;          [Check if options have already been activated]
-!!if&v3=512/v4=19/y1=1;                 [if right click and specialty icon are clicked]
+!!FU(ACM_OpenSpellTrainerTable)&v3=512/v4=19/y1=1:P;                 [if right click and specialty icon are clicked]
 
+!?FU(ACM_OpenSpellTrainerTable);
 !!DL88:N^SpTr.txt^;                     [Name of Dialogue text file Parse Dialogue]
 
 !!SN:W^Damage_Spells_Increment^/?y98;
@@ -29079,7 +29109,6 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!DL88:A4/3/z11/1;       
 
 !!DL88:S1;                              [Show complete Dialogue number 88]
-!!en;
 
 !?DL&v998=88/v999=30722/v1000=13;       [When clicking on the close Button]
 !!DL:C1;
