@@ -36,8 +36,6 @@ Name on Heroescommunity: RerryR (but please, call me Perry)
 !#SN:W^Master_Level_Global_Value^/35;
 !#SN:W^Grandmaster_Level_Global_Value^/58; [Set Global Values for Class Here eg to reach Grandmaster or Master]
 
-!#SN:W^Global_Skill_Limit^/8;           [Here comes the number of skills you intend to play with, usually 8 or 10]
-
 !#SN:W^Spell_Trainer_Mod^/1;            [Spell Trainer Mod is enabled by default]
 
 !#VRi^acm_optionChooseClass^:S0;        [Option allows to delay class selection and choose desired class when enough points are accumulated]
@@ -370,6 +368,10 @@ Enable Artefact to appear on the map
 !!DO(AC_Function_73)/0/69/1:P;          [Save Spell Points Costs at Map Start]
 !!DO(AC_Function_129)/0/155/1:P;        [Reset Magic Arrow damage increase for all Heroes when Map Starts]
 
+; Check if 10 ss mode is enabled depending on the actual skills limit in the game
+; Here we must use FU(OnGameEnter_Quit) to ensure it executes later than ES - 28 secondary skills
+!?FU(OnGameEnter_Quit);
+!!FU(ACM_Manage10SkillsMode):P;
 
 ********************************************************************************
 
@@ -380,17 +382,19 @@ Enable Artefact to appear on the map
 !!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
 !!FU(ACM_CreateERMHook):P(hookingFuncAddress);
 
-!?FU(OnGameEnter);                      [At game start 2]
-!!SN:L^EraPlugins\erm_hooker.era^/?y1;
+; Set up Necromancy hooks
+!?FU(ACM_CreateERMHook);
+!#VA(hook:x);
 
-!!if&y1;
-  !!SN:Ay1/^SetHook^/?y2;
-  !!SN&i^Alternative_Necromancy_Mod^:Ey2/1/5127891/(ACM_OnDetermineNecromancyMon);
-  !!SN:Ey2/1/5128029/(Necro_ChangePower_1); [Change the power Necromancy when the hero learns M/GM Neromany by daemon_n]
-  !!SN&i^Alternative_Necromancy_Mod^:Ey2/1/5128011/(Necro_ChangePower_2); [Get the hero Id for Custom Necromancy] 4E3F4B
-  !!SN:Ey2/1/5128574/(Necro_ChangePower_3); [Divide Necromancy power by 2]
+!!if&i^Alternative_Necromancy_Mod^;
+  !!SN:E(hook)/1/5127891/(ACM_OnDetermineNecromancyMon);
+  !!SN:E(hook)/1/5128011/(Necro_ChangePower_2); [Get the hero Id for Custom Necromancy] 4E3F4B
 !!en;
 
+!!SN:E(hook)/1/5128029/(Necro_ChangePower_1); [Change the power Necromancy when the hero learns M/GM Neromany by daemon_n]
+!!SN:E(hook)/1/5128574/(Necro_ChangePower_3); [Divide Necromancy power by 2]
+
+!?FU(OnGameEnter);                      [At game start 2]
 ; Change the Necromancy rate of Soul Prism to 0.4 (as it would be divided by 2 later)
 !!UN:C5128477/2/1/176; - replace address of the variable which contains 0.2 with variable that's equal to 0.4
 
@@ -834,15 +838,7 @@ Close Dialouge
 
 !!FU(ACM_LoadOptionsFromIni):P;         [Try to load options from ini]
 
-!!SN:F^PluginExists^/^10sskills^;       [Check for 10 SSkill Plugin]
-!!if&v1=1;
-  !!SN:W^Adept_Level_Global_Value^/20;
-  !!SN:W^Expert_Level_Global_Value^/30;
-  !!SN:W^Master_Level_Global_Value^/45;
-  !!SN:W^Grandmaster_Level_Global_Value^/72; [Set Global Values for Class Here eg to reach Grandmaster or Master]
-  !!SN:W^Global_Skill_Limit^/10;        [Here comes the number of skills you intend to play with, usually 8 or 10]
-  !!SN:W^Play_with_10_Skills^/1;        [If active set option true]
-!!en;
+!!FU(ACM_Manage10SkillsMode):P?v1;
 
 !!UN:R7/1/0;
 !!UN:R5/1/0;                            [change mouse pointer]
@@ -874,7 +870,6 @@ Close Dialouge
 !!SN:T^AC_Misc.GameOpt_Hint_Play^/?z61; !!DL271:H30722/61;
 
 !!SN:W^Spell_Trainer_Mod^/?y1;          [Check if options have already been activated]
-*!SN:W^Play_with_10_Skills^/?y2;
 !!SN:W^Easier_Class_option^/?y3;
 !!SN:W^Classic_Skin_Mod^/?y4;
 !!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y10; [Check for Third Upgrade Mod]
@@ -904,6 +899,25 @@ Close Dialouge
 
 !!FU(ACM_SaveOptionsToIni):P;           [save options to ini in runtime folder]
 
+!?FU(ACM_Manage10SkillsMode);
+!#VA(result:x);
+
+!!UN:C4881872/1/?(skillsLimit:y);                   [Check the current hero secondary skills limit]
+
+!!if&(skillsLimit)>=10;
+  !!SN:W^Adept_Level_Global_Value^/20;
+  !!SN:W^Expert_Level_Global_Value^/30;
+  !!SN:W^Master_Level_Global_Value^/45;
+  !!SN:W^Grandmaster_Level_Global_Value^/72; [Set Global Values for Class Here eg to reach Grandmaster or Master]
+  !!VR(result):S(TRUE);
+!!el;
+  !!SN:W^Adept_Level_Global_Value^/10;
+  !!SN:W^Expert_Level_Global_Value^/20;
+  !!SN:W^Master_Level_Global_Value^/35;
+  !!SN:W^Grandmaster_Level_Global_Value^/58; [Set Global Values for Class Here eg to reach Grandmaster or Master]
+  !!VR(result):S(FALSE);
+!!en;
+
 !?DL&v998=271/v999>=1/v999<=12/v1000=14; [right click on the options to show text for upgrade and description]
 
 !!SN|v999=1:T^AC_Misc.Play_Spell_Trainer^/?s^Text^; [set text for 1st]
@@ -928,7 +942,6 @@ Close Dialouge
 !!SN:Pz1;                               [Play Sound]
 
 !!SN:W^Spell_Trainer_Mod^/?y1;          [Check if options have already been activated]
-*!SN:W^Play_with_10_Skills^/?y2;
 !!SN:W^Easier_Class_option^/?y3;
 !!SN:W^Classic_Skin_Mod^/?y4;
 !!SN:W^Alternative_Necromancy_Mod^/?y5;
@@ -944,8 +957,6 @@ Close Dialouge
 
 !!SN&v999=40/y1=0:W^Spell_Trainer_Mod^/1;[activate 1st]
 !!SN&v999=40/y1=1:W^Spell_Trainer_Mod^/0;[deactivate first]
-*!SN&v999=41/y2=0:W^Play_with_10_Skills^/1;
-*!SN&v999=41/y2=1:W^Play_with_10_Skills^/0;
 !!SN&v999=42/y3=0:W^Easier_Class_option^/1;
 !!SN&v999=42/y3=1:W^Easier_Class_option^/0;
 !!SN&v999=43/y4=0:W^Classic_Skin_Mod^/1;
@@ -970,7 +981,6 @@ Close Dialouge
 !!SN&v999=51/y12=1:W^acm_Classic_Diplomacy^/0;
 
 !!SN:W^Spell_Trainer_Mod^/?y1;  [Check Status of options]
-*!SN:W^Play_with_10_Skills^/?y2;
 !!SN:W^Easier_Class_option^/?y3;
 !!SN:W^Classic_Skin_Mod^/?y4;          
 !!SN:W^Alternative_Necromancy_Mod^/?y5;
@@ -11278,12 +11288,12 @@ If either of them is >-2, this script will not change that.
  y2>-2, y3=-2.
  y2=-2, y3>-2.
 In first case all skills are not set, in second case only left, usually upgrade, skill is changed. Vicer versa for third case.
- Then it all depends on number of upgraded and not upgraded to the expert rank skills. If hero has at least 8 skills (Global_Skill_Limit), no new skills
+ Then it all depends on number of upgraded and not upgraded to the expert rank skills. If hero has reached the skill limit, no new skills
 will be proposed, hence script only changes attributes. If all hero's skills are upgraded to max (expert), then both skills will be new,
 else only right skill will be new. If right or left skills are set, script doesn't change them.
 
 !!if|y2=-2/y3=-2;                                [If right or left is not set, which corresponds to them being set by another script.]
-  !!SN:W^Global_Skill_Limit^/?y9;                [Number of skill limit for heroes.]
+  !!UN:C4881872/1/?y9;                           [Number of skill limit for heroes.]
   !!VRy4&y2>-2:S0;
   !!VRy4&y2=-2:S1;
   !!VRy5&y3>-2:S0;
@@ -13291,7 +13301,8 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 !!DL89:S1;                              [Show complete Dialogue number 89]
 
 
-!?DL&v998=89/v999=31/v1000=14;          [When Right-Click on red commander text field]
+!?DL&v998=89/v1000=14;          [When Right-Click on red commander text field]
+!!FU&i^mouse_item^<>31/i^mouse_item^<>8/i^mouse_item^<>9/i^mouse_item^<>10:E; [Archer: Extended the clickable area so it's more comfortable to click]
 
 !!DL275:N^Com_Class.txt^;               [parse dialogue]
 !!SN:W^ACM_Commander_Hero_ID^/?y4; !!SN:T^AC_Misc.Commander_Opt_Text^/?z1; !!VRy50:S0;
