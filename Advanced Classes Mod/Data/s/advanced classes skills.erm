@@ -4910,32 +4910,60 @@ Till here Normal Necromancy
 
 ***************************Estates**********************************************
 **Increases the Gold amount to plus 2000 at Grandmaster and increases the reward from resources piles
-!?FU(OnEveryDay)&i^timerOnce^=1/i^timerDay^>1/i^timerIsAi^=0;
-!!DO(AC_Function_12)/0/155/1:P;         [loop thru heroes]
+!?FU(OnGameEnter);
+!!UN:C6547996/4/250;                    [Basic]
+!!UN:C6548000/4/500;                    [Advanced]
+!!UN:C6548004/4/750;                    [Expert]
 
-!?FU(AC_Function_12);
-!!HEx16:O?y1;                           [Checke Hero Owner]
-!!FU&y1=-1:E;                           [Exit if none]
+!?FU(ACM_CreateERMHook); 5129755
+!#VA(setHook:x);
 
-!!HEx16:S13/?y3;                        [Check level of Estates]
-!!FU&y3=0:E;                            [Abort if none]
+!!SN:E(setHook)/1/5129753/(ACM_OnHeroGetGoldIncome); 4E4622
 
-!!SN:W^H3_Estates_0_Hero%X16^/?y11;     [Checke ob der Held Master Estates hat und Speichere in y11]
-!!SN:W^H3_Estates_1_Hero%X16^/?y12;     [Checke ob der Held Grandmaster Estates hat und Speichere in y12]
+!?FU(ACM_OnHeroGetGoldIncome);
+!#VA(hook:x);
 
-!!VRy10&y3=1:S125; !!VRy10&y3=2:S250; !!VRy10&y3=3/y11=0/y12=0:S250; !!VRy10&y3=3/y11=1/y12=0:S500; !!VRy10&y3=3/y11=1/y12=1:S1500; [Calc bonus gold]
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(skillLvl:y);
+!!FU&(skillLvl)<=(SKILL_NOT_LEARNED):E;
 
-!!HEx16:X?y30/?y31/?y32/?y32/?y32/?y32/?y32  E?y20/?y21/1; [Check Hero Speciality and level]
-!!if&y31=13/y30=0;                      [if Estates specialist]
-  !!FU(Skill_Value_Database):Px16/13/y21/?y71; [Pass Hero Number, Skill, Hero Level, Return Value]
-  !!VRy72&y3=1:Sy21*3*125:100-1;        [Get value for 3% increase for Basic]
-  !!VRy72&y3=2:Sy21*3*250:100-1;        [Get value for 3% increase for Advanced]
-  !!VRy72&y3=3:Sy21*3*500:100-1;        [Get value for 3% increase for Expert]
-  !!VRy10:-y72+y71;                     [Substract the native value and add the 10% increase to get correct total value]
+!!VR(offset:y):S(skillLvl) *(SIZEOF_INT);
+!!UN:C6547992/(offset:y)/4/?(gold:y); 63EA18
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+
+!!if&(skillLvl)>=(SKILL_EXPERT);
+  !!if&i^H3_Estates_0_Hero%(heroId)^=1/i^H3_Estates_1_Hero%(heroId)^=0;
+    !!VR(gold):+250;
+  !!el&i^H3_Estates_0_Hero%(heroId)^=1/i^H3_Estates_1_Hero%(heroId)^=1;
+    !!VR(gold):+1250;
+  !!en;
 !!en;
 
-!!OW:Ry1/6/dy10;                        [Add gold to current player]
-!!UN&1000:R2;                           [Redraw Screen to show ne value of gold]
+!!HE(heroId):X?(specType:y)/?(specSkill:y); better use this way so far as game uses __int64 (rax => eax+ [ebp-8])
+
+!!if&(specType)=0/(specSkill)=(SKILL_ESTATES);
+  !!HE(heroId):E?(exp:y)/?(level:y)/1;
+  !!VR(specGold:y):S(gold) *(level) *5 :100;
+  !!VR(gold):+(specGold);
+!!en;
+
+; Compatibility with WoG Scripts
+; Here we copy the part from WoG Scripts, but it won't be executed twice as we jumped over later
+!!if&i^wog_estates_ignore_native_calculation^=0; [Adds bonus from scripts]
+  !!if&i^wog_203_enabled^;              [Estates I]
+    !!FU(WOG_203_Hero_GetEstatesIBonus):P(heroId)/(skillLvl)/?(result:y); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
+    !!VR(gold):+(result);
+  !!en;
+
+  !!if&i^wog_191_enabled^;              [Estates II]
+    !!FU(WOG_191_Hero_GetEstatesIIBonus):P(heroId)/(skillLvl)/?(result);
+    !!VR(gold):+(result);
+  !!en;
+!!en;
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/(gold:y);
+!!SN:X?t/0;
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5129831; // now return directly to the +350 gold 4E4667
 
 
 !?FU(OnAfterBattleUniversal)&1000;
