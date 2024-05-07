@@ -3513,17 +3513,49 @@ Creature speed   Base movement
 
 
 ** function to pick a monster
+; by Archer30
 !?FU(pick_a_monster);
+!#VA(mon:x);                            [Return the random monster ID]
+!#VA(minLevel:x);                       [Optional. Min Monster level, including the level specified]
+!#VA(maxLevel:x);                       [Optional. Man Monster level, including the level specified]
+!#VA(maxFightValue:x);                  [Optional. Max fight value allowed, including the value specified]
 
-!!VRy1:S0R144;                          [random 0 to 144]
-!!VRy1&y1=122:S136;
-!!VRy1&y1=124:S134;
-!!VRy1&y1=126:S137;
-!!VRy1&y1=128:S139;
-!!UN:N3/z704/y1/0;                      [get monster name]
-!!UN:N3/z705/y1/1;                      [get monsters name]
-!!VRx1:Sy1;
+!!FU:A?(numArgs:y);
 
+!!if&(numArgs)<3;
+  !!VR(minLevel):S(MON_MIN_LEVEL);
+  !!VR(maxLevel):S(MON_MAX_LEVEL);
+!!en;
+
+!!MA&(numArgs)<4:F(MON_BLOOD_DRAGON)/?(maxFightValue); [by default the max fight value is not greater than or equal to Blood Dragon's]
+
+!!VR(mon):S(NO_MON);
+!!FU(GetMaxMonsterId):P?(lastMon:y);
+
+!!re i;
+  !!VR(randMon:y):R0/(MON_FIRST)/(lastMon);
+  ; Skip invalid monsters
+  !!co|(randMon)=(MON_NOT_USED_1)/(randMon)=(MON_NOT_USED_2)/(randMon)=(MON_NOT_USED_3)/(randMon)=(MON_NOT_USED_4);
+  !!co&(randMon)>=(MON_CATAPULT)/(randMon)<=(MON_ARROW_TOWERS);
+  !!co&(randMon)>=(MON_EMISSARY_OF_WAR)/(randMon)<=(MON_EMISSARY_OF_LORE);
+  !!co&(randMon)>=(MON_COMMANDER_FIRST_A)/(randMon)<=(MON_COMMANDER_LAST_D);
+
+  ; Check if the level and fight value are ideal
+  !!MA:L(randMon)/?(level:y);
+
+  !!if&(level)>=(minLevel)/(level)<=(maxLevel);
+    !!MA:F(randMon)/?(fightValue:y);
+
+    !!if&(fightValue)>0/(fightValue)<(maxFightValue);
+      !!VR(mon):S(randMon);
+
+      !!SN:H^monname^/(mon)/0/?z704;    [get monster name]
+      !!SN:H^monname^/(mon)/1/?z705;    [get monsters name]
+
+      !!br;
+    !!en;
+  !!en;
+!!en;
 
 
 ***************************Diplomacy********************************************
@@ -4463,13 +4495,19 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!SN:W^Eagle_Eye_Spell_0^/0;
 !!BG:A?y1;                              [Aktion in y1 Must be Hero Cast]
 !!FU&y1<>1:E;                           [Exit if not Hero cast]
+
 !!BG:Q?y1;                              [Get Battle Side]
 !!VRy1:-1*-1;
 !!BA:Hy1/?y99;                          [Get Hero]
 !!FU&y99=-2:E;                          [Exit if no Hero]
+
 !!HEy99:S11/?y10;                       [11 Eagle Eye]
 !!FU(Count_Set_Pieces_2):Py99/0/0/0/0/0/?y20; [Count Vision of the Eagle Set Pieces]
 !!FU&y10=0/y20<3:E;                     [If set is complete and hero has no EE skill give basic Eagle Eye Skill]
+
+!!HEy99:A2/(ART_META_SPELLBOOK)/?y30/?y31; [Get spell book]
+!!FU&y31<=0:E;                            [Exit if no spell book]
+
 !!SN:W^H3_Eagle Eye_0_Hero%Y99^/?y11;
 !!SN:W^H3_Eagle Eye_1_Hero%Y99^/?y12;
 !!VRy40:S0;
@@ -6884,14 +6922,42 @@ x5=Current Spell Points, x6=amount of regen spell points
 !!VRy1:Sy6;                             [we will save number of non-zero monster, as we need it later for nobility fail message]
 !!HEx1:B0/?z-1;
 
+!!if&i^eighth_on^;
+  !#VA(usedY[70]:y);                    [Don't place this at the start of the function, it would corrupt IF:N dlg monster numbers for some reason]
+
+  !!if|i^tum_reborn_on^/i^tum_full_on^;
+    !!FU(eighth_SetOrGet8thMonByTownId):P(CURRENT_TOWN)/?(mon:y)/?(qty:y);
+  !!el;
+    !!FU(eighth_SetOrGet8thMon):P(CURRENT_TOWN)/?(mon:y)/?(qty:y)/(TRUE); [Legacy]
+  !!en;
+
+  !!MA:L(mon)/?(level:y);
+
+  !!VR(index:y):S(level) +21;
+  !!VR(picSubtype:y):S65536 *y(index) +(mon);
+
+  !!VRy6&y(index):+1;
+!!en;
+
 !!SN&y6=0:T^AC_Misc.Nobility Town Fail^/?z2 Iz2/?z2;
 !!IF&y6=0/999:Mz2;
 !!SN&y6=0:W^H3_Nobility_Hero%X1_Active^/2;
 !!FU&y6=0:E;                            [exit if no creatures to add]
 
-!!SN&y6<>0:T^AC_Misc.Nobility Town^/?z2 Iz2/?z2;
-!!IF&y6<>0/999:Ny51/y41/y52/y42/y53/y43/y54/y44/y55/y45/y56/y46/y57/y47;
-!!IF&y6<>0/999:N2/z2/?y2;
+!!if&y6<>0;
+  !!SN:T^AC_Misc.Nobility Town^/?z2 Iz2/?z2;
+
+  !!if&999;
+    ; Compatibility with 8th mon (from TUM)
+    !!if&i^eighth_on^;
+      !!IF:Ny51/y41/y52/y42/y53/y43/y54/y44/y55/y45/y56/y46/y57/y47/(PIC_TYPE_MONSTER)/(picSubtype);
+    !!el;
+      !!IF:Ny51/y41/y52/y42/y53/y43/y54/y44/y55/y45/y56/y46/y57/y47;
+    !!en;
+
+    !!IF:N2/z2/?y2;
+  !!en;
+!!en;
 
 !!SN&y2=0:W^H3_Nobility_Hero%X1_Active^/2;
 !!FU&y2=0:E;                            [Exit if press no]
@@ -6907,8 +6973,18 @@ x5=Current Spell Points, x6=amount of regen spell points
 !!CA-1&yy3=0:M1/y4/dyy2/d0;             [Non-upg dwelling #y1]
 !!VRy1:+1;
 !!SN&y1<8:G[loopTownDwellingsAddCreatures];
-!!SN:D;                                 [Added SN:D command. It's used to redraw hero, heroes meeting, adventure map and town screens.]
 
+; Compatibility with 8th mon (from TUM)
+!!if&i^eighth_on^;
+  !!if|i^tum_reborn_on^/i^tum_full_on^;
+    !!FU(eighth_SetOrGet8thMonByTownId):P(CURRENT_TOWN)/(mon)/dy(index);
+  !!el;
+    !!VR(qty):+y(index);
+    !!FU(eighth_SetOrGet8thMon):P(CURRENT_TOWN)/(mon)/(qty)/(FALSE); [Legacy]
+  !!en;
+!!en;
+
+!!SN:D;                                 [Added SN:D command. It's used to redraw hero, heroes meeting, adventure map and town screens.]
 
 *Make AI use of Nobility. Procs everytime per one week if AI walks in town
 !?HM-1&-1000;
@@ -9027,8 +9103,12 @@ for later
 
 !!if&(mon)<>(MON_BALLISTA);
   !!MA:O(mon)/?(townType:y) L(mon)/?(level:y);
-  !!FU(tum_GetTownMon):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon);
-  !!FU(tum_GetMonstersInTown)|i^tum_reborn_on^/i^tum_newTowns_on^/i^tum_full_on^:P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon);  
+
+  !!if|i^tum_reborn_on^/i^tum_newTowns_on^/i^tum_full_on^;
+    !!FU(tum_GetMonstersInTown):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); 
+  !!el;
+    !!FU(tum_GetTownMon):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); [legacy]
+  !!en;
 !!el;
   !!VR(upgMon):S(MON_FIRST_AID_TENT);
   !!VR(thirdUpgMon):S(MON_AMMO_CART);
@@ -24862,6 +24942,7 @@ The following lines must be executed later than the functions with the same name
 ; Fix quantity in particular cases
 !!VR(lostHp:y):S(totalHp) %(hp) -(hp) *-1;
 !!VR(qty)|(hp)=(lostHp)/(lostHp)=0:-1;
+
 ********************************************************************************
 
 
