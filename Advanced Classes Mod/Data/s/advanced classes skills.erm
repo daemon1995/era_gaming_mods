@@ -892,8 +892,8 @@ Close Dialouge
 !!SN:W^Spell_Trainer_Mod^/?y1;          [Check if options have already been activated]
 !!SN:W^Easier_Class_option^/?y3;
 !!SN:W^Classic_Skin_Mod^/?y4;
-!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y10; [Check for Third Upgrade Mod]
-!!SN&y10=1:W^Alternative_Necromancy_Mod^/0;
+*!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y10; [Check for Third Upgrade Mod - Archer: doesn't seem to be needed, the option is compatible with TUM]
+*!SN&y10=1:W^Alternative_Necromancy_Mod^/0;
 !!SN:W^Alternative_Necromancy_Mod^/?y5;
 !!SN:W^Spell_Duration_Mod^/?y6;
 !!SN:W^acm_optionChooseClass^/?y7;
@@ -4669,32 +4669,58 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 
     ; Set default option based on the current selection
     !!VRy32:S0;
+    !!FU(ACM_FixAlternativeNecromancyChoice):Py1;
     !!VRy31:Si^H3_Necromancy_Choice_%y1^;
 
-    !!if&y31<=56;
+    !!if&y31<=(MON_SKELETON);
       !!VRy32:S1;
-    !!el&y31=58;
+    !!el&y31=(MON_WALKING_DEAD);
       !!VRy32:S2;
-    !!el&y31=60;
+    !!el&y31=(MON_WIGHT);
       !!VRy32:S4;
-    !!el&y31=62;
+    !!el&y31=(MON_VAMPIRE);
       !!VRy32:S8;
-    !!el&y31=64;
+    !!el&y31=(MON_LICH);
       !!VRy32:S16;
-    !!el&y31=66;
+    !!el&y31=(MON_BLACK_KNIGHT);
       !!VRy32:S32;
     !!en;
 
     !!IF:G1/3/y32/1/2/3/4/5/6/7/^%T(era.buttons.cancel)^/0/0/0/0/;[Show Choice Dialouge]
-    !!SN&v3=1:W^H3_Necromancy_Choice_%y1^/0;
-    !!SN&v3=2:W^H3_Necromancy_Choice_%y1^/58;
-    !!SN&v3=4:W^H3_Necromancy_Choice_%y1^/60;
-    !!SN&v3=8:W^H3_Necromancy_Choice_%y1^/62;
-    !!SN&v3=16:W^H3_Necromancy_Choice_%y1^/64;
-    !!SN&v3=32:W^H3_Necromancy_Choice_%y1^/66;
+
     !!CM:R0;                            [Disable standard reaction]
+
+    !!SN&v3=1:W^H3_Necromancy_Choice_%y1^/0;
+    !!SN&v3=2:W^H3_Necromancy_Choice_%y1^/(MON_WALKING_DEAD);
+    !!SN&v3=8:W^H3_Necromancy_Choice_%y1^/(MON_VAMPIRE);
+    !!SN&v3=16:W^H3_Necromancy_Choice_%y1^/(MON_LICH);
+    !!SN&v3=32:W^H3_Necromancy_Choice_%y1^/(MON_BLACK_KNIGHT);
+
+    !!FU(ACM_FixAlternativeNecromancyChoice):Py1;
   !!en;
 !!en;
+
+
+!?FU(ACM_FixAlternativeNecromancyChoice);
+!#VA(hero:x);
+
+!!VR(monType:y):S0;
+!!HE(hero):S(SKILL_NECROMANCY)/?(level:y);
+
+!!if&(level)>=(SKILL_EXPERT);
+  ; Expert
+  !!if&i^H3_Necromancy_Choice_%(hero)^=(MON_WALKING_DEAD);
+    !!VR(monType):S(MON_WALKING_DEAD);
+  ; Master
+  !!el&i^H3_Necromancy_Choice_%(hero)^=(MON_WIGHT);
+    !!VR(monType)&i^H3_Necromancy_0_Hero%(hero)^:S(MON_WIGHT);
+  ; Grandmaster
+  !!el&i^H3_Necromancy_Choice_%(hero)^>(MON_WIGHT);
+    !!VR(monType)&i^H3_Necromancy_0_Hero%(hero)^/i^H3_Necromancy_1_Hero%(hero)^:Si^H3_Necromancy_Choice_%(hero)^;
+  !!en;
+!!en;
+
+!!VRi^H3_Necromancy_Choice_%(hero)^:S(monType);
 
 
 !?FU(ACM_GetDefaultNecromancyMon);
@@ -4718,14 +4744,19 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!en;
 
 
-// Change the type of Necromancy creature for Alternative Necromancy by Archer30
+// Change the type of Necromancy creature for Alternative Necromancy
+; Archer30
 !?FU(ACM_OnDetermineNecromancyMon);     [Also works for AI]
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/(UNC_INT)/?(heroStruct:y) C(heroStruct)/26/(UNC_INT)/?(hero:y);
 
 ; Change Necromancy raising monster only if it's been set other than Skeletons
-; This means if it's set to Skeletons from the dialog, Cloak of Undead will work as usual
-; Ideally the dialog should have "Skeletons" replaced with "Default" to be more exact.
-!!if&i^H3_Necromancy_Choice_%(hero)^>(MON_SKELETON);
+; This means if it's set to Skeletons from the dialog, Cloak of Undead King will work as usual
+; Check if it is really eligible for Alternative Necromancy
+!!FU(ACM_FixAlternativeNecromancyChoice)&i^H3_Necromancy_Choice_%(hero)^>0:P(hero);
+
+; If it really does, implement the change
+; Don't merge this with the upper part!
+!!if&i^H3_Necromancy_Choice_%(hero)^>0;
   !!SN:X?y99/(FALSE);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/(UNC_INT)/i^H3_Necromancy_Choice_%(hero)^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5127998;
@@ -6421,9 +6452,9 @@ Before the interaction of the hero with the hero
 !!if&(maxLevel)=(SKILL_EXPERT);
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDI)/4/?(heroStruct1:y);
   !!UN:C(heroStruct1)/26/4/?(heroId1:y);
+  !!HE(heroId1):S(SKILL_SCHOLAR)/?(level1:y);
 
-  ; Here we assume checking i^H3_Scholar_1_Hero_%(heroId)^ is enough to prove that the hero learns Grandmaster Scholar
-  !!if&i^H3_Scholar_1_Hero%(heroId1)^;
+  !!if&(level1)>=(SKILL_EXPERT)/i^H3_Scholar_0_Hero%(heroId1)^/i^H3_Scholar_1_Hero%(heroId1)^;
     !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/4; [Set Scholar level as +1 (a.k.a. 4)]
 
     !!FU:E;
@@ -6431,8 +6462,9 @@ Before the interaction of the hero with the hero
 
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(heroStruct2:y);
   !!UN:C(heroStruct2)/26/4/?(heroId2:y);
+  !!HE(heroId2):S(SKILL_SCHOLAR)/?(level2:y);
 
-  !!if&i^H3_Scholar_1_Hero%(heroId2)^;
+  !!if&(level2)>=(SKILL_EXPERT)/i^H3_Scholar_0_Hero%(heroId2)^/i^H3_Scholar_1_Hero%(heroId2)^;
     !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/4;
   !!en;
 !!en;
@@ -32694,10 +32726,10 @@ On first battle round apply Bless and Prayer Spells on Paladin commander if mast
         !!VRy20:Sy11*y10;               [total HP of target]
         !!VRy30:Sy15:7 +7 F0/50;        [set percentage damage based on kill count 1% for 7 kill count +7, max at 50%]
 
-        ; For boss creatures (creature with HP >= 5000), the max percentage becomes 25% (not sure yet)
+        ; For boss creatures (creature with HP >= 5000), the HP percentage as damage is halved
         ; by Archer30
         !!MA:Py2/?y31;
-        !!VRy30&y31>=5000:F0/25;
+        !!VRy30&y31>=5000::2;
 
         !!MF:F?y6;                      [Get damage in y6]
         !!VRy7:Sy20*y30:100;            [calc additional damage]        
