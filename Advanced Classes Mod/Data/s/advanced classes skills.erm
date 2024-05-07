@@ -22619,7 +22619,6 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 ; Get the type of terrain
 ; Here this parameter is not used as it seems Perry's function handles it
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(terrain:y); [BU:G value, -1 for no terrain overlay]
-*!IF:M^%(terrain)^;
 
 !!FU(H3_Set_Spell_Descriptions):P(heroId)/(side);
 
@@ -22627,6 +22626,16 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !?FU(ACM_OnCloseSpellBook)&i^acm_isNonCombatSpellBookOpened^;
 !!VRi^acm_isNonCombatSpellBookOpened^:S(FALSE);
 !!FU(ACM_RestoreOriginalSpellValue):P;
+
+; Compatibility with Summon Elemental (WoG Option)
+!!if&i^acm_isAdvMapCastSpell^;
+  !!re i/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL);
+    !!SSi:C0/d:10;                      [Normal]
+    !!SSi:C1/d*10;                      [Basic]
+    !!SSi:C2/d*10;                      [Advanced]
+    !!SSi:C3/d*10;                      [Expert]
+  !!en;
+!!en;
 
 ; Restore spell details when exiting battle
 !?FU(OnAfterBattleUniversal);
@@ -22704,6 +22713,14 @@ Counterstrike: Increases retaliation damage based on your Spell Power
   !!SSi:C1/dy1;                         [Basic]
   !!SSi:C2/dy1;                         [Advanced]
   !!SSi:C3/dy1;                         [Expert]
+
+  ; Compatibility with Summon Elemental (WoG Option)
+  !!if&i^acm_isAdvMapCastSpell^/i>=(SPELL_FIRE_ELEMENTAL)/i<=(SPELL_AIR_ELEMENTAL);
+    !!SSi:C0/d*10;                      [Normal]
+    !!SSi:C1/d*10;                      [Basic]
+    !!SSi:C2/d*10;                      [Advanced]
+    !!SSi:C3/d*10;                      [Expert]
+  !!en;
 
   !!if|i=11/i=13/i=15/i=16/i=17/i=18/i=19/i=20/i=21/i=22/i=23/i=24/i=25/i=26/i=57; [Disabled for now]
     !!SSi:S?y60;                        [Get spell's magic school bits]
@@ -24942,6 +24959,13 @@ The following lines must be executed later than the functions with the same name
 ; Fix quantity in particular cases
 !!VR(lostHp:y):S(totalHp) %(hp) -(hp) *-1;
 !!VR(qty)|(hp)=(lostHp)/(lostHp)=0:-1;
+
+; Compatibility
+!?FU(OnBeforeAdventureMagic)&i^wog_74_enabled^;
+!!VRi^acm_isAdvMapCastSpell^:S(TRUE);
+
+!?FU(OnAfterAdventureMagic)&i^acm_isAdvMapCastSpell^;
+!!VRi^acm_isAdvMapCastSpell^:S(FALSE);
 
 ********************************************************************************
 
