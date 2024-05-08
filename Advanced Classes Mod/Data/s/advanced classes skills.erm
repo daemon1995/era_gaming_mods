@@ -382,6 +382,14 @@ Enable Artefact to appear on the map
 !!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
 !!FU(ACM_CreateERMHook):P(hookingFuncAddress);
 
+; Here we use a later timing for compatibility
+!?FU(OnStartOrLoad_Quit);
+!!SN:L^erm_hooker.era^/?(hooker:y);
+!!FU&(hooker)=0:E;
+
+!!SN:A(hooker)/^UnsetHook^/?(hookingFuncAddress:y);
+!!FU(ACM_UnsetERMHook):P(hookingFuncAddress);
+
 ; Set up Necromancy hooks
 !?FU(ACM_CreateERMHook);
 !#VA(hook:x);
@@ -615,8 +623,11 @@ this should make creature casts respecting dwarv type golem resistance
 
 ; QoL: If the hero has Cloak of the Undead King but also choose an option that raises the same creature, the rate of necromancy won't be reduced
 !!FU(ACM_GetDefaultNecromancyMon):P(heroId)/?(defaultMon:y);
-!!VRi^acm_altNecro_customMon^&i^H3_Necromancy_Choice_%(heroId)^<>(defaultMon):Si^H3_Necromancy_Choice_%(heroId)^;
 
+!!if&i^H3_Necromancy_Choice_%(heroId)^<>(defaultMon);
+  !!VR(necroMon:y):Si^H3_Necromancy_Choice_%(heroId)^ F(MON_SKELETON)/(INT_MAX);
+  !!VRi^acm_altNecro_customMon^:S(necroMon);
+!!en;
 
 !?FU(Necro_ChangePower_3);
 !#VA(hook:x);
@@ -624,6 +635,7 @@ this should make creature casts respecting dwarv type golem resistance
 ; Get current power
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
 !!UN:C(ebp)/-4/4/?(power:y);
+
 ; Get the latest power in float
 !!SN:X?t X(power) X?(powerFloat:e) Xt;  [get fct parameters]
 !!VR(powerFloat)::2;
@@ -632,14 +644,15 @@ this should make creature casts respecting dwarv type golem resistance
 !!if&i^acm_altNecro_customMon^>(MON_SKELETON); [if anything higher than skeletons was selected - Alternative Necromancy]
   !!VR(customMon:y):Si^acm_altNecro_customMon^;
   !!VRi^acm_altNecro_customMon^:S0;
-  !!VR(maxPowerFloat:e)&(customMon)=58:S10; [set to 10%]
-  !!VR(maxPowerFloat)&(customMon)=60:S7; [set to 7%]
-  !!VR(maxPowerFloat)&(customMon)=62:S4; [set to 4%]
-  !!VR(maxPowerFloat)&(customMon)=64:S3; [set to 3%]
-  !!VR(maxPowerFloat)&(customMon)=66:S2; [set to 2%]
+  !!VR(maxPowerFloat:e)&(customMon)=(MON_WALKING_DEAD):S10; [set to 10%]
+  !!VR(maxPowerFloat)&(customMon)=(MON_WIGHT):S7; [set to 7%]
+  !!VR(maxPowerFloat)&(customMon)=(MON_VAMPIRE):S4; [set to 4%]
+  !!VR(maxPowerFloat)&(customMon)=(MON_LICH):S3; [set to 3%]
+  !!VR(maxPowerFloat)&(customMon)=(MON_BLACK_KNIGHT):S2; [set to 2%]
   ; Restrain the current power to the given value
   !!VR(powerFloat):*100 F0/(maxPowerFloat) :100;
 !!en;
+
 ; Convert to Int
 !!SN:X?t X(powerFloat) X?(power) Xt;    [get fct parameters]
 ; Set
@@ -3736,6 +3749,9 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
     !!FU|v4<0/v4>8:E;
     !!HEy1:Sv4/?y5/1;
     !!FU&y5<>4:E;                       [Exit if no Diplomacy]
+
+    !!CM:R0;
+
     !!FU(Calc_Diplomacy_values):Py1/?y48/?y49/?y50;
     !!SN:W^ACM_Diplomacy_Price_Default^/?y30;
     !!SN:W^ACM_Diplomacy_Price_Old_Diplo^/?y40; 
@@ -4555,8 +4571,12 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!VRy40:S1;                             [1 SP]
 !!VRy40&y20=3/y50>0:S2;                 [2 SP with full set]
 !!VRy40&y20=3/y50=0:S1;                 [Give only 1 SP with only set equipped]
-!!SN:T^AC_Misc.Eagle_Eye_Spell^/?z3/^value^/y40; !!SN:Iz3/?z3;
-!!IF&1000/999:Q1/9/y1/1/z3;             [Show spell learning screen for hero]
+
+!!if&i^battle_isVisible^;
+  !!SN:T^AC_Misc.Eagle_Eye_Spell^/?z3/^value^/y40; !!SN:Iz3/?z3;
+  !!IF:Q1/9/y1/1/z3;             [Show spell learning screen for hero]
+!!en;
+
 !!HEy2:Fd/d/?y1/d;                      [Check Hero Spell Power]
 !!HEy2&y1<99:Fd/d/dy40/d;               [Gain +1 Spell Power for every successfull EE proc]
 
@@ -4710,7 +4730,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
     !!FU(ACM_FixAlternativeNecromancyChoice):Py1;
     !!VRy31:Si^H3_Necromancy_Choice_%y1^;
 
-    !!if&y31<=(MON_SKELETON);
+    !!if&y31=0;
       !!VRy32:S1;
     !!el&y31=(MON_WALKING_DEAD);
       !!VRy32:S2;
@@ -4764,12 +4784,12 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !?FU(ACM_GetDefaultNecromancyMon);
 !#VA(hero:x) (result:x);
 
-!!FU&(hero)<0:E;                        [Exit if no hero]
+!!VR(result):S(MON_SKELETON);
+!!FU&(hero)<=(NO_HERO):E;                        [Exit if no hero]
+
 !!HE(hero):A2/(ART_CLOAK_OF_THE_UNDEAD_KING)/?(has:y)/?(equipped:y);
 
-!!if&(equipped)=0;
-  !!VR(result):S(MON_SKELETON);
-!!el;
+!!if&(equipped)>0;
   !!HE(hero):S(SKILL_NECROMANCY)/?(level:y);
   
   !!if&(level)=(SKILL_BASIC);
@@ -4785,7 +4805,9 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 // Change the type of Necromancy creature for Alternative Necromancy
 ; Archer30
 !?FU(ACM_OnDetermineNecromancyMon);     [Also works for AI]
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/(UNC_INT)/?(heroStruct:y) C(heroStruct)/26/(UNC_INT)/?(hero:y);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/(UNC_INT)/?(heroStruct:y) C(heroStruct)/26/(UNC_INT)/?(hero:y);
 
 ; Change Necromancy raising monster only if it's been set other than Skeletons
 ; This means if it's set to Skeletons from the dialog, Cloak of Undead King will work as usual
@@ -4795,9 +4817,9 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 ; If it really does, implement the change
 ; Don't merge this with the upper part!
 !!if&i^H3_Necromancy_Choice_%(hero)^>0;
-  !!SN:X?y99/(FALSE);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/(UNC_INT)/i^H3_Necromancy_Choice_%(hero)^;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5127998;
+  !!SN:X?t/(FALSE);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/(UNC_INT)/i^H3_Necromancy_Choice_%(hero)^;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5127998;
 !!en;
 
 
@@ -9046,6 +9068,8 @@ Change Heroes Speciali Descriptions
 !!IF:M1/4/z2;                           [show description for Hero Speciality when right click]
 !!en;
 !!en;
+
+
 ********************************************************************************
 
 
@@ -9053,7 +9077,94 @@ Change Heroes Speciali Descriptions
 
 ***********************Creature Specialists Buff in combat**********************
 
+
+; Unset hook - for TUM compatibility
+!?FU(ACM_UnsetERMHook);
+!#VA(unsetHook:x);
+
+!!SN:E(unsetHook)/1/5137685/(tum_Hero_GetSpecMonster);
+
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN&i^Typhon_Third_Upgrade_Mod_Active^/i^tum_reborn_on^<>(TRUE):E(setHook)/1/5137595/(tum_Hero_GetSpecMonster_BeforeMonIdCheck); [Archer: This function ideally should be placed in TUM]
+!!SN:E(setHook)/1/5137685/(ACM_Hero_GetSpecMonster); [Manage addtional monster if TUM is enabled] 4E6515
+
+; Archer: This function ideally should be placed in TUM
+!?FU(tum_Hero_GetSpecMonster_BeforeMonIdCheck);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(mon:y);
+!!FU&(mon)<(MON_SUPREME_ARCHANGEL):E;
+
+!!MA:O(mon)/?(townType:y) L(mon)/?(level:y);
+
+!!if|i^tum_reborn_on^/i^tum_newTowns_on^/i^tum_full_on^;
+  !!FU(tum_GetMonstersInTown):P(townType)/(level)/?(basicMon:y)/?(upgMon:y)/?(thirdUpgMon:y); 
+!!el;
+  !!FU(tum_GetTownMon):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); [legacy]
+!!en;
+
+!!if&(mon)=(thirdUpgMon);
+  !!UN:C(ebp)/8/4/(basicMon);
+!!el;
+  !!MA:U(thirdUpgMon)/?(fourthUpg:y);
+  !!UN&(mon)=(fourthUpg)C(ebp)/8/4/(basicMon);
+!!en;
+
+!?FU(ACM_GetSpecMonsterStats);
+!#VA(heroId:x) (monLvl:x) (attack:x) (defense:x) (damage:x) (bonusHp:x);
+
+!!HE(heroId):E?t/?(level:y)/1;          [Check hero Level]
+!!VR(level):F1/(INT_MAX);               [Fix the value fetched in case it's buggy]
+
+!!VR(divider:y)&(monLvl)=0:S16;
+!!VR(divider)&(monLvl)=1:S15; 
+!!VR(divider)&(monLvl)=2:S13; 
+!!VR(divider)&(monLvl)=3:S12; 
+!!VR(divider)&(monLvl)=4:S10; 
+!!VR(divider)&(monLvl)=5:S7; 
+!!VR(divider)&(monLvl)=6:S5;
+
+!!VR(attack):S(level):7 +1;             [Attack and Defense per 7 Level]
+!!VR(defense):S(attack);
+!!VR(damage):S(level):(divider);        [Damage per Level]
+!!VR(bonusHp):S(level)+9;               [+1% per Health per Level +9%]
+
+; The script doesn't deal with War Machines as we don't need the stats to show in non-combat creature dlg
+!?FU(ACM_Hero_GetSpecMonster);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!HE(heroId):X?t/?(monId:y);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monPtr:y) C(monPtr)/4/4/?(monLvl:y);
+; General
+!!if&(monId)<>(MON_FIREBIRD)/(monId)<>(MON_BALLISTA);
+  !!UN:C(monPtr)/76/4/?(currHp:y);
+  !!FU(ACM_GetSpecMonsterStats):P(heroId)/(monLvl)/?(attack:y)/?(defense:y)/?(damage:y)/?(bonusHp:y);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(monId:y);
+  !!UN:C(monPtr)/84/4/d(attack) C(monPtr)/88/4/d(defense); [edit min/max damage]
+  !!VR(newHp:e):S(currHp) :100 *(bonusHp);
+  !!VR(hp:y):S(newHp);
+  !!UN:C(monPtr)/76/4/d(hp); edit hp
+  !!UN:C(monPtr)/92/4/d(damage) C(monPtr)/96/4/d(damage); [edit min/max damage]
+; Ignissa
+!!el&(monId)=(MON_FIREBIRD);
+  !!HE(heroId):E?t/?(level:y)/1;        [Check hero level]
+  !!VR(level):F1/(INT_MAX);             [Fix the value fetched in case it's buggy]
+
+  !!VR(bonusHp):S(level) *2 -52;
+  !!UN:C(monPtr)/76/4/d(bonusHp);
+
+  ; Skip all the native bonuses
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5137898;
+!!en;
+
+; The following code is disabled by Archer's script
 !?BF;
+!!FU:E;
 
 !!BH0:N?y1;                             [Attacker]
 !!FU(AC_Function_31)&y1>=0/y1<=155:Py1/1;
@@ -9091,13 +9202,8 @@ Change Heroes Speciali Descriptions
 !!BMx16:U1/dx5 U2/dx5;                  [Min+Max Damage]
 !!en;
 
-
 ********************************************************************************
 x1=Creature, x2=Hero Number, x3 Returns first upgrade, x4 Returns second upgrade
-
-for later
-; Discussion: https://discord.com/channels/665742159307341827/1196491118704083065/1209791423998595092
-; Archer30: This script needs to be updated if Maiko finally wants to upgrade TUM after 2.17 someday. FU(tum_GetTownMon) is deprecated.
 !?FU(Set_Creature_Upgrades_TUM);
 !#VA(mon:x) (hero:x) (upgMon:x) (thirdUpgMon:x);
 
@@ -9161,13 +9267,14 @@ Need to expand and edit here for every faction
   *!DO(AC_Function_33)/21/41/1&x2=2:Py12/y13/y53/y51/y52; [Pass Creature, Upgraded Creature, Att/Def, Health and Damage]
 *!en;
 
-!!if&x1=130;                            [If Firebird or Phoenix Ignissa Hero ID is 130]
-  !!VRy12:S130;
-  !!VRy51:Sy48*2-52 F1/(INT_MAX);       [2 HP per Level starts with negative offset]
-  !!VRy13:Sy12+1;                       [Upgraded Version]
-  !!DO(AC_Function_34)/0/20/1&x2=1:Py12/y13/0/y51/0; [Pass Creature, Upgraded Creature, Att/Def, Health and Damage]
-  !!DO(AC_Function_34)/21/41/1&x2=2:Py12/y13/0/y51/0; [Pass Creature, Upgraded Creature, Att/Def, Health and Damage]
-!!en;
+; Disabled by Archer's script
+*!if&x1=130;                            [If Firebird or Phoenix Ignissa Hero ID is 130]
+  *!VRy12:S130;
+  *!VRy51:Sy48*2-52 F1/(INT_MAX);       [2 HP per Level starts with negative offset]
+  *!VRy13:Sy12+1;                       [Upgraded Version]
+  *!DO(AC_Function_34)/0/20/1&x2=1:Py12/y13/0/y51/0; [Pass Creature, Upgraded Creature, Att/Def, Health and Damage]
+  *!DO(AC_Function_34)/21/41/1&x2=2:Py12/y13/0/y51/0; [Pass Creature, Upgraded Creature, Att/Def, Health and Damage]
+*!en;
 
 
 !?FU(AC_Function_33);
@@ -16398,7 +16505,7 @@ Also show if Mastery is active or not
 
 !!SN:Ay1/^SetHook^/?y2;
 !!SN:Ey2/1/4621577/(ACM_beforeCreatureInfoDlg_Show); [right click]
-!!SN:Ey2/1/6245280/(ACM_beforeCreatureInfoDlg_Show); [left click]
+!!SN:Ey2/1/4621584/(ACM_beforeCreatureInfoDlg_Show); [left click]
 
 
 !?FU(ACM_beforeCreatureInfoDlg_Show);
@@ -17543,7 +17650,10 @@ description
 !!SN:H^art^/155/1/z188213;              [155  Slava's Ring of Power]
 
 *------- Ammo Cart -------*
-!!SN:H^art^/5/1/z188259;                [Ammo Cart]
+*!SN:H^art^/5/1/z188259;                [Ammo Cart]
+!!SN:H^art^/(ART_AMMO_CART)/1/?z30;
+!!SN:H^art^/(ART_AMMO_CART)/1/^%z30
+%T(AC_Warmachine.Ammo_Cart_Extra_Descr)^;
 
 !!SN:H^art^/105/1/z188269;               [Pendant of Free Will]
 !!SN:H^art^/102/1/z188270;               [Pendant of Holiness]
@@ -22628,7 +22738,7 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !!FU(ACM_RestoreOriginalSpellValue):P;
 
 ; Compatibility with Summon Elemental (WoG Option)
-!!if&i^acm_isAdvMapCastSpell^;
+!!if&i^acm_isAdvMapSummonElem^;
   !!re i/(SPELL_FIRE_ELEMENTAL)/(SPELL_AIR_ELEMENTAL);
     !!SSi:C0/d:10;                      [Normal]
     !!SSi:C1/d*10;                      [Basic]
@@ -22715,7 +22825,7 @@ Counterstrike: Increases retaliation damage based on your Spell Power
   !!SSi:C3/dy1;                         [Expert]
 
   ; Compatibility with Summon Elemental (WoG Option)
-  !!if&i^acm_isAdvMapCastSpell^/i>=(SPELL_FIRE_ELEMENTAL)/i<=(SPELL_AIR_ELEMENTAL);
+  !!if&i^acm_isAdvMapSummonElem^/i>=(SPELL_FIRE_ELEMENTAL)/i<=(SPELL_AIR_ELEMENTAL);
     !!SSi:C0/d*10;                      [Normal]
     !!SSi:C1/d*10;                      [Basic]
     !!SSi:C2/d*10;                      [Advanced]
@@ -24962,10 +25072,10 @@ The following lines must be executed later than the functions with the same name
 
 ; Compatibility
 !?FU(OnBeforeAdventureMagic)&i^wog_74_enabled^;
-!!VRi^acm_isAdvMapCastSpell^:S(TRUE);
+!!VRi^acm_isAdvMapSummonElem^:S(TRUE);
 
-!?FU(OnAfterAdventureMagic)&i^acm_isAdvMapCastSpell^;
-!!VRi^acm_isAdvMapCastSpell^:S(FALSE);
+!?FU(OnAfterAdventureMagic)&i^acm_isAdvMapSummonElem^;
+!!VRi^acm_isAdvMapSummonElem^:S(FALSE);
 
 ********************************************************************************
 
@@ -26442,6 +26552,7 @@ little extra script to make sure spell points are not increaased with multicast 
 !#HE55:C0/2/50/2;                       [55 Nymus starts with 2 Pit Fiends]
 
 !#HE57:X3/22;                           [Xyron Inferno]
+!#HE57:F1/1/1/2;                        [Adjust Primary Skills]
 !#UN:G2/57/1/57; !#UN:G2/57/3/57;
 
 *#HE59:S23/1;                           [Olema starts with Armourer instead of Leadership]
@@ -26720,8 +26831,8 @@ little extra script to make sure spell points are not increaased with multicast 
 
 !#HE130&y1=0:S10/1;                     [Ignissa starts with Ballistics instead of Offense]
 !#HE130&y1=0:S22/0;
-!_#HE130:X1/130;                        [Ignissa Fire Bird Specialist]
-!#HE130&y1=0:X3/2;                      [Make Her Master of Spell so Firebird gets no additional Bonus]
+!#HE130&y1=0:X1/130;                    [Ignissa Fire Bird Specialist]
+*#HE130&y1=0:X3/2;                      [Make Her Master of Spell so Firebird gets no additional Bonus]
 !#HE130&y1=0:F0/0/1/1;                  [Adjust Primary Skills to lowest Possible]
 
 !#HE131&y1=0:X0/19;                     [Lacus Warfare Specialist]
@@ -29034,34 +29145,66 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !?DL&v998=122/v999=30722/v1000=13;      [When clicking on the close Button in Goblin Support DL]
 !!DL:C1;
 
+// Right-Click on hero screen/hero meeting screen shows War Machines enhancements details
+; erm 2 part by Archer30
+!?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!VR(item:y):Si^mouse_item^;
+!!VR(art:y):S(NO_ART);
 
-!?CM2;                                  [Show Warmachine Upgrades when clicking on WM in Hero Screen]
-!!CM:F?v3 I?v4 S?v5;                    [where we click and click subtype]
-!!HE-1:N?y99;                           [Get current hero #]
+!!VR(art)&(item)=18:S(ART_CATAPULT); [Catapult]
+!!VR(art)&(item)=16:S(ART_AMMO_CART); [Ammo Cart]
+!!VR(art)&(item)=15:S(ART_BALLISTA); [Ballista]
+!!VR(art)&(item)=17:S(ART_FIRST_AID_TENT); [First Aid Tent]
+!!FU&(art)=(NO_ART):E;
 
-!!if|v4=18/v4=16/v4=15/v4=17;
-  !!if&v3=512/v5=14;                    [if right click and specialty icon are clicked]
-    !!VRy1&v4=18:S1;                    [Catapult]
-    !!VRy1&v4=16:S2;                    [Ammo Cart]
-    !!VRy1&v4=15:S3;                    [Ballista]
-    !!VRy1&v4=17:S4;                    [First Aid Tent]
-    !!FU(Set_WM_Upgrade_Description):Py99/y1;
-  !!en;
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU(ACM_PrepareWarMachineDlg):P(hero)/(art);
+
+!?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!VR(item:y):Si^mouse_item^;
+!!VR(art:y):S(NO_ART);
+
+!!if&(item)>=40/(item)<=43;
+  !!CM:H?(hero:y)/?(otherHero:y);
+  !!VR(art)&(item)=40:S(ART_BALLISTA);
+  !!VR(art)&(item)=41:S(ART_AMMO_CART);
+  !!VR(art)&(item)=42:S(ART_FIRST_AID_TENT);
+  !!VR(art)&(item)=43:S(ART_CATAPULT);
+!!el&(item)>=59/(item)<=62;
+  !!CM:H?(otherHero:y)/?(hero:y);
+  !!VR(art)&(item)=59:S(ART_BALLISTA);
+  !!VR(art)&(item)=60:S(ART_AMMO_CART);
+  !!VR(art)&(item)=61:S(ART_FIRST_AID_TENT);
+  !!VR(art)&(item)=62:S(ART_CATAPULT);
 !!en;
 
+!!FU&(art)=(NO_ART):E;
 
-!?FU(Set_WM_Upgrade_Description);
+!!FU(ACM_PrepareWarMachineDlg):P(hero)/(art);
+
+!?FU(ACM_PrepareWarMachineDlg);
+!#VA(hero:x) (art:x);
+
+!!HE(hero):A2/(art)/?(has:y)/?(equipped:y);
+
+!!if&(equipped);
+  !!FU(Get_WM_Upgrade_Description):P(hero)/(art)/?(msg:z);
+  !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_POPUP)/(msg);
+  !!CM:R0;
+!!en;
+
+!?FU(Get_WM_Upgrade_Description);
+
 18 Catapult Slot
 3 Catapult
-!!HEx1:A2/3/d/?y15;                    [Check for 3 Catapult]
-!!if&x2=1/y15=1;                              [if right click and specialty icon are clicked]
+!!if&x2=(ART_CATAPULT);                 [if right click and specialty icon are clicked]
   !!SN:T^AC_Warmachine.All_Upg_1^/?z21; !!SN:W^WM_Fortification_%X1^/?y10; !!VRz31&y10=0:S^Grey^; !!VRz31&y10=1:S^Gold^; [Check if hero has bought the upgrade and set color of text accordingly]
   !!SN:T^AC_Warmachine.All_Upg_2^/?z22; !!SN:W^WM_Maintainability_%X1^/?y10; !!VRz32&y10=0:S^Grey^; !!VRz32&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.All_Upg_3^/?z23; !!SN:W^WM_Versatility_%X1^/?y10; !!VRz33&y10=0:S^Grey^; !!VRz33&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.All_Ench_1^/?z24; !!SN:W^WM_Shield_Ench_%X1^/?y10; !!VRz34&y10=0:S^Grey^; !!VRz34&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.All_Ench_2^/?z25; !!SN:W^WM_MR_Ench_%X1^/?y10; !!VRz35&y10=0:S^Grey^; !!VRz35&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.All_Ench_3^/?z26; !!SN:W^WM_MR_Aura_%X1^/?y10; !!VRz36&y10=0:S^Grey^; !!VRz36&y10=1:S^Gold^;
-  !!UN:A3/10/0;                         [restore original artefact description]
+  *!SN:H^art^/3/1/^^;                   [restore original artefact description]
   !!SN:H^art^/3/1/?z2;                  [readout artefact description]
   !!VRz1:S^%Z2
 
@@ -29071,9 +29214,9 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z34}%Z24{~}
   {~%Z35}%Z25{~}
   {~%Z36}%Z26{~}^;
-  !!UN:A3/10/z1;                        [Set new Ammo Cart description to show it on right click]
+  *!UN:A3/10/z1;                        [Set new Ammo Cart description to show it on right click]
   
-  !!VRz4:S^
+  *!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29084,20 +29227,16 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 
 16 Ammo Cart Slot
 5 Ammo Cart
-!!HEx1:A2/5/d/?y15;                    [Check for 5 Ammo Cart]
-!!if&x2=2/y15=1;                              [if right click and specialty icon are clicked]
+!!if&x2=(ART_AMMO_CART);                [if right click and specialty icon are clicked]
   !!SN:T^AC_Warmachine.Cart_Upg_1^/?z21; !!SN:W^Ammo_Supply_%X1^/?y10; !!VRz31&y10=0:S^Grey^; !!VRz31&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Cart_Upg_2^/?z22; !!SN:W^Ammo_Goblin_%X1^/?y10; !!VRz32&y10=0:S^Grey^; !!VRz32&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Cart_Upg_3^/?z23; !!SN:W^Ammo_Enhanced_Arrow_%X1^/?y10; !!VRz33&y10=0:S^Grey^; !!VRz33&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Cart_Ench_1^/?z24; !!SN:W^Ammo_Booby_Trap_%X1^/?y10; !!VRz34&y10=0:S^Grey^; !!VRz34&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Cart_Ench_2^/?z25; !!SN:W^Ammo_Replensih_SP_%X1^/?y10; !!VRz35&y10=0:S^Grey^; !!VRz35&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Cart_Ench_3^/?z26; !!SN:W^Ammo_Burning_Arrow_%X1^/?y10; !!VRz36&y10=0:S^Grey^; !!VRz36&y10=1:S^Gold^;
-  !!UN:A5/10/0;
+  *!SN:H^art^/5/1/^^;
   !!SN:H^art^/5/1/?z2;
-  !!SN:T^AC_Warmachine.Ammo_Cart_Extra_Descr^/?z3;
   !!VRz1:S^%Z2
-
-  %Z3
 
   {~%Z31}%Z21{~}
   {~%Z32}%Z22{~}
@@ -29105,9 +29244,9 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z34}%Z24{~}
   {~%Z35}%Z25{~}
   {~%Z36}%Z26{~}^;
-  !!UN:A5/10/z1;                        [Set new Ammo Cart description]
+  *!UN:A5/10/z1;                        [Set new Ammo Cart description]
 
-  !!VRz4:S^
+  *!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29118,15 +29257,14 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 
 15 Ballista Slot
 4 Ballista
-!!HEx1:A2/4/d/?y15;                    [Check for 4 Ballista]
-!!if&x2=3/y15=1;                              [if right click and specialty icon are clicked]
+!!if&x2=(ART_BALLISTA);                 [if right click and specialty icon are clicked]
   !!SN:T^AC_Warmachine.Bal_Upg_1^/?z21; !!SN:W^Ballista_Morale_%X1^/?y10; !!VRz31&y10=0:S^Grey^; !!VRz31&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Bal_Upg_2^/?z22; !!SN:W^Ballista_Add_Shots_%X1^/?y10; !!VRz32&y10=0:S^Grey^; !!VRz32&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Bal_Upg_3^/?z23; !!SN:W^Ballista_Crippling_%X1^/?y10; !!VRz33&y10=0:S^Grey^; !!VRz33&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Bal_Ench_1^/?z24; !!SN:W^Ballista_Fireball_Attack_%X1^/?y10; !!VRz34&y10=0:S^Grey^; !!VRz34&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Bal_Ench_2^/?z25; !!SN:W^Ballista_Magic_Arrow_%X1^/?y10; !!VRz35&y10=0:S^Grey^; !!VRz35&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Bal_Ench_3^/?z26; !!SN:W^Ballista_Spell_Trigger_%X1^/?y10; !!VRz36&y10=0:S^Grey^; !!VRz36&y10=1:S^Gold^;
-  !!UN:A4/10/0;
+  *!SN:H^art^/4/1/^^;
   !!SN:H^art^/4/1/?z2;
   !!VRz1:S^%Z2
 
@@ -29136,9 +29274,9 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z34}%Z24{~}
   {~%Z35}%Z25{~}
   {~%Z36}%Z26{~}^;
-  !!UN:A4/10/z1;
+  *!UN:A4/10/z1;
 
-  !!VRz4:S^
+  *!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29149,15 +29287,14 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 
 17 First Aid Tent Slot
 6 First Aid Tent
-!!HEx1:A2/6/d/?y15;                     [Check for 4 Tent]
-!!if&x2=4/y15=1;                        [if right click and specialty icon are clicked]
+!!if&x2=(ART_FIRST_AID_TENT);           [if right click and specialty icon are clicked]
   !!SN:T^AC_Warmachine.Tent_Upg_1^/?z21; !!SN:W^Tent_Improved_%X1^/?y10; !!VRz31&y10=0:S^Grey^; !!VRz31&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Tent_Upg_2^/?z22; !!SN:W^Tent_Capacity_Upgrade_%X1^/?y10; !!VRz32&y10=0:S^Grey^; !!VRz32&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Tent_Upg_3^/?z23; !!SN:W^Tent_Gold_Gain_%X1^/?y10; !!VRz33&y10=0:S^Grey^; !!VRz33&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Tent_Ench_1^/?z24; !!SN:W^Tent_Herbalism_%X1^/?y10; !!VRz34&y10=0:S^Grey^; !!VRz34&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Tent_Ench_2^/?z25; !!SN:W^Tent_Overheal_%X1^/?y10; !!VRz35&y10=0:S^Grey^; !!VRz35&y10=1:S^Gold^;
   !!SN:T^AC_Warmachine.Tent_Ench_3^/?z26; !!SN:W^Tent_Life_Aura_%X1^/?y10; !!VRz36&y10=0:S^Grey^; !!VRz36&y10=1:S^Gold^;
-  !!UN:A6/10/0;
+  *!SN:H^art^/6/1/^^;
   !!SN:H^art^/6/1/?z2;
   !!VRz1:S^%Z2
 
@@ -29167,9 +29304,9 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z34}%Z24{~}
   {~%Z35}%Z25{~}
   {~%Z36}%Z26{~}^;
-  !!UN:A6/10/z1;
+  *!UN:A6/10/z1;
 
-  !!VRz4:S^
+  *!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29178,6 +29315,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 {~%Z36}%Z26{~}^;
 !!en;
 
+!!VRx3:Zz1;                             [Export the text]
 
 ****************************************************************************************************
 **Spell Trainer
@@ -34614,10 +34752,10 @@ x1=creature type, x2=hero, x3=stack, x4=battle side
 !!SN:B(descPtr)/d/?(desc);              [get stack description]
 !!VR(desc):S^^;                         [clear description]
 *get the description of upgrades in z4 by calling the fct
-!!FU(Set_WM_Upgrade_Description)&x1=145:Px2/1; [145 Catapult]
-!!FU(Set_WM_Upgrade_Description)&x1=146:Px2/3; [146 Ballista]
-!!FU(Set_WM_Upgrade_Description)&x1=147:Px2/4; [147 First Aid Tent]
-!!FU(Set_WM_Upgrade_Description)&x1=148:Px2/2; [148 Ammo Cart]
+!!FU(Get_WM_Upgrade_Description)&x1=145:Px2/1; [145 Catapult]
+!!FU(Get_WM_Upgrade_Description)&x1=146:Px2/3; [146 Ballista]
+!!FU(Get_WM_Upgrade_Description)&x1=147:Px2/4; [147 First Aid Tent]
+!!FU(Get_WM_Upgrade_Description)&x1=148:Px2/2; [148 Ammo Cart]
 
 *some code to get additional heal parameter
 !!HEx2:S27/?y80; 
