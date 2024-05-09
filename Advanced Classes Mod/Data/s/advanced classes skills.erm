@@ -6739,7 +6739,7 @@ Before the interaction of the hero with the hero
 
 !?FU(Intelligence_Set_Spell_Points);
 x1=Hero Id,  x2=1 double Spell Points   x3=Returns Max Spell Points   x4=1 to only check and not set SP 0 means Set
-x5=Current Spell Points, x6=amount of regen spell points
+x5=Current Spell Points
 
 !!HEx1:S24/?y6;                         [Get Intelligence level]
 !!HEx1:E?y47/?y48/1;                    [Get Hero level]
@@ -6834,13 +6834,12 @@ x5=Current Spell Points, x6=amount of regen spell points
 !!FU&y1<>109/y1<>113/y1<>120:E;         [exit if click is not on mana]
 
 !!CM:H?y3/?y4;                          [y3/y4 - left/right heroes]
-!!FU(Intelligence_Set_Spell_Points):Py3/0/?y5/1/?y7/?y6;
 !!FU(AC_Function_8):Py3/?y6/1/1;        [loop thru heroes]
 !!HEy3:B0/?z1 I?y7/1;                   [z1/y7 - hero name/mana]
 !!SN:T^AC_Misc.Spell_Points_hero_screen^/?z2/^hero^/z1/^regenSp^/y6;
 
-!!IF&y2=13/y8=0:M^%Z2^;                 [output LKM message (released, no modifiers)]
-!!IF&y2=14:M0/4/^%Z2^;                  [output PKM message]
+!!IF&y2=(MOUSE_LMB_PRESSED)/y8=0:M^%Z2^;                 [output LKM message (released, no modifiers)]
+!!IF&y2=(MOUSE_RMB_PRESSED):M0/4/^%Z2^;                  [output PKM message]
 !!CM:R0;                                [disable standard click action]
 
 
@@ -6856,7 +6855,6 @@ x5=Current Spell Points, x6=amount of regen spell points
   !!VRy3:Sy2;
 !!en;
 
-!!FU(Intelligence_Set_Spell_Points):Py3/0/?y5/1/0/?y6;
 !!FU(AC_Function_8):Py3/?y6/1/1;        [loop thru heroes]
 !!HEy3:B0/?z1 I?y7/1;                   [z1/y7 - hero name/mana]
 !!SN:T^AC_Misc.Spell_Points_hero_screen^/?z2/^hero^/z1/^regenSp^/y6;
@@ -16482,7 +16480,7 @@ All changes to these parameters should be done here. Values can be called anytim
   *Commander Balance 
   !!COx1&x1>=0:B1/6/?y1;                [check Strikes All Around ability]
   !!VRy52&x1>=0/y1=1:-10;               [-10% Damage if ability is active]
-  !!VRy50&x1>=0/y1=1:-10;               [-10% Attack if ability is active]
+  *!VRy50&x1>=0/y1=1:-10;               [-10% Attack if ability is active]
 
   !!COx1&x1>=0:B1/9/?y1;                [check Attack Twice ability]
   !!VRy52&x1>=0/y1=1:-15;               [-15% Damage if ability is active]
@@ -16880,7 +16878,8 @@ x9=returns skill value
 // by Archer30
 ; Commanders now deal reduced damage to secondary targets of their strike all around attacks
 ; For the main target, the damage would still be 100%
-
+; This sciprt won't work if the attacker, the defender and the secondary targets are all in the same side (possible with Berserk)
+; To solve this, we need to introduce a new hook to get the actual attacking stack. But this is a rare situation so we are not doing it for now
 !?FU(OnMonsterPhysicalDamage);
 !!VRi^acm_Redstrik_damagePercent^:S50;  [Percentage of damage commanders deal to secondary targets of their Strike all around attacks]
  
@@ -16893,21 +16892,26 @@ x9=returns skill value
 
   ; Check if it is a commander dealing damage
   ; Here we assume the attacker with different side with the defender (MF:N) is the real attacker
+  ; It can be the same if Berserked!
   !!BM(defStack):I?(defSide:y);
   !!VR(attackers[2]:y):Ci^battle_acting_stack^/(targetStack);
 
   !!re i/0/1;
-    !!FU(acm_Redstrik_GetActualStackSide):P(attackers[i])/?(actualSide:y);
+    !!FU(ACM_GetActualStackSide):P(attackers[i])/?(actualSide:y);
 
     !!if&(actualSide)<>(defSide);
       !!VR(atkStack:y):S(attackers[i]);
+
       !!br;
     !!en;
   !!en;
 
-  !!BM(atkStack):T?(atkType:y) I?(defSide:y);
+  ; Exit if we are really not sure about which stack was the attacker
+  !!FU&i>1:E;
+
+  !!BM(atkStack):T?(atkType:y);
   !!VRy80:Si^acm_Redstrik_damagePercent^;
-  !!BA:H(defSide)/?y99;                 [get hero based on combat side]
+  !!BA:H(actualSide)/?y99;              [get hero based on combat side]
   !!if&y99=105;                         [if special hero]
     !!HEy99:E?y97/?y98/1;               [get hero level]
     !!VRy80:Sy98*2+73;                  [calc new damage]
@@ -16921,7 +16925,7 @@ x9=returns skill value
 !!en;
 
 ; The stack size would be reverted if the stack is hypnotized
-!?FU(acm_Redstrik_GetActualStackSide);
+!?FU(ACM_GetActualStackSide);
 !#VA(stack:x) (side:x);
 
 !!BM(stack):I?(side) G(SPELL_HYPNOTIZE)/?(hypnotizeTurns:y)/d;
