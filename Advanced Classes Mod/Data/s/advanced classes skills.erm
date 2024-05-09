@@ -4522,7 +4522,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !!FU&y10=0/y20<3:E;                     [If set is complete and hero has no EE skill give basic Eagle Eye Skill]
 
 !!HEy99:A2/(ART_META_SPELLBOOK)/?y30/?y31; [Get spell book]
-!!FU&y31<=0:E;                            [Exit if no spell book]
+!!FU&y31<=0:E;                          [Exit if no spell book]
 
 !!SN:W^H3_Eagle Eye_0_Hero%Y99^/?y11;
 !!SN:W^H3_Eagle Eye_1_Hero%Y99^/?y12;
@@ -4546,6 +4546,8 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
   !!if&y7=0/y8=0;                       [If Hero doesnt know the spell and also not currently just unlearned]
     !!HEy99:My4/1;                      [Give Hero the new spell]
     !!SN:W^Hero%Y99_Spell%Y4_Specialists^/1; [Fix for Sorcery or Elemental Specialists]
+    !!SN&y1=0:W^Attacker_Spell%Y4_Temp_Learned^/1; [Save Spell for Battle replay case]
+    !!SN&y1=1:W^Defender_Spell%Y4_Temp_Learned^/1; [Save Spell for Battle replay case]
     !!SN:W^Eagle_Eye_Spell_0^/y4;
   !!en;
 !!en;
@@ -4574,11 +4576,38 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 
 !!if&i^battle_isVisible^;
   !!SN:T^AC_Misc.Eagle_Eye_Spell^/?z3/^value^/y40; !!SN:Iz3/?z3;
-  !!IF:Q1/9/y1/1/z3;             [Show spell learning screen for hero]
+  !!IF:Q1/9/y1/1/z3;                    [Show spell learning screen for hero]
 !!en;
-
 !!HEy2:Fd/d/?y1/d;                      [Check Hero Spell Power]
 !!HEy2&y1<99:Fd/d/dy40/d;               [Gain +1 Spell Power for every successfull EE proc]
+
+
+!?FU(OnBeforeBattleUniversal);
+*reset Eagle Eye variables
+!!re i/9/69;                            [loop trough all spells]
+  !!SN:W^Attacker_Spell%i_Temp_Learned^/0; [reset spell variable to zero]
+  !!SN:W^Defender_Spell%i_Temp_Learned^/0; [reset spell variable to zero]
+!!en;
+
+!?FU(OnBattleReplay);
+*During battle replay unlearn all spells that were learned with Eagle Eye in previous battle
+!!re i/9/69;                            [loop trough all spells]
+!!SN:W^Attacker_Spell%i_Temp_Learned^/?y1; [Get saved spell ID]
+!!if&y1>0;  
+  !!BH0:N?y2;                           [Get attacking hero number]  
+  !!HEy2:Mi/0;                          [Unlearned spell that was learned by Eagle Eye]
+  !!SN:W^Attacker_Spell%i_Temp_Learned^/0; [reset spell variable to zero]
+!!en;
+!!en;
+
+!!re i/9/69;                            [loop trough all spells]
+!!SN:W^Defender_Spell%i_Temp_Learned^/?y1; [Get saved spell ID]
+!!if&y1>0;  
+  !!BH1:N?y2;                           [Get attacking hero number]  
+  !!HEy2:Mi/0;                          [Unlearned spell that was learned by Eagle Eye]
+  !!SN:W^Defender_Spell%i_Temp_Learned^/0; [reset spell variable to zero]
+!!en;
+!!en;
 
 
 ******************
@@ -10065,7 +10094,7 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!SN:W^Paladin_Attacking_Stack^/?y50;
   !!VRy1&y4=y1/y50>=0/y50<=41:Sy50;     [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
   !!SN:W^Paladin_Attacking_Stack^/y4;
-  !!BMy1:T?y2;                          [Creature Type]
+  !!BMy1:T?y2 I?y12;                    [Creature Type and side]
   !!if&y2>=174/y2<=191;                 [if any commander]
   !!BG:H?y60;                           [get hero]
   !!SN:W^ACM_Com_%Y60_Passive_1^/?y70;  [Check for 2Supporter ability]
@@ -10083,14 +10112,16 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
     !!MF:F?y10;                         [damage dealt]
     !!SN:W^Commander_Aktion^/?y50;      [Check if Melee or Shooting]
     !!VRy10&y50=7::2;                   [Half effect if shooting]
-    !!SN&y7>=y10:W^Paladin_Experience^/dy10; [If damage is smaller than complete HP of stack add to generated Experience]
-    !!SN&y10>=y7:W^Paladin_Experience^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-    !!SN:W^Paladin_Experience^/?y11;
+    !!SN&y7>=y10/y12=0:W^Paladin_Experience_Att^/dy10; [If damage is smaller than complete HP of stack add to generated Experience Attacker]
+    !!SN&y10>=y7/y12=0:W^Paladin_Experience_Att^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
+    !!SN&y12=0:W^Paladin_Experience_Att^/?y11;
+    !!SN&y7>=y10/y12=1:W^Paladin_Experience_Def^/dy10; [If damage is smaller than complete HP of stack add to generated Experience Defender]
+    !!SN&y10>=y7/y12=1:W^Paladin_Experience_Def^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
+    !!SN&y12=1:W^Paladin_Experience_Def^/?y11;
     !!FU(Check_Com_Masteries):Py60/0/0/0/0/0/0/0/0/0/0/?y45; [Pass Hero Number and return Passive Modifier]
     !!VRy31:Sy30*5+200;                 [Increase Experience gain with 5% for each Commander level +100%]
     !!VRy31:*y45:100;                   [Add potential Passive Bonus from Commander Classes like Supporter]
-    !!VRy11:*y31:100;                   [Calc new value]
-    !!BA:Q?f;
+    !!VRy11:*y31:100;                   [Calc new value]    
     !!SN&i^battle_isVisible^:T^AC_Misc.Paladin 2^/?z1/^Experience^/y11;
     !!BU&i^battle_isVisible^:Mz1;       [Show Message in battle log]
   !!en;
@@ -10098,26 +10129,35 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !!en;
 !!en;
 
+
 !?FU(OnAfterBattleUniversal);
+
 !!BA:H0/?y1;                            [Attacker Hero Number]
-!!SN:W^Paladin_Experience^/?y2;         [If Alive]
-!!FU|y1<0/y2=0:E;
-!!HEy1:O?y25;                           [(Check hero owner)]
-!!OW:C?y26;                             [(Check current player)]
-!!FU&y25<>y26:E;                        [(Abort if not the same)]
-!!CO-1:D?y4;                            [Check if Commander of Hero is still alive]
+!!FU(Paladin_Experience_Passive_msg):Py1/0;
+!!BA:H1/?y1;                            [Defender Hero Number]
+!!FU(Paladin_Experience_Passive_msg)&y1>=0:Py1/1;
+
+!?FU(Paladin_Experience_Passive_msg);
+!!SN&x2=0:W^Paladin_Experience_Att^/?y2;[Check if Gold was generated for Attacker this combat]
+!!SN&x2=1:W^Paladin_Experience_Def^/?y2;[Check if Gold was generated for Defender this combat]
+!!FU|x1<0/y2=0:E;                       [Exit if no hero of no gold was generated]
+!!HEx1:O?y25;                           [Check hero owner]
+!!OW:C?y26;                             [Check current player]
+*!FU&y25<>y26:E;                        [Abort if not the same]
+!!COx1:D?y4;                            [Check if Commander of Hero is still alive]
 !!FU&y4=1:E;                            [Exit if hes not]
 !!if&y4=0;                              [If commander alive]
-  !!CO-1:X2/?y30;                       [Get Commander Level]
-  !!FU(Check_Com_Masteries):Py1/0/0/0/0/0/0/0/0/0/0/?y45; [Pass Hero Number and return Passive Modifier]
+  !!COx1:X2/?y30;                       [Get Commander Level]
+  !!FU(Check_Com_Masteries):Px1/0/0/0/0/0/0/0/0/0/0/?y45; [Pass Hero Number and return Passive Modifier]
   !!VRy31:Sy30*5+200;                   [Increase Experience gain with 5% for each Commander level +100%]
   !!VRy31:*y45:100;                     [Add potential Passive Bonus from Commander Classes like Supporter]
   !!VRy2:*y31:100;                      [Calc new value]
-  !!SN&1000:T^AC_Misc.Paladin^/?z1/^Experience^/y2;
+  !!SN:T^AC_Misc.Paladin^/?z1/^Experience^/y2;
   !!SN:W^Message_Flag^/?y20;            [Set Flag if Human Player]
-  !!IF&1000/y20=1:M^%Z1^;               [Display text to humans and if value is bigger zero]
-  !!HEy1:Edy2;                          [Add Experience to current player]
+  !!IF&1000/y20=1/999/y25=y26:M^%Z1^;   [Display text to humans and if value is bigger zero]
+  !!HEx1:Edy2;                          [Add Experience to current player]
 !!en;
+
 
 ***************************Shaman***********************************************
 *Chance for Crushing Blow! Will Reduce Att/Def or Speed if successful hit of lvl 7 and 8
@@ -11270,7 +11310,7 @@ Close Dialouge
 !!SN&v7085>-1/v7086=4096:W^Def_Com_Poison_ability^/1;
 
 !!SN:W^Brute_Gold_Att^/0; !!SN:W^Brute_Gold_Def^/0;
-!!SN:W^Paladin_Experience^/0;
+!!SN:W^Paladin_Experience_Att^/0; !!SN:W^Paladin_Experience_Def^/0;
 
 !?FU(OnCombatRound)&v997=0;             [On First visible combat round]
 !!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y10; [Check for Third Upgrade Mod]
@@ -12061,7 +12101,7 @@ Here all variables should be reset before a repeated fight
 !!SN:W^Master_Mage_Extra_Cast_att^/0;
 !!SN:W^Master_Mage_Extra_Cast_def^/0;
 !!SN:W^Brute_Gold_Att^/0; !!SN:W^Brute_Gold_Def^/0;
-!!SN:W^Paladin_Experience^/0;
+!!SN:W^Paladin_Experience_Att^/0; !!SN:W^Paladin_Experience_Def^/0;
 !!SN:W^Event_Counter^/0;
 !!SN:W^Temple_Guarding_Casts^/0;
 !!IF:V761/1;
@@ -16722,9 +16762,11 @@ x9=returns skill value
 
     !!if&y10=12;                        [If Sniper Commander Class]
       !!BMx2:H?y50 N?y51;               [get health and number of target creature]
+      !!VRy52:S0; !!VRy52&y50>5000:S1;  [For boss creatures (creature with HP >= 5000), the HP percentage as damage is halved]
       !!VRy20:Sy51*y50;                 [total HP of target]
       !!FU(Set_Com_Battle_Description):P12/y99/y15/0/0/0/y3/0/?y16; [set percentage damage based on kill count 1% for 5 kill count +5]
-      !!VRy7:Sy20*y16:100;              [calc additional damage]
+      !!VRy7&y52=0:Sy20*y16:100;        [calc additional damage]
+      !!VRy7&y52=1:Sy20*y16:200;        [the HP percentage as damage is halved]
       !!VRx4&y7>=0:+y7;                 [add new damage]
     !!en;
 
