@@ -486,7 +486,8 @@ this should make creature casts respecting dwarv type golem resistance
 !!UN:C5881835/1/0;
 
 
-// Function to divide a number before % by 2 by Archer30
+// Function to divide a number before % by 2
+; by Archer30
 ; Here we assume all the percentage is belowe 100% (max at 2 characters for the number)
 ; We also assume that there is the first % we found is next to the number we needed
 !?FU(ACM_SetDividedNecromancyDesc);
@@ -2945,47 +2946,58 @@ Creature speed   Base movement
 11 or more        2000
 
 *?FU(OnEveryDay)&i^timerIsAi^=0/i^timerOnce^=1; [Trigger on every day once]
+; Replaced by Archer's implementation
 !?FU(OnEveryDay)&i^timerIsAi^=0; [Trigger on every day once]
+!!FU:E;
+
 !!DO(AC_Function_135)/0/155/1:P;        [loop all heroes]
 
 !?FU(AC_Function_135);
 !!HEx16:O?y1;                           [Checke Hero Owner]
 !!FU&y1=-1:E;                           [Exit if none]
 !!HEx16:S0/?y10;                        [Check if hero has Pathfinding and save result in y10]
-!!SN:W^H3_Pathfinding_0_Hero%X16^/?y11; [Checke ob der Held Grandmaster Pathfinding hat und Speichere in y11]
-!!SN:W^H3_Pathfinding_1_Hero%X16^/?y12; [Checke ob der Held Grandmaster Pathfinding hat und Speichere in y11]
-!!FU|y10=0/y11=0:E;                     [Exit if not at least Master Pathfinding]
+!!FU&y10<(SKILL_EXPERT):E;
 
-!!HEx16:C0/0/?y2/?y32; !!MA&y32<>0:Sy2/?y22; [Check Creatures in Hero Army and Get Speed of First Creature]
-!!HEx16:C0/1/?y3/?y33; !!MA&y33<>0:Sy3/?y23; [second slot]
-!!HEx16:C0/2/?y4/?y34; !!MA&y34<>0:Sy4/?y24; [...]
-!!HEx16:C0/3/?y5/?y35; !!MA&y35<>0:Sy5/?y25; [...]
-!!HEx16:C0/4/?y6/?y36; !!MA&y36<>0:Sy6/?y26; [...]
-!!HEx16:C0/5/?y7/?y37; !!MA&y37<>0:Sy7/?y27; [...]
-!!HEx16:C0/6/?y8/?y38; !!MA&y38<>0:Sy8/?y28; [...]
+!!FU(ACM_GetPathfindingBonusMovementPoints):Px16/?y21;
 
-!!VRy21:S0;
-  !!if&y11=1/y12=0;                     [if Master Pathfinding Eliminates 50% of Penalty]
-  !!VRy21|y28=8/y27=8/y26=8/y25=8/y24=8/y23=8/y22=8:S35; [+30 Movement Penalty if lowest speed is 8]
-  !!VRy21|y28=7/y27=7/y26=7/y25=7/y24=7/y23=7/y22=7:S70; [+70 Movement Penalty if lowest speed is 7]
-  !!VRy21|y28=6/y27=6/y26=6/y25=6/y24=6/y23=6/y22=6:S100; [+100 Movement Penalty if lowest speed is 6]
-  !!VRy21|y28=5/y27=5/y26=5/y25=5/y24=5/y23=5/y22=5:S135; [+135 Movement Penalty if lowest speed is 5]
-  !!VRy21|y28=4/y27=4/y26=4/y25=4/y24=4/y23=4/y22=4:S170; [+170 Movement Penalty if lowest speed is 4]
-  !!VRy21|y28=3/y27=3/y26=3/y25=3/y24=3/y23=3/y22=3:S200; [+200 Movement Penalty if lowest speed is 3]  
-!!en;
-
-!!if&y11=1/y12=1;                       [if Grandmaster Pathfinding Eliminates 100% of Penalty]
-  !!VRy21|y28=8/y27=8/y26=8/y25=8/y24=8/y23=8/y22=8:S70; [+70 Movement Penalty if lowest speed is 8]
-  !!VRy21|y28=7/y27=7/y26=7/y25=7/y24=7/y23=7/y22=7:S140; [+140 Movement Penalty if lowest speed is 7]
-  !!VRy21|y28=6/y27=6/y26=6/y25=6/y24=6/y23=6/y22=6:S200; [+200 Movement Penalty if lowest speed is 6]
-  !!VRy21|y28=5/y27=5/y26=5/y25=5/y24=5/y23=5/y22=5:S270; [+270 Movement Penalty if lowest speed is 5]
-  !!VRy21|y28=4/y27=4/y26=4/y25=4/y24=4/y23=4/y22=4:S340; [+340 Movement Penalty if lowest speed is 4]
-  !!VRy21|y28=3/y27=3/y26=3/y25=3/y24=3/y23=3/y22=3:S400; [+400 Movement Penalty if lowest speed is 3]   
-!!en;
 !!HEx16:Wdy21/1;                        [Add Bonus Movement to hero]
 !!HEx16:W?y20/1;                        [Get current movementpoints]
 !!HEx16:Gy20/1;                         [Set maximum movement points]
 !!SN:W^ACM_Total_add_movement_%X16^/y20;
+
+!?FU(ACM_GetPathfindingBonusMovementPoints);
+!#VA(hero:x) (result:x);
+
+!!VR(result):S0;
+
+!!VRy11:Si^H3_Pathfinding_0_Hero%(hero)^;
+!!VRy12:Si^H3_Pathfinding_1_Hero%(hero)^;
+!!FU&y11<>(TRUE)/y12<>(TRUE):E;
+
+!!HE(hero):C0/0/?y2/?y32; !!MA&y32<>0:Sy2/?y22; [Check Creatures in Hero Army and Get Speed of First Creature]
+!!HE(hero):C0/1/?y3/?y33; !!MA&y33<>0:Sy3/?y23; [second slot]
+!!HE(hero):C0/2/?y4/?y34; !!MA&y34<>0:Sy4/?y24; [...]
+!!HE(hero):C0/3/?y5/?y35; !!MA&y35<>0:Sy5/?y25; [...]
+!!HE(hero):C0/4/?y6/?y36; !!MA&y36<>0:Sy6/?y26; [...]
+!!HE(hero):C0/5/?y7/?y37; !!MA&y37<>0:Sy7/?y27; [...]
+!!HE(hero):C0/6/?y8/?y38; !!MA&y38<>0:Sy8/?y28; [...]
+
+!!if&y11=1/y12=0;                     [if Master Pathfinding Eliminates 50% of Penalty]
+  !!VR(result)|y28=8/y27=8/y26=8/y25=8/y24=8/y23=8/y22=8:S35; [+30 Movement Penalty if lowest speed is 8]
+  !!VR(result)|y28=7/y27=7/y26=7/y25=7/y24=7/y23=7/y22=7:S70; [+70 Movement Penalty if lowest speed is 7]
+  !!VR(result)|y28=6/y27=6/y26=6/y25=6/y24=6/y23=6/y22=6:S100; [+100 Movement Penalty if lowest speed is 6]
+  !!VR(result)|y28=5/y27=5/y26=5/y25=5/y24=5/y23=5/y22=5:S135; [+135 Movement Penalty if lowest speed is 5]
+  !!VR(result)|y28=4/y27=4/y26=4/y25=4/y24=4/y23=4/y22=4:S170; [+170 Movement Penalty if lowest speed is 4]
+  !!VR(result)|y28=3/y27=3/y26=3/y25=3/y24=3/y23=3/y22=3:S200; [+200 Movement Penalty if lowest speed is 3]
+
+!!el&y11=1/y12=1;                       [if Grandmaster Pathfinding Eliminates 100% of Penalty]
+  !!VR(result)|y28=8/y27=8/y26=8/y25=8/y24=8/y23=8/y22=8:S70; [+70 Movement Penalty if lowest speed is 8]
+  !!VR(result)|y28=7/y27=7/y26=7/y25=7/y24=7/y23=7/y22=7:S140; [+140 Movement Penalty if lowest speed is 7]
+  !!VR(result)|y28=6/y27=6/y26=6/y25=6/y24=6/y23=6/y22=6:S200; [+200 Movement Penalty if lowest speed is 6]
+  !!VR(result)|y28=5/y27=5/y26=5/y25=5/y24=5/y23=5/y22=5:S270; [+270 Movement Penalty if lowest speed is 5]
+  !!VR(result)|y28=4/y27=4/y26=4/y25=4/y24=4/y23=4/y22=4:S340; [+340 Movement Penalty if lowest speed is 4]
+  !!VR(result)|y28=3/y27=3/y26=3/y25=3/y24=3/y23=3/y22=3:S400; [+400 Movement Penalty if lowest speed is 3]   
+!!en;
 
 
 *fix for showing correct maximum movement points for heroes if they were changed by my scripts
@@ -3125,7 +3137,10 @@ Creature speed   Base movement
 
 
 *?FU(OnEveryDay)&i^timerIsAi^=0/i^timerOnce^=1;
+; Replaced by Archer's implementation
 !?FU(OnEveryDay)&i^timerIsAi^=0;
+!!FU:E;
+
 !!DO(AC_Function_5)/0/155/1:P;          [loop thru heroes]
 
 !?FU(AC_Function_5);
@@ -3135,7 +3150,7 @@ Creature speed   Base movement
 !!FU&y10<3:E;
 !!SN:W^H3_Logistics_0_Hero%X16^/?y11;   [Checke ob der Held Master Logistics hat und Speichere in y11]
 !!SN:W^H3_Logistics_1_Hero%X16^/?y12;   [Checke ob der Held Grandmaster Logistics hat und Speichere in y11]
-!!HEx16&y10=3/y11=1:Wd100/1;            [Add little Bonus Movement corresponds to +30% in total]
+!!HEx16&y10=3/y11=1:Wd100/1;            [Add little Bonus Movement corresponds to +30% in total] - Archer: Perry, they are not the same :P
 !!HEx16&y10=3/y12=1:Wd150/1;            [Add little Bonus Movement corresponds to +35% in total]
 !!HEx16:W?y20/1;                        [Get current movementpoints]
 !!HEx16:Gy20/1;                         [Set maximum movement points]
@@ -3152,6 +3167,69 @@ Creature speed   Base movement
 !!FU&y88=1:E;                           [Exit if AI]
 !!TRv998/v999/v1000:T?y10/d/d/d/d/d/d/d;[v998,v999,v1000 = x,y and level of the point of destination.]
 *!IF:L^%V998 %V999 %V1000  und Land Type is %Y10^;
+
+
+// Manage all the movement points events, including Ammo Cart, Pathfinding and Logistics
+; by Archer30
+; Warning: Only using the hook way prevent you from losing max movement points when opening hero screen
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/5132006/(ACM_OnSetHeroMovementPoints); [Trigger on getting the final result of initial movement points] 4E4E1B
+
+; Add in extra movement points when movement points is updated
+!?FU(ACM_OnSetHeroMovementPoints);
+!#VA(hook:x);
+
+; Get hero id
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/(UNC_INT)/?(heroStruct:y);
+!!UN:C(heroStruct)/26/(UNC_INT)/?(heroId:y);
+
+; Get current movement points
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/8/4/?(currMp:y);
+
+// Pathfinding
+!!if&(currMp)<1900;
+  ; Ensure the MP is 1700/1900 for M/GM
+  !!HE(heroId):S(SKILL_PATHFINDING)/?(level:y);
+
+  !!if&(level)>=(SKILL_EXPERT);
+    !!if&i^H3_Pathfinding_0_Hero%(heroId)^/i^H3_Pathfinding_1_Hero%(heroId)^<>(TRUE);
+      !!VR(currMp):F1700/(INT_MAX);
+    !!el&i^H3_Pathfinding_0_Hero%(heroId)^/i^H3_Pathfinding_1_Hero%(heroId)^;
+      !!VR(currMp):F1900/(INT_MAX);
+    !!en;
+  !!en;
+!!en;
+
+// Ammo Cart enhancement
+; +100 MP
+!!if&i^Ammo_Supply_%(heroId)^;
+  !!HE(heroId):A2/(ART_AMMO_CART)/?(has:y)/?(equipped:y);
+  !!VR(currMp)&(equipped)>0:+100;
+!!en;
+
+!!UN:C(ebp)/8/4/(currMp);
+
+// M/GM Logistics
+; +100/250 MP for M/GM
+!!HE(heroId):S(SKILL_LOGISTICS)/?(level:y);
+
+!!if&(level)>=(SKILL_EXPERT)/i^H3_Logistics_0_Hero%(heroId)^;
+  !!if&i^H3_Logistics_1_Hero%(heroId)^<>(TRUE);
+    !!VR(logisticsFloat:e):S30 :100;
+  !!el;
+    !!VR(logisticsFloat):S35 :100;
+  !!en;
+
+  !!SN:X?t X(logisticsFloat) X?(logisticsInt:y) Xt;
+  !!UN:C(ebp)/-4/4/(logisticsInt);
+
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5132018;
+!!en;
+
 
 ************************Scouting************************************************
 **Master Scouting Master Scouting allows your hero to see 7 squares further into the shroud. **Also, your hero is able to discover hidden treasures and other stuff.
@@ -9104,18 +9182,39 @@ Change Heroes Speciali Descriptions
 !!UN&y1=1:N3/z-6/y17/1;                 [Second Upgrade]
 
 !!MA:Ly12/?y14;                         [Get creature level]
-!!VRy60&y14=0:S16; !!VRy60&y14=1:S15; !!VRy60&y14=2:S13; !!VRy60&y14=3:S12; !!VRy60&y14=4:S10; !!VRy60&y14=5:S7; !!VRy60&y14=6:S5;
-!!VRy14:+1;
-!!VRy50:Sy48:7+1;                       [7 Attack and Defense per Level]
-!!VRy51:Sy48:y60;                       [Damage per Level based on creature level]
-!!VRy52:Sy48+9;                         [+1% per Health per Level +9%]
+!!FU(ACM_GetSpecMonsterStats):Py6/y14/?y50/?y53/?y51/?y52;
 
+; Add in native bonuses
+!!FU(ACM_GetNativeMonSpecBonus):Py48/y12/?y30/?y31;
+!!VRy50:+y30;
+!!VRy53:+y31;
 
-!!SN&y1=0:T^AC_Misc.Creature Specialist_0^/?z1/^level^/y14/^attack^/y50/^damage^/y51/^health^/y52; !!SN:Iz1/?z1; [Change text if Necessary]
-!!SN&y1=1:T^AC_Misc.Creature Specialist_1^/?z1/^level^/y14/^attack^/y50/^damage^/y51/^health^/y52; !!SN:Iz1/?z1; [Change Text if TUM is active]
+!!SN&y1=0:T^AC_Misc.Creature Specialist_0^/?z1/^level^/y14/^attack^/y50/^defense^/y53/^damage^/y51/^health^/y52; !!SN:Iz1/?z1; [Change text if Necessary]
+!!SN&y1=1:T^AC_Misc.Creature Specialist_1^/?z1/^level^/y14/^attack^/y50/^defense^/y53/^damage^/y51/^health^/y52; !!SN:Iz1/?z1; [Change Text if TUM is active]
 !!FU(ACM_GetDialogMessageType):Pi^mouse_action^/?y30;
 !!IF:M1/y30/z1;
 !!en;
+
+!?FU(ACM_GetNativeMonSpecBonus);
+!#VA(heroLevel:x) (mon:x) (bonusAtk:x) (bonusDef:x);
+
+!!MA:L(mon)/?(monLevel:y) A(mon)/?(attack:y) D(mon)/?(defense:y);
+!!VR(monLevel):+1;
+!!VR(heroLevelFloat:e):S(heroLevel);
+!!VR(monLevelFloat:e):S(monLevel);
+
+!!VR(bonusFloat:e):S1 :20;
+!!VR(totalBonusFloat:e):S(heroLevelFloat) :(monLevelFloat) *(bonusFloat);
+
+!!VR(attackFloat:e):S(attack);
+!!VR(bonusAtkFloat:e):S(totalBonusFloat) *(attackFloat);
+
+!!VR(defenseFloat:e):S(defense);
+!!VR(bonusDefFloat:e):S(totalBonusFloat) *(defenseFloat);
+
+!!VR(bonusAtk):S(bonusAtkFloat) +1;
+!!VR(bonusDef):S(bonusDefFloat) +1;
+
 
 *Extension Heroes improved Specialists Description
 !?CM2;                                  [Show Correct Info for Artillery Specialists]
@@ -9148,7 +9247,7 @@ Change Heroes Speciali Descriptions
 !?FU(ACM_UnsetERMHook);
 !#VA(unsetHook:x);
 
-!!SN:E(unsetHook)/1/5137685/(tum_Hero_GetSpecMonster);
+!!SN:E(unsetHook)/1/5137685/(tum_Hero_GetSpecMonster); 4E6515
 
 !?FU(ACM_CreateERMHook);
 !#VA(setHook:x);
@@ -9235,7 +9334,7 @@ Change Heroes Speciali Descriptions
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5137898;
 !!en;
 
-; The following code is disabled by Archer's script
+; The following code is Replaced by Archer's script
 !?BF;
 !!FU:E;
 
@@ -9341,7 +9440,7 @@ Need to expand and edit here for every faction
   *!DO(AC_Function_33)/21/41/1&x2=2:Py12/y13/y53/y51/y52; [Pass Creature, Upgraded Creature, Att/Def, Health and Damage]
 *!en;
 
-; Disabled by Archer's script
+; Replaced by Archer's script
 *!if&x1=130;                            [If Firebird or Phoenix Ignissa Hero ID is 130]
   *!VRy12:S130;
   *!VRy51:Sy48*2-52 F1/(INT_MAX);       [2 HP per Level starts with negative offset]
@@ -10676,7 +10775,7 @@ x1=hero ID
 
 !!HEx1:O?y12;                           [Get Hero owner]
 !!OW&y12>=0:Iy12/?y13; !!FU&y13<>0:E;   [Get if AI(1) or Human(0) and exit if no human]
-!!FU(Check_Com_Masteries):Px1/0/?y50/?y97/?y98; [Get commander kill count and max kill count]
+!!FU(Check_Com_Masteries):Px1/0/?y50/?y97/?y98; [Get commander kill count and max kill count] y50 - kill count, y98 - class
 !!SN:W^Commander_Round_Counter^/?y11;
 !!FU|y11>=4/y97<=y50:E;                 [Exit so increase cannot happen more than 4 times per combat and not above the maximum boost level]
 !!VRz1:S^MAGCHDRN^;
@@ -10684,7 +10783,7 @@ x1=hero ID
 !!SN:W^Commander_Round_Counter^/d1;
 !!SN:W^Commander_Kill_Counter_%X1^/d1;  [Increase counter by one if kill happened]
 !!SN:W^Commander_Kill_Counter_Temp_%X1^/d1; [Increase temp counter by one if kill happened]
-!!FU(Ancient_Commander_Stat_Counter)&y98=29:Px1/y98; [Call fct to determine and add random stats to Ancient commander. Pass Hero ID]
+!!FU(Ancient_Commander_Stat_Counter)&y98=29:Px1/y50; [Call fct to determine and add random stats to Ancient commander. Pass Hero ID]
 !!FU(ACM_Select_Commander_Role)&y50=0/y98=0:Px1; [Call DL to select Commander class on first kill. Pass current hero-y10]
 !!FU(ACM_Select_Commander_Role_Upg)&y50=29/y98>0/y98<10:Px1; [Open second choice for upgrade class and only if it just has base class]
 
@@ -16960,6 +17059,9 @@ x9=returns skill value
   !!BA:Hy2/?y5;                         [Get Hero Number of creature side]
   !!FU&y5<0:E;                          [Exit if no Hero]
   !!FU&y50=y5:E;                        [Exit for beneficial spells, meaning same hero side as crature side]
+  ; Archer: here it's missing a check for spell type, it skips for all the spells casted by the same side (even when it's a damaging spell).
+  ; Also we miss out the magic resistance from Stoic Watchman
+
   !!FU(Check_Com_Masteries):Py5/0/0/0/d/?y30/d/d/d/d/d/d/d/d/d/1; [Get commander class resistance dwarf type in y30]
   !!MR:F?y40;
   !!VRy40:+y30;                         [Add MR from com class to current MR value]
@@ -20256,7 +20358,7 @@ Undead stacks heal and with next attack^;                                       
 !!VRy23&y87>0:+10;                      [+10% with GM]
 !!VRy23&y23>=50/y87=0:S50;              [Cap at 50%, 65% with GM @Alf]
 !!VRy23&y23>=65/y87=1:S65;
-!!if&y20<y23;                          [chance is dependant on Spell Power +20%]
+!!if&y20<y23;                           [chance is dependant on Spell Power +20%]
 
 !!BMy1:P?y1;
 
@@ -26781,13 +26883,14 @@ little extra script to make sure spell points are not increaased with multicast 
 !#HE93:S7/0;
 !#HE93:S3/0;
 
-!#HE94:S13/2;                           [Sephironth starts with Adv. Estates instead of Wisdom and Intelligence]
+!#HE94:S13/2;                           [Sephinroth starts with Adv. Estates instead of Wisdom and Intelligence]
 !#HE94:S7/0;
 !#HE94:S24/0;
 !#HE94:S3/0;
 !#HE94:M43/1;                           [Bloodlust instead of Air Protection.]
 !#HE94:M30/0;
 !#HE94:X0/13;                           [Estates Special]
+!#UN:G2/94/3/94;                        [Set the picture back to Estates after HE:X]
 
 !#HE95:S17/1;                           [Darkstorn starts with Earth magic instead of Learning]
 !#HE95:S21/0;
@@ -28692,7 +28795,9 @@ SkillRequired=%i(acmSkillRequired)  isSkillPresent=%(isSkillPresent)^;
 
 ****************************************************************************************************
 *Ammo Cart adds a little bonus movement +100 if upgrade was purchased
+; Replaced by Archer's implementation
 !?FU(OnEveryDay)&i^timerIsAi^=0;
+!!FU:E;
 
 !!re y1/0/155;
   !!HEy1:O?y2;                          [Checke Hero Owner]
@@ -29300,8 +29405,8 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!HE(hero):A2/(art)/?(has:y)/?(equipped:y);
 
 !!if&(equipped);
-  !!FU(Get_WM_Upgrade_Description):P(hero)/(art)/?(msg:z);
-  !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_POPUP)/(msg);
+  !!FU(Get_WM_Upgrade_Description):P(hero)/(art)/?(desc:z)/?(shortDesc:z);
+  !!IF:Q1/(PIC_TYPE_ART)/(art)/(MSG_TYPE_POPUP)/(desc);
   !!CM:R0;
 !!en;
 
@@ -29328,7 +29433,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z36}%Z26{~}^;
   *!UN:A3/10/z1;                        [Set new Ammo Cart description to show it on right click]
   
-  *!VRz4:S^
+  !!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29358,7 +29463,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z36}%Z26{~}^;
   *!UN:A5/10/z1;                        [Set new Ammo Cart description]
 
-  *!VRz4:S^
+  !!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29388,7 +29493,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z36}%Z26{~}^;
   *!UN:A4/10/z1;
 
-  *!VRz4:S^
+  !!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29418,7 +29523,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
   {~%Z36}%Z26{~}^;
   *!UN:A6/10/z1;
 
-  *!VRz4:S^
+  !!VRz4:S^
 {~%Z31}%Z21{~}
 {~%Z32}%Z22{~}
 {~%Z33}%Z23{~}
@@ -29428,6 +29533,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!en;
 
 !!VRx3:Zz1;                             [Export the text]
+!!VRx4:Zz4;
 
 ****************************************************************************************************
 **Spell Trainer
@@ -33403,7 +33509,7 @@ Refills Marksman extra shots depending on kill count and mastery
 Arch Mage or Warden commander class can select different spells during combat by 
 CTRL+Left click on commander to change the spell to cast 
 
-!?FU(OnBattleScreenMouseClick)&i^key_ctrl^;
+!?FU(OnBattleScreenMouseClick)&i^key_ctrl^/i^battle_round^>=0; [i^battle_round^>=0 is important not to crash in tactics phase]
 !!CM:D?y1;                              [Get Battlefield position with click]
 
 !!if&y1>=0/y1<=186;                     [If a valid battlefield position]
@@ -34842,60 +34948,93 @@ x1=hero number, x2=acting side, x3=returns number of extra casts for this combat
 
 ****************************************************************************************************
 Set description of Warmachines when right clicking them in battle
-!?CM4;                                  [when clicking in combat]
+; For dynamic description (description will change in the battle)
+!?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>0/i^mouse_battleHex^<186;
+!!BU:Ey1/?y2;
+!!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
 
-!!CM:D?y1;                              [Get Battlefield position with click]
-!!if&y1>=0/y1<=186;                     [If a valid battlefield position]
-  !!BU:Ey1/?y2; !!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
-  !!BMy2:T?y3 I?y4 S?y6;                [get monster type and side index]
-  !!BHy4:N?y30;                         [Get hero or commander ID]
-  !!if|y3=145/y3=146/y3=147/y3=148;     [if any warmachine]
-    !!FU(ACM_SetUpNewWarMachineDesc):Py3/y30/y2/y4; [run function to set new description]
-  !!en;  
+!!BMy2:T?y3 I?y4 S?y6;                [get monster type and side index]
+!!BHy4:N?y30;                         [Get hero or commander ID]
+
+!!if|y3=145/y3=146/y3=147/y3=148;     [if any warmachine]
+  !!FU(ACM_SetUpNewWarMachineDesc):Py2/y4; [run function to set new description]
 !!en;
 
-
 !?FU(ACM_SetUpNewWarMachineDesc);
-x1=creature type, x2=hero, x3=stack, x4=battle side
+!#VA(stack:x) (side:x);
 
-!!VR(desc:z):S^^; 
-!!BMx3:Z?(stackStruct:y);               [get battle struc]
-!!UN:C(stackStruct)/144/(UNC_INT)/?(descPtr:y); [pointer to structure]
-!!SN:B(descPtr)/d/?(desc);              [get stack description]
-!!VR(desc):S^^;                         [clear description]
+; Exit if not owned by a hero
+!!FU&i^battle_hero_%(side)^<=(NO_HERO):E;
+
+; Exit if not a war machine/catapult in siege
+!!BM(stack):T?(type:y);
+!!FU|(type)<(MON_CATAPULT)/(type)>(MON_AMMO_CART):E;
+
+; Get the stack struct
+!!BM(stack):Z?(stackStruct:y);
+!!VR(hero:y):Si^battle_hero_%(side)^;
+
 *get the description of upgrades in z4 by calling the fct
-!!FU(Get_WM_Upgrade_Description)&x1=145:Px2/1; [145 Catapult]
-!!FU(Get_WM_Upgrade_Description)&x1=146:Px2/3; [146 Ballista]
-!!FU(Get_WM_Upgrade_Description)&x1=147:Px2/4; [147 First Aid Tent]
-!!FU(Get_WM_Upgrade_Description)&x1=148:Px2/2; [148 Ammo Cart]
+!!FU(Get_WM_Upgrade_Description)&(type)=145:P(hero)/(ART_CATAPULT)/?(desc:z)/?(shortDesc:z); [145 Catapult]
+!!FU(Get_WM_Upgrade_Description)&(type)=146:P(hero)/(ART_BALLISTA)/?(desc)/?(shortDesc); [146 Ballista]
+!!FU(Get_WM_Upgrade_Description)&(type)=147:P(hero)/(ART_FIRST_AID_TENT)/?(desc)/?(shortDesc); [147 First Aid Tent]
+!!FU(Get_WM_Upgrade_Description)&(type)=148:P(hero)/(ART_AMMO_CART)/?(desc)/?(shortDesc); [148 Ammo Cart]
 
 *some code to get additional heal parameter
-!!HEx2:S27/?y80; 
-!!FU(AC_Function_35):Px3/y80/1/0;       [function to set low and high heal value]
-!!SN:W^Heal_InCombat_Low_Hero%X2^/?y66; [Save Low Heal to display it in Bonus List]
-!!SN:W^Heal_InCombat_High_Hero%X2^/?y67;[Save High Heal to display it in Bonus List]
-!!VRy66&y66=0:S20; !!VRy67&y67=0:S40;   [set to minimum heal]
-!!SN&x4=0:W^Tent_Capacity_Att^/?y68;
-!!SN&x4=1:W^Tent_Capacity_Def^/?y68;    [Save HC from hero to show in bonus list]
-!!SN:W^Total_Ballista_Shots^/?y50;      [save number of total shots to display on right click]
-!!FU(ACM_Calc_Ballista_Shots):P146/x2/x3/?y50; [Pass Ballista ID and Hero and stack and return number of ballista shots]
+!!if&(type)=(MON_FIRST_AID_TENT);
+  !!HE(hero):S27/?y80; 
+  !!FU(AC_Function_35):P(stack)/y80/1/0;       [function to set low and high heal value]
+  !!SN:W^Heal_InCombat_Low_Hero%(hero)^/?y66; [Save Low Heal to display it in Bonus List]
+  !!SN:W^Heal_InCombat_High_Hero%(hero)^/?y67;[Save High Heal to display it in Bonus List]
+  !!VRy66&y66=0:S20;
+  !!VRy67&y67=0:S40;                      [set to minimum heal]
+  !!SN&(side)=0:W^Tent_Capacity_Att^/?y68;
+  !!SN&(side)=1:W^Tent_Capacity_Def^/?y68;    [Save HC from hero to show in bonus list]
 
-!!SN&x1=145:T^AC_Misc.ACM_Catapult_Battle_Desc^/?z-3; [get description from json file for catapult]
-!!SN&x1=146:T^AC_Misc.ACM_Ballista_Battle_Desc^/?z-3/^shots^/y50;
-!!SN&x1=147:T^AC_Misc.ACM_Aid_Tent_Battle_Desc^/?z-3/^low^/y66/^high^/y67/^capa^/y68;
-!!SN&x1=148:T^AC_Misc.ACM_AmmoCart_Battle_Desc^/?z-3; !!SN:Iz-3/?z-3;
+!!el&(type)=(MON_BALLISTA);
+  !!SN:W^Total_Ballista_Shots^/?y50;      [save number of total shots to display on right click]
+  !!FU(ACM_Calc_Ballista_Shots):P146/(hero)/(stack)/?y50; [Pass Ballista ID and Hero and stack and return number of ballista shots]
+!!en;
 
-!!VR(desc)&x1=145:S^%z-3
+!!SN&(type)=145:T^AC_Misc.ACM_Catapult_Battle_Desc^/?z-3; [get description from json file for catapult]
+!!SN&(type)=146:T^AC_Misc.ACM_Ballista_Battle_Desc^/?z-3/^shots^/y50;
+!!SN&(type)=147:T^AC_Misc.ACM_Aid_Tent_Battle_Desc^/?z-3/^low^/y66/^high^/y67/^capa^/y68;
+!!SN&(type)=148:T^AC_Misc.ACM_AmmoCart_Battle_Desc^/?z-3; !!SN:Iz-3/?z-3;
+
+!!VR(desc:z)&(type)=145:S^%z-3
 %z4^; set description and merge with additional info about warmachine upgrades
-!!VR(desc)&x1=146:S^%z-3
+!!VR(desc)&(type)=146:S^%z-3
 %z4^;
-!!VR(desc)&x1=147:S^%z-3
+!!VR(desc)&(type)=147:S^%z-3
 %z4^;
-!!VR(desc)&x1=148:S^%z-3
+!!VR(desc)&(type)=148:S^%z-3
 %z4^;
 
-!!FU(WOG_AllocBattleStr):P(desc)/?(newDescAddr:y);
+; Get the index of the item in the array
+!!VR(index:y):S4 *(side) +(type) -(MON_CATAPULT); [4 - war machines of a side, the array size is 8]
+
+!!FU(ACM_AllocWarMachineBattleStr):P(desc)/(index)/?(newDescAddr:y);
 !!UN:C(stackStruct)/144/(UNC_INT)/(newDescAddr); [Apply new description]
+
+// Get the string pointer to be used in battle
+!?FU(OnSetupBattlefield)&i^battle_isVisible^;
+; Recreate battle strings persistent storage
+!!SN:Mi^acm_warMchineBattleStrings^;
+!!FU(NewStrArray):P8/?i^acm_warMchineBattleStrings^/(M_TEMP); [size = 8 for 4 machines each side]
+
+!?FU(OnAfterBattleUniversal)&i^acm_warMchineBattleStrings^;
+; Free battle strings persistent storage
+!!SN:Mi^acm_warMchineBattleStrings^;
+!!VRi^acm_warMchineBattleStrings^:S0;
+
+!?FU(ACM_AllocWarMachineBattleStr);
+; Stores string in a battle persistent memory and returns its raw address in memory
+!#VA(textPtr:x); string contents to get persistent address for
+!#VA(index:x);
+!#VA(result:x);  result raw string address
+
+!!SN:Mi^acm_warMchineBattleStrings^/(index)/z(textPtr);
+!!SN:Mi^acm_warMchineBattleStrings^/?(result)/(index);
 
 
 *function to calc number of ballista shots
