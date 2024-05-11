@@ -1246,6 +1246,50 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!MF:F(INT_MAX);
 !!en;
 
+
+// Make sure the first acting stack is correct in the first round
+// by Archer30
+; Ideally this script needs to be executed as late as possible to ensure overflow doesn't happen, like in a script with "-1000" as the prefix of filename
+!?FU(OnBattleRound_Quit)&i^battle_round^=0;
+!!FU(ActivateNextStack):P;
+
+
+// Bad Fix: Correct Dragon Heart's position to summon
+// by Archer30
+; Here we just recreate the summoning behaviour with Summon Elemental way to avoid the wrong position to summon
+; Discussion: http://wforum.heroes35.net/showthread.php?tid=4218&pid=138936#pid138936
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/7764465/(gem_OnDragonHeartSummonDragons);
+
+!?FU(gem_OnDragonHeartSummonDragons);
+!#VA(hook:x);
+
+; Get details for summon
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/-24/4/?(side:y) C(ebp)/-28/4/?(mon:y) C(ebp)/-12/4/?(num:y);
+
+; Get the values from memory and set
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!UN:C(cmbMgr)/78528/(UNC_INT)/?(origActiveSide:y) C(cmbMgr)/78528/(UNC_INT)/(side);
+
+!!VR(summonedMonOffset:y):S(side) *(UNC_INT) +78504;
+!!UN:C(cmbMgr)/(summonedMonOffset)/(UNC_INT)/?(origSummonedMon:y); [The monster summoned by Summon Elemental spell]
+
+!!SS(SPELL_EARTH_ELEMENTAL):E0/?(origEff:y) E0/1;
+
+; Summon
+!!SN:E5927824/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_EARTH_ELEMENTAL)/(mon)/(num)/0;
+
+; Restore values to the memory
+!!UN:C(cmbMgr)/(summonedMonOffset)/(UNC_INT)/(origSummonedMon);
+!!UN:C(cmbMgr)/78528/(UNC_INT)/(origActiveSide);
+
+!!SS(SPELL_EARTH_ELEMENTAL):E0/(origEff:y);
+
+; Skip the native summon
+!!SN:X?t/0;
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/7764855;
+
 ************************************************************************
 ************************************************************************
 ************************** ADVENTURE MAP FIXES *************************
@@ -1678,13 +1722,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     !!COi:X1/i^gem_cmdExp_%i^;
     !!VRi^gem_cmdExp_%i^:S0;
   !!en;
-
-
-// Make sure the first acting stack is correct in the first round
-// by Archer30
-; Ideally this script needs to be executed as late as possible to ensure overflow doesn't happen, like in a script with "-1000" as the prefix of filename
-!?FU(OnBattleRound_Quit)&i^battle_round^=0;
-!!FU(ActivateNextStack):P;
 
 ************************************************************************
 ************************************************************************
