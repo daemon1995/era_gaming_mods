@@ -10377,7 +10377,11 @@ Shaman gains 125% of Heroes attack, this values gets modified by commanders pass
 
 
 **************************************Vampire*******************************************************
+; Replaced by Archer's implementation
+*Vampire Commander Class heals 25% with melee attacks
 !?MF1;
+!!FU:E;
+
 *Vampire Commander Class heals 25% with melee attacks
 !!UN:C42149568/4/?y10;                  [Physical Damage]
 !!if|y10=4462398/y10=4456676;           [Only run when melee or Strikes all round]
@@ -10410,7 +10414,6 @@ Shaman gains 125% of Heroes attack, this values gets modified by commanders pass
     !!SN&i^battle_isVisible^:Pz1;       [Play leech sound]
   !!en;
 !!en;
-
 
 *************************************Fire Mage******************************************************
 Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times Spell Power.
@@ -15928,7 +15931,10 @@ Life Artifacts +2%, +4%, +6%
 !!en;
 
 
+; Replaced by Archer's script
 !?MF1; 
+!!FU:E;
+
 *Vampire Coate gives 1% life leech to all creatures
 *Cloak of the Undead King full set gives 5% life leech
 !!UN:C42149568/4/?y10;                  [Physical Damage]
@@ -15991,6 +15997,182 @@ Life Artifacts +2%, +4%, +6%
   !!VRz1&1000:S^DRAINLIF^;
   !!SN&i^battle_isVisible^:Pz1;                    [Play leech sound]
 !!en;
+
+
+// All the Drain effects, including Vampire commander class and artifacts (Vampire Cowl and Cloak of the Undead King)
+; by Archer30
+; This script should be executed as late as possible to obtain the latest damage for draining
+!?FU(ACM_OnBeforeMelee);
+!#VA(atkStack:x) (defStack:x);
+
+!!VRi^acm_drainPercent^:S0;
+!!VRi^acm_drainHp^:S0;
+
+; Exit if somethng kills the attacker
+!!BM(atkStack):N?(atkNum:y);
+!!FU&(atkNum)<=0:E;
+
+; Check if it is possible to drain
+; It cannot be a creature that can drain by default (like Vampires), here we check with function from WoG Scripts - Emerald Tower
+!!BM(atkStack):T?(atkType:y);
+!!FU(WOG_44_CheckIfMonDrainsLife):P(atkType)/?(result:y);
+!!FU&(result):E;
+
+!!VR(drainPercent:y):S0;
+
+; It can be troops with draining artifacts (Vampire's Coul or the full Cloak of the Undead King set)
+!!FU(ACM_GetActualStackSide):P(atkStack)/?(actualAtkSide:y);
+
+!!if&i^battle_hero_%(actualAtkSide)^>(NO_HERO);
+  !!HEi^battle_hero_%(actualAtkSide)^:A2/(ART_VAMPIRES_COWL)/?(has:y)/?(equipped:y);
+
+  !!if&(equipped)>0;
+    !!VR(drainPercent):+1;
+    !!HEi^battle_hero_%(actualAtkSide)^:A2/(ART_AMULET_OF_THE_UNDERTAKER)/?(has:y)/?(equipped2:y);
+    !!HEi^battle_hero_%(actualAtkSide)^:A2/(ART_DEAD_MANS_BOOTS)/?(has:y)/?(equipped3:y);
+    !!VR(drainPercent)&(equipped2)>0/(equipped3):+4;
+  !!en;
+!!en;
+
+; It can be a commander with Vampire class
+!!if&(atkType)>=(MON_COMMANDER_FIRST_A)/(atkType)<=(MON_COMMANDER_LAST_D);
+  !!BM(atkStack):I?(atkSide:y);
+
+  !!if&i^battle_hero_%(atkSide)^>(NO_HERO);
+    !!FU(Check_Com_Masteries):Pi^battle_hero_%(atkSide)^/?(masteryActivated:y)/0/0/?(comClass:y);
+    !!VR(comClass):S19;
+
+    !!VR(drainPercent)&(comClass)=19:+25;
+  !!en;
+!!en;
+
+!!VRi^acm_drainPercent^&(drainPercent)>0:S(drainPercent);
+
+!?FU(OnMonsterPhysicalDamage)&i^acm_drainPercent^>0;
+; Exit if not direct melee or strike all around
+!!UN:C42149568/(UNC_INT)/?(dmgType:y);
+!!FU&(dmgType)<>4456676/(dmgType)<>4462398:E;
+
+; Exit if the damage is not ideal
+!!MF:F?(finalDmg:y);
+!!FU&(finalDmg)<=0:E;
+
+; Get the attacker/defender stack
+!!MF:N?(defStack:y);
+
+; Exit if not possible to drain due to not alive
+!!BM(defStack):F?(defFlags:y);
+!!VR(isAlive:y):S(defFlags) &(MON_FLAG_ALIVE);
+!!FU&(isAlive)=(FALSE):E;
+
+; compatibility with TUM Reborn - special creatures/artifact to prevent drain even if alive
+!!if&i^tum_reborn_on^;
+  !!BM(defStack):T?(defType:y);
+  !!FU(tum_CheckIfMonIsImmuneToCreatureEffects):P(defType)/?(result:y);
+  !!FU&(result):E;
+
+  !!BM(defStack):I?(defSide:y);
+
+  !!if&i^battle_hero_%(defSide)^>(NO_HERO);
+    !!HEi^battle_hero_%(defSide)^:A2/286/?(has:y)/?(equipped:y); [Tri Colour Scepter]
+
+    !!FU&(equipped)>0:E;
+  !!en;
+!!en;
+
+; Calculatte drain hp
+!!VR(drainHp:y):S(finalDmg) *i^acm_drainPercent^ :100 F1/(INT_MAX);
+!!VRi^acm_drainHp^:+(drainHp);
+
+!?FU(ACM_OnAfterMelee)&i^acm_drainHp^;
+!#VA(atkStack:x) (defStack:x);
+
+!!VR(drainHp:y):Si^acm_drainHp^;
+!!VRi^acm_drainHp^:S0;
+!!VRi^acm_drainPercent^:S0;
+
+; Exit if the attacking stack is dead
+!!BM(atkStack):N?(atkNum:y);
+!!FU&(atkNum)<=0:E;
+
+; Drain - if not full
+!!FU(ACM_HealAndReviveStack):P(atkStack)/(drainHp)/?(reviveNum:y)/?(actualRegenHp:y);
+!!FU&(actualRegenHp)<=0:E;
+
+; Cosmetics
+!!if&i^battle_isVisible^;
+  ; Battle log
+  ; First part - The @atkMon@ drain @num@ life from the @defMon@.
+  !!BM(atkStack):T?(atkType:y);
+  !!VR(atkIsPlural:y):S(atkNum) -1 B;
+  !!SN:H^monname^/(atkType)/(atkIsPlural)/?(atkName:z);
+  !!BM(defStack):T?(defType:y) N?(defNum:y);
+  !!VR(defIsPlural:y):S(defNum) -1 B;
+  !!SN:H^monname^/(defType)/(defIsPlural)/?(defName:z);
+  !!SN:T^AC_Misc.Drain_%(atkIsPlural)^/?(battleLog:z)/^atkMon^/(atkName)/^defMon^/(defName)/^num^/(actualRegenHp);
+  ; Second part - \n and @num@ rise from the dead.
+  !!if&(reviveNum)>0;
+    !!VR(isPlural:y):S(reviveNum) -1 B;
+    !!SN:T^AC_Misc.Drain_Rise_%(isPlural)^/?(battleLogEnd:z)/^num^/(reviveNum);
+    !!VR(battleLog):+(battleLogEnd);
+  !!en;
+
+  !!MM:S(battleLog);
+  
+  ; Sound
+  !!SN:P^DRAINLIF^;
+  ; Animation
+  !!BM(atkStack):V74;
+!!en;
+
+!?FU(ACM_HealAndReviveStack);
+!#VA(stack:x);                          [Stack Id]
+!#VA(regenHp:x);                        [Amount of HP regen]
+!#VA(reviveNum:x);                      [Out. Number of creature revived]
+!#VA(actualRegenHp:x);                  [Out. Actual amount of HP regenerated. By default this equals to regen Hp unless the stack is neally full]
+
+; Initialise vars
+!!VR(reviveNum):S(FALSE);
+!!VR(actualRegenHp):S(regenHp);
+
+; Calculations
+!!BM(stack):H?(hp:y) L?(lostHp:y) N?(num:y) B?(initNum:y);
+!!VR(totalCurrHp:y):S(hp) *(num) -(lostHp);
+!!VR(totalInitHp:y):S(hp) *(initNum);
+
+; Exit if nothing to heal
+!!if&(totalInitHp)=(totalCurrHp);
+  !!VR(actualRegenHp):S0;
+  !!FU:E;
+!!en;
+
+!!VR(totalLostHp:y):S(totalInitHp) -(totalCurrHp);
+!!VR(totalNewHp:y):S(totalCurrHp) +(regenHp);
+
+; Fix if overflowed
+!!VR(totalNewHp)&(totalNewHp)<(totalCurrHp):S(totalInitHp);
+; Deal with overheal
+!!if&(totalNewHp)>(totalInitHp);
+  !!VR(overhealHp:y):S(totalNewHp) -(totalInitHp);
+  !!VR(actualRegenHp):S(regenHp) -(overhealHp);
+  !!VR(totalNewHp):S(totalInitHp);
+!!en;
+
+; Calculate new stats
+!!VR(newNum:y):S(totalNewHp) :(hp);
+!!VR(newCurrHp:y):S(totalNewHp) %(hp);
+
+!!if&(newCurrHp)=0;
+  !!VR(newCurrHp):S(hp);
+!!el;
+  !!VR(newNum):+1;
+!!en;
+
+!!VR(newLostHp:y):S(hp) -(newCurrHp);
+!!VR(reviveNum):S(newNum) -(num);
+
+; Set up new stack stats
+!!BM(stack):N(newNum) L(newLostHp);
 
 
 !?AE1&v998=146; Equip Artifact  !!FU&761:E;
@@ -34684,10 +34866,42 @@ kill count you get +4% of a random attribute
 ****************************************************************************************************
 
 !?FU(ACM_CreateERMHook);
-!#VA(address:x);
+!#VA(setHook:x);
 
-!!SN:E(address)/1/4462998/(ACM_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
-!!SN:E(address)/1/4455129/(ACM_HOOK_AfterAttackMainFunc); [Trigger after shooting]
+!!SN:E(setHook)/1/4461377/(ACM_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation. Won't triggered if the target is killed]
+!!SN:E(setHook)/1/4462998/(ACM_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
+!!SN:E(setHook)/1/4455129/(ACM_HOOK_AfterAttackMainFunc); [Trigger after shooting]
+
+!?FU(ACM_HOOK_BeforeMeleeMainFunc);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStrucktAttacker:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ptr:y);
+!!UN:C(ptr)/8/(UNC_INT)/?(stackStrucktDefender:y);
+
+!!VR(stackAttackerID:y):S(NO_STACK); 
+!!VR(stackDefenderID:y):S(NO_STACK); 
+
+!!if&(stackStrucktAttacker); 
+  !!UN:C(stackStrucktAttacker)/244/(UNC_INT)/?(attakerSide:y);
+  !!UN:C(stackStrucktAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
+  !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide);
+!!en;
+
+!!if&(stackStrucktDefender);
+  !!UN:C(stackStrucktDefender)/244/(UNC_INT)/?(defenderSide:y);
+  !!UN:C(stackStrucktDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
+  !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
+!!en;
+
+; Get the direction of attack
+; The value would be wrong if Gnoll Marauder's Stirke First triggers (direction would become -1)!
+*!UN:C(ptr)/12/(UNC_INT)/?(direction:y);
+*!VR(offset:y):S(STRUCT_HOOK_CONTEXT_ESP) +60;
+*!UN:C(hook)/(offset)/(UNC_INT)/?(direction:y);
+*!VR(direction)|(direction)<0/(direction)>7:S-1;
+
+!!FU(ACM_OnBeforeMelee):P(stackAttackerID)/(stackDefenderID);
 
 !?FU(ACM_HOOK_AfterAttackMainFunc);
 !!SN:X?(hook:y);
