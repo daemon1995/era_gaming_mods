@@ -2784,7 +2784,7 @@ Close Dialouge
 !!SN:W^Tongue_Attacking_Stack^/-1;
 !!SN:W^DragonSet_Attacking_Stack^/-1;
 !!SN:W^Oger_Attacking_Stack^/-1;
-!!SN:W^Commander_Kill_Attacking_Stack^/-1;
+*!SN:W^Commander_Kill_Attacking_Stack^/-1;
 !!SN:W^Damage_Counter_Attacking_Stack^/-1;
 !!SN:W^Vampire_Class_Attacking_Stack^/-1;
 !!SN:W^FireMage_Attacking_Stack^/-1;
@@ -10432,7 +10432,7 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 !!en;
 
 
-!?FU(Event_AfterMeeleDamage_Fire_Mage);
+!?FU(ACM_Event_AfterMeeleDamage);
 
 !!SN:W^FireMage_Attacking_Stack^/?y4;
 !!UN:C42149568/4/?y10;                  [Physical Damage]
@@ -10465,13 +10465,6 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
     !!en;
   !!en;
 !!en;
-
-
-!?FU(OnGameEnter);           
-!!SN:L^EraPlugins\erm_hooker.era^/?y1;
-!!FU&y1=0:E; 
-!!SN:Ay1/^SetHook^/?y2;                
-!!SN:Ey2/1/4462998/(Event_AfterMeeleDamage_Fire_Mage);
 
 
 !?BA0;
@@ -10510,10 +10503,92 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
   !!en;
 !!en;
 
+****************************************************************************************************
+
 
 ****************************************************************************************************
 *Select Commander Class after the first kill and increase kill counter
+; Here we use OnAfterAttackHook to fix in some situation, the attacked stack is not killed as they have the Block/Reflect ability, but still grants klll count
+; Note that even if the targeted stack can rebirth, killing them will grant you a kill count even if they rebirth later on
+; by Archer30
+!?FU(ACM_OnBeforeMelee);                [OnBeforeMelee + OnMonsterPhysicalDamage to deal with Strike all Around/Breath]
+!#VA(atkStack:x) (defStack:x);
+
+; Exit if the attacking stack is killed
+!!BM(atkStack):N?(atkNum:y);
+!!FU&(atkNum)<=0:E;
+
+; Exit if not a commander
+!!BM(atkStack):T?(atkType:y);
+!!FU|(atkType)<(MON_COMMANDER_FIRST_A)/(atkType)>(MON_COMMANDER_LAST_D):E;
+
+; Exit if the commander does not belong to a hero
+!!BM(atkStack):I?(atkSide:y);
+!!FU&i^battle_hero_%(atkSide)^=(NO_HERO):E;
+
+!!SN:Mi^acm_commanderMeleeList^;
+!!FU(NewIntArray):P?i^acm_commanderMeleeList^/(M_TEMP);
+
+!?FU(OnMonsterPhysicalDamage)&i^acm_commanderMeleeList^;
+!!MF:N?(defStack:y);
+!!FU(Array_Push):Pi^acm_commanderMeleeList^/(defStack);
+
+!?FU(ACM_OnAfterMelee)&i^acm_commanderMeleeList^;
+!#VA(atkStack:x) (defStack:x);
+
+; Exit if the attacking stack is killed
+!!BM(atkStack):N?(atkNum:y);
+
+!!if&(atkNum)>0;
+  ; Get the total kill count from a melee attack
+  !!VR(killCount:y):S0;
+  !!SN:Mi^acm_commanderMeleeList^/?(size:y);
+
+  !!re i/0/(size)/1/-1;
+    !!SN:Mi^acm_commanderMeleeList^/i/?(targetStack:y);
+    !!BM(targetStack):N?(targetNum:y);
+    !!VR(killCount)&(targetNum)<=0:+1;
+  !!en;
+
+  ; Kill
+  !!if&(killCount)>0;
+    !!BM(atkStack):I?(atkSide:y);
+
+    !!re j/1/(killCount);
+      !!FU(ACM_Com_Kill_Counter_Fkt):Pi^battle_hero_%(atkSide)^; [If any commander go to kill count adder function]
+    !!en;
+  !!en;
+!!en;
+
+!!SN:Mi^acm_commanderMeleeList^;
+!!VRi^acm_commanderMeleeList^:S0;
+
+!?FU(ACM_OnAfterShoot);
+!#VA(atkStack:x) (defStack:x);
+
+; Exit if the attacked stack is alive
+!!BM(defStack):N?(defNum:y);
+!!FU&(defNum)>0:E;
+
+; Exit if the attacking stack is killed
+!!BM(atkStack):N?(atkNum:y);
+!!FU&(atkNum)<=0:E;
+
+; Exit if not a commander
+!!BM(atkStack):T?(atkType:y);
+!!FU|(atkType)<(MON_COMMANDER_FIRST_A)/(atkType)>(MON_COMMANDER_LAST_D):E;
+
+; Exit if the commander does not belong to a hero
+!!BM(atkStack):I?(atkSide:y);
+!!FU&i^battle_hero_%(atkSide)^=(NO_HERO):E;
+
+; Kill
+!!FU(ACM_Com_Kill_Counter_Fkt):Pi^battle_hero_%(atkSide)^; [If any commander go to kill count adder function]
+
+
+; Replaced with Archer's implementation
 !?MF1;
+!!FU:E;
 
 !!UN:C42149568/4/?y10;                  [Get Physical Damage type]
 !!if|y10=4462398/y10=4455011/y10=4456676;[Only run when melee or shooting damage or Strikes all enemys around]
@@ -10766,7 +10841,7 @@ Any cast can increase the kill counter
   !!SN&y4=>174/y4<=191:W^ACM_BG_Commander_Cast_Hero^/y5; [Set flag to trigger in BG1]
 !!en;
 
-!?BG1;
+!?FU(OnBattleActionEnd);
 !!SN:W^ACM_BG_Commander_Cast^/?y1; !!FU&y1<0:E; [Check for Scan and exit if no summoning was cast]
 !!SN:W^ACM_BG_Commander_Cast_Hero^/?y10; !!FU&y10<0:E; [Check for Scan and exit if no summoning was cast]
 !!BMy1:T?y2;                            [Creature Type]
@@ -11097,8 +11172,55 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
 !?FU(OnAfterTacticsPhase); [Moved timing from OnCombatRound to OnAfterTacticsPhase to have correct move order in battle]
 !!DO(Apply_Commander_Kill_Bonus)/0/41/1:P; [loop through Stacks]
 
+!?FU(OnSetupBattlefield);
+!!VRi^Commander_SavedClass_0^:S0;
+!!VRi^Commander_SavedClass_1^:S0;
+
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!FU(Check_Com_Masteries):Pi^battle_hero_%i^/0/?t/?t/?i^Commander_SavedClass_%i^; [Pass Hero Number and return current com class]
+!!en;
+
+!?FU(ACM_FixCommanderClass);
+!#VA(hero:x) (class:x);
+
+!!if&(class)=1;  !!VRi^Commander_Fighter_%X1^:S1;!!el;  !!VRi^Commander_Fighter_%X1^:S0;!!en;
+!!if&(class)=2;  !!VRi^Commander_Ranger_%X1^:S1;!!el;  !!VRi^Commander_Ranger_%X1^:S0;!!en;
+!!if&(class)=3;  !!VRi^Commander_Defender_%X1^:S1;!!el;  !!VRi^Commander_Defender_%X1^:S0;!!en;
+!!if&(class)=4;  !!VRi^Commander_Caster_%X1^:S1;!!el;  !!VRi^Commander_Caster_%X1^:S0;!!en;
+!!if&(class)=5;  !!VRi^Commander_Supporter_%X1^:S1;!!el;  !!VRi^Commander_Supporter_%X1^:S0;!!en;
+!!if&(class)=6;  !!VRi^Commander_Leader_%X1^:S1;!!el;  !!VRi^Commander_Leader_%X1^:S0;!!en;
+!!if&(class)=7;  !!VRi^Commander_Scout_%X1^:S1;!!el;  !!VRi^Commander_Scout_%X1^:S0;!!en;
+!!if&(class)=8;  !!VRi^Commander_Undead_%X1^:S1;!!el;  !!VRi^Commander_Undead_%X1^:S0;!!en;
+!!if&(class)=9;  !!VRi^Commander_FireMage_%X1^:S1;!!el;  !!VRi^Commander_FireMage_%X1^:S0;!!en;
+!!if&(class)=11;  !!VRi^Commander_Dragonslayer_%X1^:S1;!!el;  !!VRi^Commander_Dragonslayer_%X1^:S0;!!en;
+!!if&(class)=12;  !!VRi^Commander_Sniper_%X1^:S1;!!el;  !!VRi^Commander_Sniper_%X1^:S0;!!en;
+!!if&(class)=13;  !!VRi^Commander_Retaliator_%X1^:S1;!!el;  !!VRi^Commander_Retaliator_%X1^:S0;!!en;
+!!if&(class)=14;  !!VRi^Commander_ArchMage_%X1^:S1;!!el;  !!VRi^Commander_ArchMage_%X1^:S0;!!en;
+!!if&(class)=15;  !!VRi^Commander_Constructor_%X1^:S1;!!el;  !!VRi^Commander_Constructor_%X1^:S0;!!en;
+!!if&(class)=16;  !!VRi^Commander_King_%X1^:S1;!!el;  !!VRi^Commander_King_%X1^:S0;!!en;
+!!if&(class)=17;  !!VRi^Commander_Prospector_%X1^:S1;!!el;  !!VRi^Commander_Prospector_%X1^:S0;!!en;
+!!if&(class)=18;  !!VRi^Commander_Lich_%X1^:S1;!!el;  !!VRi^Commander_Lich_%X1^:S0;!!en;
+!!if&(class)=19;  !!VRi^Commander_Vampire_%X1^:S1;!!el;  !!VRi^Commander_Vampire_%X1^:S0;!!en;
+!!if&(class)=21;  !!VRi^Commander_Paladin_%X1^:S1;!!el;  !!VRi^Commander_Paladin_%X1^:S0;!!en;
+!!if&(class)=22;  !!VRi^Commander_Marksmen_%X1^:S1;!!el;  !!VRi^Commander_Marksmen_%X1^:S0;!!en;
+!!if&(class)=23;  !!VRi^Commander_Avenger_%X1^:S1;!!el;  !!VRi^Commander_Avenger_%X1^:S0;!!en;
+!!if&(class)=24;  !!VRi^Commander_Warden_%X1^:S1;!!el;  !!VRi^Commander_Warden_%X1^:S0;!!en;
+!!if&(class)=25;  !!VRi^Commander_Arcanist_%X1^:S1;!!el;  !!VRi^Commander_Arcanist_%X1^:S0;!!en;
+!!if&(class)=26;  !!VRi^Commander_General_%X1^:S1;!!el;  !!VRi^Commander_General_%X1^:S0;!!en;
+!!if&(class)=27;  !!VRi^Commander_Lancer_%X1^:S1;!!el;  !!VRi^Commander_Lancer_%X1^:S0;!!en;
+!!if&(class)=28;  !!VRi^Commander_Necromant_%X1^:S1;!!el;  !!VRi^Commander_Necromant_%X1^:S0;!!en;
+!!if&(class)=29;  !!VRi^Commander_Ancient_%X1^:S1;!!el;  !!VRi^Commander_Ancient_%X1^:S0;!!en;
 
 !?FU(OnBattleReplay);
+; Restore commander class
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!FU(Check_Com_Masteries):Pi^battle_hero_%i^/0/?t/?t/?(class:y);
+
+  !!if&(class)<>i^Commander_SavedClass_%i^;
+    !!FU(ACM_FixCommanderClass):Pi^battle_hero_%i^/i^Commander_SavedClass_%i^;
+  !!en;
+!!en;
+
 !!SN:W^Commander_Round_Counter^/0;      [Reset round counter for max 3 gains per battle]
 
 !!BA:H0/?y1;                            [Attacker]
