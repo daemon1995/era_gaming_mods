@@ -10864,6 +10864,7 @@ Astral Spirit new Pacifist ability. Instead of reducing the number of enemy unit
 !!en;
 
 
+; Summon elemental
 Astral Spirit can only summon one Elemental per combat. This Elemental gets stronger with every commander and magic level
 !?FU(OnCombatRound)&v997=0;
 !!BA:H0/?y1;
@@ -10885,7 +10886,6 @@ Astral Spirit can only summon one Elemental per combat. This Elemental gets stro
   !!BMi&y13=191/y12>0/y10=8/y20=0:Edy15;[Set casts to one for humans]
 !!en;
 
-
 !?BG0;
 !!SN:W^Scan_Summoned_Air_Element^/-1;   [Reset Var]
 !!BG:A?y1;
@@ -10896,7 +10896,7 @@ Astral Spirit can only summon one Elemental per combat. This Elemental gets stro
   !!SN|y4=191/y4=182:W^Scan_Summoned_Air_Element^/y2; [Set Flag 112 Air Elemental]
 !!en;
 
-!?BG1;
+!?FU(OnBattleActionEnd);
 !!SN:W^Scan_Summoned_Air_Element^/?y1; !!FU&y1<0:E; [Check for Scan and exit if no summoning was cast]
 !!BG:H?y50;
 !!COy50:X2/?y40 S4/?y60;                [Get Commander Level and Magic Level of Commander]
@@ -19199,6 +19199,7 @@ Creatures next to the Force Field have increased combat power.^;                
 Places one patch of quicksand in front of all your shooting troops.^;           [call funktion for Quicksand]
 !!DO(AC_Function_123)/0/20/1&v9280=0:P;
 !!DO(AC_Function_123)/21/41/1&v9280=1:P;
+!!BMi^battle_current_stack^:C0/0/0/0/0;                                         [Archer's hack to restore the highlight]
 !!en;
 
 !!if&v9290=146;
@@ -25105,7 +25106,90 @@ TUM Creatures
 !!UN:C5896327/1/235;                    [Disable type checking of called elemental]
 !!UN:C5936848/1/235;
 
+// New Summon Elemental implementation
+; by Archer30
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/5928230/(ACM_OnCombatElementalSummonCount);
+
+!?FU(ACM_OnCombatElementalSummonCount); [This hook works with any summoning cast]
+!#VA(hook:x);
+
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_HERO_CAST):E;
+
+; Exit if no hero on the side
+!!FU&i^battle_hero_%i(battle_acting_side)^=(NO_HERO):E;
+
+; Manage the spell only when the combination of spell id and summon type is correct
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(spellId:y);
+
+!!VR(secSkill:y):S(NO_SKILL);
+!!UN:C(ebp)/12/4/?(monId:y);
+
+!!if&(spellId)=(SPELL_FIRE_ELEMENTAL)/(monId)=(MON_FIRE_ELEMENTAL);
+  !!VR(secSkill:y):S(SKILL_FIRE_MAGIC);
+!!el&(spellId)=(SPELL_EARTH_ELEMENTAL)/(monId)=(MON_EARTH_ELEMENTAL);
+  !!VR(secSkill):S(SKILL_EARTH_MAGIC);
+!!el&(spellId)=(SPELL_WATER_ELEMENTAL)/(monId)=(MON_WATER_ELEMENTAL);
+  !!VR(secSkill):S(SKILL_WATER_MAGIC);
+!!el&(spellId)=(SPELL_AIR_ELEMENTAL)/(monId)=(MON_AIR_ELEMENTAL);
+  !!VR(secSkill):S(SKILL_AIR_MAGIC);
+!!en;
+
+!!FU&(secSkill)=(NO_SKILL):E;
+
+!!VR(hero:y):Si^battle_hero_%i(battle_acting_side)^;
+
+; Check if the elemental should be upgraded
+!!UN:C(ebp)/20/4/?(spellLevel:y);
+
+!!if&(spellLevel)>=(SKILL_EXPERT);
+  !!HE(hero):S(secSkill)/?(realLevel:y);
+  !!SN:Mi^acm_SkillNames_ArrayId^/(secSkill)/?(skillName:z);
+
+  !!if&(realLevel)>=(SKILL_EXPERT)/i^H3_%(skillName)_0_Hero%(hero)^/i^H3_%(skillName)_1_Hero%(hero)^;
+    !!FU(GetUpgradedMonster):P(monId)/?(upgMonId:y);
+    !!VR(monId)&(upgMonId)>(NO_MON):S(upgMonId);
+  !!en;
+!!en;
+
+; Get the HP to summon and calculate the number to summon
+!!FU(Calc_Summoning_Power):Pi^battle_hero_%i(battle_acting_side)^/(spellId)/?(totalHp:y);
+
+!!MA:P(monId)/?(baseHp:y);
+!!VR(totalSummonCount:y):S(totalHp:y) :(baseHp);
+
+!!if&(totalSummonCount)>0;
+  !!VR(lostHp:y):S(totalHp:y) %(baseHp);
+  !!VR(totalSummonCount)&(lostHp): +1;
+!!en;
+
+!!VR(totalSummonCount):F1/(INT_MAX);
+
+; Set the date in the memory to summon
+!!VR(monInfoOffset:y):S(monId) *116;
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/(totalSummonCount:y) C(ebp)/12/4/(monId:y) C(ebp)/-28/4/(monInfoOffset:y); [set new mon count and id to summon and text]
+
+!!VRi^acm_summonElementalSpell^:S(spellId);
+
+!?FU(ACM_BattleStack_InitParams)&i^acm_summonElementalSpell^;
+!#VA(stackId:x) (side:x);
+
+!!VR(spellId:y):Si^acm_summonElementalSpell^;
+!!VRi^acm_summonElementalSpell^:S(NULL);
+
+!!SN&(spellId)=(SPELL_WATER_ELEMENTAL):W^Summoned_Water_Perk_%X2^/1; [If Water or Ice  Elemental was summoned Set Flag to 1]
+!!SN&(spellId)=(SPELL_EARTH_ELEMENTAL):W^Summoned_Earth_Perk_%X2^/1; [If Earth or Magma Elemental was summoned Set Flag to 1]
+
+!!BM(stackId)&(spellId)=(SPELL_FIRE_ELEMENTAL):M29/99/3;        [Apply 29 Fire Shield to Fire Elemental or Energy Elemental]
+!!BM(stackId)&(spellId)=(SPELL_AIR_ELEMENTAL):Sd1;             [Apply +1 Speed to Air Elemental or Storm Elemental]
+
+
+; Replaced by Archer's implementation. This implemtation doesn't handle spell book button and shadow correctly
 !?BG0; 
+!!FU:E;
 
 !!BG:A?y1;
 !!FU&y1<>1:E;
@@ -25187,6 +25271,7 @@ TUM Creatures
   !!VRv2:S0;
   !!DO(Summoning_Rework3)/0/10/1:Py4/x2;
   !!BU:Sx1/x3/v2/x2/-1/1 Ev2/?y4;
+
   !!BMy4:Lx5;
   !!BMy4:F?i; !!VRi:|4194304; !!BMy4:Fi;[Add Summoning Flag]
 
@@ -34867,9 +34952,17 @@ kill count you get +4% of a random attribute
 !?FU(ACM_CreateERMHook);
 !#VA(setHook:x);
 
+!!SN:E(setHook)/1/4445639/(ACM_HOOK_AfterStackInitParams); [Trigger after initialising the stats of a stack on the battlefield] 43D5C7
 !!SN:E(setHook)/1/4461377/(ACM_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation. Won't triggered if the target is killed]
 !!SN:E(setHook)/1/4462998/(ACM_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
 !!SN:E(setHook)/1/4455129/(ACM_HOOK_AfterAttackMainFunc); [Trigger after shooting]
+
+!?FU(ACM_HOOK_AfterStackInitParams);    [by daemon_n]
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stackStruct:y) C(stackStruct)/244/(UNC_INT)/?(side:y) C(stackStruct)/248/(UNC_INT)/?(stackPerSide:y);
+!!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackPerSide);
+!!FU(ACM_BattleStack_InitParams):P(stackId)/(side);
 
 !?FU(ACM_HOOK_BeforeMeleeMainFunc);
 !#VA(hook:x);
