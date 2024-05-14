@@ -6,25 +6,11 @@ ZVSE2
 ; Disable neutrals joining for free. Whenever a neutral stack is "with a desire for greater glory", they only offer to join with a fee.
 
 
+!?FU(WOG_CreateERMHook);
+!!UN:P251/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!?FU(WOG_251_SetFreeJoinState);
-!#VA(state:x);
-
-!!if&(state);
-  !!UN:C4289079/4/2 C4879709/1/127;                                       [default attack and rmc mon map click values]
-!!el;
-  !!UN:C4289079/4/3 C4879709/1/235;                                       [skip free join]
-!!en;
-
-
-!?FU(WOG_OnMonsterPlaceAtMap);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
-
-!#VA(tile[3]:y);
-
-!!UN:C(ebp)/12/4/?(tile[0]) C(ebp)/16/4/?(tile[1]) C(ebp)/20/4/?(tile[2]);
-!!VRi^WOG_251_at_%(tile[0])_%(tile[1])_%(tile[2])^:Si^timerOwner^ +1;     [store owner of the placed  monster]
-!!UN:R1;
+!!SN:Ex1/1/7696427/(WOG_OnMonsterPlaceAtMap);                             [set hook to handle mon leaving]
 
 !?FU(OnGameEnter);
 !!UN:P251/?(wogOption:y);
@@ -32,14 +18,13 @@ ZVSE2
 
 !!VRi^WOG_251_enabled^:S(TRUE);
 !!FU(WOG_251_SetFreeJoinState):P(FALSE);                                  [disable free join]
-!!SN:Ex1/1/7696427/(WOG_OnMonsterPlaceAtMap);                             [set hook to handle mon leaving]
 
 !?FU(OnGameLeave)&i^WOG_251_enabled^;
 !!FU(WOG_251_SetFreeJoinState):P(TRUE);
 
 !?OB(OBJ_MONSTER)&i^WOG_251_enabled^; 
-
 !!MO(CURRENT_OBJ):R?(monAggression:y)/1;                                  [check aggression]
+
 !!VR(owner:y):Si^WOG_251_at_%v998_%v999_%v1000^ -1;                       [check if monster is left but this hero]
 
 !!if&(owner)=i^timerOwner^|(monAggression:y)=0; 
@@ -49,4 +34,21 @@ ZVSE2
 
 !$OB(OBJ_MONSTER)&i^WOG_251_join_is_changed^; 
 !!FU(WOG_251_SetFreeJoinState):P(FALSE);                                  [and restore global state back]
-!!SN:Wi^WOG_251_at_%v998_%v999_%v1000^ Wi^WOG_251_join_is_changed^;       [clear variables]
+!!SN:Wi^WOG_251_at_%v998_%v999_%v1000^/0 Wi^WOG_251_join_is_changed^/0;   [clear variables]
+
+!?FU(WOG_251_SetFreeJoinState);
+!#VA(state:x);                                                            [1 for set, 0 for restoration]
+
+!!if&(state);
+  !!UN:C4289079/4/2 C4879709/1/127;                                       [default attack and rmc mon map click values]
+!!el;
+  !!UN:C4289079/4/3 C4879709/1/235;                                       [skip free join]
+!!en;
+
+!?FU(WOG_OnMonsterPlaceAtMap);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+
+!#VA(tile[3]:y);
+
+!!UN:C(ebp)/12/4/?(tile[0]) C(ebp)/16/4/?(tile[1]) C(ebp)/20/4/?(tile[2]);
+!!VRi^WOG_251_at_%(tile[0])_%(tile[1])_%(tile[2])^:Si^timerOwner^ +1;     [store owner of the placed monster]
