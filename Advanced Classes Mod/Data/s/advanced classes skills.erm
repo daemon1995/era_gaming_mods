@@ -20203,48 +20203,85 @@ Undead stacks heal and with next attack^;                                       
 !!VRy22::2 +20;                         [Chance is 20% + 1% per 2SP]
 !!VRy22&y87>0:+10;                      [+10% with GM Air]
 
-!!if&y20<y22;                          [chance is  to steal with every attack]
-!!BMy4:A?y11 D?y12 S?y13 U2/?y14 U1/?y16;
+!!if&y20<y22;                           [chance is  to steal with every attack]
+  ; Check if the target stack is possible to accept a hostile Fortune spell
+  !!SS(SPELL_FORTUNE):O?y7 O-1;
+  !!FU(ACM_Battle_CanStackReceiveSpell):Py4/(SPELL_FORTUNE)/y5/?y6;
+  !!SS(SPELL_FORTUNE):Oy7;
+  !!FU&y6<>(TRUE):E;
 
-!!VRy15:S11 R3;
-!!VRy11&y15=11:-5;                      [Attack]
-!!VRy12&y15=12:-5;                      [Defense]
-!!VRy13&y15=13:-2;                      [Speed]
-!!VRy14&y15=14:-4; !!VRy16&y15=14:-4;   [Min and Max damage]
+  !!VRy15:S11 R3;
+  !!VRy14:S0;
 
-!!VRy11&y11<1:S1; !!VRy12&y12<1:S1; !!VRy13&y13<1:S1; !!VRy14&y14<1:S1; !!VRy16&y16<1:S1;
+  ; Attack
+  !!if&y15=11;
+    !!BMy4:A?y11;
+    !!FU&y11<=1:E;
 
-!!BMy4&y15=11:Ay11;
-!!BMy4&y15=12:Dy12;
-!!BMy4&y15=13:Sy13;
-!!BMy4&y15=14:U2/y14;
-!!BMy4&y15=14:U1/y16;
+    !!VRy13:Sy11 -4 F1/(INT_MAX);       [Reduce attack but prevent attack lower than 1]
+    !!VRy14:Sy11 -y13;                  [Get the value changed]
+    !!FU&y14<=0:E;
 
-!!BMy1:A?y11 D?y12 S?y13 U2/?y14 U1/?y16;
+    !!BMy4:Ad-y14;
+    !!BMy1:Ady14;
 
-!!VRy11&y15=11:+5;
-!!VRy12&y15=12:+5;
-!!VRy13&y15=13:+2;
-!!VRy14&y15=14:+4; !!VRy16&y15=14:+4;
+  ; Defense
+  !!el&y15=12;
+    !!BMy4:D?y11;
+    !!FU&y11<=1:E;
 
-!!BMy1&y15=11:Ay11;
-!!BMy1&y15=12:Dy12;
-!!BMy1&y15=13:Sy13;
-!!BMy1&y15=14:U2/y14;
-!!BMy1&y15=14:U1/y16;
+    !!VRy13:Sy11 -4 F1/(INT_MAX);       [Reduce defense but prevent defense lower than 1]
+    !!VRy14:Sy11 -y13;                  [Get the value changed]
+    !!FU&y14<=0:E;
 
-!!BA:Q?f;
-!!VRz1&i^battle_isVisible^:S^MAGCHDRN^;
-!!SN&i^battle_isVisible^:Pz1;
+    !!BMy4:Dd-y14;
+    !!BMy1:Ddy14;
 
-!!SN&y15=11:T^AC_Misc.Fortune Steal 1^/?z-1;
-!!SN&y15=12:T^AC_Misc.Fortune Steal 2^/?z-1;
-!!SN&y15=13:T^AC_Misc.Fortune Steal 3^/?z-1;
-!!SN&y15=14:T^AC_Misc.Fortune Steal 4^/?z-1;
-!!BU:Mz-1;
+  ; Speed
+  !!el&y15=13;
+    !!BMy4:S?y11;
+    !!FU&y11<=2:E;
+
+    !!VRy13:Sy11 -2 F2/(INT_MAX);       [Reduce speed but prevent speed lower than 2]
+    !!VRy14:Sy11 -y13;                  [Get the value changed]
+    !!FU&y14<=0:E;
+
+    !!BMy4:Sd-y14;
+    !!BMy1:Sdy14;
+
+  ; Damage
+  !!el&y15=14;
+    !!BMy4:U2/?y11 U1/?y12;
+    !!FU&y12<=1:E;
+
+    !!VRy13:Sy12 -3 F1/(INT_MAX);       [Reduce damage but prevent damage lower than 1]
+    !!VRy14:Sy12 -y13;
+    !!FU&y14<=0:E;
+
+    !!BMy4:U2/d-y14 U1/d-y14;
+    !!BMy1:U2/dy14 U1/dy14;
+  !!en;
+
+  !!if&i^battle_isVisible^;
+    !!SN&y15=11:T^AC_Misc.Fortune Steal 1^/?z-1/^num^/y14;
+    !!SN&y15=12:T^AC_Misc.Fortune Steal 2^/?z-1/^num^/y14;
+    !!SN&y15=13:T^AC_Misc.Fortune Steal 3^/?z-1/^num^/y14;
+    !!SN&y15=14:T^AC_Misc.Fortune Steal 4^/?z-1/^num^/y14;
+    !!MM:Sz-1;
+
+    !!SN:P^MAGCHDRN^;
+  !!en;
 !!en;
 !!en;
 !!en;
+
+!?FU(ACM_Battle_CanStackReceiveSpell);
+!#VA(stackId:x) (spellID:x) (castingSide:x) (result:x);
+
+!!BM(stackId):Z?(stack:y); I?(side:y);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; [can stack apply buff/debuff] 5A3F90
+!!VR(result):Sv1;
 
 *-------------------------------Firewall ---------------------------------------*
 !?FU(OnStackToStackDamage);
