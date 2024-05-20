@@ -12080,6 +12080,68 @@ x1=Hero ID, x2 returns yes(1) or no (0)
 !!VRx2:Sy1;                             [Returns yes or no in x2]
 
 
+// Rename Adventurer classes
+; by igrik and Archer30
+!?FU(OnAfterErmInstructions);
+!!FU(NewStrArray):P9/?i^acm_heroClassNames^/(M_STORED);
+!!SN:Vi^acm_heroClassNames^/0/^%T(AC_Misc.Adventurer_0)^/^%T(AC_Misc.Adventurer_1)^/^%T(AC_Misc.Adventurer_2)^/^%T(AC_Misc.Adventurer_3)^
+  /^%T(AC_Misc.Adventurer_4)^/^%T(AC_Misc.Adventurer_5)^/^%T(AC_Misc.Adventurer_6)^/^%T(AC_Misc.Adventurer_7)^
+  /^%T(AC_Misc.Adventurer_8)^;
+
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/5083661/(ACM_OnSetClassName_1); 4D921D
+!!SN:E(setHook)/1/5093760/(ACM_OnSetClassName_2);
+!!SN:E(setHook)/1/5094903/(ACM_OnSetClassName_2);
+!!SN:E(setHook)/1/5119462/(ACM_OnSetClassName_3);
+
+!?FU(ACM_OnSetClassName_1);
+!!SN:X?y1;
+!!VRy2:Sy1 +24;
+!!FU(ACM_SetClassName):Py2/?y4;
+!!FU&y4=(NULL):E;
+
+!!SN:X?y1/0;
+!!VRy3:Sy1 +28;
+!!UN:Cy3/4/y4;
+!!VRy5:Sy1 +32;
+!!UN:Cy5/4/5083660; 4D920C
+
+!?FU(ACM_OnSetClassName_2);
+!!SN:X?y1;
+!!VRy2:Sy1 +24;
+!!FU(ACM_SetClassName):Py2/?y4;
+!!FU&y4=(NULL):E;
+
+!!VRy3:Sy1 +28;
+!!UN:Cy3/4/y4;
+
+!?FU(ACM_OnSetClassName_3);
+!!SN:X?y1;
+!!VRy2:Sy1 +28;
+!!FU(ACM_SetClassName):Py2/?y4;
+!!FU&y4=(NULL):E;
+
+!!VRy3:Sy1 +24;
+!!UN:Cy3/4/y4;
+
+; Use only ert here, json is not supported
+!?FU(ACM_SetClassName);
+!#VA(heroStructPtr:x) (strPtr:x);
+
+!!VR(strPtr):S(NULL);
+!!UN:C(heroStructPtr)/4/?(heroStruct:y);
+!!UN:C(heroStruct)/26/4/?(heroId:y);
+!!FU(Valid_Adventurer_Hero):P(heroId)/?(result:y);
+!!FU&(result)<>(TRUE):E;
+
+!!HE(heroId):B2/?(heroType:y);
+!!VR(townType:y):S(heroType) :2;
+
+!!SN:Mi^acm_heroClassNames^/?(strPtr)/(townType);
+
+
 !?PI;
   This are instructions that set chances to get primary and secondary skills for new class of heroes - adventurers. Do not change them recklessly (you can).
 
@@ -14505,6 +14567,17 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 !!VRy90:-1;
 
 !!HE-1&y90=1:Fd-1/d-1/d-1/d-1;
+
+********************************************************************************
+// General fix for AE1+HE:A screen update
+; by Archer30
+; This fixes Spyglass not showing in the backpack when it's added by HE:A from the script above
+!?FU(OnEquipArt_Quit)&999;
+!!FU(H3Dlg_GetCurrentDlgId):P?(result:y);
+
+!!if|(result)=(DLG_HERO_SCREEN)/(result)=(DLG_HERO_MEETING_SCREEN);
+  !!SN:D;
+!!en;
 
 ********************************************************************************
 *?SN&1000;                              [Sound Trigger for Moral and Luck]
@@ -17369,6 +17442,8 @@ x9=returns skill value
   !!VR(attackers[2]:y):Ci^battle_acting_stack^/(targetStack);
 
   !!re i/0/1;
+    !!co&(attackers[i])=(NO_STACK);     [It's possible that BG:E is -1]
+
     !!FU(ACM_GetActualStackSide):P(attackers[i])/?(actualSide:y);
 
     !!if&(actualSide)<>(defSide);
