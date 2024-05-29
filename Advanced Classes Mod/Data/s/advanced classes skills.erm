@@ -152,6 +152,34 @@ Enable Artefact to appear on the map
 !#DC(ACM_BACKUPED_SKILL_WAS_DECREASED_FLAG) = (BIT_31);
 !#DC(ACM_WM_DLG_ID) = 50;
 
+!#DC(ACM_CMD_CLASS_FIGHTER) = 1;
+!#DC(ACM_CMD_CLASS_RANGER) = 2;
+!#DC(ACM_CMD_CLASS_DEFENDER) = 3;
+!#DC(ACM_CMD_CLASS_CASTER) = 4;
+!#DC(ACM_CMD_CLASS_SUPPORTER) = 5;
+!#DC(ACM_CMD_CLASS_LEADER) = 6;
+!#DC(ACM_CMD_CLASS_SCOUT) = 7;
+!#DC(ACM_CMD_CLASS_UNDEAD) = 8;
+!#DC(ACM_CMD_CLASS_FIREMAGE) = 9;
+!#DC(ACM_CMD_CLASS_DRAGONSLAYER) = 11;
+!#DC(ACM_CMD_CLASS_SNIPER) = 12;
+!#DC(ACM_CMD_CLASS_RETALIATOR) = 13;
+!#DC(ACM_CMD_CLASS_ARCHMAGE) = 14;
+!#DC(ACM_CMD_CLASS_CONSTRUCTOR) = 15;
+!#DC(ACM_CMD_CLASS_KING) = 16;
+!#DC(ACM_CMD_CLASS_PROSPECTOR) = 17;
+!#DC(ACM_CMD_CLASS_LICH) = 18;
+!#DC(ACM_CMD_CLASS_VAMPIRE) = 19;
+!#DC(ACM_CMD_CLASS_PALADIN) = 21;
+!#DC(ACM_CMD_CLASS_MARKSMAN) = 22;
+!#DC(ACM_CMD_CLASS_AVENGER) = 23;
+!#DC(ACM_CMD_CLASS_WARDEN) = 24;
+!#DC(ACM_CMD_CLASS_ARCANIST) = 25;
+!#DC(ACM_CMD_CLASS_GENERAL) = 26;
+!#DC(ACM_CMD_CLASS_LANCER) = 27;
+!#DC(ACM_CMD_CLASS_NECROMANT) = 28;
+!#DC(ACM_CMD_CLASS_ANCIENT) = 29;
+
 !#FU(NewIntArray):P(NUM_SECONDARY_SKILLS)/0/?i^acm_SecSkillsBackup^/(M_STORED);
 
 !?FU(acm_CountNumUniqueSkillsLearned);
@@ -3636,6 +3664,10 @@ Creature speed   Base movement
   !!co&(randMon)>=(MON_CATAPULT)/(randMon)<=(MON_ARROW_TOWERS);
   !!co&(randMon)>=(MON_EMISSARY_OF_WAR)/(randMon)<=(MON_EMISSARY_OF_LORE);
   !!co&(randMon)>=(MON_COMMANDER_FIRST_A)/(randMon)<=(MON_COMMANDER_LAST_D);
+
+  ; Check if the monster is allowed to spawn
+  !!MA:H(randMon)/?(advMapHigh:y);
+  !!co&(advMapHigh)<=0;
 
   ; Check if the level and fight value are ideal
   !!MA:L(randMon)/?(level:y);
@@ -10097,23 +10129,25 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!BG:A?y1;
   !!if|y1=6/y1=7;
   !!SN:W^Commander_Aktion^/y1;          [Save if Melee6 or Shooting7]
-  !!BG:N?y1 H?y5;                       [Attacking Stack]
+  !!BG:N?y1;                            [Attacking Stack]
   !!MF:N?y4;                            [damage receiving stack]
   !!SN:W^Brute_Attacking_Stack^/?y50;
   !!VRy1&y4=y1/y50>=0/y50<=41:Sy50;     [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
   !!SN:W^Brute_Attacking_Stack^/y4;
   !!BMy1:T?y2 I?y12;                    [Creature Type and side]
   !!if&y2>=174/y2<=191;                 [if any commander]
-  !!SN:W^ACM_Com_%Y5_Passive_6^/?y70;   [Check for 2Supporter ability]
+  !!VRy5:Si^battle_hero_%y12^;          [Get hero]
+  !!FU&y5=(NO_HERO):E;
+
+  !!SN:W^ACM_Com_%y5_Passive_6^/?y70;   [Check for 2Supporter ability]
   !!if|y2=179/y2=188/y70=1;             [if Brute]
-  !!SN&y12=0:W^Brute_Gold_Att^/?y11;    [Check current gold for that combat]
-  !!SN&y12=1:W^Brute_Gold_Def^/?y11;    [Check current gold for that combat]
-  !!if&y11>=1000000;                    [Limit the max amount of gold per combat to 1 Million]
-    !!SN&y12=0:W^Brute_Gold_Att^/1000000;[set limit]
-    !!SN&y12=1:W^Brute_Gold_Def^/1000000;
-    !!FU:E;                             [Exit]
-  !!en;  
-  !!BG:H?y5;                            [Get Hero]
+
+  ; Exit if the additional gold is full this battle
+  !!VRz2:S^Att^;
+  !!VRz3:S^Def^;
+  !!VRj:S2 +y12;
+  !!VRy33:Si^Brute_Gold_%zj^;
+  !!FU&y33>=1000000:E;                  [max at 1 million]
 
   !!HEy5&y5>=0:O?y56;                   [Get Hero Color]
   !!OW:Iy56/?y57;                       [Get if AI or Human}]
@@ -10122,22 +10156,27 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!BG:E?y3;                            [Destination Poistion]
   !!FU&y3=-1:E;                         [Exit if no Monster there]
   !!BMy4:N?y55;                         [Number of Attacked Stack]
-  !!BMy4:H?y6;                          [Health of Attacked Stack]
-  !!VRy7:Sy55*y6;                       [Get total life of attacked Stack]
-  !!MF:F?y10; !!FU&y10=0:E;             [damage dealt and exit if none]
+  !!BMy4:H?y6 L?y40;                    [Health of Attacked Stack]
+  !!VRy7:Sy55*y6 -y40;                  [Get total life of attacked Stack]
+  !!FU&y7<=0:E;
+
+  !!MF:F?y10;
+  !!FU&y10<=0:E;                        [damage dealt and exit if none]
+
+  !!VRy10&y10>y7:Sy7;                   [Get the lower value between y10 and y7]
+
   !!VRy10:*80:100;                      [Reduce Gold Gain to 80 as default value]
   !!VRy10&y40=4456676:*80:100;          [Reduce Gold Gain when Strikes All Enemies around is active]
+
   !!SN:W^Commander_Aktion^/?y50;        [Check if Melee or Shooting]
   !!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y43; [Pass Hero Number and return Passive Modifier]
   !!VRy10:*y43:100;                     [Increase Gold gain by passive modifier]
-  !!SN&y7>=y10/y12=0:W^Brute_Gold_Att^/dy10; [If damage is smaller than complete HP of stack add to generated Gold]
-  !!SN&y10>=y7/y12=0:W^Brute_Gold_Att^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-  !!SN&y7>=y10/y12=1:W^Brute_Gold_Def^/dy10; [If damage is smaller than complete HP of stack add to generated Gold]
-  !!SN&y10>=y7/y12=1:W^Brute_Gold_Def^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-  !!SN&y12=0:W^Brute_Gold_Att^/?y11;    [Save Gold to show after Combat]
-  !!SN&y12=1:W^Brute_Gold_Def^/?y11;    [Save Gold to show after Combat]
 
-  !!BA:Q?f;
+  !!VRy11:Sy33 +y10 F0/1000000;         [max at 1 million]
+  !!FU&y33>=y11:E;                      [Exit if the previous value is greater than the new one (overflow)]
+
+  !!VRi^Brute_Gold_%zj^:Sy11;
+
   !!SN&i^battle_isVisible^:T^AC_Misc.Brute^/?z1/^gold^/y11;
   !!BU&i^battle_isVisible^:Mz1;
   !!en;
@@ -10152,6 +10191,14 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !!BG:N?y1;                              [Current Stack]
 !!BMy1:T?y2 I?y12;                      [Creature Type and side]
 !!if|y2=179/y2=188;                     [if Brute]
+
+  ; Exit if the additional gold is full this battle
+  !!VRz2:S^Att^;
+  !!VRz3:S^Def^;
+  !!VRj:S2 +y12;
+  !!VRy33:Si^Brute_Gold_%zj^;
+  !!FU&y33>=1000000:E;                  [max at 1 million]
+
   !!BG:H?y5;                            [Get Hero]
   !!HEy5&y5>=0:O?y56;                   [Get Hero Color]
   !!OW:Iy56/?y57;                       [Get if AI or Human}]
@@ -10159,18 +10206,23 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!BG:E?y3;                            [Destination Poistion Monster Stack]
   !!FU&y3=-1:E;                         [Exit if no Monster there]
   !!BMy3:N?y9;                          [Number of Attacked Stack]
-  !!BMy3:H?y6;                          [Health of Attacked Stack]
-  !!VRy7:Sy9*y6;                        [Get total life of attacked Stack]
-  !!FU(ACM_Calc_Commander_Spell_damage):Py5/?y20/15/1/y3; [Pass Hero Number and return spell damage in y20, Pass Spell Number and Battle State 1=In Fight, 0=No Fight, TargetCreature]
+  !!BMy3:H?y6 L?y40;                    [Health of Attacked Stack]
+  !!VRy7:Sy9*y6 -y40;                   [Get total life of attacked Stack]
+  !!FU&y7<=0:E;
+
+  !!FU(ACM_Calc_Commander_Spell_damage):Py5/?y10/15/1/y3; [Pass Hero Number and return spell damage in y20, Pass Spell Number and Battle State 1=In Fight, 0=No Fight, TargetCreature]
+  !!FU&y10<=0:E;                        [damage dealt and exit if none]
+
+  !!VRy10&y10>y7:Sy7;                   [Get the lower value between y10 and y7]
+
   !!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y43; [Pass Hero Number and return Passive Modifier]
-  !!VRy20:*y43:100;                     [Spell Damage + passive modifier to get correct Gold amount]
-  !!SN&y7>=y20/y12=0:W^Brute_Gold_Att^/dy20; [If damage is smaller than complete HP of stack add to generated Gold]
-  !!SN&y20>=y7/y12=0:W^Brute_Gold_Att^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-  !!SN&y7>=y20/y12=1:W^Brute_Gold_Def^/dy20; [If damage is smaller than complete HP of stack add to generated Gold]
-  !!SN&y20>=y7/y12=1:W^Brute_Gold_Def^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-  !!SN&y12=0:W^Brute_Gold_Att^/?y11;    [Save Gold to show after Combat]
-  !!SN&y12=1:W^Brute_Gold_Def^/?y11;    [Save Gold to show after Combat]
-  !!BA:Q?f;
+  !!VRy10:*y43:100;                     [Increase Gold gain by passive modifier]
+
+  !!VRy11:Sy33 +y10 F0/1000000;         [max at 1 million]
+  !!FU&y33>=y11:E;                      [Exit if the previous value is greater than the new one (overflow)]
+
+  !!VRi^Brute_Gold_%zj^:Sy11;
+
   !!SN&i^battle_isVisible^:T^AC_Misc.Brute^/?z1/^gold^/y11;
   !!BU&i^battle_isVisible^:Mz1;
 !!en;
@@ -10255,10 +10307,11 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!SN:W^Paladin_Attacking_Stack^/y4;
   !!BMy1:T?y2 I?y12;                    [Creature Type and side]
   !!if&y2>=174/y2<=191;                 [if any commander]
-  !!BG:H?y60;                           [get hero]
+  !!VRy60:Si^battle_hero_%y12^;         [get hero]
+  !!FU&y60=(NO_HERO):E;
+
   !!SN:W^ACM_Com_%Y60_Passive_1^/?y70;  [Check for 2Supporter ability]
   !!if|y2=174/y2=183/y70=1;             [if Paladin]
-    !!BG:H?y60; !!FU&y60<0:E;           [Get Hero and exit if none]
     !!HEy60&y60>=0:O?y56;               [Get Hero Color]
     !!OW:Iy56/?y57;                     [Get if AI or Human}]
     !!SN&y57=0:W^Message_Flag^/1;       [Set Flag if Human Player]
@@ -10266,21 +10319,38 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
     !!BG:E?y3;                          [Destination Poistion]
     !!FU&y3=-1:E;                       [Exit if no Monster there]
     !!BMy4:N?y5;                        [Number of Attacked Stack]
-    !!BMy4:H?y6;                        [Health of Attacked Stack]
-    !!VRy7:Sy5*y6;                      [Get total life of attacked Stack]
+    !!BMy4:H?y6 L?y40;                  [Health of Attacked Stack]
+    !!VRy7:Sy5*y6 -y40;                 [Get total life of attacked Stack]
+    !!FU&y7<=0:E;
+
     !!MF:F?y10;                         [damage dealt]
+    !!FU&y10<=0:E;
+
+    !!VRy10&y10>y7:Sy7;                 [Get the lower value between y10 and y7]
+
     !!SN:W^Commander_Aktion^/?y50;      [Check if Melee or Shooting]
     !!VRy10&y50=7::2;                   [Half effect if shooting]
-    !!SN&y7>=y10/y12=0:W^Paladin_Experience_Att^/dy10; [If damage is smaller than complete HP of stack add to generated Experience Attacker]
-    !!SN&y10>=y7/y12=0:W^Paladin_Experience_Att^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-    !!SN&y12=0:W^Paladin_Experience_Att^/?y11;
-    !!SN&y7>=y10/y12=1:W^Paladin_Experience_Def^/dy10; [If damage is smaller than complete HP of stack add to generated Experience Defender]
-    !!SN&y10>=y7/y12=1:W^Paladin_Experience_Def^/dy7; [If damage dealt is higher than full stack just add HP of full stack left]
-    !!SN&y12=1:W^Paladin_Experience_Def^/?y11;
+
+    !!VRz2:S^Att^;
+    !!VRz3:S^Def^;
+
+    ; Exit if the addtional exp is full this battle
+    !!VRj:S2 +y12;
+    !!VRy33:Si^Paladin_Experience_%zj^;
+    !!FU&y33>=10000000:E;               [max at 10 million]
+
     !!FU(Check_Com_Masteries):Py60/0/0/0/0/0/0/0/0/0/0/?y45; [Pass Hero Number and return Passive Modifier]
-    !!VRy31:Sy30*5+200;                 [Increase Experience gain with 5% for each Commander level +100%]
-    !!VRy31:*y45:100;                   [Add potential Passive Bonus from Commander Classes like Supporter]
-    !!VRy11:*y31:100;                   [Calc new value]    
+    ; Here we use float number to prevent overflow
+    !!VRe1:Sy30 *5 +200 :100;           [Increase Experience gain with 5% for each Commander level +100%]
+    !!VRe2:Sy45 :100;                   [Add potential Passive Bonus from Commander Classes like Supporter]
+    !!VRe3:Sy10 *e1 *e2;
+    !!VRy10:Se3;
+
+    !!VRy11:Sy33 +y10 F0/10000000;      [max at 10 million]
+    !!FU&y33>=y11:E;                    [Exit if the previous value is greater than the new one (overflow)]
+
+    !!VRi^Paladin_Experience_%zj^:Sy11;
+
     !!SN&i^battle_isVisible^:T^AC_Misc.Paladin 2^/?z1/^Experience^/y11;
     !!BU&i^battle_isVisible^:Mz1;       [Show Message in battle log]
   !!en;
@@ -10306,11 +10376,6 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !!COx1:D?y4;                            [Check if Commander of Hero is still alive]
 !!FU&y4=1:E;                            [Exit if hes not]
 !!if&y4=0;                              [If commander alive]
-  !!COx1:X2/?y30;                       [Get Commander Level]
-  !!FU(Check_Com_Masteries):Px1/0/0/0/0/0/0/0/0/0/0/?y45; [Pass Hero Number and return Passive Modifier]
-  !!VRy31:Sy30*5+200;                   [Increase Experience gain with 5% for each Commander level +100%]
-  !!VRy31:*y45:100;                     [Add potential Passive Bonus from Commander Classes like Supporter]
-  !!VRy2:*y31:100;                      [Calc new value]
   !!SN:T^AC_Misc.Paladin^/?z1/^Experience^/y2;
   !!SN:W^Message_Flag^/?y20;            [Set Flag if Human Player]
   !!IF&1000/y20=1/999/y25=y26:M^%Z1^;   [Display text to humans and if value is bigger zero]
@@ -10474,6 +10539,33 @@ Shaman gains 125% of Heroes attack, this values gets modified by commanders pass
 *************************************Fire Mage******************************************************
 Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times Spell Power.
 *Trigger Spell at attack position after damage animation for melee attacks*
+; Friendly units are immune to Fire Ball casted by Fire Mage, while hostile units are vulnerable (piecing spell immunity)
+
+; Archer30's new implementation - disabled, because can't see how damage is calculated here
+; Ideally use only FU(ACM_OnAfterMelee) because you don't need MF1 to sort out the attacking and defending stack
+*?FU(ACM_OnAfterMelee);
+*#VA(atkStack:x) (defStack:x);
+
+*!BM(atkStack):N?(atkNum:y);
+*!BM(defStack):N?(defNum:y);
+*!FU|(atkNum)<=0/(defNum)<=0:E;
+
+; Exit if not commander
+*!BM(atkStack):T?(atkType:y);
+*!FU|(atkType)<(MON_COMMANDER_FIRST_A)/(atkType)>(MON_COMMANDER_LAST_D):E;
+
+; Exit if no hero
+*!BM(atkStack):I?(atkSide:y);
+*!FU&i^battle_hero_%(atkSide)^=(NO_HERO):E;
+
+*!VR(hero:y):Si^battle_hero_%(atkSide)^;
+
+; Exit if not Fire Mage
+*!FU(Check_Com_Masteries):P(hero)/?y51/?y52/?y53/?y54/0/0/0/0/0/?y55; [Pass Hero Number and return Class and Spell Damage modifier]
+*!SN:W^Commander_%Y50_Ancient_FireMage^/?y90;  
+*!VRy54&y90=1:S9;                     [Check for Ancient Fire Mage and set active]
+
+
 !?MF1;
 
 !!UN:C42149568/4/?y10;                  [Physical Damage]
@@ -10515,7 +10607,18 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
         !!VRy8:S8*y61*y99:100*y55:100-y56; [Damage is 8*Spell Power from Hero, +%Hero Spell Damage +%CommanderSpell Damage - base spell offset for clean calculation]
         !!VRy8&y8<0:S0;                 [Value cannot be below zero to prevent negative damage, it will apply base damage instead]
         !!SSy21:E3/y8;                  [set new damage for Fireball to also show damage when hitting several targets]
+
+        ; Archer30's new implementation
+        !!VRi^acm_fireMageSpell^:Sy21;
+        !!FU(ACM_GetActualStackSide):Py2/?i^acm_fireMageCastSide^;
+        !!BMy4:I?i^acm_fireMageTargetSide^;
+
         !!BMy2:Cy21/y3/3/3/0;           [Cast Expert Spell at Stack Position]
+
+        !!VRi^acm_fireMageSpell^:S(NULL);
+        !!VRi^acm_fireMageCastSide^:S(NULL);
+        !!VRi^acm_fireMageTargetSide^:S(NULL);
+
         !!SSy21:E3/y57;                 [Revert damage to value from before]
         !!VRy85:S0R2;                   [Generate Random Number]
         !!SN&y85=0/y52<y53:W^Commander_Kill_Counter_%Y50^/d1; [Increase counter by one with each attack and 33% chance]
@@ -10538,7 +10641,24 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 !!UN:C42149568/4/?y10;                  [Judgement basis (028326c0)]
 !!MF&y10=4454752/y5=y6:E0;              [Disable taking damage if Magog Fireball and own team]
 
+; Archer30's new implementation
+!?FU(OnDwarfMagicResistance)&i^acm_fireMageSpell^;
+!!MR:S?(spell:y);
+!!FU&(spell)<>i^acm_fireMageSpell^:E;
+
+!!MR:N?(stack:y);
+!!BM(stack):I?(targetSide:y);
+
+!!if&(targetSide)=i^acm_fireMageTargetSide^;
+  !!MR:F0;
+!!el&(targetSide)=i^acm_fireMageCastSide^;
+  !!MR:F100;
+!!en;
+
+; Replaced with Archer30's new implementation
 !?MR2;                                  [Magogs Fireball-Cast that comes with Stack Expierence doesnt damage own troops]
+!!FU:E;
+
 *When attacking with Fire Mage make own units immune vs damage*
 !!SN:W^Magog_Fireball_Enable^/?y1;
 !!FU&y1=0:E;
@@ -11244,33 +11364,35 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
 !?FU(ACM_SetCommanderClass);
 !#VA(hero:x) (class:x);
 
-!!if&(class)=1;  !!VRi^Commander_Fighter_%X1^:S1;!!el;  !!VRi^Commander_Fighter_%X1^:S0;!!en;
-!!if&(class)=2;  !!VRi^Commander_Ranger_%X1^:S1;!!el;  !!VRi^Commander_Ranger_%X1^:S0;!!en;
-!!if&(class)=3;  !!VRi^Commander_Defender_%X1^:S1;!!el;  !!VRi^Commander_Defender_%X1^:S0;!!en;
-!!if&(class)=4;  !!VRi^Commander_Caster_%X1^:S1;!!el;  !!VRi^Commander_Caster_%X1^:S0;!!en;
-!!if&(class)=5;  !!VRi^Commander_Supporter_%X1^:S1;!!el;  !!VRi^Commander_Supporter_%X1^:S0;!!en;
-!!if&(class)=6;  !!VRi^Commander_Leader_%X1^:S1;!!el;  !!VRi^Commander_Leader_%X1^:S0;!!en;
-!!if&(class)=7;  !!VRi^Commander_Scout_%X1^:S1;!!el;  !!VRi^Commander_Scout_%X1^:S0;!!en;
-!!if&(class)=8;  !!VRi^Commander_Undead_%X1^:S1;!!el;  !!VRi^Commander_Undead_%X1^:S0;!!en;
-!!if&(class)=9;  !!VRi^Commander_FireMage_%X1^:S1;!!el;  !!VRi^Commander_FireMage_%X1^:S0;!!en;
-!!if&(class)=11;  !!VRi^Commander_Dragonslayer_%X1^:S1;!!el;  !!VRi^Commander_Dragonslayer_%X1^:S0;!!en;
-!!if&(class)=12;  !!VRi^Commander_Sniper_%X1^:S1;!!el;  !!VRi^Commander_Sniper_%X1^:S0;!!en;
-!!if&(class)=13;  !!VRi^Commander_Retaliator_%X1^:S1;!!el;  !!VRi^Commander_Retaliator_%X1^:S0;!!en;
-!!if&(class)=14;  !!VRi^Commander_ArchMage_%X1^:S1;!!el;  !!VRi^Commander_ArchMage_%X1^:S0;!!en;
-!!if&(class)=15;  !!VRi^Commander_Constructor_%X1^:S1;!!el;  !!VRi^Commander_Constructor_%X1^:S0;!!en;
-!!if&(class)=16;  !!VRi^Commander_King_%X1^:S1;!!el;  !!VRi^Commander_King_%X1^:S0;!!en;
-!!if&(class)=17;  !!VRi^Commander_Prospector_%X1^:S1;!!el;  !!VRi^Commander_Prospector_%X1^:S0;!!en;
-!!if&(class)=18;  !!VRi^Commander_Lich_%X1^:S1;!!el;  !!VRi^Commander_Lich_%X1^:S0;!!en;
-!!if&(class)=19;  !!VRi^Commander_Vampire_%X1^:S1;!!el;  !!VRi^Commander_Vampire_%X1^:S0;!!en;
-!!if&(class)=21;  !!VRi^Commander_Paladin_%X1^:S1;!!el;  !!VRi^Commander_Paladin_%X1^:S0;!!en;
-!!if&(class)=22;  !!VRi^Commander_Marksmen_%X1^:S1;!!el;  !!VRi^Commander_Marksmen_%X1^:S0;!!en;
-!!if&(class)=23;  !!VRi^Commander_Avenger_%X1^:S1;!!el;  !!VRi^Commander_Avenger_%X1^:S0;!!en;
-!!if&(class)=24;  !!VRi^Commander_Warden_%X1^:S1;!!el;  !!VRi^Commander_Warden_%X1^:S0;!!en;
-!!if&(class)=25;  !!VRi^Commander_Arcanist_%X1^:S1;!!el;  !!VRi^Commander_Arcanist_%X1^:S0;!!en;
-!!if&(class)=26;  !!VRi^Commander_General_%X1^:S1;!!el;  !!VRi^Commander_General_%X1^:S0;!!en;
-!!if&(class)=27;  !!VRi^Commander_Lancer_%X1^:S1;!!el;  !!VRi^Commander_Lancer_%X1^:S0;!!en;
-!!if&(class)=28;  !!VRi^Commander_Necromant_%X1^:S1;!!el;  !!VRi^Commander_Necromant_%X1^:S0;!!en;
-!!if&(class)=29;  !!VRi^Commander_Ancient_%X1^:S1;!!el;  !!VRi^Commander_Ancient_%X1^:S0;!!en;
+!!HE(hero)&(hero)=(NO_HERO):N?(hero);
+
+!!if&(class)=(ACM_CMD_CLASS_FIGHTER);  !!VRi^Commander_Fighter_%X1^:S1;!!el;  !!VRi^Commander_Fighter_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_RANGER);  !!VRi^Commander_Ranger_%X1^:S1;!!el;  !!VRi^Commander_Ranger_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_DEFENDER);  !!VRi^Commander_Defender_%X1^:S1;!!el;  !!VRi^Commander_Defender_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_CASTER);  !!VRi^Commander_Caster_%X1^:S1;!!el;  !!VRi^Commander_Caster_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_SUPPORTER);  !!VRi^Commander_Supporter_%X1^:S1;!!el;  !!VRi^Commander_Supporter_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_LEADER);  !!VRi^Commander_Leader_%X1^:S1;!!el;  !!VRi^Commander_Leader_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_SCOUT);  !!VRi^Commander_Scout_%X1^:S1;!!el;  !!VRi^Commander_Scout_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_UNDEAD);  !!VRi^Commander_Undead_%X1^:S1;!!el;  !!VRi^Commander_Undead_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_FIREMAGE);  !!VRi^Commander_FireMage_%X1^:S1;!!el;  !!VRi^Commander_FireMage_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_DRAGONSLAYER);  !!VRi^Commander_Dragonslayer_%X1^:S1;!!el;  !!VRi^Commander_Dragonslayer_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_SNIPER);  !!VRi^Commander_Sniper_%X1^:S1;!!el;  !!VRi^Commander_Sniper_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_RETALIATOR);  !!VRi^Commander_Retaliator_%X1^:S1;!!el;  !!VRi^Commander_Retaliator_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_ARCHMAGE);  !!VRi^Commander_ArchMage_%X1^:S1;!!el;  !!VRi^Commander_ArchMage_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_CONSTRUCTOR);  !!VRi^Commander_Constructor_%X1^:S1;!!el;  !!VRi^Commander_Constructor_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_KING);  !!VRi^Commander_King_%X1^:S1;!!el;  !!VRi^Commander_King_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_PROSPECTOR);  !!VRi^Commander_Prospector_%X1^:S1;!!el;  !!VRi^Commander_Prospector_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_LICH);  !!VRi^Commander_Lich_%X1^:S1;!!el;  !!VRi^Commander_Lich_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_VAMPIRE);  !!VRi^Commander_Vampire_%X1^:S1;!!el;  !!VRi^Commander_Vampire_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_PALADIN);  !!VRi^Commander_Paladin_%X1^:S1;!!el;  !!VRi^Commander_Paladin_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_MARKSMAN);  !!VRi^Commander_Marksmen_%X1^:S1;!!el;  !!VRi^Commander_Marksmen_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_AVENGER);  !!VRi^Commander_Avenger_%X1^:S1;!!el;  !!VRi^Commander_Avenger_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_WARDEN);  !!VRi^Commander_Warden_%X1^:S1;!!el;  !!VRi^Commander_Warden_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_ARCANIST);  !!VRi^Commander_Arcanist_%X1^:S1;!!el;  !!VRi^Commander_Arcanist_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_GENERAL);  !!VRi^Commander_General_%X1^:S1;!!el;  !!VRi^Commander_General_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_LANCER);  !!VRi^Commander_Lancer_%X1^:S1;!!el;  !!VRi^Commander_Lancer_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_NECROMANT);  !!VRi^Commander_Necromant_%X1^:S1;!!el;  !!VRi^Commander_Necromant_%X1^:S0;!!en;
+!!if&(class)=(ACM_CMD_CLASS_ANCIENT);  !!VRi^Commander_Ancient_%X1^:S1;!!el;  !!VRi^Commander_Ancient_%X1^:S0;!!en;
 
 !?FU(OnBattleReplay);
 ; Restore commander class
@@ -12126,7 +12248,6 @@ x1=Hero ID, x2 returns yes(1) or no (0)
 !!VRy3:Sy1 +24;
 !!UN:Cy3/4/y4;
 
-; Use only ert here, json is not supported
 !?FU(ACM_SetClassName);
 !#VA(heroStructPtr:x) (strPtr:x);
 
@@ -14007,7 +14128,7 @@ Show Bonus Table when clicking on Experience Icon in Hero Screen
 !!SN:T^AC_Misc.Bonus_Table_Commander_ClassII^/?z9; !!SN:Iz9/?z9;
 !!SN:T^AC_Misc.Bonus_Table_Income^/?z15; !!SN:Iz15/?z15;
 
-!!FU(Set_Com_Battle_Description):Py1/y4/y42/y22/y25/5/0; 
+!!FU(Set_Com_Battle_Description):Py1/y4/y42/y22/y25/5/0/1/?t/1; 
 x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery, x6=speed, x7=Side
 !!VRz11&y1=0:S^^;                       [set empty if no class]
 
@@ -14027,11 +14148,21 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 !!DL89:S1;                              [Show complete Dialogue number 89]
 
 
-!?DL&v998=89/v1000=14;          [When Right-Click on red commander text field]
+!?DL&v998=89;                           [When Right-Click on red commander text field]
 !!FU&i^mouse_item^<>31/i^mouse_item^<>8/i^mouse_item^<>9/i^mouse_item^<>10:E; [Archer: Extended the clickable area so it's more comfortable to click]
+!!FU&i^mouse_action^<>(MOUSE_LMB_PRESSED)/i^mouse_action^<>(MOUSE_RMB_PRESSED):E; [Left or right for different features]
 
+!!SN:W^ACM_Commander_Hero_ID^/?y4; 
+
+; Archer30: Left - Archmage and Warden only, change their spells
+; still planning
+!!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
+  !!FU:E;
+!!en;
+
+; Right- show info
 !!DL275:N^Com_Class.txt^;               [parse dialogue]
-!!SN:W^ACM_Commander_Hero_ID^/?y4; !!SN:T^AC_Misc.Commander_Opt_Text^/?z1; !!VRy50:S0;
+!!SN:T^AC_Misc.Commander_Opt_Text^/?z1; !!VRy50:S0;
 
 !!SN:W^Commander_Fighter_%Y4^/?y1; !!SN&y1=1:T^AC_Misc.Play_Com_Opt_1^/?z1; !!VRy50&y1=1:S1;      
 !!SN:W^Commander_Ranger_%Y4^/?y1; !!SN&y1=1:T^AC_Misc.Play_Com_Opt_2^/?z1; !!VRy50&y1=1:S2;
@@ -16417,18 +16548,29 @@ Life Artifacts +2%, +4%, +6%
 !#VA(regenHp:x);                        [Amount of HP regen]
 !#VA(reviveNum:x);                      [Out. Number of creature revived]
 !#VA(actualRegenHp:x);                  [Out. Actual amount of HP regenerated. By default this equals to regen Hp unless the stack is neally full]
+!#VA(mustRevive:x);                     [OPT. Activate the effect only when it's possible to revive at least one (like the limit of Archangel spell). FALSE means not limited]
 
 ; Initialise vars
+!!FU:A?(numArgs:y);
+!!VR(mustRevive)&(numArgs)<5:S(FALSE);
+
 !!VR(reviveNum):S(FALSE);
 !!VR(actualRegenHp):S(regenHp);
 
 ; Calculations
 !!BM(stack):H?(hp:y) L?(lostHp:y) N?(num:y) B?(initNum:y);
+
+; Exit if the heal amount is no bigger than the HP of one unit if it's set to Must Revive mode
+!!FU&(regenHp)<(hp)/(mustRevive):E;
+
 !!VR(totalCurrHp:y):S(hp) *(num) -(lostHp);
 !!VR(totalInitHp:y):S(hp) *(initNum);
 
+; Exit if it overflows
+!!FU|(totalCurrHp)<=0/(totalInitHp)<=0:E;
+
 ; Exit if nothing to heal
-!!if&(totalInitHp)=(totalCurrHp);
+!!if&(totalInitHp)<=(totalCurrHp);
   !!VR(actualRegenHp):S0;
   !!FU:E;
 !!en;
@@ -16436,7 +16578,7 @@ Life Artifacts +2%, +4%, +6%
 !!VR(totalLostHp:y):S(totalInitHp) -(totalCurrHp);
 !!VR(totalNewHp:y):S(totalCurrHp) +(regenHp);
 
-; Fix if overflowed
+; Fix overflows
 !!VR(totalNewHp)&(totalNewHp)<(totalCurrHp):S(totalInitHp);
 ; Deal with overheal
 !!if&(totalNewHp)>(totalInitHp);
@@ -17050,21 +17192,24 @@ All changes to these parameters should be done here. Values can be called anytim
   !!en;
 
   *Commander Balance 
-  !!COx1&x1>=0:B1/6/?y1;                [check Strikes All Around ability]
-  !!VRy52&x1>=0/y1=1:-10;               [-10% Damage if ability is active]
-  *!VRy50&x1>=0/y1=1:-10;               [-10% Attack if ability is active]
+  !!if&x1>=0;
+    !!COx1:B1/6/?y1;                    [check Strikes All Around ability]
+    !!VRy52&y1=1:-10;                   [-10% Damage if ability is active]
 
-  !!COx1&x1>=0:B1/9/?y1;                [check Attack Twice ability]
-  !!VRy52&x1>=0/y1=1:-15;               [-15% Damage if ability is active]
-  !!VRy50&x1>=0/y1=1:-15;               [-15% Attack if ability is active]
+    !!if&y40<>(ACM_CMD_CLASS_SNIPER);   [If not Sniper, as they are forced to attack only once]
+      !!COx1:B1/9/?y1;                  [check Attack Twice ability]
+      !!VRy52&y1=1:-15;                 [-15% Damage if ability is active]
+      !!VRy50&y1=1:-15;                 [-15% Attack if ability is active]
+    !!en;
 
-  !!if|y40=2/y40=12/y40=18/y40=22;      [If any commander class that has native shoot ability. Ranger Sniper Marksman Lich give +10% damage]
-    !!COx1&x1>=0:B1/4/?y1;              [check Shooting ability]
-    !!VRy52&x1>=0/y1=1:+10;             [+10% Damage if ability is active]
+    !!if|y40=(ACM_CMD_CLASS_RANGER)/y40=(ACM_CMD_CLASS_SNIPER)/y40=(ACM_CMD_CLASS_LICH)/y40=(ACM_CMD_CLASS_MARKSMAN);    [If any commander class that has native shoot ability. Ranger Sniper Marksman Lich give +10% damage]
+      !!COx1:B1/4/?y1;                  [check Shooting ability]
+      !!VRy52&y1=1:+10;                 [+10% Damage if ability is active]
+    !!en;
   !!en;
 !!en;
 
-!!VRy56&y40=25::2;                      [The 2supporter class has all passive value halved]
+!!VRy56&y40=25::2;                      [The supporter class has all passive value halved]
 
 !!VRy50&y50<1:S1; !!VRy51&y51<1:S1; !!VRy52&y52<1:S1;!!VRy53&y53<1:S1; !!VRy55&y55<1:S1; !!VRy56&y56<1:S1; [So it cannot go below zero]
 
@@ -17103,6 +17248,11 @@ All changes to these parameters should be done here. Values can be called anytim
 !!SN:W^Ancient_Commander_Totalbonus_%(hero)^/0; 
 
 !!VRi^Commander_Opal_SpellDmg_%(hero)^:S0;
+
+; Reset bought spells
+!!re i/(SPELL_FIRST_BATTLE)/(SPELL_LAST_BATTLE);
+  !!VRi^Com_Attack_Caster_%(hero)_%i_purchased^:S0;
+!!en;
 
 ****************************************************************************************************
 *When right cklicking the commander in battle set new stack description to show class and current level of commanders
@@ -17203,6 +17353,11 @@ Also show if Mastery is active or not
 !?FU(Set_Com_Battle_Description);
 x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery, x6=speed, x7=Side, x8= 0 or 1  1- means Return only base value (ignore kill count)
 x9=returns skill value
+
+x10=mode (for Archmage and Warden), optional
+!!FU:A?y30;
+!!VRx10&y30<10:S0;
+
 !!VRz12:S^^; 
 
 !!VRx3&x8=1:S0;                         [Set kill count to zero to show base value]
@@ -17226,7 +17381,7 @@ x9=returns skill value
 !!if&x1=14;                             [Arch Mage]
   !!SN&x7=0:W^Com_Attack_Selected_Spell^/?y98; [Set Spell ID in variable]
   !!SN&x7=1:W^Com_Defender_Selected_Spell^/?y98; [Set Spell ID in variable]
-  !!VRz12:S^None^;
+  !!VRz12:S^%T(AC_Misc.Spell_Book_Description_None)^;
   !!SN&y98>=1/y98<=69:H^spell^/y98/(SPELL_TEXT_NAME)/?z12;  
   !!VRy10:S0;                           
 !!en;
@@ -17254,7 +17409,7 @@ x9=returns skill value
 !!if&x1=24;                             [Warden]
   !!SN&x7=0:W^Com_Attack_Selected_Spell^/?y98; [Set Spell ID in variable]
   !!SN&x7=1:W^Com_Defender_Selected_Spell^/?y98; [Set Spell ID in variable]
-  !!VRz12:S^None^;
+  !!VRz12:S^%T(AC_Misc.Spell_Book_Description_None)^;
   !!SN&y98>=1/y98<=69:H^spell^/y98/(SPELL_TEXT_NAME)/?z12; 
   !!VRy10:S0;                           [Arch Mage]
 !!en;
@@ -17281,7 +17436,14 @@ x9=returns skill value
   !!SN:W^Ancient_Commander_Totalbonus_%X2^/?y10; [get total bonus]
 !!en;
 
-!!SN:T^AC_Misc.Com_Battle_Text_%X1^/?z11/^kills^/y10/^spell^/z12/^stat^/y15; [set second string variable that will be shown on right click commander in battle]
+!!VRy31:Sx1;
+
+!!if|x1=14/x1=24;
+  !!VRy31&x10=0:S14;
+  !!VRy31&x10=1:S24;
+!!en;
+
+!!SN:T^AC_Misc.Com_Battle_Text_%y31^/?z11/^kills^/y10/^spell^/z12/^stat^/y15; [set second string variable that will be shown on right click commander in battle]
 
 ; Hide Ancient hint if Ancient is not unlocked
 !!if&x1=29/i^Ancient_Unlocked^<>(TRUE);
@@ -17291,7 +17453,7 @@ x9=returns skill value
 !!VRx9:Sy10;                            [return number for calculations]
 
 
-!?FU(OnCombatRound)&v997=0;
+!?FU(OnSetupBattlefield_Quit);
 !!re i/0/41;
   !!BMi:U4/?y1 T?y2;  
   !!SN&y2>=174/y2<=182:W^Com_Attack_Selected_Spell^/y1; [Set Spell ID in variable]
@@ -17457,17 +17619,16 @@ x9=returns skill value
   !!FU&i>1:E;
 
   !!BM(atkStack):T?(atkType:y);
-  !!VRy80:Si^acm_Redstrik_damagePercent^;
-  !!BA:H(actualSide)/?y99;              [get hero based on combat side]
-  !!if&y99=105;                         [if special hero]
-    !!HEy99:E?y97/?y98/1;               [get hero level]
-    !!VRy80:Sy98*2+73;                  [calc new damage]
+
+  !!if&i^battle_hero_%(actualSide)^=105;[if special hero]
+    !!HEi^battle_hero_%(actualSide)^:E?(exp:y)/?(level:y)/1; [get hero level]
+    !!VRi^acm_Redstrik_damagePercent^:S(level) *2 +73; [calc new damage]
   !!en; 
    
   !!if&(atkType)>=(MON_COMMANDER_FIRST_A)/(atkType)<=(MON_COMMANDER_LAST_D); [If it is a commander inflicing damage]
-    !!MF:F?y20;                         [get damage]
-    !!VRy21:Sy20*y80:100;               [calc new damage]
-    !!MF&y21>0:Fy21;                    [set new damage]
+    !!MF:F?(dmg:y);                     [get damage]
+    !!VR(newDmg:y):S(dmg) *i^acm_Redstrik_damagePercent^:100; [calc new damage]
+    !!MF&(newDmg)>0:F(newDmg);          [set new damage]
   !!en;
 !!en;
 
@@ -25400,7 +25561,6 @@ TUM Creatures
 
 !?FU(OnGameEnter);
 !!UN:C5896327/1/235;                    [Disable type checking of called elemental]
-!!UN:C5936848/1/235;
 
 // New Summon Elemental implementation
 ; by Archer30
@@ -33213,7 +33373,7 @@ New Commander Specialisation window during combat to set new classes
 !!SN:T^AC_Misc.Commander_Opt_Promo_Text^/?z60; !!DL276:A60/3/z60/1; [heading additional game options]
 !!SN:T^AC_Misc.Commander_Opt_Text_Info^/?z62; !!DL276:A62/3/z62/1; [heading additional game options]
 !!SN:T^AC_Misc.Commander_Opt_%Y98^/?z65;[Get name of base class]
-!!VRz65&y98=0:S^None^;
+!!VRz65&y98=0:S^%T(AC_Misc.Spell_Book_Description_None)^;
 !!SN:T^AC_Misc.Commander_Opt_Text_Class^/?z63/^class^/z65; !!SN:Iz63/?z63; !!DL276:A63/3/z63/1; [heading additional game options]
 
 !!SN:T^AC_Misc.Commander_Play_as^/?z80; [Set Hint text when hovering mouse over icons]
@@ -34229,7 +34389,7 @@ x1=Hero Number, x2=returns spell damage from commander, x3 Spell Number, x4=In F
 x7=spell points x8=spell damage modifier
 
 !!SN:T^AC_Misc.ACM_Com_Buy_Spell_3^/?z2; !!SN:Iz2/?z2;
-!!IF:M^%Z1 %Z2^;
+!!IF:M0/(MSG_TYPE_POPUP)/^%Z1 %Z2^;
 
 
 
@@ -35287,8 +35447,8 @@ kill count you get +4% of a random attribute
 !#VA(setHook:x);
 
 !!SN:E(setHook)/1/4445639/(ACM_HOOK_AfterStackInitParams); [Trigger after initialising the stats of a stack on the battlefield] 43D5C7
-!!SN:E(setHook)/1/4461377/(ACM_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation. Won't triggered if the target is killed]
-!!SN:E(setHook)/1/4462998/(ACM_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation]
+!!SN:E(setHook)/1/4461377/(ACM_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation. Won't triggered if the target is killed] 441341
+!!SN:E(setHook)/1/4462998/(ACM_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation] 441996
 !!SN:E(setHook)/1/4455129/(ACM_HOOK_AfterAttackMainFunc); [Trigger after shooting]
 
 !?FU(ACM_HOOK_AfterStackInitParams);    [by daemon_n]
