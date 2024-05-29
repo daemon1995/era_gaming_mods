@@ -528,7 +528,7 @@ ZVSE2
 !!UN&(mapExpansion)<2:C(gameMgr)/128664/(UNC_INT)/2;
 
 
-// Divide all the AI values by 10 in order to prevent negative values after gathering massive amount of troops
+// Divide all the AI values by 5 in order to prevent negative values after gathering massive amount of troops
 // by Archer30
 !?FU(OnAfterErmInstructions);
 ; Divide AI values only when Peasant's AI value is original (15)
@@ -569,7 +569,7 @@ ZVSE2
 ; Division
 !!el;
   !!re i/(MON_FIRST)/(lastMon);
-    !!MA:Ii/d:10;
+    !!MA:Ii/d:5;
   !!en;
 
   !!VRi^gem_aiValuesDivided^:S(TRUE);
@@ -1249,6 +1249,24 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!en;
 
 
+!?FU(OnBattleRound_Quit);
+// Bad Fix: Make sure the first acting stack is correct in the first round
+// by Archer30
+; Many mod makers forget about giving speed on FU(OnBattleRound) won't change the first creature acting. 
+; Ideally this script needs to be executed as late as possible to ensure overflow doesn't happen, like in a script with "-1000" as the prefix of filename
+; It must be executed twice to avoid changing the orignal acting stack to another (if was right from the start)
+!!FU(ActivateNextStack)&i^battle_round^=0:P P;
+
+// Bad Fix: Remove retaliation on war machines
+// by Archer30
+; The plugin to prevent war machine retaliation doesn't seem to work correctly, wms were reported retaliated and crashed the game.
+; We don't want BM:R value at non-zero on war machines anyway
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!BMi:T?(type:y);
+  !!BMi&(type)>=(MON_CATAPULT)/(type)<=(MON_ARROW_TOWERS):R0;
+!!en;
+
+
 // Bad Fix: Fix final damage on the battlefield overflowing
 // by Archer30
 ; Ideally this script needs to be executed as late as possible to ensure overflow doesn't happen, like in a script with "-1000" as the prefix of filename
@@ -1258,15 +1276,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!if&(damage)<0;
   !!MF:F(INT_MAX);
 !!en;
-
-
-// Bad Fix: Make sure the first acting stack is correct in the first round
-// by Archer30
-; Many mod makers forget about giving speed on FU(OnBattleRound) won't change the first creature acting. 
-; Ideally this script needs to be executed as late as possible to ensure overflow doesn't happen, like in a script with "-1000" as the prefix of filename
-; It must be executed twice to avoid changing the orignal acting stack to another (if was right from the start)
-!?FU(OnBattleRound_Quit)&i^battle_round^=0;
-!!FU(ActivateNextStack):P P;
 
 
 // Bad Fix: Correct Dragon Heart's position to summon
