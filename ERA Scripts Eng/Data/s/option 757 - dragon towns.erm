@@ -8,15 +8,23 @@ ZVSE2
 ** Разграбленную Утопию Драконов можно перестроить в город имеющий форт и ГМ 3-го уровня за 20 дерева и 20 руды.
 ** Тип нового города определяется расой героя-строителя. ИИ при наличии ресурсов всегда перестраивает разграбленную Утопию.
 ; This script used to work with AI, but not anymore. UN:I seems to have some problem on AI's turn, the new town sometimes fails to be put on the map and leads to a crash.
+; This script used to work in MP, but not anymore. It results in crashs when the town is built (https://discord.com/channels/665742159307341827/1245861416615805068)
 
 
-; Set up array for the index of dragon town names
-; We use an array in order to generate random town names without duplicates
 !?FU(OnAfterErmInstructions);
 !!UN:P757/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
-; Set up a function to be used later
+; Check if it is a real multiplayer game. Disable Dragon Town if it is (coz of crashes)
+!!UN:V?t/?t/?t/?t/?(gameType:y);
+
+!!if&(gameType)<>0/(gameType)<>3;
+  !!UN:P757/(FALSE);
+  !!FU:E;
+!!en;
+
+; Set up array for the index of dragon town names
+; We use an array in order to generate random town names without duplicates
 !!FU(ES_757_SetUpDragonTownNamesIndList):P;
 
 !?FU(ES_757_SetUpDragonTownNamesIndList);
@@ -40,7 +48,8 @@ ZVSE2
 !!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(townNum:y);
 
 ; Check for the owner and type pf the hero to set the details of the new town
-!!HE(CURRENT_HERO):O?(owner:y) B2/?(class:y);
+!!HE(CURRENT_HERO):N?(hero:y);
+!!HE(hero):O?(owner:y) B2/?(class:y);
 !!VR(townType:y):S(class) :2;
 !!VR(picTypeTown:y)&(ERM_FLAG_IS_HUMAN):S(townType) +22;
 
@@ -173,45 +182,11 @@ ZVSE2
 !!FU(ES_Player_RemoveResources):P(owner)/(requiredResourcesList);
 !!UN&(ERM_FLAG_IS_HUMAN):R2;
 
-; Teleport the hero to the front of the entrance
-!!FU(ES_757_RemoveObject)&(heroResult)=2:P(heroX)/(entranceY)/v1000;
-!!HE(CURRENT_HERO):P(heroX)/(entranceY)/v1000/0;
-
-; Remove obstacles if existing
-!!FU(ES_757_RemoveObject):Pv998/v999/v1000; [Entrance of Utopia]
-!!FU(ES_757_RemoveObject):P(entranceX)/v999/v1000; [Entrance of the town]
-!!FU(ES_757_RemoveObject)&(result1)=2:P(townX)/v999/v1000;
-!!FU(ES_757_RemoveObject)&(result2)=2:P(townX)/(objY)/v1000;
-!!FU(ES_757_RemoveObject)&(result3)=2:P(objX)/v999/v1000;
-
-; Wipe out every single tile of the new town just to be safe (or maybe not?)
-; Start from the leftmost spot in the middle row
-*!VR(extraX:y):Sv998 -3;
-*!VR(extraY:y):Sv999 -1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; One tile right
-*!VR(extraX):+1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; One tile down
-*!VR(extraY):+1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; Entrance of the Town
-*!VR(extraX):+1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; Top of the Entrance
-*!VR(extraY):-1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; One tile right
-*!VR(extraX):+1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; One tile Up
-*!VR(extraY):-1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-; All the way to the left
-*!VR(extraX):-1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
-*!VR(extraX):-1;
-*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; Remove obstacles
+; This function must be executed with FU:D first! Otherwise it leads to a crash
+!!IP:D(ANY_PLAYER);
+!!FU(ES_757_RemoveObstacles):D(hero)/(heroResult)/(heroX)/(townX)/(entranceX)/(entranceY)/(objX)/(objY)/(result1)/(result2)/(result3)
+ P(hero)/(heroResult)/(heroX)/(townX)/(entranceX)/(entranceY)/(objX)/(objY)/(result1)/(result2)/(result3);
 
 ; Generate a random index for the name of dragon town
 !!SN:Mi^es_757_dragonTownNamesIndList^/?(size:y);
@@ -224,8 +199,7 @@ ZVSE2
 !!FU(Array_Pop):Pi^es_757_dragonTownNamesIndList^/?(nameInd:y);
 
 ; Place and set up the new town
-!!IP:D(ANY_PLAYER);
-!!FU(ES_757_PlaceAndSetUpTheTown):P(townX)/(owner)/(townType)/(nameInd) D(townX)/(owner)/(townType)/(nameInd);
+!!FU(ES_757_PlaceAndSetUpTheTown):D(townX)/(owner)/(townType)/(nameInd)/(hero) P(townX)/(owner)/(townType)/(nameInd)/(hero);
 
 // Check if the targeted tile is available
 !?FU(ES_757_CheckTileEligibility);
@@ -283,10 +257,54 @@ ZVSE2
   !!en;
 !!en;
 
+
+!?FU(ES_757_RemoveObstacles);
+!#VA(hero:x) (heroResult:x) (heroX:x) (townX:x) (entranceX:x) (entranceY:x) (objX:x) (objY:x) (result1:x) (result2:x) (result3:x);
+
+; Teleport the hero to the front of the entrance (to prevent the hero got covered by the town)
+!!FU(ES_757_RemoveObject)&(heroResult)=2:P(heroX)/(entranceY)/v1000;
+!!HE(hero):P(heroX)/(entranceY)/v1000/0;
+
+; Remove obstacles if existing
+!!FU(ES_757_RemoveObject):Pv998/v999/v1000; [Entrance of Utopia]
+!!FU(ES_757_RemoveObject):P(entranceX)/v999/v1000; [Entrance of the town]
+!!FU(ES_757_RemoveObject)&(result1)=2:P(townX)/v999/v1000;
+!!FU(ES_757_RemoveObject)&(result2)=2:P(townX)/(objY)/v1000;
+!!FU(ES_757_RemoveObject)&(result3)=2:P(objX)/v999/v1000;
+
+; Wipe out every single tile of the new town just to be safe (or maybe not?)
+; Start from the leftmost spot in the middle row
+*!VR(extraX:y):Sv998 -3;
+*!VR(extraY:y):Sv999 -1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile right
+*!VR(extraX):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile down
+*!VR(extraY):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; Entrance of the Town
+*!VR(extraX):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; Top of the Entrance
+*!VR(extraY):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile right
+*!VR(extraX):+1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; One tile Up
+*!VR(extraY):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+; All the way to the left
+*!VR(extraX):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+*!VR(extraX):-1;
+*!FU(ES_757_RemoveObject):P(extraX)/(extraY)/v1000;
+
 // Place and set up the town for every player in MP
 // For some reason, the new town will only visually appear after showing up IF msg (from Achievements for example)
 !?FU(ES_757_PlaceAndSetUpTheTown);
-!#VA(x:x) (owner:x) (townType:x) (nameInd:x);
+!#VA(x:x) (owner:x) (townType:x) (nameInd:x) (hero:x);
 
 !!VR(y:y):Sv999;
 !!VR(z:y):Sv1000;
@@ -330,7 +348,6 @@ ZVSE2
 !!UN&(result5)=1:I(logX)/(logY)/(z)/(OBJ_LOG)/0/(OBJ_LOG)/0/-1/1;
 
 ; Teleport the hero to the real entrance of the town and update the data of the town
-!!HE(CURRENT_HERO):N?(hero:y);
 !!HE(hero):P(x)/(y)/(z)/1;
 !!FU(ES_Town_GetStruct):P(townId)/?(townStruct:y);
 ; Don't set visiting hero - it seems uncessary and results in bugs
