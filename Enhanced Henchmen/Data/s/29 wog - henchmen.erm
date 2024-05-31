@@ -85,6 +85,12 @@ ZVSE2
 
 !!VRi^hench_transferred_%(hero)^:S(TRUE);[Mark for henchman initialization]
 
+!!IF:W(hero);
+!!VR(henchMonPlusTwo:y):Sw118 +2;
+
+!!FU(PackUnion):P(henchMonPlusTwo)/10/w119/4/0/18/?i^hench_monData_%(hero)_init^;
+!!VRi^hench_exp_%(hero)_init^:Sw117;
+
 ; Remove ini OnAfterErmInstructions as there is no OnTransferHero on the victory of the the last zone of a campaign
 !?FU(OnAfterErmInstructions);
 !!VR(filePath:z):S^Runtime/henchmen.ini^;
@@ -94,7 +100,6 @@ ZVSE2
   !!FU(ClearIniCache):P(filePath);
   !!FU(DeleteFile):P(filePath)/?(result);
 !!en;
-
 
 ; Set up hook in order to prevent reseting Disguise from henchman stack
 !?FU(WOG_CreateERMHook)&i^hench_enabled^;
@@ -127,6 +132,25 @@ ZVSE2
   !!IF:Wi;
   !!VRw117:S0;
   !!VRw118:S(NO_MON);
+!!en;
+
+; Restore initial data on restarting game
+!?FU(OnGameLeave)&i^hench_enabled^;
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+; Check if it is a restarting map event
+!!UN:C6911784/4/?(value:y);
+!!FU&(value)<>107:E;
+
+!!re (hero:y)/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!if&i^hench_monData_%(hero)_init^;
+    !!IF:W(hero);
+    !!FU(UnpackUnion):Pi^hench_monData_%(hero)_init^/?(henchMonPlusTwo:y)/10/?w119/4/?t/18;
+    !!VRw118:S(henchMonPlusTwo) -2;
+
+    !!VRw117:Si^hench_exp_%(hero)_init^;
+  !!en;
 !!en;
 
 ; Pops up dialogue when clicking on player's flag on the hero screen

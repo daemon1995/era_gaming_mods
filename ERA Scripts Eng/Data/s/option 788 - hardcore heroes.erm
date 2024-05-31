@@ -585,10 +585,7 @@ ZVSE2
 !!VR(filePath:z):S^Runtime/mortal heroes.ini^;
 
 !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!if&i^es_788_rebornFlags_%i^<>0;
-    !!VR(packedUnion:y):Si^es_788_rebornFlags_%i^;
-    !!FU(WriteIniInts):P(filePath)/^rebornHero^/^%i^/(packedUnion);
-  !!en;
+  !!FU(WriteIniInts)&i^es_788_rebornFlags_%i^:P(filePath)/^rebornHero^/^%i^/i^es_788_rebornFlags_%i^;
 !!en;
 
 !!FU(SaveIni):P(filePath);
@@ -606,6 +603,9 @@ ZVSE2
   !!FU(UnpackUnion):Pi^es_788_rebornFlags_%(hero)^/?(heroType:y)/2/?(random1:y)/1/?(random2:y)/1/?(subtype:y)/12/?(dummy:y)/16;
   !!VR(heroType):-1;                    [correct hero type from unpacked value]
   !!FU(ES_788_SetUpNewSpecialty):P(hero)/(heroType)/(random1)/(random2)/(subtype);
+
+  ; Save a copy of initial flags to be used when restarting game
+  !!VRi^es_788_rebornFlags_%(hero)_init^:Si^es_788_rebornFlags_%(hero)^;
 !!en;
 
 ; Remove ini OnAfterErmInstructions as there is no OnTransferHero on the victory of the the last zone of a campaign
@@ -617,5 +617,25 @@ ZVSE2
   !!FU(ClearIniCache):P(filePath);
   !!FU(DeleteFile):P(filePath)/?(result);
 !!en;
+
+; Restore initial flags on restarting game
+!?FU(OnGameLeave);
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+; Check if it is a restarting map event
+!!UN:C6911784/4/?(value:y);
+!!FU&(value)<>107:E;
+
+!!VR(filePath:z):S^Runtime/mortal heroes.ini^;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!FU(WriteIniInts)&i^es_788_rebornFlags_%i_init^:P(filePath)/^rebornHero^/^%i^/i^es_788_rebornFlags_%i_init^;
+!!en;
+
+!!FU(SaveIni):P(filePath);
 
 ** end
