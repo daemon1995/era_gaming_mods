@@ -5,31 +5,42 @@ ZVSE2
 ** Name rus.     : Сбалансированные стартовые армии
 ** Options       : 764
 
-; Note: This option will only be enabled in random maps. Enabling this option would disable Rebalanced Starting Armies option (WoG)
+; Note: This option will only be enabled in random maps (managed in 1000 es stdlib). Enabling this option would disable Rebalanced Starting Armies option (WoG)
 
 
 !?FU(OnAfterErmInstructions);           // перед показом карты
 !!UN:P764/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;                            // выход, если опция не включена
 
-!!DO(ES_764_Bsa)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P0/0/114; // если балансировка еще не выполнялась, выполняем
+!!FU(ES_CheckRandomMap):P?(isRandMap:y);
+
+!!DO(ES_764_Bsa)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P0/0/(isRandMap); // если балансировка еще не выполнялась, выполняем
 
 !?FU(OnEveryDay)&i^timerWeekday^=1;                       // ежедневно
 !!UN:P764/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;                               // выход, если опция не включена
 
 !!OW:Vi^timerOwner^/?(leftHero:y)/?(rightHero:y);         // герои в таверне текущего игрока
-!!FU(ES_764_Bsa)&(leftHero)>(NO_HERO):P1/(leftHero)/0;    // балансировка стартовых армий героев таверны
-!!FU(ES_764_Bsa)&(rightHero)>(NO_HERO):P1/(rightHero)/0;  // ...
+!!FU(ES_764_Bsa)&(leftHero)>(NO_HERO):P1/(leftHero)/(FALSE);    // балансировка стартовых армий героев таверны
+!!FU(ES_764_Bsa)&(rightHero)>(NO_HERO):P1/(rightHero)/(FALSE);  // ...
 
-!?FU(ES_764_Bsa);                    // Балансировка стартовой армии героя
-!!VRx16&x1=1:Sx2;            [проверяется герой из x2 для героев в тавернах]
-!!HEx16&x1=0:O?y1 P?y2/?y3/?y4 E?y5/?y6/1; [y1/y2/y6 - владелец/абсцисса/уровень героя]
-!!FU&x1=0/y1<0:E;            [выход, если начало игры и герой не нанят]
-!!FU&y1<0/y2>=0/x3<>114:E;   [выход, если герой в тюрьме на авторской (не рандомной) карте]
-!!FU&y6>1:E;                 [выход, если герой не первого уровня]
+!?FU(ES_764_Bsa);                       [Balancing the hero's starting army]
+; Set up var
+!!VRx16&x1=1:Sx2;                       [checks hero from x2 for heroes in taverns]
+!!HEx16:O?y1;
+; Exit if day 1 and the hero is not owned
+!!FU&x1=0/y1=(NO_PLAYER):E;
+; Exit if not day 1 and the hero is owned
+!!FU&x1=1/y1>(NO_PLAYER):E;
 
-!!FU&x1=1/i^opt764.H%X16.BDay^>i^timerDay^:E;                [выход, если герой вчера сбегал/откупался]
+; If the hero belongs to no one, check if in the prison. Change their army only on random maps if in the prison on day 1
+!!if&y1=(NO_PLAYER);
+  !!HEx16:P?y2/?y3/?y4;
+
+  !!FU&y2>0/x3=0:E;
+!!en;
+
+!!FU&x1=1/i^opt764.H%X16.BDay^>i^timerDay^:E; [exit if the hero ran away / paid off yesterday]
 
 !!VRy10:S4000;               [y10 - макс. FV армии героя]
 !!HEx16:B2/?y1 X?y2/?y3/d/d/d/d/?i; [y1 - класс, y2/y3 - специальность]
