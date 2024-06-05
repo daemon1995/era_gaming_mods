@@ -102,7 +102,7 @@ Enable Artefact to appear on the map
 *Show splash screen at first mod start
 !#UN:V?y1/?y2;                          [Check ERA version]
 !#SN:T^AC_Misc.ATTENTION GRANDPA^/?z2/^version^/y2; !!SN:Iz2/?z2; [Interpolate String]
-!#IF&y2<3905:M^%Z2^;                    [Updated to version 3.95 with png support and SN_H support for spells]
+!#IF&y2<3911:M^%Z2^;                    [Updated to version 3.911 with advanced MP support erm syntax]
 
 !#VRz-2:S^ACM Update 1.07^;             [User-defined section of WoG.ini file ("ACM Update 1.0X")]
 !#UN:N6/-1/1/-2;                        [Check if ACM Update 1.0X Message has already been displayed]
@@ -214,7 +214,7 @@ Enable Artefact to appear on the map
 !!VRi^acm_%(ART_ORB_OF_VULNERABILITY)_equipped^:S(FALSE);
 !!VRi^acm_%(ART_ORB_OF_INHIBITION)_equipped^:S(FALSE);
 
-// Set up stack side before melee attack
+// Set up stack id and side before melee attack
 ; by Archer30
 ; Please don't use BG:N in MR/MF triggers! In mose cases you won't get the correct result (with retaliation). 
 ; Use i^acm_meleeStack^ and i^acm_meleeSide^ instead
@@ -14240,6 +14240,10 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 ^;
     !!SN:T^AC_Misc.Com_Battle_Text_24^/?z11/^spell^/z12/^newLine^/z30;
     !!DL89:A10/3/z11/1;                 [Set text about special ability from new commander classes]
+
+    ; Send the change to other players
+    !!IP:D(ANY_PLAYER);
+    !!IP:M^acm_cmdSpell_%y4^;
   !!en;
 
   !!FU:E;
@@ -17548,6 +17552,22 @@ x10=mode (for Archmage and Warden), optional
 
 ; Set the spell of commanders at the start of battle (if they are Archmages or Wardens)
 ; by Archer30
+; Sync the spell in MP games - send the choice of spell from the defender to the attacker
+; i^wog_isNeutralBattle^ should be FALSE as the second hero can be added by WoG Scripts - random heroes, this variable helps you find the situation
+; This is disabled as Berserkser said it's abnormal to sync data from the defender to the attacker. Now we sync the data after any change to spell from the UI instead
+*?FU(OnBeforeBattleUniversal)&i^battle_hero_vs_hero^/i^wog_isNeutralBattle^<>(TRUE);
+*!OW:C?(player:y)/?(interactPlayer:y);
+
+*!if&(interactPlayer)=i^battle_owner_1^;
+  *!FU(Check_Com_Masteries):Pi^battle_hero_1^/?t/?t/?t/?(cmdClass:y);
+
+  *!if|(cmdClass)=(ACM_CMD_CLASS_ARCHMAGE)/(cmdClass)=(ACM_CMD_CLASS_WARDEN);
+    *!IP:Di^battle_owner_0^;
+    *!IP:M^acm_cmdSpell_%i(battle_hero_1)^;
+    *!IP:S;
+  *!en;
+*!en;
+
 !?FU(OnBattleRound)&i^battle_round^=0;  [Should not be earlier to be compatible with crappy Amethyst! Not even OnAfterTactics]
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
   !!VR(hero:y):Si^battle_hero_%i^;
