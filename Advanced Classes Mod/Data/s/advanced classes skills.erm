@@ -182,6 +182,58 @@ Enable Artefact to appear on the map
 
 !#FU(NewIntArray):P(NUM_SECONDARY_SKILLS)/0/?i^acm_SecSkillsBackup^/(M_STORED);
 
+
+// Set up critical artifact variables
+; by Archer30
+; Ideally this must be placed in stdlib.erm
+!?FU(OnAfterBattleSetup);
+!!FU(acm_ResetArtifactVars):P;
+
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!VR(hero:y):Si^battle_hero_%i^;
+
+  !!HE(hero):A2/(ART_RECANTERS_CLOAK)/?(has:y)/?(equipped:y);
+  !!VRi^acm_%(ART_RECANTERS_CLOAK)_equipped^&(equipped):S(TRUE);
+
+  !!HE(hero):A2/(ART_SPHERE_OF_PERMANENCE)/?(has)/?(equipped);
+  !!VRi^acm_%(ART_SPHERE_OF_PERMANENCE)_equipped^&(equipped):S(TRUE);
+
+  !!HE(hero):A2/(ART_ORB_OF_VULNERABILITY)/?(has)/?(equipped);
+  !!VRi^acm_%(ART_ORB_OF_VULNERABILITY)_equipped^&(equipped):S(TRUE);
+
+  !!HE(hero):A2/(ART_ORB_OF_INHIBITION)/?(has)/?(equipped);
+  !!VRi^acm_%(ART_ORB_OF_INHIBITION)_equipped^&(equipped):S(TRUE);
+!!en;
+
+!?FU(OnAfterBattleUniversal);
+!!FU(acm_ResetArtifactVars):P;
+
+!?FU(acm_ResetArtifactVars);
+!!VRi^acm_%(ART_RECANTERS_CLOAK)_equipped^:S(FALSE);
+!!VRi^acm_%(ART_SPHERE_OF_PERMANENCE)_equipped^:S(FALSE);
+!!VRi^acm_%(ART_ORB_OF_VULNERABILITY)_equipped^:S(FALSE);
+!!VRi^acm_%(ART_ORB_OF_INHIBITION)_equipped^:S(FALSE);
+
+// Set up stack side before melee attack
+; by Archer30
+; Please don't use BG:N in MR/MF triggers! In mose cases you won't get the correct result (with retaliation). 
+; Use i^acm_meleeStack^ and i^acm_meleeSide^ instead
+!?FU(ACM_OnBeforeMelee);
+!#VA(atkStack:x) (defStack:x);
+
+!!VRi^acm_meleeStack^:S(atkStack);
+!!FU(ACM_GetActualStackSide):P(atkStack)/?i^acm_meleeSide^;
+
+// Custom Fire Shield
+; by Archer30
+; This function is called by external scripts to alter the Fire Shield damage in ACM
+; It should be executed as early as possible
+!?FU(ACM_GetCustomFireShieldMultiplier);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S1;
+
+
 !?FU(acm_CountNumUniqueSkillsLearned);
 !#VA(hero:x);
 !#VA(result:x);
@@ -10620,14 +10672,14 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 
         ; Archer30's new implementation
         !!VRi^acm_fireMageSpell^:Sy21;
-        !!FU(ACM_GetActualStackSide):Py2/?i^acm_fireMageCastSide^;
-        !!BMy4:I?i^acm_fireMageTargetSide^;
+        !!VRi^acm_fireMageStack^:Sy2;
+        !!FU(ACM_GetActualStackSide):Py2/?i^acm_fireMageSide^;
 
         !!BMy2:Cy21/y3/3/3/0;           [Cast Expert Spell at Stack Position]
 
-        !!VRi^acm_fireMageSpell^:S(NULL);
-        !!VRi^acm_fireMageCastSide^:S(NULL);
-        !!VRi^acm_fireMageTargetSide^:S(NULL);
+        !!VRi^acm_fireMageSpell^:S0;
+        !!VRi^acm_fireMageStack^:S0;
+        !!VRi^acm_fireMageSide^:S0;
 
         !!SSy21:E3/y57;                 [Revert damage to value from before]
         !!VRy85:S0R2;                   [Generate Random Number]
@@ -10657,13 +10709,14 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 !!FU&(spell)<>i^acm_fireMageSpell^:E;
 
 !!MR:N?(stack:y);
-!!BM(stack):I?(targetSide:y);
+!!BM(stack):I?(side:y);
 
-!!if&(targetSide)=i^acm_fireMageTargetSide^;
+!!if|(stack)=i^acm_fireMageStack^/(side)=i^acm_fireMageSide^;
+  !!MR&i^acm_%(ART_ORB_OF_VULNERABILITY)_equipped^<>(TRUE):F100;
+!!el;
   !!MR:F0;
-!!el&(targetSide)=i^acm_fireMageCastSide^;
-  !!MR:F100;
 !!en;
+
 
 ; Replaced with Archer30's new implementation
 !?MR2;                                  [Magogs Fireball-Cast that comes with Stack Expierence doesnt damage own troops]
@@ -12262,6 +12315,8 @@ x1=Hero ID, x2 returns yes(1) or no (0)
 !#VA(heroStructPtr:x) (strPtr:x);
 
 !!VR(strPtr):S(NULL);
+!!FU&i^acm_heroClassNames^=0:E;
+
 !!UN:C(heroStructPtr)/4/?(heroStruct:y);
 !!UN:C(heroStruct)/26/4/?(heroId:y);
 !!FU(Valid_Adventurer_Hero):P(heroId)/?(result:y);
@@ -17312,11 +17367,12 @@ Also show if Mastery is active or not
 !!FU&y1=0:E;
 
 !!SN:Ay1/^SetHook^/?y2;
-!!SN:Ey2/1/4621577/(ACM_beforeCreatureInfoDlg_Show); [right click]
-!!SN:Ey2/1/4621584/(ACM_beforeCreatureInfoDlg_Show); [left click]
+!!SN:Ey2/1/4621577/(ACM_beforeCreatureInfoDlg_Show); [right click] 468509
+!!SN:Ey2/1/4621584/(ACM_beforeCreatureInfoDlg_Show); [left click] 468510
 
 
 !?FU(ACM_beforeCreatureInfoDlg_Show);
+
 !!UN:Cx1/24/4/?y1;                      [get creature dlg]
 
 !!if&y1>0;
@@ -20556,6 +20612,7 @@ Undead stacks heal and with next attack^;                                       
   !!FU(ACM_Battle_CanStackReceiveSpell):Py4/(SPELL_FORTUNE)/y5/?y6;
   !!SS(SPELL_FORTUNE):Oy7;
   !!FU&y6<>(TRUE):E;
+
   !!VRy15:S11 R3;
   !!VRy14:S0;
   ; Attack
@@ -25464,64 +25521,107 @@ x1 - hero id; x2 - spell id; x3 - mode. -1 is remove, 1 - apply, 0 - print for d
 *Fire Shield Rework*
 !?MF1;
 !!UN:C42149568/4/?y10;                  [Physical Damage]
-!!MF:F?y6;                              [Damage]
 !!MF:N?y4;                              [Damage receiving stack]
-!!BMy4:N?y20 H?y21 L?y22;               [Get Number and Life of Stack to calc real applied damage]
-!!VRy23:Sy20*y21 -y22;
-!!VRy6&y23<y6:Sy23;                     [If rest life of the stack is smaller than applied damage only set the rest life as new damage]
 
-!!SN|y10=4462398/y10=4456676:W^Damage_Fire_Shield^/y6; [Save Physical Damage]
+!!if|y10=4462398/y10=4456676;
+  !!MF:F?y6;                              [Damage]
+  !!BMy4:N?y20 H?y21 L?y22;               [Get Number and Life of Stack to calc real applied damage]
+  !!VRy23:Sy20*y21 -y22;
+  !!VRy6&y23<y6:Sy23;                     [If rest life of the stack is smaller than applied damage only set the rest life as new damage]
 
-!!FU&y10<>4458589:E;                    [Exit if damage does not come from Fire Shield]
-!!BG:N?y1 E?y2 Q?y3;
-!!MF:N?y4;                              [Damage receiving stack]
-!!BMy4:T?y80 F?i;
-!!VRi:&16384;                           [Check for Immunity vs Fire]
-!!VRy90:S0;
-!!VRy90&i>0:S1;                         [If Immune vs Fire Exit]
-!!VRy90|y80=27/y80=33/y80=55/y80=82/y80=83/y80=116/y80=117:S1;
-!!VRy90|y80=121/y80=151/y80=153/y80=155/y80=172/y80=195/y80=207/y80=209/y80=231/y80=251:S1;
-!!VRy90|y80=249/y80=289/y80=294:S1;
-!!MF&y90=1:E0;                          [Apply Zero Damage if Immune]
-!!MF&y90=1:F0;                          [Apply Zero Damage if Immune]
-!!FU&y90=1:E;                           [Exit]
+  !!SN:W^Damage_Fire_Shield^/y6;          [Save Physical Damage]
 
-*Immune Creatures*
-27 Gold Dragon
-33 Iron Golem
-55 Arch Devil
-69 Ghost Dragon removed
-82 Red Dragon
-83 Black Dragon
-116 Gold Golem
-117 Diamond Golem
-121 Magic Elemental
-151 Diamond Dragon
-153 Antichrist
-155 Darkness Dragon
-172 Nightmare
-195 Hell Steed
+!!el&y10=4458589;                         [Exit if damage does not come from Fire Shield]
 
-TUM Creatures
-207 Pure Diamond Dragon
-209 Steel Golems
-231 Black Dragons Upgrade
-251 Void Elemental
-249 Plasma Elemental
-289 Fire Paladin
-294 Vermin Bird
+  ; Check if the target stack is possible to accept a hostile Fire Shield
+  ; Replaced by Archer30's new implementation
+  *!BG:N?y1 E?y2 Q?y3;
+  *!MF:N?y4;                              [Damage receiving stack]
 
-!!VRy3:-1 *-1;
-!!BHy3:N?y5;                            [Hero Number]
-!!SN:W^Damage_Fire_Shield^/?y8;         [Physical Damage]
-!!FU(Fire_Shield_Calculation):Py5/y1/y4/y2/y3/y8/?y7/0/1;
-!!MF:Fy7;                               [Apply new Damage]
+  *!BMy4:T?y80 F?i;
+  *!VRi:&16384;                           [Check for Immunity vs Fire]
+  *!VRy90:S0;
+  *!VRy90&i>0:S1;                         [If Immune vs Fire Exit]
+
+  *!VRy90|y80=27/y80=33/y80=55/y80=82/y80=83/y80=116/y80=117:S1;
+  *!VRy90|y80=121/y80=151/y80=153/y80=155/y80=172/y80=195/y80=207/y80=209/y80=231/y80=251:S1;
+  *!VRy90|y80=249/y80=289/y80=294:S1;
+
+  *!MF&y90=1:E0;                          [Apply Zero Damage if Immune]
+  *!MF&y90=1:F0;                          [Apply Zero Damage if Immune]
+  *!FU&y90=1:E;                           [Exit]
+
+  *Immune Creatures*
+  27 Gold Dragon
+  33 Iron Golem
+  55 Arch Devil
+  69 Ghost Dragon removed
+  82 Red Dragon
+  83 Black Dragon
+  116 Gold Golem
+  117 Diamond Golem
+  121 Magic Elemental
+  151 Diamond Dragon
+  153 Antichrist
+  155 Darkness Dragon
+  172 Nightmare
+  195 Hell Steed
+
+  TUM Creatures
+  207 Pure Diamond Dragon
+  209 Steel Golems
+  231 Black Dragons Upgrade
+  251 Void Elemental
+  249 Plasma Elemental
+  289 Fire Paladin
+  294 Vermin Bird
+
+  !!BMy4:I?y3;
+  !!BHy3:N?y5;                            [Hero Number]
+  !!SN:W^Damage_Fire_Shield^/?y8;         [Physical Damage]
+  !!FU(Fire_Shield_Calculation):Py5/i^acm_meleeStack^/y4/d/i^acm_meleeSide^/y8/?y7/0/1;
+  !!MF:Fy7;                               [Apply new Damage]
+!!en;
+
+; New implementation for skipping Fire Shield damage for spell immune creatures (except for Fire Immunity ones)
+; by Archer30
+; Ideally we should also manage Fire Shield damage under this hook, but it's possibly got overwritten by Amethyst
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/4335104/(ACM_OnGetFireShieldDamage);
+
+!?FU(ACM_OnGetFireShieldDamage);
+!#VA(hook:x);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stackStruct:y);
+!!UN:C(stackStruct)/244/4/?(side:y);
+!!VR(oppSide:y):S(side) X(TRUE);
+
+; Check if the targeted stack can receive a hostile Fire Shield spell
+!!SS(SPELL_FIRE_SHIELD):O?(savedSpellType:y) O-1;
+!!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_FIRE_SHIELD)/(oppSide)/(stackStruct)/1/1; [can stack apply buff/debuff]
+!!SS(SPELL_FIRE_SHIELD):O(savedSpellType);
+
+!!if&v1<>(TRUE);
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4335094;
+!!en;
 
 
 !?FU(Fire_Shield_Calculation);
 *x1=Hero Number, x2=attacking stack, x3=damage receiving stack, x4=destination monster stack, x5=attacking side, x6=damage, x7=returns damage, x7=returns only magic damage, x9=State (1)Combat/Non-Combat(0)
 
 !!VRx6::5;                              [20% of physical damage]
+
+; Calculate custom Fire Shield damage (used by external scripts)
+!!if&x9=1;
+  !!BMx3:T?y30;
+  !!FU(ACM_GetCustomFireShieldMultiplier):Py30/?y31;
+  !!VRx6&y31>1:*y31;
+!!en;
 
 !!SN:W^ACM_FS_Destiantion_Stack^/?y51;  [remember Stack]
 !!SN:W^ACM_Fire_Shield_Target_%Y51^/?y50;[Check if Fire Shield was casted on that Stack]
@@ -25555,13 +25655,14 @@ TUM Creatures
 
 !!VRx8:Sy9;                             [Get only the additional Magic Damage without the physical part]
 !!FU&x9=0:E;                            [Exit here if only damage for the spell book is wanted (Non Combat)]
+
 !!VRy30:Sx6+y9;                         [Total Damage add Physical Damage]
 !!VRy30|x1<0/y50=0:-y9;                 [If no Hero or Fire Shield was not cast damage is only 20%]
 !!VRy30&y30<0:S0;
 
 !!BMx3&x3>=0/x3<=41:G31/?y70/?y71 T?y80;[Check for Protection of Fire and creature type]
 
-!!VRx5:-1 *-1;
+*!VRx5:-1 *-1;                          [Archer30: x5 is now the real attacker side so we don't have to reverse it]
 !!BHx5:N?x1;                            [Hero Number]
 !!if&x1>=0;                             [Resistance Calculation]
   !!HEx1:S26/?y10;
@@ -25595,7 +25696,7 @@ TUM Creatures
 !!en;
 !!VRy30&y70>0::2;                       [Half damage from Fire Shield if Protection is On]
 
-!!VRx7:Sy30;                            [Transfer New damage]
+!!VRx7:Sy30 F1/(INT_MAX);               [Transfer New damage]
 
 
 !?BG0;                                  [Before Battle Action]
@@ -34330,7 +34431,7 @@ CTRL+Left click on commander to change the spell to cast
 ; WARNING: For some reason, the spell damage on two sides in MP is DIFFERENT. This must be fixed ASAP. 
 ; I can't as I don't how spell damage is calculated in ACM. It will be Perry to fix.
 
-!?FU(OnBattleScreenMouseClick)&i^key_ctrl^/i^battle_round^>=0/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185; [i^battle_round^>=0 is important not to crash in tactics phase]
+!?FU(OnBattleScreenMouseClick)&i^key_ctrl^/i^battle_round^>=0/i^mouse_battleHex^>=1/i^mouse_battleHex^<=185/i^battle_isActingSideUiUser^; [i^battle_round^>=0 is important not to crash in tactics phase]
 !!BU:Ei^mouse_battleHex^/?y2;
 !!FU&y2=-1:E;                         [get monster ID at position and exit if no monster]
 
