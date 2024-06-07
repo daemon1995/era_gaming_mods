@@ -14756,48 +14756,33 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 !!HE-1&y90=2:Fd-2/d-2/d/d;              [With 6 Set pieces decrease all -2]
 !!HE-1&y90=4:Fd-2/d-2/d-2/d-2;
 
+
 *---------------------------------
 *Scouting Set*
-!?AE1|v998=52/v998=53; Equip Artifact       !!FU&761:E;
-
-!!HE-1:A2/52/?y30/?y10;
-!!HE-1&v998=52/y10=1:A-52;
-
-!!HE-1:A2/53/?y31/?y11;
-!!HE-1&v998=53/y11=1:A-53;
+!?FU(OnEquipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
+!!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(FALSE);
 
 
-!!FU(Count_Set_Pieces_2):P-1/0/?y90;     [Count Set Pieces function X3]
-!!VRy90:+1;
+!?FU(OnUnequipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
+!!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(TRUE);
 
-!!HE-1&y90=2/v998=52/y10=1/y30=1:Fd-1/d-1/d-1/d-1;
-!!HE-1&y90=2/v998=53/y11=1/y31=1:Fd-1/d-1/d-1/d-1;
-!!HE-1&y90=2/v998=52/y10=1/y30=2:Fd-1/d-1/d-1/d-1;
-!!HE-1&y90=2/v998=53/y11=1/y31=2:Fd-1/d-1/d-1/d-1;
+!?FU(acm_HandleAncientSpyglassHeroPrimarySkills);
+!#VA(handledArt:x) (isUnequip:x);
 
-!!HE-1&y90=2:Fd1/d1/d1/d1;              [With 2 Set pieces Increase all +1]
-
-!!HE-1&v998=52/y10=1:A52;
-!!HE-1&v998=53/y11=1:A53;
-
-*!FU(Set_Complete_Sound)&y90=2:P;
-
-!?AE0|v998=52/v998=53; Unequip Artifact   !!FU&761:E;
-!!FU(Count_Set_Pieces_2):P-1/0/?y90;     [Count Set Pieces function X3]
-!!VRy90:-1;
-
-!!HE-1&y90=1:Fd-1/d-1/d-1/d-1;
-
-********************************************************************************
-// General fix for AE1+HE:A screen update
-; by Archer30
-; This fixes Spyglass not showing in the backpack when it's added by HE:A from the script above
-!?FU(OnEquipArt_Quit)&999;
-!!FU(H3Dlg_GetCurrentDlgId):P?(result:y);
-
-!!if|(result)=(DLG_HERO_SCREEN)/(result)=(DLG_HERO_MEETING_SCREEN);
-  !!SN:D;
+!!if&(handledArt)=(ART_SPECULUM);
+  !!VR(oppositeArt:y):S(ART_SPYGLASS);
+!!el;
+  !!VR(oppositeArt:y):S(ART_SPECULUM);
 !!en;
+
+!!HE-1:A2/(handledArt)/?t/?(handledArtsEquipped:y) A2/(oppositeArt)/?t/?(oppositeArtsEquipped:y);
+
+!!if&(handledArtsEquipped)=0/(oppositeArtsEquipped)/(isUnequip:x)=(FALSE);
+  !!HE-1:Fd1/d1/d1/d1;
+!!el&(oppositeArtsEquipped)/(handledArtsEquipped)=1/(isUnequip);
+  !!HE-1:Fd-1/d-1/d-1/d-1;
+!!en;
+
 
 ********************************************************************************
 *?SN&1000;                              [Sound Trigger for Moral and Luck]
@@ -32561,29 +32546,20 @@ Allows a hero to forget a secondary skill. Can be used once or twice for each he
 This should help to better roll your desired class.
 The Market can be accessed by right cklicking the market in the citiy or the GEM town buttons.
 
-!?FU(OnTownMouseClick);                 [Town Screen Trigger]
-
-!!CM:T?y1 F?y2 I?y3 S?y4;               [y1, y2, y3, y4, where we click and click subtype]
-!!FU&y4<>14:E; !!FU&y2<>512:E;          []
-!!if&y1=512/y2=512/y4=14/y3=14;         [if right click on marketplace]
-  !!CA-1:H1/?y5;                        [y5, town Visitor]
-  !!FU|y5<0/y5>155:E;                   []
-
-  !!FU(Mobile_Time_Market)&y1=512/y2=512/y3=14/y4=14:Py5;
+!?FU(OnTownMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED)/i^dlg_action^=(DLG_CMD_TYPE_DEFAULT)/i^mouse_flags^=(MOUSE_FLAG_RMB)/i^mouse_item^=14;[if right click on marketplace]
+!!CA-1:H1/?(garrisonHeroId:y);                        [y5, town Visitor]
+!!if&(garrisonHeroId)<>(NO_HERO);
+  !!FU(Mobile_Time_Market):P(garrisonHeroId)/?(skillWasChosen:y);
   !!SN:W^ACM_Skill_Match_Found^/-1;
-  !!SN:W^WM_Upgrade_Hero^/y5;
-  !!SN:W^ACM_MobileMarket_Finished^/0; 
-!!en;                                   []
+  !!SN:W^WM_Upgrade_Hero^/(garrisonHeroId);
+  !!SN:W^ACM_MobileMarket_Finished^/0;
+  !!UN:P(WOG_OPT_DISABLE_TOWN_DEMOLISHING)/?(noDemolishTown:y);
 
-; Disable standard action depending on conditions
-!!UN:P(WOG_OPT_DISABLE_TOWN_DEMOLISHING)/?y30;
-
-!!if&y30<>(TRUE)/i^acm_timeMarket_hasChosenSkill^;
-  !!CM:R0;
-  !!VRi^acm_timeMarket_hasChosenSkill^:S(FALSE);
-!!el&y30;
-  !!CM:R0;
+  !!if|(noDemolishTown)=(FALSE)/(skillWasChosen:y);
+    !!CM:R0;
+  !!en;
 !!en;
+
 
 
 !?FU(gem_OnOpenButtonDlg);              [Function from GEM Mod that is called when clicking the new buttons]
@@ -32598,7 +32574,7 @@ The Market can be accessed by right cklicking the market in the citiy or the GEM
 
 
 !?FU(Mobile_Time_Market);
-  
+  !#VA(heroId:x) (skillWasChosen:x);
   !!VRz1:S^Warlock Bank 01.wav^;
   !!SN:Pz1;
 
@@ -32611,6 +32587,8 @@ The Market can be accessed by right cklicking the market in the citiy or the GEM
   !!DL233:A4/3/^%T(AC_Misc.Time_Market_Button4)^/1; [Cancel button]
 
   !!DL233:S;
+  !!VR(skillWasChosen):Si^acm_timeMarket_hasChosenSkill^;
+  !!VRi^acm_timeMarket_hasChosenSkill^:S(NULL);
   !!SN:D;                               [Refresh resources bar (after dialog closed)]
 
 !?FU(acm_Dlg_TimeMarket_Clear);
@@ -36250,3 +36228,64 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
   !!SN:W^Commander_%Y99_Ancient_Undead^/1;
   !!SN:W^Commander_%Y99_Ancient_FireMage^/1;
 !!en;
+
+
+
+
+
+*?FU(acm_InitComboArtifactSets);
+*!SN:M(M_AUTO_ID)/0/(M_STR)/(M_STORED)/?i^acm_ComboAtrifactSets^;
+
+
+*#FU(acm_InitComboArtifactSets):P;
+
+*?FU(acm_ComboAtrifact_Create);
+*#VA(uniqueName:x) (returnArray:x) (arts[14]:x);
+*!VR(returnArray):S(NULL);
+*!FU(Array_IndexOf):Pi^acm_ComboAtrifactSets^/z(uniqueName)/?(index:y);
+*!if&(index)<0;
+  *!FU(NewIntArray):P?(tempArray:y);/(M_STORED);
+
+  *!re i/0/(arts[SIZE])/1/-1;
+    *!if&(arts[i])>1;
+
+      *!FU(Array_Push):P(tempArray)/(arts[i]);
+    *!en;
+  *!en;
+  *!SN:M(tempArray)/?(arraySize:y);
+  *!if&(arraySize);
+    *!FU(Array_SortedUnique):P(tempArray);
+    *!SN:M(tempArray)/?(arraySize:y);
+
+    *!SN:M(M_AUTO_ID)/(arraySize)/(M_INT)/(M_STORED)/?(returnArray);
+    *!FU(Array_Copy):P(tempArray)/(returnArray);
+    *!FU(Array_Push):Pi^acm_ComboAtrifactSets^/z(uniqueName)/^%(returnArray)^;
+    *!SN:Mi^acm_ComboAtrifactSets^/?s;
+    *!VRi^%z(uniqueName)^:S(returnArray);
+  *!en;
+*!en;
+
+
+
+*?FU(acm_ComboAtrifact_PiecesWeared);
+*#VA(uniqueName:x) (heroId:x) (pieces:x);
+*!VR(pieces):S(NULL);
+
+*!VR(arrayId:y):Si^%z(arrayName)^;
+*!FU(Array_IndexOf):Pi^acm_ComboAtrifactSets^/z(uniqueName)/?(index:y);
+
+*!if&(index)>=0;
+
+  *!VR(arraySetIdIndex:y):S(index) +1;
+  *!SN:Mi^acm_ComboAtrifactSets^/(arraySetIdIndex)/?(arrayIntName:z);
+  *!VR(arrayId:y):V(arrayIntName);
+
+  *!SN:M(arrayId)/?(size:y);
+  *!re i/0/(size)/1/-1;
+    *!SN:M(arrayId)/i/?(artId:y);
+
+    *!HE(heroId):A2/(artId)/?t/?(equipped:y);
+    *!VR(pieces)&(equipped):+1;
+   *!en; 
+*!en;
+
