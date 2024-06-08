@@ -574,7 +574,7 @@ ZVSE2
 !!UN:P(WOG_OPT_CASTLE_UPGRADING)/?(wogOption:y);  
 
 !!if&(wogOption);
-  !!SN:Ex1/1/6113249/(WOG_Town_GetCreatureIncomeText);
+  !!SN:Ex1/1/6113249/(WOG_Town_GetCreatureGrowthText);
   !!SN:Ex1/1/6029174/(WOG_Town_GetDwellingGrowth_GetTownId);
   !!SN:Ex1/1/6029756/(WOG_Town_GetDwellingGrowth);
 !!en;
@@ -608,7 +608,9 @@ ZVSE2
 !!VR(result):Zs^wog_45_temp^;                                  [return result]
 !!VRs^wog_45_temp^:S^^;
 
-!?FU(WOG_Town_GetCreatureIncomeText);
+!?FU(WOG_Town_GetCreatureGrowthText);
+!#VA(hook:x);
+
 !!CM:I?(itemId:y);                                                                       [get dwelling level by clikcing item id]
 !!VR(creatureSpot:y):S(itemId:y) -164;
 !!VR(creatureSpot)&(creatureSpot)>7: -8;                                                 [fix the mouse click on the text]
@@ -619,26 +621,27 @@ ZVSE2
 !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrMonstersBonus)/?(growth:y);
 
 !!if&(growth);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(currentTextPtr:y);                              [original text is in the ECX]
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/?(currentTextPtr:y);                              [original text is in the ECX]
   !!SN:B(currentTextPtr:y)/d/?z1 T^wog.45.hintRMC^/?(addedString:z)/^number^/(growth:y); [get text and interpolate to the another text-var]
 
   !!CA(CURRENT_TOWN):B3/26;                                                              [if grail is built it counts all overgrowing into own field so it requires text fix]
-
-  !!if&1;
-    !!FU(WOG_45_FixGrailText):Pz1/(growth)/?z1;                                          [complex function lol]
-  !!en;
+  !!FU(WOG_45_FixGrailText)&1:Pz1/(growth)/?z1;                                          [complex function lol]
 
   !!VRz1:+(addedString:z);                                                               [add "dwelling upgrade" txt to original one]
   !!SN:B(PTR_TEXT_BUFFER)/d/z1;                                                          [store it in the text h3 buffer]
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(PTR_TEXT_BUFFER);                                [redirect ecx to read h3 buffer instead original ptr]
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/(PTR_TEXT_BUFFER);                            [redirect ecx to read h3 buffer instead original ptr]
 !!en;
 
 ; ============= ADD BONUSES ========================================================================
 !?FU(WOG_Town_GetDwellingGrowth_GetTownId);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(town:y) C(town)/1/?i^wog_45_town_id^;4/?(creatureSpot:y);      [Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(baseGrowth:y);]
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(town:y) C(town)/1/?i^wog_45_town_id^;4/?(creatureSpot:y);      [Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(baseGrowth:y);]
 
 !?FU(WOG_Town_GetDwellingGrowth);                                                       [hook when game counts growth in the town]
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(creatureSpot:y);             [Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(baseGrowth:y);]
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(creatureSpot:y);             [Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(baseGrowth:y);]
 
 !!if&(creatureSpot)>(MON_MAX_LEVEL)/(creatureSpot)<14;                                  [only for upg dweillings (values are 0-13)]
   !!VR(creatureSpot):-7;                                                                [determinate dwelling level]
@@ -648,7 +651,7 @@ ZVSE2
   !!SN:M(WOG_OPT_CASTLE_UPGRADING)/(ptrMonstersBonus)/?(growth:y);
 
   !!if&(growth);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/2/d(growth:y);                                   [increase summary growth after ALL bonuses been count before]
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/2/d(growth:y);                                   [increase summary growth after ALL bonuses been count before]
   !!en;
 !!en;
 
