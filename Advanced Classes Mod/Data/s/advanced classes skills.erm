@@ -101,7 +101,7 @@ Enable Artefact to appear on the map
 
 *Show splash screen at first mod start
 !#UN:V?y1/?y2;                          [Check ERA version]
-!#SN:T^AC_Misc.ATTENTION GRANDPA^/?z2/^version^/y2; !!SN:Iz2/?z2; [Interpolate String]
+!#SN&y2<3911:T^AC_Misc.ATTENTION GRANDPA^/?z2/^version^/y2 Iz2/?z2; [Interpolate String]
 !#IF&y2<3911:M^%Z2^;                    [Updated to version 3.911 with advanced MP support erm syntax]
 
 !#VRz-2:S^ACM Update 1.07^;             [User-defined section of WoG.ini file ("ACM Update 1.0X")]
@@ -2844,12 +2844,12 @@ Close Dialouge
 ************************Reset Variables Section*********************************
 !?FU(OnAfterBattleUniversal);
 
-!!SN:W^Leadership_Current_battle_round^/-1;
-!!SN:W^Leadership_Stack_had_Moral^/-1;
+*!SN:W^Leadership_Current_battle_round^/-1;
+*!SN:W^Leadership_Stack_had_Moral^/-1;
 
 !?FU(OnBattleRegeneratePhase);          [Reset Attacking Stacks Function]
 
-!!SN:W^Leadership_Attacking_Stack^/-1;
+*!SN:W^Leadership_Attacking_Stack^/-1;
 !!SN:W^Brute_Attacking_Stack^/-1;
 !!SN:W^Temple_G_Attacking_Stack^/-1;
 !!SN:W^Paladin_Attacking_Stack^/-1;
@@ -3317,7 +3317,37 @@ Creature speed   Base movement
 *Chance for Random encounter
 *[Reveal Extra 2 Radius at Week Start]
 
+; Arcerh30's new implementation
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/5128949/(ACM_OnGetScoutingSkillMultiplier); 4E42F5
+
+!?FU(ACM_OnGetScoutingSkillMultiplier);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/?(level:y);
+
+!!if&(level)>=(SKILL_EXPERT);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(heroStruct:y);
+  !!UN:C(heroStruct)/26/4/?(heroId:y);
+
+  !!if&i^H3_Scouting_0_Hero%(heroId)^;
+    !!if&i^H3_Scouting_1_Hero%(heroId)^=(FALSE);
+      !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/9;
+    !!el;
+      !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/10;
+    !!en;
+
+    !!SN:X?t/0;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5128956;
+  !!en;
+!!en;
+
+; Replaced by Archer30's new implementation as it doesn't do what the in-game description says
 !?FU(OnEveryDay)&i^timerIsAi^=0/i^timerOnce^=1/i^timerDay^>1/i^timerWeekDay^=1; [Trigger each monday to reveal extra 2 Radius at Week Start]
+!!FU:E;
+
 !!DO(AC_Function_6)/0/155/1:P;          [loop through heroes]
 
 !?FU(AC_Function_6);
@@ -3969,7 +3999,45 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
 *-------------------------------Leadership------------------------------------------*
 *Master Leadership +4 Morale, GrandMaster +5 Morale
 **Deal Extra damage in the Current Battle Round if Stack Had Moral
+; New implementation with OnStackToStackDamage for displaying correct damage on mouse hint
+; by Archer30
+!?FU(OnStackToStackDamage_Quit);
+!#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distanceArg:x) (isTheoretical:x);
+
+!!BM(atkStack):F?(monFlags:y);
+!!VR(isMorale:y):S(monFlags) &(MON_FLAG_MORALE);
+
+!!if&(isMorale);
+  !!FU(ACM_GetActualStackSide):P(atkStack)/?(side:y);
+
+  !!if&i^battle_hero_%(side)^>(NO_HERO);
+    !!VR(hero:y):Si^battle_hero_%(side)^;
+    !!HE(hero):S(SKILL_LEADERSHIP)/?(level:y);
+
+    !!if&(level)>=(SKILL_EXPERT)/i^H3_Leadership_0_Hero%(hero)^;
+      !!if&i^H3_Leadership_1_Hero%(hero)^=0;
+        !!VR(finalDmgNew:y):S(finalDmg) *11 :10; [Archer30: It's recommended to calculate the final damage based on finalDmgConst]
+      !!el;
+        !!VR(finalDmgNew):S(finalDmg) *5 :4;
+      !!en;
+
+      !!if&(finalDmgNew)>(finalDmg);
+        !!if&i^battle_isVisible^/(isTheoretical)<>(TRUE);
+          !!VR(finalDmgDiff:y):S(finalDmgNew) -(finalDmg);
+          !!VR(type:y):Si^H3_Leadership_1_Hero%(hero)^+1;
+          !!SN:T^AC_Misc.Leadership %(type)^/?(msg:z)/^damage^/(finalDmgDiff);
+          !!MM:S(msg);
+        !!en;
+
+        !!VR(finalDmg):S(finalDmgNew);
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Replaced with Archer30's new implementation as it's been reported dealing extra damage even when the stack had no morale
 !?MF1;                                  [*Physical Combat *]
+!!FU:E;
 
 !!UN:C42149568/4/?y10;                  [Get Physical Damage type]
 !!if|y10=4462398/y10=4455011/y10=4456676;[Only run when melee or shooting damage]
@@ -4019,6 +4087,7 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
 !!en;
 
 !?BG0;
+!!FU:E;
 
 !!BG:N?y1;                              [attacking stack]
 !!BMy1:I?y2;                            [Side index as for heroes (0:left, 1:right)]
@@ -12651,8 +12720,8 @@ Here all variables should be reset before a repeated fight
 !?FU(OnBattleReplay);
 
 !!SN:W^This_Is_Replay_Battle^/1;
-!!SN:W^Leadership_Current_battle_round^/-1;
-!!SN:W^Leadership_Stack_had_Moral^/-1;
+*!SN:W^Leadership_Current_battle_round^/-1;
+*!SN:W^Leadership_Stack_had_Moral^/-1;
 !!SN:W^Pathfinding_Speed_Bonus1^/0;     [Reset]
 !!SN:W^Pathfinding_Speed_Bonus2^/0;     [Reset]
 !!SN:W^Logistics_Speed_Bonus1^/0;       [Reset]
@@ -14759,30 +14828,35 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 
 *---------------------------------
 *Scouting Set*
-!?FU(OnEquipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
-!!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(FALSE);
+!?AE1|v998=52/v998=53; Equip Artifact       !!FU&761:E;
+
+!!HE-1:A2/52/?y30/?y10;
+!!HE-1&v998=52/y10=1:A-52;
+
+!!HE-1:A2/53/?y31/?y11;
+!!HE-1&v998=53/y11=1:A-53;
 
 
-!?FU(OnUnequipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
-!!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(TRUE);
+!!FU(Count_Set_Pieces_2):P-1/0/?y90;     [Count Set Pieces function X3]
+!!VRy90:+1;
 
-!?FU(acm_HandleAncientSpyglassHeroPrimarySkills);
-!#VA(handledArt:x) (isUnequip:x);
+!!HE-1&y90=2/v998=52/y10=1/y30=1:Fd-1/d-1/d-1/d-1;
+!!HE-1&y90=2/v998=53/y11=1/y31=1:Fd-1/d-1/d-1/d-1;
+!!HE-1&y90=2/v998=52/y10=1/y30=2:Fd-1/d-1/d-1/d-1;
+!!HE-1&y90=2/v998=53/y11=1/y31=2:Fd-1/d-1/d-1/d-1;
 
-!!if&(handledArt)=(ART_SPECULUM);
-  !!VR(oppositeArt:y):S(ART_SPYGLASS);
-!!el;
-  !!VR(oppositeArt:y):S(ART_SPECULUM);
-!!en;
+!!HE-1&y90=2:Fd1/d1/d1/d1;              [With 2 Set pieces Increase all +1]
 
-!!HE-1:A2/(handledArt)/?t/?(handledArtsEquipped:y) A2/(oppositeArt)/?t/?(oppositeArtsEquipped:y);
+!!HE-1&v998=52/y10=1:A52;
+!!HE-1&v998=53/y11=1:A53;
 
-!!if&(handledArtsEquipped)=0/(oppositeArtsEquipped)/(isUnequip:x)=(FALSE);
-  !!HE-1:Fd1/d1/d1/d1;
-!!el&(oppositeArtsEquipped)/(handledArtsEquipped)=1/(isUnequip);
-  !!HE-1:Fd-1/d-1/d-1/d-1;
-!!en;
+*!FU(Set_Complete_Sound)&y90=2:P;
 
+!?AE0|v998=52/v998=53; Unequip Artifact   !!FU&761:E;
+!!FU(Count_Set_Pieces_2):P-1/0/?y90;     [Count Set Pieces function X3]
+!!VRy90:-1;
+
+!!HE-1&y90=1:Fd-1/d-1/d-1/d-1;
 
 ********************************************************************************
 *?SN&1000;                              [Sound Trigger for Moral and Luck]
@@ -19036,7 +19110,6 @@ Pendant of Courage
 !!SN:W^Summon_Attacking_Stack^/-1;
 !!SN:W^Coordinated_Attacking_Stack^/-1;
 !!SN:W^BlessSpell_Attacking_Stack^/-1;
-!!SN:W^Counterstrike_Attacking_Stack^/-1;
 !!SN:W^AxeSmash_Attacking_Stack^/-1;
 !!SN:W^SwordSharpness_Attacking_Stack^/-1;
 !!SN:W^Dragon_Ring_Attacking_Stack^/-1;
@@ -23630,38 +23703,47 @@ Counterstrike: Increases retaliation damage based on your Spell Power
 !?MF1;
 
 !!UN:C42149568/4/?y10;                  [Get Physical Damage type]
-!!if|y10=4462398/y10=4456676;          [Only run when melee or strikes all round]
 
-!!MF:W?y80;
-!!FU&y80>0:E;
-!!BG:A?y1;                              [Aktion in y1]
-!!FU&y1<>6:E;                           [Exit if not melee attack]
-!!BG:N?y1;                              [Attacking Stack]
-!!MF:N?y4;                              [damage receiving stack]
+!!if|y10=4462398/y10=4456676;           [Only run when melee or strikes all round]
+  !!BG:N?y1;                            [Attacking Stack]
+  !!MF:N?y4;                            [damage receiving stack]
 
-!!SN:W^Counterstrike_Attacking_Stack^/?y50;
-!!VRy1&y4=y1/y50>=0/y50<=41:Sy50;       [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
-!!SN:W^Counterstrike_Attacking_Stack^/y4;
+  !!if&y1=y4;                           [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
+    !!VRy1:Si^acm_meleeStack^;
+    !!BMy1:I?y5;                        [Side index as for heroes (0:left, 1:right)]
+    !!FU&i^Counterstrike_Cast%Y5^=0:E;  [Check if there was a valid Counterstrike cast]
 
-!!BMy1:I?y5;                            [Side index as for heroes (0:left, 1:right)]
-!!BA:Hy5/?y99;
-!!SN:W^H3_Air Magic_0_Hero%Y99^/?y90;   [Air Magic Bonus handling]
-!!SN:W^H3_Air Magic_1_Hero%Y99^/?y91;   [Air Magic Bonus handling]
-!!SN:W^Counterstrike_Cast%Y5^/?y3;      [Check if there was a valid Bless cast]
-!!BMy1:G58/?y12/?y13;                   [58 Counterstrike]
-!!FU|y12=0/y90=0/y3=0:E;                [Exit if conditions are wrong]
+    !!BA:Hy5/?y99;
+    !!FU&y99=(NO_HERO):E;
 
-!!HEy99:F?y41/?y41/?y40/?y41;
-!!VRy40::3 +10 +100;                    [+SP/3% +10% increased damage]
-!!VRy40&y91>0:+10;                      [+10% increase with GM Air]
+    !!HEy99:S(SKILL_AIR_MAGIC)/?y30;
+    !!SN:W^H3_Air Magic_0_Hero%Y99^/?y90;   [Air Magic Bonus handling]
+    !!SN:W^H3_Air Magic_1_Hero%Y99^/?y91;   [Air Magic Bonus handling]
+    !!FU|y30<(SKILL_EXPERT)/y90=(FALSE):E;
 
-!!MF:F?y6;                              [damage dealt]
-!!VRy10:Sy6*y40:100-y6;                 [Calc increased damage]
-!!VRy6:+y10;
-!!MF:Fy6;
-!!BA:Q?f;
-!!SN&1000:T^AC_Misc.Counterstrike_Avoid^/?z-1/^damage1^/y10;
-!!BU&i^battle_isVisible^:Mz-1;
+    !!BMy1:G58/?y12/?y13;                   [58 Counterstrike]
+    !!FU|y12=0/y13<(SKILL_EXPERT):E; [Exit if conditions are wrong]
+
+    !!HEy99:F?y41/?y41/?y40/?y41;
+    !!VRy40::3 +10 +100;                    [+SP/3% +10% increased damage]
+    !!VRy40&y91>0:+10;                      [+10% increase with GM Air]
+
+    !!MF:F?y6;                              [damage dealt]
+    !!VRy10:Sy6*y40:100-y6;                 [Calc increased damage]
+
+    !!if&y10>0;
+      !!VRy7:Sy6 +y10;
+
+      !!if&y7>y6;
+        !!MF:Fy7;
+
+        !!if&i^battle_isVisible^;
+          !!SN:T^AC_Misc.Counterstrike_Avoid^/?z-1/^damage1^/y10;
+          !!MM:Sz-1;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
 !!en;
 
 
@@ -36289,3 +36371,27 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
    *!en; 
 *!en;
 
+*Scouting Set*
+*?FU(OnEquipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
+*!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(FALSE);
+
+
+*?FU(OnUnequipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
+*!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(TRUE);
+
+*?FU(acm_HandleAncientSpyglassHeroPrimarySkills);
+*#VA(handledArt:x) (isUnequip:x);
+
+*!if&(handledArt)=(ART_SPECULUM);
+  *!VR(oppositeArt:y):S(ART_SPYGLASS);
+*!el;
+  *!VR(oppositeArt:y):S(ART_SPECULUM);
+*!en;
+
+*!HE-1:A2/(handledArt)/?t/?(handledArtsEquipped:y) A2/(oppositeArt)/?t/?(oppositeArtsEquipped:y);
+
+*!if&(handledArtsEquipped)=0/(oppositeArtsEquipped)/(isUnequip:x)=(FALSE);
+  *!HE-1:Fd1/d1/d1/d1;
+*!el&(oppositeArtsEquipped)/(handledArtsEquipped)=1/(isUnequip);
+  *!HE-1:Fd-1/d-1/d-1/d-1;
+*!en;
