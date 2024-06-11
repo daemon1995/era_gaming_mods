@@ -101,11 +101,14 @@ ZVSE2
   !!FU(DeleteFile):P(filePath)/?(result);
 !!en;
 
-; Set up hook in order to prevent reseting Disguise from henchman stack
+; Set up hooks
 !?FU(WOG_CreateERMHook)&i^hench_enabled^;
 !#VA(setHook:x);
-  
+
+; Prevent reseting Disguise from henchman stack
 !!SN:E(setHook)/1/4473430/(WOG_OnResetSpellFromStack);
+; Manage henchmen's banners before battle result
+!!SN&i^hench_bannerEnabled^:E(setHook)/1/4681149/(WOG_OnBeforeBattleResult);
 
 !?FU(WOG_OnResetSpellFromStack);
 !#VA(hook:x);
@@ -331,15 +334,6 @@ ZVSE2
     !!BM(stack):K1000000000;            [prevent resurrecting henchman in battle]
     !!FU(hench_ManageHenchLiving):P(side)/(FALSE);
 
-    ; Move the banner from the killed henchman to the hero
-    !!if&i^hench_bannerEnabled^;
-      !!VR(hero:y):Si^battle_hero_%(side)^;
-      
-      !!if&i^hench_banner_%(hero)^>-1;
-        !!VRi^hench_banner_%(hero)^:S-1;
-        !!HE(hero):A(ART_WARLORDS_BANNER);
-      !!en;
-    !!en;
   !!el&(qty)>1;
     ; Restrain the quantity to 2 (for henchmen with Attract dead souls ability)
     !!BM(stack)&(qty)>2:N2 L0;
@@ -682,6 +676,19 @@ ZVSE2
 !!VRw118:S(henchMon);
 !!VRw119:S(TRUE);
 
+; Set up AI henchmen's banner
+!!if&i^hench_bannerEnabled^/i^hench_banner_%(hero)^=-1;
+  !!HE(hero):A2/(ART_WARLORDS_BANNER)/?(has:y)/?(equipped:y);
+
+  !!if&(has)>0;
+    ; Give a random type of banner to the AI's henchman
+    !!VR(random:y):R0/0/8;
+    !!VRi^hench_banner_%(hero)^:S(random);
+    ; Remove the banner from the hero's backpack
+    !!HE(hero):A3/(ART_WARLORDS_BANNER)/1/0;
+  !!en;
+!!en;
+
 ; Restore the henchman in battle replay
 !?FU(OnBeforeBattleUniversal)&i^hench_enabled^;
 !!SN:W^henchmen_side_0^/(FALSE)  W^henchmen_side_1^/(FALSE);
@@ -708,6 +715,18 @@ ZVSE2
 !!if&(defHero)>(NO_HERO);
   !!IF:W(defHero);
   !!VRw119&i^henchmen_side_1^:S(TRUE);
+!!en;
+
+; Manage banner after battle if any henchman is killed
+!?FU(WOG_OnBeforeBattleResult);
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!VR(hero:y):Si^battle_hero_%i^;
+  !!IF:W(hero);
+
+  !!if&i^hench_banner_%(hero)^>-1;
+    !!VRi^hench_banner_%(hero)^:S-1;
+    !!HE(hero):A(ART_WARLORDS_BANNER);
+  !!en;
 !!en;
 
 ; Reward the henchman exp if won the battle
