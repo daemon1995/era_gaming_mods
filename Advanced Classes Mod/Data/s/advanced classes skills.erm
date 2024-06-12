@@ -5600,70 +5600,71 @@ Till here Normal Necromancy
 !!VRi^ACM_Artillery_Shoot^:S(FALSE);    [set flag to false after first damage was inflicted]
 
 !?FU(ACM_KillWithArtillery);
-  !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?y1;
-  !!re y2/0/i^battle_hero_vs_hero^;  
-    !!HEi^battle_hero_%Y2^:A2/4/?y99/?y3;[get if hero has ballista in backpack]
-    !!HEi^battle_hero_%Y2^:S20/?y11 A2/142/d/?y8;    [get artillery skill level]
-    !!if&y3=1/y11>0;                    [if ballista is present and hero has Artillery skill]
-      !!VRy4:Sy2 *21;                   [set battle sides]
-      !!VRy5:Sy4 +20;
 
-      !!re i/y4/y5;                     [loop battle stacks]
-        !!BMi:T?t N?n;                  [get type and number]
-        !!if&n>0/t=146;                 [if ballista stack]
-          !!BMi:Z?y6;
-          !!HEi^battle_hero_%Y2^:N?v7020;[Get hero number]
-          !!VRy40:Sy2;
-          !!VRy40:-1*-1;                [Get other hero if available]
-          !!VRy25:S0; 
-          !!HEi^battle_hero_%Y40^:N?y50;[Get hero number]
-          !!if&y50>=0;
-            !!HEy50:A2/65/?y22/?y23;    [Check defender for Emblem of Cognizance, this prevents the damage from Artillery]
-            !!VRy25&y23=1:S1;           [Set y25 to 1 if artifact is present]
+!!re (side:y)/0/i^battle_hero_vs_hero^;  
+  !!VR(oppSide:y):S1 -(side);
+  !!VR(oppHero:y):Si^battle_hero_%(oppSide:y)^;
+  !!if&(oppHero)<>(NO_HERO);
+    !!HE(oppHero):A2/(ART_EMBLEM_OF_COGNIZANCE)/d/?(hasEmbleme:y);  
+    !!co&(hasEmbleme);
+  !!en;
+
+  !!HEi^battle_hero_%(side:y)^:A2/(ART_BALLISTA)/?y99/?(ballistas:y) S(SKILL_ARTILLERY)/?(artilleryLvl:y) A2/142/d/?(goldenArrow:y);[get if hero has ballista in backpack]
+  
+  !!if&(ballistas:y)/(artilleryLvl:y)>(SKILL_NOT_LEARNED);                                                   [if ballista is present and hero has Artillery skill]
+
+    !!VR(startInd:y):S(side) *(BATTLE_STACKS_PER_SIDE);
+    !!VR(endInd:y):S(startInd) +(BATTLE_STACKS_PER_SIDE);
+    *!co;
+    !!re i/(startInd:y)/(endInd);
+      !!BMi:N?n T?t;
+      !!if&t=(MON_BALLISTA)/n>0;
+        !!VR(shootNums:y):S4;
+        !!VR(shootNums:y)&(goldenArrow:y):+1;
+
+        !!FU(ACM_Generate_Random_Stack):P(side)/?(targetStackId:y);                                                        [return a random enemy stack to shoot]
+        !!if&(targetStackId)<>(NO_STACK);
+          *!VR(targetStackId):S23;
+          !!re j/0/4;                                                                                                      [ skip double damage bonus message]
+            !!UN:C4470304/j/1/?i^acm_temp_%j^ C4470304/j/1/(OPCODE_NOP_1); 
           !!en;
 
-          !!FU(Artillery_Bonus0):Py30/1/?y13; [get back damage from ACM script]
-          !!VRy13&y25=1:S0;             [Set damage to zero if defender has the artifact to prevent damage]
+          !!BMi:Z?(ballistaStack:y);
+          !!BM(targetStackId):Z?(targetStack:y) N?n P?p;            
+          !!UN:C(targetStack)/248/4/?(targetStackSideIndex:y);
+          !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/68/4/p;                                                           [set combat target pos]
+          !!UN:C(ballistaStack:y)/16/4/(oppSide) C(ballistaStack:y)/14/4/(targetStackSideIndex) C(ballistaStack:y)/28/4/p; [set stack target]
+          !!BMi:U3/?(storedShots:y) U3/1 G212/?(storedMorale:y)/d G212/0/d G213/?(storedLuck:y)/d G213/0/d;                [get morale shots and luck]
+          !!VR(newNum:y):Sn;
+          !!re k/1/(shootNums);
 
-          !!FU(ACM_Generate_Random_Stack):Py2/?y15; [return a random enemy stack to shoot]
-          !!VRy15&y13=0:S-1;            [Exit if the damage preventing artifact is present]
-          !!if&y15<>-1;
-            !!VRi^ACM_Artillery_Shoot^:Sy13;
-            !!BMy15:Z?p N?n;            
-            !!UN:Cy6/16/4/p;        
-            !!BMi:U3/?y16 U3/1 G213/?y17/d  G213/0/d; [get morale shots and luck]
-            !!UN:C6919200/4/?y18;
-            !!SN:E4453920/2/y6/p;       [shoot stack to stack]
-            !!SN:E4607072/2/y18/0;      [find next stack to act start battle]
-            !!BMi:U3/y16 G213/y17/d;    [set back luck/morale]
-            !!BMy15:N?y19;              [get number of stack that was target]
-            !!VRy20:Sn -y19;            [reduce number and set new number at battle start]
-            !!BMy15:Bd-y20;
-            !!VRi^ACM_Artillery_Shoot^:S0; [set flag to zero]
+            !!FU(acm_Hero_GetArtilleryMinMaxDamage):Pi^battle_hero_%(side:y)^/?(minDamage:y)/?(maxDamage:y);               [get back damage from ACM script]
+            !!VR(damage:y):R0/(minDamage)/(maxDamage);
+            !!VRi^ACM_Artillery_Shoot^:S(damage:y);
+
+            !!SN:E4453920/2/(ballistaStack:y)/(targetStack:y);                                                             [shoot stack to stack]
+            !!BM(targetStackId):N?(newNum:y);
+            !!br&(newNum)<1;
           !!en;
+          !!BM(targetStackId):N?(newNum:y);                                                                                [get number of stack that was target]
+          !!VR(lost:y):Sn -(newNum:y);                                                                                     [reduce number and set new number at battle start]
+          !!BM(targetStackId):Bd-(lost:y);
 
-          !!FU(ACM_Generate_Random_Stack):Py2/?y15; [return a random enemy stack to shoot]
-          !!VRy15&y13=0:S-1;            [Exit if the damage preventing artifact is present]
-          !!if&y15<>-1/y8=1;            [Shot a second time if Tower arrow artifact is equipped]
-            !!VRi^ACM_Artillery_Shoot^:Sy13;
-            !!BMy15:Z?p N?n;            
-            !!UN:Cy6/16/4/p;          
-            !!BMi:U3/?y16 U3/1 G213/?y17/d  G213/0/d; [get morale shots and luck]
-            !!UN:C6919200/4/?y18;
-            !!SN:E4453920/2/y6/p;       [shoot stack to stack]
-            !!SN:E4607072/2/y18/0;      [find next stack to act start battle]
-            !!BMi:U3/y16 G213/y17/d;    [set back luck/morale]
-            !!BMy15:N?y19;              [get number of stack that was target]
-            !!VRy20:Sn -y19;            [reduce number and set new number at battle start]
-            !!BMy15:Bd-y20;
-            !!VRi^ACM_Artillery_Shoot^:S0; [set flag to zero]
+          !!SN:E4607072/2/(cmbMgr:y)/0;                                                                                    [find next stack to act start battle]
+          !!BMi:U3/(storedShots) G213/(storedMorale:y)/d G213/(storedLuck:y)/d;                                            [set back luck/morale]
+          !!re j/0/4;
+            !!UN:C4470304/j/1/i^acm_temp_%j^;                                                                              [ restore double damage bonus message]
+            !!VRi^acm_temp_%j^:S(NULL);
           !!en;
-
-          !!br;
+          !!VRi^ACM_Artillery_Shoot^:S0;                                                                                   [set flag to zero]
+          !!br;                                                                                                            [break finding ballista loop]
         !!en;
+
       !!en;
+
     !!en;
   !!en;
+!!en;
 
 
 *selects target to be shot with Artillery
@@ -5695,56 +5696,33 @@ Till here Normal Necromancy
 
 
 ************************Artillery***********************************************
-*Shoots enemy before combat and gives +50/100/150/250/500 HP to Ballista WM
-
-!?FU(OnBeforeBattleUniversal);          [Continue trigger if any skills are enabled]
-!!FU:E;                                 [Disabled and handled by different script]
-** artillery
-!!BA:H0/?v7020;                         [get attacking hero #]
-!!BA:H1/?y10;                           [get defending hero #]
-!!HEy10&y10>=0:A2/65/?y22/?y23;         [Check defender for Emblem of Cognizance, this prevents the damage from Artillery]
-!!HEv7020&v7020>-1:A2/4/?y7/?y8 S20/?y9;[see if attacking hero has a Ballista and SS]
-!!FU(Artillery_Bonus0)&y8>0/v7020>-1/y9>0/y23=0:P1; [shoot something - attacker]
-
-!!BA:H1/?v7020;                         [get defending hero #]
-!!BA:H0/?y10;                           [get attacking hero #]
-!!HEy10&y10>=0:A2/65/?y22/?y23;         [Check defender for Emblem of Cognizance, this prevents the damage from Artillery]
-!!HEv7020&v7020>-1:A2/4/?y7/?y8 S20/?y9;[see if defending hero has a Ballista and SS]
-!!FU(Artillery_Bonus0)&y8>0/v7020>-1/y9>0/y23=0:P2; [shoot something - defender]
-
-
 ** function to handle artillery, hero v7020, skill level y1
-!?FU(Artillery_Bonus0);
+!?FU(acm_Hero_GetArtilleryMinMaxDamage);
+!#VA(heroId:x) (minDamage:x) (maxDamage:x);
+!#VA(arts[4]:y);
+!!VR(arts[0]):C(ART_AMMO_CART)/(ART_SPECULUM)/(ART_SPYGLASS)/(ART_GOLD_TOWER_ARROW);
 
-!!HEv7020:A2/5/?y7/?y8 A2/52/?y7/?y55 A2/53/?y7/?y56 A2/142/?y7/?y57 E?y3/?y4/1 S20/?y1 F?y9/?y15/?y16/?y17; [check for Ammo Cart, get hero's level, artillery level, Attack from Hero]
 
-!!VRy5:S1;                              [set multiplier to 1]
-!!SN:W^H3_Artillery_0_Hero%V7020^/?y11; [Checke ob der Held Master Artillery hat und Speichere in y11]
-!!SN:W^H3_Artillery_1_Hero%V7020^/?y12; [Checke ob der Held Grandmaster Artillery hat und Speichere in y12]
 
-!!VRy5&y11=1:+1;                        [Master bonus]
-!!VRy5&y12=1:+1;                        [Grandmaster bonus]
-!!VRy5&y8>0:+1;                         [ammo cart bonus]
-!!VRy5&y55>0:+1;                        [Speculum bonus]
-!!VRy5&y56>0:+1;                        [Spyglass bonus]
-!!VRy5&y57>0:+1;                        [Ballista Arrow bonus]
-!!VRy5&y1>0:+y1;                        [artillery bonus]
-!!VRy9:*3;                              [attack bonus]
-!!VRy4:*2;                              [Hero Level times 2]
-!!VRy5|v7020=6/v7020=97/v7020=54/v7020=81/v7020=36:+1; [if Artillery Specialist Hero]
+!!HE(heroId:x):E?y99/?l/1 S(SKILL_ARTILLERY)/?(skillLvl:y) F?(heroAtk:y)/?y99/?y99/?y99 X?(specType:y)/?(specSubtype:y); [ get hero's level, artillery level, Attack from Hero]
 
-!!VRy3:S1R49 +y4 +y9 *y5;               [Artillery damage: (1-50 + hero level*2+ hero attack*3) x bonus multiplier]
+!!VR(multiplier:y):S1 +(skillLvl:y);[artillery bonus]
 
-!!VRy30:S1 +y4 +y9 *y5;                 [Min Damage]
-!!VRy31:S50 +y4 +y9 *y5;                [Max Damage]
-!!SN:W^Artillery_Low_Damage_Hero%V7020^/y30; [Save Low Damage to display it in Bonus List]
-!!SN:W^Artillery_High_Damage_Hero%V7020^/y31; [Save High Damage to display it in Bonus List]
-!!VRx3:Sy3;                             [return damage to Daemons script]
-!!FU&x2=1:E;                            [Exit here to not run the actual shooting fkt]
+!!VR(multiplier:y)&i^H3_Artillery_0_Hero%(heroId)^=1:+1;                        [Master bonus]
+!!VR(multiplier:y)&i^H3_Artillery_1_Hero%(heroId)^=1:+1;                        [Grandmaster bonus]
+!!re i/0/(arts[SIZE])/1/-1;
+  !!HE(heroId):A2/(arts[i])/?y99/?(equipped:y); check for Ammo Cart, Speculum, Spyglass, Ballista Arrow bonus
+  !!VR(multiplier)&(equipped):+1;
+!!en;
 
-!!VRy2:S0R6;                            [random slot # to start search from]
-!!SN:W^First_Aid_Heal_Slot^/7;          [7 = slot not found]
-!!DO(AC_Function_14)/0/6/1:Px1/y2/y3;   [shoot next slot with >= 2 monsters]
+!!VR(heroAtk:y):*3;                              [attack bonus]
+!!VRl:*2;                              [Hero Level times 2]
+!!VR(multiplier:y)|(specType)=1/(specSubtype)=(MON_BALLISTA):+1; [if Artillery Specialist Hero]
+
+;[Artillery damage: (1-50 + hero level*2+ hero attack*3) x bonus multiplier]
+!!VR(minDamage):S1 +l +(heroAtk:y) *(multiplier:y);                 [Min Damage]
+!!VR(maxDamage):S50 +l +(heroAtk:y) *(multiplier:y);                [Max Damage]
+
 ** end of function
 
 
@@ -14116,11 +14094,11 @@ Show Bonus Table when clicking on Experience Icon in Hero Screen
 
 !!FU(Spell_Trainer_Calc):Py4/?y95/?y96; [Pass Hero Number and return Number of Spell Upgrades and Chance for Spell Upgrade]
 
-!!VRv7020:Sy4;                          [Set v7020 so it has correct hero number]
-!!FU(Artillery_Bonus0):P0/1;
+!!FU(acm_Hero_GetArtilleryMinMaxDamage):Py4/?y58/?y59;
 !!SN:W^Artillery_Low_Damage_Hero%V7020^/?y58; [Save Low Damage to display it in Bonus List]
 !!SN:W^Artillery_High_Damage_Hero%V7020^/?y59; [Save High Damage to display it in Bonus List]
 
+!!VRv7020:Sy4;                          [Set v7020 so it has correct hero number]
 !!FU(Magic_Artillery_Shoot1):P0/y4/1;
 !!SN:W^EagleEye_Low_Damage_Hero%V7020^/?y62; [Save Low Damage to display it in Bonus List]
 !!SN:W^EagleEye_High_Damage_Hero%V7020^/?y63; [Save High Damage to display it in Bonus List]

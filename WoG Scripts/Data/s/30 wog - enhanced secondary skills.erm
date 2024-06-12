@@ -624,8 +624,8 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
   !!VRi^wog_201_ShootOnce^:S(FALSE);
   !!FU(WOG_GetRandomSeedByCoord):Pi^battle_x^/i^battle_y^/i^battle_z^/?(seed:y);
   !!re (side:y)/0/i^battle_hero_vs_hero^;
-    !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y) S(SKILL_ARTILLERY)/?(artilleryLv:y);
-    !!if&(ballista)/(artilleryLv);
+    !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y) S(SKILL_ARTILLERY)/?(artilleryLvl:y);
+    !!if&(ballista)/(artilleryLvl);
 
       !!VR(min:y):S(side) *21;
       !!VR(max:y):S(min) +20;
@@ -634,42 +634,46 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
         !!BMi:T?t N?n;
 
         !!if&n>0/t=(MON_BALLISTA);
-          !!BMi:Z?(stack:y);
-          !!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLv:y)/1; [check for Ammo Cart, get hero's level, artillery level]
-          !!VR(equipped):F0/1 +1;       [ammo cart bonus]
-          !!VR(mult:y):S1 +(artilleryLv) *(equipped); [set multiplier to 1]
+          !!BMi:Z?(ballistaStack:y);
+          !!HEi^battle_hero_%(side)^:A2/(MON_AMMO_CART)/?(has:y)/?(equipped:y) E?(exp:y)/?(heroLvl:y)/1;                     [check for Ammo Cart, get hero's level, artillery level]
+          !!VR(equipped):B +1;                                                                                               [ammo cart bonus]
+          !!VR(mult:y):S1 +(artilleryLvl) *(equipped);                                                                       [set multiplier to 1]
           !!VR(seed):+i^timerDay^ +(side) +i^battle_hero_%(side)^;
           !!FU(WOG_SafeRand):P1/50/(seed)/?(dmg:y);
-          !!VR(dmg:y):+(heroLv) *(mult); [ballista damage: (1-50 + hero level) x bonus multiplier x ammo]
-          !!VR(oppSide:y):S(side) X1;
+          v
+          !!VR(dmg:y):+(heroLvl) *(mult);                                                                                    [ballista damage: (1-50 + hero level) x bonus multiplier x ammo]
+          !!VR(oppSide:y):S(side) -1;
           !!FU(WOG_201_SelectBestTarget):P(oppSide)/(dmg)/?(targetStackId:y);
 
           !!if&(targetStackId)<>(NO_STACK);
-            !!BM(targetStackId:y):Z?(targetStack:y) N?n H?h L?l;
+            !!BM(targetStackId:y):Z?(targetStack:y) N?n H?h L?l P?p;
 
             !!VR(maxDamage:y):Sn *h -l -1;
             !!VRi^wog_201_Shoot^:S(dmg) Fd/(maxDamage);
 
-            !!UN:C(stack)/16/4/(targetStack:y);                              [set stack target]
+            !!UN:C(targetStack)/248/4/?(targetStackSideIndex:y);
+            !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/68/4/p;                                                           [set combat target pos]
 
-            !!BMi:U3/?(shots:y) U3/1 G213/?(luck:y)/d  G213/0/d;
+            !!UN:C(ballistaStack:y)/16/4/(oppSide) C(ballistaStack:y)/14/4/(targetStackSideIndex) C(ballistaStack:y)/28/4/p; [set stack target]
+
+            !!BMi:U3/?(storedShots:y) U3/1 G212/?(storedMorale:y)/d G212/0/d G213/?(storedLuck:y)/d G213/0/d;                [get morale shots and luck]
 
             !!if&i^battle_isVisible^;
               !!VR(msg:z):S^%T(wog.201.ballista_log)^;
               !!MM:S(msg:z);
             !!en;
 
-            !!re j/0/4;                                                      [ skip double damage bonus]
+            !!re j/0/4;                                                                                                      [ skip double damage bonus]
               !!UN:C4470304/j/1/?i^test_%j^ C4470304/j/1/(OPCODE_NOP_1); 
             !!en;
 
-            !!SN:E4453920/(CALLCONV_THISCALL)/(stack)/(targetStack:y);       [shoot stack to stack]
+            !!SN:E4453920/(CALLCONV_THISCALL)/(stack)/(targetStack:y);                                                       [shoot stack to stack]
 
             !!re j/0/4;
               !!UN:C4470304/j/1/i^test_%j^;
             !!en;
             restore stack and hero data
-            !!BMi:U3/(shots:y) G213/(luck:y)/d;
+            !!BMi:U3/(storedShots) G213/(storedMorale:y)/d G213/(storedLuck:y)/d;                                            [set back luck/morale]
 
             next time make lost uncureable
             *!BM(targetStackId:y):N?(new:y);
