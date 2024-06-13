@@ -64,35 +64,7 @@ ZVSE2
     !!CM:R0;
   !!en;
 
-; Fixed losing Double Strike/Strike all around after the commander learns shooting with igrik's ChooseAttack plugin
-; Ideally this should be fixed in the plugin
-; by Archer30
-!?FU(OnBeforeBattleAction);
-!!SN:F^PluginExists^/^ChooseAttack^;
-!!FU&v1<>(TRUE):E;
 
-!!BG:A?(action:y);
-!!FU&(action)<>(BATTLE_ACTION_WALK_AND_ATTACK):E;
-
-!!BMi^battle_acting_stack^:T?(type:y);
-
-!!if&(type)>=(MON_PALADIN_A)/(type)<=(MON_ASTRAL_SPIRIT_D);
-  !!BMi^battle_acting_stack^:F?(flags:y) Fd~(MON_FLAG_SHOOTER);
-  !!VRi^gem_comm_canShoot^:S(flags) &(MON_FLAG_SHOOTER);
-!!en;
-
-!?FU(OnBattleActionEnd)&i^gem_comm_canShoot^;
-; Double check the creature type
-!!BMi^battle_acting_stack^:T?(type:y);
-
-!!if&(type)>=(MON_PALADIN_A)/(type)<=(MON_ASTRAL_SPIRIT_D);
-  !!BMi^battle_acting_stack^:Fd|(MON_FLAG_SHOOTER);
-!!en;
-
-!!VRi^gem_comm_canShoot^:S(FALSE);
-
-
-// Press L/Ctrl L to enter Loading Save Game screen
 ; by Archer30
 ; L - Load with confirmation
 ; Ctrl-L - Load without confirmation
@@ -101,30 +73,28 @@ ZVSE2
 ; This constant must be removed if EEF adds it 
 !#DC(GAME_MENU_TARGET_LOAD_GAME) = 102;
 
-; Ctrl-L to enter loading screen without confirmation
-; Battlefield
+; Ctrl=L to enter loading screen without confirmation
+; Adventure map
+
 !?FU(OnKeyPressed_AdvMap)&i^key_ctrl^/i^key^=(KEY_L);
 !#VA(key:x) (preventDefault:x);
-
 !!VR(preventDefault):S(TRUE);
 !!SN:F^FastQuitToGameMenu^/(GAME_MENU_TARGET_LOAD_GAME);
 
-; Adventure map
-!?FU(OnKeyPressed_Battle)&i^key_ctrl^/i^key^=(KEY_L);
-!#VA(key:x) (preventDefault:x);
+; Press L/Ctrl+l to enter loading screen with confirmation
 
-!!VR(preventDefault):S(TRUE);
-!!SN:F^FastQuitToGameMenu^/(GAME_MENU_TARGET_LOAD_GAME);
-
-; Press L to enter loading screen with confirmation
 ; Battlefield
-!?FU(OnKeyPressed_Battle)&i^key_ctrl^<>(TRUE)/i^key^=(KEY_L);
+!?FU(OnKeyPressed_Battle)&i^key^=(KEY_L);
 !#VA(key:x) (preventDefault:x);
-
 !!VR(preventDefault):S(TRUE);
-!!FU(GetTextFileString):P^genrltxt^/69/?(loadGameStr:z);
-!!IF:Q2/(loadGameStr);
-!!SN&2:F^FastQuitToGameMenu^/(GAME_MENU_TARGET_LOAD_GAME);
+
+!!if&i^key_ctrl^=0;
+  !!FU(GetTextFileString):P^genrltxt^/69/?(loadGameStr:z);
+  !!IF:Q2/(loadGameStr);
+  !!FU&-2:E;
+!!en;
+!!SN:F^FastQuitToGameMenu^/(GAME_MENU_TARGET_LOAD_GAME);
+
 
 ; --------------------------------------------------------------------------------------------------
 

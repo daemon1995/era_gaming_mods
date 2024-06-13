@@ -1529,6 +1529,33 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 ************************************************************************
 ************************************************************************
 
+; Fixed losing Double Strike/Strike all around after the commander learns shooting with igrik's ChooseAttack plugin
+; Ideally this should be fixed in the plugin
+; by Archer30
+!?FU(OnBeforeBattleAction);
+!!SN:F^PluginExists^/^ChooseAttack^;
+!!FU&v1<>(TRUE):E;
+
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_WALK_AND_ATTACK):E;
+
+!!BMi^battle_acting_stack^:T?(type:y);
+
+!!if&(type)>=(MON_PALADIN_A)/(type)<=(MON_ASTRAL_SPIRIT_D);
+  !!BMi^battle_acting_stack^:F?(flags:y) Fd~(MON_FLAG_SHOOTER);
+  !!VRi^gem_NPC_canShoot^:S(flags) &(MON_FLAG_SHOOTER);
+!!en;
+
+!?FU(OnBattleActionEnd)&i^gem_NPC_canShoot^;
+; Double check the creature type
+!!BMi^battle_acting_stack^:T?(type:y);
+
+!!if&(type)>=(MON_PALADIN_A)/(type)<=(MON_ASTRAL_SPIRIT_D);
+  !!BMi^battle_acting_stack^:Fd|(MON_FLAG_SHOOTER);
+!!en;
+
+!!VRi^gem_NPC_canShoot^:S(FALSE);
+
 !?FU(gem_CreateERMHook);
   // Removing message about deacreasing army before combat and placing
   // them into combat log
@@ -1542,38 +1569,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!UN:C7771553/-1/1/1;                 [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3]
   *!SN:Ex1/1/7779070/(gem_OnNPCBattleDescriptionGet);
 
-  // Elixir of Life gives full hp for NPC
-  *!SN:Ex1/1/4484064/(gem_OnWogRegenerationCheckingCombatCreatureAbilities);
-!?FU(gem_OnWogRegenerationCheckingCombatCreatureAbilities);
-  !!FU:E;
-
-
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(combatStack:y);
-  !!UN:C8646396/4/?(creatureId:y); temporary wog variable - here it contains handled creature id
-  !!if&(creatureId)>=(MON_COMMANDER_FIRST_A)/(creatureId)<=(MON_COMMANDER_LAST_D);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(combatStack:y);
-    !!SN:E7788612/(CALLCONV_CDECL)/(creatureId)/(combatStack);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/v1;?(crExpobonusRestoredHealth:y);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/50;(defaultRestoredHealth); remove healing bonus
-
-    *!VRv1:B;
-    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/0;-1;(defaultRestoredHealth); remove healing bonus
-    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/(defaultRestoredHealth); remove healing bonus
-  *!el&(crExpobonusRestoredHealth)<(defaultRestoredHealth);
-    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(defaultRestoredHealth); set creature healing to default 50 (if stack exp gives less than that)
-  !!en;
-
-  !!FU:E;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(crExpobonusRestoredHealth:y);
-
-  !!UN:C42232776/4/?(defaultRestoredHealth:y);
-  *!IF:L^%(creatureId) %(crExpobonusRestoredHealth)^;
-  !!if&(creatureId)>=(MON_COMMANDER_FIRST_A)/(creatureId)<=(MON_COMMANDER_LAST_D);
-    *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/0;-1;(defaultRestoredHealth); remove healing bonus
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/(defaultRestoredHealth); remove healing bonus
-  !!el&(crExpobonusRestoredHealth)<(defaultRestoredHealth);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(defaultRestoredHealth); set creature healing to default 50 (if stack exp gives less than that)
-  !!en;
 
 !?FU(gem_OnBruteGoldBonusMessage); // replace brute message with adv map dlg info panel message
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(strPtr:y) Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-64/4/?(gold:y);
