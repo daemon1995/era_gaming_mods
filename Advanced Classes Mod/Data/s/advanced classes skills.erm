@@ -5624,18 +5624,17 @@ Till here Normal Necromancy
 
         !!FU(ACM_Generate_Random_Stack):P(side)/?(targetStackId:y);                                                        [return a random enemy stack to shoot]
         !!if&(targetStackId)<>(NO_STACK);
-          *!VR(targetStackId):S23;
+
+          !#VA(patch[5]:y);
           !!re j/0/4;                                                                                                      [ skip double damage bonus message]
-            !!UN:C4470304/j/1/?i^acm_temp_%j^ C4470304/j/1/(OPCODE_NOP_1); 
+            !!UN:C4470304/j/1/?(patch[j]) C4470304/j/1/(OPCODE_NOP_1); 
           !!en;
 
           !!BMi:Z?(ballistaStack:y);
           !!BM(targetStackId):Z?(targetStack:y) N?n P?p;    
-          *!IF:L^%(targetStackId) %p^;
         
           !!UN:C(targetStack)/248/4/?(targetStackSideIndex:y);
           !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78520/4/(side) C(cmbMgr)/78528/4/(side) C(cmbMgr)/68/4/p C(cmbMgr)/492854/4/(ballistaStack);                                                           [set combat target pos]
-          !!UN:C(cmbMgr)/78528/(UNC_INT)/?(currentActiveSide:y) C(cmbMgr)/78528/(UNC_INT)/(side:y);
 
           !!UN:C(ballistaStack:y)/16/4/(oppSide) C(ballistaStack:y)/20/4/(targetStackSideIndex) C(ballistaStack:y)/28/4/p; [set stack target]
           !!BMi:U3/?(storedShots:y) U3/1 G212/?(storedMorale:y)/d G212/0/d G213/?(storedLuck:y)/d G213/0/d;                [get morale shots and luck]
@@ -5653,11 +5652,10 @@ Till here Normal Necromancy
           !!BM(targetStackId):N?(newNum:y);                                                                                [get number of stack that was target]
           !!VR(lost:y):Sn -(newNum:y);                                                                                     [reduce number and set new number at battle start]
           !!BM(targetStackId):Bd-(lost:y);
-          !!UN:C(cmbMgr)/78528/(UNC_INT)/(currentActiveSide:y);
+
           !!BMi:U3/(storedShots) G213/(storedMorale:y)/d G213/(storedLuck:y)/d;                                            [set back luck/morale]
           !!re j/0/4;
-            !!UN:C4470304/j/1/i^acm_temp_%j^;                                                                              [ restore double damage bonus message]
-            !!VRi^acm_temp_%j^:S(NULL);
+            !!UN:C4470304/j/1/(patch[j]);                                                                              [ restore double damage bonus message]
           !!en;
           !!VRi^ACM_Artillery_Shoot^:S0;                                                                                   [set flag to zero]
           !!SN:E4607072/2/(cmbMgr:y)/0;                                                                                    [find next stack to act start battle]
@@ -14814,60 +14812,30 @@ x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery,
 
 *---------------------------------
 *Scouting Set*
-!?AE1|v998=52/v998=53; Equip Artifact       !!FU&761:E;
-
-!!HE-1:A2/52/?y30/?y10;
-!!HE-1&v998=52/y10=1:A-52;
-
-!!HE-1:A2/53/?y31/?y11;
-!!HE-1&v998=53/y11=1:A-53;
+!?FU(OnEquipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
+!!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(FALSE);
 
 
-!!FU(Count_Set_Pieces_2):P-1/0/?y90;     [Count Set Pieces function X3]
-!!VRy90:+1;
+!?FU(OnUnequipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
+!!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(TRUE);
 
-!!HE-1&y90=2/v998=52/y10=1/y30=1:Fd-1/d-1/d-1/d-1;
-!!HE-1&y90=2/v998=53/y11=1/y31=1:Fd-1/d-1/d-1/d-1;
-!!HE-1&y90=2/v998=52/y10=1/y30=2:Fd-1/d-1/d-1/d-1;
-!!HE-1&y90=2/v998=53/y11=1/y31=2:Fd-1/d-1/d-1/d-1;
+!?FU(acm_HandleAncientSpyglassHeroPrimarySkills);
+!#VA(handledArt:x) (isUnequip:x);
 
-!!HE-1&y90=2:Fd1/d1/d1/d1;              [With 2 Set pieces Increase all +1]
+!!if&(handledArt)=(ART_SPECULUM);
+  !!VR(oppositeArt:y):S(ART_SPYGLASS);
+!!el;
+  !!VR(oppositeArt:y):S(ART_SPECULUM);
+!!en;
 
-!!HE-1&v998=52/y10=1:A52;
-!!HE-1&v998=53/y11=1:A53;
+!!HE-1:A2/(handledArt)/?t/?(handledArtsEquipped:y) A2/(oppositeArt)/?t/?(oppositeArtsEquipped:y);
 
-*!FU(Set_Complete_Sound)&y90=2:P;
+!!if&(handledArtsEquipped)=0/(oppositeArtsEquipped)/(isUnequip:x)=(FALSE);
+  !!HE-1:Fd1/d1/d1/d1;
+!!el&(oppositeArtsEquipped)/(handledArtsEquipped)=1/(isUnequip);
+  !!HE-1:Fd-1/d-1/d-1/d-1;
+!!en;
 
-!?AE0|v998=52/v998=53; Unequip Artifact   !!FU&761:E;
-!!FU(Count_Set_Pieces_2):P-1/0/?y90;     [Count Set Pieces function X3]
-!!VRy90:-1;
-
-!!HE-1&y90=1:Fd-1/d-1/d-1/d-1;
-
-********************************************************************************
-*?SN&1000;                              [Sound Trigger for Moral and Luck]
-
-*!SN:S?z-7;
-*!VRz-9:S^goodluck.82m^;
-*!VRz8:S^GoodMrle.wav^;
-
-*!if&z7=z9|z7=z8;
-*!if&z-7=z-9;
-*!FU(Count_Set_Pieces):P-1/?y90/?y91/?y92/?y93/?y94;
-*!FU&y94<>4:E;
-*!BG:Q?y1;
-
-*!SN&y1=0/y94=4:W^Luck_Count_Att^/d10;  [Luck Count Attacker +1]
-*!SN&y1=1/y94=4:W^Luck_Count_Def^/d10;  [Luck Count Attacker +1]
-
-*!SN&y1=0/y94=4:W^Luck_Count_Att^/?y2;  [Luck Count Attacker +1]
-*!SN&y1=1/y94=4:W^Luck_Count_Def^/?y2;  [Luck Count Attacker +1]
-
-*!BA:Q?f;
-*!IF&i^battle_isVisible^:L^Total Spell Damage Bonus: %Y2^;
-*!SN&y1=0/z7=z8/y93=4:W^Moral_Count_Att^/1;           [Moral Count Attacker 1]
-*!SN&y1=1/z7=z8/y93=4:W^Moral_Count_Def^/1;           [Moral Count Attacker 1]
-*!en;
 
 ********************************************************************************
 !?FU(Count_Set_Pieces);                 [Count Set Pieces Fkt]
@@ -36357,27 +36325,4 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
    *!en; 
 *!en;
 
-*Scouting Set*
-*?FU(OnEquipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
-*!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(FALSE);
 
-
-*?FU(OnUnequipArt)|v998=(ART_SPECULUM)/v998=(ART_SPYGLASS);
-*!FU(acm_HandleAncientSpyglassHeroPrimarySkills):Pv998/(TRUE);
-
-*?FU(acm_HandleAncientSpyglassHeroPrimarySkills);
-*#VA(handledArt:x) (isUnequip:x);
-
-*!if&(handledArt)=(ART_SPECULUM);
-  *!VR(oppositeArt:y):S(ART_SPYGLASS);
-*!el;
-  *!VR(oppositeArt:y):S(ART_SPECULUM);
-*!en;
-
-*!HE-1:A2/(handledArt)/?t/?(handledArtsEquipped:y) A2/(oppositeArt)/?t/?(oppositeArtsEquipped:y);
-
-*!if&(handledArtsEquipped)=0/(oppositeArtsEquipped)/(isUnequip:x)=(FALSE);
-  *!HE-1:Fd1/d1/d1/d1;
-*!el&(oppositeArtsEquipped)/(handledArtsEquipped)=1/(isUnequip);
-  *!HE-1:Fd-1/d-1/d-1/d-1;
-*!en;
