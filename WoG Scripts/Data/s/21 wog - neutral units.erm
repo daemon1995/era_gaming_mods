@@ -426,21 +426,27 @@ Recommendations for Neutral Units Bonuses:
   !!DO5403/1/y-1/1&y-1>0/i^timerWeekDay^=1:P; [Loop through all Towns weekly]
 !!en;
 
-!!UN:U16/-1/?y-4;                       [Number of Creature Banks on map: y-4]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5405/1/y-4/1&y-4>0:P16/y-4;         [Loop through all Creature Banks]
-!!UN:U24/-1/?y-5;                       [Number of Derelict Ships on map: y-5]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5405/1/y-5/1&y-5>0:P24/y-5;         [Loop through all Derelict Ships]
-!!UN:U25/-1/?y-6;                       [Number of Dragon Utopias on map: y-6]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5405/1/y-6/1&y-6>0:P25/y-6;         [Loop through all Dragon Utopias]
-!!UN:U84/-1/?y-7;                       [Number of Crypts on map: y-7]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5405/1/y-7/1&y-7>0:P84/y-7;         [Loop through all Crypts]
-!!UN:U85/-1/?y-8;                       [Number of Shipwrecks on map: y-8]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5405/1/y-8/1&y-8>0:P85/y-8;         [Loop through all Shipwrecks]
+
+
+// Handle Creature Banks (All the types supported)
+
+!#VA(cbObjTypes[5]:y);
+!!VR(cbObjTypes[0]):C(OBJ_CREATURE_BANK)/(OBJ_DERELICT_SHIP)/(OBJ_DRAGON_UTOPIA)/(OBJ_CRYPT)/(OBJ_SHIPWRECK);
+
+!#VA(x:y) (y:y) (z:y); define variables to store object coordinates
+!!re i/0/(cbObjTypes[SIZE])/1/-1;
+  !!VR(x):S-1;           setting x-coordinate to -1 will force to start search from scratch
+
+  !!re j;
+    !!SN:F^FindNextObject^/(cbObjTypes[i])/(ANY_OBJ)/?(x)/?(y)/?(z)/-1; find next monster, v1 is (TRUE) on success
+    !!if&v1;
+      !!FU(WOG_235_CreatureBanksDailyHandler):P(x)/(y)/(z)/(cbObjTypes[i]);
+    !!el;
+      !!br;
+    !!en;
+  !!en;
+!!en;
+
 
 !!UN:U53/7/?y-9;                        [Number of abandoned mines on map: y-9]
 !!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
@@ -453,6 +459,12 @@ Recommendations for Neutral Units Bonuses:
 !!DO5412/1/y10/1&y-8>0/i^timerWeekDay^=1:P6/-1; [Loop through all pandora's boxes]
 
 !!FU(WOG_231_RefillDeathChamber):P;
+
+
+
+
+
+
 
 !?FU(WOG_231_RefillDeathChamber);
 !!UN:P70/?(dc:y);                       [** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled]
@@ -527,156 +539,141 @@ Recommendations for Neutral Units Bonuses:
 
  [Loop through all creature banks]
  [x1=type of bank, x2=number of banks]
-!?FU5405;
-!!UN:Ux1/-1/-1/2;                       [Creature Bank coordinates in v2/v3/v4]
-!!CBv2/v3/v4:T?y1;                      [Check if Creature Bank already Taken: y1=1 if Taken]
 
-!!if&y1=0/i^timerWeekDay^=1;
-  ; Loop through guard slots and resources in creature bank each week
-  !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-    !!FU5406:Pi;
-  !!en;
-              
-  !!CBv2/v3/v4:M?y30/?y31;              [Number of Bonus Creatures, Type=y30, Number=y31]
 
-  ; Every 3rd week, add 1 bonus creature: y31 (maximum 127)
-  !!if&y30>(NO_MON)/y31>0/y31<127/i^wog_235_is3rdWeek^;
-    !!CBv2/v3/v4:M?y30/d1;              [Set new number of bonus creatures]
+!?FU(WOG_235_CreatureBanksDailyHandler);
+!#VA(x:x) (y:x) (z:x) (cbObjType:x); 
+
+!!CB(x)/(y)/(z):T?(looted:y);              [Check if Creature Bank already Taken]
+
+!!if&(looted:y);
+
+  !!PO(x)/(y)/(z):S?(daysUntilRefill:y);  [Read PO:S number for Creature Bank square]
+  !!if&(daysUntilRefill:y);
+    !!PO(x)/(y)/(z):Sd-1 S?(daysUntilRefill:y);
+    !!if&(daysUntilRefill:y)=0;
+      !!CB(x)/(y)/(z):T0 V0;                     [Reset creature bank to "not taken"]
+      !!FU(WOG_235_RefillCreatureBanks):P(x)/(y)/(z)/(cbObjType:x);
+    !!en;
+  !!el;
+    !!PO(x)/(y)/(z):S27;
   !!en;
+
+!!el&i^timerWeekDay^=1;
+  !!CB(x)/(y)/(z):V0;                     [Reset creature bank to "not taken"]
+
+  !!FU(WOG_235_CreatureBanksWeeklyHandler):P(x)/(y)/(z)/(cbObjType);
 !!en;
-
-!!POv2/v3/v4&y1=1:S?y18;                [Read PO:S number for Creature Bank square: y18]
-!!POv2/v3/v4&y1=1/y18=0:S28;            [Set PO:S number for Creature Bank square to 28: y18]
-!!VRy18&y1=1/y18>0:-1;                  [Subtract one from PO:S number: y18]
-!!POv2/v3/v4&y1=1/y18>0:Sy18;           [Write new PO:S number: y18]
-
-!!FU|y1<>1/y18<>1:E;                    [Exit if bank not taken or y18<>1]
 
  [Reset/Restock taken creature banks after 28 days]
-!!POv2/v3/v4:S0;                        [Reset Creature Bank's PO:S number to 0]
-!!OBv2/v3/v4&x1=16:U?y2;                [Subtype of type 16 creature bank: y2]
-!!FU&x1=16/y2>=13/y2<=16:E;             [Exit if it's an Emissary building]
 
-!!CBv2/v3/v4:T0 V0;                     [Reset creature bank to "not taken"]
-
-!!UN:J6/4/?y3;                          [Random Treasure Artifact: y3]
-!!UN:J6/4/?y4;                          [Random Minor Artifact: y4]
-!!UN:J6/16/?y5 J6/16/?y6 J6/16/?y7 J6/16/?y8; [Random Relics: y5, y6, y7, y8]
-!!CBv2/v3/v4&x1=24:G0/115/12 G1/115/12 G2/115/12 G3/115/12 G4/123/12; [Derelict Ship]
-!!CBv2/v3/v4&x1=24:R6/6000 A2/0/y4;     [Derelict Ship: 6000 gold, 1 Minor Artifact]
-!!CBv2/v3/v4&x1=85:G0/60/10 G1/60/10 G2/60/10 G3/61/10 G4/61/10; [Shipwreck]
-!!CBv2/v3/v4&x1=85:R6/5000 A2/0/y4;     [Shipwreck: 5000 gold, 1 Minor Artifact]
-!!CBv2/v3/v4&x1=84:G0/57/20 G1/59/20 G2/60/20 G3/62/10 G4/63/6 G5/64/3; [Crypt]
-!!CBv2/v3/v4&x1=84:R6/6000 A2/0/y3 A3/y4;[Crypt: 6000 gold, 1 Treasure Artifact, 1 Minor Artifact]
-
-!!if&x1=(OBJ_DRAGON_UTOPIA);
-  !!CB2:G0/134/3 G1/135/2 G2/133/2 G3/132/1; [Dragon Utopia (guards replaced with neutral dragons)]
+!?FU(WOG_235_RefillCreatureBanks);
+!#VA(x:x) (y:x) (z:x) (cbObjType:x); 
+!!if&(cbObjType)=(OBJ_DRAGON_UTOPIA);
+  !!CB(x)/(y)/(z):G0/(MON_FAERIE_DRAGON)/3 G1/(MON_RUST_DRAGON)/2 G2/(MON_CRYSTAL_DRAGON)/2 G3/(MON_AZURE_DRAGON)/1; [Dragon Utopia (guards replaced with neutral dragons)]
 
   ; Set up additional guards depending on whether Enhanced Dragon Utopia is enabled
-  !!UN:P53/?y30;                        [Enhanced Dragon Utopia]
+  !!UN:P53/?(enabled:y);                [Enhanced Dragon Utopia]
 
-  !!if&y30;
-    !!CB2:G4/(MON_BLOOD_DRAGON)/4 G5/(MON_DRACOLICH)/1;
+  !!if&(enabled);
+    !!CB(x)/(y)/(z):G4/(MON_BLOOD_DRAGON)/4 G5/(MON_DRACOLICH)/1;
   !!el;
-    !!CB2:G4/(MON_DIAMOND_DRAGON)/3 G5/(MON_DARKNESS_DRAGON)/3;
+    !!CB(x)/(y)/(z):G4/(MON_DIAMOND_DRAGON)/3 G5/(MON_DARKNESS_DRAGON)/3;
+  !!en;
+
+  !!CB(x)/(y)/(z):R(RES_GOLD)/70000; R(RES_CRYSTAL)/6 R5/6;   [Dragon Utopia: 50000 gold, 6 Crystal, 6 Gems]
+  
+  !!re i/0/6;
+
+    !!UN:J6/(ART_LEVEL_RELIC)/?(artId:y);[J6/16/?y6 J6/16/?y7 J6/16/?y8; [Random Relics: y5, y6, y7, y8]
+
+    !!CB(x)/(y)/(z):A2/i/?(currentArtId:y); [Dragon Utopia: 4 Relics]
+    !!if&(currentArtId)=(NO_ART);
+      !!CB(x)/(y)/(z):A3/(artId:y);     [generate new art]
+    !!el;
+      !!CB(x)/(y)/(z):A2/i/(artId:y);   [replace art]
+    !!en;
+  !!en;
+
+
+!!el&(cbObjType)=(OBJ_CRYPT);
+  !!UN:J6/(ART_LEVEL_MINOR)/?(randArtB:y) J6/(ART_LEVEL_MINOR)/?(randArtA:y); [Random 2 Minor Artifacts: y4]
+  !!CB(x)/(y)/(z):G0/57/20 G1/59/20 G2/60/20 G3/62/10 G4/63/6 G5/64/3; [Crypt]
+  !!CB(x)/(y)/(z):R6/6000 A2/0/(randArtA) A3/(randArtB); [Crypt: 6000 gold, 1 Treasure Artifact, 1 Minor Artifact]
+!!el;
+  // call original Restore CB function
+  !!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
+  !!if&(mapItem);
+    !!UN:C(mapItem)/34/2/?(objSubtype:y);
+    !!SN:E4218240/(CALLCONV_THISCALL)/(mapItem);
+    !!VR(cbMapItem:y):Sv1;
+    !!if&(cbMapItem);
+      !!SN:E4695744/(CALLCONV_THISCALL)/(cbMapItem)/(objSubtype);
+    !!en;
   !!en;
 !!en;
-
-!!CBv2/v3/v4&x1=25:R6/50000 R4/6 R5/6;                                     [Dragon Utopia: 50000 gold, 6 Crystal, 6 Gems]
-!!CBv2/v3/v4&x1=25:A2/0/y5 A2/1/y6 A2/2/y7 A2/3/y8;                        [Dragon Utopia: 4 Relics]
-!!UN&x1=25:P3/?y9 P238/?y10 P177/?y14;                                     [Check if Commanders (y9), Commander Artifacts (y10), and Slava's Ring (y14) are enabled]
-!!VRy15&x1=25/y9=0/y10=0/y14=1:S8;                                         [Commander Artifact's minus Slava's Ring: y15]
-!!VRy15&x1=25/y9=0/y10=0/y14=0:S9;                                         [Commander Artifact's including Slava's Ring: y15]
-!!VRy16&x1=25/y9=0/y10=0:S146 Ry15;                                        [Random Commander Artifact 1: y16]
-!!VRy17&x1=25/y9=0/y10=0:S146 Ry15;                                        [Random Commander Artifact 2: y17]
-!!CBv2/v3/v4&x1=25/y9=0/y10=0:A3/y16 A3/y17;                               [Dragon Utopia: 2 Commander Artifacts]
-!!CBv2/v3/v4&x1=16/y2=0:G0/95/10 G1/95/10 G2/95/10 G3/95/10 G4/95/10;      [Cyclops Stockpile]
-!!CBv2/v3/v4&x1=16/y2=0:R0/10 R1/10 R2/10 R3/10 R4/10 R5/10;               [Cyclops Stockpile: 10 of each resource]
-!!CBv2/v3/v4&x1=16/y2=1:G0/17/30 G1/17/30 G2/17/30 G3/17/30 G4/17/30;      [Dwarven Treasury]
-!!CBv2/v3/v4&x1=16/y2=1:R6/7500 R4/10;                                     [Dwarven Treasury: 7500 Gold, 10 Crystals]
-!!CBv2/v3/v4&x1=16/y2=2:G0/5/20 G1/5/20 G2/5/20 G3/5/20 G4/5/20;           [Griffin Conservatory]
-!!CBv2/v3/v4&x1=16/y2=3:G0/43/60 G1/42/60 G2/42/60 G3/43/60 G4/42/60;      [Imp Cache]
-!!CBv2/v3/v4&x1=16/y2=3:R6/5000 R1/6;                                      [Imp Cache: 5000 Gold, 6 Mercury]
-!!CBv2/v3/v4&x1=16/y2=4:G0/77/10 G1/77/10 G2/77/10 G3/77/10 G4/77/10;      [Medusa Stores]
-!!CBv2/v3/v4&x1=16/y2=4:R6/5000 R3/10;                                     [Medusa Stores: 5000 Gold, 10 Sulfur]
-!!CBv2/v3/v4&x1=16/y2=5:G0/39/6 G1/39/6 G2/39/6 G3/39/6 G4/39/6;           [Naga Bank]
-!!CBv2/v3/v4&x1=16/y2=5:R6/12000 R5/24;                                    [Naga Bank: 12000 Gold, 24 Gems]
-!!CBv2/v3/v4&x1=16/y2=6:G0/105/18 G1/105/18 G2/105/18 G3/108/18 G4/108/18; [Dragon Fly Hive]
-!!CBv2/v3/v4&x1=16/y2=11:G0/23/6 G1/19/10 G2/23/6 G3/19/10 G4/23/6;        [Hunting Lodge]
-!!CBv2/v3/v4&x1=16/y2=11:R6/1000 R0/40;                                    [Hunting Lodge: 1000 Gold, 40 Wood]
-!!CBv2/v3/v4&x1=16/y2=12:G0/33/8 G1/29/50 G2/33/8 G3/29/50 G4/33/8;        [Snow-covered Grotto]
-!!CBv2/v3/v4&x1=16/y2=12:R6/1000 R2/40;                                    [Snow-covered Grotto: 1000 Gold, 40 Ore]
-!!CBv2/v3/v4&x1=16/y2=17:G0/63/6 G1/63/6 G2/63/6 G3/63/6 G4/63/6;          [Transylvanian Tavern]
-!!CBv2/v3/v4&x1=16/y2=17:R6/5000;                                          [Transylvanian Tavern: 5000 Gold]
-!!CBv2/v3/v4&x1=16/y2=18:G0/63/6 G1/63/6 G2/63/6 G3/63/6 G4/63/6;          [Home of the Bat]
-!!CBv2/v3/v4&x1=16/y2=18:R1/5 R3/5 R4/5 R5/5;                              [Home of the Bat: 5 Mercury, 5 Sulfur, 5 Crystal, 5 Gems]
-!!CBv2/v3/v4&x1=16/y2=19:G0/37/6 G1/37/6 G2/37/6 G3/37/6 G4/37/6;          [Lost Bottle]
-!!CBv2/v3/v4&x1=16/y2=19:R1/5 R3/5 R4/5 R5/5;                              [Lost Bottle: 5 Mercury, 5 Sulfur, 5 Crystal, 5 Gems]
-!!CBv2/v3/v4&x1=16/y2=20:G0/75/6 G1/73/6 G2/75/6 G3/73/6 G4/75/6;          [Grotto]
-!!CBv2/v3/v4&x1=16/y2=20:R6/2000 R2/35;                                    [Grotto: 2000 Gold, 35 Ore]
-
 ; Grow new creature bank's guards and resources for each game week
 !!re i/1/i^timerWeek^;
-  !!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
-    !!FU5406:Pj;
-  !!en;
+  !!FU(WOG_235_CreatureBanksWeeklyHandler):P(x)/(y)/(z)/(cbObjType);
 !!en;
 
- [Loop through guard slots and resources in creature bank]
- [x1=-1 for normal growth, x1=guard slot number if restocking new bank]
- [x2=type of creature bank if restocking]
-!?FU5406;
-!#VA(slot:x);
+[Loop through guard slots and resources in creature bank]
+[x2=type of creature bank if restocking]
+!?FU(WOG_235_CreatureBanksWeeklyHandler);
+!#VA(x:x) (y:x) (z:x) (cbObjType:x); 
 
-!!VRy10:S(slot);                        [Set y10 to guard slot number: y10]
-!!CB2:Gy10/?y1/?y2;                     [Guard slot y10, Type: y1, Number: y2]
+!!re (guardSlot:y)/0/(ARMY_SLOT_LAST);
+  
+  !!CB(x)/(y)/(z):G(guardSlot:y)/?(monGuardType:y)/?(monGuardQty:y);
 
-; If the position has no guard
-!!if&y2<=0;
-  !!CB2:G0/?y6/?y8;                     [Guard Type in slot 0: y6, Number in y8]
-  !!CB2&y8<1:G1/?y6/?y8;                [Guard Type in slot 1 if nothing in 0: y6]
-  !!FU|y6<=(NO_MON)/y8<=0:E;            [If nothing in slot y10 and nothing in slot 0 or 1, If guard type in slot 0 or 1 is less than 0, Exit]
+  ; If the position has no guard
+  !!if&(monGuardQty:y)<=0;
+    !!CB(x)/(y)/(z):G0/?(guardType:y)/?(guardQty:y);
+    !!CB(x)/(y)/(z)&(guardQty:y)<1:G1/?(guardType:y)/?(guardQty:y);
+    !!co|(guardType:y)<=(NO_MON)/(guardQty:y)<=0;
 
-  ; Set up commander in the last slot
-  !!if&y10=(ARMY_SLOT_LAST);
-    !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?y30;
+    ; Set up commander in the last slot
+    !!if&(guardSlot:y)=(ARMY_SLOT_LAST);
+      !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(wogOpt:y);
 
-    !!if&y30=(FALSE);
-      !!MA:Oy6/?y7;                       [Town number that creature in slot 0 belongs to: y7]
-      !!VRy1:S(MON_COMMANDER_FIRST_D) +y7;[Set "Commander" in slot 6: y1]
-      !!CB2:G(ARMY_SLOT_LAST)/y1/1; [Set 1 Commander in slot 6]
+      !!if&(wogOpt:y)=(FALSE);
+        !!MA:O(guardType:y)/?(townType:y);
+        !!VR(monGuardType:y):S(MON_COMMANDER_FIRST_D) +(townType:y);
+        !!CB(x)/(y)/(z):G(ARMY_SLOT_LAST)/(monGuardType:y)/1;
+      !!en;
+
+    ; Set up new guards in other slots
+    !!el;
+      !!VR(newGuardQty:y):S(guardQty:y) :2 +1 F1/500000;     [Half of the number of guards in slot 0 or 1 plus one]
+      !!CB(x)/(y)/(z):G(guardSlot:y)/(guardType:y)/(newGuardQty:y);    [Set new creatures in empty slot]
     !!en;
 
-  ; Set up new guards in other slots
-  !!el;
-    !!VRy9:Sy8 :2 +1 F1/500000;         [Half of the number of guards in slot 0 or 1 plus one: y9]
-
-    ; Special rule for Dragon Utopia - Disabled as it's already set with CB:G
-    *!if&y6=(MON_FAERIE_DRAGON);
-      *!if&y10=(ARMY_SLOT_4);
-        *!VRy6:S(MON_DIAMOND_DRAGON);
-      *!el&y10=(ARMY_SLOT_5);
-        *!VRy6:S(MON_DARKNESS_DRAGON);
-      *!en;
-    *!en;
-
-    !!CB2:Gy10/y6/y9;                   [Set y9 new creatures in empty slot]
+  ; If the position is guarded and not commander
+  !!el|(monGuardType:y)<(MON_COMMANDER_FIRST_A)/(monGuardType:y)>(MON_COMMANDER_LAST_D);
+    !!VR(tenPercentMonQty:y):S(monGuardQty:y) :10 F1/500000;             [10% of the number of guards (rounded down): y3]
+    !!CB(x)/(y)/(z):G(guardSlot:y)/(monGuardType:y)/d(tenPercentMonQty:y);         [Add extra guards to slot but don't increase Commanders]
+    !!CB(x)/(y)/(z):G(guardSlot:y)/?y98/?(guardQty:y);
+    !!VR(guardQty:y):F1/500000;
+    !!CB(x)/(y)/(z):G(guardSlot:y)/?y98/(guardQty:y);
   !!en;
 
-; If the position is guarded and not commander
-!!el|y1<(MON_COMMANDER_FIRST_A)/y1>(MON_COMMANDER_LAST_D);
-  !!VRy3:Sy2 :10 F1/500000;             [10% of the number of guards (rounded down): y3]
-  !!CB2:Gy10/y1/dy3;                    [Add extra guards to slot y10 but don't increase Commanders]
-  !!CB2:Gy10/?y98/?y3;
-  !!VRy3:F1/500000;
-  !!CB2:Gy10/?y98/y3;
+  ; Manage bonus resources
+  !!CB(x)/(y)/(z):R(guardSlot:y)/?(resQty:y);       [Number of Resource type]
+  !!if&(resQty);
+    !!VR(tenPercentResQty:y):S(resQty:y) :10;    [10% of resources]
+    !!VR(tenPercentResQty:y)&(tenPercentResQty:y)=0/i^timerMonthWeek^=3:S1; [Every 3rd week set resource bonzus to 1 if less than 1: y5]
+    !!CB(x)/(y)/(z):R(guardSlot:y)/d(tenPercentResQty:y);               [Add resource bonus]
+  !!en;
+!!en;
+; Every 3rd week, add 1 bonus creature (maximum 127)
+
+!!if&i^timerMonthWeek^=3;
+  !!CB(x)/(y)/(z):M?(monRewardType:y)/?(monRewardQty:y);       [Number of Bonus Creatures]
+  !!if&(monRewardType:y)>(NO_MON)/(monRewardQty:y)>0/(monRewardQty:y)<127;
+    !!CB(x)/(y)/(z):M?(monRewardType:y)/d1;              [Set new number of bonus creatures]
+  !!en;
 !!en;
 
-; Manage bonus resources
-!!CB2:Ry10/?y4;                         [Number of Resource type y10: y4]
-!!VRy5&y4>0:Sy4 :10;                    [10% of resources: :y5]
-!!VRy5&y4>0/y5=0/i^wog_235_is3rdWeek^:S1; [Every 3rd week set resource bonzus to 1 if less than 1: y5]
-!!CB2&y4>0/y5>0:Ry10/dy5;               [Add resource bonus]
 
 
  [If necessary, reduce number of guards in Creature Banks when AI attacks]
