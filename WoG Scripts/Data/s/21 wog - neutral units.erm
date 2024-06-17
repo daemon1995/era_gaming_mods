@@ -544,15 +544,15 @@ Recommendations for Neutral Units Bonuses:
 !?FU(WOG_235_CreatureBanksDailyHandler);
 !#VA(x:x) (y:x) (z:x) (cbObjType:x); 
 
-!!CB(x)/(y)/(z):T?(looted:y);              [Check if Creature Bank already Taken]
+!!CB(x)/(y)/(z):T?(looted:y);           [Check if Creature Bank already Taken]
 
 !!if&(looted:y);
 
-  !!PO(x)/(y)/(z):S?(daysUntilRefill:y);  [Read PO:S number for Creature Bank square]
+  !!PO(x)/(y)/(z):S?(daysUntilRefill:y);[Read PO:S number for Creature Bank square]
   !!if&(daysUntilRefill:y);
     !!PO(x)/(y)/(z):Sd-1 S?(daysUntilRefill:y);
     !!if&(daysUntilRefill:y)=0;
-      !!CB(x)/(y)/(z):T0 V0;                     [Reset creature bank to "not taken"]
+      !!CB(x)/(y)/(z):T0 V0;            [Reset creature bank to "not taken"]
       !!FU(WOG_235_RefillCreatureBanks):P(x)/(y)/(z)/(cbObjType:x);
     !!en;
   !!el;
@@ -560,9 +560,8 @@ Recommendations for Neutral Units Bonuses:
   !!en;
 
 !!el&i^timerWeekDay^=1;
-  !!CB(x)/(y)/(z):V0;                     [Reset creature bank to "not taken"]
-
-  !!FU(WOG_235_CreatureBanksWeeklyHandler):P(x)/(y)/(z)/(cbObjType);
+  !!CB(x)/(y)/(z):V0;                   [Reset creature bank to "not taken"]
+  !!FU(WOG_235_CreatureBanks_IncreaseReward):P(x)/(y)/(z)/i^timerWeek^;
 !!en;
 
  [Reset/Restock taken creature banks after 28 days]
@@ -614,13 +613,20 @@ Recommendations for Neutral Units Bonuses:
 !!en;
 ; Grow new creature bank's guards and resources for each game week
 !!re i/1/i^timerWeek^;
-  !!FU(WOG_235_CreatureBanksWeeklyHandler):P(x)/(y)/(z)/(cbObjType);
+  !!FU(WOG_235_CreatureBanks_IncreaseReward):P(x)/(y)/(z)/i;
 !!en;
 
 [Loop through guard slots and resources in creature bank]
 [x2=type of creature bank if restocking]
-!?FU(WOG_235_CreatureBanksWeeklyHandler);
-!#VA(x:x) (y:x) (z:x) (cbObjType:x); 
+!?FU(WOG_235_CreatureBanks_IncreaseReward);
+!#VA(x:x) (y:x) (z:x) (weekIndex:x); 
+
+
+!!if&(weekIndex)>0;
+  !!VR(weekIndex):%3;
+  !!VR(isThirdWeek:y)&(weekIndex)=0:S(TRUE);
+!!en;
+
 
 !!re (guardSlot:y)/0/(ARMY_SLOT_LAST);
   
@@ -661,13 +667,13 @@ Recommendations for Neutral Units Bonuses:
   !!CB(x)/(y)/(z):R(guardSlot:y)/?(resQty:y);       [Number of Resource type]
   !!if&(resQty);
     !!VR(tenPercentResQty:y):S(resQty:y) :10;    [10% of resources]
-    !!VR(tenPercentResQty:y)&(tenPercentResQty:y)=0/i^timerMonthWeek^=3:S1; [Every 3rd week set resource bonzus to 1 if less than 1: y5]
+    !!VR(tenPercentResQty:y)&(tenPercentResQty:y)/(isThirdWeek):S1; [Every 3rd week set resource bonzus to 1 if less than 1: y5]
     !!CB(x)/(y)/(z):R(guardSlot:y)/d(tenPercentResQty:y);               [Add resource bonus]
   !!en;
 !!en;
 ; Every 3rd week, add 1 bonus creature (maximum 127)
 
-!!if&i^timerMonthWeek^=3;
+!!if&(isThirdWeek:y);
   !!CB(x)/(y)/(z):M?(monRewardType:y)/?(monRewardQty:y);       [Number of Bonus Creatures]
   !!if&(monRewardType:y)>(NO_MON)/(monRewardQty:y)>0/(monRewardQty:y)<127;
     !!CB(x)/(y)/(z):M?(monRewardType:y)/d1;              [Set new number of bonus creatures]
