@@ -25,12 +25,12 @@ ZVSE2
 
 
 !?FU(hench_LoadGlobalConfig);
-!!FU(LoadIntGlobalsFromJson):P^henchmen.settings_%i(hench_lang).^/^hench_^/
+!!FU(LoadIntGlobalsFromJson):P^henchmen.settings.^/^hench_^/
   ^battleExpStatic^/^battleExpRandom^/^battleHeroExpCoef^/^battleExpPerHeroLv^/^battleExpMin^/^battleExpMax^/
-  ^bonusHeroLvUp^/^bonusDaily^/^stackExpEnabled^/^stackExpTroopMode^/^bannerEnabled^/^bannerFree^/
+  ^bonusHeroLvUp^/^bonusDaily^/^stackExpEnabled^/^bannerEnabled^/^bannerFree^/
   ^bonusSpellDmgPerPwr^/^moreSpellEveryXKnl^;
 
-!!FU(LoadIntGlobalsFromJson):P^henchmen.settings_%i(hench_lang).^/^hench_^/
+!!FU(LoadIntGlobalsFromJson):P^henchmen.settings.^/^hench_^/
   ^battleExpLossPct^/^battleExpAIPct^/^returnToArmy^/^altExpPerLv^/^campaignTransfer^/^moreSantaGuards^/^reviveAnywhere^;
 
 !!VRi^hench_battleExpStatic^:F0/(INT_MAX);
@@ -42,7 +42,6 @@ ZVSE2
 !!VRi^hench_bonusHeroLvUp^:F0/(INT_MAX);
 !!VRi^hench_bonusDaily^:F0/(INT_MAX);
 !!VRi^hench_stackExpEnabled^:F(FALSE)/(TRUE);
-!!VRi^hench_stackExpTroopMode^:F(FALSE)/i^hench_stackExpEnabled^; [force disabling stack exp troop mode if stack exp disabled]
 !!VRi^hench_bannerEnabled^:F(FALSE)/i^hench_stackExpEnabled^; [force disabling banner if stack exp disabled]
 !!VRi^hench_bannerFree^:F(FALSE)/i^hench_bannerEnabled^; [force disabling free banner if banner disabled]
 !!VRi^hench_bonusSpellDmgPerPwr^:F0/(HENCH_SPELL_MAX);
@@ -55,14 +54,7 @@ ZVSE2
 !!VRi^hench_moreSantaGuards^:F(FALSE)/(TRUE);
 !!VRi^hench_reviveAnywhere^:F(FALSE)/(TRUE);
 
-!?FU(hench_CheckGameLang);
-!!UN:J8/1/^era rus.pac^;
-!!VRi^hench_lang^&1:S1;
-!!UN:J8/5/^-1000 egc - Archer.erm^;
-!!VRi^hench_lang^&1:S2;
-
 !#UN:P49/?i^hench_enabled^;
-!#FU(hench_CheckGameLang):P;
 !#FU(hench_LoadGlobalConfig):P;
 
 ; Store banner type if both campaign carry over and free banner is enabled
@@ -108,7 +100,7 @@ ZVSE2
 ; Prevent reseting Disguise from henchman stack
 !!SN:E(setHook)/1/4473430/(WOG_OnResetSpellFromStack);
 ; Manage henchmen's banners before battle result
-!!SN&i^hench_bannerEnabled^:E(setHook)/1/4681149/(WOG_OnBeforeBattleResult);
+!!SN&i^hench_stackExpEnabled^:E(setHook)/1/4681149/(WOG_OnBeforeBattleResult);
 
 !?FU(WOG_OnResetSpellFromStack);
 !#VA(hook:x);
@@ -190,7 +182,7 @@ ZVSE2
         !!UN:C6916824/4/(NO_ART);
         !!UN:R5/0/0;                    [Refresh cursor]
       !!el;
-        !!SN:T^henchmen.strings_%i(hench_lang).bannerDead^/?(bannerDead:z);
+        !!SN:T^henchmen.strings.bannerDead^/?(bannerDead:z);
         !!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/(MSG_TYPE_MES)^%(bannerDead)^;
       !!en;
 
@@ -438,7 +430,7 @@ ZVSE2
   !!VR(henchExpLoss:y):Sw117 *i^hench_battleExpLossPct^ :100; [Enhanced]
   !!VRw117:-(henchExpLoss);
 
-  !!if&i^hench_stackExpEnabled^/i^hench_stackExpTroopMode^;
+  !!if&i^hench_stackExpEnabled^;
     !!VR(prevHenchStackExp:y):Si^hench_stackExp_%(hero)^;
     !!VRi^hench_stackExp_%(hero)^:S(stackExp); [Transfer stack exp from original creature if stack exp transfer enabeld]
   !!en;
@@ -523,13 +515,13 @@ ZVSE2
 
 !!if&i^hench_stackExpEnabled^;          [Enhanced - stack exp and banner display]
   !!SN:E7503648/1/w118/i^hench_stackExp_%(hero)^; [Hawaiing - calculate exp of the creature, export rank to v1]
-  !!SN:T^henchmen.strings_%i(hench_lang).rank^/?z-1/^lv^/v1;
+  !!SN:T^henchmen.strings.rank^/?z-1/^lv^/v1;
   !!VRz1:+z-1;
 
   !!if&i^hench_bannerEnabled^;
-    !!SN:T^henchmen.strings_%i(hench_lang).banner^/?z-2;
+    !!SN:T^henchmen.strings.banner^/?z-2;
     !!VRy30:Si^hench_banner_%(hero)^;   [y30 - choice of henchman's banner]
-    !!SN:T^henchmen.strings_%i(hench_lang).banner_%y30^/?z-3;
+    !!SN:T^henchmen.strings.banner_%y30^/?z-3;
     !!VRz1:+z-2 +z-3;
   !!en;
 
@@ -720,9 +712,15 @@ ZVSE2
 ; Manage banner after battle if any henchman is killed
 !?FU(WOG_OnBeforeBattleResult);
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  ; Next if the henchman is alive
   !!VR(hero:y):Si^battle_hero_%i^;
   !!IF:W(hero);
+  !!co&w119;
 
+  ; Reset stack exp
+  !!VRi^hench_stackExp_%(hero)^:S0;
+
+  ; Bring the banner to the hero
   !!if&i^hench_banner_%(hero)^>-1;
     !!VRi^hench_banner_%(hero)^:S-1;
     !!HE(hero):A(ART_WARLORDS_BANNER);
@@ -734,7 +732,6 @@ ZVSE2
 !!BA:H0/?(atkHero:y) H1/?(defHero:y);
 !!FU(hench_GiveExpAfterBattle)&(atkHero)>(NO_HERO):P(atkHero)/(BATTLE_LEFT);
 !!FU(hench_GiveExpAfterBattle)&(defHero)>(NO_HERO):P(defHero)/(BATTLE_RIGHT);
-!!FU(hench_StackExpLoss)&i^hench_stackExpTroopMode^:P; [Enhanced - lose stack exp when henchman killed if troop mode = TRUE]
 
 !?FU(hench_GiveExpAfterBattle);
 !#VA(hero:x) (side:x);
@@ -949,17 +946,6 @@ ZVSE2
 !!VRi^hench_stackExp_%(hero)^:+(stackExpGain); [give exp to henchman]
 !!VRi^hench_stackExp_%(hero)^|i^hench_stackExp_%(hero)^>(monExpR11)/i^hench_stackExp_%(hero)^<0:S(monExpR11); [restrain exp]
 
-!?FU(hench_StackExpLoss);
-!!IF:Wi^battle_hero_0^;                  [lose stack exp and banner if killed - attacker]
-!!VRi^hench_stackExp_%i(battle_hero_0)^&w119=0:S0;
-!!VRi^hench_banner_%i(battle_hero_0)^&i^hench_bannerEnabled^/w119=0:S-1;
-
-!!if&i^battle_hero_1^>(NO_HERO);         [lose stack exp and banner if killed - defender]
-  !!IF:Wi^battle_hero_1^;
-  !!VRi^hench_stackExp_%i(battle_hero_1)^&w119=0:S0;
-  !!VRi^hench_banner_%i(battle_hero_1)^&i^hench_bannerEnabled^/w119=0:S-1;
-!!en;
-
 !?FU(hench_SmartHenchDlg);
 !#VA(hero:x) (isEligible:x);
 
@@ -983,7 +969,7 @@ ZVSE2
 !!if&w118>(NO_MON)/w119<>(TRUE);
   !!FU&i^hench_reviveAnywhere^:E;
   
-  !!SN:T^henchmen.strings_%i(hench_lang).bannerDead^/?z-1;
+  !!SN:T^henchmen.strings.bannerDead^/?z-1;
   !!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/1^%z-1^;
   !!FU:E;
 !!en;
@@ -992,7 +978,7 @@ ZVSE2
   !!HE(hero):A2/(ART_WARLORDS_BANNER)/?(quantity:y)/?(quantityEquipped:y); [check banner from hero]
 
   !!if&(quantity)>0;                      [if banner is in backpack]
-    !!SN:T^henchmen.strings_%i(hench_lang).bannerToHench^/?z-1;
+    !!SN:T^henchmen.strings.bannerToHench^/?z-1;
     !!IF:Q1/8/(ART_WARLORDS_BANNER)/2/z-1;[ask to give banner to henchman]
 
     !!if&1;
@@ -1001,7 +987,7 @@ ZVSE2
       !!UN:R3/(CURRENT_HERO);
     !!en;
   !!el;                                   [if no banner]
-    !!SN:T^henchmen.strings_%i(hench_lang).bannerNone^/?z-2;
+    !!SN:T^henchmen.strings.bannerNone^/?z-2;
     !!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/1^%z-2^;
   !!en;
 !!en;
@@ -1009,7 +995,7 @@ ZVSE2
 !?FU(hench_OpenBannerDlg);
 !#VA(hero:x);
 
-!!SN:T^henchmen.strings_%i(hench_lang).bannerTitle^/?z-1 T^henchmen.strings_%i(hench_lang).bannerToHero^/?z-2;
+!!SN:T^henchmen.strings.bannerTitle^/?z-1 T^henchmen.strings.bannerToHero^/?z-2;
 !!VR(last:y):Si^hench_banner_%(hero)^;  [load last choice of henchman's banner]
 
 !!VR(choice:y):S1 Sd<<(last);
