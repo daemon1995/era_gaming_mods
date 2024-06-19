@@ -7261,7 +7261,13 @@ x5=Current Spell Points
 !!if&i^tum_8thDwell_%(townId)^;
   !#VA(usedY[70]:y);                    [Don't place this at the start of the function, it would corrupt IF:N dlg monster numbers for some reason]
 
-  !!FU(eighth_SetOrGet8thMonByTownId):P(townId)/?(mon:y)/?(qty:y);
+  !!if|i^tum_reborn_on^/i^tum_full_on^;
+    !!FU(eighth_SetOrGet8thMonByTownId):P(townId)/?(mon:y)/?(qty:y);
+  !!el;
+    !!FU(eighth_SetOrGet8thMon):P(townId)/?(mon:y)/?(qty:y)/(TRUE); [Legacy]
+  !!en;
+
+  *!FU(eighth_SetOrGet8thMonByTownId):P(townId)/?(mon:y)/?(qty:y);
   !!MA:L(mon)/?(level:y);
 
   !!VR(index:y):S(level) +21;
@@ -7307,7 +7313,14 @@ x5=Current Spell Points
 
 ; Compatibility with 8th mon (from TUM)
 !!if&i^tum_8thDwell_%(townId)^;
-  !!FU(eighth_SetOrGet8thMonByTownId):P(townId)/(mon)/dy(index);
+  !!if|i^tum_reborn_on^/i^tum_full_on^;
+    !!FU(eighth_SetOrGet8thMonByTownId):P(townId)/(mon)/dy(index);
+  !!el;
+    !!VR(qty):+y(index);
+    !!FU(eighth_SetOrGet8thMon):P(townId)/(mon)/(qty)/(FALSE); [Legacy]
+  !!en;
+
+  *!FU(eighth_SetOrGet8thMonByTownId):P(townId)/(mon)/dy(index);
 !!en;
 
 !!SN:D;                                 [Added SN:D command. It's used to redraw hero, heroes meeting, adventure map and town screens.]
@@ -9446,6 +9459,36 @@ Change Heroes Speciali Descriptions
 !#VA(setHook:x);
 
 !!SN:E(setHook)/1/5137685/(ACM_Hero_GetSpecMonster); [Manage addtional monster if TUM is enabled] 4E6515
+!!SN&i^Typhon_Third_Upgrade_Mod_Active^/i^tum_full_on^<>(TRUE)/i^tum_reborn_on^<>(TRUE):E(setHook)/1/5137595/(tum_Hero_GetSpecMonster_BeforeMonIdCheck); [Archer: This function ideally should be placed in TUM]
+
+; Archer: This function ideally should be placed in TUM [Legacy]
+!?FU(tum_Hero_GetSpecMonster_BeforeMonIdCheck)&i^tum_full_on^<>(TRUE)/i^tum_reborn_on^<>(TRUE);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(mon:y);
+!!FU&(mon)<(MON_SUPREME_ARCHANGEL):E;
+
+!!MA:O(mon)/?(townType:y);
+!!FU&(townType)=(NO_TOWN):E;
+
+!!MA:L(mon)/?(level:y);
+
+!!if|i^tum_reborn_on^/i^tum_newTowns_on^/i^tum_full_on^;
+  !!FU(tum_GetMonstersInTown):P(townType)/(level)/?(basicMon:y)/?(upgMon:y)/?(thirdUpgMon:y); 
+!!el;
+  !!FU(tum_GetTownMon):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); [legacy]
+!!en;
+
+!!if&(mon)=(thirdUpgMon);
+  !!UN:C(ebp)/8/4/(basicMon);
+!!el;
+  !!UN:P300/?(fourthUpgOn:y);
+
+  !!if&(fourthUpgOn);
+    !!MA:U(thirdUpgMon)/?(fourthUpgMon:y);
+    !!UN&(mon)=(fourthUpgMon)C(ebp)/8/4/(basicMon);
+  !!en;
+!!en;
 
 !?FU(ACM_GetSpecMonsterStats);
 !#VA(heroId:x) (monLvl:x) (attack:x) (defense:x) (damage:x) (bonusHp:x);
@@ -9545,7 +9588,14 @@ x1=Creature, x2=Hero Number, x3 Returns first upgrade, x4 Returns second upgrade
 
 !!if&(mon)<>(MON_BALLISTA);
   !!MA:O(mon)/?(townType:y) L(mon)/?(level:y);
-  !!FU(tum_GetMonstersInTown):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); 
+
+  !!if|i^tum_reborn_on^/i^tum_newTowns_on^/i^tum_full_on^;
+    !!FU(tum_GetMonstersInTown):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); 
+  !!el;
+    !!FU(tum_GetTownMon):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); [legacy]
+  !!en;
+
+  *!FU(tum_GetMonstersInTown):P(townType)/(level)/?(basicMon:y)/?(upgMon)/?(thirdUpgMon); 
 !!el;
   !!VR(upgMon):S(MON_FIRST_AID_TENT);
   !!VR(thirdUpgMon):S(MON_AMMO_CART);
