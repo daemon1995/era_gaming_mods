@@ -7847,16 +7847,31 @@ Randomly before battle a spell is choosen that will deal significantly more dama
 That breakes immunities and allows to apply spells to creatures that are usually immune.
 
 !?MR2;                                  [Magic Resistance Trigger]
+; Exit if not hero cast
+!!BG:A?y30;
+!!FU&y30<>(BATTLE_ACTION_HERO_CAST):E;
 
+; Exit if friendly spell
+!!MR:S?y31;
+!!SSy31:O?y32;
+!!FU&y32=1:E;
+
+; Exit for War Machines
 !!MR:N?y1;                              [Get Creature Number]
 !!BMy1:I?y2 T?y3;                       [Get Creature Side and Type]
 !!FU|y3=145/y3=146/y3=147/y3=148/y3=149:E; [Exit for Warmachines]
-!!VRy2:-1*-1;                           [Invert Side]
-!!BG:H?y50;                             [Get Casting Hero]
-!!BA:Hy2/?y4;                           [Get Hero Number of creature side]
-!!FU&y4<0:E;
+
+; Exit if the target is the same side as the caster
+!!FU&y2=i^battle_acting_side^:E;
+
+; Get caster hero Id
+!!VRy4:Si^battle_hero_%i(battle_acting_side)^;
+!!FU&y4=(NO_HERO):E;
+
+; Exit if can't reduce spell resistance
 !!FU(ACM_Calc_Magic_Pierce):Py4/?y20;   [Pass hero number and return pierce value]
-!!FU|y50<>y4/y20=0:E;                   [Exit for beneficial spells, meaning same hero]
+!!FU&y20=0:E;
+
 !!MR:F?y5;                              [Get temporarily MR of Creature]
 !!VRy5:+y20; !!VRy5&y5<0:S0;            [Reduce MR by value and make sure it cannot be negative]
 !!MR:Fy5;                               [Apply decreased resistance chance to that stack temporarily]
