@@ -5,7 +5,7 @@ ZVSE2
 ** Script56.erm
 ** Updated by rennyo 26.02.2012
 ** Updated August 23, 2004
-** Updated by Archer30 on May 2022
+** Updated by Archer30 on Jun 2024
 
 ** This script changes all Earth Messengers into Metamorphs. Metamorphs stacks transform
 ** in battle on their first action into another type of creature. The type is determined
@@ -48,11 +48,6 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 
 !!DO(WOG_56_StoreMetamorphInfo)/0/41/1:P; [Cycle through all battlefield stacks]
 
- [Battle location: v998/v999/v1000]
-!!TR998:G?(terrainOverlay:y);           [Check for special terrian type: y-5]
-!!VRi^wog_56_isCursedGround^:S0;        [Initialize i^wog_56_isCursedGround^ to 0]
-!!VRi^wog_56_isCursedGround^&(terrainOverlay)=21:S1; [Set i^wog_56_isCursedGround^ to 21 if battle is on Cursed Ground: i^wog_56_isCursedGround^]
-
 --------------------------------------------------------------------------------------------------------------------
 
  [Store information about creature type (Metamorphs) in v variables]
@@ -63,43 +58,27 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 
 --------------------------------------------------------------------------------------------------------------------
 
- [Check if Metamorphed creature defeats an enemy stack]
-!?FU(OnBeforeBattleAction)&i^wog_56_isCursedGround^=0/1000/-998;
-!!UN:P56/?y-1; [Check if script is enabled: y-1]
-!!FU&y-1<>1:E; [Exit if script isn't enabled]
-
-!!VRi^wog_56_targetStack^:S-1; [Initialize i^wog_56_targetStack^ to -1]
-!!BG:N?v1 A?v2; [Current stack number: v1, Action: v2]
-!!VRv3:S4500 +v1; [Index for original acting monster: v3]
-!!VRv4:Svv3; [Original monster number of acting stack: v4]
-
-!!BG:E?y-2; [Destination monster stack: y-2]
-!!BMy-2&y-2>=0:T?y-3 R?y-4; [Target type (y-3), Retaliations left (y-4)]
-!!VRy-5&y-2>=0:S4500 +y-2; [Index for original target monster: y-5]
-!!VRy-6&y-2>=0:Svy-5; [Original monster number of target stack: y-6]
-!!VRv4601:S-1; [Initialize v4601 to -1]
-!!VRv4601&y-2>=0/y-6=(MON_EARTH_MESSENGER)/v2=6/y-4>0:Sv1; [Set v4601 to attacking stack number if target is a Metamorph and it can retaliate]
-!!VRv4602:S-1; [Initialize v4602 to -1]
-!!VRv4602&y-2>=0/y-6=(MON_EARTH_MESSENGER)/v2=6/y-4>0:Sy-2; [Set v4602 to target's stack number if target is a Metamorph and it can retaliate]
-
-!!BG&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:E?i^wog_56_targetStack^; [Target monster stack: i^wog_56_targetStack^]
-!!FU&i^wog_56_targetStack^<0:E; [Exit if no valid target monster]
-
-!!BMi^wog_56_targetStack^&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:T?v4543; [Target type: v4543]
-!!BG&v4=(MON_EARTH_MESSENGER)/v2>=6/v2<=7:N?v4544; [(Metamorph's) stack #: v4544]
-
---------------------------------------------------------------------------------------------------------------------
-
  [Determine if victorious Metamorphed stack transforms again]
-!?FU(OnAfterBattleAction)&i^wog_56_targetStack^>=0/i^wog_56_isCursedGround^=0/1000/-998; 
-!!UN:P56/?y-1; [Check if script is enabled: y-1]
-!!BU:C?y-3; [Check if battle is ending this turn: y-3=1 if yes]
-!!FU|y-1<>1/y-3=1:E; [Exit if script isn't enabled or battle is ending]
+!?FU(WOG_OnAfterAttack)&1000/-998; 
+!#VA(atkStack:x) (defStack:x);
 
-!!BMi^wog_56_targetStack^:N?v1; [Number of target monsters still alive: v1]
-!!FU&v1>0:E; [Exit if any still alive]
+!!UN:P56/?(wogOption:y); [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E; [Exit if script isn't enabled]
 
-!!VRv1:Sv4544; [(Metamorph's) stack number: v1]
+; Exit if not Metamorph
+!!VR(index:y):S(atkStack) +4500;
+!!FU&v(index)<>(MON_EARTH_MESSENGER):E;
+
+; Exit if the attacker is killed or the defender is not killed
+!!BM(atkStack):N?(atkNum:y);
+!!BM(defStack):N?(defNum:y);
+!!FU|(atkNum)<=0/(defNum)>0:E;
+
+; Exit if the killed stack is Metamorph
+!!BM(defStack):T?v4543;
+!!FU&v4543=(MON_EARTH_MESSENGER):E;
+
+!!VRv1:S(atkStack); [(Metamorph's) stack number: v1]
 !!BMv1:T?v2 N?v3; [Type that Metamorph is currently: v2, Number in stack: v3]
 !!MA:Pv2/?v4; [Health of one (Metamorph): v4]
 !!VRv4:*v3; [Total health of (Metamorph) stack: v4]
@@ -116,6 +95,7 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!BMv1:P?v6 O?v7 I?v8; [Position: v6, Hero's slot: v7, Side: v8]
 
 !!BMv1:F?y-8; [Read Metamorph's Flags: y-8]
+!!VRy31:Sy-8 &(MON_FLAG_ACTED);
 !!VRy-9:Sy-8; [Copy Metamorph's Flags to y-9]
 !!VRy-10:Sy-8; [Copy Metamorph's Flags to y-10]
 !!VRy-9:&8388608; [See if Metamorph is a clone: y-9=8388608 if yes]
@@ -124,107 +104,31 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!VRy-8:|8388608; [Set Metamorph's "clone" bit if not set]
 !!VRy-8:|(MON_FLAG_NO_COLORING);
 !!BMv1:Fy-8; [Write Metamorph's Flags: y-8]
+!!BMv1:R?y-12;
 
 !!BMv1:K1;                              [Kill the Metamorph]
 !!SN&i^battle_isVisible^:D;
+
+!!FU(NewIntArray):P?i^wog_56_metamorphStatsList^/(M_TEMP);
+!!FU(Array_Push):Pi^wog_56_metamorphStatsList^/y31/y-9/y-10/y-12/y-5;
 
 !!BU:Sv4543/v9/v6/v8/v7/1; [Summon new (Metamorph) creature stack: type=v4543]
-!!BU:Ev6/?y-1; [Stack number of new (Metamorph) creature stack: y-1]
 
-*!BMy-1&v4543>=174/v4543<=191:E2; [Set Commander Monster Metamorph spell castings to 2]
-*!BMi^wog_56_targetStack^&v4543>=174/v4543<=191:U4/?y-14; [Target Commander's spell number: y-14]
-*!BMy-1&v4543>=174/v4543<=191:U4/y-14; [Set Commander Monster Metamorph's spell number]
+!!SN:Mi^wog_56_metamorphStatsList^;
+!!VRi^wog_56_metamorphStatsList^:S0;
 
-!!BMy-1&y-1>=0:F?y-2; [New (Metamorph's) Flags: y-2]
-!!VRy-2:|67108864; [Add "done acting this round" Flag]
-!!VRy-2&y-9=8388608:|8388608; [Set new Metamorph stack's "clone" bit if it was a clone]
-!!VRy-2&y-10=4194304:|4194304; [Set new Metamorph stack's "summoned" bit if it was summoned]
-!!BMy-1&y-1>=0:Fy-2; [Write modified Flags to (Metamorph) stack: y-2]
-
-!!VRy-6:Sy-1 *-1 -1; [Negative of New Metamorph stack number: y-6]
-!!EAy-6:Ov4543; [Copy Bonus Lines for new type (v4543) to Metamorph stack (y-6)]
-!!EAy-6:Ey-5/2/v4543/d; [Set Experience of Metamorph stack: y-5]
-
-!!VRz1&v5=1:Sz156003;
-!!VRz1&v5>1:Sz156004;
-!!UN:N3/2/v4543/1; [New creature name (plural): z2]
-!!VRz3:Sz156005;
-!!BU:Mz3; [Display scroll bar message]
-
-!!BG:N?v10; [Next stack to act: v10]
-!!BMv10:P?v13; [Next stack's position: v13]
-!!BMv10:C2/v13/3/1/0; [Next stack casts dummy spell on self]
-
---------------------------------------------------------------------------------------------------------------------
-
- [Post-Action Trigger if Metamorph is being attacked and retaliates]
- [to see if it transforms into the creature type that attacked it]
-!?FU(OnAfterBattleAction)&v4601>=0/i^wog_56_isCursedGround^=0/1000/-998; [After action - only if v4601 isn't less than 0]
-!!UN:P56/?y-1; [Check if script is enabled: y-1]
-!!BU:C?y-3; [Check if battle is ending this turn: y-3=1 if yes]
-!!FU|y-1<>1/y-3=1:E; [Exit if script isn't enabled or battle is ending]
-
-!!BMv4601:N?y-11; [Number of attacking monsters still alive after retaliation: y-11]
-!!FU&y-11>0:E; [Exit if any still alive]
-
-!!VRv1:Sv4602; [(Metamorph's) stack number: v1]
-!!BMv1:T?v2 N?v3; [Type that Metamorph is currently: v2, Number in stack: v3]
-!!MA:Pv2/?v4; [Health of one (Metamorph): v4]
-!!VRv4:*v3; [Total health of (Metamorph) stack: v4]
-!!BMv4601:T?y-7; [Type of attacking creature: y-7]
-!!MA:Py-7/?v5; [Health of one attacking creature: v5]
-!!FU&v2=y-7:E; [Exit if attacking creature is the same type as Metamorph's current type]
-!!FU&v4<v5:E; [Exit if attacking creature's health is higher than (Metamorphs)]
-!!FU(WOG_CheckIfMonsterIsValid):Py-7/?y30; [Exit if target creature is a War Machine, commander or emissary]
-!!FU&y30<>(TRUE):E;
-
-!!VRy-4:Sv1 *-1 -1; [Negative of Metamorph stack number: y-4]
-!!EAy-4:E?y-5/d/d/d; [Experience of Metamorph stack: y-5]
-!!VRv9:Sv4 :v5; [Number of creatures (Metamorphs) can transform to: v9]
-!!VRv9&v9<1:S1; [Minimum 1]
-!!BMv1:P?v6 O?v7 I?v8; [Position: v6, Hero's slot: v7, Side: v8]
-
-!!BMv1:F?y-8 R?y-12; [Read Metamorph's Flags (y-8) and Retaliations (y-12)]
-!!VRy-9:Sy-8; [Copy Metamorph's Flags to y-9]
-!!VRy-10:Sy-8; [Copy Metamorph's Flags to y-10]
-!!VRy-9:&8388608; [See if Metamorph is a clone: y-9=8388608 if yes]
-!!VRy-10:&4194304; [See if Metamorph was summoned: y-10=4194304 if yes]
-!!VRy-8:|4194304; [Set Metamorph's "summoned" bit if not set]
-!!VRy-8:|8388608; [Set Metamorph's "clone" bit if not set]
-!!VRy-8:|(MON_FLAG_NO_COLORING);
-!!BMv1:Fy-8; [Write Metamorph's Flags: y-8]
-
-!!BMv1:K1;                              [Kill the Metamorph]
-!!SN&i^battle_isVisible^:D;
-
-!!BU:Sy-7/v9/v6/v8/v7/1; [Summon new (Metamorph) creature stack: type=y-7]
-!!BU:Ev6/?y-1; [Stack number of new (Metamorph) creature stack: y-1]
-
-*!BMy-1&y-7>=174/y-7<=191:E2; [Set Commander Monster Metamorph spell castings to 2]
-*!BMv4601&y-7>=174/y-7<=191:U4/?y-14; [Target Commander's spell number: y-14]
-*!BMy-1&y-7>=174/y-7<=191:U4/y-14; [Set Commander Monster Metamorph's spell number]
-
-!!BMy-1&y-1>=0:F?y-2; [New (Metamorph's) Flags: y-2]
-!!VRy-2:|67108864; [Add "done acting this round" Flag]
-!!VRy-2&y-9=8388608:|8388608; [Set new Metamorph stack's "clone" bit if it was a clone]
-!!VRy-2&y-10=4194304:|4194304; [Set new Metamorph stack's "summoned" bit if it was summoned]
-!!BMy-1&y-1>=0:Fy-2 Ry-12; [Write modified Flags (y-2) and Retaliations (y-12) to (Metamorph) stack]
-!!VRy-6:Sy-1 *-1 -1; [Negative of New Metamorph stack number: y-6]
-!!EAy-6:Oy-7; [Copy Bonus Lines for new type (y-7) to Metamorph stack (y-6)]
-!!EAy-6:Ey-5/2/y-7/d; [Set Experience of Metamorph stack: y-5]
-!!VRz1&v5=1:Sz156006;
-!!VRz1&v5>1:Sz156007;
-!!UN:N3/2/y-7/1; [New creature name (plural): z2]
-!!VRz3:Sz156008;
-!!BU:Mz3; [Display scroll bar message]
-!!BG:N?v10; [Next stack to act: v10]
-!!BMv10:P?v13; [Next stack's position: v13]
-!!BMv10:C2/v13/3/1/0; [Next stack casts dummy spell on self]
+!!if&i^battle_isVisible^;
+  !!VRz1&v5=1:Sz156003;
+  !!VRz1&v5>1:Sz156004;
+  !!UN:N3/2/v4543/1; [New creature name (plural): z2]
+  !!VRz3:Sz156005;
+  !!BU:Mz3; [Display scroll bar message]
+!!en;
 
 --------------------------------------------------------------------------------
 
  [Battle Stack Obtain Turn trigger]
-!?FU(OnBattleStackObtainsTurn)&i^wog_56_isCursedGround^=0/1000/-998/i^battle_round^>=0;
+!?FU(OnBattleStackObtainsTurn)&1000/-998/i^wog_tacticsIsEnded^;
 !!UN:P56/?y-1; [Check if script is enabled: y-1]
 !!FU&y-1<>1:E; [Exit if script isn't enabled]
 
@@ -253,6 +157,7 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!BMv1:I?v9; [Side that owns Metamorph: v9]
 
 !!BMv1:F?y-8; [Read Metamorph's Flags: y-8]
+!!VRy31:Sy-8 &(MON_FLAG_ACTED);
 !!VRy-9:Sy-8; [Copy Metamorph's Flags to y-9]
 !!VRy-10:Sy-8; [Copy Metamorph's Flags to y-10]
 !!VRy-9:&8388608; [See if Metamorph is a clone: y-9=8388608 if yes]
@@ -261,26 +166,51 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!VRy-8:|8388608; [Set Metamorph's "clone" bit if not set]
 !!VRy-8:|(MON_FLAG_NO_COLORING);
 !!BMv1:Fy-8; [Write Metamorph's Flags: y-8]
+!!BMv1:R?y-12;
 
 !!BMv1:K1;                              [Kill the Metamorph]
 !!SN&i^battle_isVisible^:D;
 
+!!FU(NewIntArray):P?i^wog_56_metamorphStatsList^/(M_TEMP);
+!!FU(Array_Push):Pi^wog_56_metamorphStatsList^/y31/y-9/y-10/y-12/y-5;
+
 !!BU:Sv4/v7/v8/v9/v14/1; [Summon new creature stack: Type is v4]
-!!BU:Ev8/?v24; [Stack number of new summoned stack: v24]
-!!EAy-4:Ov4; [Copy Bonus Lines for new type (v4) to (Metamorph) stack (y-4)]
-!!EAy-4:Ey-5/2/v4/d; [Set Experience of (Metamorph) stack: y-5]
 
-!!BMv24:F?y-2; [New (Metamorph's) Flags: y-2]
-!!VRy-2&y-9=8388608:|8388608; [Set new Metamorph stack's "clone" bit if it was a clone]
-!!VRy-2&y-10=4194304:|4194304; [Set new Metamorph stack's "summoned" bit if it was summoned]
-!!BMv24:Fy-2; [Write modified Flags to (Metamorph) stack: y-2]
-!!BMv24&v24>=0:C4/v8/3/1/0; [Metamorph casts dummy spell on self]
+!!SN:Mi^wog_56_metamorphStatsList^;
+!!VRi^wog_56_metamorphStatsList^:S0;
 
-!!VRz1&v5=1:Sz156009;
-!!VRz1&v5>1:Sz156010;
-!!UN:N3/2/v4/1; [New creature name (plural): z2]
-!!VRz3:Sz156011;
-!!BU:Mz3; [Display scroll bar message]
+!!if&i^battle_isVisible^;
+  !!VRz1&v5=1:Sz156009;
+  !!VRz1&v5>1:Sz156010;
+  !!UN:N3/2/v4/1; [New creature name (plural): z2]
+  !!VRz3:Sz156011;
+  !!BU:Mz3; [Display scroll bar message]
+!!en;
+
+--------------------------------------------------------------------------------------------------------------------
+
+// Set up Metamorph parameters
+!?FU(WOG_BattleStack_InitParams)&i^wog_56_metamorphStatsList^;
+!#VA(stack:x) (side:x);
+
+; Flags
+!!SN:Mi^wog_56_metamorphStatsList^/0/?(isActed:y) Mi^wog_56_metamorphStatsList^/1/?(isClone:y) Mi^wog_56_metamorphStatsList^/2/?(isSummoned:y);
+!!BM(stack):F?(flags:y);
+!!VR(flags):|(isActed) |(isClone) |(isSummoned);
+!!BM(stack):F(flags);
+
+; Retaliation
+!!SN:Mi^wog_56_metamorphStatsList^/3/?(retals:y);
+!!BM(stack):R(retals);
+
+; Archer30: Warning! This is very buggy
+; Stack exp
+!!VR(eaStack:y):S(stack) +1 *-1;
+!!BM(stack):T?(type:y);                 [Copy Bonus Lines for new type to (Metamorph) stack]
+!!EA(eaStack):O(type);                  [Set Experience of (Metamorph) stack]
+
+!!SN:Mi^wog_56_metamorphStatsList^/4/?(exp:y);
+!!EA(eaStack):E(exp)/2/d/d;
 
 --------------------------------------------------------------------------------------------------------------------
 
