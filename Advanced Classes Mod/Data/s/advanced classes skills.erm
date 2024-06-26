@@ -217,11 +217,11 @@ Enable Artefact to appear on the map
 // Set up stack id and side before melee attack
 ; by Archer30
 ; Please don't use BG:N in MR/MF triggers! In mose cases you won't get the correct result (with retaliation). 
-; Use i^acm_meleeStack^ and i^acm_meleeSide^ instead
+; Use i^acm_attackStack^ and i^acm_meleeSide^ instead
 !?FU(ACM_OnBeforeMelee);
 !#VA(atkStack:x) (defStack:x);
 
-!!VRi^acm_meleeStack^:S(atkStack);
+!!VRi^acm_attackStack^:S(atkStack);
 !!FU(ACM_GetActualStackSide):P(atkStack)/?i^acm_meleeSide^;
 
 // Custom Fire Shield
@@ -23699,7 +23699,7 @@ Counterstrike: Increases retaliation damage based on your Spell Power
   !!MF:N?y4;                            [damage receiving stack]
 
   !!if&y1=y4;                           [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
-    !!VRy1:Si^acm_meleeStack^;
+    !!VRy1:Si^acm_attackStack^;
     !!BMy1:I?y5;                        [Side index as for heroes (0:left, 1:right)]
     !!FU&i^Counterstrike_Cast%Y5^=0:E;  [Check if there was a valid Counterstrike cast]
 
@@ -25672,7 +25672,8 @@ x1 - hero id; x2 - spell id; x3 - mode. -1 is remove, 1 - apply, 0 - print for d
   !!BMy4:I?y3;
   !!BHy3:N?y5;                            [Hero Number]
   !!SN:W^Damage_Fire_Shield^/?y8;         [Physical Damage]
-  !!FU(Fire_Shield_Calculation):Py5/i^acm_meleeStack^/y4/d/i^acm_meleeSide^/y8/?y7/0/1;
+  !!FU(ACM_GetActualStackSide):Pi^acm_attackStack^/?y30;
+  !!FU(Fire_Shield_Calculation):Py5/i^acm_attackStack^/y4/d/y30/y8/?y7/0/1;
   !!MF:Fy7;                               [Apply new Damage]
 !!en;
 
@@ -35750,12 +35751,18 @@ kill count you get +4% of a random attribute
 !!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackPerSide);
 !!FU(ACM_BattleStack_InitParams):P(stackId)/(side);
 
-!?FU(ACM_HOOK_BeforeMeleeMainFunc);
+!?FU(ACM_HOOK_BeforeAttackMainFunc);
 !#VA(hook:x);
 
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStrucktAttacker:y);
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ptr:y);
 !!UN:C(ptr)/8/(UNC_INT)/?(stackStrucktDefender:y);
+
+!!if&(hook)=4461377;
+  !!VR(typeAttack:y):S(BATTLE_ACTION_WALK_AND_ATTACK);
+!!el;
+  !!VR(typeAttack):S(BATTLE_ACTION_SHOOT);
+!!en;
 
 !!VR(stackAttackerID:y):S(NO_STACK); 
 !!VR(stackDefenderID:y):S(NO_STACK); 
@@ -35772,20 +35779,24 @@ kill count you get +4% of a random attribute
   !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
 !!en;
 
-; Get the direction of attack
-; The value would be wrong if Gnoll Marauder's Stirke First triggers (direction would become -1)!
-*!UN:C(ptr)/12/(UNC_INT)/?(direction:y);
-*!VR(offset:y):S(STRUCT_HOOK_CONTEXT_ESP) +60;
-*!UN:C(hook)/(offset)/(UNC_INT)/?(direction:y);
-*!VR(direction)|(direction)<0/(direction)>7:S-1;
+!!VRi^acm_attackStack^:S(stackAttackerID);
+!!VRi^acm_defendStack^:S(stackDefenderID);
 
-!!FU(ACM_OnBeforeMelee):P(stackAttackerID)/(stackDefenderID);
+!!FU(ACM_OnBeforeMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
+!!FU(ACM_OnBeforeShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+!!FU(ACM_OnBeforeAttack)|(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK)/(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
 
 !?FU(ACM_HOOK_AfterAttackMainFunc);
 !!SN:X?(hook:y);
 !!UN:C(hook)/0/(UNC_INT)/?(stackStrucktDefender:y);   
 !!UN:C(hook)/4/(UNC_INT)/?(stackStrucktAttacker:y);  
-!!BG:A?(typeAttack:y);
+
+!!if&(hook)=4462998;
+  !!VR(typeAttack:y):S(BATTLE_ACTION_WALK_AND_ATTACK);
+!!el;
+  !!VR(typeAttack):S(BATTLE_ACTION_SHOOT);
+!!en;
+
 !!VR(stackAttackerID:y):S(NO_STACK); 
 !!VR(stackDefenderID:y):S(NO_STACK); 
 
