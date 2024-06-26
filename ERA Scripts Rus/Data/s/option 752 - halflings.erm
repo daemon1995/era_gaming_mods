@@ -24,32 +24,43 @@ ZVSE2
 !!MA:F(MON_HALFLING)/(fv);    [обновл€ем FV]
 
 !?FU(OnMonsterPhysicalDamage);
-!!UN:P752/?y1;                [провер€ем включена ли опци€ 752 в y1]
-!!FU&y1=0:E;                  [выход если опци€ не включена]
+!!UN:P752/?(wogOption:y);               [провер€ем включена ли опци€ 752]
+!!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
 
-!!BG:D?y1;                    [y1 - атакуемый гекс]
-!!MF:W?y2 N?y3;               [y2/y3 - тип урона/отр€д получающий урон]
-!!BMy3:T?y4 P?y5 N?y6;        [y4/y5/y6 - тип/позици€/численность отр€да, получающего урон]
-!!BG:N?y7;                    [y7 - активный отр€д]
-!!FU|y2<>0/y4<>(MON_HALFLING)/y1=y5/y3=y7:E; [выход, если урон рва/башен, урон получают не ’оббиты, урон пр€мой или ответна€ атака]
+!!MF:N?(targetStack:y);
+!!BM(targetStack):T?(defType:y);
+!!FU&(defType)<>(MON_HALFLING):E;
 
-!!BMy3:G59/?y11/d G60/?y12/d G61/?y13/d G62/?y14/d G70/?y15/d G72/?y16/d G74/?y17/d; [y11-y17 - длительность заклинаний обездвиживани€/разума]
-!!FU|y11>0/y12>0/y13>0/y14>0/y15>0/y16>0/y17>0:E; [выход, если на ’оббитах есть заклинание обездвиживани€/разума]
+; Check damage type, exit if not breath attacking, Fireball or Death Cloud
+; Halflings receive Strike All Around attack damage as normal
+!!UN:C42149568/(UNC_INT)/?(dmgTypeValue:y);
+!!VR(evaded:y):S(FALSE);
 
-!!MF:E0;                      [отмена урона]
+; For Breath, just set the damage to 0
+!!if&(dmgTypeValue)=4462479;
+  !!VR(evaded):S(TRUE);
+
+; For Strike all around, Fireball and Death Cloud, check if Halflings are the target
+!!el|(dmgTypeValue)=4456676/(dmgTypeValue)=4454752/(dmgTypeValue)=4455746;
+  !!VR(evaded)&i^es_defendStack^<>(targetStack):S(TRUE);
+!!en;
+
+!!FU&(evaded)<>(TRUE):E;
+
+!!MF:F0;
+
+*!BMy3:G59/?y11/d G60/?y12/d G61/?y13/d G62/?y14/d G70/?y15/d G72/?y16/d G74/?y17/d; [y11-y17 - длительность заклинаний обездвиживани€/разума]
+*!FU|y11>0/y12>0/y13>0/y14>0/y15>0/y16>0/y17>0:E; [выход, если на ’оббитах есть заклинание обездвиживани€/разума]
 
 ; Show battle log and animation
 !!if&i^battle_isVisible^;
-  !!BMy3:V86;
-
-  !!if&y6=1;
-    !!SN:H^monname^/(MON_HALFLING)/0/?(halfingName:z);
-  !!el;
-    !!SN:H^monname^/(MON_HALFLING)/1/?(halfingName);
-  !!en;
-
+  !!BM(targetStack):N?(defNum:y);
+  !!VR(isPlural:y):S(defNum) -1 B;
+  !!SN:H^monname^/(MON_HALFLING)/(isPlural)/?(halfingName:z);
   !!SN:T^es.752.battleLog^?(battleLog:z)/^halfling^/(halfingName);
   !!MM:S(battleLog);
+
+  !!BM(targetStack):V86;
 !!en;
 
 !?FU(OnMagicCorrectedResistance);
@@ -57,30 +68,35 @@ ZVSE2
 !!FU&y1=0:E;                  [выход если опци€ не включена]
 
 !!MR:M?y1;                    [y1 - тип существа получающего урон]
-!!FU&y1<>(MON_HALFLING):E;               [выход, если урон получают не ’оббиты]
+!!FU&y1<>(MON_HALFLING):E;    [выход, если урон получают не ’оббиты]
+
 !!BG:A?y1 D?y2;               [y1/y2 - действие/атакуемый гекс]
-!!FU&y1<>1/y1<>10:E;          [выход, если не каст заклинани€]
+!!FU&y1<>(BATTLE_ACTION_HERO_CAST)/y1<>(BATTLE_ACTION_MONSTER_CAST):E;          [выход, если не каст заклинани€]
 
-!!UN:C42231940/4/?y11;        [спасибо за код Berserker'у]
-!!VRy11:+56;                  [...]
-!!UN:Cy11/4/?y3;              [y3 - гекс отр€да, получающего урон]
-!!FU|y3<0/y3>186:E;           [выход, если гекс за пределами пол€]
+!!MR:N?y4;
+!!BMy4:P?y31;
+!!FU&y2=y31:E;
 
-!!BU:Ey3/?y4;                 [y4 - номер отр€да на позиции]
-!!FU&y4<0:E;                  [выход, если живого отр€да нет]
+!!BMy4:N?y6;
 
-!!BMy4:N?y6;                  [y6 - численность отр€да, получающего урон]]
-!!FU|y2=y3/y6<1:E;            [выход, если урон пр€мой или отр€д мертв]
+*!UN:C42231940/4/?y11;        [спасибо за код Berserker'у]
+*!VRy11:+56;                  [...]
+*!UN:Cy11/4/?y3;              [y3 - гекс отр€да, получающего урон]
+*!FU|y3<0/y3>186:E;           [выход, если гекс за пределами пол€]
 
-!!BMy4:G59/?y11/d G60/?y12/d G61/?y13/d G62/?y14/d G70/?y15/d G72/?y16/d G74/?y17/d; [y11-y17 - длительность заклинаний обездвиживани€/разума]
-!!FU|y11>0/y12>0/y13>0/y14>0/y15>0/y16>0/y17>0:E; [выход, если на ’оббитах есть заклинание обездвиживани€/разума]
+*!BU:Ey3/?y4;                 [y4 - номер отр€да на позиции]
+*!FU&y4<0:E;                  [выход, если живого отр€да нет]
+
+*!BMy4:N?y6;                  [y6 - численность отр€да, получающего урон]]
+*!FU|y2=y3/y6<1:E;            [выход, если урон пр€мой или отр€д мертв]
+
+*!BMy4:G59/?y11/d G60/?y12/d G61/?y13/d G62/?y14/d G70/?y15/d G72/?y16/d G74/?y17/d; [y11-y17 - длительность заклинаний обездвиживани€/разума]
+*!FU|y11>0/y12>0/y13>0/y14>0/y15>0/y16>0/y17>0:E; [выход, если на ’оббитах есть заклинание обездвиживани€/разума]
 
 !!MR:F0;                      [обнуление магического урона]
 
 ; Show battle log and animation
 !!if&i^battle_isVisible^;
-  !!BMy4:V86;
-
   !!if&y6=1;
     !!SN:H^monname^/(MON_HALFLING)/0/?(halfingName:z);
   !!el;
@@ -89,6 +105,8 @@ ZVSE2
 
   !!SN:T^es.752.battleLog^?(battleLog:z)/^halfling^/(halfingName);
   !!MM:S(battleLog);
+
+  !!BMy4:V86;
 !!en;
 
 **end
