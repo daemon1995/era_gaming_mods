@@ -197,8 +197,8 @@ ZVSE2
 
 !!SN:E(setHook)/1/5013149/(ES_OnNewDay);[Trigger after adjusting Cover of Darkness visibility]
 
-!!SN:E(setHook)/1/4461377/(ES_HOOK_BeforeAttackMainFunc); [Trigger before melee attack, works for retaliation] 441341
-!!SN:E(setHook)/1/4453930/(ES_HOOK_BeforeAttackMainFunc); [Trigger before shooting] 43F62A
+!!SN:E(setHook)/1/4461377/(ES_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation] 441341
+!!SN:E(setHook)/1/4453930/(ES_HOOK_BeforeShootMainFunc); [Trigger before shooting] 43F62A
 
 !!SN:E(setHook)/1/4462998/(ES_HOOK_AfterAttackMainFunc);   [Trigger after melee attack, before retaliation]
 !!SN:E(setHook)/1/4455129/(ES_HOOK_AfterAttackMainFunc);   [Trigger after shooting]
@@ -215,56 +215,27 @@ ZVSE2
 
 !!SN:E(setHook)/1/5131803/(ES_OnSetHeroMovementPoints); [Trigger on getting the final result of initial movement points]
 
-!?FU(ES_HOOK_BeforeAttackMainFunc);
+!?FU(ES_HOOK_BeforeMeleeMainFunc);
 !#VA(hook:x);
 
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStrucktAttacker:y);
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ptr:y);
-!!UN:C(ptr)/8/(UNC_INT)/?(stackStrucktDefender:y);
+!!FU(ES_HOOK_BeforeAttackMainFunc):P(hook)/0;
 
-!!if&(hook)=4461377;
-  !!VR(typeAttack:y):S(BATTLE_ACTION_WALK_AND_ATTACK);
-!!el;
-  !!VR(typeAttack):S(BATTLE_ACTION_SHOOT);
-!!en;
+!?FU(ES_HOOK_BeforeShootMainFunc);
+!#VA(hook:x);
+
+!!FU(ES_HOOK_BeforeAttackMainFunc):P(hook)/1;
+
+!?FU(ES_HOOK_BeforeAttackMainFunc);
+!#VA(hook:x) (mode:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStructAttacker:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y);
+!!UN:C(ebp)/8/(UNC_INT)/?(stackStructDefender:y);
 
 !!VR(stackAttackerID:y):S(NO_STACK); 
 !!VR(stackDefenderID:y):S(NO_STACK); 
 
-!!if&(stackStrucktAttacker); 
-  !!UN:C(stackStrucktAttacker)/244/(UNC_INT)/?(attakerSide:y);
-  !!UN:C(stackStrucktAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
-  !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide);
-!!en;
-
-!!if&(stackStrucktDefender);
-  !!UN:C(stackStrucktDefender)/244/(UNC_INT)/?(defenderSide:y);
-  !!UN:C(stackStrucktDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
-  !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
-!!en;
-
-!!VRi^es_attackStack^:S(stackAttackerID);
-!!VRi^es_defendStack^:S(stackDefenderID);
-
-!!FU(ES_OnBeforeMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
-!!FU(ES_OnBeforeShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
-!!FU(ES_OnBeforeAttack)|(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK)/(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
-
-!?FU(ES_HOOK_AfterAttackMainFunc);      [by igrik]
-!!SN:X?(hook:y);
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDI)/(UNC_INT)/?(stackStructDefender:y);  
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStructAttacker:y); 
-
-!!if&(hook)=4462998;
-  !!VR(typeAttack:y):S(BATTLE_ACTION_WALK_AND_ATTACK);
-!!el;
-  !!VR(typeAttack):S(BATTLE_ACTION_SHOOT);
-!!en;
-
-!!VR(stackAttackerID:y):S(NO_STACK);
-!!VR(stackDefenderID:y):S(NO_STACK);
-
-!!if&(stackStructAttacker);
+!!if&(stackStructAttacker); 
   !!UN:C(stackStructAttacker)/244/(UNC_INT)/?(attakerSide:y);
   !!UN:C(stackStructAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
   !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide);
@@ -276,9 +247,55 @@ ZVSE2
   !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
 !!en;
 
-!!FU(ES_OnAfterMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
-!!FU(ES_OnAfterShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
-!!FU(ES_OnAfterAttack)|(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK)/(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+!!VRi^es_attackStack^:S(stackAttackerID);
+!!VRi^es_defendStack^:S(stackDefenderID);
+
+!!if&(mode)=0;
+  !!FU(ES_OnBeforeMelee):P(stackAttackerID)/(stackDefenderID);
+!!el;
+  !!FU(ES_OnBeforeShoot):P(stackAttackerID)/(stackDefenderID);
+!!en;
+
+!!FU(ES_OnBeforeAttack):P(stackAttackerID)/(stackDefenderID);
+
+!?FU(ES_HOOK_AfterMeleeMainFunc);
+!#VA(hook:x);
+
+!!FU(ES_HOOK_BeforeAttackMainFunc):P(hook)/0;
+
+!?FU(ES_HOOK_AfterShootMainFunc);
+!#VA(hook:x);
+
+!!FU(ES_HOOK_BeforeAttackMainFunc):P(hook)/1;
+
+!?FU(ES_HOOK_AfterAttackMainFunc);
+!#VA(hook:x) (mode:x);
+
+!!UN:C(hook)/0/(UNC_INT)/?(stackStructDefender:y);   
+!!UN:C(hook)/4/(UNC_INT)/?(stackStructAttacker:y);  
+
+!!VR(stackAttackerID:y):S(NO_STACK); 
+!!VR(stackDefenderID:y):S(NO_STACK); 
+
+!!if&(stackStructAttacker); 
+  !!UN:C(stackStructAttacker)/244/(UNC_INT)/?(attakerSide:y); 
+  !!UN:C(stackStructAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
+  !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide); 
+!!en;
+
+!!if&(stackStructDefender);
+  !!UN:C(stackStructDefender)/244/(UNC_INT)/?(defenderSide:y);
+  !!UN:C(stackStructDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
+  !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
+!!en;
+
+!!if&(mode)=0;
+  !!FU(ES_OnAfterMelee):P(stackAttackerID)/(stackDefenderID);
+!!el;
+  !!FU(ES_OnAfterShoot):P(stackAttackerID)/(stackDefenderID);
+!!en;
+
+!!FU(ES_OnAfterAttack):P(stackAttackerID)/(stackDefenderID);
 
 !?FU(ES_HOOK_AfterStackInitParams);
 !#VA(hook:x);
