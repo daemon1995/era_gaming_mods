@@ -11338,7 +11338,7 @@ x1=ComLevel, x2=ComMagicLvl, x3=ComSpellModifier, x4=returns HP, x5=returns min 
 
 !!ifx7>=0;                              [Artifact Bonus]
   !!HEx7:A2/143/?i/?y28;                [Check Hero artifact for summoning scroll]
-  !!VRx4&y28=1:+1000;                   [If Scroll equipped give +1000HP]
+  !!VRx4&y28>0:+1000;                   [If Scroll equipped give +1000HP]
 !!en;
 
 
@@ -26139,7 +26139,7 @@ x1 - hero id; x2 - spell id; x3 - mode. -1 is remove, 1 - apply, 0 - print for d
 !!SN:W^Hero%X1_Summoning_Upgrade^/?y50;
 !!VRy50:*100;                           [+100 HP per Spell Upgrade]
 !!VRy9:+y50;
-!!VRy9&y28=1:+1000;                     [+1000HP with the scroll of summoning]
+!!VRy9&y28>0:+1000;                     [+1000HP with the scroll of summoning]
 !!VRx3:Sy9;                             [Return and pass HP value]
 
 
@@ -35740,9 +35740,10 @@ kill count you get +4% of a random attribute
 !#VA(setHook:x);
 
 !!SN:E(setHook)/1/4445929/(ACM_HOOK_AfterStackInitParams); [Trigger after initialising the stats of a stack on the battlefield]
-!!SN:E(setHook)/1/4461377/(ACM_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation. Won't triggered if the target is killed] 441341
-!!SN:E(setHook)/1/4462998/(ACM_HOOK_AfterAttackMainFunc); [Trigger after melee attack, before retaliation] 441996
-!!SN:E(setHook)/1/4455129/(ACM_HOOK_AfterAttackMainFunc); [Trigger after shooting]
+!!SN:E(setHook)/1/4461377/(ACM_HOOK_BeforeMeleeMainFunc); [Trigger before melee attack, works for retaliation] 441341
+!!SN:E(setHook)/1/4453930/(ACM_HOOK_BeforeShootMainFunc); [Trigger before shooting] 43F62A
+!!SN:E(setHook)/1/4462998/(ACM_HOOK_AfterMeleeMainFunc); [Trigger after melee attack, before retaliation] 441996
+!!SN:E(setHook)/1/4455129/(ACM_HOOK_AfterShootMainFunc); [Trigger after shooting]
 
 !?FU(ACM_HOOK_AfterStackInitParams);    [by daemon_n]
 !#VA(hook:x);
@@ -35751,70 +35752,87 @@ kill count you get +4% of a random attribute
 !!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackPerSide);
 !!FU(ACM_BattleStack_InitParams):P(stackId)/(side);
 
-!?FU(ACM_HOOK_BeforeAttackMainFunc);
+!?FU(ACM_HOOK_BeforeMeleeMainFunc);
 !#VA(hook:x);
 
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStrucktAttacker:y);
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ptr:y);
-!!UN:C(ptr)/8/(UNC_INT)/?(stackStrucktDefender:y);
+!!FU(ACM_HOOK_BeforeAttackMainFunc):P(hook)/0;
 
-!!if&(hook)=4461377;
-  !!VR(typeAttack:y):S(BATTLE_ACTION_WALK_AND_ATTACK);
-!!el;
-  !!VR(typeAttack):S(BATTLE_ACTION_SHOOT);
-!!en;
+!?FU(ACM_HOOK_BeforeShootMainFunc);
+!#VA(hook:x);
+
+!!FU(ACM_HOOK_BeforeAttackMainFunc):P(hook)/1;
+
+!?FU(ACM_HOOK_BeforeAttackMainFunc);
+!#VA(hook:x) (mode:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(stackStructAttacker:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y);
+!!UN:C(ebp)/8/(UNC_INT)/?(stackStructDefender:y);
 
 !!VR(stackAttackerID:y):S(NO_STACK); 
 !!VR(stackDefenderID:y):S(NO_STACK); 
 
-!!if&(stackStrucktAttacker); 
-  !!UN:C(stackStrucktAttacker)/244/(UNC_INT)/?(attakerSide:y);
-  !!UN:C(stackStrucktAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
+!!if&(stackStructAttacker); 
+  !!UN:C(stackStructAttacker)/244/(UNC_INT)/?(attakerSide:y);
+  !!UN:C(stackStructAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
   !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide);
 !!en;
 
-!!if&(stackStrucktDefender);
-  !!UN:C(stackStrucktDefender)/244/(UNC_INT)/?(defenderSide:y);
-  !!UN:C(stackStrucktDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
+!!if&(stackStructDefender);
+  !!UN:C(stackStructDefender)/244/(UNC_INT)/?(defenderSide:y);
+  !!UN:C(stackStructDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
   !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
 !!en;
 
 !!VRi^acm_attackStack^:S(stackAttackerID);
 !!VRi^acm_defendStack^:S(stackDefenderID);
 
-!!FU(ACM_OnBeforeMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
-!!FU(ACM_OnBeforeShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
-!!FU(ACM_OnBeforeAttack)|(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK)/(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+!!if&(mode)=0;
+  !!FU(ACM_OnBeforeMelee):P(stackAttackerID)/(stackDefenderID);
+!!el;
+  !!FU(ACM_OnBeforeShoot):P(stackAttackerID)/(stackDefenderID);
+!!en;
+
+!!FU(ACM_OnBeforeAttack):P(stackAttackerID)/(stackDefenderID);
+
+!?FU(ACM_HOOK_AfterMeleeMainFunc);
+!#VA(hook:x);
+
+!!FU(ACM_HOOK_BeforeAttackMainFunc):P(hook)/0;
+
+!?FU(ACM_HOOK_AfterShootMainFunc);
+!#VA(hook:x);
+
+!!FU(ACM_HOOK_BeforeAttackMainFunc):P(hook)/1;
 
 !?FU(ACM_HOOK_AfterAttackMainFunc);
-!!SN:X?(hook:y);
-!!UN:C(hook)/0/(UNC_INT)/?(stackStrucktDefender:y);   
-!!UN:C(hook)/4/(UNC_INT)/?(stackStrucktAttacker:y);  
+!#VA(hook:x) (mode:x);
 
-!!if&(hook)=4462998;
-  !!VR(typeAttack:y):S(BATTLE_ACTION_WALK_AND_ATTACK);
-!!el;
-  !!VR(typeAttack):S(BATTLE_ACTION_SHOOT);
-!!en;
+!!UN:C(hook)/0/(UNC_INT)/?(stackStructDefender:y);   
+!!UN:C(hook)/4/(UNC_INT)/?(stackStructAttacker:y);  
 
 !!VR(stackAttackerID:y):S(NO_STACK); 
 !!VR(stackDefenderID:y):S(NO_STACK); 
 
-!!if&(stackStrucktAttacker)<>(FALSE); 
-  !!UN:C(stackStrucktAttacker)/244/(UNC_INT)/?(attakerSide:y); 
-  !!UN:C(stackStrucktAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
+!!if&(stackStructAttacker)<>(FALSE); 
+  !!UN:C(stackStructAttacker)/244/(UNC_INT)/?(attakerSide:y); 
+  !!UN:C(stackStructAttacker)/248/(UNC_INT)/?(attakerStackIdInSide:y);
   !!VR(stackAttackerID):S(attakerSide) *(BATTLE_STACKS_PER_SIDE) +(attakerStackIdInSide); 
 !!en;
 
-!!if&(stackStrucktDefender)<>(FALSE);
-  !!UN:C(stackStrucktDefender)/244/(UNC_INT)/?(defenderSide:y);
-  !!UN:C(stackStrucktDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
+!!if&(stackStructDefender)<>(FALSE);
+  !!UN:C(stackStructDefender)/244/(UNC_INT)/?(defenderSide:y);
+  !!UN:C(stackStructDefender)/248/(UNC_INT)/?(defenderStackIdInSide:y);
   !!VR(stackDefenderID):S(defenderSide) *(BATTLE_STACKS_PER_SIDE) +(defenderStackIdInSide);
 !!en;
 
-!!FU(ACM_OnAfterMelee)&(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK):P(stackAttackerID)/(stackDefenderID);
-!!FU(ACM_OnAfterShoot)&(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
-!!FU(ACM_OnAfterAttack)|(typeAttack)=(BATTLE_ACTION_WALK_AND_ATTACK)/(typeAttack)=(BATTLE_ACTION_SHOOT):P(stackAttackerID)/(stackDefenderID);
+!!if&(mode)=0;
+  !!FU(ACM_OnAfterMelee):P(stackAttackerID)/(stackDefenderID);
+!!el;
+  !!FU(ACM_OnAfterShoot):P(stackAttackerID)/(stackDefenderID);
+!!en;
+
+!!FU(ACM_OnAfterAttack):P(stackAttackerID)/(stackDefenderID);
 
 
 ****************************** Artifact Set description made by kongsuni****************************
@@ -36053,7 +36071,7 @@ x1=hero number, x2=acting side, x3=returns number of extra casts for this combat
 Set description of Warmachines when right clicking them in battle
 ; For dynamic description (description will change in the battle)
 !?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>0/i^mouse_battleHex^<186;
-!!BU:Ey1/?y2;
+!!BU:Ei^mouse_battleHex^/?y2;
 !!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
 
 !!BMy2:T?y3 I?y4 S?y6;                [get monster type and side index]
