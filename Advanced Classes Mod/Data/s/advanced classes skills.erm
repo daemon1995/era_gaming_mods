@@ -9345,8 +9345,8 @@ Change Heroes Speciali Descriptions
     !!en;
 
     !!if&y6=36;                         [Torosar has increased chance to block physical damage]
-      !!VRy54:Sy48:2+30;                [chance to block]
-      !!VRy53:Sy48:2+50;                [damage block]
+      !!VRy54:Sy48:2+30 F30/100;        [chance to block]
+      !!VRy53:Sy48:2+50 F50/95;         [damage block]
     !!en;
 
     !!if&y6=105;                        [Vey has increased strikes all around damage]
@@ -19089,7 +19089,6 @@ Pendant of Courage
 !!SN:W^Misfortune_Attacking_Stack^/-1;
 !!SN:W^Slayer_Attacking_Stack^/-1;
 !!SN:W^Mirth_Attacking_Stack^/-1;
-!!SN:W^Fire_Shield_Attacking_Stack^/-1;
 !!SN:W^Prayer_Shield_Attacking_Stack^/-1;
 !!SN:W^Sorrow_Shield_Attacking_Stack^/-1;
 !!SN:W^Shield_Attacking_Stack^/-1;
@@ -21150,36 +21149,35 @@ Undead stacks heal and with next attack^;                                       
 
 *-------------------------------Fire Shield------------------------------------*
 *chance to summon fire element when hit with melee attack; chance is 10/20% + Spell Power/2%
-!?MF1&1000/-936;
+!?MF1&-936;
 
 !!MF:W?y80;
 !!FU&y80>0:E;
 
-!!BG:A?y1;
-!!FU&y1<>6:E;                           [Exit if no Melee Attack]
+; Exit if not Strike all around or normal melee attack
+!!UN:C42149568/(UNC_INT)/?y30;
+!!FU&y30<>4456676/y30<>4462398:E;
 
-!!BG:N?y4;                              [Attacking Stack]
-!!MF:N?y1;                              [damage receiving stack]
-!!SN:W^Fire_Shield_Attacking_Stack^/?y50;
-!!VRy1&y4=y1/y50>=0/y50<=41:Sy50;       [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
-
-!!SN:W^Fire_Shield_Attacking_Stack^/y4;
-
-!!BMy1:I?y2;                            [Side index as for heroes (0:left, 1:right)]
-!!SN:W^Fire_Shield_Cast%Y2^/?y3;        [Check if Spell was actually cast by Hero]
+!!VRy1:Si^acm_defendStack^;             [Get the attacked stack from saved variable]
+!!SN:W^ACM_Fire_Shield_Target_%Y1^/?y3; [Check if Spell was actually cast by Hero] - Archer30: Fire_Shield_Cast is deprecated
 !!FU&y3<>1:E;
 
-!!BMy1:G29/?y13/?y14;                   [check for Fire_Shield Duration]
-!!FU&y13=0:E;                           [Exit if no Fire_Shield]
-
 !!BMy1:I?y5;                            [Side index as for heroes (0:left, 1:right)]
+
+; Exit if there can be no more stack for the side
+!!FU(ACM_CheckIfPossibleToSummonMoreStacks):Py5/?y31;
+!!FU&y31<>(TRUE):E;
+
+!!BMy1:G29/?y13/?y14;                   [check for Fire_Shield Duration]
+!!FU&y13<=0:E;                          [Exit if no Fire_Shield]
+
 !!BA:Hy5/?y99;
 !!SN:W^H3_Fire Magic_0_Hero%Y99^/?y11;  [Fire Magic Bonus handling]
 !!HEy99&y99>=0:S14/?y81 S15/?y82 S16/?y83 S17/?y84 S25/?y85 Fd/d/?y22/d S24/?y87; [Checke ob der Held Sorcery und Fire Magien hat und Sp]
 *!VRy85&y85><0/v7198=1:+4;
 !!FU|y81<3/y11<>1:E;
 
-!!BMy1:T?y66;
+!!BMy1:T?y66;                           [Archer30: It doesn't seem necessary to prevent summoning Fire Elementals from attacking Fire Elementals]
 !!FU&y66=114:E;
 
 !!SN:W^H3_Fire Magic_1_Hero%Y99^/?y87;  [Fire Magic Bonus handling]
@@ -21188,7 +21186,9 @@ Undead stacks heal and with next attack^;                                       
 !!VRy23&y87>0:+10;                      [+10% with GM]
 !!VRy23&y23>=50/y87=0:S50;              [Cap at 50%, 65% with GM @Alf]
 !!VRy23&y23>=65/y87=1:S65;
-!!if&y20<y23;                           [chance is dependant on Spell Power +20%]
+*!FU&y20>=y23:E;                        [chance is dependant on Spell Power +20%]
+
+; Archer30: Ideally, we should also check if the targeted position has siege wall on it
 
 !!BMy1:P?y1;
 
@@ -21198,49 +21198,64 @@ Undead stacks heal and with next attack^;                                       
 !!BU&y3>=0/y3<=186:Oy3/?y9;
 
 !!if|y8<>-1/y9<>0;
-!!VRy6:S1;
-!!FU(AC_Function_126):Py1/y6/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BU&y3>=0/y3<=186:Oy3/?y9;
+  !!VRy6:S1;
+  !!FU(AC_Function_126):Py1/y6/?y3;
+  !!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
+  !!BU&y3>=0/y3<=186:Oy3/?y9;
 !!en;
 
 !!if|y8<>-1/y9<>0;
-!!VRy6:S2;
-!!FU(AC_Function_126):Py1/y6/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BU&y3>=0/y3<=186:Oy3/?y9;
+  !!VRy6:S2;
+  !!FU(AC_Function_126):Py1/y6/?y3;
+  !!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
+  !!BU&y3>=0/y3<=186:Oy3/?y9;
 !!en;
 
 !!if|y8<>-1/y9<>0;
-!!VRy6:S3;
-!!FU(AC_Function_126):Py1/y6/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BU&y3>=0/y3<=186:Oy3/?y9;
+  !!VRy6:S3;
+  !!FU(AC_Function_126):Py1/y6/?y3;
+  !!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
+  !!BU&y3>=0/y3<=186:Oy3/?y9;
 !!en;
 
 !!if|y8<>-1/y9<>0;
-!!VRy6:S4;
-!!FU(AC_Function_126):Py1/y6/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BU&y3>=0/y3<=186:Oy3/?y9;
+  !!VRy6:S4;
+  !!FU(AC_Function_126):Py1/y6/?y3;
+  !!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
+  !!BU&y3>=0/y3<=186:Oy3/?y9;
 !!en;
 
 !!if|y8<>-1/y9<>0;
-!!VRy6:S5;
-!!FU(AC_Function_126):Py1/y6/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BU&y3>=0/y3<=186:Oy3/?y9;
+  !!VRy6:S5;
+  !!FU(AC_Function_126):Py1/y6/?y3;
+  !!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
+  !!BU&y3>=0/y3<=186:Oy3/?y9;
 !!en;
 
 !!if&y8=-1/y9=0/y3>=0/y3<=186;
-!!BU:S114/y22/y3/y2/-1/1;               [Summon Element]
+  !!BU:S114/y22/y3/y5/-1/1;               [Summon Element]
 
-!!BA:Q?f;
-!!VRz1:S^SUMNELM^;
-!!SN&i^battle_isVisible^:Pz1;
-!!en;
+  !!SN&i^battle_isVisible^:P^SUMNELM^;
 !!en;
 
+
+; Check if there are 20 stacks already on one side of the battlefield
+; by Archer30
+!?FU(ACM_CheckIfPossibleToSummonMoreStacks);
+!#VA(side:x) (result:x);
+!#VA(pendingStacks:x);                  [Optional. Number of Stacks that has not yet been in the battlefield but should be considered]
+
+!!FU:A?(numArgs:y);
+!!VR(pendingStacks)&(numArgs)<3:S0;
+
+!!VR(result):S(FALSE);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(value:y);
+!!VR(address:y):S(side) *(UNC_INT) +21692 +(value);
+!!UN:C(address)/4/?(stackQty:y);
+
+!!VR(stackQty):+(pendingStacks);
+
+!!VR(result)&(stackQty)<20:S(TRUE);
 
 *-------------------------------Slayer-------------------------------------*
 *Chance for Crushing Blow! Will Reduce Att/Def or Speed if successful hit of lvl 7 and 8
@@ -25670,10 +25685,8 @@ x1 - hero id; x2 - spell id; x3 - mode. -1 is remove, 1 - apply, 0 - print for d
   294 Vermin Bird
 
   !!BMi^acm_defendStack^:I?y3;          [DO NOT use MF:N here!]
-  !!BHy3:N?y5;                          [Hero Number]
-  !!SN:W^Damage_Fire_Shield^/?y8;       [Physical Damage]
   !!FU(ACM_GetActualStackSide):Pi^acm_attackStack^/?y30;
-  !!FU(Fire_Shield_Calculation):Py5/i^acm_attackStack^/y4/d/y30/y8/?y7/0/1;
+  !!FU(Fire_Shield_Calculation):Pi^battle_hero_%y3^/i^acm_attackStack^/i^acm_defendStack^/d/y30/i^Damage_Fire_Shield^/?y7/0/1;
   !!MF:Fy7;                             [Apply new Damage]
 !!en;
 
@@ -25797,9 +25810,8 @@ x1 - hero id; x2 - spell id; x3 - mode. -1 is remove, 1 - apply, 0 - print for d
 *Safe the stack that received the Fire Shield Spell
 !!BG:S?y10 A?y20 N?y30 E?y40 D?y50;     [Spell Number and action type]
 !!SN&y10=29/y20=1:W^ACM_Fire_Shield_Target_%Y40^/1; [Set Flag active]
-!!SN:W^ACM_FS_Destiantion_Stack^/y40;   [remember Stack]
 
-!?FU(OnBattlefieldVisible);
+!?FU(OnSetupBattlefield);
 
 !!re y1/0/41;
 !!SN:W^ACM_Fire_Shield_Target_%Y1^/0;   [Remove Flag before every combat]
@@ -33449,15 +33461,21 @@ New Commanders Section
       !!VRy97:S50;                      [Damage reduction]
       !!if&y99=36;                      [if special hero]
         !!HEy99:E?y80/?y81/1;           [get level of hero in case of Vey]
-        !!VRy98:Sy81:2+30;              [Calc chance to block based on level]
-        !!VRy97:Sy81:2+50;              [Calc damage reduction based on level]
+        !!VRy98:Sy81:2+30 F30/100;      [Calc chance to block based on level]
+        !!VRy96:Sy81:2+50 F50/95;
+        !!VRy97:S100 -y96;              [Calc damage reduction based on level]
       !!en;
+
       !!FU&y90>=y98:E;                  [30% chance for success]
+
       !!MF:F?y6;                        [Damage Dealt]
       !!VRy6:*y97:100;                  [Reduce damage by 50%]
-      !!VRz-1&i^battle_isVisible^:S^CRUSDFND.wav^; [find block sound]
-      !!SN&i^battle_isVisible^:Pz-1;    [play block sound]
-      !!BMy4&i^battle_isVisible^:V84;   [play commander block animation]
+
+      !!if&i^battle_isVisible^;
+        !!SN:P^CRUSDFND.wav^;    [play block sound]
+        !!BMy4:V84;   [play commander block animation]
+      !!en;
+
       !!MF:Fy6;                         [apply reduced damage]
     !!en;
   !!en;
