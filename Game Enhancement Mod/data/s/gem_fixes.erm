@@ -1777,6 +1777,51 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
 ************************************************************************
 ************************************************************************
-******************************* FUNCTIONS ******************************
+*************************** CAMPAIGN FIXES *****************************
+************************************************************************
+************************************************************************
+
+// Fix Griffin Cliff (from Long Live the Queen) not winning after capturing all the 7 Griffin Towers
+// by Archer30
+; Ideally, we should also change the text of "Capturing all the dwellings" to "Capturing all the Griffin Towers" as it's possibly that we haven't capture some other dwellings
+!?FU(gem_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+!!SN:F^GetCampaignFileName^/?(campaignFileName:z);
+!!SN:E6448768/(CALLCONV_CDECL)/(campaignFileName)/^Good1.h3c^/4; [Compare string (case-insensitively)]
+!!FU&v1:E;                              [If the filename is the same, it returns 0]
+
+!!SN:F^GetCampaignMapInd^;
+!!FU&v1<>2:E;
+
+; It's Griffin Cliff from Long Live the Queen
+; Set hook at checking owenrs of all the dwellings to decide whether it's a victory
+!!SN:E(setHook)/1/6236710/(gem_OnCheckDwellingOwners); 005F2A26
+
+!?FU(gem_OnCheckDwellingOwners);
+!#VA(hook:x);
+
+!!VR(x:y):S-1;
+
+!!re i;
+  !!UN:U(OBJ_CREATURE_GENERATOR_1)/25/-1/(x)/(y:y)/(z:y); [25 - Griffin Tower]
+  !!br&(x)<0;
+
+  !!DW(x)/(y)/(z):O?(player:y);
+  !!br&(player)<>i^timerOwner^;
+!!en;
+
+; If the search was performed without interuption, meaning every Griffin tower is captured by the current player, return TRUE
+!!if&(x)=-1;
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/6236822;
+!!en;
+
+************************************************************************
+************************************************************************
+****************************** FUNCTIONS *******************************
 ************************************************************************
 ************************************************************************
