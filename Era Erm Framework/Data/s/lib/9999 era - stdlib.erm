@@ -1,4 +1,9 @@
 ZVSE2
+; Author:      Berserker aka EtherniDee
+; Requires:    ERA 3.9.15+
+; Description: Provides common functions, constants and global variables, which greatly simplifies writing ERM scripts.
+;              Does not influence gameplay and is thus quite compatible with other mods.
+
 ; ========== EVENTS ==========
 ; Temporary stack to hold events chain saved data
 !#SN:M(M_AUTO_ID)/0/(M_INT)/(M_TEMP)/?i^savedEventData^;
@@ -12,6 +17,8 @@ ZVSE2
 ; Saves all passed integer arguments in event data storage. You MUST restore the same number of arguments
 ; in the same order by calling RestoreEventData function in the same event.
 !#VA(firstArg:x); ... Integer arguments to save
+
+!!SN:F^DisableErmTracking^;
 
 !!FU:A?(numArgs:y);
 !!FU&(numArgs)<=0:E;
@@ -35,10 +42,14 @@ ZVSE2
 !!SN:V(savedEventData)/(eventDataPos)/(numArgs);
 !!VR(eventDataPos):+1;
 
+!!SN:F^RestoreErmTracking^;
+
 !?FU(RestoreEventData);
 ; Restores previously saved arguments from event data storage. They same number of arguments in the same order MUST HAVE BEEN
 ; saved in the same event previously using SaveEventData function.
 !#VA(firstArg:x); ... Integer arguments to restore using ?$ syntax
+
+!!SN:F^DisableErmTracking^;
 
 !!FU:A?(numArgs:y);
 !!FU&(numArgs)<=0:E;
@@ -72,6 +83,8 @@ ZVSE2
   !!VR(argPtr):+1;
 !!en;
 
+!!SN:F^RestoreErmTracking^;
+
 !?FU(SavePrevKeyModsState);
 !!FU(SaveEventData):Pi^key^/i^key_down^/i^key_leftAlt^/i^key_rightAlt^/i^key_alt^/i^key_leftCtrl^/i^key_rightCtrl^/i^key_ctrl^/i^key_leftShift^/i^key_rightShift^/i^key_shift^;
 
@@ -79,6 +92,8 @@ ZVSE2
 !!FU(RestoreEventData):P?i^key^/?i^key_down^/?i^key_leftAlt^/?i^key_rightAlt^/?i^key_alt^/?i^key_leftCtrl^/?i^key_rightCtrl^/?i^key_ctrl^/?i^key_leftShift^/?i^key_rightShift^/?i^key_shift^;
 
 !?FU(GetKeyModsState);
+!!SN:F^DisableErmTracking^;
+
 !!SN:F^GetKeyState^/(KEY_LMENU);
 !!VR(leftKeyPressed:y):Sv1 Sd>>7 &1;
 !!VRi^key_leftAlt^:S(leftKeyPressed);
@@ -108,6 +123,8 @@ ZVSE2
 !!VRi^key_rightShift^:S(rightKeyPressed);
 
 !!VRi^key_shift^:S(leftKeyPressed) |(rightKeyPressed);
+
+!!SN:F^RestoreErmTracking^;
 
 !?FU(CollectMouseEventData);
 !!CM:A?i^mouse_x^/?i^mouse_y^ D?i^mouse_battleHex^ F?i^mouse_flags^ H?i^mouse_hero_0^/?i^mouse_hero_1^ I?i^mouse_item^ P?i^mouse_mapX^/?i^mouse_mapY^/?i^mouse_mapZ^
@@ -1381,6 +1398,16 @@ ZVSE2
 
 
 ; ================ STRINGS ================
+!?FU(Trim);
+; Trims #0..#32 characters (space and control characters) from both sides of the string.
+!#VA(strPtr:x);    Source string.
+!#VA(resultPtr:x); OUT. Result string.
+
+!!VR(savedV1:y):Sv1;
+!!SN:F^Erm_StrTrim^/z(strPtr);
+!!VR(resultPtr):Sv1;
+!!VRv1:S(savedV1);
+
 !?FU(GetStrAtAddr);
 ; Reads null terminated string at specified address into s^result^ variable.
 ; Null address (0) results in empty string.
@@ -1440,51 +1467,46 @@ ZVSE2
 !#VA(count:x);  Number of characters to copy. Negative value means "skipping" that number of characters from string end.
 !#VA(result:x); Result substring.
 
-!!VR(emptyStr:z):S^^;
-!!VR(result):S(@emptyStr);
-
-!!if&(strPtr)=(NULL);
-  !!SN:F^ShowErmError^/^Substr: invalid strPtr argument: 0^;
-  !!FU:E;
-!!en;
-
-!!FU:A?(numArgs:y);
-
-!!if&(numArgs)<(@count);
-  !!SN:F^ShowErmError^/^Substr: invalid arguments number. Expected at least %(@count) arguments^;
-  !!FU:E;
-!!en;
-
-!!VRz(strPtr):M4/?(strLen:y);
-!!FU&(strLen)<=0:E;
-
-!!VR(start)&(start)<0:+(strLen) F0/(INT_MAX);
-!!FU&(start)>=(strLen):E;
-
-!!VR(maxCharsToCopy:y):S(strLen) -(start);
-
-!!if&(count)<0;
-  !!VR(maxCharsToCopy):+(count);
-  !!VR(count):S(maxCharsToCopy);
-!!en;
-
-!!VR(count):F0/(maxCharsToCopy);
-!!FU&(count)<=0:E;
-
-!!SN:Bz(strPtr)/?(startAddr:y);
-!!VR(startAddr):+(start);
-!!VR(endAddr:y):S(startAddr) +(count);
-!!VR(resultSize:y):S(count) +1;
 !!VR(savedV1:y):Sv1;
-
-!!SN:E(FUNC_MEM_ALLOC)/(CALLCONV_CDECL)/(resultSize);
-!!VR(buf:y):Sv1;
-!!SN:K(count)/(startAddr)/(buf)/0 K(buf)/(count)/^^ B(buf)/d/?s^temp^;
-!!SN:E(FUNC_MEM_FREE)/(CALLCONV_CDECL)/(buf);
-
+!!SN:F^Erm_Substr^/z(strPtr)/(start)/(count);
+!!VR(result):Sv1;
 !!VRv1:S(savedV1);
-!!VR(result):Zs^temp^;
-!!VRs^temp^:S^^;
+
+
+!?FU(StrPos);
+; Finds the first occurance of needle string in the haystack string. Returns offset from string start or -1 for faulure
+!#VA(haystackPtr:x); String to search in
+!#VA(needlePtr:x);   String to seacrh for
+!#VA(result:x);      Result offset in the haystack string or -1.
+!#VA(offset:x);      Zero-based offset in haystack string to start search from. Default: 0.
+
+!!VR(savedV1:y):Sv1;
+!!SN:F^Erm_StrPos^/z(haystackPtr)/z(needlePtr)/(offset);
+!!VR(result):Sv1;
+!!VRv1:S(savedV1);
+
+!?FU(StrReplace);
+; Replaces all occurencies of Pattern string in the Source string with Replacement string. Returns final string.
+; Can be used inside triggers only.
+!#VA(sourcePtr:x);      Original string to perform replacements in
+!#VA(patternPtr:x);     What string to replace
+!#VA(replacementPtr:x); Replacement string
+!#VA(result:x);         Result string index
+
+!!VR(savedV1:y):Sv1;
+!!SN:F^Erm_StrReplace^/z(sourcePtr)/z(patternPtr)/z(replacementPtr);
+!!VR(result):Sv1;
+!!VRv1:S(savedV1);
+
+!?FU(Interpolate);
+; Interpolates ERM variables inside given string (%v1, etc).
+!#VA(strPtr:x);    Source string.
+!#VA(resultPtr:x); OUT. Result string.
+
+!!VR(savedV1:y):Sv1;
+!!SN:F^Erm_Interpolate^/z(strPtr);
+!!VR(resultPtr):Sv1;
+!!VRv1:S(savedV1);
 
 !?FU(DecorateInt);
 ; Converts integer to string, separating each three digit group by "era.locale.thousand_separator" characer.
@@ -2626,8 +2648,8 @@ ZVSE2
 !#VA(result:x);
 
 !!VR(savedV1:y):Sv1;
-!!SN:F^GetProcessGuid^/?(processGuid:z);
-!!VR(result):Z(processGuid);
+!!SN:F^GetProcessGuid^ Bv1/d/?(processGuid:z);
+!!VR(result):S(@processGuid);
 !!VRv1:S(savedV1);
 
 !?FU(IsDllLoaded);
@@ -2804,10 +2826,11 @@ ZVSE2
 !!en;
 
 !!if&(slot)>=(ART_SLOT_EQUIPPED_FIRST)/(slot)<=(ART_SLOT_EQUIPPED_LAST);
-  !!VR(artHandlePtr:y):S(slot) *8 +301 +(heroStruct);
+  !!VR(artHandlePtr:y):+S(slot) *8 +301 +(heroStruct);
 !!el;
-  !!VR(artHandlePtr:y):S(slot) -(ART_SLOT_EQUIPPED_LAST) -1 *8 +468 +(heroStruct);
+  !!VR(artHandlePtr:y):+S(slot) -(ART_SLOT_EQUIPPED_LAST) -1 *8 +468 +(heroStruct);
 !!en;
+
 !!UN:C(artHandlePtr)/0/(UNC_INT)/?(artId);
 !!UN:C(artHandlePtr)/4/(UNC_INT)/?(artMod);
 
@@ -2825,9 +2848,9 @@ ZVSE2
 !!en;
 
 !!if&(slot)>=(ART_SLOT_EQUIPPED_FIRST)/(slot)<=(ART_SLOT_EQUIPPED_LAST);
-  !!VR(artHandlePtr:y):S(slot) *8 +301 +(heroStruct);
+  !!VR(artHandlePtr:y):+S(slot) *8 +301 +(heroStruct);
 !!el;
-  !!VR(artHandlePtr:y):S(slot) -(ART_SLOT_EQUIPPED_LAST) -1 *8 +468 +(heroStruct);
+  !!VR(artHandlePtr:y):+S(slot) -(ART_SLOT_EQUIPPED_LAST) -1 *8 +468 +(heroStruct);
 !!en;
 
 !!UN:C(artHandlePtr)/4/(UNC_INT)/(artMod);
