@@ -131,6 +131,7 @@ entrance squares. Do not use this with another script that might do the same
 !!if&i^wog_36_enabled^;
 
   !!IF:Q2/(PIC_TYPE_RES_MITHRIL)/(number:y)/(MSG_TYPE_QUESTION)/^%(msg:z)%T(wog.36.description.question)^; [Display Mithril and offer to display price list: Flag 2]
+
   !!if&2;
     !!VRz1:S^mithPric.pcx^;  [File and path name for Mithril Price List image: z1]
     !!SN:F^PcxPngExists^/z1; [Check if Mithril Price List image is there: v1=True if yes]
@@ -393,11 +394,8 @@ entrance squares. Do not use this with another script that might do the same
 *** Upgrade Mine ***
 
 !?FU(WOG_36_UpgradeMine);
-; Warning: Mixing classic y and name y is a very bad practice. This needs to be rewritten later.
-!!PO4:V3/?i N?(modNumber:y);
-!!FU|i=1/(modNumber:y):E; // exit if modified
-
-(check for "Mines change Resource every week" rule)
+!!PO4:N?(modCounter:y);
+!!FU&(modCounter):E; // exit if modified
 
 !!MN4:O?(mineOwner:y) R?(resType:y);   (check who owns mine)
 !#VA(owners[2]:y);
@@ -405,12 +403,12 @@ entrance squares. Do not use this with another script that might do the same
 
 !!FU|(mineOwner:y)<=(NO_OWNER)/(owners[0])<>(owners[1]):E;
 
-!!if&i^wog_101_map_rule_11_isEnabled^;
+!!if&i^wog_101_map_rule_11_isEnabled^;  [check for "Mines change Resource every week" rule]
   !#VA(upgCosts[7]:y);
   !!VR(upgCosts[0]):C1/3/1/3/3/3/5;
   !!VR(cost:y):S(upgCosts[resType]);
 !!el;
-  !!VR(cost):S(resType) -5 F0/1 *3 +4; [(Set base Cost && Set More Cost for Gold Mine)]
+  !!VR(cost):S(resType) -5 F0/1 *3 +4; [Set base Cost & Set More Cost for Gold Mine]
 !!en;
 
 !!if&(number)>=(cost);
@@ -426,8 +424,8 @@ entrance squares. Do not use this with another script that might do the same
   !!CM:R0;
   !!IF:Q1/(RES_MITHRIL)/(cost)/2/(msg:z);
   !!if&1;
-    !!OW:R-1/(RES_MITHRIL)/d-(cost);           [(take mithril)]
-    !!PO4:N2;                                  [set as protected - assigned with Map Rules for mines protection]
+    !!OW:R-1/(RES_MITHRIL)/d-(cost);           [take mithril]
+    !!PO4:N7;                                  [set as upgraded or protected - assigned with Map Rules for mines protection]
   !!en;
 !!en;
 
@@ -444,22 +442,37 @@ entrance squares. Do not use this with another script that might do the same
 
 
 *** AI Gets Gold ***
-!!if&(isAi);
-  !!OW:R(owner)/(RES_MITHRIL)/?(resAmount:y); (get amount of mithril if AI)
-  !!if&(resAmount)>0;
-    !!VR(resAmount):*100;
-    !!OW:R(owner)/(RES_GOLD)/d(resAmount); (Give mithril*100 in gold to AI)
-  !!en:;
+; This is to compensate AI not being able to use gold optimally
+!!if&i^wog_36_enabled^;
+  !!if&(isAi);
+    !!OW:R(owner)/(RES_MITHRIL)/?(resAmount:y); (get amount of mithril if AI)
+
+    !!if&(resAmount)>0;
+      !!VR(resAmount):*100;
+      !!OW:R(owner)/(RES_GOLD)/d(resAmount); (Give mithril*100 in gold to AI)
+    !!en;
+  !!en;
+
+  ; Decrease the counters on mines if weekly mine change is not enabled (for this rule it will be reset on Monday)
+  !!if&i^timerOnce^/i^wog_101_map_rule_11_isEnabled^=(FALSE);
+    !!VR(x:y):S-1;
+
+    ; loop through all the mines
+    !!re i;
+      !!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+      !!br&(x)<0;
+
+      !!PO(x)/(y)/(z):N?(counter:y);
+
+      !!if&(counter);
+        !!VR(counter):-1 F0/(INT_MAX);
+        !!PO(x)/(y)/(z):N(counter);
+      !!en;
+    !!en;
+  !!en;
 !!en;
 
-!!IF:V9/0;
-!!IF:V10/0;
-!!UN:P36/?y-1;
-!!IF:V2/0;
-!!IF&y-1=1:V2/1;
-
-
-
+; Plce Mithril on Monday
 !!if&i^timerWeekDay^=1/i^timerOnce^/i^wog_171_enabled^;
   !!FU(WOG_171_PlaceMithrilIntoMillsAndGardens):P;
 !!en;
@@ -865,6 +878,7 @@ entrance squares. Do not use this with another script that might do the same
 !!VRi^wog_36_rmc_hint_object_type^:S0;
 
 ; Archer30: This hook is disabled due to incompatile with Asian lang
+; It's recreated with FU(OnAdventureMapTileHint)
 *?FU(WOG_HOOK_GetMineDescription);
 *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(mine:y);
 *!UN:C(mine)/60/-1/?j C(mine)/61/-1/?k C(mine)/62/-1/?l;
