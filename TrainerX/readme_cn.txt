@@ -4,7 +4,6 @@
 新作弊功能 - 作者：Archer30
 修改器 - 作者：Valery、Archer30
 显示事件 - 作者：Valery、Gamecreator
-ERM命令执行工具 - 作者：贤知有您
 选择战场 - 作者：Valery、Archer30
 特别鸣谢：Jim Vogan、daemon_n、MoP、igrik和Algor
 
