@@ -456,21 +456,6 @@ Enable Artefact to appear on the map
 
 ********************************************************************************
 
-!?FU(OnStartOrLoad);                    [At game start 1]
-!!SN:L^erm_hooker.era^/?(hooker:y);
-!!FU&(hooker)=0:E;
-
-!!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
-!!FU(ACM_CreateERMHook):P(hookingFuncAddress);
-
-; Here we use a later timing for compatibility
-!?FU(OnStartOrLoad_Quit);
-!!SN:L^erm_hooker.era^/?(hooker:y);
-!!FU&(hooker)=0:E;
-
-!!SN:A(hooker)/^UnsetHook^/?(hookingFuncAddress:y);
-!!FU(ACM_UnsetERMHook):P(hookingFuncAddress);
-
 ; Set up Necromancy hooks
 !?FU(ACM_CreateERMHook);
 !#VA(hook:x);
@@ -5249,10 +5234,15 @@ Till here Normal Necromancy
 !!UN:C6548000/4/500;                    [Advanced]
 !!UN:C6548004/4/750;                    [Expert]
 
-!?FU(ACM_CreateERMHook); 5129755
+!?FU(ACM_CreateERMHook);
 !#VA(setHook:x);
 
-!!SN:E(setHook)/1/5129753/(ACM_OnHeroGetGoldIncome); 4E4622
+!!SN:E(setHook)/1/5129755/(ACM_OnHeroGetGoldIncome); 4E461B
+
+!?FU(ACM_UnsetERMHook);
+!#VA(unsetHook:x);
+
+!!SN:E(unsetHook)/1/5129755/(WOG_OnHeroGetGoldIncome); 4E461B
 
 !?FU(ACM_OnHeroGetGoldIncome);
 !#VA(hook:x);
@@ -11996,7 +11986,7 @@ At each level up AI will choose com class if none has been selected. Each level 
 
 !!HE-1:Ed/?y7/1;                        [Get hero number and level]
 !!FU&y7<6:E;                            [Exit below level 5 or above 50]
-!!FU&i^acm_isGameStarted^<>(TRUE)/y7>50:E;
+!!FU&y7>50:E;
 
 !!HE-1:N?y1;
 
@@ -18377,8 +18367,8 @@ x1=Hero ID, x2=returns Luck
 
 
 *****************
-!?HL-1;
-!!HE-1:O?y30;                           [Exit if AI's hero]
+!?HL-1&i^acm_isGameStarted^;            [Works only after entering the map]
+!!HE-1:O?y30;                           [Exit if AI's hero (they have their own script)]
 !!OW:Iy30/?y31;
 !!FU&y31:E;
 
@@ -18386,13 +18376,14 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
 !!HE-1:N?y1;                            [Get Hero Number]
 !!FU(Count_Set_Pieces)&y1>=0/y1<=155:Py1/0/0/0/?y93; [Count Set Pieces function, check for Champions Honor Set]
 !!FU&y93<2:E;                           [Exit if not at least 2 set pieces]
+
 !!VRy10:S0R100;
 !!VRy20:S0;
 !!VRy20&y93>=2:S20;                     [With 2 set pieces give a 20% chance]
 !!VRy20&y93=4:S+30;                     [With 4 set pieces give a 50% chance]
 
 !!if&y10<y20;                           [If roll is successful]
-!!VRy2:S1R23;                           [Generate Random Number from 1-24]
+  !!VRy2:S1R23;                         [Generate Random Number from 1-24]
   !!SN&y2=1:W^Ballista_Fireball_Attack_%Y1^/?y3; !!SN&y2=1/y3=0:W^Ballista_Fireball_Attack_%Y1^/1; !!SN&y2=1/y3=0:T^AC_Warmachine.Bal_Ench_1^/?z-1; !!SN&y2=1/y3=0:T^AC_Warmachine.Bal_Ench_1_Description^/?z2;
   !!SN&y2=2:W^Ballista_Magic_Arrow_%Y1^/?y3; !!SN&y2=2/y3=0:W^Ballista_Magic_Arrow_%Y1^/1; !!SN&y2=2/y3=0:T^AC_Warmachine.Bal_Ench_2^/?z-1; !!SN&y2=2/y3=0:T^AC_Warmachine.Bal_Ench_2_Description^/?z2;
   !!SN&y2=3:W^Ballista_Spell_Trigger_%Y1^/?y3; !!SN&y2=3/y3=0:W^Ballista_Spell_Trigger_%Y1^/1; !!SN&y2=3/y3=0:T^AC_Warmachine.Bal_Ench_3^/?z-1; !!SN&y2=3/y3=0:T^AC_Warmachine.Bal_Ench_3_Description^/?z2;
@@ -18428,6 +18419,7 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
   !!en;
 !!en;
 
+; Archer30: Note that y10 is never gonna be lower than y20 (only equal to), thus the following bonus would never be executed
 !!VRy10:S0R100;
 !!VRy20:S0;
 !!VRy20&y93>=3:S20;                     [With 3 set pieces give a 20% chance for extra Prim Skill]
@@ -29524,7 +29516,7 @@ x1=Hero Number, x1= 1 or 2 (Blacksmith or Mage Guild)
 There are 24 Upgrades in total.
 !!HE-1:Ed/?(level:y)/1;                 [Get Hero Number and level]
 !!FU&(level)<=5:E;                      [Exit if level is smaller or equal 5 or above 50]
-!!FU&i^acm_isGameStarted^<>(TRUE)/(level)>50:E;
+!!FU&(level)>50:E;
 
 !!VRi^heroLevel^:S(level);
 !!HE-1:N?i^heroNumber^;
