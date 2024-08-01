@@ -11180,7 +11180,6 @@ x1=hero ID
 !!SN&i^battle_isVisible^:Pz1;           [Play leach sound]
 !!SN:W^Commander_Round_Counter^/d1;
 !!SN:W^Commander_Kill_Counter_%X1^/d1;  [Increase counter by one if kill happened]
-!!SN:W^Commander_Kill_Counter_Temp_%X1^/d1; [Increase temp counter by one if kill happened]
 !!FU(Ancient_Commander_Stat_Counter)&y98=29:Px1/y50; [Call fct to determine and add random stats to Ancient commander. Pass Hero ID]
 !!FU(ACM_Select_Commander_Role)&y50=0/y98=0:Px1; [Call DL to select Commander class on first kill. Pass current hero-y10]
 !!FU(ACM_Select_Commander_Role_Upg)&y50=29/y98>0/y98<10:Px1; [Open second choice for upgrade class and only if it just has base class]
@@ -11482,7 +11481,6 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
 !?FU(OnCombatRound)&v997=0;             [On First visible combat round]
 !!re y10/0/155;                         [Reset Temp vars before every fight for every hero]
   !!SN:W^Damage_Counter_Hero_Temp_%Y10^/0;
-  !!SN:W^Commander_Kill_Counter_Temp_%Y10^/0;
   !!SN:W^Magic_Damage_Counter_Hero_Temp_%Y10^/0;
 !!en;
 !!SN:W^Commander_Round_Counter^/0;
@@ -11496,9 +11494,11 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
 !?FU(OnSetupBattlefield);
 !!VRi^Commander_SavedClass_0^:S0;
 !!VRi^Commander_SavedClass_1^:S0;
+!!VRi^Commander_SavedKillCount_0^:S0;
+!!VRi^Commander_SavedKillCount_1^:S0;
 
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
-  !!FU(Check_Com_Masteries):Pi^battle_hero_%i^/0/?t/?t/?i^Commander_SavedClass_%i^; [Pass Hero Number and return current com class]
+  !!FU(Check_Com_Masteries):Pi^battle_hero_%i^/0/?i^Commander_SavedKillCount_%i^/?t/?i^Commander_SavedClass_%i^; [Pass Hero Number and return current com class]
 !!en;
 
 !?FU(ACM_SetCommanderClass);
@@ -11535,13 +11535,17 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
 !!if&(class)=(ACM_CMD_CLASS_ANCIENT);  !!VRi^Commander_Ancient_%X1^:S1;!!el;  !!VRi^Commander_Ancient_%X1^:S0;!!en;
 
 !?FU(OnBattleReplay);
-; Restore commander class
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  ; Restore commander class
   !!FU(Check_Com_Masteries):Pi^battle_hero_%i^/0/?t/?t/?(class:y);
 
   !!if&(class)<>i^Commander_SavedClass_%i^;
     !!FU(ACM_SetCommanderClass):Pi^battle_hero_%i^/i^Commander_SavedClass_%i^;
   !!en;
+
+  ; Restore kill count
+  !!VR(hero:y):Si^battle_hero_%i^;
+  !!VRi^Commander_Kill_Counter_%(hero)^:Si^Commander_SavedKillCount_%i^;
 !!en;
 
 !!SN:W^Commander_Round_Counter^/0;      [Reset round counter for max 3 gains per battle]
@@ -11551,17 +11555,12 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
   !!SN:W^Damage_Counter_Hero_%Y1^/?y12;
   !!SN:W^Damage_Counter_Hero_Temp_%Y1^/?y10;
 
-  !!SN:W^Commander_Kill_Counter_%Y1^/?y13;
-  !!SN:W^Commander_Kill_Counter_Temp_%Y1^/?y11;
-
   !!SN:W^Magic_Damage_Counter_Hero_%Y1^/?y14;
   !!SN:W^Magic_Damage_Counter_Hero_Temp_%Y1^/?y15;
 
   !!VRy12:-y10;                         [Substract temp value from real value]
-  !!VRy13:-y11;
   !!VRy14:-y15;
   !!SN:W^Damage_Counter_Hero_%Y1^/y12;  [apply new value again]
-  !!SN:W^Commander_Kill_Counter_%Y1^/y13;
   !!SN:W^Magic_Damage_Counter_Hero_%Y1^/y14;
 !!en;
 
@@ -11570,17 +11569,12 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
   !!SN:W^Damage_Counter_Hero_%Y1^/?y12;
   !!SN:W^Damage_Counter_Hero_Temp_%Y1^/?y10;
 
-  !!SN:W^Commander_Kill_Counter_%Y1^/?y13;
-  !!SN:W^Commander_Kill_Counter_Temp_%Y1^/?y11;
-
   !!SN:W^Magic_Damage_Counter_Hero_%Y1^/?y14;
   !!SN:W^Magic_Damage_Counter_Hero_Temp_%Y1^/?y15;
 
   !!VRy12:-y10;                         [Substract temp value from real value]
-  !!VRy13:-y11;
   !!VRy14:-y15;
   !!SN:W^Damage_Counter_Hero_%Y1^/y12;  [apply new value again]
-  !!SN:W^Commander_Kill_Counter_%Y1^/y13;
   !!SN:W^Magic_Damage_Counter_Hero_%Y1^/y14;
 !!en;
 
