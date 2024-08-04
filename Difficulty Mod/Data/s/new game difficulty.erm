@@ -3335,27 +3335,35 @@ Gives AI creatures,spellpoints, movement and experience daily
 !!FU(Progressive_Difficulty)&i^timerDay^=y1/y2=1:P; [Run prog increase if option is selected and day equals payday]
 
 !!SN:W^H3_Game_Difficulty^/?y1;
-!!DO(AI_Increase_Loop)/0/155/1&y1>0:P;  [loop through heroes]
+!!FU(AI_Increase_Loop)&y1>0:P;  [loop through heroes]
 
 
 !?FU(AI_Increase_Loop);
+; Get the counter of the day (to determine whether to give creatures)
+!!VRy10:Si^timerDay^ %2;
+!!VRy10&i^H3_Game_Difficulty^=5:S0;
 
-!!HEx16:O?y1;                           [Checke Hero Owner]
-!!FU&y1=-1:E;                           [Exit if none]
-!!OW:Iy1/?y2;                           [AI 1 / Human 0]
-!!OW:Iy1/y2/?y3;                        [Check if player killed 1=killed 0=alive]
-!!FU|y2=0/y3=1:E;                       [Exit if Human or player Killed]
+; Get the level limit of the scenario (to determine whether to give exp)
+!!UN:J1/?y30/d;
+!!VRy30&y30<=0/y30>74:S74;
 
-!!VRy10:Sc;                             [get day]
-!!VRy10:%2;                             [Modulo 2]
-!!SN:W^H3_Game_Difficulty^/?y5;   !!VRy10&y5=5:S0; [If Insane Difficulty Set creature Reward to daily]
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:O?y1;                           [Checke Hero Owner]
+  !!co&y1=(NO_OWNER);                   [Skip if none]
 
-!!FU(Give_AI_Creatures)&y10=0:Px16/y1;  [Run if AI and still alive und gerader Tag]
-!!FU(Give_AI_Experience):Px16/y1;       [Run if AI and still alive]
-!!FU(Give_AI_Spell_Points):Px16/y1;     [Run if AI and still alive]
-!!FU(Give_AI_Movement):Px16/y1;         [Run if AI and still alive]
-!!FU(Give_AI_Spell_Book):Px16/y1;       [Run if AI and still alive]
+  !!OW:Iy1/?y2;                         [y2, AI 1 / Human 0]
+  !!co&y2=0;                            [Skip if Human]
 
+  !!FU(Give_AI_Creatures)&y10=0:Pi/y1;  [Run if AI and still alive und gerader Tag]
+
+  ; AI heroes will not receive additional exp once they've reached the level limit of the scenario or level 74
+  !!HEi:E?y31/?y32/1;
+  !!FU(Give_AI_Experience)&y32<y30:Pi/y1;[Run if AI]
+
+  !!FU(Give_AI_Spell_Points):Pi/y1;     [Run if AI]
+  !!FU(Give_AI_Movement):Pi/y1;         [Run if AI]
+  !!FU(Give_AI_Spell_Book):Pi/y1;       [Run if AI]
+!!en;
 
 !?FU(Give_AI_Creatures);
 x1=hero, x2=owner
@@ -3393,10 +3401,10 @@ x1=hero, x2=owner
 
 
 !?FU(Give_AI_Experience);
+
 !!SN:W^H3_Game_Difficulty^/?y1;
 !!VRy2&y1=1:S500; !!VRy2&y1=2:S1000; !!VRy2&y1=3:S2500; !!VRy2&y1=4:S5000; !!VRy2&y1=5:S10000;
 !!HEx1:Edy2;                            [Gives Experience daily]
-
 
 !?FU(Give_AI_Spell_Points);
 !!SN:W^H3_Game_Difficulty^/?y1;
