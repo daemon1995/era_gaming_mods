@@ -451,7 +451,6 @@ Enable Artefact to appear on the map
 !!FU(ACM_Manage10SkillsMode):P;
 
 ********************************************************************************
-
 ; Set up Necromancy hooks
 !?FU(ACM_CreateERMHook);
 !#VA(hook:x);
@@ -6401,7 +6400,7 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!SN&y4=1/y5<0:W^Tent_Capacity_Def^/0;
 !!VRy5&y5<0:S0;
 
-!!FU(AC_Function_35)&y5>0:Py1/y3/y5;    [The function only runs if enough Heal capacity is left]
+!!FU(AC_Function_35)&y5>0:Py1/y3/y5/0;  [The function only runs if enough Heal capacity is left]
 !!SN:W^Improved_Tent^/-1;
 
 !!SN:W^Tent_Number_Att^/?y2;            [Set new heal capacity for Tent]
@@ -6422,18 +6421,16 @@ gives +50/100/150/250/500 HP to Ballista WM
 
 
 !?FU(AC_Function_35);                   [*Restore HP of Healed creatures*]
-; Exit if the current number is greater than the initial (possible with scripts)
-!!BMx1:N?y1 B?y4;
-!!FU&y1>y4:E;
 
 *y10 holds the possible heal amount*
 !!if&x4=0;                              [This part only runs in combat]
+; Exit if the current number is greater than the initial (possible with scripts)
+  !!BMx1:N?y1 B?y4;
+  !!FU&y1>y4:E;
   !!BMx1:H?y2 L?y3;                     [Get Battle Monsters parameters]
-
   !!FU&y4=0:E;
   !!FU&y2=0:E;
   !!FU&y1=y4/y3=0:E;                    [Exit if monster was not damaged]
-
   !!BMx1:I?y60;                         [Acting Side Monster]
   !!BA:Hy60/?y61;                       [Current Hero]
   !!SN:W^H3_First Aid_0_Hero%Y61^/?y71; [Checke ob der Held Master First Aid hat und Speichere in y71]
@@ -6451,6 +6448,7 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!VRy75&y74<25:Sy74*10;                 [10 times the Hero Level additional heal before hero level 25]
 !!VRy75&y74>=25:Sy74*15;                [15 times the Hero Level additional heal after hero level 25]
 
+!!VRy10&x2=0:S20;                       [Set Heal for None]
 !!VRy10&x2=1:S30 +y75;                  [Set Heal for Basic]
 !!VRy10&x2=2:S50 +y75;                  [Set Heal for Advanced]
 !!VRy10&x2=3/y71=0/y72=0:S75 +y75;      [Set Heal for Expert]
@@ -6478,12 +6476,8 @@ gives +50/100/150/250/500 HP to Ballista WM
 !!en;
 
 !!VRy70:Sy10:2;
-!!SN:W^Heal_InCombat_Low_Hero%Y61^/y70;[Save Low Heal to display it in Bonus List]
-!!SN:W^Heal_InCombat_High_Hero%Y61^/y10; [Save High Heal to display it in Bonus List]
-
-*!VRy70:Sy10:2;
-*!SN:W^Heal_InCombat_Low_Hero%V7020^/y70;[Save Low Heal to display it in Bonus List]
-*!SN:W^Heal_InCombat_High_Hero%V7020^/y10; [Save High Heal to display it in Bonus List]
+!!SN:W^Heal_InCombat_Low_Hero%Y61^/y70; [Save Low Heal to display it in Bonus List]
+!!SN:W^Heal_InCombat_High_Hero%Y61^/y10;[Save High Heal to display it in Bonus List]
 !!FU&x4=1:E;                            [Exit here to not run the actual fkt]
 
 !!VRy10::2; !!VRy10:Sy10Ry10;           [Divide Heal trough 2 and Set range to half + R(half)]
@@ -11128,13 +11122,14 @@ UNC hacks to change commanders attributes per skill at game start. Attack and De
   !!HEy50&y11<=0:I0/1;                  [Set Spell Points to zero if negative]
 
 *In this code Commander gets kill count if kill happened with Magic Damage
+*Currently disabled because now all spells have a chance to generate kill count
   !!VRy10:Sy50; !!VRy4:Sy5;             [Switch variables to make the code below work]
   !!BG:N?y1;                            [Attacking Stack]
   !!BMy1:T?y2;                          [Creature Type]
   !!BMy4:N?y5 H?y6 L?y7;                [Get Number and Life of attacked Stack and lost Hitpoints]
   !!VRy5:*y6-y7;                        [Get total Life of attacked stack]
   !!FU&y5>y20:E;                        [Exit if not enough damage was dealt]
-  !!FU(ACM_Com_Kill_Counter_Fkt)&y2>=174/y2<=191:Py10; [If any commander go to kill count adder function]
+  *!FU(ACM_Com_Kill_Counter_Fkt)&y2>=174/y2<=191:Py10; [If any commander go to kill count adder function]
 !!en;
 
 
@@ -11147,17 +11142,18 @@ Any cast can increase the kill counter
 !!SN:W^ACM_BG_Commander_Cast^/-1;       [Reset Var]
 !!SN:W^ACM_BG_Commander_Cast_Hero^/-1;  [Reset Var]
 
-!!VRy1:S0R100; !!FU&y1>45:E;            [45% chance to get a kill count per cast]
+!!VRy1:S0R100; !!FU&y1>50:E;            [50% chance to get a kill count per cast]
 !!BG:A?y1;                              [battle action]
 !!FU&y1<>10:E;                          [Exit if not creature cast]
 !!BG:S?y1 Q?y2 N?y3 H?y5;               [get stack paramters]
 !!BMy3:T?y4 I?y6;                       [Get Monster Type]
-!!if&y1=-1/y5>=0;                       [If any commander casted a spell]
-  !!FU(Check_Com_Masteries):Py5/0/?y50/?y97/?y98; [Get commander kill count and max kill count]
+!!if&y1=-1/y5>=0/y4=>174/y4<=191;       [If any commander casted a spell]
+  !!FU(Check_Com_Masteries):Py5/0/?y50/?y97/?y98/0/0/0/0/0/?y51; [Get commander kill count and max kill count and spell efficiency]
+  !!FU(Commander_Spells_Scaling):Py5/y51/0; [Pass hero ID, Spell modifier, and 0 means save spells.]
   !!FU&y98=0:E;                         [If commander has no class this cast cannot trigger class selection. Must perform a manual kill]
-  !!FU|y4=176/y4=185:E;                 [Temple  Guardian]
-  !!FU|y4=177/y4=186:E;                 [Succubus]
-  !!FU|y4=179/y4=188:E;                 [Brute]
+  *!FU|y4=176/y4=185:E;                 [Temple  Guardian]
+  *!FU|y4=177/y4=186:E;                 [Succubus]
+  *!FU|y4=179/y4=188:E;                 [Brute]
   !!SN&y4=>174/y4<=191:W^ACM_BG_Commander_Cast^/y3; [Set flag to trigger in BG1]
   !!SN&y4=>174/y4<=191:W^ACM_BG_Commander_Cast_Hero^/y5; [Set flag to trigger in BG1]
 !!en;
@@ -11167,6 +11163,119 @@ Any cast can increase the kill counter
 !!SN:W^ACM_BG_Commander_Cast_Hero^/?y10; !!FU&y10<0:E; [Check for Scan and exit if no summoning was cast]
 !!BMy1:T?y2;                            [Creature Type]
 !!FU(ACM_Com_Kill_Counter_Fkt)&y2>=174/y2<=191:Py10; [If any commander go to kill count adder function]
+!!FU(Commander_Spells_Scaling)&y2>=174/y2<=191:P0/0/1; Pass hero ID, Spell modifier, and 0 means save spells.
+
+
+*This functions saves are restores current spell values and sets new scaling based on spell efficiency
+!?FU(Commander_Spells_Scaling);
+x1=Hero ID, x2=Spell Modifier, x3=0 means save and set, x3=1 means restore
+
+!!if&x3=0;                              [Save Spell values]
+  *!IF:M^Now Save^;
+  !!SS27:E1/?y20; !!SN:W^Com_Spell_Scaling_27_1^/y20; [27  Shield]
+  !!SS27:E2/?y20; !!SN:W^Com_Spell_Scaling_27_2^/y20; [27  Shield]
+  !!SS27:E3/?y20; !!SN:W^Com_Spell_Scaling_27_3^/y20; [27  Shield]
+  !!VRy21:Sx2:5 -100 *-1; !!VRy21:F20/80; !!SS27:E1/y21; !!SS27:E2/y21; !!SS27:E3/y21;
+
+  !!SS28:E1/?y20; !!SN:W^Com_Spell_Scaling_28_1^/y20; [28  Air Shield]
+  !!SS28:E2/?y20; !!SN:W^Com_Spell_Scaling_28_2^/y20; [28  Air Shield]
+  !!SS28:E3/?y20; !!SN:W^Com_Spell_Scaling_28_3^/y20; [28  Air Shield]
+  !!VRy21:Sx2:5 -100 *-1; !!VRy21:F20/80; !!SS28:E1/y21; !!SS28:E2/y21; !!SS28:E3/y21;
+
+  !!SS29:E1/?y20; !!SN:W^Com_Spell_Scaling_29_1^/y20; [29  Fire Shield]
+  !!SS29:E2/?y20; !!SN:W^Com_Spell_Scaling_29_2^/y20; [29  Fire Shield]
+  !!SS29:E3/?y20; !!SN:W^Com_Spell_Scaling_29_3^/y20; [29  Fire Shield]
+  !!VRy21:Sx2:10 +8; !!VRy21:F2/100; !!SS29:E1/y21; !!SS29:E2/y21; !!SS29:E3/y21;
+
+  !!SS38:P?y20; !!SN:W^Com_Spell_Scaling_38_0^/y20; [38  Resurrection]
+  !!SS38:E1/?y20; !!SN:W^Com_Spell_Scaling_38_1^/y20; [38  Resurrection]
+  !!SS38:E2/?y20; !!SN:W^Com_Spell_Scaling_38_2^/y20; [38  Resurrection]
+  !!SS38:E3/?y20; !!SN:W^Com_Spell_Scaling_38_3^/y20; [38  Resurrection]
+  !!VRy21:Sx2*10; !!SS38:P0; !!SS38:E1/y21; !!SS38:E2/y21; !!SS38:E3/y21;
+
+  !!SS39:P?y20; !!SN:W^Com_Spell_Scaling_39_0^/y20; [39  Animate Dead]
+  !!SS39:E1/?y20; !!SN:W^Com_Spell_Scaling_39_1^/y20; [39  Animate Dead]
+  !!SS39:E2/?y20; !!SN:W^Com_Spell_Scaling_39_2^/y20; [39  Animate Dead]
+  !!SS39:E3/?y20; !!SN:W^Com_Spell_Scaling_39_3^/y20; [39  Animate Dead]
+  !!VRy21:Sx2*10; !!SS39:P0; !!SS39:E1/y21; !!SS39:E2/y21; !!SS39:E3/y21;
+
+  !!SS48:E1/?y20; !!SN:W^Com_Spell_Scaling_48_1^/y20; [48  Prayer]
+  !!SS48:E2/?y20; !!SN:W^Com_Spell_Scaling_48_2^/y20; [48  Prayer]
+  !!SS48:E3/?y20; !!SN:W^Com_Spell_Scaling_48_3^/y20; [48  Prayer]
+  !!VRy21:Sx2:40; !!VRy21:F2/100; !!SS48:E1/y21; !!SS48:E2/y21; !!SS48:E3/y21;
+
+  !!SS53:E1/?y20; !!SN:W^Com_Spell_Scaling_53_1^/y20; [53  Haste]
+  !!SS53:E2/?y20; !!SN:W^Com_Spell_Scaling_53_2^/y20; [53  Haste]
+  !!SS53:E3/?y20; !!SN:W^Com_Spell_Scaling_53_3^/y20; [53  Haste]
+  !!VRy21:Sx2:30; !!VRy21:F2/100; !!SS53:E1/y21; !!SS53:E2/y21; !!SS53:E3/y21;
+
+  !!SS54:E1/?y20; !!SN:W^Com_Spell_Scaling_54_1^/y20; [54  Slow]
+  !!SS54:E2/?y20; !!SN:W^Com_Spell_Scaling_54_2^/y20; [54  Slow]
+  !!SS54:E3/?y20; !!SN:W^Com_Spell_Scaling_54_3^/y20; [54  Slow]
+  !!VRy21:Sx2:4 -100 *-1; !!VRy21:F20/90; !!SS54:E1/y21; !!SS54:E2/y21; !!SS54:E3/y21;
+
+  !!SS60:P?y20; !!SN:W^Com_Spell_Scaling_60_0^/y20; [60  Hypnotize]
+  !!SS60:E1/?y20; !!SN:W^Com_Spell_Scaling_60_1^/y20; [60  Hypnotize]
+  !!SS60:E2/?y20; !!SN:W^Com_Spell_Scaling_60_2^/y20; [60  Hypnotize]
+  !!SS60:E3/?y20; !!SN:W^Com_Spell_Scaling_60_3^/y20; [60  Hypnotize]
+  !!VRy21:Sx2*20; !!SS60:P0; !!SS60:E1/y21; !!SS60:E2/y21; !!SS60:E3/y21;
+
+  *!SS66:E3/?y20; *!SN:W^Com_Spell_Scaling_66^/y20; [66  Fire Elemental]
+  *!VRy21:Sx2*20; *!SS66:P100; *!SS66:E1/100; *!SS66:E2/100; *!SS66:E3/100;
+  
+!!en;
+
+!!if&x3=1;                              [Restore Spell values]
+  *!IF:M^Now Restore^;
+  !!SN:W^Com_Spell_Scaling_27_1^/?y20; !!SS27:E1/y20; [27  Shield]
+  !!SN:W^Com_Spell_Scaling_27_2^/?y20; !!SS27:E2/y20; [27  Shield]
+  !!SN:W^Com_Spell_Scaling_27_3^/?y20; !!SS27:E3/y20; [27  Shield]
+
+  !!SN:W^Com_Spell_Scaling_28_1^/?y20; !!SS28:E1/y20; [28  Air Shield]
+  !!SN:W^Com_Spell_Scaling_28_2^/?y20; !!SS28:E2/y20; [28  Air Shield]
+  !!SN:W^Com_Spell_Scaling_28_3^/?y20; !!SS28:E3/y20; [28  Air Shield]
+
+  !!SN:W^Com_Spell_Scaling_29_1^/?y20; !!SS29:E1/y20; [29  Fire Shield]
+  !!SN:W^Com_Spell_Scaling_29_2^/?y20; !!SS29:E2/y20; [29  Fire Shield]
+  !!SN:W^Com_Spell_Scaling_29_3^/?y20; !!SS29:E3/y20; [29  Fire Shield]
+
+  !!SN:W^Com_Spell_Scaling_38_0^/?y20; !!SS38:Py20; [38  Resurrection]
+  !!SN:W^Com_Spell_Scaling_38_1^/?y20; !!SS38:E1/y20; [38  Resurrection]
+  !!SN:W^Com_Spell_Scaling_38_2^/?y20; !!SS38:E2/y20; [38  Resurrection]
+  !!SN:W^Com_Spell_Scaling_38_3^/?y20; !!SS38:E3/y20; [38  Resurrection]
+
+  !!SN:W^Com_Spell_Scaling_39_0^/?y20; !!SS39:Py20; [39  Animate Dead]
+  !!SN:W^Com_Spell_Scaling_39_1^/?y20; !!SS39:E1/y20; [39  Animate Dead]
+  !!SN:W^Com_Spell_Scaling_39_2^/?y20; !!SS39:E2/y20; [39  Animate Dead]
+  !!SN:W^Com_Spell_Scaling_39_3^/?y20; !!SS39:E3/y20; [39  Animate Dead]
+
+  !!SN:W^Com_Spell_Scaling_48_1^/?y20; !!SS48:E1/y20; [48  Prayer]
+  !!SN:W^Com_Spell_Scaling_48_2^/?y20; !!SS48:E2/y20; [48  Prayer]
+  !!SN:W^Com_Spell_Scaling_48_3^/?y20; !!SS48:E3/y20; [48  Prayer]
+
+  !!SN:W^Com_Spell_Scaling_53_1^/?y20; !!SS53:E1/y20; [53  Haste]
+  !!SN:W^Com_Spell_Scaling_53_2^/?y20; !!SS53:E2/y20; [53  Haste]
+  !!SN:W^Com_Spell_Scaling_53_3^/?y20; !!SS53:E3/y20; [53  Haste]
+
+  !!SN:W^Com_Spell_Scaling_54_1^/?y20; !!SS54:E1/y20; [54  Slow]
+  !!SN:W^Com_Spell_Scaling_54_2^/?y20; !!SS54:E2/y20; [54  Slow]
+  !!SN:W^Com_Spell_Scaling_54_3^/?y20; !!SS54:E3/y20; [54  Slow]
+
+  !!SN:W^Com_Spell_Scaling_60_0^/?y20; !!SS60:Py20; [60  Hypnotize]
+  !!SN:W^Com_Spell_Scaling_60_1^/?y20; !!SS60:E1/y20; [60  Hypnotize]
+  !!SN:W^Com_Spell_Scaling_60_2^/?y20; !!SS60:E2/y20; [60  Hypnotize]
+  !!SN:W^Com_Spell_Scaling_60_3^/?y20; !!SS60:E3/y20; [60  Hypnotize]
+
+  *!SN:W^Com_Spell_Scaling_66^/?y20; *!SS66:E3/y20; [66  Fire Elemental]
+!!en;
+
+
+ 
+
+
+
+ 
+
 
 
 *This function adds kill count stacks during combat for your commander
@@ -11302,7 +11411,7 @@ Astral Spirit can only summon one Elemental per combat. This Elemental gets stro
   !!BU:Ei/?y10;                         [Get Stack Number at Position]
   !!if&y10>0/y10<42;                    [If valid Stack]
     !!BMy10:T?y11 F?y12 N?y13 G69/?y14/?y15 I?y16; !!VRy12:&4194304; [Check Monster Type and Summon Bit]
-    !!BMy10&y11=112/y12>0/y14=0/y16=y1:N1 Hy30 U1/y31 U2/y32 S7 M69/99/3; [Set attributes of summoned Air Elemental]
+    !!BMy10&y11=112/y12>0/y14=0/y16=y1:N1 Hy30 U1/y31 U2/y32 S7 M69/99/3; [Set attributes of summoned Air Elemental]    
     !!if&y11=112/y12>0/y14=0/y16=y1;    [Exit Loop]
       !!br;                             [Exit Loop when stack was found]
     !!en; 
@@ -11502,6 +11611,7 @@ x7=spell points x8=spell damage modifier, x8=enemy hero
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
   !!FU(Check_Com_Masteries):Pi^battle_hero_%i^/0/?i^Commander_SavedKillCount_%i^/?t/?i^Commander_SavedClass_%i^; [Pass Hero Number and return current com class]
 !!en;
+
 
 !?FU(ACM_SetCommanderClass);
 !#VA(hero:x) (class:x);
@@ -14265,7 +14375,7 @@ Show Bonus Table when clicking on Experience Icon in Hero Screen
 !!SN:T^AC_Misc.Bonus_Table_Commander_ClassII^/?z9; !!SN:Iz9/?z9;
 !!SN:T^AC_Misc.Bonus_Table_Income^/?z15; !!SN:Iz15/?z15;
 
-!!FU(Set_Com_Battle_Description):Py1/y4/y42/y22/y25/5/0/1/?t/2; 
+!!FU(Set_Com_Battle_Description):Py1/y4/y42/y22/y25/5/0/0/?t/2;
 x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery, x6=speed, x7=Side
 !!VRz11&y1=0:S^^;                       [set empty if no class]
 
@@ -15973,10 +16083,8 @@ Life Artifacts +2%, +4%, +6%
 *Armor of Wonders reduces any ranged damage by 5+2*HLvL points
 !!UN:C42149568/4/?y10;                  [Physical Damage]
 !!FU&y10<>4455011:E;                    [Shooting Damage]
-
 !!MF:W?y80;
 !!FU&y80>0:E;
-
 !!BG:A?y1;
 !!if&y1=7;                              [or Shoot]
   !!MF:N?y4;                            [damage receiving stack]
@@ -15994,14 +16102,12 @@ Life Artifacts +2%, +4%, +6%
   !!MF:F?y6;                            [Damage Dealt]
   !!HEy99:E?y10/?y8/1;
   !!VRy8:*2+5;                          [Armor Strength 5+2*Hero Level]
-
   !!if&y8>=y6;
     !!BA:Q?f;
-    !!VRz-1&1000:S^CRUSDFND.wav^;         [find block sound]
-    !!SN&i^battle_isVisible^:Pz-1;        [play block sound]
+    !!VRz-1&1000:S^CRUSDFND.wav^;       [find block sound]
+    !!SN&i^battle_isVisible^:Pz-1;      [play block sound]
     !!MF:E0;
     !!MF:F0;
-
   !!el;                                 [do if damage is bigger than shield]
     !!VRy7:Sy6-y8;
     !!MF:Fy7;
@@ -16013,10 +16119,8 @@ Life Artifacts +2%, +4%, +6%
 *25 Breastplate of Petrified Wood reduces any melee damage by 2*HLvL points
 !!UN:C42149568/4/?y10;                  [Physical Damage]
 !!FU&y10<>4462398:E;                    [melee Damage]
-
 !!MF:W?y80;
 !!FU&y80>0:E;
-
 !!BG:A?y1;
 !!if&y1=6;                              [or melee]
   !!MF:N?y4;                            [damage receiving stack]
@@ -16034,14 +16138,12 @@ Life Artifacts +2%, +4%, +6%
   !!MF:F?y6;                            [Damage Dealt]
   !!HEy99:E?y10/?y8/1;
   !!VRy8:*2;                            [Armor Strength 2*Hero Level]
-
   !!if&y8>=y6;
     !!BA:Q?f;
     !!VRz-1&1000:S^CRUSDFND.wav^;       [find block sound]
     !!SN&i^battle_isVisible^:Pz-1;      [play block sound]
     !!MF:E0;
     !!MF:F0;
-
   !!el;                                 [do if damage is bigger than shield]
     !!VRy7:Sy6-y8;
     !!MF:Fy7;
@@ -17151,7 +17253,7 @@ All changes to these parameters should be done here. Values can be called anytim
   !!VRy50:S1; Attack !!VRy51:S80; Defense          !!VRy52:S1; Damage !!VRy53:S90+y11; [Health]
   !!VRy54:S100; Speed  !!VRy55:S110+y12; Spell Damage !!VRy56:S120; Passive  !!VRy57:S100; [Aura] !!VRy58:S1; [Const Speed]
   !!VRy59:S10; [MR Dwarf] !!VRy60:S25;  [MR Golem]
-  *!VRy71&x16=1:S56; Upgrade to  *!VRy72&x16=1:S57; [Upgrade to]
+  !!VRy71&x16=1:S57; [Upgrade to Ancient]
 !!en; 
 
 
@@ -18066,8 +18168,8 @@ On Battle Start set chance to generate Res to 100%
 
 *Gold and Resource giving artifacs also work in backpack*
 ; Disabled as Era Scripts - Backpack Artifacts opition works better
+Perry: I dont think it works better in all regards. Skill description looks worse. Res amount from Wood and Ore is less. Gives free movement with Boots and Gloves which feels very strong
 !?FU(OnEveryDay)&i^timerOnce^=1/i^timerDay^>1/i^timerIsAi^=0; [Trigger each day]
-!!FU:E;
 
 Fix for Cart of Lumber and Cart of Ore give +2 in total
 !!DO(AC_Function_40)/0/155/1:P;         [loop through heroes]
@@ -18411,11 +18513,10 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
   !!en;
 !!en;
 
-; Archer30: Note that y10 is never gonna be lower than y20 (only equal to), thus the following bonus would never be executed
 !!VRy10:S0R100;
 !!VRy20:S0;
-!!VRy20&y93>=3:S20;                     [With 3 set pieces give a 20% chance for extra Prim Skill]
-!!if&y10<y20;                           [If roll is successful]
+!!VRy20&y93>=3:S25;                     [With 3 set pieces give a 25% chance for extra Prim Skill]
+!!if&y10<=y20;                          [If roll is successful]
   !!VRy96:S1R3;
   !!SN:T^AC_Warmachine.Champions_Honor_Set_Skill^/?z21;
   !!IF&y96=1:Q2/31/1/1^%Z21^;
@@ -20381,12 +20482,13 @@ Undead stacks heal and with next attack^;                                       
 !!BU:Mz-1;                              [show message in log]
 !!en;
 
+
 *-------------------------------shield ----------------------------------------*
 *first creature in stack gets a big shield which blocks physical and magic damage
 !?MF1&1000/-936;
 
 !!UN:C42149568/4/?y10;                  [Get Physical Damage type]
-!!if|y10=4462398/y10=4455011/y10=4456676; [Only run when melee or shooting damage]
+!!if|y10=4462398/y10=4455011/y10=4456676;[Only run when melee or shooting damage]
 
 !!MF:W?y80;
 !!FU&y80>0:E;
@@ -20395,26 +20497,19 @@ Undead stacks heal and with next attack^;                                       
 !!MF:N?y4;                              [damage receiving stack]
 !!SN:W^Shield_Attacking_Stack^/?y50;
 !!VRy1&y4=y1/y50>=0/y50<=41:Sy50;       [If Attacking Stack gleich Damage Recieving Stack it means Retaliation]
-
 !!BMy1:I?y2;                            [Side index as for heroes (0:left, 1:right)]
 !!VRy2:-1 *-1;
-
 !!SN:W^Shield_Attacking_Stack^/y4;
-
 !!SN:W^Shield_Cast%Y2^/?y3;             [Check if Spell was actually cast by Hero]
 !!FU&y3<>1:E;
-
 !!BMy4:G27/?y13/?y14;                   [check for Shield Duration]
 !!SN:W^H3_Shield_0_Block_Stack_%Y4^/?y15;
 !!FU|y13=0/y15<=0:E;                    [Exit if no Shield or no more Shield Blocks left]
-
 !!MF:N?y4;                              [damage receiving stack]
 !!SN:W^Shield_Attacking_Stack^/y4;
-
 !!BMy4:F?y78;                           [read flags]
 !!VRy78:&4194304;                       [just look summoned bit]
 !!FU&y78>0:E;                           [Exit if cloned or summoned]
-
 !!BMy4:I?y5;                            [Side index as for heroes (0:left, 1:right)]
 !!BA:Hy5/?y99;
 !!SN:W^H3_Earth Magic_0_Hero%Y99^/?y11; [Earth Magic Bonus handling]
@@ -20430,35 +20525,28 @@ Undead stacks heal and with next attack^;                                       
 !!VRy10&y87=1:Sy22 *15 +150;            [calculate shield value with GM Earth]
 !!VRy10&y89=1:*2;                       [39  Dragon Scale Shield gives double effect]
 !!BA:Q?f;
-
 !!MF:F?y8;                              [damage dealt]
-
 !!if&y8>y10;                            [do if damage is bigger than shield]
   !!VRy12:Sy6-y10;
   !!VRy9:Sy8-y10;
-
   !!VRz-1:S^CRUSDFND.wav^;              [find block sound]
   !!SN&i^battle_isVisible^:Pz-1;        [play block sound]
   !!MF:Fy9;
-
   !!SN:T^AC_Misc.Shield block^/?z-1/^damage^/y10;
   !!BU:Mz-1;
-
 !!el;                                   [do if damage is smaller than shield]
   !!VRy12:Sy6-y10;
-
   !!VRz-1:S^CRUSDFND.wav^;              [find block sound]
   !!SN&i^battle_isVisible^:Pz-1;        [play block sound]
   !!VRy9:Sy8;
   !!MF:E0;
   !!MF:F0;
-
   !!SN:T^AC_Misc.Shield block^/?z-1/^damage^/y8;
   !!BU:Mz-1;
 !!en;
-
 !!SN:W^H3_Shield_0_Block_Stack_%Y4^/d-1;
 !!en;
+
 
 !?MR0&1000/-936;
 
@@ -20467,12 +20555,9 @@ Undead stacks heal and with next attack^;                                       
 !!FU&y1<>1:E;
 !!BG:A?y1;                              [Aktion in y1]
 !!FU&y1<>1:E;
-
 !!MR:S?y2;
 !!FU&y2<=9|y2>69:E;
-
 !!FU(AC_Function_112):P?y4;             [call fkt for magic dmg recieving stack]
-
 !!if&y4>=0/y4<=41;
 !!BMy4:G27/?y13/?y14;                   [check for shield duration]
 !!SN:W^H3_Shield_1_Block_Stack_%Y4^/?y15;
@@ -20485,16 +20570,13 @@ Undead stacks heal and with next attack^;                                       
 !!SN:W^H3_Earth Magic_0_Hero%Y99^/?y11; [Earth Magic Bonus handling]
 !!HEy99&y99>=0:S14/?y81 S15/?y82 S16/?y83 S17/?y84 S25/?y85 Fd/d/?y22/d S24/?y87 A2/39/?y88/?y89; [Checke ob der Held Sorcery und EarthMagien hat und Sp]
 !!FU|y84<3/y11<>1:E;
-
 !!BA:Q?f;
 !!SN:W^H3_Earth Magic_1_Hero%Y99^/?y87; [Earth Magic Bonus handling]
 !!VRy10&y87=0:Sy22 *10 +100;            [calculate shield value with Master Earth]
 !!VRy10&y87=1:Sy22 *15 +150;            [calculate shield value with GM Earth]
 !!VRy10&y89=1:*2;                       [39  Dragon Scale Shield gives double effect]
-
 !!MR:F?y8;                              [damage dealt]
 !!FU&y8<=0:E;
-
 !!if&y8>y10;                            [do if damage is bigger than shield]
   !!VRy12:Sy6-y10;
   !!VRy9:Sy8 -y10;
@@ -20503,7 +20585,6 @@ Undead stacks heal and with next attack^;                                       
   !!MR:Dy9;
   !!SN:T^AC_Misc.Shield block 2^/?z-1/^damage^/y10;
   !!BU:Mz-1;
-
 !!el;                                                   [do if damage is smaller than shield]
   !!VRy12:Sy6 -y10;
   !!VRz-1&i^battle_isVisible^:S^CRUSDFND.wav^;          [find block sound]
@@ -20515,8 +20596,8 @@ Undead stacks heal and with next attack^;                                       
   !!BU:Mz-1;
 !!en;
 !!en;
-
 !!SN:W^H3_Shield_1_Block_Stack_%Y4^/d-1;
+
 
 *-------------------------------curse -----------------------------------------*
 *with Curse creature deals less damage for ever debuff applied
@@ -29912,7 +29993,8 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!SN:W^Ammo_Enhanced_Arrow_%Y1^/?y11;   [Check if options have already been activated]
 !!if&y10=1/y11=1;
   !!re i/0/20;
-    !!BMi:U2/d1;                        [+1Max Damage]
+    !!BMi:T?y5;                         [Get Creature Type]
+    !!BMi&y5<>145/y5<>147/y5<>148/y5<>149:U2/d1; [+1Max Damage]
   !!en;
 !!en;
 
@@ -29921,7 +30003,8 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!SN:W^Ammo_Enhanced_Arrow_%Y1^/?y11;   [Check if options have already been activated]
 !!if&y10=1/y11=1;
   !!re i/21/41;
-    !!BMi:U2/d1;                        [+1Max Damage]
+    !!BMi:T?y5;                         [Get Creature Type]
+    !!BMi&y5<>145/y5<>147/y5<>148/y5<>149:U2/d1; [+1Max Damage]
   !!en;
 !!en;
 
@@ -33453,21 +33536,18 @@ New Commanders Section
         !!VRy96:Sy81:2+50 F50/95;
         !!VRy97:S100 -y96;              [Calc damage reduction based on level]
       !!en;
-
       !!FU&y90>=y98:E;                  [30% chance for success]
-
       !!MF:F?y6;                        [Damage Dealt]
       !!VRy6:*y97:100;                  [Reduce damage by 50%]
-
       !!if&i^battle_isVisible^;
         !!SN:P^CRUSDFND.wav^;           [play block sound]
         !!BMy4:V84;                     [play commander block animation]
       !!en;
-
       !!MF:Fy6;                         [apply reduced damage]
     !!en;
   !!en;
 !!en;
+
 
 [set commander description in battle]
 !?CM4;
@@ -34649,8 +34729,8 @@ loop to set hint text with spell name
 !!VRy31&v999>=40:-39;
 
 !!SN:W^ACM_Commander_Hero_ID^/?y99;
-!!FU(Check_Com_Masteries):Py99/0/0/0/?y10; [Pass Hero Number and return commander class]
-!!FU&y10<>14/y10<>24:E;
+!!FU(Check_Com_Masteries):Py99/0/0/0/?y10/0/0/0/0/0/?y71; [Pass Hero Number and return commander class and spell efficiency]
+!!FU&y10<>14/y10<>24:E; Exit if not Archmage or Warden class
 
 !!if&y10=14;
 !!VRy11:S11; !!VRy12:S13; !!VRy13:S15; !!VRy14:S16; !!VRy15:S17; !!VRy16:S18; !!VRy17:S19; [Set spell IDs for offensive caster]
@@ -34678,9 +34758,72 @@ x1=Hero Number, x2=returns spell damage from commander, x3 Spell Number, x4=In F
 x7=spell points x8=spell damage modifier
 
   !!SN:T^AC_Misc.ACM_Com_Buy_Spell_3^/?z2; !!SN:Iz2/?z2;
-  !!IF:M0/(MSG_TYPE_POPUP)/^%Z1 %Z2^;
-!!en;
 
+  !!if&y10=24;                          [Set text for spell efficiency in case of Warden Caster]    
+    
+    !!VRy70&y1=27:Sy71:5; !!VRy70:F20/80;
+    !!VRz2&y1=27:S^
+    Melee damage reduction is: {~r}%Y70%{~}
+    Scales with 1% per 5 spell modifier (%Y71)^;
+
+    !!VRy70&y1=28:Sy71:5; !!VRy70:F20/80;
+    !!VRz2&y1=28:S^
+    Range damage reduction is: {~r}%Y70%{~}
+    Scales with 1% per 5 spell modifier (%Y71)^;
+
+    !!VRy70&y1=29:Sy71:10 +8; !!VRy70:F10/90;
+    !!VRz2&y1=29:S^
+    Returns damage: {~r}%Y70%{~}
+    Scales with 8+1% per 10 spell modifier (%Y71)^;
+
+    !!VRy70&y1=38:Sy71*10;
+    !!VRz2&y1=38:S^
+    Resurrects a total of: {~r}%Y70{~}HP
+    Scales with 10HP per 1 spell modifier (%Y71)^;
+
+    !!VRy70&y1=39:Sy71*10;
+    !!VRz2&y1=39:S^
+    Animates a total of: {~r}%Y70{~}HP
+    Scales with 10HP per 1 spell modifier (%Y71)^;
+
+    !!VRy70&y1=48:Sy71:40;
+    !!VRz2&y1=48:S^
+    Increases stats by: {~r}%Y70{~}
+    Scales with +1 per 40 spell modifier (%Y71)^;
+
+    !!VRy70&y1=53:Sy71:30;
+    !!VRz2&y1=53:S^
+    Increases speed by: {~r}%Y70{~}
+    Scales with +1 per 30 spell modifier (%Y71)^;
+
+    !!VRy70&y1=54:Sy71:4 -100 *-1; !!VRy70:F10/90;
+    !!VRz2&y1=54:S^
+    Slows down until: {~r}%Y70{~}
+    Scales with 1% per 4 spell modifier (%Y71)^;
+
+    !!VRy70&y1=60:Sy71*20;
+    !!VRz2&y1=60:S^
+    Total HP: {~r}%Y70{~}
+    Scales with +20HP per 1 spell modifier (%Y71)^;
+
+    !!VRy70&y1=66:Sy71:10 +5;
+    !!VRz2&y1=66:S^
+    Summons Fire Elementals: {~r}%Y70{~}
+    Scales with 5 +1 element per 10 spell modifier (%Y71)^;
+
+    !!VRz2&y1=35:S^
+    Casts at advanced level.^;
+    !!VRz2&y1=59:S^
+    Casts at advanced level.^;
+    !!VRz2&y1=62:S^
+    Casts at advanced level.^;
+    !!VRz2&y1=65:S^
+    Casts at advanced level.^;
+  !!en;
+
+  !!IF&y10=14:M0/(MSG_TYPE_POPUP)/^%Z1 %Z2^; [Show Spell Description for Archmage]
+  !!IF&y10=24:M0/(MSG_TYPE_POPUP)/^%Z1 %Z2^; [Show Spell Description for Warden]
+!!en;
 
 
 !?DL&v998=278/v999>=1/v999<=14/v1000=13;[Left click on the spell pictures icons to purchase the spell]
@@ -36078,14 +36221,17 @@ Set description of Warmachines when right clicking them in battle
 ; For dynamic description (description will change in the battle)
 !?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>0/i^mouse_battleHex^<186;
 !!BU:Ei^mouse_battleHex^/?y2;
-!!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
+!!FU&y2=-1:E;                           [get monster ID at position and exit if no monster]
 
-!!BMy2:T?y3 I?y4 S?y6;                [get monster type and side index]
-!!BHy4:N?y30;                         [Get hero or commander ID]
+!!if&y2>=0/y2<=41;
+  !!BMy2:T?y3 I?y4 S?y6;                [get monster type and side index]
+  !!BHy4:N?y30;                         [Get hero or commander ID]
 
-!!if|y3=145/y3=146/y3=147/y3=148;     [if any warmachine]
-  !!FU(ACM_SetUpNewWarMachineDesc):Py2/y4; [run function to set new description]
+  !!if|y3=145/y3=146/y3=147/y3=148;     [if any warmachine]
+    !!FU(ACM_SetUpNewWarMachineDesc):Py2/y4; [run function to set new description]
+  !!en;
 !!en;
+
 
 !?FU(ACM_SetUpNewWarMachineDesc);
 !#VA(stack:x) (side:x);
@@ -36110,16 +36256,16 @@ Set description of Warmachines when right clicking them in battle
 *some code to get additional heal parameter
 !!if&(type)=(MON_FIRST_AID_TENT);
   !!HE(hero):S27/?y80; 
-  !!FU(AC_Function_35):P(stack)/y80/1/1;       [function to set low and high heal value]
+  !!FU(AC_Function_35):P(stack)/y80/1/1;[function to set low and high heal value]
   !!SN:W^Heal_InCombat_Low_Hero%(hero)^/?y66; [Save Low Heal to display it in Bonus List]
-  !!SN:W^Heal_InCombat_High_Hero%(hero)^/?y67;[Save High Heal to display it in Bonus List]
+  !!SN:W^Heal_InCombat_High_Hero%(hero)^/?y67; [Save High Heal to display it in Bonus List]
   !!VRy66&y66=0:S20;
-  !!VRy67&y67=0:S40;                      [set to minimum heal]
+  !!VRy67&y67=0:S40;                    [set to minimum heal]
   !!SN&(side)=0:W^Tent_Capacity_Att^/?y68;
-  !!SN&(side)=1:W^Tent_Capacity_Def^/?y68;    [Save HC from hero to show in bonus list]
+  !!SN&(side)=1:W^Tent_Capacity_Def^/?y68; [Save HC from hero to show in bonus list]
 
 !!el&(type)=(MON_BALLISTA);
-  !!SN:W^Total_Ballista_Shots^/?y50;      [save number of total shots to display on right click]
+  !!SN:W^Total_Ballista_Shots^/?y50;    [save number of total shots to display on right click]
   !!FU(ACM_Calc_Ballista_Shots):P146/(hero)/(stack)/?y50; [Pass Ballista ID and Hero and stack and return number of ballista shots]
 !!en;
 
@@ -36300,10 +36446,10 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
 !!FU:E;
 !!HE-1:N?y99; 
 !!SN:W^ACM_Commander_Hero_ID^/y99;
-!!SN:W^Commander_Kill_Counter_%Y99^/200;
-*!FU:E;
-!!FU(Check_Com_Masteries):Py99/0/0/0/?y98; [Pass Hero Number and return current class]
-!!FU(ACM_Select_Commander_Role)&999:Py99;[Call DL to select Commander class on first kill. Pass current hero-y10 and commander ID-y2 if Human]
+!!SN:W^Commander_Kill_Counter_%Y99^/150;
+!!FU:E;
+*!FU(Check_Com_Masteries):Py99/0/0/0/?y98; [Pass Hero Number and return current class]
+*!FU(ACM_Select_Commander_Role)&999:Py99;[Call DL to select Commander class on first kill. Pass current hero-y10 and commander ID-y2 if Human]
 !!FU(ACM_Select_Commander_Role_Upg)&y98<10/999:Py99; [Call DL to select Commander class on first kill. Pass current hero-y10 and commander ID-y2 if Human]
 
 !!FU(Check_Com_Masteries):Py99/0/0/0/?y98; [Pass Hero Number and return current class]
@@ -36328,7 +36474,7 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
 !!if&v3=512;                            [if right click and kingdom overview icon are clicked]  
 
   !!SN:W^ACM_Commander_Hero_ID^/?y99;
-  !!IF:M^Now Ancient Commander %Y99^;
+  !!IF:M^Now Warden Commander %Y99^;
   
   !!SN:W^Commander_Fighter_%Y99^/0;     [Check if options have already been activated]
   !!SN:W^Commander_Ranger_%Y99^/0;
@@ -36353,12 +36499,12 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
   !!SN:W^Commander_Paladin_%Y99^/0; 
   !!SN:W^Commander_Marksmen_%Y99^0; 
   !!SN:W^Commander_Avenger_%Y99^/0; 
-  !!SN:W^Commander_Warden_%Y99^/0; 
+  !!SN:W^Commander_Warden_%Y99^/1; 
   !!SN:W^Commander_Arcanist_%Y99^/0;
   !!SN:W^Commander_General_%Y99^/0; 
   !!SN:W^Commander_Lancer_%Y99^/0; 
   !!SN:W^Commander_Necromant_%Y99^/0; 
-  !!SN:W^Commander_Ancient_%Y99^/1; 
+  !!SN:W^Commander_Ancient_%Y99^/0; 
 
   !!SN:W^Commander_%Y99_Ancient_Fighter^/1;
   !!SN:W^Commander_%Y99_Ancient_Ranger^/1;
@@ -36372,63 +36518,17 @@ x1=ballista ID, x2=hero, x3=stack, x4=returns value
 !!en;
 
 
+*?HM-1;
 
+*!VRy2:S66;
 
+*!HE-1:N?y99; 
+*!SSy2:E0/?y20;
+*!SSy2:E1/?y21;
+*!SSy2:E2/?y22;
+*!SSy2:E3/?y23;
+*!SSy2:P?y24;
+*!IF:L^Spell Effect is %Y20 %Y21 %Y22 %Y23 Power %Y24^;
 
-*?FU(acm_InitComboArtifactSets);
-*!SN:M(M_AUTO_ID)/0/(M_STR)/(M_STORED)/?i^acm_ComboAtrifactSets^;
-
-
-*#FU(acm_InitComboArtifactSets):P;
-
-*?FU(acm_ComboAtrifact_Create);
-*#VA(uniqueName:x) (returnArray:x) (arts[14]:x);
-*!VR(returnArray):S(NULL);
-*!FU(Array_IndexOf):Pi^acm_ComboAtrifactSets^/z(uniqueName)/?(index:y);
-*!if&(index)<0;
-  *!FU(NewIntArray):P?(tempArray:y);/(M_STORED);
-
-  *!re i/0/(arts[SIZE])/1/-1;
-    *!if&(arts[i])>1;
-
-      *!FU(Array_Push):P(tempArray)/(arts[i]);
-    *!en;
-  *!en;
-  *!SN:M(tempArray)/?(arraySize:y);
-  *!if&(arraySize);
-    *!FU(Array_SortedUnique):P(tempArray);
-    *!SN:M(tempArray)/?(arraySize:y);
-
-    *!SN:M(M_AUTO_ID)/(arraySize)/(M_INT)/(M_STORED)/?(returnArray);
-    *!FU(Array_Copy):P(tempArray)/(returnArray);
-    *!FU(Array_Push):Pi^acm_ComboAtrifactSets^/z(uniqueName)/^%(returnArray)^;
-    *!SN:Mi^acm_ComboAtrifactSets^/?s;
-    *!VRi^%z(uniqueName)^:S(returnArray);
-  *!en;
-*!en;
-
-
-
-*?FU(acm_ComboAtrifact_PiecesWeared);
-*#VA(uniqueName:x) (heroId:x) (pieces:x);
-*!VR(pieces):S(NULL);
-
-*!VR(arrayId:y):Si^%z(arrayName)^;
-*!FU(Array_IndexOf):Pi^acm_ComboAtrifactSets^/z(uniqueName)/?(index:y);
-
-*!if&(index)>=0;
-
-  *!VR(arraySetIdIndex:y):S(index) +1;
-  *!SN:Mi^acm_ComboAtrifactSets^/(arraySetIdIndex)/?(arrayIntName:z);
-  *!VR(arrayId:y):V(arrayIntName);
-
-  *!SN:M(arrayId)/?(size:y);
-  *!re i/0/(size)/1/-1;
-    *!SN:M(arrayId)/i/?(artId:y);
-
-    *!HE(heroId):A2/(artId)/?t/?(equipped:y);
-    *!VR(pieces)&(equipped):+1;
-   *!en; 
-*!en;
 
 
