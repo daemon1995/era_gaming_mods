@@ -1,0 +1,245 @@
+ZVSE2
+; Author:      Berserker aka EtherniDee
+; Requires:    ERA 3.9.15+, Era Erm Framework 3.9.15+
+; Description: Provides easy to type and remember alternative cheats, ERM variables dumping and ERM commands execution support
+;              Type "help" in chat for details.
+
+!#VRs^ech_lastCmd^:S^^;
+!#VRi^ech_execCmdViaMouse^:S(FALSE);
+
+
+!?FU(OnAdventureMapLeftMouseClick)|i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!VRi^ech_mapX^:Si^mouse_mapX^;
+!!VRi^ech_mapY^:Si^mouse_mapY^;
+!!VRi^ech_mapZ^:Si^mouse_mapZ^;
+
+!!if&i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^ech_execCmdViaMouse^/^ech_lastCmd^<>^^;
+  !!CM:R(FALSE);
+  !!FU(ech_ProcessCmd):Ps^ech_lastCmd^;
+!!en;
+
+
+!?FU(OnAdventureMapRightMouseClick)|i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!VRi^ech_mapX^:Si^mouse_mapX^;
+!!VRi^ech_mapY^:Si^mouse_mapY^;
+!!VRi^ech_mapZ^:Si^mouse_mapZ^;
+
+!!if&i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP)/i^ech_execCmdViaMouse^/s^ech_lastCmd^<>^^;
+  !!CM:R(FALSE);
+  !!FU(ech_ProcessCmd):Ps^ech_lastCmd^;
+!!en;
+
+
+!?FU(OnChat)&x1=(CHAT_EVENT_TYPE_INPUT);
+!#VA(action:x) (strAddr:x) (result:x);
+
+!!VR(result):S(CHAT_EVENT_RESULT_CLEAR);
+
+!!SN:B(strAddr)/d/?(input:z);
+!!FU(Trim):P(input)/?(input);
+!!FU&(input)=^^:E;
+
+!!UN:V?t/?t/?t/?(isNetworkGame:y)/?t;
+
+; To use mod in network game special additional mod unlocker is necessary
+!!if&(isNetworkGame);
+  !!FU(ech_OnCheckNetworkPermission):P?(isNetworkAllowed:y);
+
+  !!if&(isNetworkAllowed)=(FALSE);
+    !!VR(result):S(CHAT_EVENT_RESULT_DEFAULT);
+    !!FU:E;
+  !!en;
+!!en;
+
+!!FU(StrToLower):P(input)/?(loweredInput:z);
+
+!!if|(loweredInput)=^mouse^/(loweredInput)=^%T(easy_cheats.cheat.mouse)^;
+  !!if&i^ech_execCmdViaMouse^;
+    !!IF:L^%T(easy_cheats.mouse_mode_off)^;
+  !!el;
+    !!IF:L^%T(easy_cheats.mouse_mode_on)^;
+  !!en;
+
+  !!VRi^ech_execCmdViaMouse^:X(TRUE);
+  !!FU:E;
+!!el|(loweredInput)=^help^/(loweredInput)=^%T(easy_cheats.cheat.help)^;
+  ; FIXME: remove interpolation, once Era supports nested translations
+  !!VRs^temp^:S^%T(easy_cheats.help)^;
+  !!FU(Interpolate):Ps^temp^/?s^temp^;
+  !!IF:M^%s(temp)^;
+  !!VRs^temp^:S^^;
+  !!FU:E;
+!!el|(loweredInput)=^rem^/(loweredInput)=^%T(easy_cheats.cheat.rem)^;
+  !!IF:Ls^ech_lastCmd^;
+  !!FU:E;
+!!en;
+
+!!if|(input)=^rep^/(input)=^%T(easy_cheats.cheat.rep)^;
+  !!VR(input):Ss^ech_lastCmd^;
+  !!FU(StrToLower):P(input)/?(loweredInput);
+!!en;
+
+!!VRs^ech_lastCmd^:S(input);
+!!VR(result):S(CHAT_EVENT_RESULT_DEFAULT);
+
+; Do not process native WoG case insensitive cheats
+!!FU|
+  (loweredInput)=^wogminastirith^/
+  (loweredInput)=^woggaladriel^/
+  (loweredInput)=^wogoliphaunt^/
+  (loweredInput)=^woggandalfwhite^/
+  (loweredInput)=^wogshadowfax^/
+  (loweredInput)=^wogeyeofsauron^/
+  (loweredInput)=^wogisengard^/
+  (loweredInput)=^wogsaruman^/
+  (loweredInput)=^woggandalf^/
+  (loweredInput)=^wogpathofthedead^/
+  (loweredInput)=^wogdarklord^/
+  (loweredInput)=^wogdenethor^/
+  (loweredInput)=^wogonering^/
+  (loweredInput)=^wogfrodo^/
+  (loweredInput)=^wogbilbo^/
+  (loweredInput)=^wogmordor^:E;
+!!FU|(loweredInput)=^wogfellowship^/(loweredInput)=^gosolo^:E;
+
+!!SN:F^GetGameState^/?(gameState[2]:y);
+
+!!if|(loweredInput)=^build^/(loweredInput)=^%T(easy_cheats.cheat.build)^/(loweredInput)=^nwconlyamodel^/(loweredInput)=^nwccoruscant^/(loweredInput)=^nwczion^;
+  !!SN:B(strAddr)/?t/^wogminastirith^;
+!!el|(loweredInput)=^angels^/(loweredInput)=^%T(easy_cheats.cheat.angels)^/(loweredInput)=^nwcavertingoureyes^/(loweredInput)=^nwcpadme^/(loweredInput)=^nwctrinity^;
+  !!SN:B(strAddr)/?t/^woggaladriel^;
+!!el|(loweredInput)=^machines^/(loweredInput)=^%T(easy_cheats.cheat.machines)^/(loweredInput)=^nwcantioch^/(loweredInput)=^nwcr2d2^/(loweredInput)=^nwclotsofguns^;
+  !!SN:B(strAddr)/?t/^wogoliphaunt^;
+!!el|(loweredInput)=^levelup^/(loweredInput)=^%T(easy_cheats.cheat.levelup)^/(loweredInput)=^nwcigotbetter^/(loweredInput)=^nwcquigon^/(loweredInput)=^nwcneo^;
+  !!SN:B(strAddr)/?t/^woggandalfwhite^;
+!!el|(loweredInput)=^moves^/(loweredInput)=^%T(easy_cheats.cheat.moves)^/(loweredInput)=^nwccoconuts^/(loweredInput)=^nwcpodracer^/(loweredInput)=^nwcnebuchadnezzar^;
+  !!SN:B(strAddr)/?t/^wogshadowfax^;
+!!el|(loweredInput)=^show^/(loweredInput)=^%T(easy_cheats.cheat.show)^/(loweredInput)=^nwcgeneraldirection^/(loweredInput)=^nwcrevealourselves^/(loweredInput)=^nwcwhatisthematrix^;
+  !!SN:B(strAddr)/?t/^wogeyeofsauron^;
+!!el|(loweredInput)=^resources^/(loweredInput)=^%T(easy_cheats.cheat.resources)^/(loweredInput)=^nwcshrubbery^/(loweredInput)=^nwcwatto^/(loweredInput)=^nwctheconstruct^;
+  !!SN:B(strAddr)/?t/^wogisengard^;
+!!el|(loweredInput)=^spells^/(loweredInput)=^%T(easy_cheats.cheat.spells)^/(loweredInput)=^nwctim^/(loweredInput)=^nwcmidichlorians^/(loweredInput)=^nwcthereisnospoon^;
+  !!SN&(gameState[1])=(DLG_ADVMAP):B(strAddr)/?t/^wogsaruman^;
+  !!SN&(gameState[1])=(DLG_BATTLE):B(strAddr)/?t/^woggandalf^;
+!!el|(loweredInput)=^knights^/(loweredInput)=^%T(easy_cheats.cheat.knights)^/(loweredInput)=^nwcfleshwound^/(loweredInput)=^nwcdarthmaul^/(loweredInput)=^nwcagents^;
+  !!SN:B(strAddr)/?t/^wogpathofthedead^;
+!!el|(loweredInput)=^lose^/(loweredInput)=^%T(easy_cheats.cheat.lose)^/(loweredInput)=^nwcsirrobin^/(loweredInput)=^nwcbluepill^;
+  !!SN&(gameState[1])=(DLG_ADVMAP):B(strAddr)/?t/^wogdarklord^;
+  !!SN&(gameState[1])=(DLG_BATTLE):B(strAddr)/?t/^wogdenethor^;
+!!el|(loweredInput)=^win^/(loweredInput)=^%T(easy_cheats.cheat.win)^/(loweredInput)=^nwctrojanrabbit^/(loweredInput)=^nwcredpill^;
+  !!SN&(gameState[1])=(DLG_ADVMAP):B(strAddr)/?t/^wogonering^;
+  !!SN&(gameState[1])=(DLG_BATTLE):B(strAddr)/?t/^wogfrodo^;
+!!el|(loweredInput)=^luck^/(loweredInput)=^%T(easy_cheats.cheat.luck)^/(loweredInput)=^nwccastleanthrax^/(loweredInput)=^nwcfollowthewhiterabbit^;
+  !!SN:B(strAddr)/?t/^wogbilbo^;
+!!el|(loweredInput)=^hide^/(loweredInput)=^%T(easy_cheats.cheat.hide)^/(loweredInput)=^nwcignoranceisbliss^;
+  !!SN:B(strAddr)/?t/^wogmordor^;
+!!el|(loweredInput)=^morale^/(loweredInput)=^%T(easy_cheats.cheat.morale)^/(loweredInput)=^nwcmuchrejoicing^/(loweredInput)=^nwcmorpheus^;
+  !!SN:B(strAddr)/?t/^wogfellowship^;
+!!el|(loweredInput)=^ai^/(loweredInput)=^%T(easy_cheats.cheat.ai)^;
+  !!SN:B(strAddr)/?t/^gosolo^;
+!!el;
+  !!FU(ech_ProcessCmd):P(input);
+  !!VR(result):S(CHAT_EVENT_RESULT_CLEAR);
+!!en;
+
+
+!?FU(ech_ProcessCmd);
+!#VA(cmdPtr:x); Command to execute (cheat name, ERM command or ERM variable to dump)
+
+!!VR(input:z):Sz(cmdPtr);
+!!FU&(input)=^^:E;
+
+!!VR(input):M4/?(inputLen:y);
+!!VR(delimPos:y):S-1;
+!!FU(StrPos)&(inputLen)>3:P(input)/^:^/?(delimPos:y);
+
+; Initialize current hero
+!!OW:A(CURRENT_PLAYER)/?(activeHero:y);
+!!OW&(activeHero)=(NO_HERO):O(CURRENT_PLAYER)/0/?(activeHero);
+!!VR(heroStruct:y):S(NULL);
+!!HE(activeHero)&(activeHero)<>(NO_HERO):Z?(heroStruct);
+!!VR(currHeroPtr:y):S41916784;
+!!IF:W(HERO_ORRIN);
+!!IF&(activeHero)<>(NO_HERO):W(activeHero);
+
+; Execute command
+!!if&(delimPos)<>-1;
+  ; ERM command like he:c0/4/13/700/999999/2
+  ; - first 2 characters and first subcommand character may be in lower case and must be uppercased automatically
+  ; - v1/v2/v3 must point to last RMB clicked adventure map tile position
+  ; - current ERM hero must be set to current active hero or the first hero of current player
+  !!VR(subcmdPos:y):S(delimPos) +1;
+  !!VR(cmdTailPos:y):S(subcmdPos) +1;
+  !!SN:K(input)/(subcmdPos)/?(firstSubcmd:z);
+  !!VR(middleCmdLen:y):S(subcmdPos) -2;
+
+  !!FU(Substr):P(input)/0/2/?(cmdStart:z);
+  !!FU(Substr):P(input)/2/(middleCmdLen)/?(cmdMiddle:z);
+  !!FU(Substr):P(input)/(cmdTailPos)/9999/?(cmdEnd:z);
+  !!FU(StrToUpper):P(cmdStart)/?(cmdStart);
+  !!FU(StrToUpper):P(firstSubcmd)/?(firstSubcmd);
+
+  !!VR(input):S^%(cmdStart)%(cmdMiddle)%(firstSubcmd)%(cmdEnd)^;
+
+  !!VRv2:Ci^ech_mapX^/i^ech_mapY^/i^ech_mapZ^;
+  !!SN:B(currHeroPtr)/d/(heroStruct) F^ExecErmCmd^/(input);
+  !!IF:L^{~w}Executed{~} {%(input)}^;
+; Debug variables
+!!el;
+  !!SN:K(input)/0/?(firstChar:y);
+
+  ; Ignore input if first character is not in [a..zA..Z]
+  !!if|(firstChar)<(ORD_LOWER_A)/(firstChar)>(ORD_LOWER_Z);
+    !!IF:L^%(input)^;
+    !!FU|(firstChar)<(ORD_UPPER_A)/(firstChar)>(ORD_UPPER_Z):E;
+  !!en;
+
+  ; Handle dynamic arrays dump with ID in global variables
+  ; Syntax: a(globaL_var_name), the rest is ignored
+  !!FU(Substr):P(input)/0/2/?(prefix:z);
+  !!VR(isArray:y):S(FALSE);
+
+  !!if&(prefix)=^a(^;
+    !#VA(-prefix);
+    !!FU(StrPos):P(input)/^)^/?(endParenthesisPos:y)/2;
+
+    !!if&(endParenthesisPos)<>-1;
+      !!VR(arrayVarNameLen:y):S(endParenthesisPos) -2;
+      !!FU(Substr):P(input)/2/(arrayVarNameLen)/?(arrayVarName:z);
+      !!VR(input):S^a(%(arrayVarName))^;
+      !!VRs^ech_lastCmd^:S(input);
+
+      !!VR(arrayId:y):Si^%(arrayVarName)^;
+
+      !!if&(arrayId)=0;
+        !!IF:L^{~w}a(%(arrayVarName)){~} {~F20202}does not exist{~}^;
+        !!FU:E;
+      !!en;
+
+      !!VR(numItems:y):S-1;
+      !!SN:M(arrayId)/?(numItems)/?(itemsType:y)/d;
+      !!FU&(numItems)<0:E;
+
+      !!FU(Array_Join):P(arrayId)/?s^temp^/^ ^;
+      !!VR(isArray):S(TRUE);
+    !!en;
+  !!en;
+
+  ; Escape '^' in input
+  !!FU(StrReplace):P(input)/^%\"^/^%%\"^/?(input);
+
+  ; Get expanded input in s^temp^
+  !!SN&(isArray)=(FALSE):F^ExecErmCmd^/^VRs%\"temp%\":S%\"%%%(input)%\"^;
+
+  ; Escape '%' to display original input string
+  !!FU(StrReplace):P(input)/^%^/^%%%%^/?(escapedInput:z);
+
+  !!VRs^temp^:M4/?(valueLen:y);
+  !!VR(maxValueLenForShortMsg:y):S100;
+
+  !!VR(messageCmd:z):S^L^;
+  !!VR(messageCmd)&(valueLen)>(maxValueLenForShortMsg):S^M^;
+
+  !!SN:F^ExecErmCmd^/^IF:%(messageCmd)%\"{~w}%(escapedInput) = {%s(temp)}{~}%\"^;
+  !!VRs^temp^:S^^;
+!!en;
