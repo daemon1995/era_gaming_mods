@@ -3822,6 +3822,7 @@ Creature speed   Base movement
 
 !!VRy98:S0;                             [Initialize Res cost to zero]
 !!VRy98&y90>0:Sy90*y3; !!VRy98&y91>0:Sy91*y3; !!VRy98&y92>0:Sy92*y3; !!VRy98&y93>0:Sy93*y3; !!VRy98&y94>0:Sy94*y3; !!VRy98&y95>0:Sy95*y3; [Check if one res is required]
+!!VRy99:S(NO_RES);
 !!VRy99&y90>0:S0; !!VRy99&y91>0:S1; !!VRy99&y92>0:S2; !!VRy99&y93>0:S3; !!VRy99&y94>0:S4; !!VRy99&y95>0:S5; [;]
 
 !!MA:Ly5/?y70;                          [Get creature level]
@@ -3849,7 +3850,13 @@ Creature speed   Base movement
 
 !!if&2;                                 [if presses Yes by human]
   !!OW:Ry25/6/?y27;                     [Check players Gold]
-  !!OW:Ry25/y99/?y30;                   [Check players Res]
+
+  !!if&y99>(NO_RES);
+    !!OW:Ry25/y99/?y30;                   [Check players Res]
+  !!el;
+    !!VRy30:S(INT_MIN);
+  !!en;
+
   !!VRy28:Sy22*-1;                      [Make Gold amount negative]
   !!VRy31:Sy98*-1;                      [Make Res amount negative]
   !!if&y22<y27/y98<y30;
@@ -7833,33 +7840,41 @@ That breakes immunities and allows to apply spells to creatures that are usually
 
 !?MR2;                                  [Magic Resistance Trigger]
 ; Exit if not hero cast
-!!BG:A?y30;
-!!FU&y30<>(BATTLE_ACTION_HERO_CAST):E;
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_HERO_CAST):E;
 
 ; Exit if friendly spell
-!!MR:S?y31;
-!!SSy31:O?y32;
-!!FU&y32=1:E;
-
-; Exit for War Machines
-!!MR:N?y1;                              [Get Creature Number]
-!!BMy1:I?y2 T?y3;                       [Get Creature Side and Type]
-!!FU|y3=145/y3=146/y3=147/y3=148/y3=149:E; [Exit for Warmachines]
+!!MR:S?(spell:y);
+!!SS(spell):O?(spellType:y);
+!!FU&(spellType)=1:E;
 
 ; Exit if the target is the same side as the caster
-!!FU&y2=i^battle_acting_side^:E;
+!!MR:N?(targetStack:y);                 [Get Creature Number]
+!!BM(targetStack):I?(side:y); 
+!!FU&(side)=i^battle_acting_side^:E;
+
+; Exit for War Machines
+!!BM(targetStack):T?(type:y);           [Get Creature Type]
+!!FU&(type)>=145/(type)<=149:E;         [Exit for Warmachines]
+
+; Exit if Forgetfullness and the receiver can't shoot
+!!if&(spell)=(SPELL_FORGETFULNESS);
+  !!BM(targetStack):F?(flags:y);
+  !!VR(canShoot:y):S(flags) &(MON_FLAG_SHOOTER);
+  !!FU&(canShoot)=0:E;
+!!en;
 
 ; Get caster hero Id
-!!VRy4:Si^battle_hero_%i(battle_acting_side)^;
-!!FU&y4=(NO_HERO):E;
+!!VR(hero:y):Si^battle_hero_%i(battle_acting_side)^;
+!!FU&(hero)=(NO_HERO):E;
 
 ; Exit if can't reduce spell resistance
-!!FU(ACM_Calc_Magic_Pierce):Py4/?y20;   [Pass hero number and return pierce value]
-!!FU&y20=0:E;
+!!FU(ACM_Calc_Magic_Pierce):P(hero:y)/?(pierceRate:y);   [Pass hero number and return pierce value]
+!!FU&(pierceRate)=0:E;
 
-!!MR:F?y5;                              [Get temporarily MR of Creature]
-!!VRy5:+y20; !!VRy5&y5<0:S0;            [Reduce MR by value and make sure it cannot be negative]
-!!MR:Fy5;                               [Apply decreased resistance chance to that stack temporarily]
+!!MR:F?(resistance:y);                  [Get temporarily MR of Creature]
+!!VR(resistance):+(pierceRate) F0/100;[Reduce MR by value and make sure it cannot be negative]
+!!MR:F(resistance);                     [Apply decreased resistance chance to that stack temporarily]
 
 
 !?FU(ACM_Calc_Magic_Pierce);
