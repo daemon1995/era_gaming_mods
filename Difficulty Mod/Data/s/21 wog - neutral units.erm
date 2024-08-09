@@ -199,7 +199,7 @@ Recommendations for Neutral Units Bonuses:
 !!VRv2:Sv998;
 !!VRv3:Sv999;
 !!VRv4:Sv1000;
-!!DO5413/0/6/1&-1000:P1/53/7;           [reset guards to 1 stack troglodytes if AI visits]
+!!DO5413/0/6/1&-1000:P(TRUE)/(OBJ_MINE);[reset guards to 1 stack troglodytes if AI visits]
 
 !$OB53/7;                               [abandoned Mines]
 !!VRi^Encounter_Type^:S0;
@@ -440,99 +440,90 @@ This option is for everyone who wants to have stronger AI players and the diffic
 
  [Daily Timer, only activates once (for first colour)]
 !?FU(OnEveryDay)&i^timerOnce^/i^timerDay^>1;
+!!UN:P235/?(wogOption:y);               [Check if script is enabled]
+!!FU&(wogOption)<>(TRUE):E;             [Exit if not enabled]
 
-!!UN:P235/?y-12;                        [Check if script is enabled: y-12]
-!!FU&y-12<>1:E;                         [Exit if not enabled]
-
-!!if&i^wog_235_increaseTownGuards_enabled^;
-  !!UN:U98/-1/?y-1;                       [Number of Towns on map: y-1]
-
-  !!VRi^wog_235_is3rdWeek^:S(FALSE);
-  !!VRy-9:Si^timerWeek^ :3 *3;            [Determine every 3rd week: y-9]
-  !!VRi^wog_235_is3rdWeek^&y-9=i^timerWeek^:S(TRUE); [Set i^wog_235_is3rdWeek^ to 1 every 3rd week: i^wog_235_is3rdWeek^]
-
-  !!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-  !!DO5403/1/y-1/1&y-1>0/i^timerWeekDay^=1:P; [Loop through all Towns weekly]
-!!en;
-
-
-
-// Handle Creature Banks (All the types supported)
-
+; Creature Banks (All the types supported)
 !#VA(cbObjTypes[5]:y);
 !!VR(cbObjTypes[0]):C(OBJ_CREATURE_BANK)/(OBJ_DERELICT_SHIP)/(OBJ_DRAGON_UTOPIA)/(OBJ_CRYPT)/(OBJ_SHIPWRECK);
 
-!#VA(x:y) (y:y) (z:y); define variables to store object coordinates
-!!re i/0/(cbObjTypes[SIZE])/1/-1;
-  !!VR(x):S-1;           setting x-coordinate to -1 will force to start search from scratch
+!!re j/0/(cbObjTypes[SIZE])/1/-1;
+  !!VR(x:y):S-1;
 
-  !!re j;
-    !!SN:F^FindNextObject^/(cbObjTypes[i])/(ANY_OBJ)/?(x)/?(y)/?(z)/-1; find next monster, v1 is (TRUE) on success
-    !!if&v1;
-      !!FU(WOG_235_CreatureBanksDailyHandler):P(x)/(y)/(z)/(cbObjTypes[i]);
+  !!re i;
+    !!UN:U(cbObjTypes[j])/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+
+    !!FU(WOG_235_CreatureBanksDailyHandler):P(x)/(y)/(z)/(cbObjTypes[j]);
+  !!en;
+!!en;
+
+!#VA(objTypes[4]:y);
+!#VA(objSubtypes[4]:y);
+!!VR(objTypes):C(OBJ_MINE)/(OBJ_TOWN)/(OBJ_EVENT)/(OBJ_PANDORAS_BOX);
+!!VR(objSubtypes):C7/(ANY_OBJ)/(ANY_OBJ)/(ANY_OBJ);
+
+!!re j/0/(objTypes[SIZE])/1/-1;
+  !!br&(objTypes[j])<>(OBJ_MINE)/i^timerWeekDay^<>1; [Daily for Abandonned Mines, others weekly]
+  !!co&(objTypes[j])=(OBJ_TOWN)/i^wog_235_increaseTownGuards_enabled^<>(TRUE); [Skip if town guards is disabled by external scripts]
+
+  !!VRv2:S-1;                           [Legacy]
+
+  !!re i;
+    !!UN:U(objTypes[j])/(objSubtypes[j])/-1/v2/v3/v4;
+    !!br&v2<0;
+
+    ; Towns
+    !!if&(objTypes[j])=(OBJ_TOWN);
+      !!CAv2/v3/v4:O?(owner:y);
+      !!co&(owner)>(NO_OWNER);
+
+      !!CAv2/v3/v4:T?(townType:y) H0/?(garrisonHero:y);
+      !!VRy-3:S0;                       [Legacy, Initialize y-3 to 0]
+      !!DO5404/0/6/1:P(garrisonHero)/(townType); [Loop through garrison slots in town]
+
+    ; Others
     !!el;
-      !!br;
+      !!if&(objTypes[j])=(OBJ_MINE);
+        !!MNv2/v3/v4:O?(owner);
+        !!co&(owner)>(NO_OWNER);
+      !!en;
+
+      !!DO5413/0/6/1:P(FALSE)/(objTypes[j]); [loop daily through all slots (of the mine only if it has no owner)]
     !!en;
   !!en;
 !!en;
 
-
-!!UN:U53/7/?y-9;                        [Number of abandoned mines on map: y-9]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5412/1/y-9/1&y-8>0:P53/7;           [Loop through all abandoned mines]
-!!UN:U26/-1/?y10;                       [Number of local events on map: y10]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5412/1/y10/1&y-8>0/i^timerWeekDay^=1:P26/-1; [Loop through all local events]
-!!UN:U6/-1/?y10;                        [Number of pandora's boxes on map: y10]
-!!VRv2:S-1;                             [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO5412/1/y10/1&y-8>0/i^timerWeekDay^=1:P6/-1; [Loop through all pandora's boxes]
-
 !!FU(WOG_231_RefillDeathChamber):P;
-
-
-
-
-
-
 
 !?FU(WOG_231_RefillDeathChamber);
 !!UN:P70/?(dc:y);                       [** Store 1 in i^WOG_70_enabled^ if script enabled, 0 if disabled]
+!!FU&(dc)<>(TRUE):E;
 
-!!if&(dc);
-  !!VR(x:y):S-1; 
+!!VR(x:y):S-1; 
 
-  !!re i;                               [endless loop]
-    !!UN:U63/15/-1/(x)/(y:y)/(z:y);     [find next (x) = -1 on failure]
-    !!br&(x)<0;                         [exit loop if nothing found]
+!!re i;                               [endless loop]
+  !!UN:U63/15/-1/(x)/(y:y)/(z:y);     [find next (x) = -1 on failure]
+  !!br&(x)<0;                         [exit loop if nothing found]
 
-    !!PO(x)/(y)/(z):S?(counter:y);
-    !!PM(x)/(y)/(z):V?(notVisited:y);
+  !!PO(x)/(y)/(z):S?(counter:y);
+  !!PM(x)/(y)/(z):V?(notVisited:y);
 
-    !!if&(notVisited)=(FALSE);
-      !!PO(x)/(y)/(z):Sd-1;
+  !!if&(notVisited)=(FALSE);
+    !!PO(x)/(y)/(z):Sd-1;
 
-      !!if&(counter)=1;
-        !!re (player:y)/(PLAYER_FIRST)/(PLAYER_LAST); [reset AI visits]
-          !!PM(x)/(y)/(z):P(player)/(FALSE);
-        !!en;
-
-        !!PM(x)/(y)/(z):V1;
+    !!if&(counter)=1;
+      !!re (player:y)/(PLAYER_FIRST)/(PLAYER_LAST); [reset AI visits]
+        !!PM(x)/(y)/(z):P(player)/(FALSE);
       !!en;
 
-    !!el&i^timerWeekDay^=1;             [counter>=100]
-      !!PO(x)/(y)/(z):Sd1;              [coef]
+      !!PM(x)/(y)/(z):V1;
     !!en;
-  !!en;
-!!en;								   
 
- [Loop through all towns]
-!?FU5403;
-!!UN:U98/-1/-1/2;                       [Town coordinates in v2/v3/v4]
-!!CAv2/v3/v4:O?y1 T?y2;                 [Owner of Town: y1, Type of Town: y2]
-!!FU&y1>=0:E;                           [Skip if town is owned]
-!!CAv2/v3/v4:H0/?y3;                    [Check if Town has a Garrison Hero: y3]
-!!VRy-3:S0;                             [Initialize y-3 to 0]
-!!DO5404/0/6/1:Py3/y2;                  [Loop through garrison slots in town]
+  !!el&i^timerWeekDay^=1;             [counter>=100]
+    !!PO(x)/(y)/(z):Sd1;              [coef]
+  !!en;
+!!en;
 
  [Loop through garrison slots in neutral town]
  [x1=hero number (-1=none), x2=town type]
@@ -576,10 +567,11 @@ This option is for everyone who wants to have stronger AI players and the diffic
 !!CB(x)/(y)/(z):T?(looted:y);           [Check if Creature Bank already Taken]
 
 !!if&(looted:y);
-
   !!PO(x)/(y)/(z):S?(daysUntilRefill:y);[Read PO:S number for Creature Bank square]
+
   !!if&(daysUntilRefill:y);
     !!PO(x)/(y)/(z):Sd-1 S?(daysUntilRefill:y);
+
     !!if&(daysUntilRefill:y)=0;
       !!CB(x)/(y)/(z):T0 V0;            [Reset creature bank to "not taken"]
       !!FU(WOG_235_RefillCreatureBanks):P(x)/(y)/(z)/(cbObjType:x);
@@ -597,6 +589,7 @@ This option is for everyone who wants to have stronger AI players and the diffic
 
 !?FU(WOG_235_RefillCreatureBanks);
 !#VA(x:x) (y:x) (z:x) (cbObjType:x); 
+
 !!if&(cbObjType)=(OBJ_DRAGON_UTOPIA);
   !!CB(x)/(y)/(z):G0/(MON_FAERIE_DRAGON)/3 G1/(MON_RUST_DRAGON)/2 G2/(MON_CRYSTAL_DRAGON)/2 G3/(MON_AZURE_DRAGON)/1; [Dragon Utopia (guards replaced with neutral dragons)]
 
@@ -623,23 +616,23 @@ This option is for everyone who wants to have stronger AI players and the diffic
     !!en;
   !!en;
 
-
 !!el&(cbObjType)=(OBJ_CRYPT);
   !!UN:J6/(ART_LEVEL_MINOR)/?(randArtB:y) J6/(ART_LEVEL_MINOR)/?(randArtA:y); [Random 2 Minor Artifacts: y4]
   !!CB(x)/(y)/(z):G0/57/20 G1/59/20 G2/60/20 G3/62/10 G4/63/6 G5/64/3; [Crypt]
   !!CB(x)/(y)/(z):R6/6000 A2/0/(randArtA) A3/(randArtB); [Crypt: 6000 gold, 1 Treasure Artifact, 1 Minor Artifact]
+
 !!el;
   // call original Restore CB function
   !!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
+
   !!if&(mapItem);
     !!UN:C(mapItem)/34/2/?(objSubtype:y);
     !!SN:E4218240/(CALLCONV_THISCALL)/(mapItem);
     !!VR(cbMapItem:y):Sv1;
-    !!if&(cbMapItem);
-      !!SN:E4695744/(CALLCONV_THISCALL)/(cbMapItem)/(objSubtype);
-    !!en;
+    !!SN&(cbMapItem):E4695744/(CALLCONV_THISCALL)/(cbMapItem)/(objSubtype);
   !!en;
 !!en;
+
 ; Grow new creature bank's guards and resources for each game week
 !!re i/1/i^timerWeek^;
   !!FU(WOG_235_CreatureBanks_IncreaseReward):P(x)/(y)/(z)/i;
@@ -654,7 +647,6 @@ This option is for everyone who wants to have stronger AI players and the diffic
   !!VR(weekIndex):%3;
   !!VR(isThirdWeek:y)&(weekIndex)=0:S(TRUE);
 !!en;
-
 
 !!re (guardSlot:y)/0/(ARMY_SLOT_LAST);
   
@@ -888,38 +880,31 @@ This option is for everyone who wants to have stronger AI players and the diffic
 
 
 ** abandoned mines and (on monday) local events / pandoras boxes
-** called by TM2; x1/x2 gives type and subtype
-!?FU5412;
-!!UN:Ux1/x2/-1/2;                       [get coordinates to v2-v4]
-!!MNv2/v3/v4&x1=53:O?y1;                [get owner of abandoned mine]
-!!VRy1|x1=26/x1=6:S-1;                  [set y1 to -1 if it is an local event or pandoras box]
-!!DO5413/0/6/1&y1=-1:P0/x1/x2;          [loop daily through all slots (of the mine only if it has no owner)]
-
-**************************** end function FU5412 ****************************************
-
 !?FU5413;                               [set / increase ghosts in abandoned mines; increase once per week guards in local events]
 ** x1 = if 1 (AI visits the mine) then set troglodydes as guards
 ** x2 = type (53=mine, 6=pandoras boxes, 26=local event)
 
 ** abandoned mines
-!!MNv2/v3/v4&x2=53:Mx16/?y1/?y2;        [get guards of slot x16 of the abandoned mine]
-!!VRy1:S159;                            [set guard to ghosts in mine]
-!!VRy1&x1=1/x16=0:S70;                  [if x1=1 (AI visits) set stack 1 to Troglodytes]
-!!VRy1&x1=1/x16>0:S-1;                  [and delete all other guards]
-!!VRy2&y2<50:S50;                       [set at least 50 Ghosts per stack]
-!!VRy3:S1 R2;                           [random 1-3]
-!!VRy4:S101 R2;                         [random 101-103]
-!!VRy5:Sy2 *y4 :100;                    [get 100-103% of the old guards]
-!!VRy5&y5<=y2:+1;                       [but at least 1 more as before]
-!!VRy2:Sy5 + y3;                        [Increase guards by 100-103% plus 1-3 random ghosts]
-!!VRy2&x1=1/x16>0:S0;                   [set number to 0 if x1=1 (AI visits the abandoned mine]
-!!MNv2/v3/v4&x2=53:Mx16/y1/y2;          [set the guards of the abandoned mine]
-!!FU&x2=53:E;                           [exit if abandoned mine]
+!!if&x2=(OBJ_MINE);
+  !!MNv2/v3/v4:Mx16/?y1/?y2;        [get guards of slot x16 of the abandoned mine]
+  !!VRy1:S159;                            [set guard to ghosts in mine]
+  !!VRy1&x1=1/x16=0:S70;                  [if x1=1 (AI visits) set stack 1 to Troglodytes]
+  !!VRy1&x1=1/x16>0:S-1;                  [and delete all other guards]
+  !!VRy2&y2<50:S50;                       [set at least 50 Ghosts per stack]
+  !!VRy3:S1 R2;                           [random 1-3]
+  !!VRy4:S101 R2;                         [random 101-103]
+  !!VRy5:Sy2 *y4 :100;                    [get 100-103% of the old guards]
+  !!VRy5&y5<=y2:+1;                       [but at least 1 more as before]
+  !!VRy2:Sy5 + y3;                        [Increase guards by 100-103% plus 1-3 random ghosts]
+  !!VRy2&x1=1/x16>0:S0;                   [set number to 0 if x1=1 (AI visits the abandoned mine]
+  !!MNv2/v3/v4:Mx16/y1/y2;          [set the guards of the abandoned mine]
 
 ** Local events and pandora's boxes (the LE-receiver works for both)
-!!LEv2/v3/v4:Gx16/?y1/?y2;              [get guards of slot x16 of the local event]
-!!VRy5:Sy2 *11 :10;                     [set y5 to 110% of old guards]
-!!VRy5&y5<=y2:+1;                       [but at least 1 more as before]
-!!LEv2/v3/v4&y1>-1:Gx16/d/y5;           [set guards of slot x16 of the local event]
+!!el;
+  !!LEv2/v3/v4:Gx16/?y1/?y2;              [get guards of slot x16 of the local event]
+  !!VRy5:Sy2 *11 :10;                     [set y5 to 110% of old guards]
+  !!VRy5&y5<=y2:+1;                       [but at least 1 more as before]
+  !!LEv2/v3/v4&y1>-1:Gx16/d/y5;           [set guards of slot x16 of the local event]
+!!en;
 
 **************************** end function FU5413 ****************************************
