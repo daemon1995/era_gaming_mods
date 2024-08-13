@@ -28,40 +28,29 @@ ZVSE2
 
   !!SN&(spec)=1/(spec2)<>(MON_BALLISTA):H^spec^/i/2/^%T(es.740.spec)^;
 !!en;
+
 !?FU(ES_CreateERMHook);
 !#VA(address:x);
 
 !!UN:P740/?(wogOption:y);               [проверяем включена ли опция 740]
 !!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
 
-!!SN:E(address)/1/5137688/(ES_740_Hook);[0x004E6518]
+!!SN:E(address)/1/5137685/(ES_Hero_GetSpecMonster);[0x004E6515]
 
-!?FU(ES_740_Hook);
-!!SN:X?y1/0;
-; [получаем параметры героя]
-!!VRy2:Sy1 +28;                           [EAX]
-!!UN:Cy2/4/?y3;                           [структура героя]
-!!VRy3:+85;                               [EAX+0x55]
-!!UN:Cy3/2/?y4;                           [узнать уровень героя]
-; [получаем параметры монстра]
-!!VRy5:Sy1 +4;                            [ESI]
-!!UN:Cy5/4/?y6;                           [структура монстра]
-!!VRy7:Sy6 +4;                            [ESI+4]
-!!UN:Cy7/4/?y7;                           [уровень монстра]
-!!VRy7:+11;                               [y7 - индекс в таблице уровней героя, с которых начинают даваться бонусы]
-!!VRv11:C2/3/4/5/6/7/8;                   [таблица уровней героя, с которых начинают даваться бонусы существам - оригинал]
-!!VRv11:C1/1/1/1/1/1/1;                   [таблица уровней героя, с которых начинают даваться бонусы существам - тест]
+
+!?FU(ES_Hero_GetSpecMonster);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(hero:y); [структура героя]
+!!UN:C(hero)/85/2/?(heroLevel:y);
+
 ; [бонус от специальности]
-!!VRy10:Sy4 -vy7 +1;                      [y10 - текущее количество бонусных уровней]
-!!VRy10&y10<0:S0;                         [проверка на отрицательное значение]
-!!VRy13:Sy10 :2;                          [y13 - бонус атаки (+1 за каждый четный уровень)]
-!!VRy14:Sy10 +1 :2;                       [y14 - бонус защиты (+1 за каждый нечетный уровень)]
-; [устанавливаем бонусы]
-!!VRy11:Sy6 +84;
-!!UN:Cy11/4/dy13;                         [бонус к атаке]
-!!VRy12:Sy6 +88;
-!!UN:Cy12/4/dy14;                         [бонус к защите]
-*!VRy99:Sy1 +32;
-!!UN:Cy1/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5137828; [возврат в 0x004E65A4]
+!!VR(attackBonus:y):S(heroLevel) +1 :2 F0/(INT_MAX);
+!!VR(defenseBonus:y):S(heroLevel) :2 F0/(INT_MAX);
 
+; [устанавливаем бонусы]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(creatureInfo:y);
+!!UN:C(creatureInfo:y)/84/4/d(attackBonus:y);                         [бонус к атаке]
+!!UN:C(creatureInfo:y)/88/4/d(defenseBonus:y);
+
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5137828; [возврат в 0x004E65A4]
 ** end
