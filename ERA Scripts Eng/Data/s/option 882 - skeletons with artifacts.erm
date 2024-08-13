@@ -92,9 +92,12 @@ ZVSE2
 !!BM(BATTLE_DEFENDER_STACK_FIRST):E?(spells:y) P?(pos:y);
 !!FU&(spells)<=0:E;                            // выход, если скелет исчерпал заклинания
 
-!!SN:T^opt882.b1^/?z2;
-!!MM:Sz2;                               // вывод сообщения о призыве в лог битвы
-!!SN:P^CLONE^;                          // вывод звука Клона
+!!if&i^battle_isVisible^;
+  !!SN:T^opt882.b1^/?z2;
+  !!MM:Sz2;                               // вывод сообщения о призыве в лог битвы
+  !!SN:P^CLONE^;                          // вывод звука Клона
+!!en;
+
 
 ; Summon Skeletons
 ; No need to check if it is possible to summon as the max spell is 5, meaning max at 6 stacks would be created
@@ -119,20 +122,23 @@ ZVSE2
     ; Summon the stack
     !!BU:S(MON_SKELETON)/(summNum)/(summPos)/(BATTLE_RIGHT)/-1/(TRUE) E(summPos)/?(summStack:y);      // и призываем на его место отряд скелетов, номер отряда
 
-    !!SN:P^ANIMDEAD^;                   // вывод звука Поднятия нежити
-
+    !!if&i^battle_isVisible^;
+      !!SN:P^ANIMDEAD^;                   // вывод звука Поднятия нежити
+      ; Set up new description for skeleton (only when the battle is visible)
+      !!FU(ES_882_SetUpNewDescForSkeleton):P(summStack);
+    !!en;
     ; Set up new abilities
-    ; Set up new description for skeleton (only when the battle is visible)
-    !!FU(ES_882_SetUpNewDescForSkeleton):P(summStack);
-
     !!BM(summStack):F?(flags:y);
     !!VR(flags)&(newAbilities)>=1:|(MON_FLAG_NO_RETALIATION);     // безответный удар для treasure-артефактов
     !!VR(flags)&(newAbilities)>=2:|(MON_FLAG_ATTACKS_TWICE);      // + двойной удар для minor-артефактов
     !!VR(flags)&(newAbilities)>=3:|(MON_FLAG_ATTACKS_ALL_AROUND); // + круговая атака для major-артефактов
     !!BM(summStack):F(flags);
 
-    !!BM(summStack):V74;                         // копируем отряду флаги охранника и анимируем Поднятие нежити
-    !!SN:D;                             // обновляем поле боя
+    !!if&i^battle_isVisible^;
+      !!BM(summStack):V74;                         // копируем отряду флаги охранника и анимируем Поднятие нежити
+      !!SN:D;                             // обновляем поле боя
+    !!en;
+
   !!en;
 !!en;
 
@@ -144,14 +150,18 @@ ZVSE2
 
 !?FU(ES_882_RemoveStack);               // удаление отряда x1 с поля
 !#VA(stackId:x);
+!!if&(stackId)>=(BATTLE_STACK_FIRST)/(stackId)<=(BATTLE_STACK_LAST);
+  !!BM(stackId):Z?(stackStruct:y);
+  !!UN:C(stackStruct)/234/(UNC_INT8)/1;   // указываем, что стек умер                     
+  !!BM(stackId):Fd|(MON_FLAG_SACRIFICED); // ставим флаг "принесён в жертву"
+  !!BM(stackId):N0;                       // кол-во: 0
+  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+  !!SN:E4621680/2/(cmbMgr)/51/1;          // функция "убрать тело", если мертв
+  !!SN:E4797616/2/(cmbMgr)/0/1;           // обновить сетку поля боя
+!!el;
+  !!SN:F^ShowErmError^/^Invalid "stackId" argument: %(stackId)^;
+!!en;
 
-!!BM(stackId):Z?(stackStruct:y);
-!!UN:C(stackStruct)/234/(UNC_INT8)/1;   // указываем, что стек умер                     
-!!BM(stackId):Fd|(MON_FLAG_SACRIFICED); // ставим флаг "принесён в жертву"
-!!BM(stackId):N0;                       // кол-во: 0
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-!!SN:E4621680/2/(cmbMgr)/51/1;          // функция "убрать тело", если мертв
-!!SN:E4797616/2/(cmbMgr)/0/1;           // обновить сетку поля боя
 
 !?FU(ES_882_SetUpNewDescForSkeleton)&i^battle_isVisible^;
 !#VA(stack:x);
