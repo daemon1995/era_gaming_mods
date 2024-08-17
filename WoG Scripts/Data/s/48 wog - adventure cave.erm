@@ -147,7 +147,10 @@ ZVSE2
 !!if&i^timerDay^=1/i^timerOnce^;
   !!UN:U63/57/?v600; [count caves]
   !!DO(WOG_30_InitializeACave)/1/v600/1:P; [loop through caves]
-  !!DO(WOG_30_InitializeHeroVars)/(HERO_FIRST)/(HERO_LAST_WOG)/1:P; [initialize hero w variables - must be OnEveryDay]
+
+  !!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+    !!FU(WOG_30_InitializeHeroVars):Pi; [initialize hero w variables - must be OnEveryDay]
+  !!en;
 !!en;
 
 !!OW:C?y-1; [get current player]
@@ -966,8 +969,9 @@ ZVSE2
 ** function to initialize w variables for hero x16
 
 !?FU(WOG_30_InitializeHeroVars);
+!#VA(hero:x);
 
-!!IF:Wx16; [pick hero x16 for w variables]
+!!IF:W(hero); [pick hero x16 for w variables]
 !!VRw62:S-1; [hero paying for Rogue attack]
 !!VRw63:S-1; [artifact stolen by Rogues]
 !!VRw64:S0; [hermit wealth skill]
@@ -1704,8 +1708,8 @@ ZVSE2
 
 !?FU(WOG_30_HandleExtraSpell);
 
-!!BA:E?(networkType:y);                 [Check if Network Battle]
-!!FU&(networkType)>0:E;                 [Continue function if not a Network Battle]
+*!BA:E?(networkType:y);                 [Check if Network Battle]
+*!FU&(networkType)>0:E;                 [Continue function if not a Network Battle]
 
 !!BG:A?(action:y);
 !!FU&(action)<>(BATTLE_ACTION_HERO_CAST):E;
@@ -1729,15 +1733,15 @@ ZVSE2
 !?FU(WOG_30_ExecuteSpecialAbilities);
 !#VA(atkStack:x) (defStack:x);
 
-!!BA:E?(networkType:y);                 [Check if Network Battle]
-!!FU&(networkType)>0:E;                 [Continue function if not a Network Battle]
+*!BA:E?(networkType:y);                 [Check if Network Battle]
+*!FU&(networkType)>0:E;                 [Continue function if not a Network Battle]
 
 ; Exit if the defending stack is killed
 !!BM(defStack):N?(defNum:y);
 !!FU&(defNum)<=0:E;
 
 ; Get info
-!!BG:Q?(atkSide:y);
+!!BM(atkStack):I?(atkSide:y);
 !!BM(defStack):T?(type:y);
 
 ; Remove some abilities (Voodoo)
@@ -1745,27 +1749,31 @@ ZVSE2
   !!IF:Wi^battle_hero_%(atkSide)^;
 
   !!if&w67=3;
-    !!BM(defStack):F?i;
-    !!VR(isFlyer:y):Si &(MON_FLAG_FLYER);
-    !!VR(isShooter:y):Si &(MON_FLAG_SHOOTER);
+    *!VR(random:y):R0/0/99;
 
-    !!if|(isFlyer)/(isShooter);
-      ; remove flyer and shooter - if applicable
-      !!VR(removedFlags:y):S(MON_FLAG_FLYER) +(MON_FLAG_SHOOTER);
-      !!BM(defStack):Fd~(removedFlags);
+    *!if&(random)<30;
+      !!BM(defStack):F?i;
+      !!VR(isFlyer:y):Si &(MON_FLAG_FLYER);
+      !!VR(isShooter:y):Si &(MON_FLAG_SHOOTER);
 
-      !!if&i^battle_isVisible^;
-        !!BM(defStack):N?(num:y);
-        !!VR(isPlural:y):S(num) -1 B;
-        !!SN:H^monname^/(type)/(isPlural)/?(monName:z);
-        !!VR(abilityType:y)&(isFlyer)/(isShooter)=(FALSE):S0;
-        !!VR(abilityType)&(isFlyer)=(FALSE)/(isShooter):S1;
-        !!VR(abilityType)&(isFlyer)/(isShooter):S2;
-        !!SN:T^wog.30.voodooAbil%(abilityType)^/?(abilName:z);
-        !!SN:T^wog.30.voodooLog%(isPlural)^/?(battleLog:z)/^mon^/(monName)/^abilities^/(abilName);
-        !!MM:S(battleLog);
+      !!if|(isFlyer)/(isShooter);
+        ; remove flyer and shooter - if applicable
+        !!VR(removedFlags:y):S(MON_FLAG_FLYER) +(MON_FLAG_SHOOTER);
+        !!BM(defStack):Fd~(removedFlags);
+
+        !!if&i^battle_isVisible^;
+          !!BM(defStack):N?(num:y);
+          !!VR(isPlural:y):S(num) -1 B;
+          !!SN:H^monname^/(type)/(isPlural)/?(monName:z);
+          !!VR(abilityType:y)&(isFlyer)/(isShooter)=(FALSE):S0;
+          !!VR(abilityType)&(isFlyer)=(FALSE)/(isShooter):S1;
+          !!VR(abilityType)&(isFlyer)/(isShooter):S2;
+          !!SN:T^wog.30.voodooAbil%(abilityType)^/?(abilName:z);
+          !!SN:T^wog.30.voodooLog%(isPlural)^/?(battleLog:z)/^mon^/(monName)/^abilities^/(abilName);
+          !!MM:S(battleLog);
+        !!en;
       !!en;
-    !!en;
+    *!en;
   !!en;
 !!en;
 
@@ -2443,8 +2451,10 @@ ZVSE2
 !!BG:H?y1 Q?y3; [get acting hero and side]
 !!IF&y1<>-1:Wy1; [use that hero's w variables]
 !!VRy2&y1<>-1:Sw74 &3; [look at just relevant altar effect bits]
-!!BA:E?y4; [Check if Network Battle: y4>0 if yes]
-!!FU831&y1<>-1/y2>0/y4=0:Py3/y2/y1; [continue if have altar ability and not Network Battle]
+*!BA:E?y4; [Check if Network Battle: y4>0 if yes]
+*!FU&y4:E;
+
+!!FU831&y1<>-1/y2>0:Py3/y2/y1; [continue if have altar ability]
 
 ** end of function
 
