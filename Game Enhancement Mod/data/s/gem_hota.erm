@@ -3,28 +3,33 @@ ZVSE2
 ; Engine:   ERM 2.0+
 ; Requires: ERA 3.3+, Era Erm Framework
 
-; Differentiate sprites of heroes in the battle with genders.
+; Scripts that implements hota ideas.
 
 
 !?FU(gem_CreateERMHook);
-!!SN:Ex1/1/4296921/(gem_OnDrawArrows); 4190D9 
-!!SN:Ex1/1/4599887/(gem_OnSetUpBattleHeroSprite); 46304F
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/4296921/(gem_OnDrawArrows); 4190D9 
+!!SN:E(setHook)/1/4599887/(gem_OnSetUpBattleHeroSprite); 46304F
+!!SN:E(setHook)/1/6020454/(gem_OnManaVortexGivesExtraSpellPoints); 5BDD66
 
 // 3-colour arrow
 ; Warning: Must make sure ADAG.DEF has 75 frames!
 !?FU(gem_OnDrawArrows);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(heroStruct:y);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(heroStruct:y);
 !!UN:C(heroStruct)/73/4/?(maxMp:y);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y);
 !!VR(secDayMp:y):S(esi) +(maxMp);
 
 !!if&(secDayMp)<0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(edx:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(eax:y);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/?(edx:y) C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(eax:y);
   !!VR(ptr:y):S(eax) *2 +(edx);
   !!UN:C(ptr)/2/d50;
 
   !!SN:X?t/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4296926; 4190DE
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4296926; 4190DE
 !!en;
 
 // Hero sprites in battle
@@ -35,8 +40,10 @@ ZVSE2
 !!SN:Vi^gem_heroBattleDefsList^/18/^CH00b.DEF^/^CH01.def^/^CH02b.DEF^/^CH03.def^/^CH04.def^/^CH05b.DEF^/^CH06b.DEF^/^CH07.def^/^CH08b.def^/^CH09.def^/^CH010b.def^/^CH11.def^/^CH012.def^/^CH012b.DEF^/^CH014.def^/^CH015.def^/^CH16b.def^/^CH17b.DEF^;
 
 !?FU(gem_OnSetUpBattleHeroSprite)&i^gem_heroBattleDefsList^;
+!#VA(hook:x);
+
 ; Get the index of the sprite
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(heroStruct:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(heroStruct:y);
 !!FU&(heroStruct)=(NULL):E;
 
 !!UN:C(heroStruct)/48/4/?(index:y);
@@ -46,8 +53,98 @@ ZVSE2
 
 ; Load the filename pointer to the memory
 !!SN:Mi^gem_heroBattleDefsList^/?(memAddr:y)/(index);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/(memAddr);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/(memAddr);
 
 ; Jump
 !!SN:X?t/0;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4599933;
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4599933;
+
+// Optimised Mana Vortex interaction
+; Mana Vortex is now activated manually and can only be used by a guest hero. Additionally, AI hero allies cannot use Mana Vortex in the player's castle.
+
+; Mana Vortext desc
+!?FU(OnGameEnter);
+!!UN:C6977888/(UNC_INT)/?(ptr:y);
+!!SN:B(ptr)/d/^%T(gem.hota.manaVortex3)^;
+
+!?FU(gem_OnManaVortexGivesExtraSpellPoints);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/1/?(isHuman:y);
+
+; Disable human players' standard Mana Vortex
+!!if&(isHuman);
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/6020506;
+; Don't allow AI use allies' Mana Vortex
+!!el;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/?(townStruct:y);
+  !!UN:C(townStruct)/1/1/?(townOwner:y);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDI)/4/?(heroStruct:y);
+  !!UN:C(heroStruct)/34/1/?(heroOwner:y);
+
+  !!if&(townOwner)<>(heroOwner);
+    !!SN:X?t/0;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/6020506;
+  !!en;
+!!en;
+
+; Click on Mana Vortex to use it
+!?FU(OnTownMouseClick)&i^mouse_item^=21/i^mouse_action^=(MOUSE_LMB_PRESSED)/999;
+; Exit if not Dungeon
+!!CA(CURRENT_TOWN):T?(townType:y);
+!!FU&(townType)<>(TOWN_DUNGEON):E;
+
+; Exit if the town does not belong to the current player
+!!CA(CURRENT_TOWN):O?(owner:y);
+!!OW:C?(player:y)/?(interactPlayer:y);
+!!FU&(owner)<>(interactPlayer):E;
+
+!!CA(CURRENT_TOWN):U?(townId:y);
+
+; Get the hero
+; Visiting hero has higher priority than the hero in the garrison
+!!CA0/(townId):H1/?(hero:y);
+!!CA0/(townId)&(hero)=(NO_HERO):H0/?(hero:y); [ERA optimisation]
+
+!!CM:R0;
+
+!!if&(hero)=(NO_HERO);
+  ; Hota original
+  *!FU(GetTextTableString):P^bldgspec^/59/0/?(vortexName:z);
+  *!FU(GetTextFileString):P^genrltxt^/274/?(str:z);
+  *!SN:E6388190/(CALLCONV_CDECL)/?(msg:z)/(str)/(vortexName);
+  *!IF:M^%(msg)^;
+  ; ERA optimisation
+  !!SN:T^gem.hota.manaVortex0^/?(msg:z);
+  !!IF:Q1/(PIC_TYPE_DUNGEON_TOWN_BUILDING)/21/(MSG_TYPE_MES)/(msg);
+!!el;
+  ; Check the availability of Mana Vortex
+  !!FU(gem_Town_GetStruct):P(townId)/?(townStruct:y);
+  !!UN:C(townStruct)/51/1/?(vortexIsAvail:y);
+  
+  !!if&(vortexIsAvail)=(FALSE);
+    !!SN:T^gem.hota.manaVortex2^/?(msg);
+    !!IF:Q1/(PIC_TYPE_DUNGEON_TOWN_BUILDING)/21/(MSG_TYPE_MES)/(msg);
+  !!el;
+    !!FU(gem_Hero_GetFullSpellPoints):P(hero)/?(fullMana:y);
+    !!VR(doubleMana:y):S(fullMana) *2;
+    !!HE(hero):I?(currMana:y)/1;
+
+    !!if&(currMana)<(doubleMana);
+      !!HE(hero):B0/?(heroName:z);
+      !!SN:T^gem.hota.manaVortex1^/?(msg)/^hero^/(heroName);
+      !!IF:Q1/(PIC_TYPE_DUNGEON_TOWN_BUILDING)/21/(MSG_TYPE_QUESTION)/(msg);
+
+      !!if&1;
+        !!HE(hero):I(doubleMana)/1;
+        !!UN:C(townStruct)/51/1/(FALSE);
+        ; Hota original
+        *!FU(GetTextFileString):P^genrltxt^/580/?(str:z);
+        *!IF:M^%(str)^;
+        ; ERA optimisation
+        !!SN:P^view^;
+      !!en;
+    !!en;
+  !!en;
+!!en;
