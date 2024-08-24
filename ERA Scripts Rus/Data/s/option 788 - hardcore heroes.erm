@@ -5,7 +5,7 @@ ZVSE2
 ** Name rus.     : Смертные герои
 ** Options       : 788
 
-; To-do: Fix the compatibility with Hero Specialty Boost
+; This script might not be fully compatible with Hero Specialty Boost option
 
 
 !?FU(OnBeforeBattleAction);             // перед действием в бою
@@ -378,25 +378,13 @@ ZVSE2
 
   !!el;                                               // маг с заклинанием
     ; Aura of Curse
-    ; Note: Aura of Curse specialists are also spell specialists
+    ; Warning: Must make sure there is no other definition for Summon Boat, Scuttle Boat, Visions and View Earth
     !!if&(random2)=1/(subtype)>=7/(subtype)<=10;      // специалисты по аурам-проклятиям
-      !#VA(spellsList[11]:y);
+      !!VR(curseType:y):S(subtype) -7;  [index: 0-3]
 
-      !!VR(spellsList):C45/47/42/54;
-      !!VR(curseType:y):S(subtype) -7;
-      !!VR(spell:y):S(spellsList[curseType]);
-
-      !!UN:J0/(spell)/?(isNotValid);
-
-      !!if&(isNotValid)=(FALSE);
-        !!FU10932:P(spell)/?(isNotValid); [WoG legacy. same function as FU(WOG_CHECK_SPELL_BAN)]
-
-        !!if&(isNotValid)=(FALSE);
-          !!HE(hero):X3/(spell)/0/0/0/0/0;
-          !!HE(hero):M(spell)/(TRUE);
-          !!SN:T^es.788.auraOfCurse%(curseType)^/?(spec);
-        !!en;
-      !!en;
+      !!HE(hero):X3/(curseType)/0/0/0/0/0;
+      !!UN:G2/(hero)/3/353;
+      !!SN:T^es.788.auraOfCurse%(curseType)^/?(spec);
     ; Battlemage
     !!el;
       ; Check if the spell is disabled (map editor) or banned (wog options)
@@ -405,7 +393,7 @@ ZVSE2
 
       !!VR(spellsList):C15/16/17/20/21/23/22/18/19/26/25;
       !!VR(spellsList[10])&(faction)=(TOWN_NECROPOLIS):S24;
-      !!VR(spell):S(spellsList[subtype]);
+      !!VR(spell:y):S(spellsList[subtype]);
 
       !!UN:J0/(spell)/?(isNotValid);
 
@@ -430,19 +418,6 @@ ZVSE2
   !!FU(ES_788_Rebirth):P(hero);
 !!en;
 
-!?FU(ES_788_SetUpAuraOfCurseSpec);
-!#VA(hero:x) (subtype:x) (specInd:x);
-
-!!HE(hero)&(subtype)=7:X3/45/0/0/0/0/0;         // Слабость
-!!HE(hero)&(subtype)=8:X3/47/0/0/0/0/0;         // Разрушение
-!!HE(hero)&(subtype)=9:X3/42/0/0/0/0/0;         // Проклятье
-!!HE(hero)&(subtype)=10:X3/54/0/0/0/0/0;        // Медлительность
-
-!!VR(curseType:y):S(subtype) -6;
-!!SN:T^es.788.auraOfCurse%(curseType)^/?(spec:z);
-!!VR(specInd):Z(spec);
-
-
 ** Подержка специализаций на заклинаниях перерожденных героев
 !?FU(OnMagicCorrectedResistance);       // при нанесении урона заклинанием
 !!UN:P788/?y1;
@@ -466,112 +441,91 @@ ZVSE2
 !!MR:Fy3;                               // установка бонуса к урону в размере 5% за уровень героя
 
 ** Подержка аур-проклятий перерожденных героев
-!?FU(OnBeforeBattleUniversal);
-!!UN:P788/?y1;
-!!FU&y1=0:E;                            // выход, если опция не включена
-
-!!SN:W^opt788.a1^/0 W^opt788.a2^/0 W^opt788.a3^/0 W^opt788.a4^/0; // сброс флагов аур-проклятий
-
-; Aura of Curse - Must be executed later than anything else to have a wider range of effect
+// Aura of Curse - Must be executed later than anything else to have a wider range of effect
 !?FU(OnBattleRound_Quit)&i^battle_round^=0;
-!!UN:P788/?y1;
-!!FU&y1=0:E;                            // выход, если опция не включена
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
 
-!!BA:H0/?y1 H1/?y2;                     // y1/y2 - номера сражающихся героев
-!!VRy11:C0/0/0/0;                       // y11..y14 - действующие ауры
-!!HEy1:X?y3/?y4/d/d/d/d/d;              // y3/y4 - специализация атакующего героя
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!co&i^battle_hero_%i^=(NO_HERO);
 
-!!if&y3=3/i^es_788_rebornFlags_%y1^<>0;              [флаг перерождения атакующего героя]
-  !!VRy11&y4=45:S1;                // y11 - активация ауры Слабости
-  !!VRy12&y4=47:S1;                // y11 - активация ауры Разрушения
-  !!VRy13&y4=42:S1;                // y11 - активация ауры Проклятья
-  !!VRy14&y4=54:S1;                // y11 - активация ауры Медлительности
-!!en;
+  ; Skip if not reborn hero
+  !!VR(hero:y):Si^battle_hero_%i^;
+  !!co&i^es_788_rebornFlags_%(hero)^=0;
 
-!!if&y2>=0;                             // если есть защищающийся герой
-  !!HEy2:X?y3/?y4/d/d/d/d/d;            // y3/y4 - специализация защищающегося героя
+  !!HE(hero):X?(type:y)/?(subtype:y)/d/d/d/d/d;
 
-  !!if&y3=3/i^es_788_rebornFlags_%y2^<>0;            [флаг перерождения защищающегося героя]
-    !!VRy11&y4=45:S1;              // y11 - активация ауры Слабости
-    !!VRy12&y4=47:S1;              // y11 - активация ауры Разрушения
-    !!VRy13&y4=42:S1;              // y11 - активация ауры Проклятия
-    !!VRy14&y4=54:S1;              // y11 - активация ауры Медлительности
+  !!if&(type)=3/(subtype)>=0/(subtype)<=3;
+    !!FU(NewIntArray)&i^battle_isVisible^:P?(affectedStacksList:y);
+
+    !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+      !!BMi:T?(type:y) N?(num:y);
+      !!co|(type)<=(NO_MON)/(type)=(MON_ARROW_TOWERS)/(num)<=0;
+
+      ; Attack
+      !!if&(subtype)=0;
+        !!BMi:A?(atk:y);
+
+        !!if&(atk)>=1;
+          !!VR(atk)::2;
+          !!BMi:A(atk);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      ; Defense
+      !!el&(subtype)=1;
+        !!BMi:D?(def:y);
+
+        !!if&(def)>=1;
+          !!VR(def)::2;
+          !!BMi:D(def);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      ; Damage
+      !!el&(subtype)=2;
+        !!BMi:U1/?(minDmg:y) U2/?(maxDmg:y);
+
+        !!if&(minDmg)<(maxDmg);
+          !!BMi:U2/(minDmg);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      ; Speed
+      !!el;
+        !!BMi:S?(spd:y);
+
+        !!if&(spd)>=2;
+          !!VR(spd)::2;
+          !!BMi:S(spd);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      !!en;
+    !!en;
+
+    !!if&i^battle_isVisible^;
+      !!SN:M(affectedStacksList)/?(size:y);
+
+      !!if&(size)>0;
+        ; Text
+        !!HE(hero):B0/?(heroName:z);
+        !!SN:T^es.788.battleLog%(subtype)^/?(battleLog:z)/^hero^/(heroName);
+        !!MM:S(battleLog);
+
+        ; Play the sound and animation
+        !!if&(subtype)=0;
+          !!SN:P^WEAKNESS^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/56;
+        !!el&(subtype)=1;
+          !!SN:P^DISRUPTR^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/14;
+        !!el&(subtype)=2;
+          !!SN:P^CURSE^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/40;
+        !!el;
+          !!SN:P^MUCKMIRE^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/19;
+        !!en;
+      !!en;
+    !!en;
   !!en;
-!!en;                                   // 
-
-!!FU&y11=0/y12=0/y13=0/y14=0:E;         // выход, если ни одна аура-проклятье не действует
-
-!!if&i^battle_isVisible^;
-  !!FU(Fun_SpellAnimationOnStacks)&y11=1:P-1/?y21; // y21 = слот для массовой анимации Слабости
-  !!FU(Fun_SpellAnimationOnStacks)&y12=1:P-1/?y22; // y22 = слот для массовой анимации Разрушения
-  !!FU(Fun_SpellAnimationOnStacks)&y13=1:P-1/?y23; // y23 = слот для массовой анимации Проклятия
-  !!FU(Fun_SpellAnimationOnStacks)&y14=1:P-1/?y24; // y24 = слот для массовой анимации Медлительности
-!!en;
-
-!!re i/0/41;                            // для всех отрядов Защищающегося
-  !!BMi:N?y3;
-  !!co&y3<1;                            // пропуск пустых отрядов
-
-  !!BMi:A?y3 D?y4 U1/?y5 U2/?y6 S?y7;   // y3/y4/y5/y6/y7 - атака/защита/мин.урон/макс.урон/скорость отряда
-  !!VRy3&y11=1::2;                      // снижение атаки для Слабости
-  !!VRy4&y12=1::2;                      // снижение защиты для Разрушения
-  !!VRy6&y13=1:Sy5;                     // макс. урон снижается до мин.урона для Проклятия
-  !!VRy7&y14=1/y7>1::2;                 // снижение скорости для Медлительности, если скорость больше 1
-
-  !!if&i^battle_isVisible^;
-    !!FU(Fun_SpellAnimationOnStacks)&y11=1:Pi/y21; // добавление отряда в массовую анимацию Слабости
-    !!FU(Fun_SpellAnimationOnStacks)&y12=1:Pi/y22; // добавление отряда в массовую анимацию Разрушения
-    !!FU(Fun_SpellAnimationOnStacks)&y13=1:Pi/y23; // добавление отряда в массовую анимацию Проклятия
-    !!FU(Fun_SpellAnimationOnStacks)&y14=1:Pi/y24; // добавление отряда в массовую анимацию Медлительности
-  !!en;
-
-  !!BMi:Ay3 Dy4 U2/y6 Sy7;              // обновляем параметры отряда
-!!en;                                   // 
-
-!!if&f=0;
-  !!SN&y11=1:W^opt788.a1^/y21;        // выставление флага анимации Слабости
-  !!SN&y12=1:W^opt788.a2^/y22;        // выставление флага анимации Разрушения
-  !!SN&y13=1:W^opt788.a3^/y23;        // выставление флага анимации Проклятия
-  !!SN&y14=1:W^opt788.a4^/y24;        // выставление флага анимации Медлительности
-!!en;
-
-; Play animations
-!!if&i^battle_isVisible^;
-  !!SN:W^opt788.a1^/?y1;                  // y1 - аура Слабости
-
-  !!if&y1<>0;                             // если аура есть
-    !!SN:T^es.788.battleLog^/?z1;
-    !!MM:Sz1;                             // вывод текста в лог битвы
-    !!SN:P^WEAKNESS^;                     // вывод звука слабости
-    !!FU(Fun_SpellAnimationOnStacks):Py1/56/0/1; // проигрывание массовой амимации "Слабость" без анимации урона с очисткой памяти
-  !!en;                                   // 
-
-  !!SN:W^opt788.a2^/?y1;                  // y1 - аура Разрушения
-
-  !!if&y1<>0;                             // если аура есть
-    !!SN:T^es.788.battleLog^/?z1;
-    !!MM:Sz1;                             // вывод текста в лог битвы
-    !!SN:P^DISRUPTR^;                     // вывод звука разрушения
-    !!FU(Fun_SpellAnimationOnStacks):Py1/14/0/1; // проигрывание массовой амимации "Разрушение" без анимации урона с очисткой памяти
-  !!en;                                   // 
-
-  !!SN:W^opt788.a3^/?y1;                  // y1 - аура Проклятия
-
-  !!if&y1<>0;                             // если аура есть
-    !!SN:T^es.788.battleLog^/?z1;
-    !!MM:Sz1;                             // вывод текста в лог битвы
-    !!SN:P^CURSE^;                        // вывод звука проклятия
-    !!FU(Fun_SpellAnimationOnStacks):Py1/40/0/1; // проигрывание массовой амимации "Проклятие" без анимации урона с очисткой памяти
-  !!en;                                   // 
-
-  !!SN:W^opt788.a4^/?y1;                  // y1 - аура Медлительности
-
-  !!if&y1<>0;                             // если аура есть
-    !!SN:T^es.788.battleLog^/?z1;
-    !!MM:Sz1;                             // вывод текста в лог битвы
-    !!SN:P^MUCKMIRE^;                     // вывод звука медлительности
-    !!FU(Fun_SpellAnimationOnStacks):Py1/19/0/1; // проигрывание массовой амимации "Медлительность" без анимации урона с очисткой памяти
-  !!en;                                   // 
 !!en;
 
 ; Set up new specialty campaign carry over for reborn heroes
