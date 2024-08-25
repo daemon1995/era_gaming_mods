@@ -1,4 +1,4 @@
-WoG Graphics Expansion Lite
+WoG Graphics Fix Lite
 
 Author: Grossmaster
 Tweaks: Archer30
@@ -13,7 +13,6 @@ Kuririn
 Fred79
 Mod Design Team
 Docent Picolan
-Totkotoriy
 Astaroth
 Fcst1
 Raistlin
