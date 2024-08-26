@@ -420,22 +420,20 @@ ZVSE2
 
 !?FU(OnHeroScreenMouseClick)|i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_action^=(MOUSE_RMB_PRESSED);
 
-  !!if|i^wog_191_enabled^=1/i^wog_193_enabled^=1;                                                    [estates II option/ Warfare option]
+  !!if|i^wog_191_enabled^=1/i^wog_193_enabled^=1; [estates II option/ Warfare option]
 
 
-    !!FU(WOG_GetSkillInfoByClick):Pi^mouse_item^/-1/?(skill:y)/?(skillArea:y);          [call skill click function (in: click number and hero number, out: skill (y-3), area (y-4) and slot (y-5))]
+    !!FU(WOG_GetSkillInfoByClick):Pi^mouse_item^/-1/?(skill:y)/?(skillArea:y); [call skill click function (in: click number and hero number, out: skill (y-3), area (y-4) and slot (y-5))]
 
 
     !!if&(skill)=(SKILL_ESTATES)/i^wog_191_enabled^=1;
-      !!UN:P75/?(isShortDescr:y);                                                       [check if Short Skill descriptions (script75.erm, Hermann the Weird) is enabled]
+      !!UN:P75/?(shortDescr:y);         [check if Short Skill descriptions (script75.erm, Hermann the Weird) is enabled]
       ; 203 - Estates I
-      !!if&i^wog_203_enabled^=(FALSE)/(isShortDescr)=(FALSE);
-        !!CM:R0;                                                                        [if clicked skill was Estates, disable standard skill click reaction         [NOTE to get std Estates descr on name click: y-1<87 instead of y-1<103]
-        !!FU(WOG_191_ShowEstatesSkillDlg):P(skillArea)/i^mouse_action^;                                          [.. and call enhEstates display function (in: skill area, left/right-click)  [NOTE to get std Estates descr on name click: add /y-1<87]
+      !!if&i^wog_203_enabled^=(FALSE)/(shortDescr)=(FALSE); [if clicked skill was Estates, disable standard skill click reaction]         [NOTE to get std Estates descr on name click: y-1<87 instead of y-1<103]                                                              
+        !!FU(WOG_191_ShowEstatesSkillDlg):P(skillArea)/i^mouse_action^; [.. and call enhEstates display function (in: skill area, left/right-click)  [NOTE to get std Estates descr on name click: add /y-1<87]
 
-      !!el&(skillArea)=1;
-        !!CM:R0;                                                                        [same but for Estates I or short skill descr, then only a click on skill icons will trigger the below msgboxes]
-        !!FU(WOG_191_ShowEstatesSkillDlg):P(skillArea)/i^mouse_action^;                                          [.. same but for Estates I or short skill descr]
+      !!el&(skillArea)=1;               [same but for Estates I or short skill descr, then only a click on skill icons will trigger the below msgboxes]                                                              
+        !!FU(WOG_191_ShowEstatesSkillDlg):P(skillArea)/i^mouse_action^; [.. same but for Estates I or short skill descr]
       !!en;
 
     !!en;
@@ -443,7 +441,7 @@ ZVSE2
     !!if|(skill)=(SKILL_BALLISTICS)/(skill)=(SKILL_ARTILLERY)/(skill)=(SKILL_FIRST_AID);
       !!if&i^wog_193_enabled^=1/(skillArea)=1;
         !!CM:R0;
-        !!FU(WOG_44_Msg_SkillView):P(skillArea)/i^mouse_action^/(skill);                [.. and call Warfare display function (in: skill area, left/right-click, skill)]
+        !!FU(WOG_44_Msg_SkillView):P(skillArea)/i^mouse_action^/(skill); [.. and call Warfare display function (in: skill area, left/right-click, skill)]
       !!en;
     !!en;
 
@@ -456,155 +454,165 @@ ZVSE2
 ;   x1 = skill area (= 1 if icon, = 2 if name, = 3 if expertise clicked)
 ;   x2 = click type (= 12 left click, = 14 right click)
 
+!!CM:R0;
+
 !!VR(msgType:y):S(mouseAction) -10;                      if left-click  then init y16:=2 (OK/Cancel buttons)
 !!HE(CURRENT_HERO):N?(hero:y);
 !!IF:W(hero);                              set w var reference to current hero
 !!HE(hero):S(SKILL_ESTATES)/?(skillLvl:y) E?(heroExp:y)/?(heroLvl:y)/1 X?(specType:y)/?(specSkill:y)/d/d/d/d/d; get Estates expertise (y1), hero experience (y2) and level (y3), skill specialty (y20=0 and y19=13 is Estates)
+!!FU&(skillLvl)<=(SKILL_NOT_LEARNED):E;
 
-!!if&(skillLvl);
-  !!VRw47&w47=0/(heroLvl)<10:S1 R5;             init w47 with random 1..6 for lvl 1..9 and no init
-  !!VRw47&w47<8/(heroLvl)>=10:S8;                 init w47 with cycling (no lvl 10 msg displayed then)
+!!VRw47&w47=0/(heroLvl)<10:S1 R5;               init w47 with random 1..6 for lvl 1..9 and no init
+!!VRw47&w47<8/(heroLvl)>=10:S8;                 init w47 with cycling (no lvl 10 msg displayed then)
 
-  !!VR(stringNum:y):S164015 +i^timerWeekDay^;
-  !!VRz-3:Sz(stringNum);
+!!VR(stringNum:y):S164015 +i^timerWeekDay^;
+!!VRz-3:Sz(stringNum);
 
+!!HE(CURRENT_HERO):O?(owner:y);
+
+!!if|-999/(owner)<>i^timerOwner^;
+  !!VR(msgType)&(mouseAction)=(MOUSE_LMB_PRESSED):S(MSG_TYPE_MES);            lvl 1..9 left-click has OK button only
+  !!FU(WOG_191_SetUpGeneralResourcesText):P(heroLvl)/?z-1; [Set up z-1]
+
+!!el;
   !!if&w47<8;
     !!VR(msgType)&(mouseAction)=(MOUSE_LMB_PRESSED):S(MSG_TYPE_MES);            lvl 1..9 left-click has OK button only
-    !!VRz-1&(heroLvl)=1:Sz164023;       lvl 1 text
-    !!VRv2:S(heroLvl);
-    !!VRz-1&(heroLvl)>1/(heroLvl)<7:Sz164024;  lvl 2..6 text
-    !!VRz-1&(heroLvl)>6/(heroLvl)<10:Sz164025; lvl 7..9 text
+    !!FU(WOG_191_SetUpGeneralResourcesText):P(heroLvl)/?z-1; [Set up z-1]
 
   !!el&w47=8;
+    ; LMB
     !!if&(mouseAction)=(MOUSE_LMB_PRESSED);
-      !!VR(msgType)&(skillLvl)<(SKILL_EXPERT):S(MSG_TYPE_MES);           lvl 10+ cycling left-click Bas/Adv Estates OK button only
-      !!VRz-1&(skillLvl)<3:Sz164026;     lvl 10+ cycling left-click Bas/Adv Estates
-      !!VRz-1&(skillLvl)=3:Sz164027;     lvl 10+ cycling left-click Expert Estates
+
+      !!if&(skillLvl)<(SKILL_EXPERT);
+        !!VR(msgType):S(MSG_TYPE_MES);           lvl 10+ cycling left-click Bas/Adv Estates OK button only
+        !!VRz-1:Sz164026;     lvl 10+ cycling left-click Bas/Adv Estates
+      !!el;
+        !!VRz-1:Sz164027;     lvl 10+ cycling left-click Expert Estates
+      !!en;
+    ; RMB
     !!el;
       !!VRz-1:Sz164028;          lvl 10+ cycling right-click
     !!en;
 
-  !!el&w47>8/w47<15;
-    !!VRz-1&x2=12:Sz164029;   lvl 10+ chosen left-click
-    !!VRz-1&x2=14:Sz164030;   lvl 10+ chosen right-click
-  !!en;
+  !!el&w47>8/w47<=14;
+    !!VRz-1&(mouseAction)=(MOUSE_LMB_PRESSED):Sz164029;   lvl 10+ chosen left-click
+    !!VRz-1&(mouseAction)=(MOUSE_RMB_PRESSED):Sz164030;   lvl 10+ chosen right-click
 
   ; lvl 10+ and Mithril chosen
-  !!FU(WOG_Hero_GetLuckLevel)&w47>=15:P(CURRENT_HERO)/0/?(luckBonus:y);             check current luck of current hero
-  !!VR(chance:y):S(luckBonus) *10;                      set daily chance
+  !!el&w47>14;
+    !!FU(WOG_Hero_GetLuckLevel):P(CURRENT_HERO)/0/?(luckBonus:y);             check current luck of current hero
+    !!VR(chance:y):S(luckBonus) *10;                      set daily chance
 
-  !!if&(chance)>100;
-    !!VR(chance):S100;                    [set daily chance 100% max if luck 10+]
-  !!el&(chance)=0;
-    !!VR(chance):S10;                     [set daily chance 10% if zero luck]
-  !!el&(chance)<0;
-    !!VR(chance):S0;                      [set daily chance 0% if negative luck]
-  !!en;
+    !!if&(chance)>100;
+      !!VR(chance):S100;                  [set daily chance 100% max if luck 10+]
+    !!el&(chance)=0;
+      !!VR(chance):S10;                   [set daily chance 10% if zero luck]
+    !!el&(chance)<0;
+      !!VR(chance):S0;                    [set daily chance 0% if negative luck]
+    !!en;
 
-  !!if&w47>14;
-    !!VRv2:S(chance);
+    !!VRv2:S(chance);                     [legacy]
     !!VRv3:S(luckBonus);
-    !!VRz-1&x2=12:Sz164031;         lvl 10+ Mithril chosen left-click
-    !!VRz-1&x2=14:Sz164032;         lvl 10+ Mithril chosen right-click
+    !!VRz-1&(mouseAction)=(MOUSE_LMB_PRESSED):Sz164031;         lvl 10+ Mithril chosen left-click
+    !!VRz-1&(mouseAction)=(MOUSE_RMB_PRESSED):Sz164032;         lvl 10+ Mithril chosen right-click
   !!en;
+!!en;
 
-  ; calculate correct resource pics
-  !!VR(pic:y):S(PIC_TYPE_SEC_SKILL);                           set first pic as skill pic
-  !!VR(picSub:y):S41 +(skillLvl);                       calculate correct Estates pic (according to expertise)
+; calculate correct resource pics
+!!VR(pic:y):S(PIC_TYPE_SEC_SKILL);                           set first pic as skill pic
+!!VR(picSub:y):S41 +(skillLvl);                       calculate correct Estates pic (according to expertise)
 
-  !!VR(resource:y)&w47<8:Sw47;                    set resource display for lvl 1..9
-  !!VR(resource)&w47=8:Si^timerWeekDay^;       if cycling (=8), or unlucky Mithril (=16), set pic to weekday resource
-  !!VR(resource)&w47>8/w47<15:Sw47 -8;          set resource display for lvl 10+ chosen
+!!VR(resource:y)&w47<8:Sw47;                    set resource display for lvl 1..9
+!!VR(resource)&w47=8:Si^timerWeekDay^;       if cycling (=8), or unlucky Mithril (=16), set pic to weekday resource
+!!VR(resource)&w47>8/w47<15:Sw47 -8;          set resource display for lvl 10+ chosen
 
-  !!if&w47=15;
-    !!if&i^wog_191_dailyResPlusOne_%(hero)^;
-      !!VR(resource):Si^wog_191_dailyResPlusOne_%(hero)^ -1; [Show resource got today]
+!!if&w47=15;
+  !!if&i^wog_191_dailyResPlusOne_%(hero)^;
+    !!VR(resource):Si^wog_191_dailyResPlusOne_%(hero)^ -1; [Show resource got today]
+  !!el;
+    !!VR(resource):S(NO_PIC_TYPE);
+  !!en;
+!!en;
+
+!!if&(resource)=1;
+  !!VR(pic):S(RES_WOOD);                      if Wood/Ore then set first pic to Wood instead of Estates
+  !!VR(picSub):S1;                      .. set Wood amount
+  !!VR(resource):S(RES_ORE);                      .. set Ore  
+!!en;
+
+!!VR(resource)&(resource)=2/(picSub)>1:S(RES_MERCURY);                set Mercury resource
+!!VR(resource)&(resource)=(RES_MITHRIL)/i^wog_36_enabled^<>(TRUE):S(RES_GOLD);              set gold resource instead of Mithril if Mithril script disabled (needed for weekday=sunday)
+!!VR(resourceNum:y):S1;                            resource amount
+!!VR(resourceNum)&(resource)=(RES_GOLD):S350;                    gold amount 350 instead of 1
+!!VR(resourceNum)&w47=15/i^wog_191_dailyResPlusOne_%(hero)^=0:S(NO_PIC_TYPE);
+
+!!VRi^wog_estates_ignore_native_calculation^:S(TRUE);
+!!HE(CURRENT_HERO):Z?(hero:y);
+!!SN:E5129728/(CALLCONV_THISCALL)/(hero); Hero::GetEstatesPower;  
+!!VR(baseBonus:y):Sv1;
+!!VRi^wog_estates_ignore_native_calculation^:S(FALSE);
+
+; calculate correct additional amount of gold text (dep on hero experience and Estates Expertise) [%gold, %x and %y]
+!!VR(goldBonus:y):S(baseBonus);
+
+; Add up Estates I bonus
+!!VRz-4:S^^;
+
+!!if&i^wog_203_enabled^;
+  !!FU(WOG_203_Hero_GetEstatesIBonus):P(CURRENT_HERO)/(skillLvl)/?(estatesIBonus:y);
+  !!VR(goldBonus):+(estatesIBonus);                   total if Estates I also active
+  !!VRz-4:S^ + %(estatesIBonus) (%T(wog.191.estates)I)^;              if Estates I active
+!!en;
+; Add up Estates II bonus
+!!FU(WOG_191_Hero_GetEstatesIIBonus):P(CURRENT_HERO)/(skillLvl)/?(estatesIIBonus:y);
+!!VR(goldBonus):+(estatesIIBonus);
+
+; finally display msgbox (incl z var, pics and button state from above)
+!!VRz-4:+^ + %(estatesIIBonus) (%T(wog.191.estates)II)^;
+!!VR(skillLvlMinusOne:y):S(skillLvl) -1;
+!!FU(GetTextFileString):P^skilllev^/(skillLvlMinusOne)/?z-2;
+!!SN:T^wog.191.dlg^/?z2/^level^/z-2/^gold^/(goldBonus)/^base^/(baseBonus)/^bonus^/z-4/^end^/z-1;
+!!IF:Q1/(pic)/(picSub)/(resource)/(resourceNum)/(msgType)/z2; main display
+
+!!if&-1/(skillLvl)>=(SKILL_EXPERT)/(msgType)=(MSG_TYPE_QUESTION);
+  !!VR(lastRes:y):S(RES_LAST_SOD);
+  !!VR(lastRes)&i^wog_36_enabled^:S(RES_LAST_WOG);
+  !!FU(NewIntArray):P?(resPicsList:y);
+  
+  !!re i/(PIC_TYPE_RES_MERCURY)/(lastRes); [Wood and Ores are merged into one option]
+    ; Swap the place of Mercury and Wood/Ores
+    !!VR(resType:y):Si;
+
+    ; Randomly pick one picture for Wood/Ores
+    !!if&i=(PIC_TYPE_RES_MERCURY);
+      !#VA(normalResList[2]:y);
+
+      !!VR(normalResList):C(PIC_TYPE_RES_WOOD)/(PIC_TYPE_RES_ORE);
+      !!VR(random:y):T0/0/1;
+      !!VR(resType):S(normalResList[random]);
+
+    !!el&i=(PIC_TYPE_RES_ORE);
+      !!VR(resType):S(PIC_TYPE_RES_MERCURY);
+    !!en;
+
+    ; Declare the number of resources depending on resoruces type
+    !!if&(resType)=(PIC_TYPE_RES_GOLD);
+      !!VR(resNum:y):S350;
     !!el;
-      !!VR(resource):S(NO_PIC_TYPE);
-    !!en;
-  !!en;
-
-  !!if&(resource)=1;
-    !!VR(pic):S(RES_WOOD);                      if Wood/Ore then set first pic to Wood instead of Estates
-    !!VR(picSub):S1;                      .. set Wood amount
-    !!VR(resource):S(RES_ORE);                      .. set Ore  
-  !!en;
-
-  !!VR(resource)&(resource)=2/(picSub)>1:S(RES_MERCURY);                set Mercury resource
-  !!VR(resource)&(resource)=(RES_MITHRIL)/i^wog_36_enabled^<>(TRUE):S(RES_GOLD);              set gold resource instead of Mithril if Mithril script disabled (needed for weekday=sunday)
-  !!VR(resourceNum:y):S1;                            resource amount
-  !!VR(resourceNum)&(resource)=(RES_GOLD):S350;                    gold amount 350 instead of 1
-  !!VR(resourceNum)&w47=15/i^wog_191_dailyResPlusOne_%(hero)^=0:S(NO_PIC_TYPE);
-
-  !!VRi^wog_estates_ignore_native_calculation^:S(TRUE);
-  !!HE(CURRENT_HERO):Z?(hero:y);
-  !!SN:E5129728/(CALLCONV_THISCALL)/(hero); Hero::GetEstatesPower;  
-  !!VR(baseBonus:y):Sv1;
-  !!VRi^wog_estates_ignore_native_calculation^:S(FALSE);
-
-  ; calculate correct additional amount of gold text (dep on hero experience and Estates Expertise) [%gold, %x and %y]
-
-  !!VR(goldBonus:y):S(baseBonus);
-
-  ; Add up Estates I bonus
-  !!VRz-4:S^^;
-
-  !!if&i^wog_203_enabled^;
-    !!FU(WOG_203_Hero_GetEstatesIBonus):P(CURRENT_HERO)/(skillLvl)/?(estatesIBonus:y);
-    !!VR(goldBonus):+(estatesIBonus);                   total if Estates I also active
-    !!VRz-4:S^ + %(estatesIBonus) (%T(wog.191.estates)I)^;              if Estates I active
-  !!en;
-  ; Add up Estates II bonus
-  !!FU(WOG_191_Hero_GetEstatesIIBonus):P(CURRENT_HERO)/(skillLvl)/?(estatesIIBonus:y);
-  !!VR(goldBonus):+(estatesIIBonus);
-
-  ; finally display msgbox (incl z var, pics and button state from above)
-  !!VRz-4:+^ + %(estatesIIBonus) (%T(wog.191.estates)II)^;
-  !!VR(skillLvlMinusOne:y):S(skillLvl) -1;
-  !!FU(GetTextFileString):P^skilllev^/(skillLvlMinusOne)/?z-2;
-  !!SN:T^wog.191.dlg^/?z2/^level^/z-2/^gold^/(goldBonus)/^base^/(baseBonus)/^bonus^/z-4/^end^/z-1;
-  !!IF:Q1/(pic)/(picSub)/(resource)/(resourceNum)/(msgType)/z2; main display
-
-  !!if&-1/(skillLvl)>=(SKILL_EXPERT)/(msgType)=(MSG_TYPE_QUESTION);
-    !!VR(lastRes:y):S(RES_LAST_SOD);
-    !!VR(lastRes)&i^wog_36_enabled^:S(RES_LAST_WOG);
-    !!FU(NewIntArray):P?(resPicsList:y);
-    
-    !!re i/(PIC_TYPE_RES_MERCURY)/(lastRes); [Wood and Ores are merged into one option]
-      ; Swap the place of Mercury and Wood/Ores
-      !!VR(resType:y):Si;
-
-      ; Randomly pick one picture for Wood/Ores
-      !!if&i=(PIC_TYPE_RES_MERCURY);
-        !#VA(normalResList[2]:y);
-
-        !!VR(normalResList):C(PIC_TYPE_RES_WOOD)/(PIC_TYPE_RES_ORE);
-        !!VR(random:y):T0/0/1;
-        !!VR(resType):S(normalResList[random]);
-
-      !!el&i=(PIC_TYPE_RES_ORE);
-        !!VR(resType):S(PIC_TYPE_RES_MERCURY);
-      !!en;
-
-      ; Declare the number of resources depending on resoruces type
-      !!if&(resType)=(PIC_TYPE_RES_GOLD);
-        !!VR(resNum:y):S350;
-      !!el;
-        !!VR(resNum):S1;
-      !!en;
-
-      !!FU(Array_Push):P(resPicsList)/(resType)/(resNum);
+      !!VR(resNum):S1;
     !!en;
 
-    ; Show the dlg
-    !!FU(PrepareMultiPicDialog):P(resPicsList);
-    !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z164038/?(choice:y);
+    !!FU(Array_Push):P(resPicsList)/(resType)/(resNum);
+  !!en;
 
-    !!if&(choice)>-1;
-      !!VRw47:S(choice) +9;
-    !!el;
-      !!VRw47:S8;            set w47=8 (cycling) if rejected
-    !!en;
+  ; Show the dlg
+  !!FU(PrepareMultiPicDialog):P(resPicsList);
+  !!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/z164038/?(choice:y);
+
+  !!if&(choice)>-1;
+    !!VRw47:S(choice) +9;
+  !!el;
+    !!VRw47:S8;            set w47=8 (cycling) if rejected
   !!en;
 !!en;
 
@@ -616,6 +624,19 @@ lvl 10+ and cycling
 #4: type pic 2    (=1..7 for resource, -1 for none)
 #5: subtype pic 2 (=amount resource, 350 if gold (resource=6), else 1)
 #6: type message  (=1 OK button, =2 OK/Cancel buttons, =4 no button)
+
+!?FU(WOG_191_SetUpGeneralResourcesText);
+!#VA(heroLvl:x) (str:x);
+
+!!if&(heroLvl)<=1;
+  !!VR(str):Zz164023;       lvl 1 text
+!!el&(heroLvl)>1/(heroLvl)<=6;
+  !!VRv2:S(heroLvl);                  [Legacy]
+  !!VR(str):Zz164024;  lvl 2..6 text
+!!el;
+  !!VR(str):Zz164025; lvl 7..9 text
+!!en;
+
 
 
 ******************************************************************************************

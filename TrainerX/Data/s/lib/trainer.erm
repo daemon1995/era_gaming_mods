@@ -317,9 +317,10 @@ ZVSE2
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=30722/i^mouse_action^=(MOUSE_LMB_RELEASED);      [close trainer]
 !!VR(hasLeveledUp:y):S(FALSE);
-!!OW:C?(currPlayer:y)/?(interactPlayer:y); [It is not possible to activate level up screen if the hero doesn't belong to the player using tranier]
 
-!!if&i^trainer_hero^>(NO_HERO)/i^trainer_player^=(interactPlayer);
+!!if&i^trainer_hero^>(NO_HERO);
+  !!OW:C?(currPlayer:y)/?(interactPlayer:y); [In the game, it is not possible to activate level up screen if the hero doesn't belong to the player using tranier]
+
   !!VR(hero:y):Si^trainer_hero^;
   !!VR(lvNew:y):Si^trainer_heroLv^;
   !!HE(hero):E?(exp:y)/?(lv:y)/(TRUE);
@@ -327,16 +328,18 @@ ZVSE2
   ; If the new level of the hero is greater than the current, level up the part below Level 74 and change only the level number for the part above 74
   !!VR(lvFixed:y):S(lvNew) F1/(TRAINER_LEVEL_CAP_LEGIT);
 
-  ; Manage level below 74
-  !!if&(lvFixed)>(lv);
+  ; Manage level below 74 when the hero belongs to the interacting player
+  !!if&(lvFixed)>(lv)/i^trainer_player^=(interactPlayer);
     !!FU(trainer_GetExpRequirementOfLevel):P(lvFixed)/?(expFixed:y);
     !!HE(hero):E(expFixed);
     !!VR(hasLeveledUp):S(TRUE);
   !!en;
 
   ; Manage levels above 74 OR
-  ; If the new level of the hero is lower than the current, set new level only
-  !!if|(lvNew)>(lvFixed)/(lvNew)<(lv);
+  ; If the new level of the hero is lower than the current, set new level only OR
+  ; If the hero doesn't belong to the interacting player
+  ; This mustn't be merged into the if condition above as we need to separate the level up above 74 with 2 different approaches
+  !!if|(lvNew)>(lvFixed)/(lvNew)<(lv)/i^trainer_player^<>(interactPlayer);
     !!FU(trainer_GetExpRequirementOfLevel):P(lvNew)/?(expNew:y);
     !!HE(hero):E(expNew)/(lvNew)/(TRUE);
   !!en;

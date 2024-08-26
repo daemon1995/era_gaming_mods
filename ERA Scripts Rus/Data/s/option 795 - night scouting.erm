@@ -1184,31 +1184,47 @@ ZVSE2
 
 
 !?FU(OnHeroScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^mouse_flags^=(NO_MOUSE_FLAGS);           [Клик в окне героя]
-!!UN:P795/?y1;
-!!FU&y1=0:E;                            [выход если опция 795 не включена]
+!!UN:P795/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;             [выход если опция 795 не включена]
 
 !!SN:F^GetButtonID^/^assasins^;
-!!if&v1=i^mouse_item^;
-  
-  !!HE(CURRENT_HERO):N?h;
-  !!VR(assassinsNum:y):Si^opt795.11.%h^;
-  !!if&(assassinsNum:y)<1;                              [вывод информации об ассасинах героя и запрос роспуска, если ассасины есть]
-    !!IF:M1/^%T(es.795.assassins.noUnits)^;                           // 
-  !!el;                                   // 
-    !!SN:T^es.795.assassins.header^/?(msg:z)/^num^/(assassinsNum:y);
+!!FU&v1<>i^mouse_item^:E;
 
-    !!if&i^opt795.11.f%h^=0;
-      !!VR(add:z):S^%T(es.795.assassins.allow)^;
-    !!el;
-      !!VR(add:z):S^%T(es.795.assassins.restrict)^;
+!!FU(ES_795_GetAssassinMonType):P?(assassinsType:y);
+!!SN:H^monname^/(assassinsType)/1/?(monName:z) H^monname^/(assassinsType)/1/^%T(es.795.assassins.plurName)^;
+
+!!HE(CURRENT_HERO):N?h;
+!!VR(assassinsNum:y):Si^opt795.11.%h^;
+!!VR(picSubtype:y):S65536 *(assassinsNum) +(assassinsType);
+
+!!if&(assassinsNum:y)<1;                [вывод информации об ассасинах героя и запрос роспуска, если ассасины есть]
+  !!IF:Q1/(PIC_TYPE_MONSTER)/(picSubtype)/(MSG_TYPE_MES)/^%T(es.795.assassins.noUnits)^;                           // 
+!!el;
+  !!VR(msgType:y):S(MSG_TYPE_MES);
+  !!SN:T^es.795.assassins.header^/?(msg:z)/^num^/(assassinsNum:y);
+
+  ; Propose to change assassin status
+  !!if&999;
+    !!HEh:O?(owner:y);
+    
+    !!if&(owner)=i^timerOwner^;
+      !!VR(msgType):S(MSG_TYPE_QUESTION);
+
+      !!if&i^opt795.11.f%h^=0;
+        !!VR(add:z):S^%T(es.795.assassins.allow)^;
+      !!el;
+        !!VR(add):S^%T(es.795.assassins.restrict)^;
+      !!en;
     !!en;
 
     !!VR(msg):+^%T(es.endl)%T(es.endl)^ +(add);
-    !!IF:Q1/(msg);текст сообщения
-    !!VRi^opt795.11.f%h^&1:X(TRUE);
   !!en;
 
+  !!IF:Q1/(PIC_TYPE_MONSTER)/(picSubtype)/(msgType)/(msg);
+  !!VRi^opt795.11.f%h^&1/(msgType)=(MSG_TYPE_QUESTION):X(TRUE);
 !!en;
+
+!!SN:H^monname^/(assassinsType)/1/(monName);
 
 
 
