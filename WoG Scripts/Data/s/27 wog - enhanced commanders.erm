@@ -56,46 +56,50 @@ ZVSE2
 
 ** initialization
 
-*#DC(WOG_NPC_TABLE) = 42344640;
-!?FU(WOG_51_NPC_Init);
+!?FU(WOG_51_Initialization);
 !!UN:P51/?(enhCommander:y) P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderDisabled:y); [check if Enhanced Commanders is enabled in WoGify Options and if Commanders are enabled]
 
-!!VRi^wog_51_enabled^&(enhCommander)/(commanderDisabled)<>(TRUE):S(TRUE); [set var i^wog_51_enabled^ to true]
+!!VRi^wog_51_enabled^&(enhCommander)/(commanderDisabled)<>(TRUE):S(TRUE);        [set var i^wog_51_enabled^ to true]
 ; Set up basic stuff
-!#FU(WOG_51_NPC_Init):P;
+!#FU(WOG_51_Initialization):P;
 
 !?FU(OnAfterErmInstructions)&i^wog_51_enabled^;
 
-** make commanders alive
-  !#VA(npcBonuses[9]:y);
-  !!VR(npcBonuses[0]):C5/7/4/14/1/3/8/12/0; 
-  !!UN:B6/1;                                       [set new chest 6 to advanced setting (disabled)]
+!!FU(WOG_51_SetNpcAbilities):P(NO_HERO);
+!!UN:B6/1;                                     [set new chest 6 to advanced setting (disabled)]
 
+!?FU(WOG_51_SetNpcAbilities);
+!#VA(npcId:x);
 
-  !!re i/0/(HERO_LAST_WOG);
-    !!VR(abilitiesOffs:y):Si*296 +288;
-    !!COi:P5/?s P0 T?t;
-    !!VR(ability:y):S1 Sd<<(npcBonuses[t]);
-    !!UN:C42344640/(abilitiesOffs)/4/d|(ability:y); [Add! bonuses for npc based on type;]
-    !!if&s<5;
-      !!COi:P5/5;          [set base npc speeds as 5]
-    !!en;
+!!VR(firstHeroId:y):S(HERO_FIRST);
+!!VR(lastHeroId:y):S(HERO_LAST_WOG);
+!!if&(npcId)<>(NO_HERO);
+  !!VR(firstHeroId:y):S(npcId);
+  !!VR(lastHeroId:y):S(npcId);
+!!en;
+
+!#VA(npcBonuses[9]:y);
+!!VR(npcBonuses[0]):C5/7/4/14/1/3/8/12/0; 
+
+!!re i/(firstHeroId:y)/(lastHeroId);
+  !!VR(abilitiesOffs:y):Si *(SIZEOF_COMMANDER_STRUCT) +288;
+  !!COi:P5/?s P0 T?t;
+  !!VR(ability:y):S1 Sd<<(npcBonuses[t]);
+  !!UN:C(ADDR_WOG_COMMANDERS_TABLE)/(abilitiesOffs)/4/d|(ability:y); [Add! bonuses for npc based on type;]
+  !!if&s<5;
+    !!COi:P5/5;                                   [set base npc speeds as 5]
   !!en;
+!!en;
 
 !?FU(OnAfterCommanderBuy)&i^wog_51_enabled^;
-!#VA(npcBonuses[9]:y);
-  !!VR(npcBonuses[0]):C5/7/4/14/1/3/8/12/0; 
-  !!HE(CURRENT_HERO):N?(heroId:y);
 
-  !!VR(abilitiesOffs:y):S(heroId:y)*296 +288;
-  !!CO(heroId):T?t;
-  !!VR(ability:y):S1 Sd<<(npcBonuses[t]);
-  !!UN:C42344640/(abilitiesOffs)/4/d|(ability:y); [Add! bonuses for npc based on type;]
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(WOG_51_SetNpcAbilities):P(heroId:y);
 
 
 ; Manage spell casting
 ** pre-action trigger **
-!?FU(OnBattleRegeneratePhase)&i^wog_51_enabled^;         [continue if enabled]
+!?FU(OnBattleRegeneratePhase)&i^wog_51_enabled^;           [continue if enabled]
   !!BMx1:T?t;
   !!if|t=(MON_TEMPLE_GUARDIAN_A)/t=(MON_TEMPLE_GUARDIAN_D);
     !!BMx1:U4/(SPELL_PRAYER);                              [if astral spirit is casting - change spell to summon elemental]
@@ -221,21 +225,21 @@ ZVSE2
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(atkStack:y) C(atkStack)/52/4/?t; [get atk stack type]
 
 
-  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);              [added npc type cehck]
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(defStack:y);                   [get def stack]
-    !!SN:E7789324/(CALLCONV_CDECL)/(atkStack)/(defStack);                 [check for death stare skill - actually it returns number of creatures to kill but it returns 0 is no skill]
+  !!if&t>=(MON_COMMANDER_FIRST_A)/t<=(MON_COMMANDER_LAST_D);    [added npc type cehck]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(defStack:y);         [get def stack]
+    !!SN:E7789324/(CALLCONV_CDECL)/(atkStack)/(defStack);       [check for death stare skill - actually it returns number of creatures to kill but it returns 0 is no skill]
     !!if&v1;
-      !!UN:C(atkStack)/52/4/(MON_WYVERN_MONARCH);                         [imitate monarch]
-      !!UN:C4457822/2/1/?(oldPoisonChance:y) C4457822/2/1/50;             [set new poison chance (30% was default)]
-      !!SN:E4456992/(CALLCONV_THISCALL)/(atkStack)/(defStack);            [BattleStack::AfterHitSpell]
-      !!UN:C(atkStack)/52/4/t C4457822/2/1/(oldPoisonChance:y);           [restore mon type and poison chance]
+      !!UN:C(atkStack)/52/4/(MON_WYVERN_MONARCH);               [imitate monarch]
+      !!UN:C4457822/2/1/?(oldPoisonChance:y) C4457822/2/1/50;   [set new poison chance (30% was default)]
+      !!SN:E4456992/(CALLCONV_THISCALL)/(atkStack)/(defStack);  [BattleStack::AfterHitSpell]
+      !!UN:C(atkStack)/52/4/t C4457822/2/1/(oldPoisonChance:y); [restore mon type and poison chance]
       !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
-      !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/-1/0;                  [BattleMgr_DrawAction_Play]
+      !!SN:E4621680/(CALLCONV_THISCALL)/(cmbMgr:y)/-1/0;        [BattleMgr_DrawAction_Play]
     !!en;
 
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/-2;                              [why that was solution ? welcome to the WoG programming]
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/-2;                    [why that was solution ? welcome to the WoG programming]
     !!UN:C42230812/4/-2;
-    !!SN:X?t/0;                                                         [return without death stare calculation]
+    !!SN:X?t/0;                                                 [return without death stare calculation]
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7722877;
   !!en;
 
@@ -317,7 +321,7 @@ ZVSE2
   !!UN:C8002720/4/?i^wog_51_npc_resistance_max_bonus^ C8002720/4/90;                                                                              [set max resistance equal to 95%]
 
 
-  !!UN:C7783548/6/4/(SPELL_AIR_ELEMENTAL);
+  *!UN:C7783548/6/4/(SPELL_AIR_ELEMENTAL); // disable that stuff since we have a better solution
 
 
   !!SN:R^dlg_npc2.def:0_86.png^/^Data\Pcx\WS\mirror2d.png^; // changing fireshield ability frames

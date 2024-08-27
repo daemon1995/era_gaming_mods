@@ -192,27 +192,21 @@ ZVSE2
 !!SN:W^opt795.11.%(hero)^/?y15 W^opt795.11.%(hero).rebirth^/y15 W^opt795.11.%(hero)^/0; // удаление ассасинов
 
 ** очистка командира/артефактов командира
-!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?i P(WOG_OPT_COMMANDERS_NEED_HIRING)/?j P51/?k;                // i/j/k - статус опций Командиры / Обязательный найм командиров / Измененные командиры
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(isDisabled:y) P(WOG_OPT_COMMANDERS_NEED_HIRING)/?(needHiring:y) P51/?(isEnhanced:y);                // i/j/k - статус опций Командиры / Обязательный найм командиров / Измененные командиры
 
-!!if&i=(FALSE);                               // если командиры разрешены
-  !!CO(hero):A4/-1/0/-1/0/-1/0/-1/0/-1/0/-1/0;         // удаление артефактов командира
-  !!CO(hero):B0/0 D0 Ty1 X0/1000 X1/0 X2/1;            // удаление способностей, уровня, опыта, оживление и сброс расы командира
-  !!CO(hero)&k=0:P0/5 P1/5 P2/40 P3/9 P4/1 P5/4 P6/5;  // сброс первичных параметров командира
-  !!CO(hero)&k=1:P0/5 P1/5 P2/30 P3/10 P4/3 P5/5 P6/0; // сброс первичных параметров для "измененного" командира
-  !!CO(hero):S0/0 S1/0 S2/0 S3/0 S4/0 S5/0 S6/0;       // сброс вторичных навыков командира
+!!if&(isDisabled)=(FALSE);                               // если командиры разрешены
 
-  !!CO(hero)&j:E0;                          // если командиры должны быть наняты, удаляем командира
+  !!VR(npcStruct:y):S(SIZEOF_COMMANDER_STRUCT) *(hero) +(ADDR_WOG_COMMANDERS_TABLE);
+  !!SN:E7772852/(CALLCONV_THISCALL)/(npcStruct);                                    [init NPC (resets all data)]
+  !!UN:C(heroPtr)/81/4/?(heroExp:y);
+  !!if&(heroExp:y)>0;
+    !!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(heroExp)/1;                      [Add NPC experience from hero and use auto level ups]
+  !!en;
+  !!VR(isEnabled:e):S(needHiring) X1;
+  !!UN:C(npcStruct)/4/(needHire);                                                   [enable NPC if NeedHiring is FALSE]
 
-  !!if&k;                             // если включены измененные командиры, раздаем расовые бонусные навыки
-    !!CO(hero)&y1=0:B1/5/0;                 // paladin         - endless retaliation 
-    !!CO(hero)&y1=1:B1/7/0;                 // heirophant      - magic mirror (fire shield)
-    !!CO(hero)&y1=2:B1/4/0;                 // temple guardian - shoot 
-    !!CO(hero)&y1=3:B1/14/0;                // succubus        - fly 
-    !!CO(hero)&y1=4:B1/1/0;                 // soul eater      - fear
-    !!CO(hero)&y1=5:B1/3/0;                 // brute           - no retaliation 
-    !!CO(hero)&y1=6:B1/8/0;                 // ogre leader     - block 
-    !!CO(hero)&y1=7:B1/12/0;                // shaman          - 50% poison (death stare)
-    !!CO(hero)&y1=8:B1/0/0;                 // astral spirit   - ignore 50% defense  
+  !!if&(isEnhanced:y);                                                              [если включены измененные командиры, раздаем расовые бонусные навыки]
+    !!FU(WOG_51_SetNpcAbilities):P(hero);                                           [delegate npc abilities to the original script]
   !!en;
 !!en;
 
@@ -306,6 +300,7 @@ ZVSE2
 
     ; Creature Trainer
     !!if&(random2)=1;                                                // специалисты по лучшению существ
+      !!VR(isValidCreature:y):S(TRUE);
       !!if&(subtype)=(MON_MONK);
         !!VR(mon2:y):S(MON_ZEALOT);
         !!VR(mon3:y):S(MON_WAR_ZEALOT);
@@ -327,13 +322,15 @@ ZVSE2
         !!VR(mon3):S(MON_NIGHTMARE);
       !!el&(subtype)=(MON_GREEN_DRAGON);
         !!VR(mon2):S(MON_GOLD_DRAGON);
-        !!VR(mon3):S(MON_BLOOD_DRAGON);
+        !!VR(mon3):S(MON_DIAMOND_DRAGON);
       !!el&(subtype)=(MON_RED_DRAGON);
         !!VR(mon2):S(MON_BLACK_DRAGON);
         !!VR(mon3):S(MON_BLOOD_DRAGON);
+      !!el;
+        !!VR(isValidCreature:y):S(FALSE);
       !!en;
 
-      !!if|(subtype)=(MON_MONK)/(subtype)=(MON_GREMLIN)/(subtype)=(MON_STONE_GOLEM)/(subtype)=(MON_WALKING_DEAD)/(subtype)=(MON_CAVALIER)/(subtype)=(MON_UNICORN)/(subtype)=(MON_GREEN_DRAGON)/(subtype)=(MON_RED_DRAGON);
+      !!if&(isValidCreature);
         !!HE(hero):X6/(subtype)/0/0/0/(mon2)/(mon3);
         !!SN:H^monname^/(subtype)/1/?(mon1Name:z) H^monname^/(mon2)/1/?(mon2Name:z) H^monname^/(mon3)/1/?(mon3Name:z);
 
