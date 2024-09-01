@@ -655,13 +655,14 @@ this should make creature casts respecting dwarv type golem resistance
 !!en;
 
 
-// Necromancy features by Archer30
+// Necromancy features
+; by Archer30
 *Set Necromancy value according to Expert/Master/Grandmaster skill level
 !?FU(Necro_ChangePower_1);
 ; Note that with this hook, part of the lines are eaten so we need to manually put them back
 !#VA(hook:x);
 
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/?(necroPower:e);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/?(necroPower:e); [by default, this value is twice of the real Necromancy value]
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/1/?(necroLvl:y);
 
@@ -669,21 +670,21 @@ this should make creature casts respecting dwarv type golem resistance
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
 
   !!if&i^H3_Necromancy_0_Hero%(heroId)^;
-    !!VR(var:e):S4 :100;
+    !!VR(var:e):S10 :100;               [5%]
     !!VR(necroPower): +(var);
 
     !!if&i^H3_Necromancy_1_Hero%(heroId)^;
-      !!VR(var:e):S6 :100;
+      !!VR(var:e):S10 :100;             [5%]
       !!VR(necroPower): +(var);      
     !!en;
 
     !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/(necroPower); 
     !!UN:C(ebp)/-4/4/(necroPower);    
   !!en;
-!!el&(necroLvl)<=0;
+!!el&(necroLvl)<=(SKILL_NOT_LEARNED);
   !!UN:C(ebp)/-4/4/(necroPower);
 
-  !!SN:X?y99/0;
+  !!SN:X?t/0;
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/5128496; 4E4130
 !!en;
 
@@ -721,13 +722,28 @@ this should make creature casts respecting dwarv type golem resistance
 !!if&i^acm_altNecro_customMon^>(MON_SKELETON); [if anything higher than skeletons was selected - Alternative Necromancy]
   !!VR(customMon:y):Si^acm_altNecro_customMon^;
   !!VRi^acm_altNecro_customMon^:S0;
-  !!VR(maxPowerFloat:e)&(customMon)=(MON_WALKING_DEAD):S10; [set to 10%]
-  !!VR(maxPowerFloat)&(customMon)=(MON_WIGHT):S7; [set to 7%]
-  !!VR(maxPowerFloat)&(customMon)=(MON_VAMPIRE):S4; [set to 4%]
-  !!VR(maxPowerFloat)&(customMon)=(MON_LICH):S3; [set to 3%]
-  !!VR(maxPowerFloat)&(customMon)=(MON_BLACK_KNIGHT):S2; [set to 2%]
+
+  !!if&(customMon)=(MON_WALKING_DEAD);
+    !!VR(ratio:e):S80;                  [The raito of Necromany becomes 80%. For example, normally GM Necromany has 25% in Necromancy, when raising Walking Dead, it becomes 20%]
+    *!VR(maxPowerFloat:e):S100;         [The max Necromancy value: set to 100%. (does nothing as the internal limit IS 100%)]
+  !!el&(customMon)=(MON_WIGHT);
+    !!VR(ratio):S55;
+    *!VR(maxPowerFloat):S70;            [set to 70%]
+  !!el&(customMon)=(MON_VAMPIRE);
+    !!VR(ratio):S30;
+    *!VR(maxPowerFloat):S40;            [set to 40%]
+  !!el&(customMon)=(MON_LICH);
+    !!VR(ratio):S25;
+    *!VR(maxPowerFloat):S30;            [set to 30%]
+  !!el&(customMon)=(MON_BLACK_KNIGHT);
+    !!VR(ratio):S15;
+    *!VR(maxPowerFloat):S20;            [set to 20%]
+  !!en;
+
+  ; Set the new ratio
+  !!VR(powerFloat):*(ratio) :100;
   ; Restrain the current power to the given value
-  !!VR(powerFloat):*100 F0/(maxPowerFloat) :100;
+  *!VR(powerFloat):*(ratio) F0/(maxPowerFloat) :100;
 !!en;
 
 ; Convert to Int
@@ -4958,8 +4974,8 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 
 
 ***********************Alternative Necromancy***************************************
-**Master Ressurects 17%
-**Grandmaster Ressurects 20%
+**Master Ressurects 20%
+**Grandmaster Ressurects 25%
 ** And Nekropolis Creature Specialists get little chance to ressurect their creature after battle
 !?FU(ACM_OnResetHero);
 !#VA(hero:x);
@@ -5073,6 +5089,7 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 !#VA(hook:x);
 
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/(UNC_INT)/?(heroStruct:y) C(heroStruct)/26/(UNC_INT)/?(hero:y);
+!!FU&(hero)<(NO_HERO):E;                [fail safe]
 
 ; Change Necromancy raising monster only if it's been set other than Skeletons
 ; This means if it's set to Skeletons from the dialog, Cloak of Undead King will work as usual
