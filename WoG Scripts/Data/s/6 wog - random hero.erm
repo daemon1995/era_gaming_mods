@@ -7,6 +7,7 @@ ZVSE2
 
 ; There is a 1/4 chance that a random hero will appear on the monster's side and help them fight.
 ; The chance would become 100% if i^Random_Neutral_Hero^ is TRUE
+; This script works for human player only. It used to work for AI, but seems some devs don't like it.
 
 
 // Hooks
@@ -68,7 +69,19 @@ ZVSE2
       !!HE(randHero):Z?(heroStruct:y);  [DON'T use HE:O as it might fail setting a hero to a lost player]
       !!UN:C(heroStruct)/34/(UNC_INT8)/i;
       !!BA:H1/(randHero);
+
       !!VRi^wog_72_randHero^:S(randHero);
+
+      ; Store the availability of the hero in an array 
+      ; Can be smarter if found the INT storing this thing from hero structure
+      !!SN:Mi^wog_72_randHeroAvailabilityList^;
+      !!FU(NewIntArray):P8/?i^wog_72_randHeroAvailabilityList^/(M_TEMP);
+
+      !!re j/(PLAYER_FIRST)/(PLAYER_LAST);
+        !!VR(playerBits:y):S1 Sd<<j;
+        !!HE(randHero):R3/?(isAllowed:y)/(playerBits);
+        !!SN:Mi^wog_72_randHeroAvailabilityList^/j/(isAllowed);
+      !!en;
     !!el;
       !!VRi^wog_72_randHeroActive^:S(FALSE);
     !!en;
@@ -93,5 +106,12 @@ ZVSE2
 !?FU(OnAfterBattleUniversal)&i^wog_72_randHeroActive^;
 !!VRi^wog_72_randHeroActive^:S(FALSE);
 
-!?FU(OnAfterLoadGame)&i^wog_72_randHeroActive^;
-!!VRi^wog_72_randHeroActive^:S(FALSE);
+; Restore the availability of the hero
+!!re j/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!SN:Mi^wog_72_randHeroAvailabilityList^/j/?(isAllowed:y);
+  !!VR(playerBits:y):S1 Sd<<j;
+  !!HEi^wog_72_randHero^:R3/(isAllowed)/(playerBits);
+!!en;
+
+!!SN:Mi^wog_72_randHeroAvailabilityList^;
+!!VRi^wog_72_randHero^:S0;
