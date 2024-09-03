@@ -1,5 +1,5 @@
 
-Advanced Classes Mod 1.093
+Advanced Classes Mod 1.094
 
 A Mod by Perry R, for Heroes of Might and Magic 3, ERA3 
 with the help of AlfWithCake, anti-victor, Daemon_n, Sandris, Berserker and Archer
