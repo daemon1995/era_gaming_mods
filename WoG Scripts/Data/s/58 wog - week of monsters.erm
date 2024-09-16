@@ -173,16 +173,23 @@ ZVSE2
 !#VA(weekType:x) (weekSubType:x);
 
 !!VR(weekSubType):S(NO_MON);
-!!MA:F(MON_AZURE_DRAGON)/?(fv:y);                                                                                 [get strongest mon FV to limit monster week power]
+!!MA:F(MON_AZURE_DRAGON)/?(maxFv:y);                                                                                 [get strongest mon FV to limit monster week power]
 
 !!if&(weekType:x)=(WOG_20_INFERNO_WEEK);
   !!VR(weekSubType):S(MON_IMP);
 !!el&(weekType)=(WOG_20_RESOURCE_WEEK);
   !!VR(weekSubType):T0/(RES_FIRST)/(RES_LAST_SOD);
 !!el&(weekType)=(WOG_20_PLAYER_WEEK);
-  !!FU(WOG_20_GetMonsterOfPlayerWeek):P?(weekSubType)/?(player:y)/?(hero:y)/(fv);
+  !!FU(WOG_20_GetMonsterOfPlayerWeek):P?(weekSubType)/?(player:y)/?(hero:y)/(maxFv);
 !!el&(weekType)=(WOG_20_MONSTER_WEEK);
-  !!FU(WOG_20_GetRandomMonster):P(NO_MON)/(NO_MON)/?(weekSubType)/(fv);
+  ; If it was a week of monsters, skip the monster for the next week
+  !!if|i^wog_20_week_type^=(WOG_20_PLAYER_WEEK)/i^wog_20_week_type^=(WOG_20_MONSTER_WEEK);
+    !!VR(excludeMon:y):Si^wog_20_week_subtype^;
+  !!el;
+    !!VR(excludeMon):S(NO_MON);
+  !!en;
+
+  !!FU(WOG_GetRandomMonster):P?(weekSubType)/(MON_MIN_LEVEL)/(MON_MAX_LEVEL)/(maxFv)/(excludeMon);
 !!en;
 
 ---------------------------------------------------------------------------------------
@@ -505,42 +512,15 @@ s^wog_35_prediction_%i^
     !!en;
   !!en;
 !!en;
-!!FU(WOG_20_GetRandomMonster):P(NO_MON)/(NO_MON)/?(monster)/(maxFv);
 
-!?FU(WOG_20_GetRandomMonster);
-!#VA(excludeMon1:x) (excludeMon2:x) (mon:x) (maxFv:x);
-
-!!FU:A?(numArgs:y);
-!!VR(maxFv)&(numArgs)<4:S(INT_MAX);
-
-!!VR(mon):S(NO_MON);
-!!FU(GetMaxMonsterId):P?(lastMon:y);
-!!FU(NewIntArray):P?(validMons:y);
-
-!!re i/(MON_FIRST)/(lastMon);
-  !!co|i=(MON_NOT_USED_1)/i=(MON_NOT_USED_2)/i=(MON_NOT_USED_3)/i=(MON_NOT_USED_4);
-  !!co&i=(MON_ARROW_TOWERS);            [War Machines are valid except for Arrow Towers!]
-  !!co&i>=(MON_EMISSARY_OF_WAR)/i<=(MON_EMISSARY_OF_LORE);
-  !!co&i>=(MON_COMMANDER_FIRST_A)/i<=(MON_COMMANDER_LAST_D);
-
-  !!MA:Fi/?(fv:y);
-  !!co&(fv)>(maxFv);
-
-  !!FU(Array_Push):P(validMons)/i;
+; If it was a week of monsters, skip the monster for the next week
+!!if|i^wog_20_week_type^=(WOG_20_PLAYER_WEEK)/i^wog_20_week_type^=(WOG_20_MONSTER_WEEK);
+  !!VR(excludeMon:y):Si^wog_20_week_subtype^;
+!!el;
+  !!VR(excludeMon):S(NO_MON);
 !!en;
 
-!!SN:M(validMons)/?(size:y);
-
-!!if&(size)>0;
-  !!FU(Array_Shuffle):P(validMons);
-
-  ; Loop for 5 times at most to find a monster not the same as the excluding monsters
-  !!re i/0/4;
-    !!FU(Array_Pop):P(validMons)/?(mon);
-
-    !!br&(mon)<>(excludeMon1)/(mon)<>(excludeMon2);
-  !!en;
-!!en;
+!!FU(WOG_GetRandomMonster):P?(monster)/(MON_MIN_LEVEL)/(MON_MAX_LEVEL)/(maxFv)/(excludeMon);
 
 --------------------------------------------------------------------------------------
 

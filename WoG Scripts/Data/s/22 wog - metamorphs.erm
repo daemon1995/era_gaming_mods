@@ -5,7 +5,7 @@ ZVSE2
 ** Script56.erm
 ** Updated by rennyo 26.02.2012
 ** Updated August 23, 2004
-** Updated by Archer30 on Jun 2024
+** Updated by Archer30 on Sep 2024
 
 ** This script changes all Earth Messengers into Metamorphs. Metamorphs stacks transform
 ** in battle on their first action into another type of creature. The type is determined
@@ -30,7 +30,9 @@ Temporary Variables used:  v1-v10, v13-v14, v24
  [Set Name and Description for Metamorph (Earth Messenger)]
 !!SN:H^monname^/(MON_EARTH_MESSENGER)/0/z156000;
 !!SN:H^monname^/(MON_EARTH_MESSENGER)/1/z156001;
-!!SN:H^monname^/(MON_EARTH_MESSENGER)/2/z156002;
+!!SN:H^monname^/(MON_EARTH_MESSENGER)/2/?(desc:z);
+!!VR(desc):+z156002;
+!!SN:H^monname^/(MON_EARTH_MESSENGER)/2/(desc);
 
  [Set new bonus lines for Metamorphs (but only when in Metamorph form)]
 !!EA(MON_EARTH_MESSENGER):F97/10/?(slot:y); [Bonus line number for Quicksand Post-Attack Spell: v2]
@@ -58,8 +60,90 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 
 --------------------------------------------------------------------------------------------------------------------
 
+ [Battle Stack Obtain Turn trigger]
+!?FU(OnBattleStackObtainsTurn)&1000/-998/i^wog_tacticsIsEnded^;
+!!UN:P56/?y-1; [Check if script is enabled: y-1]
+!!FU&y-1<>1:E; [Exit if script isn't enabled]
+
+!!BMi^battle_current_stack^:T?v2 N?v5; [Type of monster: v2, Number in stack: v5]
+
+!!FU(WOG_56_TransformMetamorphInit)&v2=(MON_EARTH_MESSENGER)/v5>=1:P; [Initial Transformation of Metamorph]
+
+--------------------------------------------------------------------------------
+
+ [Initial Transformation of Metamorph]
+!?FU(WOG_56_TransformMetamorphInit);
+!!FU(GetMaxMonsterId):P?y32;
+!!VRv3:R0/(MON_FIRST)/y32; [Random number from 0..last mon for monster: v3]
+!!VRv4:S-1; [Initialize v4 to -1]
+!!MA:Pv2/?v6; [Health of one Metamorph: v6]
+!!VRv6:*v5; [Total health of Metamorph stack: v6]
+
+!!MA:P(MON_EARTH_MESSENGER)/?v6; [Health of one of creature at x16: y1]
+
+; Determine the new creature
+!!re i;
+  !!FU(WOG_GetRandomMonster):P?v4/1/5/(INT_MAX)/(MON_EARTH_MESSENGER);
+
+  ; Skip if not enough to generate a full creature
+  !!MA:Pv4/?y1;
+  !!VRv7:Sv6 :y1; [Number of creatures it can transform to: v7]
+  !!co&v7<=0;
+
+  !!FU(WOG_56_CheckIfPassabilityIsCorrect):Pi^battle_current_stack^/v4/?y34;
+  !!co&y34<>(TRUE);
+
+  !!br;
+!!en;
+
+!!VRv1:Si^battle_current_stack^;
+
+!!BMi^battle_current_stack^:P?v8 O?v14; [Position of Metamorph: v8, Hero's slot: v14]
+!!VRy-4:Si^battle_current_stack^ *-1 -1; [Negative of Metamorph stack number: y-4]
+!!EAy-4:E?y-5/d/d/d; [Experience of Metamorph stack: y-5]
+!!BMi^battle_current_stack^:I?v9; [Side that owns Metamorph: v9]
+
+!!BMi^battle_current_stack^:F?y-8; [Read Metamorph's Flags: y-8]
+!!VRy31:Sy-8 &(MON_FLAG_ACTED);
+!!VRy-9:Sy-8 &(MON_FLAG_CLONE); [See if Metamorph is a clone: y-9=8388608 if yes]
+!!VRy-10:Sy-8 &(MON_FLAG_SUMMONED); [See if Metamorph was summoned: y-10=4194304 if yes]
+!!BMi^battle_current_stack^:Fd|549453824; [Write Metamorph's Flags: y-8]
+!!BMi^battle_current_stack^:R?y-12;
+
+; For some reason, BM:M/F/R results in broken sound here. Thus we set the volume to 0 temporarily
+!!if&i^battle_isVisible^;
+  !!UN:C6916020/4/?y33;
+  !!UN:C6916020/4/0;
+!!en;
+
+!!BMi^battle_current_stack^:K1;                              [Kill the Metamorph]
+
+!!if&i^battle_isVisible^;
+  !!SN:D;
+  !!UN:C6916020/4/y33;
+!!en;
+
+!!FU(NewIntArray):P?i^wog_56_metamorphStatsList^/(M_TEMP);
+!!FU(Array_Push):Pi^wog_56_metamorphStatsList^/y31/y-9/y-10/y-12/y-5;
+
+!!BU:Sv4/v7/v8/v9/v14/1; [Summon new creature stack: Type is v4]
+
+!!SN:Mi^wog_56_metamorphStatsList^;
+!!VRi^wog_56_metamorphStatsList^:S0;
+
+!!if&i^battle_isVisible^;
+  !!VRz1&v5=1:Sz156009;
+  !!VRz1&v5>1:Sz156010;
+  !!SN:H^monname^/v4/1/?z2; [New creature name (plural): z2]
+  !!VRz3:Sz156011;
+  !!MM:Sz3; [Display scroll bar message]
+!!en;
+
+--------------------------------------------------------------------------------------------------------------------
+
  [Determine if victorious Metamorphed stack transforms again]
-!?FU(WOG_OnAfterAttack)&1000/-998; 
+; Retaliation doesn't trigger the transformation
+!?FU(WOG_OnAfterAttack)&1000/-998/i^battle_acting_stack^=x1;
 !#VA(atkStack:x) (defStack:x);
 
 !!UN:P56/?(wogOption:y); [Check if script is enabled]
@@ -75,44 +159,55 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!FU|(atkNum)<=0/(defNum)>0:E;
 
 ; Exit if the killed stack is Metamorph
-!!BM(defStack):T?v4543;
-!!FU&v4543=(MON_EARTH_MESSENGER):E;
+!!BM(defStack):T?y32;
+!!FU&y32=(MON_EARTH_MESSENGER):E;
 
-!!VRv1:S(atkStack); [(Metamorph's) stack number: v1]
-!!BMv1:T?v2 N?v3; [Type that Metamorph is currently: v2, Number in stack: v3]
+!!BM(atkStack):T?v2 N?v3; [Type that Metamorph is currently: v2, Number in stack: v3]
 !!MA:Pv2/?v4; [Health of one (Metamorph): v4]
 !!VRv4:*v3; [Total health of (Metamorph) stack: v4]
-!!MA:Pv4543/?v5; [Health of one target creature: v5]
-!!FU&v2=v4543:E; [Exit if target creature is the same type as Metamorph's current type]
+!!MA:Py32/?v5; [Health of one target creature: v5]
+!!FU&v2=y32:E; [Exit if target creature is the same type as Metamorph's current type]
 !!FU&v4<v5:E; [Exit if target creature's health is higher than (Metamorphs)]
-!!FU(WOG_CheckIfMonsterIsValid):Pv4543/?y30; [Exit if target creature is a War Machine, commander or emissary]
+!!FU(WOG_CheckIfMonsterIsValid):Py32/?y30; [Exit if target creature is a War Machine, commander or emissary]
 !!FU&y30<>(TRUE):E;
 
-!!VRy-4:Sv1 *-1 -1; [Negative of Metamorph stack number: y-4]
+!!FU(WOG_56_CheckIfPassabilityIsCorrect):P(atkStack)/y32/?y35;
+!!FU&y35<>(TRUE):E;
+
+; Exit if the monster cannot be generated
+!!MA:Hy32/?y34;
+!!FU&y34<=0:E;
+
+!!VRy-4:S(atkStack) *-1 -1; [Negative of Metamorph stack number: y-4]
 !!EAy-4:E?y-5/d/d/d; [Experience of Metamorph stack: y-5]
 !!VRv9:Sv4 :v5; [Number of creatures (Metamorphs) can transform to: v9]
 !!VRv9&v9<1:S1; [Minimum 1]
-!!BMv1:P?v6 O?v7 I?v8; [Position: v6, Hero's slot: v7, Side: v8]
+!!BM(atkStack):P?v6 O?v7 I?v8; [Position: v6, Hero's slot: v7, Side: v8]
 
-!!BMv1:F?y-8; [Read Metamorph's Flags: y-8]
+!!BM(atkStack):F?y-8; [Read Metamorph's Flags: y-8]
 !!VRy31:Sy-8 &(MON_FLAG_ACTED);
-!!VRy-9:Sy-8; [Copy Metamorph's Flags to y-9]
-!!VRy-10:Sy-8; [Copy Metamorph's Flags to y-10]
-!!VRy-9:&8388608; [See if Metamorph is a clone: y-9=8388608 if yes]
-!!VRy-10:&4194304; [See if Metamorph was summoned: y-10=4194304 if yes]
-!!VRy-8:|4194304; [Set Metamorph's "summoned" bit if not set]
-!!VRy-8:|8388608; [Set Metamorph's "clone" bit if not set]
-!!VRy-8:|(MON_FLAG_NO_COLORING);
-!!BMv1:Fy-8; [Write Metamorph's Flags: y-8]
-!!BMv1:R?y-12;
+!!VRy-9:Sy-8 &(MON_FLAG_CLONE); [See if Metamorph is a clone: y-9=8388608 if yes]
+!!VRy-10:Sy-8 &(MON_FLAG_SUMMONED); [See if Metamorph was summoned: y-10=4194304 if yes]
+!!BM(atkStack):Fd|549453824; [Write Metamorph's Flags: y-8]
+!!BM(atkStack):R?y-12;
 
-!!BMv1:K1;                              [Kill the Metamorph]
-!!SN&i^battle_isVisible^:D;
+; For some reason, BM:M/F/R results in broken sound here. Thus we set the volume to 0 temporarily
+!!if&i^battle_isVisible^;
+  !!UN:C6916020/4/?y33;
+  !!UN:C6916020/4/0;
+!!en;
+
+!!BM(atkStack):K1;                              [Kill the Metamorph]
+
+!!if&i^battle_isVisible^;
+  !!SN:D;
+  !!UN:C6916020/4/y33;
+!!en;
 
 !!FU(NewIntArray):P?i^wog_56_metamorphStatsList^/(M_TEMP);
 !!FU(Array_Push):Pi^wog_56_metamorphStatsList^/y31/y-9/y-10/y-12/y-5;
 
-!!BU:Sv4543/v9/v6/v8/v7/1; [Summon new (Metamorph) creature stack: type=v4543]
+!!BU:Sy32/v9/v6/v8/v7/1; [Summon new (Metamorph) creature stack: type=y32]
 
 !!SN:Mi^wog_56_metamorphStatsList^;
 !!VRi^wog_56_metamorphStatsList^:S0;
@@ -120,74 +215,12 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!if&i^battle_isVisible^;
   !!VRz1&v5=1:Sz156003;
   !!VRz1&v5>1:Sz156004;
-  !!UN:N3/2/v4543/1; [New creature name (plural): z2]
+  !!SN:H^monname^/y32/1/?z2; [New creature name (plural): z2]
   !!VRz3:Sz156005;
-  !!BU:Mz3; [Display scroll bar message]
+  !!MM:Sz3; [Display scroll bar message]
 !!en;
 
 --------------------------------------------------------------------------------
-
- [Battle Stack Obtain Turn trigger]
-!?FU(OnBattleStackObtainsTurn)&1000/-998/i^wog_tacticsIsEnded^;
-!!UN:P56/?y-1; [Check if script is enabled: y-1]
-!!FU&y-1<>1:E; [Exit if script isn't enabled]
-
-!!VRv1:Si^battle_current_stack^; [Current stack number: v1]
-!!BMi^battle_current_stack^:T?v2 N?v5; [Type of monster: v2, Number in stack: v5]
-
-!!FU(WOG_56_TransformMetamorphInit)&v2=(MON_EARTH_MESSENGER)/v5>=1:P; [Initial Transformation of Metamorph]
-
---------------------------------------------------------------------------------
-
- [Initial Transformation of Metamorph]
-!?FU(WOG_56_TransformMetamorphInit);
-!!VRv3:S0 R164; [Random number from 0..164 for monster: v3]
-!!VRv4:S-1; [Initialize v4 to -1]
-!!MA:Pv2/?v6; [Health of one Metamorph: v6]
-!!VRv6:*v5; [Total health of Metamorph stack: v6]
-
-; Determine new creature
-; Note that this is not the same as FU(GetRandomMonster)
-!!DO(WOG_56_DetermineNewCreature)/v3/164/1:P;
-!!DO(WOG_56_DetermineNewCreature)/0/v3/1&v4<0:P; [Determine new creature part 2: v4]
-
-!!BMv1:P?v8 O?v14; [Position of Metamorph: v8, Hero's slot: v14]
-!!VRy-4:Sv1 *-1 -1; [Negative of Metamorph stack number: y-4]
-!!EAy-4:E?y-5/d/d/d; [Experience of Metamorph stack: y-5]
-!!BMv1:I?v9; [Side that owns Metamorph: v9]
-
-!!BMv1:F?y-8; [Read Metamorph's Flags: y-8]
-!!VRy31:Sy-8 &(MON_FLAG_ACTED);
-!!VRy-9:Sy-8; [Copy Metamorph's Flags to y-9]
-!!VRy-10:Sy-8; [Copy Metamorph's Flags to y-10]
-!!VRy-9:&8388608; [See if Metamorph is a clone: y-9=8388608 if yes]
-!!VRy-10:&4194304; [See if Metamorph was summoned: y-10=4194304 if yes]
-!!VRy-8:|4194304; [Set Metamorph's "summoned" bit if not set]
-!!VRy-8:|8388608; [Set Metamorph's "clone" bit if not set]
-!!VRy-8:|(MON_FLAG_NO_COLORING);
-!!BMv1:Fy-8; [Write Metamorph's Flags: y-8]
-!!BMv1:R?y-12;
-
-!!BMv1:K1;                              [Kill the Metamorph]
-!!SN&i^battle_isVisible^:D;
-
-!!FU(NewIntArray):P?i^wog_56_metamorphStatsList^/(M_TEMP);
-!!FU(Array_Push):Pi^wog_56_metamorphStatsList^/y31/y-9/y-10/y-12/y-5;
-
-!!BU:Sv4/v7/v8/v9/v14/1; [Summon new creature stack: Type is v4]
-
-!!SN:Mi^wog_56_metamorphStatsList^;
-!!VRi^wog_56_metamorphStatsList^:S0;
-
-!!if&i^battle_isVisible^;
-  !!VRz1&v5=1:Sz156009;
-  !!VRz1&v5>1:Sz156010;
-  !!UN:N3/2/v4/1; [New creature name (plural): z2]
-  !!VRz3:Sz156011;
-  !!BU:Mz3; [Display scroll bar message]
-!!en;
-
---------------------------------------------------------------------------------------------------------------------
 
 // Set up Metamorph parameters
 !?FU(WOG_BattleStack_InitParams)&i^wog_56_metamorphStatsList^;
@@ -199,12 +232,12 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!VR(flags):|(isActed) |(isClone) |(isSummoned);
 !!BM(stack):F(flags);
 
-; Retaliation
+; Retaliations
 !!SN:Mi^wog_56_metamorphStatsList^/3/?(retals:y);
 !!BM(stack):R(retals);
 
-; Archer30: Warning! This is very buggy
 ; Stack exp
+; Currently we don't change the stack exp after transformation to avoid the complication of restoration
 !!FU:E;
 
 !!VR(eaStack:y):S(stack) +1 *-1;
@@ -216,24 +249,32 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 
 --------------------------------------------------------------------------------------------------------------------
 
- [Determine random creature Metamorph transforms into: v4]
-!?FU(WOG_56_DetermineNewCreature);
-!!VRx16&x16>=122:+1; [Skip "Not Used (1)"]
-!!VRx16&x16>=124:+1; [Skip "Not Used (2)"]
-!!VRx16&x16>=126:+1; [Skip "Not Used (3)"]
-!!VRx16&x16>=128:+1; [Skip "Not Used (4)"]
-!!VRx16&x16>=145:+5; [Skip War Machines]
-!!VRx16&x16>=160:+4; [Skip Emissaries]
-!!VRx16&x16>=(MON_EARTH_MESSENGER):+1; [Skip Earth Messenger (Metamorph)]
-!!VRx16&x16>=174:+18; [Skip Commanders]
+!?FU(WOG_56_CheckIfPassabilityIsCorrect);
+!#VA(stack:x) (mon2:x) (result:x);
 
-!!MA:Px16/?y1; [Health of one of creature at x16: y1]
-!!VRv7:Sv6 :y1; [Number of creatures it can transform to: v7]
+!!VR(result):S(TRUE);
 
-!!if&v7>0;
-  !!VRv4:Sx16; [Set v4 to creature type: v4]
-  !!VRx16:S999; [Exit loop]
+; Exit if monster #2 is not wide
+!!MA:X(mon2)/?(mon2Flags:y);
+!!VR(mon2IsWide:y):S(mon2Flags) &(MON_FLAG_WIDE);
+!!FU&(mon2IsWide)=(FALSE):E;
+
+; Exit if monster #1 is wide (we don't need to worry about passability if the monster is wide before transformation)
+!!BM(stack):F?(mon1Flags:y);
+!!VR(mon1IsWide:y):S(mon1Flags) &(MON_FLAG_WIDE);
+!!FU&(mon1IsWide):E;
+
+; Get the second tile of the new creature
+!!BM(stack):I?(side:y) P?(pos:y);
+
+!!if&(side)=(BATTLE_LEFT);
+  !!VR(secPos:y):S(pos) +1;
+!!el;
+  !!VR(secPos):S(pos) -1;
 !!en;
+
+; Check if it's valid
+!!FU(WOG_CheckIfHexIsFree):P(secPos)/?(result);
 
 --------------------------------------------------------------------------------------------------------------------
 
@@ -243,17 +284,13 @@ Temporary Variables used:  v1-v10, v13-v14, v24
 !!FU&(wogOption)<>(TRUE):E;             [Exit if script isn't enabled]
 
 ; Set correct Metamorphs in hero's army (if the hero has retreated then it's not required, as the hero lose all the troops)
-!!DO(WOG_56_RestoreMetamorph)/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1&i^wog_isRetreated_0^<>(TRUE):P?(armyUpdated1:y);
-!!DO(WOG_56_RestoreMetamorph)/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1&i^wog_isRetreated_1^<>(TRUE):P?(armyUpdated2:y);
-!!SN|(armyUpdated1)/(armyUpdated2):D;   [Redraw screen]
+!!DO(WOG_56_RestoreMetamorph)/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST)/1&i^wog_isRetreated_0^<>(TRUE):P;
+!!DO(WOG_56_RestoreMetamorph)/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST)/1&i^wog_isRetreated_1^<>(TRUE):P;
 
 --------------------------------------------------------------------------------------------------------------------
 
  [After battle, set correct Metamorphs in hero's army]
 !?FU(WOG_56_RestoreMetamorph);
-!#VA(armyUpdated:x);
-
-!!VR(armyUpdated):S(FALSE);
 !!VRy1:S4500 +x16; [Stack number index: y1]
 !!VRy10:Svy1; [Type of creature at start of battle: y10]
 !!BMx16:N?y2 O?y3; [Number of creatures in stack: y2, Hero slot #: y3]
@@ -261,8 +298,6 @@ Temporary Variables used:  v1-v10, v13-v14, v24
  [Exit if not a Metamorph at start of battle,]
  [all killed, or a summoned creature there now]
 !!FU|y10<>(MON_EARTH_MESSENGER)/y2<1/y3<0:E;
-
-!!VR(armyUpdated):S(TRUE);
 
 !!MA:P(MON_EARTH_MESSENGER)/?y4; [Health of one Metamorph: y4]
 !!BMx16:T?y5; [Type of creature: y5]
