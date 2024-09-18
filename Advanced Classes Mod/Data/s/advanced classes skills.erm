@@ -11992,6 +11992,7 @@ Close Dialouge
 
 
 !?FU(OnSetupBattlefield);               [Set new Spells to cast for Commander]
+!#VA(usedY[10]:y);
 
 !!SN:W^Att_Com_Regeneration_ability^/0;
 !!SN:W^Def_Com_Regeneration_ability^/0;
@@ -12014,32 +12015,35 @@ Close Dialouge
 !!VRv7080:C-1/-1/-1/-1/-1/-1/-1/-1/-1/-1;[initialize variables]
 !!BA:H0/?v7083;                         [get hero (commander) number - attacker]
 !!BA:H1/?v7085;                         [get hero (commander) number - defender]
-!!COv7083&v7083>-1:B0/?y1 T?v7088;      [check skill bits, get type - attacker]
-!!COv7085&v7085>-1:B0/?y2 T?v7089;      [check skill bits, get type - defender]
-!!VRv7084&v7083>-1:Sy1 &2048;           [check regeneration bit - attacker]
-!!VRv7086&v7085>-1:Sy2 &2048;           [check regeneration bit - defender]
-!!COv7083&v7083>-1/v7084=2048:B1/11/0;  [remove regeneration - attacker]
-!!COv7085&v7085>-1/v7086=2048:B1/11/0;  [remove regeneration - defender]
-!!SN&v7083>-1/v7084=2048:W^Att_Com_Regeneration_ability^/1;
-!!SN&v7085>-1/v7086=2048:W^Def_Com_Regeneration_ability^/1;
 
-!!COv7083&v7083>-1:B0/?y1 T?v7088;      [check skill bits, get type - attacker]
-!!COv7085&v7085>-1:B0/?y2 T?v7089;      [check skill bits, get type - defender]
-!!VRv7084&v7083>-1:Sy1 &256;            [check Block bit - attacker]
-!!VRv7086&v7085>-1:Sy2 &256;            [check Block bit - defender]
-!!COv7083&v7083>-1/v7084=256:B1/8/0;    [remove Block - attacker]
-!!COv7085&v7085>-1/v7086=256:B1/8/0;    [remove Block - defender]
-!!SN&v7083>-1/v7084=256:W^Att_Com_Block_ability^/1;
-!!SN&v7085>-1/v7086=256:W^Def_Com_Block_ability^/1;
+; Manage commander abilities
+!!VR(commanders[2]:y):Ci^battle_hero_0^/i^battle_hero_1^;
 
-!!COv7083&v7083>-1:B0/?y1 T?v7088;      [check skill bits, get type - attacker]
-!!COv7085&v7085>-1:B0/?y2 T?v7089;      [check skill bits, get type - defender]
-!!VRv7084&v7083>-1:Sy1 &4096;           [check death stare bit - attacker]
-!!VRv7086&v7085>-1:Sy2 &4096;           [check death stare bit - defender]
-!!COv7083&v7083>-1/v7084=4096:B1/12/0;  [remove death stare - attacker]
-!!COv7085&v7085>-1/v7086=4096:B1/12/0;  [remove death stare - defender]
-!!SN&v7083>-1/v7084=4096:W^Att_Com_Poison_ability^/1;
-!!SN&v7085>-1/v7086=4096:W^Def_Com_Poison_ability^/1;
+; If there is no hero on the defending side, assumes there is a commander (use -4 for all the commander of the defender's side)
+!!if&i^battle_hero_1^=(NO_HERO)/i^battle_owner_1^=(NO_PLAYER);
+  !!VR(commanders[1]):S-4;
+!!en;
+
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  ; Check if there is a commander on the side
+  !!if|(commanders[i])>(NO_HERO)/(commanders[i])=-4;
+    !!CO(commanders[i]):B0/?(abilities:y);
+
+    !!if&(abilities);                   [If the ability is not 0, it means there is a commander]
+      !!VR(sideStr:z):S^Att^;
+      !!VR(sideStr)&i=(BATTLE_RIGHT):S^Def^;
+
+      !!CO(commanders[i]):B1/8/?i^%(sideStr)_Com_Block_ability^; [Block]
+      !!CO(commanders[i])&i^%(sideStr)_Com_Block_ability^:B1/8/0;
+
+      !!CO(commanders[i]):B1/11/?i^%(sideStr)_Com_Regeneration_ability^; [Regeneration]
+      !!CO(commanders[i])&i^%(sideStr)_Com_Regeneration_ability^:B1/11/0;
+
+      !!CO(commanders[i]):B1/12/?i^%(sideStr)_Com_Poison_ability^; [Poison]
+      !!CO(commanders[i])&i^%(sideStr)_Com_Poison_ability^:B1/12/0;
+    !!en;
+  !!en;
+!!en;
 
 !!SN:W^Brute_Gold_Att^/0; !!SN:W^Brute_Gold_Def^/0;
 !!SN:W^Paladin_Experience_Att^/0; !!SN:W^Paladin_Experience_Def^/0;
@@ -12068,10 +12072,10 @@ Close Dialouge
 
 !!BMv7080&v7080>-1:T?y3 I?y4;           [get acting monster type and side]
 !!BMv7082&v7082>-1:F?y7 P?y8;           [get target's flags, position]
-!!VRy10&y3>=174/y3<=191/v7081>=6/v7081<=7/v7084=4096/y4=0:S0R99; [random roll - attacker]
-!!VRy11&y3>=174/y3<=191/v7081>=6/v7081<=7/v7086=4096/y4=1:S0R99; [random roll - defender]
-!!FU7073&y3>=174/y3<=191/v7081>=6/v7081<=7/v7084=4096/y4=0/y10<50:Py7/y8; [50% cast poison if commander with death stare attacked or shot - attacker]
-!!FU7073&y3>=174/y3<=191/v7081>=6/v7081<=7/v7086=4096/y4=1/y11<50:Py7/y8; [50% cast poison if commander with death stare attacked or shot - defender]
+!!VRy10&y3>=174/y3<=191/v7081>=6/v7081<=7/i^Att_Com_Poison_ability^/y4=0:S0R99; [random roll - attacker]
+!!VRy11&y3>=174/y3<=191/v7081>=6/v7081<=7/i^Def_Com_Poison_ability^/y4=1:S0R99; [random roll - defender]
+!!FU7073&y3>=174/y3<=191/v7081>=6/v7081<=7/i^Att_Com_Poison_ability^/y4=0/y10<50:Py7/y8; [50% cast poison if commander with death stare attacked or shot - attacker]
+!!FU7073&y3>=174/y3<=191/v7081>=6/v7081<=7/i^Def_Com_Poison_ability^/y4=1/y11<50:Py7/y8; [50% cast poison if commander with death stare attacked or shot - defender]
 
 **  retaliation attack
 !!BMv7082&v7082>-1:T?y3 I?y4 P?y5;      [get target monster type, side, position]
@@ -12081,14 +12085,14 @@ Close Dialouge
 !!VRy9&v7080>-1:&65536;                 [check for no retaliation]
 
 !!BMv7080&v7080>-1:F?y7 P?y8;           [get acting creature's flags, position]
-!!VRy10&y3>=174/y3<=191/v7081=6/v7084=4096/v7087>0/y4=0/y6>-1/y9=0:S0R99; [random roll - attacker]
-!!VRy11&y3>=174/y3<=191/v7081=6/v7086=4096/v7087>0/y4=1/y6>-1/y9=0:S0R99; [random roll - defender]
-!!FU7073&y3>=174/y3<=191/v7081=6/v7084=4096/v7087>0/y4=0/y10<50/y6>-1/y9=0:Py7/y8; [50% cast poison if commander with death stare retaliates - attacker]
-!!FU7073&y3>=174/y3<=191/v7081=6/v7086=4096/v7087>0/y4=1/y11<50/y6>-1/y9=0:Py7/y8; [50% cast poison if commander with death stare retaliates - defender]
+!!VRy10&y3>=174/y3<=191/v7081=6/i^Att_Com_Poison_ability^/v7087>0/y4=0/y6>-1/y9=0:S0R99; [random roll - attacker]
+!!VRy11&y3>=174/y3<=191/v7081=6/i^Def_Com_Poison_ability^/v7087>0/y4=1/y6>-1/y9=0:S0R99; [random roll - defender]
+!!FU7073&y3>=174/y3<=191/v7081=6/i^Att_Com_Poison_ability^/v7087>0/y4=0/y10<50/y6>-1/y9=0:Py7/y8; [50% cast poison if commander with death stare retaliates - attacker]
+!!FU7073&y3>=174/y3<=191/v7081=6/i^Def_Com_Poison_ability^/v7087>0/y4=1/y11<50/y6>-1/y9=0:Py7/y8; [50% cast poison if commander with death stare retaliates - defender]
 
 !!BU:C?y1;                              [check for end of battle]
-!!COv7083&v7083>-1/v7084=4096/y1=1:B1/12/1; [restore death stare - attacker]
-!!COv7085&v7085>-1/v7086=4096/y1=1:B1/12/1; [restore death stare - defender]
+!!COv7083&v7083>-1/i^Att_Com_Poison_ability^/y1=1:B1/12/1; [restore death stare - attacker]
+!!COv7085&v7085>-1/i^Def_Com_Poison_ability^/y1=1:B1/12/1; [restore death stare - defender]
 
 ** end of post-action trigger **
 !?FU7073;
@@ -33679,29 +33683,33 @@ New Commanders Section
   !!if|y1=6/y1=7;                       [if melee or shooting]
     !!MF:N?y4;                          [damage receiving stack]
     !!BMy4:I?y5;                        [Side index as for heroes (0:left, 1:right)]
-    !!BA:Hy5/?y99;                      [get hero by side index]
+    
     !!SN&y5=0:W^Att_Com_Block_ability^/?y10; [check if the commander actually has block ability]
     !!SN&y5=1:W^Def_Com_Block_ability^/?y10;    
-    !!FU|y99<0/y10=0:E;                 [Exit if no Hero or no block ability from commander]
-    !!BMy4:T?y7;                        [get creature type]
-    !!if&y7>=174/y7<=191;               [if any commander]
-      !!VRy90:S0R99;                    [make random roll]
-      !!VRy98:S30;                      [Chance to Block]
-      !!VRy97:S50;                      [Damage reduction]
-      !!if&y99=36;                      [if special hero]
-        !!HEy99:E?y80/?y81/1;           [get level of hero in case of Vey]
-        !!VRy98:Sy81:2+30 F30/100;      [Calc chance to block based on level]
-        !!VRy96:Sy81:2+50 F50/95;
-        !!VRy97:S100 -y96;              [Calc damage reduction based on level]
+
+    !!if&y10;
+      !!BMy4:T?y7;                        [get creature type]
+      !!if&y7>=174/y7<=191;               [if any commander]
+        !!VRy90:S0R99;                    [make random roll]
+        !!VRy98:S30;                      [Chance to Block]
+        !!VRy97:S50;                      [Damage reduction]
+        !!BA:Hy5/?y99;                    [get hero by side index]
+
+        !!if&y99=36;                      [if special hero]
+          !!HEy99:E?y80/?y81/1;           [get level of hero in case of Vey]
+          !!VRy98:Sy81:2+30 F30/100;      [Calc chance to block based on level]
+          !!VRy96:Sy81:2+50 F50/95;
+          !!VRy97:S100 -y96;              [Calc damage reduction based on level]
+        !!en;
+        !!FU&y90>=y98:E;                  [30% chance for success]
+        !!MF:F?y6;                        [Damage Dealt]
+        !!VRy6:*y97:100;                  [Reduce damage by 50%]
+        !!if&i^battle_isVisible^;
+          !!SN:P^CRUSDFND.wav^;           [play block sound]
+          !!BMy4:V84;                     [play commander block animation]
+        !!en;
+        !!MF:Fy6;                         [apply reduced damage]
       !!en;
-      !!FU&y90>=y98:E;                  [30% chance for success]
-      !!MF:F?y6;                        [Damage Dealt]
-      !!VRy6:*y97:100;                  [Reduce damage by 50%]
-      !!if&i^battle_isVisible^;
-        !!SN:P^CRUSDFND.wav^;           [play block sound]
-        !!BMy4:V84;                     [play commander block animation]
-      !!en;
-      !!MF:Fy6;                         [apply reduced damage]
     !!en;
   !!en;
 !!en;
@@ -33715,51 +33723,34 @@ New Commanders Section
 !!FU(ACM_Set_Com_Desc_in_battle):Py1;   [execute function locally]
 
 !?FU(ACM_Set_Com_Desc_in_battle);
+!!VRy30:S(FALSE);
+
 !!if&x1>=0/x1<=186;                     [If a valid battlefield position]
-  !!BU:Ex1/?y2; !!FU&y2=-1:E;           [get monster ID at position and exit if no monster]
-  !!BMy2:T?y3 I?y4;                     [get monster type and side index]
-  !!BHy4:N?y5;                          [Get hero or commander ID]
-  !!if&y3>=174/y3<=191/y5>=0;           [if any commander and a hero]
-    !!SN:W^Att_Com_Block_ability^/?y1;
-    !!COv7083&v7083>=0/y1=1:B1/8/1;     [give Block ability - attacker]
-    !!SN:W^Def_Com_Block_ability^/?y2;
-    !!COv7085&v7085>=0/y2=1:B1/8/1;     [give Block ability - defender]
+  !!BU:Ex1/?y2;                         [get monster ID at position and exit if no monster]
 
-    !!SN:W^Att_Com_Regeneration_ability^/?y1;
-    !!COv7083&v7083>=0/y1=1:B1/11/1;    [give regeneration - attacker]
-    !!SN:W^Def_Com_Regeneration_ability^/?y2;
-    !!COv7085&v7085>=0/y2=1:B1/11/1;    [give regeneration - defender]
+  !!if&y2>(NO_STACK);
+    !!BMy2:T?y3 I?y4;                     [get monster type and side index]
 
-    !!SN:W^Att_Com_Poison_ability^/?y1;
-    !!COv7083&v7083>=0/y1=1:B1/12/1;    [give Poison - attacker]
-    !!SN:W^Def_Com_Poison_ability^/?y2;
-    !!COv7085&v7085>=0/y2=1:B1/12/1;    [give Poison - defender]
+    !!if&y3>=174/y3<=191;               [if any commander]
+      !!FU(ACM_RestoreCommanderAbilities):P;
+
+      !!VRy30:S(TRUE);
+    !!en;
   !!en;
-!!el;
+!!en;
 
-!!SN:W^Att_Com_Block_ability^/?y1;
-!!COv7083&v7083>=0/y1=1:B1/8/0;         [remove Block ability - attacker]
-!!SN:W^Def_Com_Block_ability^/?y2;
-!!COv7085&v7085>=0/y2=1:B1/8/0;         [remove Block ability - defender]
-
-!!SN:W^Att_Com_Regeneration_ability^/?y1;
-!!COv7083&v7083>=0/y1=1:B1/11/0;        [remove regeneration - attacker]
-!!SN:W^Def_Com_Regeneration_ability^/?y2;
-!!COv7085&v7085>=0/y2=1:B1/11/0;        [remove regeneration - defender]
-
-!!SN:W^Att_Com_Poison_ability^/?y1;
-!!COv7083&v7083>=0/y1=1:B1/12/0;        [remove Posion - attacker]
-!!SN:W^Def_Com_Poison_ability^/?y2; 
-!!COv7085&v7085>=0/y2=1:B1/12/0;        [remove Posion - defender]
+!!FU(ACM_RemoveCommanderAbilities)&y30=(FALSE):P;
 
 !?FU(OnBeforeBattleAction);
+!!FU(ACM_RemoveCommanderAbilities):P;
 
-!!COv7083&v7083>=0:B1/8/0;              [remove Block ability - attacker]
-!!COv7085&v7085>=0:B1/8/0;              [remove Block ability - defender]
-!!COv7083&v7083>=0:B1/11/0;             [remove regeneration - attacker]
-!!COv7085&v7085>=0:B1/11/0;             [remove regeneration - defender]
-!!COv7083&v7083>=0:B1/12/0;             [remove Posion - attacker]
-!!COv7085&v7085>=0:B1/12/0;             [remove Posion - defender]
+!?FU(ACM_RemoveCommanderAbilities);
+!!COi^battle_hero_0^&i^Att_Com_Block_ability^:B1/8/0; [remove Block ability - attacker]
+!!CO-4&i^Def_Com_Block_ability^:B1/8/0; [remove Block ability - defender]
+!!COi^battle_hero_0^&i^Att_Com_Regeneration_ability^:B1/11/0; [remove regeneration - attacker]
+!!CO-4&i^Def_Com_Regeneration_ability^:B1/11/0; [remove regeneration - defender]
+!!COi^battle_hero_0^&i^Att_Com_Poison_ability^:B1/12/0; [remove Posion - attacker]
+!!CO-4&i^Def_Com_Poison_ability^:B1/12/0;[remove Posion - defender]
 
 ; New timing for restoring commander abilities
 ; by Archer30
@@ -33771,20 +33762,20 @@ New Commanders Section
 !?FU(ACM_OnBeforeBattleResult);
 !#VA(hook:x);
 
-!!SN:W^Att_Com_Block_ability^/?y1;
-!!COv7083&v7083>=0/y1=1:B1/8/1;       [give Block ability - attacker]
-!!SN:W^Def_Com_Block_ability^/?y2;
-!!COv7085&v7085>=0/y2=1:B1/8/1;       [give Block ability - defender]
+!!FU(ACM_RestoreCommanderAbilities):P;
 
-!!SN:W^Att_Com_Regeneration_ability^/?y1;
-!!COv7083&v7083>=0/y1=1:B1/11/1;      [give regeneration - attacker]
-!!SN:W^Def_Com_Regeneration_ability^/?y2;
-!!COv7085&v7085>=0/y2=1:B1/11/1;      [give regeneration - defender]
+!?FU(OnBeforeBattleReplay);
+!!FU(ACM_RestoreCommanderAbilities):P;
 
-!!SN:W^Att_Com_Poison_ability^/?y1;
-!!COv7083&v7083>=0/y1=1:B1/12/1;      [give Posion - attacker]
-!!SN:W^Def_Com_Poison_ability^/?y2; 
-!!COv7085&v7085>=0/y2=1:B1/12/1;      [give Posion - defender]
+!?FU(ACM_RestoreCommanderAbilities);
+!!COi^battle_hero_0^&i^Att_Com_Block_ability^:B1/8/1; [give Block ability - attacker]
+!!CO-4&i^Def_Com_Block_ability^:B1/8/1; [give Block ability - defender]
+
+!!COi^battle_hero_0^&i^Att_Com_Regeneration_ability^:B1/11/1; [give regeneration - attacker]
+!!CO-4&i^Def_Com_Regeneration_ability^:B1/11/1; [give regeneration - defender]
+
+!!COi^battle_hero_0^&i^Att_Com_Poison_ability^:B1/12/1; [give Posion - attacker]
+!!CO-4&i^Def_Com_Poison_ability^:B1/12/1;[give Posion - defender]
 
 ; Old timing is disabled due to later than commander leveling up procedures
 !?FU(OnAfterBattleAction);
