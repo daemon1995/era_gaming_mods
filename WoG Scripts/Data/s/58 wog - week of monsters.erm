@@ -73,11 +73,19 @@ ZVSE2
 !#DC(WOG_20_PLAYER_WEEK) = 3;
 !#DC(WOG_20_INFERNO_WEEK) = 4;
 
+*#DC(WEEK_TYPE_NONE) = 0;
+!#DC(WEEK_TYPE_MONSTER) = 1;
+*#DC(WEEK_TYPE_INFERNO) = 2;
+
+!#DC(MONTH_TYPE_NONE) = 0;
+*#DC(MONTH_TYPE_MONSTER) = 1;
+*#DC(MONTH_TYPE_PLAGUE) = 2;
+
  [Check if script is enabled: if it is, set flag i^wog_20_enabled^ to true]
 
 
 !?FU(WOG_20_Initialization);
-!!UN:P20/0 P20/?i^wog_20_enabled^;
+!!UN:P20/?i^wog_20_enabled^;
 !!FU&i^wog_20_enabled^<>(TRUE):E;
 
 !!VRi^wog_20_next_week_subtype^:S(NO_MON);
@@ -92,21 +100,26 @@ ZVSE2
 --------------------------------------------------------------------------------------
 !?FU(WOG_CreateERMHook)&i^wog_20_enabled^;
 !!SN:Ex1/1/5032547/(WOG_20_HOOK_OnNewWeekMessage);
+!!SN:Ex1/1/5016726/(WOG_20_HOOK_OnNewMonth);4C8C96
+!!SN:Ex1/1/5014935/(WOG_20_HOOK_OnNewWeek);004C8597
+
+5016726
+5014678
+
 
 !!UN:P200/?(isRefugeeSync:y);
 !!if&(isRefugeeSync);
   !!SN:Ex1/1/5015808/(WOG_20_HOOK_RefugeeIteration);
 !!en;
 
-!?FU(WOG_OnNewMonth)&i^wog_20_enabled^;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(edi:y) C(edi:y)/128578/2/d1; [add + 1 month to counter]
-!!UN:M0;                                                            [set defaut month type]
+!?FU(WOG_20_HOOK_OnNewMonth)&i^wog_20_enabled^; 4C8C96
+!!UN:C6916228/4/(MONTH_TYPE_NONE); // set default month type
+!!UN:C6911896/4/(MONTH_TYPE_NONE); // set monster as pikeman but it is set as 0 - default 
 
-!!SN:X?t/0;                                                         [skip all "new month" routine]
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5017339;                       [till adding new artifacts]
 
-!?FU(WOG_OnNewWeek)&i^wog_20_enabled^;
 
+!?FU(WOG_20_HOOK_OnNewWeek)&i^wog_20_enabled^; 004C8597
+*!IF:M^WOG_OnNewWeek^;
 !!VR(previousWeekType:y):Si^wog_20_week_type^; [strore global data to local to better code]
 !!VR(previousWeekSubType:y):Si^wog_20_week_subtype^;
 
@@ -142,27 +155,32 @@ ZVSE2
   !!FU(WOG_20_GetObjectToPlace):P(thisWeekType:y)/(thisWeekSubType:y)/?(fooPtr:y)/?(objectNumber:y)/?(customArg[0])/?(customArg[1]);
   !!if&(fooPtr);
     !!FU(WOG_20_PlaceNewObjects):P(fooPtr)/(thisWeekSubType:y)/(objectNumber)/(customArg[0])/(customArg[1]);
+    !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+    // set guard for the placed objects
+    !!SN:E5021904/(CALLCONV_THISCALL)/(gameMgr);
   !!en;
 !!en;
 
 !!VRi^wog_20_week_type^:S(thisWeekType);
 !!VRi^wog_20_week_subtype^:S(thisWeekSubType);
+!!FU(WOG_20_SyncOnlineData):D^wog_20_week_type^/i^wog_20_week_type^ D^wog_20_week_subtype^/i^wog_20_week_subtype^; [send data to all players]
 
 !!if&(thisWeekType)<>(NO_RES);
-  !!FU(WOG_20_SyncOnlineData):D^wog_20_week_type^/i^wog_20_week_type^ D^wog_20_week_subtype^/i^wog_20_week_subtype^; [send data to all players]
-  !!UN:C6911904/4/1 C6915148/4/1;     [-set week type && week subtype; to show proper message]
+  !!UN:C6911904/4/(WEEK_TYPE_MONSTER) C6915148/4/(thisWeekSubType);     [-set week type && week subtype; to show proper message]
 
-  !!VR(monId:y):S(thisWeekSubType);
+
   *!MA:G(monId)/?(growth:y);
   !!VR(additionalGrowth:y):S0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(this:y); // get this
-  !!UN:C(ebp:y)/-4/4/(this) C(ebp:y)/-12/4/(additionalGrowth:y) C(ebp:y)/-8/4/(NO_MON) C(ebp:y)/-16/4/(NO_MON); [this is necessary all another used only to set town creatures gorwth]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/-8/4/(thisWeekSubType);
+  *!VR(monId:y):S(thisWeekSubType);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(this:y); // get this
+  *!UN:C(ebp:y)/-4/4/(this) C(ebp:y)/-12/4/(additionalGrowth:y) C(ebp:y)/-8/4/(NO_MON) C(ebp:y)/-16/4/(NO_MON); [this is necessary all another used only to set town creatures gorwth]
   *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(monId:y);
 
   ; WARNING: This jump makes it possible to have recruited hero appearing from taverns
   ; Discussion: https://discord.com/channels/665742159307341827/1247341490401706014
-  !!SN:X?t/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5015087;[skip only mon init and imp week but add mon to towns] 4C862F
+  *!SN:X?t/0;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5015087;[skip only mon init and imp week but add mon to towns] 4C862F
 !!en;
 
 !?FU(WOG_20_SyncOnlineData);
@@ -218,6 +236,7 @@ ZVSE2
 
 
 ---------------------------------------------------------------------------------------
+// modify TEXT_BUFFER
 !?FU(WOG_20_HOOK_OnNewWeekMessage);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
 !!FU(WOG_20_GetWeekDescription):Pi^wog_20_week_type^/i^wog_20_week_subtype^/?(descrition:z);
