@@ -46,7 +46,8 @@ ZVSE2
 
 !#UN:P733/?(wogOption:y);
 !#UN&(wogOption):P881/(FALSE);     [Отключение опции 881 "Измененная прокачка героев", если включена опция 733 "Третий класс"]
-!#VRi^es_733_threeSkillsDlgEnabled^&(wogOption):S(TRUE);
+!#VRi^es_733_thirdClass_enabled^&(wogOption):S(TRUE);
+!#VRi^es_733_threeSkillsDlg_enabled^&(wogOption):S(TRUE);
 
 !?FU7884;                          [загрузка параметров из ini-файла]
 ** x1 - тип параметра (0 - типы втор. навыков, 1 - расовые коэффициенты, 2 - классовые коэффициенты)
@@ -108,7 +109,7 @@ ZVSE2
   !!SN:W^es_733_fs.%Y1.%Y2^/y4;    [сохранение запретного навыка]
 !!en;
 
-!?FU(OnHeroGainLevel)&i^es_733_threeSkillsDlgEnabled^; [при получении уровня героем]
+!?FU(OnHeroGainLevel)&i^es_733_threeSkillsDlg_enabled^; [при получении уровня героем]
 !!UN:P733/?y1;
 !!FU&y1=0:E;                       [Выход, если опция 733 не включена]
 !!UN:C6885977/1/?y1; if gosolo
@@ -322,12 +323,12 @@ ZVSE2
 !!VRx5:Sy7;
 !!VRx8:Sy10;           [возврат номера/ранга третьего навыка]
 
-!?FU7880;                          [установка расы/класса героя x16 0..8/0..2 в es_733_hr.%X16/es_733_hc.%X16]
-!!HEx16:B2/?y1 X?y3/?y4/d/d/d/d/d; [y1/y3/y4 - параметры героя]
+!?FU7880;                               [setting hero race/class x16 0..8/0..2 in es_733_hr.%X16/es_733_hc.%X16]
+!!HEx16:B2/?y1 X?y3/?y4/d/d/d/d/d;      [y1/y3/y4 - hero parameters]
 
-!!if&y3=0/y4=27;                   [для специалистов по Первой помощи]
-  !!HEx16:A3/0/1/1;                [удаление книги]
-  !!VRy5:S0;                       [y5 - номер текущего заклинания]
+!!if&y3=0/y4=(SKILL_FIRST_AID);         [for First Aid specialists]
+  !!HEx16:A3/0/1/1;                     [deleting a book]
+  !!VRy5:S0;                            [y5 - current spell number]
 
   ; For First Aid specialist, unlearn all the spells from the start of the map
   !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
@@ -335,12 +336,21 @@ ZVSE2
   !!en;
 !!en;
 
-!!VRy1::2;                         [y1 - раса героя]
-!!VRy2:S1;                         [y2 - класс героя, по умолчанию - странник]
-!!VRy2|y3=1/y3=4/y3=6/y3=7:S0;     [спецы по существам относятся к воинам]
-!!VRy2|y3=3:S2;                    [спецы по заклинаниям относятся к магам]
-!!SN&y3=0:W^es_733_st%Y4^/?y2;     [для спецов по втор.навыку класс определяется классом навыка]
-!!SN:W^es_733_hr.%X16^/y1 W^es_733_hс.%X16^/y2; [сохранение расы и класса героя]
+!!VRy1::2;                              [y1 - hero race]
+
+; If the third class is enabled
+!!if&i^es_733_thirdClass_enabled^;
+  !!VRy2:S1;                            [y2 - hero class, wanderer by default]
+  !!VRy2|y3=1/y3=4/y3=6/y3=7:S0;        [y2, creature specialists are warriors]
+  !!VRy2|y3=3:S2;                       [y2, spell specialists are mages]
+  !!SN&y3=0:W^es_733_st%Y4^/?y2;        [y2, for secondary skill specialists, the class is determined by the skill class]
+; If there are only 2 classes
+!!el;
+  !!VRy2:Sy1 %2;
+  !!VRy2&y2=2:S2;                       [Mage is 2]
+!!en;
+
+!!SN:W^es_733_hr.%X16^/y1 W^es_733_hс.%X16^/y2; [saving the hero's race and class]
 
 !?FU7881;                          [для героя x1 возврат навыка/ранга в x6/x7 случайного навыка ранга x2, типа x3, за исключением навыков x4 и x5]
 ** x8=0 - подсчитать в x7 кол-во подходящих навыков, x8>0 - вернуть в x6/x7 x8-й подходящий навык
@@ -382,7 +392,7 @@ ZVSE2
 !!VRx2&x16=27:Sv11;                [возврат общего кол-ва занятых навыков]
 
 ** Диалог повышения уровня
-!?FU(ES_BeforeHeroLevelUpDialog0); // диалог повышения уровня героя без выбора втор. навыков
+!?FU(ES_BeforeHeroLevelUpDialog0); // 4DACF9. dialogue for increasing the hero's level without choosing secondary skills 
 !!UN:P733/?y1;
 !!FU&y1=0:E;                       [Выход, если опция 733 не включена]
 
@@ -431,26 +441,14 @@ ZVSE2
 !!en;
 
 !!FU(Fun_GetHeroPortrait):Py1/1/35;     [z35 - название большого портрета героя]
+
+; Get skill level string
 !!VRz36:S^^;
-
-!!if&y6>0;
-  !!VRy30:Sy6-1;
-  !!FU(GetTextFileString):P^skilllev^/y30/?z36; [z36-z38 - ранги навыков]
-!!en;
-
+!!FU(ES_733_GetSkillLevelString)&y6>0:Py1/y3/y6/?z36;
 !!VRz37:S^^;
-
-!!if&y7>0;
-  !!VRy31:Sy7-1;
-  !!FU(GetTextFileString):P^skilllev^/y31/?z37;
-!!en;
-
+!!FU(ES_733_GetSkillLevelString)&y7>0:Py1/y4/y7/?z37;
 !!VRz38:S^^;
-
-!!if&y8>0;
-  !!VRy32:Sy8-1;
-  !!FU(GetTextFileString):P^skilllev^/y32/?z38;
-!!en;
+!!FU(ES_733_GetSkillLevelString)&y8>0:Py1/y5/y8/?z38;
 
 !!VRz39:S^^;
 !!UN&y3>=0:N4/39/y3;                    [z39-z41 - наименоания навыков]
@@ -458,12 +456,15 @@ ZVSE2
 !!UN&y4>=0:N4/40/y4;                    [...]
 !!VRz41:S^^;
 !!UN&y5>=0:N4/41/y5;                    [...]
-!!VRy13:Sy3 *3 +2 +y6;
-!!VRy13|y3<0/y6<1:S0;                   [y13 - кадр def'а для 1-го навыка]
-!!VRy14:Sy4 *3 +2 +y7;
-!!VRy14|y4<0/y7<1:S0;                   [y14 - кадр def'а для 2-го навыка]
-!!VRy15:Sy5 *3 +2 +y8;
-!!VRy15|y5<0/y8<1:S0;                   [y15 - кадр def'а для 3-го навыка]
+
+; Get skill icon index
+!!VRy13:S0;
+!!FU(ES_733_GetSkillIconIndex)&y3>=0/y6>=1:Py1/y3/y6/?y13;
+!!VRy14:S0;
+!!FU(ES_733_GetSkillIconIndex)&y4>=0/y7>=1:Py1/y4/y7/?y14;
+!!VRy15:S0;
+!!FU(ES_733_GetSkillIconIndex)&y5>=0/y8>=1:Py1/y5/y8/?y15;
+
 !!DL78:A22/11/z35/1;                            [установка портрета]
 !!DL78:A3/3/z30/1;                              [установка надписи "ИМЯ получает новый уровень"]
 !!DL78:A13/3/z31/1;                             [установка надписи "ПАРАМЕТР: +1"]
@@ -480,6 +481,18 @@ ZVSE2
 
 !!DL78:H22/z8 H51/z9 H52/z9 H53/z9;             [установка подсказок]
 !!DL78:S?v1;                                    [вызов диалога]
+
+!?FU(ES_733_GetSkillLevelString);
+!#VA(hero:x) (skill:x) (level:x) (result:x);
+
+!!VR(strInd:y):S(level) -1;
+!!FU(GetTextFileString):P^skilllev^/(strInd)/?(skillLevelStr:z);
+!!VR(result):Z(skillLevelStr);
+
+!?FU(ES_733_GetSkillIconIndex);
+!#VA(hero:x) (skill:x) (level:x) (result:x);
+
+!!VR(result):S(skill) *3 +2 +(level);
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=78/i^mouse_action^=(MOUSE_LMB_PRESSED);                          [в диалоге нажата ЛКМ (12)]
 !!SN&i^mouse_item^=51:W^es_733_s1^/?y1 W^es_733_l1^/?y2; [y1/y2 - выбранный навык/ранг]
@@ -512,18 +525,17 @@ ZVSE2
 !!en;
 
 ** Имена классов (с)пасибо igrik'у
-!?FU(OnStartOrLoad);
-!!UN:P733/?y1;
-!!FU&y1=0:E;                                    [Выход, если опция 733 не включена]
+; Here we create the hook in this file instead of using FU(ES_CreateERMHook) for script compatibility
+!?FU(OnStartOrLoad)&i^es_733_thirdClass_enabled^;
+!!SN:L^erm_hooker.era^/?(ermHooker:y);
+!!FU&(ermHooker)=0:E;
 
-!!SN:L^EraPlugins\erm_hooker.era^/?y1;          [проверка плагина]
-!!FU&y1=0:E;                                    [выход, если плагина нет]
+!!SN:A(ermHooker)/^SetHook^/?(setHook:y);
 
-!!SN:Ay1/^SetHook^/?y2;                         [y2 - адрес функции SetHook]
-!!SN:Ey2/1/5083661/7875;
-!!SN:Ey2/1/5093760/7874;
-!!SN:Ey2/1/5094903/7874;
-!!SN:Ey2/1/5119462/7873;
+!!SN:E(setHook)/1/5083661/7875;
+!!SN:E(setHook)/1/5093760/7874;
+!!SN:E(setHook)/1/5094903/7874;
+!!SN:E(setHook)/1/5119462/7873;
 
 !?FU7875;
 !!SN:X?y1/0;
@@ -548,7 +560,7 @@ ZVSE2
 !!VRy3:Sy1 +24;
 !!UN:Cy3/4/y4;
 
-; Use only ert here, json is not supported
+; Use only strings with static address here
 !?FU7876;
 !!UN:Cx1/4/?y1;
 !!VRy1:+26;
@@ -558,20 +570,29 @@ ZVSE2
 !!SN:E7824928/1/y3;
 !!VRx2:Sv1;                             [возврат ссылки на название класса]
 
-!#UN:P733/?v9;                          [v9 - состояние опции 733]
-!#VRz1&v9>0:S^Data\s\option 733 - third class.ini^; [z1 - имя ini-файла]
-!#VRz2&v9>0:S^ss types^;                [z2 - секция ini-файла]
-!#DO7884/0/27/1&v9>0:P0;                [Загрузка типов втр. навыков]
-!#VRz2&v9>0:S^rates^;                   [z2 - секция ini-файла]
-!#DO7884/0/8/1&v9>0:P1;                 [Загрузка расовых коэффициентов]
-!#DO7884/9/11/1&v9>0:P2;                [Загрузка классовых коэффициентов]
-!#VRz2&v9>0:S^class skills^;            [z2 - секция ini-файла]
-!#UN&v9>0:N6/3/1/2/1;
-!#VRv4&v9>0:Vz3;  [v4 - числовое значение параметра 1 - шанс выпадения классового навыка]
-!#SN&v9>0:W^es_733_ClassSkillChance^/v4;[...]
-!#DO7884/0/26/1&v9>0:P3;                [Загрузка классовых навыков]
-!#VRz2&v9>0:S^forbidden skills^;        [z2 - секция ini-файла]
-!#DO7884/0/26/1&v9>0:P4;                [Загрузка запретных навыков]
-!#DO7880/0/155/1&v9>0:P;                [установка рас, классов и названий классов героев]
+!?FU(ES_733_Initialization);
+!!UN:P733/?(wogOption:y);               [состояние опции 733]
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VRz1:S^Data\s\option 733 - third class.ini^; [z1 - ini-file name]
+!!VRz2:S^ss types^;                     [z2 - ini-file section]
+!!DO7884/0/27/1:P0;                     [Loading third skill types]
+!!VRz2:S^rates^;                        [z2 - ini-file section]
+!!DO7884/0/8/1:P1;                      [Loading racial coefficients]
+!!DO7884/9/11/1:P2;                     [Loading class coefficients]
+!!VRz2:S^class skills^;                 [z2 - ini-file section]
+!!UN:N6/3/1/2/1;
+!!VRv4:Vz3;                             [v4 - numerical value of the parameter 1 - class skill drop chance]
+!!SN:W^es_733_ClassSkillChance^/v4;     [...]
+!!DO7884/0/26/1:P3;                     [Loading class skills]
+!!VRz2:S^forbidden skills^;             [z2 - ini file section]
+!!DO7884/0/26/1:P4;                     [Loading forbidden skills]
+!!DO7880/0/155/1:P; [setting races, classes and hero class names]
+
+!#FU(ES_733_Initialization):P;
+
+; Turn off option 733 if both sub-options are disabled
+!?FU(OnAfterErmInited);
+!!UN&i^es_733_thirdClass_enabled^<>(TRUE)/i^es_733_threeSkillsDlg_enabled^<>(TRUE):P733/(FALSE);
 
 ** end
