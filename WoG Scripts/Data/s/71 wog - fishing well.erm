@@ -67,14 +67,14 @@ ZVSE2
 ** pre-sets random (human) choices so re-loading game won't change results
 
 Flags Used in this Script: 1-6
-Variables Used in this Script: v300-v305,v308,v998-v1000,z1-z2,z300-z303
+Variables Used in this Script: v301-v305,v308,v998-v1000,z1-z2,z300-z303
 (& z356-z357 by JHV, 10/1/2007)
 Functions Used in this Script: FU1100-FU1110, (no longer uses FU14000)
 Dialogues Used in this script: 7-9
 !#DC(WOG_OPT_FISHING_WELL) = 107;
 -------------------------------------------------------------------------------
  (setup hint texts for JHV version)
-; igrik's fix (не было проверки на включенность скрипта для описаний)
+; igrik's fix (there was no check for script inclusion for descriptions)
 !?FU(WOG_107_Initialization);
 !!UN:P(WOG_OPT_FISHING_WELL)/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
@@ -126,12 +126,8 @@ Dialogues Used in this script: 7-9
 
 !!PO952:V1/y-99; save spell !
   [Generate random number from 0-144 for monster]
-!!VRv300:S0 R140; [Random number 0..140: v300]
-!!VRv300&v300>=122:+1; [Add 1 if 122 or higher]
-!!VRv300&v300>=124:+1; [Add 1 if 124 or higher]
-!!VRv300&v300>=126:+1; [Add 1 if 126 or higher]
-!!VRv300&v300>=128:+1; [Add 1 if 128 or higher]
-!!PO952:Tv300; save monster !
+!!FU(WOG_107_GetRandomMonster):P?y30;
+!!PO952:Ty30; save monster !
 --------------------------------------------------------------------------------
 ; Reset all the fish-out wells every month
 !?FU(OnEveryDay)&i^timerMonthDay^=1/i^timerDay^>1/i^timerOnce^;
@@ -166,14 +162,15 @@ Dialogues Used in this script: 7-9
 
 !!if&999; [Ask if hero wishes to fish in the well]
 
-  !!HE-1:W?y-1; [Get hero's current movement points: y-1]
+  !!HE(CURRENT_HERO):W?y-1/1; [Get hero's current movement points: y-1]
 
 
   !!if&y-1>0;
     !!IF:Q3/^%T(wog.107.visit.question)^;
+
     !!if&3;
       !!VRy-1:-5000 F0/d; [Subtract 5000 from y-1: y-1][If less than 0, set y-1 to 0: y-1]
-      !!HE-1:Wy-1;  [Reduce non-AI hero's movement points by 5000 if he/she stopped to fish]
+      !!HE(CURRENT_HERO):Wy-1;  [Reduce non-AI hero's movement points by 5000 if he/she stopped to fish]
       //replaced after MP reducing to battle save compatibility
       !!FU(WOG_107_Main):P;  [If hero has enough movement and wishes to fish, call function 1100]
     !!en;
@@ -191,7 +188,11 @@ Dialogues Used in this script: 7-9
 !!FU(WOG_GetRandomSeedByCoord):Pv998/v999/v1000/?y-1;
 !!PO998:V3/?y1 V3/d1;
 !!VRy-1:+y1 Rd/y-1;
-!!VRy5:S0 R3; random ! 0-3 (obscure, monster, chest, tunnel)
+
+!!FU(WOG_CheckRandomMap):P?y30;
+!!VRy31:Sy30 +2;
+!!VRy5:R0/0/y31; random ! 0-3 (obscure, monster, chest, tunnel)
+
 !!PO998:N?y6; bit flags
 !!VRy7:Sy6%2; bit flags mod 2, =1 if bit 0 set
 !!VRy8:Sy7*-1+y6%4; bit flags - bit 0 mod 4, =2 if bit 1 set
@@ -199,22 +200,26 @@ Dialogues Used in this script: 7-9
 !!VRy10:Sy7+y8+y9*-1+y6; bit flags - bits 0, 1 & 2, =8 if bit 3 set
 !!VRy1:S7+y5; index to y7-y10
 !!VRy2:Syy1; =0 if option y5 not done
-!!VRy5&y2<>0/y10=0:S3;
-!!VRy5&y2<>0/y9=0:S2;
-!!VRy5&y2<>0/y8=0:S1;
-!!VRy5&y2<>0/y7=0:S0;
+
+!!if&y2<>0;
+  !!VRy5&y30/y10=0:S3;
+  !!VRy5&y9=0:S2;
+  !!VRy5&y8=0:S1;
+  !!VRy5&y7=0:S0;
+!!en;
 
 !!FU1101&y5=0:Py-1; [obscure result]
 **FU1102&y1>=3/y1<=4:P; [If y1 = 3-4, call function 1102 - loose coins]
 !!FU1103&y5=2:Py-1; [iron chest]
 !!FU1104&y5=1:Py-1; [monster]
-!!FU1107&y5=3:Py-1; [tunnel]
+!!FU1107&y5=3:Py-1; [tunnel - works for random maps only]
 
 ------------------------------------------------------------------------------------------
 
 !?FU1101;  [Start of obscure fishing result Function]
 (JHV version:  set well to fished status)
 !#VA(usedY[4]:y);
+
 !!PO998:N?y1;  get "position N number" of current position
 !!VRy1:+1; set "obscure fishing" done
 !!PO998:Ny1;
@@ -225,9 +230,6 @@ Dialogues Used in this script: 7-9
 !!VRy1:S0 R30; [y1 = random ! from 0-30]
 
 !!if&y1>=0/y1<=17;
-  
-
-
   !!VRz-2&y1=0:S^..\data\s\pic\sandwich.jpg^;
   *!VRz-1&y1=1:Sz107006; [Boot]
   *!VRz-5&y1=1:Sz107063; [Old boot]
@@ -262,7 +264,6 @@ Dialogues Used in this script: 7-9
   *!VRz-1&y1=11:Sz107016; [Echoes]
   *!VRz-5&y1=11:Sz107073; [Spookies]
   !!VRz-2&y1=11:S^..\data\s\pic\echoes.jpg^;
-
   *!VRz-1&y1=13:Sz107018; [Hot Day]
   *!VRz-5&y1=13:Sz107077; [Hot sun]
   !!VRz-2&y1=13:S^..\data\s\pic\hotday.jpg^;
@@ -279,13 +280,12 @@ Dialogues Used in this script: 7-9
   *!VRz-5&y1=17:Sz107081; [Electric eel]
   !!VRz-2&y1=17:S^..\data\s\pic\eel.jpg^;
 
-
   !!VR(zInd:y):Sy1 +107005;
   !!VR(zIndSec:y):Sy1 +107062;
   !!VRz-1:Sz(zInd); 
   !!VRz-5:Sz(zIndSec);
-  !!if&y1=12;
 
+  !!if&y1=12;
     !!VRz-6:Sz107075; [Brave dragon]
     !!VRz-7:Sz107076; [Silly warlock]
     !!VRz-2:S^..\data\s\pic\tales1.jpg^;
@@ -293,7 +293,6 @@ Dialogues Used in this script: 7-9
     !!VRz-4:S^..\data\s\pic\tales3.jpg^;
   !!en;
 !!en;
-
 
 !!VRz-1& y1=19:Sz107024; [Rainbow fish]
 !!VRz-5& y1=19:Sz107082; [Rainbow fish]
@@ -374,11 +373,17 @@ Dialogues Used in this script: 7-9
 !!IF&1/y1>=25/y1<=27/y4>0/-2/1000:E1/7; [If refuse to sell your troops, display this instead]
 !!IF&-1/y1>=25/y1<=27/y4>0/-2/1000:M^%Z-1^; [Refuse to sell troops, standard dialogue]
 
-!!FU1105&y1>=28:P;   [Get monster to be rescued by hero]
-!!UN&y1>=28:N3/z301/v300/0; [Assign monster name to z301]
-!!IF&y1>=28/1000:Q1/21/v300/1/z107035;
-!!HE-1&y1>=28/1000:C2/v300/1/1;  [Add monster for human]
-!!HE-1&y1>=28/-1000:C2/v300/1/0; [Add monster for AI]
+!!if&y1>=28;
+  !!FU(WOG_107_GetRandomMonster):P?y30;[Get monster to be rescued by hero]
+  !!SN:H^monname^/y30/0/?z301; [Assign monster name to z301]
+
+  !!if&1000;
+    !!IF:Q1/21/y30/1/z107035;
+    !!HE(CURRENT_HERO):C2/y30/1/1;  [Add monster for human]
+  !!el;
+    !!HE(CURRENT_HERO):C2/y30/1/0; [Add monster for AI]
+  !!en;
+!!en;
 
 ------------------------------------------------------------------------------------------
 
@@ -523,22 +528,27 @@ Dialogues Used in this script: 7-9
 !!VRy1:+2; set "monster fishing" done
 !!PO998:Ny1;
 
-!!PO998:T?v300; get pre-set monster !
+!!PO998:T?y30; get pre-set monster !
 !!VRy1:S1 R4;  [Set y1 to random number from 1 to 5 - number of monsters that appear]
-!!VRy2:Sy1 *65536 +v300; [Set y2 to monster type/number for message display purposes]
+!!VRy2:Sy1 *65536 +y30; [Set y2 to monster type/number for message display purposes]
 !!IF&1000:Q1/21/y2/1/z107050;
-!!HE-1:Tv998/v999/v1000/v300/y1;  [Start a battle with hero vs y1 of type v300 monsters]
+!!HE-1:Tv998/v999/v1000/y30/y1;  [Start a battle with hero vs y1 of type y30 monsters]
 
 ------------------------------------------------------------------------------------------
 
-!?FU1105;  [Start of get monster ! Function]
+!?FU(WOG_107_GetRandomMonster);  [Start of get monster ! Function]
+!#VA(result:x);
 
   [Generate random number from 0-144 for monster]
-!!VRv300:S0 R140; [Random number 0..140: v300]
-!!VRv300&v300>=122:+1; [Add 1 if 122 or higher]
-!!VRv300&v300>=124:+1; [Add 1 if 124 or higher]
-!!VRv300&v300>=126:+1; [Add 1 if 126 or higher]
-!!VRv300&v300>=128:+1; [Add 1 if 128 or higher]
+!!VR(result):R0/(MON_PIKEMAN)/(MON_TROLL); [Random number 0..144: (result)]
+
+; Add 1 if 122/124/126/128
+!!if|(result)=122/(result)=124/(result)=126/(result)=128;
+  !!VR(result):+1; 
+; Add 4 if neutral dragons
+!!el&(result)>=(MON_AZURE_DRAGON)/(result)<=(MON_RUST_DRAGON);
+  !!VR(result):+4;
+!!en;
 
 ------------------------------------------------------------------------------------------
 
