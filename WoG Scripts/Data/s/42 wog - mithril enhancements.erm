@@ -269,7 +269,12 @@ entrance squares. Do not use this with another script that might do the same
     !!FU(WOG_36_UpgradeObject)|(type)=(OBJ_UNIVERSITY):P?(dlgShown)/(type)/4;                        [University]
 
     !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_ONE_WAY_ENTRANCE):P(OBJ_MONOLITH_ONE_WAY_EXIT)/(subtype);
-    !!FU(WOG_36_CheckMonolithExit)&(type)=(OBJ_MONOLITH_TWO_WAY):P(OBJ_MONOLITH_TWO_WAY)/(subtype); [Monolith (with instruction on which type and what hero]
+
+    !!if&(type)=(OBJ_MONOLITH_TWO_WAY);
+      !!FU&(mode)=0/i^key_ctrl^:E;      [Exit if it is a Ctrl-right-clicking, compatibility with external scripts]
+
+      !!FU(WOG_36_CheckMonolithExit):P(OBJ_MONOLITH_TWO_WAY)/(subtype); [Monolith (with instruction on which type and what hero]
+    !!en;
 
     !!FU(WOG_36_ChangeWitchHutSkill)&(type)=(OBJ_WITCH_HUT):P(type)/2; [Witch Hut]
 
@@ -777,6 +782,8 @@ entrance squares. Do not use this with another script that might do the same
 !!VR(lithFound:y):S(FALSE);
 
 ; loop through all the liths
+!!FU(WOG_GetAdvMapScreenOffset):P?(offsetX:y)/?(offsetY:y);
+
 !!re i;
   !!UN:U(objType)/(objSubtype)/-1/(x)/(y:y)/(z:y);
   !!br&(x)<0;
@@ -785,14 +792,16 @@ entrance squares. Do not use this with another script that might do the same
   !!co&(objType)=(OBJ_MONOLITH_TWO_WAY)/(x)=v4/(y)=v5/(z)=v6;
 
   !!UN:S(x)/(y)/(z)/(CURRENT_PLAYER)/2; [open shroud]
-  !!UN:L(x)/(y)/(z)/1500;               [Center view for 1.5s]
+  !!VR(lithX:y):S(x) -(offsetX);
+  !!VR(lithY:y):S(y) -(offsetY);
+  !!UN:L(lithX)/(lithY)/(z)/1500;       [Center view for 1.5s]
   !!VR(lithFound):S(TRUE);
 !!en;
 
 ; Move the camera back
 !!if&(lithFound);
-  !!VR(currX:y):Sv4 -i^wog_screenOffsetX^;
-  !!VR(currY:y):Sv5 -i^wog_screenOffsetY^;
+  !!VR(currX:y):Sv4 -(offsetX);
+  !!VR(currY:y):Sv5 -(offsetY);
   !!UN:L(currX)/(currY)/v6/10;          [move back]
 !!en;
 
@@ -800,7 +809,8 @@ entrance squares. Do not use this with another script that might do the same
 !!POv998/v999/v1000:N?y-5;   (check if Advanced University)
 !!FU&y-5<>2:E;               (exit trigger if not an Advanced University)
 
-!!VRy-1:S28; !!VRy-2:S28;    (set skill variables out of range)
+!!VRy-1:S28;
+!!VRy-2:S28;                 (set skill variables out of range)
 !!VRy-3:S0;                  (init trigger-based var y-3)
 !!IF:V2/0;                   (init flag 2)
 !!OW:R-1/6/?y-4;             (get owner gold)
