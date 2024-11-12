@@ -10,12 +10,12 @@ ZVSE2
 ** Порядок выбора города из нескольких подходящих, определяется порядком в списке городов игрока,
 ** который может быть изменен при использовании WoG-опци 244 "Сортировка списка героев и городов"
 ** Существа "8го уровня" воинской обязанности не подлежат и попадают в города героя стандартным для них путем.
+; Level 8 creatures won't move to towns as they are too gorgours to handle.
 
 
-!?FU(OnEveryDay)&i^timerWeekday^=7;
-!!UN:P994/?(wogOption:y);
-!!FU&(wogOption)<>(TRUE):E;             [выход, если опция 994 не включена]
+!#UN:P994/?i^es_994_enabled^; [Here we use a global variable so it can be compatible with scripts]
 
+!?FU(OnEveryDay)&i^timerWeekday^=7/i^es_994_enabled^;
 !!FU(ES_994_CheckForAllDwellings):P(OBJ_CREATURE_GENERATOR_1) P(OBJ_CREATURE_GENERATOR_4);
 
 !?FU(ES_994_CheckForAllDwellings);
@@ -27,7 +27,7 @@ ZVSE2
 
 !!VR(x:y):S-1;
 
-; loop through all the towns
+; loop through all the dwellings
 !!re k;
   !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
   !!br&(x)<0;
@@ -46,9 +46,12 @@ ZVSE2
         !!UN:T(townType)/(level)/0/?(nonUpgMon:y); [тип существа для найма в подходящем городе (баз.)]
         !!UN:T(townType)/(level)/1/?(upgMon:y);
 
-        !!if|(nonUpgMon)=(mon)/(upgMon)=(mon); [если существо возможно нанять в городе (не нейтрал)]
-          !!VR(dwell:y):S(level) +30;
-          !!VR(dwell)&(upgMon)=(mon):+7; [номер необходимого здания для перемещения существ]
+        !!if|(nonUpgMon)=(mon)/(upgMon)=(mon);
+          !!if&(nonUpgMon)=(mon);
+            !!VR(dwell:y):S(level) +30;
+          !!el;
+            !!VR(dwell):S(level) +37;
+          !!en;
 
           !!re j/0/(lastTown);
             !!OW:W(owner)/j/?(townId:y);
