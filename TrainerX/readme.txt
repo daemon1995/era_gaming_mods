@@ -14,7 +14,6 @@ Press F3 to enable/disable object scanner (edit heroes/player, move hero etc). T
 	Alt-click to repeat the last action. 
 	Alt+num to quickly change options.
 Press F6 to use additional cheats.
-Press X to execute erm commands.
 
 Hotkey for battlefiled:
 Press F2 to change the type of special terrains.
