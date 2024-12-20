@@ -4,6 +4,8 @@ ZVSE2
 ; Requires: ERA 3.3+, Era Erm Framework
 
 ; Lizard Warriors retaliate ranged attacks with shooting.
+; Note that OnBattleActionEnd is not the best timing for ranged retaliation as in the original game, retaliation takes place before the second strike.
+; A better timing is a hook at 0x43FF7E, but the script has to be rewritten.
 
 
 !?FU(OnAfterErmInstructions);
@@ -63,8 +65,17 @@ ZVSE2
         !!SN:E4466192/(CALLCONV_THISCALL)/(stackPtr)/0;
 
         !!if&v1;
+          ; Save and change data
+          !!BMi:F?(flags:y);
+          !!VR(hasAttacksTwice:y):S(flags) &(MON_FLAG_ATTACKS_TWICE);
+          !!BMi&(hasAttacksTwice):Fd~(MON_FLAG_ATTACKS_TWICE);
+          *!BMi:G-95/?(savedPos1:y)/d G-95/(pos)/d; [Required for Magogs and Liches]
+          ; Shoot
           !!FU(BattleStack_Shoot):P(stack)/i^battle_acting_stack^;
           !!BM(stack):Rd-1;
+          ; Restore
+          !!BMi&(hasAttacksTwice):Fd|(MON_FLAG_ATTACKS_TWICE);
+          *!BMi:G-95/(savedPos1)/d;
         !!en;
       !!en;
     !!en;

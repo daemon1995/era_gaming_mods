@@ -903,6 +903,52 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4604712;
 !!en;
 
+// Fix messing up spell immunity checks for stack exp spells
+; WoG doesn't use the native way to check spell immunity for stack exp spells, this script fixes its behaviours.
+; Sorceress spell uses the same function, yet it seems to respect correct spell immunity, thus we igonre here.
+; Discussion: http://wforum.heroes35.net/showthread.php?tid=4218&pid=139198#pid139198
+!?FU(gem_CreateERMHook);
+!#VA(hook:x);
+
+!!SN:E(hook)/1/7715330/(gem_OnCheckWoGSpellImmunity);
+
+!?FU(gem_OnCheckWoGSpellImmunity);
+!#VA(hook:x);
+
+; Get spell id
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/24/4/?(spell:y);
+*!UN:C42232368/4/?(spell:y);            [This method would be 60 if Sorceress]
+
+; Exit if sorceress (-1 for random spells)
+!!FU&(spell)=-1:E;
+
+; Get the target structure
+!!UN:C(ebp)/12/4/?(targetStruct:y);
+
+; Get the current stack structure and the real side (reverse if hypnotized)
+!!UN:C(COMBAT_MANAGER)/4/?(combatManager:y);
+!!SN:E7712518/(CALLCONV_CDECL)/(combatManager); [export to v1]
+!!VR(currStruct:y):Sv1;
+!!UN:C(currStruct)/244/4/?(side:y);
+!!UN:C(currStruct)/648/1/?(hypnotizeDuration:y);
+!!VR(side)&(hypnotizeDuration)>0:X(TRUE);
+
+; Check if the stack accepts the spell
+!!SN:E5914512/(CALLCONV_THISCALL)/(combatManager)/(spell)/(side)/(targetStruct)/1/1;
+!!VR(result:y):Sv1;
+
+; Export the result
+!!UN:C(ebp)/-4/4/(result);
+
+; Set up i
+; Does not work for Sorceress here (but not needed)
+!!UN:C42232368/4/-2;
+
+; Jump over all the messy code
+!!SN:X?t/0;
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/7717164; 75C12C
+
 
 ** Shackles of war (retreat vs neutrals bttles with SW)
 !?FU(OnBeforeBattleAction)|i^battle_hero_1^<=(NO_HERO)/i^wog_72_randHeroActive^; [Works when the defender has no hero OR is a random hero (WoG Scripts)]
