@@ -67,13 +67,8 @@ ZVSE2
 
     !!FU(srm_SetMageGuildDLGTemplate):P?z1; [Get the filename of rebuild dialogue]
     !!DL(SRM_DLG_MAGE_GUILD):Nz1;
-    *!if&(TRUE);
-      
-    *!el;
-    
-    *!en;
     !!FU(srm_ManageMageGuildDLGItems):P(SRM_DLG_MAGE_GUILD)/(townId); [Customise the dialogue]
-    !!FU(srm_set_text_lang):P;          [set text based on the mod list]
+
     *!FU(srm_check_spellbook)&999:P;                                               [now it's checked when the DLG opened;]
 
     !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
@@ -91,14 +86,15 @@ ZVSE2
     !!FU(gem_DlgItem_Show):P(SRM_ITEM_BACKGROUND_ANIM)/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!FU(gem_DlgItem_Show):P7/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!DL(SRM_DLG_MAGE_GUILD):S1;
-    [AFTER DLG WAS CLOSED]
-    // cancel standaed action
-    !!SN:X?y99/0;
+    [AFTER DLG CLOSES]
+    // cancel standard action
+    !!SN:X?t/0;
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6109572;
 
 
 !?FU(OnCustomDialogEvent)&x1=(SRM_DLG_MAGE_GUILD)/v999>=0/v999<=42;
   !#VA(spellId:y) (townId:y) (spellPlace:y) (isSpellResearched:y);
+
   !!FU&v1000<>(MOUSE_LMB_PRESSED)/v1000<>(MOUSE_RMB_PRESSED):E;
 
   !!FU&i^srm_spell_%v999^<100:E;
@@ -120,7 +116,6 @@ ZVSE2
     !!VRi^srm_ask_research_leave_dl^:S(FALSE);
 
     !!FU(srm_ask_player_for_researching):P(spellId)/(townId)/(currPlayer)/(clickedPlayer);
-
 
     !!if|i^player_decided_research_spells^/i^srm_spell_research_is_confirmed^;
 
@@ -1037,7 +1032,7 @@ ZVSE2
   !!en;
 
 
-************  AFTER ADDING ALL SPELLS TO RESEARH IN THE ARRAYS DO THIS:  ************************* 
+************  AFTER ADDING ALL SPELLS TO RESEARCH IN THE ARRAYS DO THIS:  ************************* 
 
   !!re (guildLevel:y)/0/4;                                                                             [after all the spells loops - loop all mg lvls]
     !!br&(guildLevel)=3/(townType)=(TOWN_STRONGHOLD);  
@@ -1108,11 +1103,26 @@ ZVSE2
   !!VR(maxGuildLevel)|(townType)=(TOWN_STRONGHOLD)/(townType)=(TOWN_FORTRESS):-2;
   !!DL(SRM_DLG_MAGE_GUILD):E42/0; disa
 
+  !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlgPtr:y);
+  !!UN:C(dlgPtr)/(UNC_INT)/?(dlg:y);
+
   !!if&(guildLevel);
 
     !!re i/0/4; loop all gm's
       !!CA-1:Gi/?(guildLevelSpellsAmount:y);
       !!VR(maxScrollsOnLevel:y):S5 -i +(hasLibrary);
+
+      ; Mark all the spells in the level as researched if there is not enough spell in the level (banned by map editor or scripts)
+      ; by Archer30
+      !!if&(guildLevelSpellsAmount)<(maxScrollsOnLevel);
+        !!re k/0/(guildLevelSpellsAmount)/1/-1;
+          !!VR(itemId:y):Si *10 + k;
+          !!VR(coverId:y):S200 +(itemId);
+          !!FU(gem_DlgItem_Position):P(itemId)/?(x:y)/?(y:y)/d/(dlg);
+          !!VR(y):-5;
+          !!FU(gem_DlgItem_Position):P(coverId)/(x)/(y)/d/(dlg);
+        !!en;
+      !!en;
 
       !!re j/0/(maxScrollsOnLevel);
         !!VR(spellPlace:y):Si *10 +j;
@@ -1162,7 +1172,6 @@ ZVSE2
 
     !!SN:Mi^srm_town%(townId)_researched_slots^/?(arraySize:y);
     !!FU(srm_researched_scrolls_def_replacement)&(arraySize):P(townId)/(arraySize);
-
   !!en;
 
 !?FU(srm_researched_scrolls_def_replacement);
@@ -1180,12 +1189,6 @@ ZVSE2
     !!VR(y):-5;
     !!FU(gem_DlgItem_Position):P(coverId)/(x)/(y)/d/(dlg);
   !!en;
-
-!?FU(srm_set_text_lang);
-  !!VRs^srm_lang^:S^eng^;
-  !!UN:J8/1/^era rus.pac^; !!VRs^srm_lang^&1:S^rus^;
-  !!UN:J8/5/^-1000 egc - Archer.erm^;
-  !!VRs^srm_lang^&1:S^chn^;
 
 !?FU(srm_check_spellbook);
   !#VA(guestHeroHasSpellBook:y) (garnHeroHasSpellBook:y);
@@ -1262,7 +1265,6 @@ ZVSE2
 !!VRi^srm_townsAmount^:+1;
 !!UN:C(SPELL_TABLE_POINTER)/4/?(spellsTable:y);
 !!FU(srm_SetUpTown):P(townId)/(spellsTable);
-
 
 ; Function for setting the filename of the DL template of the main dialogue
 !?FU(srm_SetMageGuildDLGTemplate);

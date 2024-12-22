@@ -908,9 +908,9 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 ; Sorceress spell uses the same function, yet it seems to respect correct spell immunity, thus we igonre here.
 ; Discussion: http://wforum.heroes35.net/showthread.php?tid=4218&pid=139198#pid139198
 !?FU(gem_CreateERMHook);
-!#VA(hook:x);
+!#VA(setHook:x);
 
-!!SN:E(hook)/1/7715330/(gem_OnCheckWoGSpellImmunity);
+!!SN:E(setHook)/1/7715330/(gem_OnCheckWoGSpellImmunity);
 
 !?FU(gem_OnCheckWoGSpellImmunity);
 !#VA(hook:x);
@@ -941,13 +941,122 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 ; Export the result
 !!UN:C(ebp)/-4/4/(result);
 
-; Set up CS_Spells table (i=0)
+; Set up i=0 (for CS_Spells table)
 ; Does not work for Sorceress here (but not needed)
-!!UN:C42232368/4/-2;
+!!UN:C(ebp)/-16/4/0;
 
 ; Jump over all the messy code
 !!SN:X?t/0;
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/7717164; 75C12C
+
+// Update the number of stacks when a summoned stack is killed
+; In the orignal H3, the total number of stacks allowed is 20 for one side of the battlefield
+; Once we reaches 20 stacks and have some summoned stacks killed, we still can't summon more units
+
+; At the moment both solutions are disabled. They do not work.
+
+; First approach (disbaled for now)
+; This approach is safe but the efficiency probably isn't the best - Not really, it gives false positive (summoned stack can be invisible)
+!?FU(gem_CreateERMHook);
+!#VA(setHook:x);
+
+!!FU:E;
+
+!!SN:E(setHook)/1/5896030/(gem_OnCheckIfPossibleToClone);
+!!SN:E(setHook)/1/5896307/(gem_OnCheckIfPossibleToSummon); 59F873
+
+!?FU(gem_OnCheckIfPossibleToClone);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(usedStackQty:y);
+
+; Double check if the all 20 stacks are occupied
+!!if&(usedStackQty)>=20;
+  ; Get the side
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+  !!UN:C(ebp)/-20/4/?(side:y);
+
+  ; Check
+  !!FU(gem_CheckIfPossibleToCreateMoreStacks):P(side)/?(result:y);
+
+  ; If there is any slot that is killed/summoned, treat it as possible to summon
+  !!if&(result);
+    !!SN:X?t/0;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5896113;
+  !!en;
+!!en;
+
+!?FU(gem_OnCheckIfPossibleToSummon);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDI)/4/?(side:y);
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(combatManager:y);
+!!VR(offset:y):S(side) *(UNC_INT) +21692; 54BC
+!!UN:C(combatManager)/(offset)/4/?(usedStackQty:y);
+
+; Double check if the all 20 stacks are occupied
+!!if&(usedStackQty)>=20;
+  ; Check
+  !!FU(gem_CheckIfPossibleToCreateMoreStacks):P(side)/?(result:y);
+
+  ; If there is any slot that is killed/summoned, treat it as possible to summon
+  !!if&(result);
+    !!SN:X?t/0;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5896317;
+  !!en;
+!!en;
+
+!?FU(gem_CheckIfPossibleToCreateMoreStacks);
+!#VA(side:x) (result:x);
+
+!!VR(result):S(FALSE);
+
+!!VR(startInd:y):S(side) *(BATTLE_STACKS_PER_SIDE);
+!!VR(endInd:y):S(startInd) +19;
+
+!!re i/(startInd)/(endInd);
+  !!BMi:F?(flags:y);
+
+  !!VR(isSummoned:y):S(flags) &(MON_FLAG_SUMMONED);
+  !!VR(isDead:y):S(flags) &(MON_FLAG_DIED);
+
+  !!br&(isSummoned)/(isDead);
+!!en;
+
+!!VR(result)&i<=(endInd):S(TRUE);
+
+; Second Approach (disbaled for now)
+; This solution doesn't work for some reason
+; This approach assumes that combat manager->54BC isn't used anywhere except for Summon Elemental/Clone
+; When a stack of summoned elemental is killed, the stack slot is free to be recycled, yet the total number of stack (combat manager->54BC) isn't updated
+; This script updates 54BC when needed
+!?FU(gem_CreateERMHook);
+!#VA(setHook:x);
+
+!!FU:E;
+
+!!SN:E(setHook)/1/4472412/(gem_HOOK_BattleStackKilled); 443E5C
+
+!?FU(gem_HOOK_BattleStackKilled);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackStruct:y);
+!!FU&(stackStruct)=(NULL):E;
+
+!!UN:C(stackStruct)/132/4/?(flags:y);
+!!VR(isSummoned:y):S(flags) &(MON_FLAG_SUMMONED);
+
+!!if&(isSummoned);
+  !!UN:C(stackStruct)/244/4/?(side:y);
+  !!VR(offset:y):S(side) *(UNC_INT) +21692; 54BC
+  !!UN:C(COMBAT_MANAGER)/(offset)/4/d-1;
+!!en;
+
+; Update the current stack quantity when summoning a new stack no matter whether the stack id is a new one or not
+!?FU(OnGameEnter);
+!!FU:E;
+
+!!UN:C4692776/2/(OPCODE_NOP_2);
 
 
 ** Shackles of war (retreat vs neutrals bttles with SW)
