@@ -4044,7 +4044,7 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
 
 !?BF&1000;                              [Combat Start]
 
-!!FU:E;                                 [Disabled and Replaced with Nobility]
+!!FU:E;                                 [Disabled and Replaced by Nobility]
 !!BA:H0/?y1;                            [Attacker]
 !!HEy1:S5/?y3;                          [Navigation]
 !!SN:W^H3_Navigation_0_Hero%Y1^/?y11;   [Checke ob der Held Master Navigation hat und Speichere in y11]
@@ -4107,7 +4107,7 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
   !!en;
 !!en;
 
-; Replaced with Archer30's new implementation as it's been reported dealing extra damage even when the stack had no morale
+; Replaced by Archer30's new implementation as it's been reported dealing extra damage even when the stack had no morale
 !?MF1;                                  [*Physical Combat *]
 !!FU:E;
 
@@ -10772,32 +10772,66 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 *Trigger Spell at attack position after damage animation for melee attacks*
 ; Friendly units are immune to Fire Ball casted by Fire Mage, while hostile units are vulnerable (piecing spell immunity)
 
-; Part of Archer30's new implementation - disabled, because can't see how damage is calculated here
-; Ideally use only FU(ACM_OnAfterMelee) because you don't need MF1 to sort out the attacking and defending stack
-*?FU(ACM_OnAfterMelee);
-*#VA(atkStack:x) (defStack:x);
+; Archer30's new implementation
+!?FU(ACM_OnAfterMelee);
+!#VA(atkStack:x) (defStack:x);
+!#VA(usedY[60]:y);
 
-*!BM(atkStack):N?(atkNum:y);
-*!BM(defStack):N?(defNum:y);
-*!FU|(atkNum)<=0/(defNum)<=0:E;
+!!BM(atkStack):N?(atkNum:y);
+!!BM(defStack):N?(defNum:y);
+!!FU|(atkNum)<=0/(defNum)<=0:E;
 
 ; Exit if not commander
-*!BM(atkStack):T?(atkType:y);
-*!FU|(atkType)<(MON_COMMANDER_FIRST_A)/(atkType)>(MON_COMMANDER_LAST_D):E;
+!!BM(atkStack):T?(atkType:y);
+!!FU|(atkType)<(MON_COMMANDER_FIRST_A)/(atkType)>(MON_COMMANDER_LAST_D):E;
 
 ; Exit if no hero
-*!BM(atkStack):I?(atkSide:y);
-*!FU&i^battle_hero_%(atkSide)^=(NO_HERO):E;
+!!BM(atkStack):I?(atkSide:y);
+!!FU&i^battle_hero_%(atkSide)^=(NO_HERO):E;
 
-*!VR(hero:y):Si^battle_hero_%(atkSide)^;
+!!VR(hero:y):Si^battle_hero_%(atkSide)^;
 
 ; Exit if not Fire Mage
-*!FU(Check_Com_Masteries):P(hero)/?y51/?y52/?y53/?y54/0/0/0/0/0/?y55; [Pass Hero Number and return Class and Spell Damage modifier]
-*!SN:W^Commander_%Y50_Ancient_FireMage^/?y90;  
-*!VRy54&y90=1:S9;                     [Check for Ancient Fire Mage and set active]
+!!FU(Check_Com_Masteries):P(hero)/?y51/?y52/?y53/?y54/0/0/0/0/0/?y55; [Pass Hero Number and return Class and Spell Damage modifier]
+!!SN:W^Commander_%Y50_Ancient_FireMage^/?y90;  
+!!VRy54&y90=1:S9;                       [Check for Ancient Fire Mage and set active]
+!!FU&y54<>9:E;                          [Exit if commander class is not Fire Mage]  
+
+; Determine the spell
+!!VRy21&y51=0:S21; !!VRy56&y51=0:S60;   [Set Spell to Fireball]
+!!VRy21&y51=1:S22; !!VRy56&y51=1:S90;   [Set Spell to Inferno if Mastery is enabled]
+
+!!BM(defStack):P?y3;
+
+!!FU(H3_Calc_Normal_Spell_Damage):Py50/?y59/?y58/1/y21/0; [Pass Hero Number and Give Back Damage in y59 and Extra Damage Option and Spell Number]
+!!SSy21:E3/?y57;                        [get extra spell damage]
+!!VRy8:S8*y61*y59:100*y55:100-y56;      [Damage is 8*Spell Power from Hero, +%Hero Spell Damage +%CommanderSpell Damage - base spell offset for clean calculation]
+!!VRy8&y8<0:S0;                         [Value cannot be below zero to prevent negative damage, it will apply base damage instead]
+!!SSy21:E3/y8;                          [set new damage for Fireball to also show damage when hitting several targets]
+
+; Cast the spell
+!!VRi^acm_fireMageSpell^:Sy21;
+!!VRi^acm_fireMageStack^:Sy2;
+!!FU(ACM_GetActualStackSide):Py2/?i^acm_fireMageSide^;
+
+!!BMy2:Cy21/y3/3/3/0;                   [Cast Expert Spell at Stack Position]
+
+!!VRi^acm_fireMageSpell^:S0;
+!!VRi^acm_fireMageStack^:S0;
+!!VRi^acm_fireMageSide^:S0;
+
+!!SSy21:E3/y57;                         [Revert damage to value from before]
+
+; Increase kill count with 1/3 chance
+!!if&y52<y53;
+  !!VR(random:y):R0/0/2;                [Generate Random Number]
+  !!SN&(random)=0:W^Commander_Kill_Counter_%Y50^/d1; [Increase counter by one with each attack and 33% chance]
+!!en;
 
 
+; Replaced by Archer's new implementation
 !?MF1;
+!!FU:E;
 
 !!UN:C42149568/4/?y10;                  [Physical Damage]
 !!if&y10=4462398;                       [Only run when melee]
@@ -10811,6 +10845,7 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 
 
 !?FU(ACM_Event_AfterMeeleDamage);
+!!FU:E;
 
 !!SN:W^FireMage_Attacking_Stack^/?y4;
 
@@ -10855,24 +10890,6 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
   !!en;
 !!en;
 
-
-!?BA0;
-!!SN:W^Magog_Fireball_Enable^/1;        [Quick Fix to Make Fire Mage Immune because Magog script got disaled in Assembly update]
-
-!?MF1;
-*When attacking with Fire Mage make own units immune vs damage*
-; Note: This script won't work if Magog's are able to retaliate in range (due to using i^battle_acting_side^ to check shooting side)
-!!SN:W^Magog_Fireball_Enable^/?y1;
-!!FU&y1=0:E;
-
-!!MF:N?y4;                              [Get defending stack number]
-!!BG:E?y30;
-!!FU&y4=y30:E;
-
-!!BMy4:I?y6;                            [Get defending stack side]
-!!UN:C42149568/4/?y10;                  [Judgement basis (028326c0)]
-!!MF&y10=4454752/i^battle_acting_side^=y6:E0; [Disable taking damage if Magog Fireball and own team]
-
 ; Archer30's new implementation
 !?FU(OnDwarfMagicResistance_Quit)&i^acm_fireMageSpell^;
 !!MR:S?(spell:y);
@@ -10887,8 +10904,7 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
   !!MR:F0;
 !!en;
 
-
-; Replaced with Archer30's new implementation
+; Replaced by Archer30's new implementation
 !?MR2;                                  [Magogs Fireball-Cast that comes with Stack Expierence doesnt damage own troops]
 !!FU:E;
 
@@ -10912,6 +10928,21 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
     !!MR&y11=y55:F100;                  [Disable Magic damage for attacker side from Fireball]
   !!en;
 !!en;
+
+// Disable Magog's friendly fire
+; Archer30: Hi Perry you know that this script has nothing to do with Fire Mage, right?
+!?FU(OnAfterErmInstructions);
+!!SN:W^Magog_Fireball_Enable^/1;        [Quick Fix to Make Fire Mage Immune because Magog script got disaled in Assembly update]
+
+!?MF1&i^Magog_Fireball_Enable^;
+; Note: This script won't work if Magog's are able to retaliate in range (due to using i^battle_acting_side^ to check shooting side)
+!!MF:N?y4;                              [Get defending stack number]
+!!BG:E?y30;
+!!FU&y4=y30:E;
+
+!!BMy4:I?y6;                            [Get defending stack side]
+!!UN:C42149568/4/?y10;                  [Judgement basis (028326c0)]
+!!MF&y10=4454752/i^battle_acting_side^=y6:E0; [Disable taking damage if Magog Fireball and own team]
 
 ****************************************************************************************************
 
@@ -10996,7 +11027,7 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 !!FU(ACM_Com_Kill_Counter_Fkt):Pi^battle_hero_%(atkSide)^; [If any commander go to kill count adder function]
 
 
-; Replaced with Archer's implementation
+; Replaced by Archer's implementation
 !?MF1;
 !!FU:E;
 
@@ -13727,7 +13758,7 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 
 !!FU(Count_Set_Pieces):Py1/0/0/0/0/0/0/0/0/0/0/0/0/0/?y96; [Count Set Pieces function]
 !!HEy1:S11/?y40;                        [Check for Eagle Eye Skill]
-!!if&y40>0/y96=999;                    [Disabled and replaced with better code]
+!!if&y40>0/y96=999;                    [Disabled and replaced by better code]
 ****Eagle Eye Set Bonus Attacker
 !!DO(AC_Function_61)/10/69/1:Py1/1;     [Count Spells After Combat Attacker Hero]
 !!SN:W^Attacker_Eagle_Eye_Spells^/?y10;
@@ -13761,7 +13792,7 @@ x1 - hero id, x2 - spell id, x3 - returns increased damage
 !!if&y49=0;                            [*only run when Magic Specialists Mod is not active to prevent errors]
 !!HEy2:S11/?y41;
 !!FU(Count_Set_Pieces):Py2/0/0/0/0/0/0/0/0/0/0/0/0/0/?y96; [Count Set Pieces function]
-!!if&y41>0/y96=999;                    [Disabled and replaced with better code]
+!!if&y41>0/y96=999;                    [Disabled and replaced by better code]
 ****Eagle Eye Set Bonus Defender
 !!DO(AC_Function_61)/10/69/1:Py2/2;     [Count Spells Before Combat Defender Hero]
 !!SN:W^Defender_Eagle_Eye_Spells^/?y11;
