@@ -1,0 +1,91 @@
+ZVSE2
+
+**************************
+**** Ring of Oblivion ****
+**************************
+// Script by Archer30 and JackSlater
+// To-do: Restrain the use of Attract Dead Souls ability (should disable it completely)
+// Warning: This script must be executed later than 6 wog - random heroes, the disabling Necromancy bit must be later than any other script changes Necromancy
+; Set up battle variables
+; After random hero set up
+!?FU(OnAfterBattleSetup);
+!!VRi^tum_%(ART_RING_OF_OBLIVION)_equipped^:S(FALSE);
+
+!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
+  !!HEi^battle_hero_%i^:A2/(ART_RING_OF_OBLIVION)/(has:y)/?(equipped:y);
+
+  !!if&(equipped);
+    !!VRi^tum_%(ART_RING_OF_OBLIVION)_equipped^:S(TRUE);
+    !!br;
+  !!en;
+!!en;
+
+; Get BM:B values
+; BM:B values would be restored on battle replay
+!?FU(OnSetupBattlefield)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!BMi:B?i^tum_%(ART_RING_OF_OBLIVION)_initNum_%i^;
+!!en;
+
+; Note: This must be executed later than anything else (especially ACM)!
+; Disable Necromancy
+!?FU(tum_OnCalcNecromancyPower)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/0;
+
+; Set up BM:B on after melee/battle action end to prevent reviving by spells or vampirism (doesn't work on ghost)
+; This script assume that the creature with Vampirism don't have ranged retaliation
+; This script also assume that there is no creature can damage its melee attacker before the attack happens (it's ok after, like Fire Shield, Ice Cloak)
+; For physical damage (including BM:K)
+!?FU(tum_OnAfterDoPhysicalDamage)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(currentStackCount:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(killCount:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(currentStackPtr:y);
+
+!!UN:C(currentStackPtr)/84/4/d(killCount);
+!!UN:C(currentStackPtr)/244/4/?(side:y) C(currentStackPtr)/248/4/?(currentStack:y);
+
+!!VR(currentStack)&(side)=(BATTLE_RIGHT):+(BATTLE_STACKS_PER_SIDE);  [For right side]
+
+; Set beforeBattleMonCount to currentMonCount - it prevents casting resurection/animate and vampire reviving
+!!BM(currentStack):B(currentStackCount);
+
+; For spells
+!?FU(OnBattleActionEnd)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!BG:A?(action:y);
+
+!!if|(action)=(BATTLE_ACTION_HERO_CAST)/(action)=(BATTLE_ACTION_MONSTER_CAST);
+  !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+    !!BMi:N?(num:y) B(num);
+  !!en;
+!!en;
+
+; Restore BM:B values before showing battle result dialogue
+; If the stack has more quantity than it was before the battle, reduce it to the same amount (for ghosts)
+!?FU(tum_OnBeforeBattleResult)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!BMi:Bi^tum_%(ART_RING_OF_OBLIVION)_initNum_%i^ N?(num:y);
+  !!BMi&(num)>i^tum_%(ART_RING_OF_OBLIVION)_initNum_%i^:Ni^tum_%(ART_RING_OF_OBLIVION)_initNum_%i^;
+
+  !!SN:W^tum_%(ART_RING_OF_OBLIVION)_initNum_%i^;
+!!en;
+
+
+; Prevent Phoenix resurrects
+!?FU(tum_OnBattleStackKilled)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackPtr:y);
+!!FU&(stackPtr)=(NULL):E;
+!!UN:C(stackPtr)/244/4/?(side:y) C(stackPtr)/248/4/?(stackOfSide:y);
+!!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackOfSide);
+!!FU|(stackId)<=(NO_STACK)/(stackId)>(BATTLE_STACK_LAST):E;
+!!BM(stackId):E0 Fd|(MON_FLAG_SACRIFICED);
+
+
+!?FU(OnAfterBattle)&i^tum_%(ART_RING_OF_OBLIVION)_equipped^;
+!!VRi^tum_%(ART_RING_OF_OBLIVION)_equipped^:S(FALSE);
+
+
+; Fix - if player loads the game during the battle
+!?FU(OnAfterLoadGame);
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  !!SN:W^tum_%(ART_RING_OF_OBLIVION)_initNum_%i^;
+!!en;

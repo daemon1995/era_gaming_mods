@@ -1,0 +1,143 @@
+Z VSE2
+// moved from erm to cpp
+
+
+!#DC(OBJ_HOTA_WATERING_PLACE_TYPE)         = 63;
+!#DC(OBJ_HOTA_WATERING_PLACE_SUBTYPE)      = 76;
+
+
+// Visiting for human players
+!?OB(OBJ_HOTA_WATERING_PLACE_TYPE)/(OBJ_HOTA_WATERING_PLACE_SUBTYPE)&1000;
+!!HE(CURRENT_HERO):N?(hero:y);
+
+// If object is already visited
+!!if&i^wateringPlace_%(hero)^;
+  !!IF:M^%T(jsMod.advObject.63.76.visitedDlg)^;
+  !!FU:E;
+!!en;
+
+// On visit
+!!IF:Q2^%T(jsMod.advObject.63.76.notVisitedDlg)^;
+!!if&2;
+  !!HE(CURRENT_HERO):W0;
+  !!HE(CURRENT_HERO):Gd1000;
+  !!VRi^wateringPlace_%(hero)^:S(TRUE);
+!!en;
+
+
+// Visiting for AI
+!?OB(OBJ_HOTA_WATERING_PLACE_TYPE)/(OBJ_HOTA_WATERING_PLACE_SUBTYPE)&-1000;
+*!PM998:V?(notVisited:y); 0 - visited, 1 - not visited
+
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU&i^wateringPlace_%(hero)^:E;
+!!HE(CURRENT_HERO):W0;
+!!HE(CURRENT_HERO):Gd1000;
+!!VRi^wateringPlace_%(hero)^:S(TRUE);
+
+
+// Hint
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
+!!FU|(objType)<>(OBJ_HOTA_WATERING_PLACE_TYPE)/(objSubtype)<>(OBJ_HOTA_WATERING_PLACE_SUBTYPE):E;
+
+; Show hint when there is no active hero, no visiting status
+!!OW:A(CURRENT_PLAYER)/?(hero:y);
+
+!!if&(hero)=(NO_HERO);
+  !!MM:M^%T(jsMod.advObject.63.76.name)^;
+!!el;
+  ; Show hint when any hero is active, set status
+  !!SN:O?(x)/?(y)/?(z);
+  !!PO(x)/(y)/(z):N?(id:y);
+
+  !!if&i^wateringPlace_%(hero)^;
+    !!MM:M^%T(jsMod.advObject.63.76.name) %T(jsMod.advObject.common.visited)^;
+  !!el;
+    !!MM:M^%T(jsMod.advObject.63.76.name) %T(jsMod.advObject.common.notVisited)^;
+  !!en;
+!!en;
+
+
+// Right-clicking dialogue
+!?FU(OnAdventureMapRightMouseClick);
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y) C?(struct:y);
+*!IF:L^%(struct:y)^;
+
+!!if&(objType)=63;
+  !!PM(x)/(y)/(z):V?(notVisited:y); 0 - visited, 1 - not visited
+  !!IF:L^%(notVisited:y)^;
+!!en;
+
+
+!!FU|(objType)<>(OBJ_HOTA_WATERING_PLACE_TYPE)/(objSubtype)<>(OBJ_HOTA_WATERING_PLACE_SUBTYPE):E;
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
+; Disable standard Rmc-Hint
+!!CM:R0;
+
+; Show RMB msg when there is no active hero, no visiting status
+!!OW:A(CURRENT_PLAYER)/?(hero:y);
+
+!!if&(hero)=(NO_HERO);
+  !!IF:M0/(MSG_TYPE_POPUP)/^%T(jsMod.advObject.63.76.nameRmc)^;
+!!el;
+  ; Show RMB msg when any hero is active, set status
+  !!SN:O?(x)/?(y)/?(z);
+  !!PO(x)/(y)/(z):N?(id:y);
+
+  !!if&i^wateringPlace_%(hero)^;
+    !!IF:M0/(MSG_TYPE_POPUP)/^%T(jsMod.advObject.63.76.nameRmc)%T(gem.endl)%T(gem.endl)%T(jsMod.advObject.common.visited)^;
+  !!el;
+    !!IF:M0/(MSG_TYPE_POPUP)/^%T(jsMod.advObject.63.76.nameRmc)%T(gem.endl)%T(gem.endl)%T(jsMod.advObject.common.notVisited)^;
+  !!en;
+!!en;
+
+
+// Clean up visiting
+!?FU(OnEveryDay);
+!!OW:Hi^timerOwner^/1;
+!!if&v1;
+  !!re i/2/v1/1/1;
+    !!VR(heroId:y):Svi;
+    !!if&i^wateringPlace_%(heroId)^;
+      !!VRi^wateringPlace_%(heroId)^:S0;
+      !!HE(heroId):Wd1000;
+      !!HE(heroId):Gd-1000;
+      // Need to update screen
+      *!SN&(result:y):E4295984/(CALLCONV_THISCALL)/x1/x2; 00418D30
+    !!en;
+  !!en;
+!!en;
+
+
+!?FU(WOG_OnResetHero);
+; x1 - heroId
+!!VRi^wateringPlace_%x1^:S0;
