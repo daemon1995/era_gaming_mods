@@ -1,0 +1,148 @@
+Z VSE2
+// executed in plugin RMG_Customizer
+
+
+!#DC(OBJ_HOTA_GAZEBO_TYPE)                 = 63;
+!#DC(OBJ_HOTA_GAZEBO_SUBTYPE)              = 75;
+
+
+// Give custom numbers to objects
+!?FU(OnEveryDay)&i^timerOnce^/i^timerDay^=1;
+!!VR(x:y):S-1;
+!!VR(gazeboId:y):S0;
+
+!!re i;                                 [loop through all objects]
+  !!UN:U(OBJ_HOTA_GAZEBO_TYPE)/(OBJ_HOTA_GAZEBO_SUBTYPE)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+  !!OB(x)/(y)/(z):C(gazeboId);
+  !!VR(gazeboId:y): +1;
+!!en;
+
+
+// Visiting for human players
+!?OB(OBJ_HOTA_GAZEBO_TYPE)/(OBJ_HOTA_GAZEBO_SUBTYPE)&1000;
+!!OB998:C?(id:y);
+!!HE(CURRENT_HERO):N?(hero:y);
+
+// If object is already visited
+!!if&i^gazebo_%(id)_%(hero)^;
+  !!IF:M^%T(jsMod.advObject.63.75.visitedDlg)^;
+  !!FU:E;
+!!en;
+
+// If hero owner has less than 1000 gold
+!!HE(CURRENT_HERO):O?(playerNum:y);
+!!OW:R(playerNum)/(RES_GOLD)/?(goldAmount:y);
+!!if&(goldAmount)<1000;
+  !!IF:M^%T(jsMod.advObject.63.75.notVisitedFailedDlg)^;
+  !!FU:E;
+!!en;
+
+// On visit
+!!IF:Q2/17/2000/2^%T(jsMod.advObject.63.75.notVisitedDlg)^;
+!!if&2;
+  //TODO: need to call func for exp receiving? hook getLearningHero/getLearningPower
+  !!HE(CURRENT_HERO):Ed2000;
+  !!OW:R(playerNum)/(RES_GOLD)/d-1000;
+  !!VRi^gazebo_%(id)_%(hero)^:S(TRUE);
+!!en;
+
+
+// Visiting for AI
+!?OB(OBJ_HOTA_GAZEBO_TYPE)/(OBJ_HOTA_GAZEBO_SUBTYPE)&-1000;
+!!OB998:C?(id:y);
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU&i^gazebo_%(id)_%(hero)^:E;
+//AI receives exp anyway without spending gold
+//TODO: need to call func for exp receiving? hook getLearningHero/getLearningPower
+!!HE(CURRENT_HERO):Ed2000;
+!!VRi^gazebo_%(id)_%(hero)^:S(TRUE);
+
+
+// Hint
+!?FU(OnAdvMapTileHint);
+!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!#VA(objType:x) (objSubtype:x);    Type and subtype of object. For active hero it's object under hero.
+!#VA(tileX:x) (tileY:x) (tileZ:x); Real tile coordinates.
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
+!!FU|(objType)<>(OBJ_HOTA_GAZEBO_TYPE)/(objSubtype)<>(OBJ_HOTA_GAZEBO_SUBTYPE):E;
+
+; Show hint when there is no active hero, no visiting status
+!!OW:A(CURRENT_PLAYER)/?(hero:y);
+
+!!if&(hero)=(NO_HERO);
+  !!MM:M^%T(jsMod.advObject.63.75.name)^;
+!!el;
+  ; Show hint when any hero is active, set status
+  !!SN:O?(x)/?(y)/?(z);
+  !!PO(x)/(y)/(z):N?(id:y);
+
+  !!if&i^gazebo_%(id)_%(hero)^;
+    !!MM:M^%T(jsMod.advObject.63.75.name) %T(jsMod.advObject.common.visited)^;
+  !!el;
+    !!MM:M^%T(jsMod.advObject.63.75.name) %T(jsMod.advObject.common.notVisited)^;
+  !!en;
+!!en;
+
+
+// Right-clicking dialogue
+!?FU(OnAdventureMapRightMouseClick);
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y);
+!!FU|(objType)<>(OBJ_HOTA_GAZEBO_TYPE)/(objSubtype)<>(OBJ_HOTA_GAZEBO_SUBTYPE):E;
+
+; Exit if the location has been occupied by a hero
+!!UN:P904/(TRUE) P905/(FALSE);
+!!HE(x)/(y)/(z):E?(exp:y);
+!!UN:P905/?(hasError:y);
+!!UN:P904/(FALSE);
+
+!!if&(hasError);
+  !!UN:P905/(FALSE);
+!!el;
+  !!FU:E;
+!!en;
+
+; Disable standard Rmc-Hint
+!!CM:R0;
+
+; Show RMB msg when there is no active hero, no visiting status
+!!OW:A(CURRENT_PLAYER)/?(hero:y);
+
+!!if&(hero)=(NO_HERO);
+  !!IF:M0/(MSG_TYPE_POPUP)/^%T(jsMod.advObject.63.75.nameRmc)^;
+!!el;
+  ; Show RMB msg when any hero is active, set status
+  !!SN:O?(x)/?(y)/?(z);
+  !!PO(x)/(y)/(z):N?(id:y);
+
+  !!if&i^gazebo_%(id)_%(hero)^;
+    !!IF:M0/(MSG_TYPE_POPUP)/^%T(jsMod.advObject.63.75.nameRmc)%T(gem.endl)%T(gem.endl)%T(jsMod.advObject.common.visited)^;
+  !!el;
+    !!IF:M0/(MSG_TYPE_POPUP)/^%T(jsMod.advObject.63.75.nameRmc)%T(gem.endl)%T(gem.endl)%T(jsMod.advObject.common.notVisited)^;
+  !!en;
+!!en;
+
+
+// Compatibility with single visit bonus sites reset each month
+!?FU(OnEveryDay)&i^timerOnce^/i^timerMonthDay^=1/i^timerDay^>1;
+!!UN:P123/?(resetOn:y);
+!!FU&(resetOn)<>(TRUE):E;
+
+!!re (id:y)/0/33;
+  !!re (hero:y)/(HERO_FIRST)/(HERO_LAST_WOG);
+    !!VRi^gazebo_%(id)_%(hero)^:S(FALSE);
+  !!en;
+!!en;

@@ -1,0 +1,456 @@
+ZVSE2
+
+
+; The stack side would be reverted if the stack is hypnotized
+!?FU(js_GetActualStackSide);
+!#VA(stack:x) (side:x);
+
+!!BM(stack):I?(side) G(SPELL_HYPNOTIZE)/?(hypnotizeTurns:y)/d;
+!!VR(side)&(hypnotizeTurns)>0:X(TRUE);
+
+
+!?FU(js_GetSecSkillValue);
+!#VA(skillId:x) (skillLvl:x) (skillValue:x) (typeValue:x);
+; typeValue = 0 - integer
+; typeValue = 1 - percent (float*100)
+
+!!FU|(skillLvl)<=0/(skillLvl)>3:E;
+
+!!FU&(skillId)=0:E;                                                              // Pathfinding
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=1:P6547944/(skillLvl)/?(skillValue);  // Shooting
+!!VR(typeValue)&(skillId)=1:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=2:P6548072/(skillLvl)/?(skillValue);  // Logistics
+!!VR(typeValue)&(skillId)=2:S1;
+
+!!FU(js_GetSecSkillValueInteger)&(skillId)=3:P6547928/(skillLvl)/?(skillValue);  // Scouting
+!!VR(typeValue)&(skillId)=3:S0;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=4:P6548024/(skillLvl)/?(skillValue);  // Diplomacy
+!!VR(typeValue)&(skillId)=4:S1;
+
+!!FU&(skillId)=5:E;                                                              // Navigation
+
+!!FU(js_GetSecSkillValueInteger)&(skillId)=6:P6547880/(skillLvl)/?(skillValue);  // Leadership
+!!VR(typeValue)&(skillId)=6:S0;
+
+!!FU&(skillId)=7:E;                                                              // Wisdom
+
+!!FU(js_GetSecSkillValueInteger)&(skillId)=8:P6547912/(skillLvl)/?(skillValue);  // Mysticism
+!!VR(typeValue)&(skillId)=8:S0;
+
+!!FU(js_GetSecSkillValueInteger)&(skillId)=9:P6547864/(skillLvl)/?(skillValue);  // Luck
+!!VR(typeValue)&(skillId)=9:S0;
+
+!!FU&(skillId)=10:E;                                                             // Ballistics
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=11:P6548008/(skillLvl)/?(skillValue); // Eagle Eye
+!!VR(typeValue)&(skillId)=11:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=12:P6547896/(skillLvl)/?(skillValue); // Necromancy
+!!VR(typeValue)&(skillId)=12:S1; 
+
+!!FU(js_GetSecSkillValueInteger)&(skillId)=13:P6547992/(skillLvl)/?(skillValue); // Estates
+!!VR(typeValue)&(skillId)=13:S0;
+
+!!FU&(skillId)=14:E;                                                             // Fire Magic
+
+!!FU&(skillId)=15:E;                                                             // Wind Magic
+
+!!FU&(skillId)=16:E;                                                             // Water Magic
+
+!!FU&(skillId)=17:E;                                                             // Earth Magic
+
+!!FU&(skillId)=18:E;                                                             // Scholar
+
+!!FU&(skillId)=19:E;                                                             // Tactics
+
+!!FU&(skillId)=20:E;                                                             // Artillery
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=21:P6548056/(skillLvl)/?(skillValue); // Learning
+!!VR(typeValue)&(skillId)=21:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=22:P6547960/(skillLvl)/?(skillValue); // Offence
+!!VR(typeValue)&(skillId)=22:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=23:P6547976/(skillLvl)/?(skillValue); // Defence
+!!VR(typeValue)&(skillId)=23:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=24:P6548104/(skillLvl)/?(skillValue); // Intelligence 63EA88
+!!VR(typeValue)&(skillId)=24:S1; 
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=25:P6548088/(skillLvl)/?(skillValue); // Sorcery
+!!VR(typeValue)&(skillId)=25:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=26:P6548040/(skillLvl)/?(skillValue); // Resistance
+!!VR(typeValue)&(skillId)=26:S1;
+
+!!FU(js_GetSecSkillValuePercent)&(skillId)=27:P6548120/(skillLvl)/?(skillValue); // First Aid 63EA98 // 0.0/1.0/2.0/3.0, после расчета возврат 1/2/3/4 (+0.05*lvl если спец) где верхнее кол-во хила = 25 * value 
+!!VR(typeValue)&(skillId)=27:S1;                                                 // FirstAidPower = (__int64)(Hero_GetFirstAidPower(hero) * 25.0);
+
+
+
+!?FU(js_GetSecSkillValuePercent);
+!#VA(basicAddr:x) (skillLvl:x) (skillPercentValue:x);
+
+!!VR(addr:y):S(skillLvl) *4 +(basicAddr);                 // Calculate skill address
+!!UN:C(addr)/4/?(skillFloatValue:e);
+!!VR(skillPercentValueFloat:e):S(skillFloatValue) *100;
+!!VR(skillPercentValue):S(skillPercentValueFloat);
+
+
+!?FU(js_GetSecSkillValueInteger);
+!#VA(basicAddr:x) (skillLvl:x) (skillIntegerValue:x);
+
+!!VR(addr:y):S(skillLvl) *4 +(basicAddr);                 // Calculate skill address
+!!UN:C(addr)/4/?(skillValue:y);
+!!VR(skillIntegerValue):S(skillValue);
+
+
+***************************************************************************************************
+!?FU(gem_SetSecSkillValue);
+!#VA(skillId:x) (skillLvl:x) (skillValue:x);
+
+; Example:
+; ?FU(OnAfterLoadGame); !FU(gem_SetSecSkillValue):P23/2/33; // Advanced (2) Defence (23) reduces damage by 33%
+
+!!FU|(skillLvl)<=0/(skillLvl)>3:E;
+
+!!FU&(skillId)=0:E;                                                              // Pathfinding
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=1:P6547944/(skillLvl)/(skillValue);  // Shooting
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=2:P6548072/(skillLvl)/(skillValue);  // Logistics
+!!FU(gem_SetSecSkillValueInteger)&(skillId)=3:P6547928/(skillLvl)/(skillValue);  // Scouting
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=4:P6548024/(skillLvl)/(skillValue);  // Diplomacy
+!!FU&(skillId)=5:E;                                                              // Navigation
+!!FU(gem_SetSecSkillValueInteger)&(skillId)=6:P6547880/(skillLvl)/(skillValue);  // Leadership
+!!FU&(skillId)=7:E;                                                              // Wisdom
+!!FU(gem_SetSecSkillValueInteger)&(skillId)=8:P6547912/(skillLvl)/(skillValue);  // Mysticism
+!!FU(gem_SetSecSkillValueInteger)&(skillId)=9:P6547864/(skillLvl)/(skillValue);  // Luck
+!!FU&(skillId)=10:E;                                                             // Ballistics
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=11:P6548008/(skillLvl)/(skillValue); // Eagle Eye
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=12:P6547896/(skillLvl)/(skillValue); // Necromancy 
+!!FU(gem_SetSecSkillValueInteger)&(skillId)=13:P6547992/(skillLvl)/(skillValue); // Estates
+!!FU&(skillId)=14:E;                                                             // Fire Magic
+!!FU&(skillId)=15:E;                                                             // Wind Magic
+!!FU&(skillId)=16:E;                                                             // Water Magic
+!!FU&(skillId)=17:E;                                                             // Earth Magic
+!!FU&(skillId)=18:E;                                                             // Scholar
+!!FU&(skillId)=19:E;                                                             // Tactics
+!!FU&(skillId)=20:E;                                                             // Artillery
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=21:P6548056/(skillLvl)/(skillValue); // Learning 63EA58
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=22:P6547960/(skillLvl)/(skillValue); // Offence
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=23:P6547976/(skillLvl)/(skillValue); // Defence
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=24:P6548104/(skillLvl)/(skillValue); // Intelligence 
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=25:P6548088/(skillLvl)/(skillValue); // Sorcery
+!!FU(gem_SetSecSkillValuePercent)&(skillId)=26:P6548040/(skillLvl)/(skillValue); // Resistance 63EA48
+!!FU&(skillId)=27:E;                                                             // First Aid
+
+
+!?FU(gem_SetSecSkillValuePercent);                        // Set a new percent value for a secondary skill
+!#VA(basicAddr:x) (skillLvl:x) (skillPercentValue:x);
+
+!!VR(addr:y):S(skillLvl) *4 +(basicAddr);                 // Calculate skill address
+!!VR(skillValue:e):S(skillPercentValue) :100; 
+!!SN:X?(addr2:y) X(skillValue) X?(addr3:y) X(addr2);      // Convert to percent
+!!UN:C(addr)/4/(addr3);                                   // Replace with new value
+
+
+!?FU(gem_SetSecSkillValueInteger);                        // Set a new integer value for a secondary skill
+!#VA(basicAddr:x) (skillLvl:x) (skillIntegerValue:x);
+
+!!VR(addr:y):S(skillLvl) *4 +(basicAddr);                 // Calculate skill address
+!!UN:C(addr)/4/(skillIntegerValue);                       // Replace with new value
+
+
+*****************************************************************************************
+
+!?FU(gem_GetSpecBuilduingName);
+!#VA(buildId:x) (name:x);
+
+!!VR(offset:y):S(buildId) *(SIZEOF_PTR);
+!!UN:C6968380/(offset)/(SIZEOF_PTR)/?(builNamePtr:y);
+!!SN:B(builNamePtr:y)/d/?s^temp^;
+!!VR(name):Zs^temp^;
+!!SN:W^temp^;
+
+
+!?FU(gem_SetSpecBuilduingName);
+!#VA(buildId:x) (name:x);
+
+!!VR(offset:y):S(buildId) *(SIZEOF_PTR);
+!!UN:C6968380/(offset)/(SIZEOF_PTR)/?(builNamePtr:y);
+!!SN:B(builNamePtr:y)/d/z(name);
+
+
+!?FU(gem_GetSpecBuilduingDesc);
+!#VA(buildId:x) (desc:x);
+
+!!VR(offset:y):S(buildId) *(SIZEOF_PTR);
+!!UN:C6977652/(offset)/(SIZEOF_PTR)/?(buildDescPtr:y);
+!!SN:B(buildDescPtr:y)/d/?s^temp^;
+!!VR(desc):Zs^temp^;
+!!SN:W^temp^;
+
+
+!?FU(gem_SetSpecBuilduingDesc);
+!#VA(buildId:x) (desc:x);
+
+!!VR(offset:y):S(buildId) *(SIZEOF_PTR);
+!!UN:C6977652/(offset)/(SIZEOF_PTR)/?(buildDescPtr:y);
+!!SN:B(buildDescPtr:y)/d/z(desc);
+
+*****************************************************************************************
+
+; Add, set or get hero power on the battlefield
+!?FU(tum_ManageHeroPowerOfSide);
+!#VA(side:x);
+!#VA(power:x);                          [Can be add, get or set]
+
+!!FU:S(@power)/?(powerSyntax:y);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatManager:y);
+!!VR(offset:y):S(UNC_INT) *(side) +21460;
+
+!!if&(powerSyntax)=(ARG_SYNTAX_ADD);
+  !!UN:C(combatManager)/(offset)/(UNC_INT32)/d(power);
+!!el&(powerSyntax)=(ARG_SYNTAX_GET);
+  !!UN:C(combatManager)/(offset)/(UNC_INT32)/?(power);
+!!el;
+  !!UN:C(combatManager)/(offset)/(UNC_INT32)/(power);
+!!en;
+
+
+// Вроде нигде не используется
+*?FU(tum_HOOK_BattleStackKilled);
+*#VA(hook:x);
+
+*!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackStruct:y);
+*!FU&(stackStruct)=(NULL):E;
+
+*!UN:C(stackStruct)/244/4/?(side:y) C(stackStruct)/248/4/?(stackOfSide:y);
+*!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackOfSide);
+*!FU|(stackId)<=(NO_STACK)/(stackId)>(BATTLE_STACK_LAST):E;
+
+*!FU(tum_OnBattleStackKilled):P(stackId)/(side);
+
+
+// Get hero Id of the opponent for negative morale/luck artifacts
+!?FU(tum_OnSetCreatureInfoDesc);
+!#VA(hook:x);
+
+!!VRi^tum_luckMoraleDesc_OppHeroIdPlusOne^:S0;
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/28/4/?(heroStruct:y);
+
+!!if&(heroStruct);
+  !!UN:C(heroStruct)/26/4/?(heroId:y);
+  !!VRi^tum_luckMoraleDesc_OppHeroIdPlusOne^&(heroId)>(NO_HERO):S(heroId) +1;  
+!!en;
+
+
+!?FU(tum_DoAdditionalShot);
+; x1 - shooterStack, x2 - targetStack
+!!FU(tum_CheckIsPossibleToShoot):Px1/x2/?(result:y);
+!!SN&(result:y):E4453920/(CALLCONV_THISCALL)/x1/x2; 43F620
+
+
+!?FU(tum_CheckIsPossibleToShoot);
+; x1 - shooterStack, x2 - targetStack, x3 - result
+!!UN:Cx1/52/4/?(shooterType:y); 34
+!!UN:Cx1/76/4/?(shooterQty:y); 4C
+!!UN:Cx1/216/4/?(ammo:y); D8
+!!UN:Cx1/656/4/?(blind:y);  290
+!!UN:Cx1/688/4/?(stoneGaze:y); 2B0
+!!UN:Cx1/704/4/?(paralize:y);  2C0
+
+!!UN:Cx2/52/4/?(targetType:y); 34
+!!UN:Cx2/76/4/?(targetQty:y); 4C
+
+!!if|(shooterType:y)<0/(shooterQty:y)<1/(ammo:y)<1/(blind:y)>0/(stoneGaze:y)>0/(paralize:y)>0/(targetType:y)<0/(targetQty:y)<1;
+  !!VRx3:S(FALSE);
+!!el;
+  !!VRx3:S(TRUE);
+!!en;
+
+
+*****************************************************************************************
+; struct _Spell
+; int Eff_Power // 0x30 // множитель к колдовской силе героя у боевого спелла
+; int Effect[4] //      // базовая часть урона у боевого спелла. (сила дебафа)/(100-сила бафа)/(множитель суммона) у небоевого
+;               // 0x34 // без скилла
+;               // 0x38 // базовый скилл
+;               // 0x3C // продв. скилл
+;               // 0x40 // эксп. скилл
+
+!?FU(js_GetSpellAttr);
+!#VA(spellNum:x) (attrOffset:x) (attrSize:x) (attrValue:x);
+
+!!UN:C6848424/4/?(spellTablePtr:y); 00687FA8
+;!IF:L^spellTablePtr= %(spellTablePtr)^;
+!!VR(spellStructSize:y):S136; // _Spell_
+!!VR(offsetSpellStruct:y):S(spellStructSize) *(spellNum);
+!!VR(totalOffset:y):S(offsetSpellStruct) +(attrOffset);
+!!UN:C(spellTablePtr)/(totalOffset)/(attrSize)/?(attrValue);
+;!IF:L^attrValue= %(attrValue)^;
+
+
+!?FU(js_SetSpellAttr);
+!#VA(spellNum:x) (attrOffset:x) (attrSize:x) (attrValue:x);
+
+!!UN:C6848424/4/?(spellTablePtr:y); 00687FA8
+;!IF:L^spellTablePtr= %(spellTablePtr)^;
+!!VR(spellStructSize:y):S136; // _Spell_
+!!VR(offsetSpellStruct:y):S(spellStructSize) *(spellNum);
+!!VR(totalOffset:y):S(offsetSpellStruct) +(attrOffset);
+!!UN:C(spellTablePtr)/(totalOffset)/(attrSize)/(attrValue);
+;!IF:L^attrValue= %(attrValue)^;
+
+
+*****************************************************************************************
+// Распаковка mixedPosition (она вроде должна быть в какой-то либе?!)
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(pos:y);
+*!IF:M^pos= %(pos)^;
+
+; x = coord & 0x3FF;
+*!VR(x:y):S(pos) & 1023;
+*!IF:M^x= %(x)^;
+; y = (coord >> 16) & 0x3FF;
+*!VR(y:y):S(pos) Sd>>16;
+*!VR(y): & 1023;
+*!IF:M^y= %(y)^;
+; z = (coord >> 26) & 1;
+*!VR(z:y):S(pos) Sd>>26;
+*!VR(z): & 1;
+*!IF:M^z= %(z)^;
+
+*!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y);
+*!IF:M^objType= %(objType), objSubtype= %(objSubtype)^;
+
+// Получение advMgr и использование
+*!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+*!SN:E4447296/(CALLCONV_THISCALL)/(stack)/(hero[side])/(armyPtr[side])/(town)/(hero[oppSide])/(armyPtr[oppSide])/(ground);         [recalc luck and morale for stack only]
+// Получение mapItem по координатам
+*!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
+
+
+// чтение массива значений из json (надо тестить)
+*!re i/0/len(arr)/1;
+  *!VR(jsonKey:z):S^key.%i^;
+  *!SN:T^%(jsonKey:z)^/?(jsonValue:z);
+  *!if&(jsonKey)<>(jsonValue);
+    *!VR(result:y):V(jsonValue);
+  *!el;
+    *!br;
+  *!en;
+*!en;
+
+***************************************************************************************** Works with strings
+!?FU(js_StringReplaceINT);
+// Replace ints with an array of strings 
+!#VA(string:x) (result:x) (substr[10]:x);
+
+; get len(arr)
+!!re i/0/9;
+  !!if&(substr[i])=0;
+    !!VR(argsNum:y):Si;
+    !!br;
+  !!en;
+!!en;
+
+!!VR(jsTemp:z):Sz(string);
+!!SN:K(jsTemp)/?(length:y);
+
+!!VR(strCounter:y):S0;
+!!VR(jsSubstring:z):S^^;
+!!VR(jsNewString:z):S^^;
+
+!!re i/0/(length)/1/-1;
+  !!SN:K(jsTemp)/i/?(char:z);
+  !!if&(char)<>^0^;
+    !!VR(int:y):V(char);
+    !!VR(jsSubstring):+(char);
+
+    !!if&(int)>0;
+      !!FU(StringReplaceINT)&(strCounter)<(argsNum):P(jsSubstring)/(substr[strCounter])/?(jsSubstring);
+      !!VR(strCounter):+1;
+    !!en;
+
+    !!VR(jsNewString):+(jsSubstring);
+    !!VR(jsSubstring):S^^;
+  !!en;
+!!en;
+
+!!VR(result):Z(jsNewString);
+
+
+!?FU(js_FindSubstringInString);
+// Return the lowest index in string where substring is found
+// Return -1 if not found
+!#VA(stringInt:x) (substrInt:x) (result:x);
+
+!!VR(string:z):Sz(stringInt);
+!!SN:K(string)/?(length:y);
+
+!!VR(substr:z):Sz(substrInt);
+!!SN:K(substr)/?(subLength:y);
+
+!!VR(result):S-1;
+
+!!VRj:S0;
+
+!!re i/0/(length)/1/-1;
+  !!SN:K(string)/i/?(char:z);
+  !!SN:K(substr)/j/?(subChar:z);
+
+  !!if&(char)=(subChar);
+    !!if&(result)=-1;
+      !!VR(result):Si;
+    !!en;
+    
+    !!VRj: +1;
+    !!br&j>=(subLength);
+    !!co;
+  !!en;
+
+  !!VRj&j>0: -1;
+  !!VR(result):S-1;
+!!en;
+
+
+!?FU(js_StringReplaceString);
+// Replace a substring with a replacer
+!#VA(stringInt:x) (substrInt:x) (substrReplacerInt:x) (result:x);
+
+!!VR(temp:z):Sz(stringInt);
+!!VR(subTemp:z):Sz(substrInt);
+
+!!FU(js_FindSubstringInString):P(temp)/(subTemp)/?(index:y);
+!!FU&(index)=-1;
+
+!!SN:K(temp)/?(length:y);
+!!SN:K(subTemp)/?(subLength:y);
+
+!!VR(rPos:y):S(index) +(subLength);
+!!VR(left:z):M1/(temp)/0/(index);
+!!VR(right:z):M1/(temp)/(rPos)/(length);
+!!VR(result):Z^%(left)%z(substrReplacerInt)%(right)^;
+
+
+!?FU(js_StringPasteString);
+// Paste a replacer before a substring
+!#VA(stringInt:x) (substrInt:x) (substrReplacerInt:x) (result:x);
+
+!!VR(temp:z):Sz(stringInt);
+!!VR(subTemp:z):Sz(substrInt);
+
+!!FU(js_FindSubstringInString):P(temp)/(subTemp)/?(index:y);
+!!FU&(index)=-1;
+
+!!SN:K(temp)/?(length:y);
+!!SN:K(subTemp)/?(subLength:y);
+
+!!VR(left:z):M1/(temp)/0/(index);
+!!VR(right:z):M1/(temp)/(index)/(length);
+!!VR(result):Z^%(left)%z(substrReplacerInt)%(right)^;
