@@ -1,0 +1,119 @@
+ZVSE2
+
+**********************************
+**** Ring of Machine Affinity ****
+**********************************
+
+//TODO: уничтожение стека тележек должно вести к -4 атаки стрелкам (не бонуса точности!)
+
+!?FU(OnAfterErmInstructions);
+!!VRi^js_ring_of_machine_affinity^:S(TRUE);
+
+
+!?FU(js_OnStartCalcCreatureInfo);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(monID:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(hero:y) C(hero)/26/4/?(heroId:y); // 1A
+
+!!MA:X(monID)/?f;
+!!VRf:&(MON_FLAG_SHOOTER);
+
+!!HE(heroId):A2/(ART_RING_OF_MACHINE_AFFINITY)/d/?(equipped:y);
+!!HE(heroId):A2/(ART_AMMO_CART)/d/?(equipped2:y);
+
+!!if&f/(equipped)/(equipped2);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d4; //heroAttack
+!!en;
+
+
+; Adding bonus in battle
+*?FU(tum_GiveAttackAsPrecision);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monStack:y); 
+*!UN:C(monStack)/244/4/?(side:y); F4
+*!BA:H(side)/?(heroNum:y);
+*!FU&(heroNum)<0:E;
+*!HE(heroNum):A2/(ART_RING_OF_MACHINE_AFFINITY)/d/?(equipped:y);
+*!HE(heroNum):A2/(ART_AMMO_CART)/d/?(equipped2:y);
+*!UN&(equipped)/(equipped2):Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d4;
+
+
+!?FU(tum_OnBeforeTentHeal);
+!!BG:N?(stackNum:y);
+!!BM(stackNum):I?(side:y);
+!!BA:H(side)/?(heroNum:y);
+!!FU&(heroNum)<0:E;
+!!HE(heroNum):A2/(ART_RING_OF_MACHINE_AFFINITY)/d/?(equipped:y);
+!!UN&(equipped):Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d<<1; = x2
+
+
+!?FU(tum_OnBeforeCatapultActionType);
+!!BG:N?(stackNum:y);
+!!BM(stackNum):I?(side:y) T?(monType:y);
+!!BA:H(side)/?(heroNum:y);
+!!FU&(heroNum)<0:E;
+!!HE(heroNum):A2/(ART_RING_OF_MACHINE_AFFINITY)/d/?(equipped:y);
+
+!!if&(monType)=(MON_CATAPULT)/(equipped);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-20/4/d1; 
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d1;
+!!en;
+
+
+!?FU(tum_OnBeforeShootActionType);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(shooterStack:y);
+!!UN:C(shooterStack)/52/4/?(monType:y); 34
+!!UN:C(shooterStack)/244/4/?(side:y); F4
+!!BA:H(side)/?(heroNum:y); // TODO - use func from EEF when it is ready and released 0043FE60
+!!FU&(heroNum)<0:E;
+!!HE(heroNum):A2/(ART_RING_OF_MACHINE_AFFINITY)/d/?(equipped:y);
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(targetStack:y);
+
+!!if&(equipped);
+  !!if&(monType)=(MON_BALLISTA);
+    !!FU(tum_DoAdditionalShot):P(shooterStack)/(targetStack);
+  !!el&i^js_ballistics_bonus^/(monType)=(MON_NOT_USED_2);
+    !!FU(tum_DoAdditionalShot):P(shooterStack)/(targetStack);
+  !!en;
+!!en;
+
+
+
+
+// Если стек подводы уничтожен
+*?FU(tum_OnBattleStackKilled);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackPtr:y);
+*!FU&(stackPtr)=(NULL):E;
+*!UN:C(stackPtr)/52/4/?(monNum:y); 34
+*!UN:C(stackPtr)/244/4/?(side:y); F4
+
+*!if&(monNum)=(MON_AMMO_CART);
+
+  *!VR(heroId:y):Si^battle_hero_%(side)^;
+  *!HE(heroId):A2/(ART_RING_OF_MACHINE_AFFINITY)/d/?(equipped:y);
+
+  *!if&(equipped);
+    *!VR(startStack:y):S(BATTLE_ATTACKER_STACK_FIRST);
+    *!VR(endStack:y):S(BATTLE_ATTACKER_STACK_LAST);
+    *!VR(startStack)&(side)=1: +(BATTLE_STACKS_PER_SIDE);
+    *!VR(endStack)&(side)=1: +(BATTLE_STACKS_PER_SIDE);
+
+    *!re i/(startStack)/(endStack);
+       *!BMi:Z?(monPtr:y);
+       *!UN:C(monPtr)/76/4/?(monQty:y); // 4C
+       *!if&(monQty)>0;
+          *!UN:C(monPtr)/132/4/?f; // 84
+          *!VR(isShooter:y):Sf &(MON_FLAG_SHOOTER);
+
+          *!if&(isShooter);
+            ;!BMi:A?(monAttack:y);
+            ;!VR(monAttack):-4;
+            ;!VR(monAttack)&(monAttack)<0:S0;
+            ;!BMi:A(monAttack);
+            *!UN:C(monPtr)/1128/4/?(precisionBonus:y); // 0x468
+            *!VR(precisionBonus): -4;
+            *!UN:C(monPtr)/1128/4/(precisionBonus);
+         *!en;
+       *!en;
+    *!en;
+  *!en;
+*!en;
