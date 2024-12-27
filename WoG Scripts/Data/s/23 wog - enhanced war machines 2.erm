@@ -171,7 +171,7 @@ ZVSE2
       !!BMi^battle_current_stack^:N?(tentsAmount:y); 
 
       !!re i/1/(tentsAmount);
-        !!VR(healPower:y):S1 R24 *(skillLvL) +(defense); [set healing: 1-25 x (first aid skill +1) +defense x # of tents]
+        !!VR(healPower:y):R0/1/25 *(skillLvL) +(defense); [set healing: 1-25 x (first aid skill +1) +defense x # of tents]
         !!VRi^WOG_55_Battle_HealPower^:+(healPower);
       !!en;
     !!en;
@@ -357,27 +357,42 @@ ZVSE2
   !!VR(stackId):S(side)*21 +(index);
 
 !?FU(WOG_55_BattleFunc_CalculateStackHealing);
-!#VA(stack:x) (healPower:x) (hpLost:x) (num:x);
+!#VA(stack:x) (regenHp:x) (newLostHp:x) (newNum:x);
 
-  !!BM(stack):H?(maxHp:y) L?(hpLost) B?(initNum:y) N?(num);
+; Calculations
+!!BM(stack):H?(hp:y) L?(lostHp:y) N?(num:y) B?(initNum:y);
 
-  !!if&(initNum)>(num);
+!!VR(totalCurrHp:y):S(hp) *(num) -(lostHp);
+!!VR(totalInitHp:y):S(hp) *(initNum);
 
-    !!if&(healPower)>(hpLost);
+; Exit if it overflows or nothing to heal
+!!if|(totalCurrHp)<=0/(totalInitHp)<=0/(totalInitHp)<=(totalCurrHp);
+  !!VR(newLostHp):S(lostHp);
+  !!VR(newNum):S(num);
+  !!FU:E;
+!!en;
 
-      !!VR(qtyToResurrect:y):S(healPower) +(maxHp) -(hpLost) :(maxHp); -1;
-      !!VR(hpLost):S(healPower) +(maxHp) %(maxHp);
+!!VR(totalLostHp:y):S(totalInitHp) -(totalCurrHp);
+!!VR(totalNewHp:y):S(totalCurrHp) +(regenHp);
 
-      !!if&(qtyToResurrect);
-        !!VR(num):+(qtyToResurrect);
-        !!VR(num)&(num)>(initNum):S(initNum);
-      !!en;
-    !!el;
-      !!VR(hpLost):-(healPower);
-    !!en;
+; Fix overflows
+!!VR(totalNewHp)&(totalNewHp)<(totalCurrHp):S(totalInitHp);
+; Deal with overheal
+!!if&(totalNewHp)>(totalInitHp);
+  !!VR(overhealHp:y):S(totalNewHp) -(totalInitHp);
+  !!VR(totalNewHp):S(totalInitHp);
+!!en;
 
-  !!el;
-    !!VR(hpLost):-(healPower);
-    !!VR(hpLost)&(hpLost)<0:S0;
-  !!en;
+; Calculate new stats
+!!VR(newNum):S(totalNewHp) :(hp);
+!!VR(newCurrHp:y):S(totalNewHp) %(hp);
+
+!!if&(newCurrHp)=0;
+  !!VR(newCurrHp):S(hp);
+!!el;
+  !!VR(newNum):+1;
+!!en;
+
+!!VR(newLostHp):S(hp) -(newCurrHp);
+
 **** End of First Aid Tents healing ****

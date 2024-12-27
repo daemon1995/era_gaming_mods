@@ -478,31 +478,43 @@ ZVSE2
   !!VR(stackId):S(side)*21 +(index);
 
 !?FU(WOG_54_BattleFunc_CalculateStackHealing);
-!#VA(stackId:x) (healPower:x) (hpLost:x) (num:x);
+!#VA(stack:x) (regenHp:x) (newLostHp:x) (newNum:x);
 
-  !!BM(stackId):H?(maxHp:y) B?(initNum:y) L?(hpLost) N?(num);
+; Calculations
+!!BM(stack):H?(hp:y) L?(lostHp:y) N?(num:y) B?(initNum:y);
 
-  !!if&(healPower)>(hpLost);
+!!VR(totalCurrHp:y):S(hp) *(num) -(lostHp);
+!!VR(totalInitHp:y):S(hp) *(initNum);
 
-    !!BM(stackId):Z?(stack:y);
-    !!SN:E4468128/(CALLCONV_THISCALL)/(stack)/0;       [get  current hp]
+; Exit if it overflows or nothing to heal
+!!if|(totalCurrHp)<=0/(totalInitHp)<=0/(totalInitHp)<=(totalCurrHp);
+  !!VR(newLostHp):S(lostHp);
+  !!VR(newNum):S(num);
+  !!FU:E;
+!!en;
 
-    !!VR(totalMaxHp:y):S(initNum) *(maxHp);
-    !!VR(assumedHp:y):Sv1 +(healPower) Fd/(totalMaxHp);
-    !!VR(remainder:y):S(assumedHp) %(maxHp);
+!!VR(totalLostHp:y):S(totalInitHp) -(totalCurrHp);
+!!VR(totalNewHp:y):S(totalCurrHp) +(regenHp);
 
-    !!VR(num):S(assumedHp) :(maxHp); +1;
+; Fix overflows
+!!VR(totalNewHp)&(totalNewHp)<(totalCurrHp):S(totalInitHp);
+; Deal with overheal
+!!if&(totalNewHp)>(totalInitHp);
+  !!VR(overhealHp:y):S(totalNewHp) -(totalInitHp);
+  !!VR(totalNewHp):S(totalInitHp);
+!!en;
 
-    !!if&(remainder:y)>0;
-      !!VR(hpLost):S(maxHp) -(remainder);
-      !!VR(num):+1;
+; Calculate new stats
+!!VR(newNum):S(totalNewHp) :(hp);
+!!VR(newCurrHp:y):S(totalNewHp) %(hp);
 
-    !!el;
-      !!VR(hpLost):S0;
-    !!en;
-  !!el;
-    !!VR(hpLost):-(healPower);
-  !!en;
+!!if&(newCurrHp)=0;
+  !!VR(newCurrHp):S(hp);
+!!el;
+  !!VR(newNum):+1;
+!!en;
+
+!!VR(newLostHp):S(hp) -(newCurrHp);
 
 ****************************** Adventure Map ***********************************
 

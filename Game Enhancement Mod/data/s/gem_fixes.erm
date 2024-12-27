@@ -791,6 +791,7 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 !!UN:R1;
 
 // Fix rebuilding town (after demolishing) doesn't update the max level of Mage Guild in random maps
+// by Archer30
 ; Note: This hack is only valid for random maps as it can't tell whether the restriction comes from town type or is it from the map author
 ; This script would conflict with mods that extends the max level of Mage Guilds in towns
 !?FU(OnAfterBuildTownBuilding);
@@ -839,6 +840,7 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 
 
 // Rebalance Hill Forts - the cost of upgrade is calculated based on the level of the upgraded monster instead of the pre-upgraded monster
+// by Archer30
 ; This is considered a bug fix as in the original H3, every upgrade has the same creature level before and after
 ; In WoG with Extended Upgrade option, it's possible to upgrade Gremlins (level 1) to Santa Gremlins (leve 3) for free (since the fee is calculated based on Gremlins)
 ; This script fixes this so that such upgrade would costs a little amount of fee (but still with discount as Hill Forts always do to low level creatures)
@@ -872,6 +874,27 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 ************************************************************************
 ************************************************************************
 
+// Fix infinite loop when a revived stack tries to defend when defended the same turn
+// by Archer30
+; For some reason, the AI's revived stack would try to defend even when it's defended in a turn
+; This results in an infinite loop - AI could possibly try to defend again and again
+; This script ensure defending status is removed on stack turn
+; Latest report (not sure if it's this issue): https://discord.com/channels/665742159307341827/666205480808611861/1317824602222755841
+!?FU(OnBattleStackObtainsTurn);         [The native defense restoration is at 00446BA7]
+!!BMi^battle_current_stack^:F?(flags:y);
+!!VR(isDefending:y):S(flags) &(MON_FLAG_DEFENDING);
+
+!!if&(isDefending);
+  !!VR(stack:y):Si^battle_current_stack^;
+  !!BM(stack):Z?(stackStruct:y);
+
+  !!UN:C(stackStruct)/1244/4/?(bonusDefense:y);
+  !!BM(stack):Fd~(MON_FLAG_DEFENDING);
+  !!BM(stack):D?(defense:y);
+  !!VR(defense):-(bonusDefense) F0/(INT_MAX);
+  !!BM(stack):D(defense);
+!!en;
+
 // Fix messing up creature stats with stack exp after battle replay when the stack was killed with Summoned flag
 // by Archer30
 // This should be fixed in BattleReplay plugin if possible
@@ -904,6 +927,7 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 !!en;
 
 // Fix messing up spell immunity checks for stack exp spells
+// by Archer30
 ; WoG doesn't use the native way to check spell immunity for stack exp spells, this script fixes its behaviours.
 ; Sorceress spell uses the same function, yet it seems to respect correct spell immunity, thus we igonre here.
 ; Discussion: http://wforum.heroes35.net/showthread.php?tid=4218&pid=139198#pid139198
@@ -950,6 +974,7 @@ C(ebp)/8/4/?i^gem_CurrentProc_Msg^;
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/7717164; 75C12C
 
 // Update the number of stacks when a summoned stack is killed
+// by Archer30
 ; In the orignal H3, the total number of stacks allowed is 20 for one side of the battlefield
 ; Once we reaches 20 stacks and have some summoned stacks killed, we still can't summon more units
 
