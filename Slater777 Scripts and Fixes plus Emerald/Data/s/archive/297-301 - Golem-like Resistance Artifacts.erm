@@ -1,0 +1,115 @@
+Z VSE2
+
+***********************************
+* Golem-like Resistance Artifacts *
+***********************************
+
+*?FU(gem_CreateERMHook); [For igrik's plugin Spell Description]
+;!SN:Ex1/1/5933899/(js_HintSpellDamageBeforeCast);
+*!SN:Ex1/1/5934083/(js_HintSpellDamageBeforeCast);
+
+** TO_DO
+!?FU(js_HintSpellDamageBeforeCast);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(spellId:y);
+!!VR(oppSide:y):Si^battle_current_side^ X1;
+!!BA:H(oppSide)/?(heroId:y);
+!!FU&(heroId)<0:E;
+
+!!VR(offset:y):Si^battle_current_side^ *(UNC_INT) +21460;
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/(offset)/4/?(heroSpellPower:y);
+*!IF:M^heroSpellPower = %(heroSpellPower)^;
+
+int damage = spell_pow * o_Spell[spell_id].eff_power + o_Spell[spell_id].effect[spell_lvl]; 20*10+30=230; 20*25+50=550
+*!SS(spellId):S?(magicSchoolBitSet:y);
+!!SS(spellId):P?(dmg:y); [base spell dmg]
+!!SS(spellId):E0/?(bonus0:y);
+!!SS(spellId):E1/?(bonus1:y);
+!!SS(spellId):E2/?(bonus2:y);
+!!SS(spellId):E3/?(bonus3:y);
+*!IF:M^dmg = %(dmg), %(bonus0) / %(bonus1) / %(bonus2) / %(bonus3)^;
+
+*!FU(tum_GetIgnoredDmgPercentage):P(spellId)/(heroId)/?(maxIgnoredDmgPercentage:y);
+
+*!IF:M^maxIgnoredDmgPercentage = %(maxIgnoredDmgPercentage)^;
+
+*!if&(maxIgnoredDmgPercentage);
+  *!VR(offset:y):Si^battle_current_side^ *(UNC_INT) +21460;
+  *!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/(offset)/4/d(bonus);
+*!en;
+
+!!MM:M?(text:z);
+*!IF:M^%(text)^;
+*!FU(StringReplaceINT):P^%(skillDesc)^/^5^/?(newSkillDesc:z);
+
+
+!?FU(OnMagicCorrectedResistance);
+!!UN:C42231940/4/?(monStackPtr:y) C(monStackPtr)/56/4/?(hexNum:y);  [hexNum - гекс отряда, получающего урон]
+!!FU|(hexNum)<0/(hexNum)>186:E;               [выход, если гекс за пределами поля]
+
+!!BU:E(hexNum)/?(monStackNum:y);       
+!!BM(monStackNum):I?(side:y);
+!!BA:H(side)/?(heroId:y);
+!!FU&(heroId)<0:E;
+
+!!MR:S?(spellId:y) D?(basicDmg:y) F?(finalDmg:y);
+!!VR(finalDmg):-(basicDmg) *-1;               [finalDmg - кол-во урона, поглощенное естественным и магическим сопротивлениями]
+
+!!FU(tum_GetIgnoredDmgPercentage):P(spellId)/(heroId)/?(maxIgnoredDmgPercentage:y);
+
+!!if&(maxIgnoredDmgPercentage);
+  !!VR(maxIgnoredDmgPercentage):*(basicDmg) :100;        
+  !!VR(basicDmg):-(maxIgnoredDmgPercentage) -(finalDmg);              
+  !!VR(basicDmg)&(basicDmg)<0:S0;         
+  !!MR:F(basicDmg);
+!!en;
+
+
+!?FU(tum_GetIgnoredDmgPercentage);
+!#VA(spellId:x) (heroId:x) (maxIgnoredDmgPercentage:x);
+
+!!SS(spellId):S?(magicSchoolBitSet:y);
+1 – школа магии Воздуха
+2 – школа магии Огня
+4 – школа магии Воды
+8 – школа магии Земли
+у волшебной стрелы битсет 15 (сумма бит всех школ)
+
+!!VR(maxIgnoredDmgPercentage):S0; [Reset var]
+
+!!re i/1/8;
+  !!VR(schoolBit:y):S(magicSchoolBitSet) &i;
+  
+  !!if&(schoolBit);
+    !!if&(schoolBit)=1;  [Wind]
+      !!VR(ignoredDmgPercentage:y):S0; [Reset var]
+      !!HE(heroId):A2/(ART_RING_OF_LIGHTNING_PROTECTION)/d/?(isEquipped:y);          
+      !!VR(ignoredDmgPercentage)&(isEquipped): +50;
+      !!VR(maxIgnoredDmgPercentage)&(ignoredDmgPercentage)>(maxIgnoredDmgPercentage):S(ignoredDmgPercentage);
+    !!en;
+
+    !!if&(schoolBit)=2;  [Fire]
+      !!VR(ignoredDmgPercentage:y):S0; [Reset var]
+      !!HE(heroId):A2/(ART_DWARVEN_SMITHY_HAMMER)/d/?(isEquipped:y);          
+      !!VR(ignoredDmgPercentage)&(isEquipped): +25;
+      !!HE(heroId):A2/(ART_SHIELD_OF_CRYSTAL_ICE)/d/?(isEquipped:y);          
+      !!VR(ignoredDmgPercentage)&(isEquipped): +50;
+      !!VR(maxIgnoredDmgPercentage)&(ignoredDmgPercentage)>(maxIgnoredDmgPercentage):S(ignoredDmgPercentage);
+    !!en;
+
+    !!if&(schoolBit)=4;  [Water]
+      !!VR(ignoredDmgPercentage:y):S0; [Reset var]
+      !!HE(heroId):A2/(ART_BEARHIDE_WRAPS)/d/?(isEquipped:y);          
+      !!VR(ignoredDmgPercentage)&(isEquipped): +25;
+      !!VR(maxIgnoredDmgPercentage)&(ignoredDmgPercentage)>(maxIgnoredDmgPercentage):S(ignoredDmgPercentage);
+    !!en;
+
+    !!if&(schoolBit)=8;  [Earth]
+      !!VR(ignoredDmgPercentage:y):S0; [Reset var]
+      !!HE(heroId):A2/(ART_CLOAK_OF_SYLANNA)/d/?(isEquipped:y);          
+      !!VR(ignoredDmgPercentage)&(isEquipped): +50;
+      !!VR(maxIgnoredDmgPercentage)&(ignoredDmgPercentage)>(maxIgnoredDmgPercentage):S(ignoredDmgPercentage);
+    !!en;
+  !!en;
+
+  !!VRi:Sd<<1 -1;  [1, 2, 4, 8]
+!!en;

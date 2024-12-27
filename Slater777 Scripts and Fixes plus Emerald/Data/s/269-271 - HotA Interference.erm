@@ -1,0 +1,146 @@
+ZVSE2
+
+
+; hota interference 10/20/30% - replaces resistance (and arts too)
+
+
+// Incompatible options
+*?FU(js_CheckResistanceOptions);
+; x1 - result
+*!UN:P216/?y1; resistance I
+*!UN:P210/?y2; resistance II
+*!UN:P777/?y3; enhanced resistance
+
+*!VRx1:S(FALSE);
+
+*!if|y1/y2/y3;
+  *!VRx1:S(TRUE);
+*!en;
+
+
+!?FU(OnAfterErmInstructions)&i^js_interference^;
+; Skill description
+!!SN:H^secskill^/(SKILL_RESISTANCE)/0/^%T(jsMod.secSkill.interference.name)^;
+!!SN:H^secskill^/(SKILL_RESISTANCE)/(SKILL_BASIC)/^%T(jsMod.secSkill.interference.desc.basic)^; // desc bas
+!!SN:H^secskill^/(SKILL_RESISTANCE)/(SKILL_ADVANCED)/^%T(jsMod.secSkill.interference.desc.advanced)^; // desc adv
+!!SN:H^secskill^/(SKILL_RESISTANCE)/(SKILL_EXPERT)/^%T(jsMod.secSkill.interference.desc.expert)^; // desc exp
+; Spec description
+!!re i/0/(HERO_LAST_WOG);
+  !!HEi:X?(specType:y)/?(specSubtype:y)/d/d/d/d/d;
+  !!SN&(specType)=0/(specSubtype)=(SKILL_RESISTANCE):H^spec^/i/2/^%T(jsMod.secSkill.interference.desc.spec)^;
+!!en;
+; Nullify resistanse values
+!!FU(gem_SetSecSkillValue):P(SKILL_RESISTANCE)/(SKILL_BASIC)/0;
+!!FU(gem_SetSecSkillValue):P(SKILL_RESISTANCE)/(SKILL_ADVANCED)/0;
+!!FU(gem_SetSecSkillValue):P(SKILL_RESISTANCE)/(SKILL_EXPERT)/0;
+
+
+!?FU(OnGameEnter)&i^js_interference^;
+;!FU(js_CheckResistanceOptions):P?(activeSettings:y);
+;!FU&(activeSettings):E;
+
+// replace defs
+// имя папки (дефа) замены допускает до 12 символов!
+// кадры из defa пересохраняются с помощью paint из bmp в png
+// имя - номер кадра в формате 0_i.png
+
+// Secskill.def
+!!SN:R^Secskill.def:0_81.png^/^Data\Defs\JSsskil.def\0_81.png^;
+!!SN:R^Secskill.def:0_82.png^/^Data\Defs\JSsskil.def\0_82.png^;
+!!SN:R^Secskill.def:0_83.png^/^Data\Defs\JSsskil.def\0_83.png^;
+// SECSK82.DEF
+!!SN:R^SECSK82.DEF:0_81.png^/^Data\Defs\JSssk82.def\0_81.png^;
+!!SN:R^SECSK82.DEF:0_82.png^/^Data\Defs\JSssk82.def\0_82.png^;
+!!SN:R^SECSK82.DEF:0_83.png^/^Data\Defs\JSssk82.def\0_83.png^;
+// SECSK32.def
+!!SN:R^SECSK32.DEF:0_81.png^/^Data\Defs\JSssk32.def\0_81.png^;
+!!SN:R^SECSK32.DEF:0_82.png^/^Data\Defs\JSssk32.def\0_82.png^;
+!!SN:R^SECSK32.DEF:0_83.png^/^Data\Defs\JSssk32.def\0_83.png^;
+
+// un32.def
+!!SN:R^UN32.def:0_20.png^/^Data\Defs\JSun32.def\0_20.png^;
+
+// un44.def
+!!SN:R^UN44.def:0_20.png^/^Data\Defs\JSun44.def\0_20.png^;
+
+
+
+; Set up new real hero magic power
+!?FU(OnSetupBattlefield)&i^js_interference^;
+!!VRi^tum_trueHeroPower_0^:S0;
+!!VRi^tum_trueHeroPower_1^:S0;
+
+!!if&i^battle_hero_vs_hero^;
+  !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+    !!HEi^battle_hero_%i^:A2/(ART_CHARM_OF_ECLIPSE)/?(backpacked:y)/?(equipped1:y);
+    !!HEi^battle_hero_%i^:A2/(ART_SEAL_OF_SUNSET)/?(backpacked)/?(equipped2:y);
+    !!HEi^battle_hero_%i^:A2/(ART_PLATE_OF_DYING_LIGHT)/?(backpacked)/?(equipped3:y);
+
+    !!HEi^battle_hero_%i^:S(SKILL_RESISTANCE)/?(skillLvl:y);
+    !!VR(skillEffect:y):S(skillLvl) *10;
+
+    ; Spec
+    !!HEi^battle_hero_%i^:X?(specType:y)/?(specSubtype:y)/d/d/d/d/d;
+
+    !!if&(specType)=0/(specSubtype)=(SKILL_RESISTANCE)/(skillLvl)>0;
+      !!HEi^battle_hero_%i^:E?s/?(level:y);
+      !!VR(percentBoost:y):S20; // 5% per lvl
+      !!VR(coeff:e):S(level) :(percentBoost);
+      !!VR(absBonusFloat:e):S(coeff) *(skillEffect);
+      !!VR(absBonus:y):S(absBonusFloat);
+      !!VR(skillEffect): +(absBonus);
+    !!en;
+
+    ; Stack all modifiers
+    !!VR(enemyPowerReductionPercent:y):S0;
+    ; Arts
+    !!VR(enemyPowerReductionPercent)&(equipped1):+10;
+    !!VR(enemyPowerReductionPercent)&(equipped2):+10;
+    !!VR(enemyPowerReductionPercent)&(equipped3):+25;
+    ; Skill
+    !!VR(enemyPowerReductionPercent): +(skillEffect);
+
+    !!VR(enemyPowerReductionPercent):F0/100;
+
+    !!if&(enemyPowerReductionPercent)>0;
+      !!VR(enemySide:y):Si X(TRUE);
+
+      ; Get the new power value
+      !!FU(tum_ManageHeroPowerOfSide):P(enemySide)/?(power:y);
+      !!VR(newPower:y):S100 -(enemyPowerReductionPercent) *(power) :100 F1/(INT_MAX);
+
+      ; Set the value up
+      !!FU(tum_ManageHeroPowerOfSide):P(enemySide)/(newPower:y);
+      !!VRi^tum_trueHeroPower_%(enemySide)^:S(newPower);
+    !!en;
+  !!en;
+!!en;
+
+
+; Set up text display according to the new power (if changed)
+!?FU(tum_OnDlg_HeroPreview_SpellPowerWrite)|i^tum_trueHeroPower_0^>0/i^tum_trueHeroPower_1^>0;
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(heroStruct:y) C(heroStruct)/26/2/?(heroId:y);
+
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!if&i^battle_hero_%i^=(heroId)/i^tum_trueHeroPower_%i^>0;
+    !!VR(truePower:y):Si^tum_trueHeroPower_%i^;
+    !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(txtPtr:y);
+    !!SN:B(txtPtr)/d/?(power:z) B(txtPtr)/d/^%(power) (%(truePower))^;
+  !!en;
+!!en;
+
+
+!?FU(js_BanArts_ResistanceOrInterference);
+;!UN:P(WOG_OPT_INTERFERENCE)/?(wogOpt:y); Под будущее новое меню вог-настроек
+;!VRi^js_interference^&(wogOpt):S(TRUE);
+!!VRi^js_interference^:S(FALSE);
+
+!!if&i^js_interference^;
+  !!UN:A(ART_GARNITURE_OF_INTERFERENCE)/1 A(ART_SURCOAT_OF_COUNTERPOISE)/1 A(ART_BOOTS_OF_POLARITY)/1 A(ART_PENDANT_OF_REFLECTION)/1;
+!!el;
+  !!UN:A(ART_CHARM_OF_ECLIPSE)/1 A(ART_SEAL_OF_SUNSET)/1 A(ART_PLATE_OF_DYING_LIGHT)/1;
+!!en;
+
+!#FU(js_BanArts_ResistanceOrInterference):P;

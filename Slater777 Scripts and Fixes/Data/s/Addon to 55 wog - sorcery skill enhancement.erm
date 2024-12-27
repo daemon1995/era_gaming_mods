@@ -1,0 +1,52 @@
+ZVSE2
+
+
+!?FU(WOG_23_MainProcedure);  [Start of Function 5000 - get coordinates and object type/subtype] [and control word at the right-click location]
+!#VA(x:x) (y:x) (z:x) (heroId:x) (sorceryLevel:x);
+
+!!OB(x)/(y)/(z):H?(customHint:y) T?(objType:y) U?(objSubtype:y) C?(cWord:y);   [Get object type, subtype and control word]
+!!FU&(customHint)/(objType)<>(OBJ_ARTIFACT):E; [Skip control word check for artifact for mod compatibility]
+
+!!IF:V3/0;[Set Flag 3 to false]
+
+!!if&(objType)>0/(objType)<>(OBJ_HERO);
+  !!if&999;
+      // Section of the ingenious remote visit feature by daemon_n
+    !!VR(pic:y):S(NO_PIC_TYPE);
+    !!VR(value:y):S(NO_PIC_TYPE);
+    !!VR(owner:y):Si^timerOwner^;
+
+    !!if&(objType)=(ERA_OBJECT_TYPE)/(objSubtype)=(DREAM_TEACHER_OBJECT_SUBTYPE);
+      ; sprintf(h3_TextBuffer, ErmVariableFormat, dreamTeacher->id, hero->id);
+      ; return Era::GetAssocVarIntValue(h3_TextBuffer);
+      !!if&i^dreamTeacher_%(cWord)_%(heroId)^=0;
+        !!VR(pic):S(PIC_TYPE_EXPERIENCE);
+        !!FU(WOG_23_HeroGetDreamTeacherExperience):P(heroId)/?(value);
+      !!en;
+    !!en;
+    !!if&(sorceryLevel)>2/(owner)<>i^timerOwner^|(value)>0;
+      !!VR(value:y)&(value)<0:S(NULL);
+      !!CM:R(FALSE);
+      !!FU(WOG_23_VisitObjectRemote):P(x)/(y)/(z)/(heroId)/(pic)/(value)/(sorceryLevel);
+    !!en;
+  !!en;
+!!en;
+-----------------------------------------------------------------------------------------
+
+!?FU(WOG_23_HeroGetDreamTeacherExperience);
+!#VA(heroId:x) (result:x);
+
+!!HE(heroId):Z?(hero:y);
+// get visited obj counter
+;sprintf(h3_TextBuffer, VisitedObjectsCount, hero->id);
+;return Era::GetAssocVarIntValue(h3_TextBuffer);
+!!VR(objVisitedCount:y):Si^dreamTeacher_%(heroId)^;
+; int expGiven = static_cast<int>((EXP_GIVEN + (ADDITIONAL_EXP_GIVEN_FOR_EACH_VISIT * visitedObjCount)) * heroLearningPower);
+!!VR(expGiven:e):S500; // TODO: Вынести 500 (expGiven) в константу в инструкцию
+!!VR(additionalExpGiven:e):S500 *(objVisitedCount); // TODO: Вынести 500 (additionalExpGiven) в константу в инструкцию
+!!VRe2:S(expGiven) +(additionalExpGiven);
+// calculate exp given considering the learning power
+; float heroLearningPower = h3functions::GetHeroLearningPower(hero);
+!!SN:E5130928/(CALLCONV_THISCALL_FLOAT)/(hero); [get hero learning power and store value to e1]
+!!VRe1:*e2;
+!!VR(result):Se1;

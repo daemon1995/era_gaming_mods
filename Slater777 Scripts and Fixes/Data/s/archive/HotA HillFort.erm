@@ -1,0 +1,175 @@
+Z VSE2
+
+
+; allow to upg lvl 1-5 creatures for 200% cost
+// TODO: move to C++ plugin
+// TODO: "Это существо уже улучшено" -> "Это существо нельзя улучшить здесь"
+// genrltxt.txt
+// строка 370 Это существо уже улучшено
+
+
+!?FU(gem_CreateERMHook);
+
+//AIMapWeight 005292EC
+*!SN:Ex1/1/5411592/(js_OnHillFortAIMapWeight); 00529308
+
+*!SN:Ex1/1/5411663/(js_OnHillFortAIMapWeight_PatchUpgradeCost); 0052934F
+
+*!SN:Ex1/1/5144653/(js_setHintAsUpgraded); 004E804D
+
+*!SN:Ex1/1/5144715/(js_JumpOverFreeUpgrade); 004E808B
+
+*!SN:Ex1/1/5144889/(js_PatchUpgradeCost); 004E8139
+
+*!SN:Ex1/1/5145362/(js_JumpOverAvailableUpgrade); 004E8312
+
+*!SN:Ex1/1/5406891/(js_OnHillFortAI); 005280AB
+
+
+
+*?FU(js_OnHillFortAIMapWeight);
+// TODO: проверка на подтип объекта
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monType:y);
+*!FU&(monType)=-1:E;
+*!MA:L(monType)/?(monLvl:y);
+;!IF:M^monType= %(monType), monLvl= %(monLvl)^;
+*!if&(monLvl)>4;
+  *!SN:X?y99/0;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5411783; 005293C7
+*!en;
+
+
+!?FU(js_OnHillFortAIMapWeight_PatchUpgradeCost);
+// ТУТ НЕТ ПРОВЕРКИ НА ПОДТИП ОБЪЕКТА!!!
+
+*!if&(objType)=35/(objSubtype)=1;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monType:y);
+
+  // 006747B0 pCreatureInfo
+  *!VR(monTypeStruct:y):S116;
+  *!VR(offset:y):S(monTypeStruct) *(monType);
+  *!UN:C6768560/4/?(pCreatureInfo:y);
+  *!UN:C(pCreatureInfo)/(offset)/4/?(crInfoPtr:y); // Это неверно! тут первый атрибут объекта
+
+  !!MA:L(monType)/?(monLvl:y);
+  !!IF:M^monType= %(monType), monLvl= %(monLvl)^;
+
+  !!if&(monLvl)>4;
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5411783; 005293C7
+  !!el;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-28/4/?(goldUpgCost:y); -1C
+    ;!IF:M^goldUpgCost= %(goldUpgCost)^;
+    !!VR(goldUpgCostFloat:e):S(goldUpgCost);
+    !!VR(goldUpgCostFloat): *2; // Вынести в глобал переменную в файл .h
+    !!VR(goldUpgCost):S(goldUpgCostFloat);
+    !!IF:M^goldUpgCost= %(goldUpgCost)^;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(goldUpgCost);
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5411688; 00529368
+  !!en;
+*!en;
+
+
+
+
+// Проставка верхней подсказки "отсутствует" для 5+лвлов
+!?FU(js_setHintAsUpgraded);
+!!UN:C6933756/4/?(pActivePlayer:y); 0069CCFC
+!!UN:C(pActivePlayer)/4/4/?(curHeroId:y);
+;!IF:M^curHeroId= %(curHeroId)^;
+!!HE(curHeroId):Z?(hero:y);
+!!UN:C(hero)/0/2/?(x:y);
+!!UN:C(hero)/2/2/?(y:y);
+!!UN:C(hero)/4/2/?(z:y);
+!!OB(x)/(y)/(z):U?(objSubtype:y);
+
+!!FU&(objSubtype)<>1:E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(arrPtr:y);
+!!UN:C(arrPtr)/4/4/?(monLvl:y);
+;!IF:M^%(monLvl)^;
+!!if&(monLvl)>4;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5145012; 004E81B4
+!!en;
+
+
+// Пропуск верхней подсказки "свободно" для 1 лвлов
+!?FU(js_JumpOverFreeUpgrade);
+!!UN:C6933756/4/?(pActivePlayer:y); 0069CCFC
+!!UN:C(pActivePlayer)/4/4/?(curHeroId:y);
+;!IF:M^curHeroId= %(curHeroId)^;
+!!HE(curHeroId):Z?(hero:y);
+!!UN:C(hero)/0/2/?(x:y);
+!!UN:C(hero)/2/2/?(y:y);
+!!UN:C(hero)/4/2/?(z:y);
+!!OB(x)/(y)/(z):U?(objSubtype:y);
+
+!!FU&(objSubtype)<>1:E;
+
+!!SN:X?y99/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5144800; 004E80E0
+
+
+!?FU(js_PatchUpgradeCost);
+!!UN:C6933756/4/?(pActivePlayer:y); 0069CCFC
+!!UN:C(pActivePlayer)/4/4/?(curHeroId:y);
+;!IF:M^curHeroId= %(curHeroId)^;
+!!HE(curHeroId):Z?(hero:y);
+!!UN:C(hero)/0/2/?(x:y);
+!!UN:C(hero)/2/2/?(y:y);
+!!UN:C(hero)/4/2/?(z:y);
+!!OB(x)/(y)/(z):U?(objSubtype:y);
+
+!!FU&(objSubtype)<>1:E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(eax:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-20/4/?(goldForGrade:e);
+!!VR(coeff:e):S2; Вынести в h в глобал переменную
+!!VR(goldTotal:y):S(goldForGrade) *(coeff);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(goldTotal);
+
+
+// Прыжок в желтую стрелку для 5+лвлов
+!?FU(js_JumpOverAvailableUpgrade);
+!!UN:C6933756/4/?(pActivePlayer:y); 0069CCFC
+!!UN:C(pActivePlayer)/4/4/?(curHeroId:y);
+;!IF:M^curHeroId= %(curHeroId)^;
+!!HE(curHeroId):Z?(hero:y);
+!!UN:C(hero)/0/2/?(x:y);
+!!UN:C(hero)/2/2/?(y:y);
+!!UN:C(hero)/4/2/?(z:y);
+!!OB(x)/(y)/(z):U?(objSubtype:y);
+
+!!FU&(objSubtype)<>1:E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(arrPtr:y);
+!!UN:C(arrPtr)/4/4/?(monLvl:y);
+;!IF:M^%(monLvl)^;
+!!if&(monLvl)>4;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5145353; 004E8309
+!!en;
+
+
+!?FU(js_OnHillFortAI);
+!!UN:C6933756/4/?(pActivePlayer:y); 0069CCFC
+!!UN:C(pActivePlayer)/4/4/?(curHeroId:y);
+;!IF:M^curHeroId= %(curHeroId)^;
+!!HE(curHeroId):Z?(hero:y);
+!!UN:C(hero)/0/2/?(x:y);
+!!UN:C(hero)/2/2/?(y:y);
+!!UN:C(hero)/4/2/?(z:y);
+!!OB(x)/(y)/(z):U?(objSubtype:y);
+
+!!FU&(objSubtype)<>1:E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monType:y);
+!!FU&(monType)=-1:E;
+!!MA:L(monType)/?(monLvl:y);
+;!IF:M^monType= %(monType), monLvl= %(monLvl)^;
+!!if&(monLvl)>4;
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/5407123; 00528193
+!!en;

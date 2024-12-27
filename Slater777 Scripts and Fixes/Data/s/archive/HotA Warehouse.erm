@@ -1,0 +1,156 @@
+Z VSE2
+*** This script is not needed as logic and rmg for Warehouses are written
+*** in RMG Customizer mod using C++ plugin
+
+
+!#DC(OBJ_HOTA_WAREHOUSE)                 = 142;
+
+
+// Object replacement
+!?FU(OnEveryDay)&i^timerOnce^/i^timerDay^=1;
+!!FU(js_HotaWarehouses):P;
+
+
+!?FU(js_HotaWarehouses);
+!!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(objNum:y);
+!!VRj:S0;
+!!VRv2:S-1;
+!!re i/0/(objNum)/1/-1;
+  !!UN:U(OBJ_REFUGEE_CAMP)/-1/-1/2;      [Store Refugee Camp Coordinates in v2/v3/v4]
+  *!VR(random:y):R0/0/9;
+  ; delete current and create a new object
+  !!UN:Ov2/v3/v4/1/(ERM_REPLACE_NO_REDRAW);
+  *!VR(x): +1; // add x-offset 
+  !!UN:Iv2/v3/v4/(OBJ_HOTA_WAREHOUSE)/j/(ERM_REPLACE_NO_REDRAW);
+  !!VRj: +1;
+  !!VRj&j>6:S0;
+!!en;
+
+
+// Give a name to an object
+!?FU(OnAfterErmInstructions);
+!!SN:T^jsMod.advObject.142.0.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/0/(objName);
+!!SN:T^jsMod.advObject.142.1.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/1/(objName);
+!!SN:T^jsMod.advObject.142.2.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/2/(objName);
+!!SN:T^jsMod.advObject.142.3.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/3/(objName);
+!!SN:T^jsMod.advObject.142.4.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/4/(objName);
+!!SN:T^jsMod.advObject.142.5.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/5/(objName);
+!!SN:T^jsMod.advObject.142.6.name^/?(objName:z);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/6/(objName);
+
+
+!?FU(js_Warehouse_GetResource);
+!#VA(x:x) (y:x) (z:x) (type:x) (qty:x);
+!!OB(x)/(y)/(z):C?(cWord:y);
+*!IF:L^%(cWord:y)^;
+!!VR(type):S(cWord) Sd<<28 Sd>>28; 0 bit - res type
+!!VR(qty):S(cWord) Sd>>13; 5 bits from 13 bit - res qty
+
+
+!?OB(OBJ_HOTA_WAREHOUSE)&1000;
+!!VRz4:S^WERHOUSE.wav^;            [Name of the soundfile that should be played]
+!!SN:Pz4;                          [Play Warehouse Sound]
+
+
+!$OB(OBJ_HOTA_WAREHOUSE);
+!!FU(WOG_AdvMgr_SetObjectAsVisited):Pv998/v999/v1000/i^timerOwner^;
+!!FU(js_Warehouse_GetResource):Pv998/v999/v1000/?(resType:y)/?(resQty:y);
+!!HE(CURRENT_HERO):Z?(hero:y);
+!!OB(CURRENT_OBJ):U?(objSubtype:y);
+!!SN:H^object^/(OBJ_HOTA_WAREHOUSE)/(objSubtype:y)/?(objName:z);
+*!IF:L^%(resQty)^;
+!!if&(resQty);
+  !!VR(resQty)&(resType)=(RES_GOLD):*500;
+  !!SN:E5126256/(CALLCONV_THISCALL)/(hero)/(resType)/(resQty);
+  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+  *!IF&1000:Q1/(resType)/(resQty)/(MSG_TYPE_MES)^{%(objName:z)}%T(hotaWarehouse.notVisitedDlg)^; old-style without HD-mod
+  !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/^{%(objName:z)}^/(resType)/(resQty); show msg in mini-window (like in HD-mod)
+  ; clear bit mask from bits responsible for resource qty
+  !!OB(CURRENT_OBJ):C?(cWord:y);
+  !!VR(resQty:y):S1 Sd<<13;
+  !!VR(cWord):Sd~(resQty);
+  !!VR(resQty:y):S1 Sd<<14;
+  !!VR(cWord):Sd~(resQty);
+  !!VR(resQty:y):S1 Sd<<15;
+  !!VR(cWord):Sd~(resQty);
+  !!VR(resQty:y):S1 Sd<<16;
+  !!VR(cWord):Sd~(resQty);
+  !!VR(resQty:y):S1 Sd<<17;
+  !!VR(cWord):Sd~(resQty);
+  ; update bit mask
+  !!OB(CURRENT_OBJ):C(cWord:y);
+!!el;
+  ; mock message - need to find a proper func in HD mod
+  !!IF&999:M^{%(objName:z)}%T(jsMod.advObject.142.visitedDlg)^;
+!!en;
+
+
+!?FU(OnAdvMapTileHint);
+!!SN:X?(x:y)/?(y:y)/?(z:y)/?(objType:y)/?(objSubtype:y);
+!!FU&(objType:y)<>(OBJ_HOTA_WAREHOUSE):E;         [Exit it it is not Warehouse_Type]
+!!OB(x)/(y)/(z):C?(cWord:y);
+!!OW:C?y99/?(clickedPlayer:y);
+!!OW:A(clickedPlayer)/?(activeHero:y);
+!!if&(activeHero)<>(NO_HERO);
+  !!VR(playerBits:y):S1 Sd<<(clickedPlayer);
+  !!VR(cWord):Sd>>5 &(playerBits);
+  !!SN:T^jsMod.advObject.142.%(objSubtype).name^/?(objName:z);
+  !!if&(cWord);                       [if object is visited]
+    !!VR(objName): +^ %T(jsMod.advObject.common.visited)^;
+  !!en;
+  !!MM:M^%(objName:z)^;
+!!en;
+
+
+!?FU(OnAdventureMapRightMouseClick);
+!!CM:P?(x:y)/?(y:y)/?(z:y);
+!!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y);
+
+!!if&(objType)=(OBJ_HOTA_WAREHOUSE);
+  !!OB(x)/(y)/(z):C?(cWord:y);
+  !!OW:C?y99/?(clickedPlayer:y);
+  !!OW:A(clickedPlayer)/?(activeHero:y);
+  !!if&(activeHero)<>(NO_HERO);
+    *!FU(js_Warehouse_GetResource):P(x)/(y)/(z)/?(resType:y)/?(resQty:y);
+    !!VR(playerBits:y):S1 Sd<<(clickedPlayer);
+    !!VR(cWord):Sd>>5 &(playerBits);
+    !!SN:T^jsMod.advObject.142.%(objSubtype).name^/?(objName:z);
+    !!if&(cWord);                       [if object is visited]
+      !!VR(objName): +^%T(gem.endl)%T(gem.endl)%T(jsMod.advObject.common.visited)^;
+    !!en;
+    !!SN:H^object^/(x)/(y)/(z)/(objName);
+    *!MM:M^%(objName:z) %(cWord) %(resType) %(resQty)^;
+  !!en;
+!!en;
+
+
+!?FU(OnEveryDay)&i^timerWeekday^=1/i^timerOnce^;/i^timerDay^>1;
+!!FU(js_ClearWarehouseData):P;
+
+
+!?FU(js_ClearWarehouseData);
+!!UN:U(OBJ_HOTA_WAREHOUSE)/-1/?(objQty:y);     [(Get amount of objects on the map)]
+!!if&(objQty);
+  !#VA(qties[7]:y);
+  !!VR(qties[0]):C10/6/10/6/6/6/4;
+  !!VRv2:S-1;                             [start searching from the first map object]
+  !!re i/1/(objQty:y);
+    !!UN:U(OBJ_HOTA_WAREHOUSE)/-1/-1/2;          [store coordinates from the objects in v2, v3, v4]
+    !!OBv2/v3/v4:T?(objType:y) U?(objSubtype:y);                  [(Get Type and Subtype)]
+    !!if&(objType:y)=(OBJ_HERO);
+      !!FU(gem_AdvMgr_HideHero):Pv2/v3/v4;
+    !!en;
+    !!VR(resCount:y):S(qties[objSubtype]) Sd<<13;
+    !!VR(cWord:y):S0 |(objSubtype:y) |(resCount); // add res type and count
+    !!OBv2/v3/v4:C(cWord);
+    !!if&(objType:y)=(OBJ_HERO);
+      !!FU(gem_AdvMgr_ShowHero):Pv2/v3/v4;
+    !!en;
+  !!en;
+!!en;

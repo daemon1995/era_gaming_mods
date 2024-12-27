@@ -1,0 +1,157 @@
+ZVSE2
+
+****************************************************************************************************
+*Morale and Luck reducing artefacts*
+Script by Daemon_n and JackSlater (26.01.23)
+Updated by Archer30 (25.04.24)
+
+!?FU(tum_MinusMorale);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/20/4/?(oppHero:y);
+
+!!VR(moralReduction:y):S0; [Reset var]
+
+!!if&(oppHero);
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_PENDANT_OF_DESPAIR);
+  !!if&v1;
+    !!VR(moralReduction): -3;
+  !!en;
+
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_CLOAK_OF_DEATHS_SHADOW);
+  !!if&v1;
+    !!VR(moralReduction): -2;
+  !!en;
+
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_PENDANT_OF_DOWNFALL);
+  !!if&v1;
+    !!VR(moralReduction): -2;
+  !!en;
+
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_HIDEOUS_MASK);
+  !!if&v1;
+    !!VR(moralReduction): -1;
+  !!en;
+  
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_RING_OF_SUPPRESSION);
+  !!if&v1;
+    !!VR(moralReduction): -1;
+  !!en;
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/d(moralReduction);
+!!en;
+
+
+!?FU(tum_MinusLuck);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/16/4/?(oppHero:y);
+
+!!VR(luckChanger:y):S0; [Reset var]
+
+!!if&(oppHero);
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_PENDANT_OF_DESPAIR);
+  !!if&v1;
+    !!VR(luckChanger:y): -3;
+  !!en;
+
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_CLOAK_OF_DEATHS_SHADOW);
+  !!if&v1;
+    !!VR(luckChanger:y): -2;
+
+  !!en;
+
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_SHAMANS_PUPPET);
+  !!if&v1;
+    !!VR(luckChanger:y): -2;
+  !!en;
+
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_DEMONS_HORSESHOE);
+  !!if&v1;
+    !!VR(luckChanger:y): -1;
+  !!en;
+  
+  !!SN:E5084256/(CALLCONV_THISCALL)/(oppHero)/(ART_RUNES_OF_IMMINENCY);
+  !!if&v1;
+    !!VR(luckChanger:y): -1;
+  !!en;
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/d(luckChanger:y);
+!!en;
+
+
+; Set up artifact description
+!?FU(OnAfterErmInstructions);
+!!FU(NewIntArray):P10/?i^tum_negativeMoraleArtsList^/(M_STORED);
+!!SN:Vi^tum_negativeMoraleArtsList^/0/(ART_PENDANT_OF_DOWNFALL)/2/(ART_HIDEOUS_MASK)/1/(ART_RING_OF_SUPPRESSION)/1/(ART_CLOAK_OF_DEATHS_SHADOW)/2/(ART_PENDANT_OF_DESPAIR)/3;
+
+!!FU(NewIntArray):P10/?i^tum_negativeLuckArtsList^/(M_STORED);
+!!SN:Vi^tum_negativeLuckArtsList^/0/(ART_SHAMANS_PUPPET)/2/(ART_DEMONS_HORSESHOE)/1/(ART_RUNES_OF_IMMINENCY)/1/(ART_CLOAK_OF_DEATHS_SHADOW)/2/(ART_PENDANT_OF_DESPAIR)/3;
+
+
+; Negative Morale artifacts
+!?FU(tum_OnAfterSetArtMoraleDesc)&i^tum_luckMoraleDesc_OppHeroIdPlusOne^>0;
+!#VA(hook:x);
+
+!!VR(negativeMoraleArtDesc:z);
+!!VR(oppHero:y):Si^tum_luckMoraleDesc_OppHeroIdPlusOne^ -1;
+!!SN:Mi^tum_negativeMoraleArtsList^/?(size:y);
+
+!!VR(totalMoralReduction:y):S0;
+
+!!re i/0/(size)/1/-1;
+  !!SN:Mi^tum_negativeMoraleArtsList^/i/?(art:y);
+  !!HE(oppHero):A2/(art)/?(has:y)/?(equipped:y);
+
+  !!SN:H^art^/(art)/0/?(artName:z);
+  !!VRi:+1;
+
+  !!if&(equipped)>0;
+    !!SN:H^art^/(art)/0/?(artName:z);
+    !!SN:Mi^tum_negativeMoraleArtsList^/i/?(moraleReduction:y);
+    !!VR(negativeMoraleArtDesc):+^%T(gem.endl)%(artName) -%(moraleReduction)^;
+    !!VR(totalMoralReduction):+(moraleReduction);
+  !!en;
+!!en;
+
+; Exit if no negative artifact found
+!!FU&(totalMoralReduction)=0:E;
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!VR(ptr:y):S(ebp) -92;
+
+!!SN:K(negativeMoraleArtDesc)/?(size:y);
+!!SN:E4305568/(CALLCONV_THISCALL)/(ptr)/?(negativeMoraleArtDesc)/(size);
+
+; Mark morale bonus managed here as resolved (nullify desc "spells +7")
+!!UN:C(ebp)/16/4/d(totalMoralReduction);
+
+
+; Negative Luck artifacts
+; Warning: This will only be executed when Hourglass is not equipped!
+!?FU(tum_OnAfterSetArtLuckDesc)&i^tum_luckMoraleDesc_OppHeroIdPlusOne^>0;
+!#VA(hook:x);
+
+!!VR(negativeLuckArtDesc:z):S^^;
+!!VR(oppHero:y):Si^tum_luckMoraleDesc_OppHeroIdPlusOne^ -1;
+!!SN:Mi^tum_negativeLuckArtsList^/?(size:y);
+
+!!VR(totalLuckReduction:y):S0;
+
+!!re i/0/(size)/1/-1;
+  !!SN:Mi^tum_negativeLuckArtsList^/i/?(art:y);
+  !!HE(oppHero):A2/(art)/?(has:y)/?(equipped:y);
+  !!VRi:+1;
+
+  !!if&(equipped)>0;
+    !!SN:H^art^/(art)/0/?(artName:z);
+    !!SN:Mi^tum_negativeLuckArtsList^/i/?(luckReduction:y);
+    !!VR(negativeLuckArtDesc):+^%T(gem.endl)%(artName) -%(luckReduction)^;
+    !!VR(totalLuckReduction):+(luckReduction);
+  !!en;
+!!en;
+
+; Exit if no negative artifact found
+!!FU&(totalLuckReduction)=0:E;
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!VR(ptr:y):S(ebp) -32;
+
+!!SN:K(negativeLuckArtDesc)/?(size:y);
+!!SN:E4305568/(CALLCONV_THISCALL)/(ptr)/?(negativeLuckArtDesc)/(size);

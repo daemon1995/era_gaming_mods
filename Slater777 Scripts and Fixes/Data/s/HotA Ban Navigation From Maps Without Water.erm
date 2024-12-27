@@ -1,0 +1,96 @@
+ZVSE2
+
+
+; Ban navigation from maps without water
+; Добавлены новые герои Беатрис и Кинкерия на замену героев с навигацией (Сильвия и Вой) для случайных карт без воды
+// Заменять портреты героев, имя и биографию
+
+
+// Incompatible options
+*?FU(js_CheckHeroesOptions);
+; x1 - result
+*!UN:P198/?y1; Changed heroes skills
+
+*!VRx1:S(FALSE);
+
+*!if&y1;|y1/y2/y3/y4;
+  *!VRx1:S(TRUE);
+*!en;
+
+
+!?FU(OnAfterErmInstructions)&i^js_landMode^;
+*!FU(js_CheckHeroesOptions):P?(activeSettings:y);
+*!FU&(activeSettings):E;
+
+; Spec switch
+!!re i/0/(HERO_LAST_WOG);
+  !!HEi:X?(specType:y)/?(specSubtype:y)/d/d/d/d/d;
+
+  !!if&(specType)=0/(specSubtype)=(SKILL_NAVIGATION);
+    !!if&i=(HERO_SYLVIA);
+      !!HEi:X0/(SKILL_SCOUTING); Сильвия спец по разведке (Беатрис)
+      !!HEi:S(SKILL_NAVIGATION)/?(skillLvl:y);
+      !!HEi:S(SKILL_NAVIGATION)/0;
+      !!HEi:S(SKILL_SCOUTING)/(skillLvl:y);
+      !!SN:H^spec^/i/2/^%T(jsMod.secSkill.scouting.desc.spec)^;
+    !!el&i=(HERO_VOY);
+      !!HEi:X0/(SKILL_LEARNING); Вой спец по обучаемости (Кинкерия)
+      !!HEi:S(SKILL_NAVIGATION)/?(skillLvl:y);
+      !!HEi:S(SKILL_NAVIGATION)/0;
+      !!HEi:S(SKILL_LEARNING)/(skillLvl:y);
+      !!SN:H^spec^/i/2/^%T(jsMod.secSkill.learning.desc.spec)^;
+    !!el;
+      !!HEi:X0/(SKILL_LOGISTICS); Остальные (если заданы) - спецы по логистике
+      !!HEi:S(SKILL_NAVIGATION)/?(skillLvl:y);
+      !!HEi:S(SKILL_NAVIGATION)/0;
+      !!HEi:S(SKILL_LOGISTICS)/(skillLvl:y);
+      !!SN:H^spec^/i/2/s^js_logisticsSpecDesc^;
+    !!en;
+  !!en;
+!!en;
+
+; Clear global vars
+!!VRs^js_logisticsSpecDesc^:S^^;
+
+
+
+!?FU(js_Check_WaterPercentageOnTheMap);
+!#VA(waterPercent:x);
+; Loop through all the tiles on the surface to get the percentage of water
+!!VR(waterTiles:y):S0;
+!!UN:X?(width:y)/?(level:y);
+
+!!re (x:y)/0/(width)/1/-1;
+  !!re (y:y)/0/(width)/1/-1;
+    !!TR(x)/(y)/0:T?(terrain:y);
+    !!VR(waterTiles)&(terrain)=8:+1;    [8 = water]
+  !!en;
+!!en;
+
+!!VR(totalTiles:y):S(width) *(width);
+!!VR(waterPercent):S(waterTiles) *100 :(totalTiles);
+
+
+!?FU(js_BanAllSpellsArtsSkillsOnNonwaterMap);
+!!FU(js_Check_WaterPercentageOnTheMap):P?(waterPercent:y);
+!!FU&(waterPercent)>=15:E;
+
+; Set the global variable for land mode
+!!VRi^js_landMode^:S(TRUE);
+; Store logistics spec desc (as it can be changed by other mods in the future)
+!!SN:H^spec^/(HERO_GUNNAR)/2/?s^js_logisticsSpecDesc^;
+
+; Ban water artifacts and spells
+!!UN:P172/1 P164/1 P157/1;
+!!UN:A(ART_NECKLACE_OF_OCEAN_GUIDANCE)/1 A(ART_BOOTS_OF_LEVITATION)/1 A(ART_SEA_CAPTAINS_HAT)/1 A(ART_ADMIRALS_HAT)/1; [запрет водных артефактов]
+!!UN:P152/1 P153/1 P221/1;            [включение опций Бана водных заклинаний]
+!!UN:J0/(SPELL_SUMMON_BOAT)/1 J0/(SPELL_SCUTTLE_BOAT)/1 J0/(SPELL_WATER_WALK)/1; [Бан водных заклинаний в Гильдиях Магов и Пирамидах]
+
+; Ban Navigation (it applies for witch huts and levelups)
+!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+!!VR(skillBanPtr:y):S(gameMgr) +321112;
+!!UN:C(skillBanPtr)/(SKILL_NAVIGATION)/(UNC_INT8)/1;?(isBanned:y);
+;!IF:L^%(isBanned)^;
+
+
+!#FU(js_BanAllSpellsArtsSkillsOnNonwaterMap):P;

@@ -1,0 +1,168 @@
+ZVSE2
+
+
+; Поднят нижний порог хила.
+; Первая помощь даёт Палатке Первой Помощи свойство увеличивать здоровье всех существ
+; в армии героя на 5/10/15% (с округлением вниз), пока Палатка присутствует на поле боя.
+; Здоровье палатки увеличивается на 100/200/300% (замена hota эффекта - получение максимум урона в 1/3 от хп палатки)
+
+
+// Incompatible options
+!?FU(js_CheckFirstAidOptions);
+; x1 - result
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?y1; ^wog_54_enabled^
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_II)/?y2; ^wog_55_enabled^
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_III)/?y3; ^wog_73_enabled^
+!!UN:P(WOG_OPT_FIRST_AID_I)/?y4; i^wog_204_enabled^
+!!UN:P(WOG_OPT_FIRST_AID_II)/?y5; i^wog_190_enabled^
+!!UN:P193/?y6; warfare
+!!UN:P782/?y7; medicine
+!!UN:P743/?y8; Health artifacts
+
+!!VRx1:S(FALSE);
+
+!!if|y1/y2/y3/y4/y5/y6/y7/y8;
+  !!VRx1:S(TRUE);
+!!en;
+
+
+!?FU(OnAfterErmInstructions);
+!!FU(js_CheckFirstAidOptions):P?(activeSettings:y);
+!!FU&(activeSettings):E;
+
+!!SN:H^secskill^/(SKILL_FIRST_AID)/(SKILL_BASIC)/?(skillDesc:z);
+!!FU(StringReplaceINT):P(skillDesc)/^40-50^/?(newSkillDesc:z);
+!!SN:T^jsMod.secSkill.firstAid.desc.addDesc^/?(addDesc:z)/^number^/5/^percent^/100;
+!!VR(newSkillDesc): +(addDesc:z);
+!!SN:H^secskill^/(SKILL_FIRST_AID)/(SKILL_BASIC)/(newSkillDesc);
+
+!!SN:H^secskill^/(SKILL_FIRST_AID)/(SKILL_ADVANCED)/?(skillDesc:z);
+!!FU(StringReplaceINT):P(skillDesc)/^60-75^/?(newSkillDesc:z);
+!!SN:T^jsMod.secSkill.firstAid.desc.addDesc^/?(addDesc:z)/^number^/10/^percent^/200;
+!!VR(newSkillDesc): +(addDesc:z);
+!!SN:H^secskill^/(SKILL_FIRST_AID)/(SKILL_ADVANCED)/(newSkillDesc);
+
+!!SN:H^secskill^/(SKILL_FIRST_AID)/(SKILL_EXPERT)/?(skillDesc:z);
+!!FU(StringReplaceINT):P(skillDesc)/^80-100^/?(newSkillDesc:z);
+!!SN:T^jsMod.secSkill.firstAid.desc.addDesc^/?(addDesc:z)/^number^/15/^percent^/300;
+!!VR(newSkillDesc): +(addDesc:z);
+!!SN:H^secskill^/(SKILL_FIRST_AID)/(SKILL_EXPERT)/(newSkillDesc);
+
+
+!?FU(gem_CreateERMHook);
+!!FU(js_CheckFirstAidOptions):P?(activeSettings:y);
+!!FU&(activeSettings:y):E;
+
+!!SN:Ex1/1/4687040/(tum_BattleMgr_TentHill); 4784C0
+!!SN:Ex1/1/5138208/(js_AfterVitalityArtifactsBonusesCalculation); 4E6720
+
+
+// Усиление нижней границы хила
+!?FU(tum_BattleMgr_TentHill);
+!!BG:N?(stackNum:y);
+!!BM(stackNum:y):I?(side:y);
+!!BA:H(side:y)/?(heroNum:y);
+!!HE(heroNum:y):S(SKILL_FIRST_AID)/?(firstAidLvl:y);
+;!IF:L^firstAidLvl = %(firstAidLvl:y)^;
+!!if&(firstAidLvl:y)>0;
+  !!VR(minHeal:y):S20 *(firstAidLvl:y) +20;
+  ;!IF:L^minHeal = %(minHeal:y)^;
+  !!UN:C4687151/4/(minHeal:y); 47852F
+!!en;
+
+
+// Отображение бонуса в диалоге - палатка дает +5/10/15% хп (с округлением вниз)
+// Применяется также в начале боя
+!?FU(js_AfterVitalityArtifactsBonusesCalculation);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/?(hero:y);
+!!UN:C(hero)/26/4/?(heroId:y); C(ebp)/8/4/?(monID:y);
+
+!!HE(heroId):A2/(ART_FIRST_AID_TENT)/?y99/?(tent:y);
+!!HE(heroId:y):S(SKILL_FIRST_AID)/?(skillLvl:y) X?(spec:y)/?(skill:y);
+
+!!if&(tent)/(skillLvl)>0;
+  !!VR(bonusFloat:e):S(skillLvl);
+
+  !!if&(spec)=0/(skill)=(SKILL_FIRST_AID); // если спец по первой помощи
+    !!HE(heroId):E?s/?(level:y);
+    !!VR(percentBoost:y):S20;
+    !!VR(specBonusFloat:e):S(level) :(percentBoost) *(bonusFloat); 0.05 за лвл
+    !!VR(bonusFloat:e): +(specBonusFloat:e);
+  !!en;
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(crInfoPtr:y) C(crInfoPtr)/16/4/?f;
+  !!VR(isSiegeWeapon:y):Sf &(MON_FLAG_SIEGE_WEAPON);
+
+  !!UN:C(ebp)/8/4/?(monID:y);
+  !!if&(monID)=(MON_FIRST_AID_TENT);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?h; // creature hp
+    !!VR(bonusHp:y):Sh *(skillLvl); // *2 (+100%); *3 (+200%); *4 (+300%)
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d(bonusHp);
+  !!en;
+
+  !!if&(isSiegeWeapon)=0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?h; // creature hp
+    !!VR(bonusPercent:e):S(bonusFloat) *5;
+    !!VR(bonusHpFloat:e):Sh :100 *(bonusPercent);
+    !!VR(bonusHp:y):S(bonusHpFloat);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/d(bonusHp);
+  !!en;
+!!en;
+
+
+// Если стек палатки уничтожен
+!?FU(tum_OnBattleStackKilled);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackPtr:y);
+!!FU&(stackPtr)=(NULL):E;
+!!UN:C(stackPtr)/52/4/?(monNum:y); 34
+!!UN:C(stackPtr)/244/4/?(side:y); F4
+
+!!if&(monNum)=(MON_FIRST_AID_TENT);
+
+  !!VR(heroId:y):Si^battle_hero_%(side)^;
+  !!HE(heroId):S(SKILL_FIRST_AID)/?(skillLvl:y);
+  !!HE(heroId):A2/(ART_FIRST_AID_TENT)/?y99/?(tent:y);
+
+  !!if&(tent)/(skillLvl)>0;
+    !!VR(bonusFloat:e):S(skillLvl);
+    !!HE(heroId):X?(spec:y)/?(skill:y);
+
+    !!if&(spec)=0/(skill)=(SKILL_FIRST_AID); // если спец по первой помощи
+      !!HE(heroId):E?s/?(level:y);
+      !!VR(percentBoost:y):S20;
+      !!VR(specBonusFloat:e):S(level) :(percentBoost) *(bonusFloat); 0.05 за лвл
+      !!VR(bonusFloat:e): +(specBonusFloat:e);
+    !!en;
+
+    !!VR(startStack:y):S(BATTLE_ATTACKER_STACK_FIRST);
+    !!VR(endStack:y):S(BATTLE_ATTACKER_STACK_LAST);
+    !!VR(startStack)&(side)=1: +(BATTLE_STACKS_PER_SIDE);
+    !!VR(endStack)&(side)=1: +(BATTLE_STACKS_PER_SIDE);
+
+    !!re i/(startStack)/(endStack);
+       !!BMi:Z?(monPtr:y);
+       !!UN:C(monPtr)/76/4/?(monQty:y); // 4C
+       !!if&(monQty)>0;
+          !!UN:C(monPtr)/132/4/?f; // 84
+          !!VR(isSiegeWeapon:y):Sf &(MON_FLAG_SIEGE_WEAPON);
+
+          !!if&(isSiegeWeapon)=0;
+           
+            !!UN:C(monPtr)/108/4/?(maxHp:y); // 6C
+            !!UN:C(monPtr)/52/4/?(monNum:y); // 34
+            !!MA:P(monNum)/?(baseHp:y);
+
+            ;!if&(bonusFloat)>0;
+              !!VR(bonusPercent:e):S(bonusFloat) *5;
+              ;!IF:L^bonusPercent= %(bonusPercent)^;
+              !!VR(bonusHpFloat:e):S(baseHp) :100 *(bonusPercent);
+              !!VR(bonusHp:y):S(bonusHpFloat);
+              ;!IF:L^bonusHp= %(bonusHp)^;
+              !!VR(fixedHp:y):S(maxHp) -(bonusHp);
+              !!UN:C(monPtr)/192/4/(fixedHp);
+            ;!en;
+         !!en;
+       !!en;
+    !!en;
+  !!en;
+!!en;
