@@ -1,0 +1,256 @@
+ZVSE2
+
+
+; BACKUP (Балистика увеличивает атаку стрелков на 3/6/9)
+; Позволяет участвовать катапульте в обычных битвах (кусок из опции 55 - ус.боев.маш II)
+; Баллиста атакует огненным шаром и критует
+
+
+!?FU(gem_CreateERMHook);
+!!if&i^js_ballistics_bonus^;
+  !!SN:Ex1/1/4454185/(js_OnBeforeMagogShoot); 0043F729
+!!en;
+
+
+// Incompatible options
+!?FU(js_CheckCatapultOptions);
+; x1 - result
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_I)/?y1; ^wog_54_enabled^
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_II)/?y2; ^wog_55_enabled^
+!!UN:P(WOG_OPT_ENHANCED_WAR_MACHINES_III)/?y3; ^wog_73_enabled^
+!!UN:P193/?y4; warfare
+
+!!VRx1:S(FALSE);
+
+!!if|y1/y2/y3/y4;
+  !!VRx1:S(TRUE);
+!!en;
+
+
+!?FU(OnAfterErmInstructions);
+!!FU(js_CheckCatapultOptions):P?(activeSettings:y);
+!!FU&(activeSettings):E;
+
+!!VRi^js_ballistics_bonus^:S(TRUE);
+
+// backup
+*!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_BASIC)/?(descBaseBallistics:z);
+*!SN:T^jsMod.secSkill.ballistics.desc.addDesc^/?(addDesc1:z)/^points^/3;
+*!VR(descBaseBallistics:z): +(addDesc1:z);
+*!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_BASIC)/(descBaseBallistics:z);
+
+*!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_ADVANCED)/?(descAdvBallistics:z);
+*!SN:T^jsMod.secSkill.ballistics.desc.addDesc^/?(addDesc2:z)/^points^/6;
+*!VR(descAdvBallistics:z): +(addDesc2:z);
+*!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_ADVANCED)/(descAdvBallistics:z);
+
+*!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_EXPERT)/?(descExpBallistics:z);
+*!SN:T^jsMod.secSkill.ballistics.desc.addDesc^/?(addDesc3:z)/^points^/9;
+*!VR(descExpBallistics:z): +(addDesc3:z);
+*!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_EXPERT)/(descExpBallistics:z);
+//
+
+!!VR(addDesc:z):S^%T(jsMod.secSkill.ballistics.desc.addDesc)^;
+
+!!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_BASIC)/?(descBallistics:z);
+!!VR(descBallistics): +(addDesc);
+!!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_BASIC)/(descBallistics);
+
+!!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_ADVANCED)/?(descBallistics:z);
+!!VR(descBallistics): +(addDesc);
+!!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_ADVANCED)/(descBallistics);
+
+!!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_EXPERT)/?(descBallistics:z);
+!!VR(descBallistics): +(addDesc);
+!!SN:H^secskill^/(SKILL_BALLISTICS)/(SKILL_EXPERT)/(descBallistics);
+
+
+
+************************************************************************************************
+!!SN:H^monname^/(MON_CATAPULT)/0/?(single:z) H^monname^/(MON_CATAPULT)/1/?(plural:z);
+!!SN:H^monname^/(MON_NOT_USED_2)/0/(single) H^monname^/(MON_NOT_USED_2)/1/(plural);
+
+; Set up flags for Catapult in non-siege
+!!MA:X(MON_NOT_USED_2)/132197 F(MON_NOT_USED_2)/650 ; [set NU2 flags {catapult flags (132197) + shooter (4)}    NU2 Fight Value 650  ]
+!!MA:A(MON_NOT_USED_2)/10 D(MON_NOT_USED_2)/10 P(MON_NOT_USED_2)/250 N(MON_NOT_USED_2)/24; [NU2 Attack 10 NU2 Defense 10 NU2 HP 250  NU2 Shots 24]
+
+; creature descriptions
+!!SN:H^monname^/(MON_CATAPULT)/2/?(catDesc:z);
+!!VR(addDesc:z):S^%T(jsMod.creature.145.addDesc)^;
+!!VR(catDesc): +(addDesc);
+!!SN:H^monname^/(MON_CATAPULT)/2/(catDesc);
+
+; Stack exp abilities
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y); [check if creature experience is enabled]
+
+!!if&(stackExp);
+  !!EA(MON_NOT_USED_2):O(MON_CATAPULT);
+
+  *!EA(MON_NOT_USED_2):F105/?(availSlot:y); [NU2 (catapult) - get bonus line index]
+  *!EA(MON_NOT_USED_2):B(availSlot)/1/105/61/1/1/1/1/1/1/1/1/1/1/1; [set no range penalty]
+  !!EA(MON_NOT_USED_2):F98/?(availSlot:y); [NU2 (catapult) - get bonus line index]
+  !!EA(MON_NOT_USED_2):B(availSlot)/1/98/61/50/50/50/50/50/50/50/50/50/50/50; [set ignore defense to 50%]
+!!en;
+
+
+!?FU(js_OnBeforeMagogShoot);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(esi:y) C(esi)/52/4/?(monNum:y); 0x34
+!!if&(monNum)=(MON_NOT_USED_2);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(monNum);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4454197; 0043F735
+!!en;
+
+
+; Set up Catapult in non-siege and non-CB battles
+!?FU(OnSetupBattlefield)&i^js_ballistics_bonus^;
+; Initialise catapult variables
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!VRi^wog_55_catapult_%i^:S(NO_STACK);
+!!en;
+
+; Restore the memory value for Arrow Tower Shoot Adjacent
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
+!!UN:C4479001/(UNC_INT)/(MON_ARROW_TOWERS);
+
+!!FU(js_PlaceCatapult)&i^wog_isSiege^<>(TRUE)/i^wog_isCBBattle^<>(TRUE):P(BATTLE_LEFT) P(BATTLE_RIGHT);
+
+
+; Restrain the quantities of First Aid Tents and Ballistas to max of 2 (1 from War Machine artifact, the other from Commander)
+!?FU(js_PlaceCatapult);
+!#VA(side:x);
+  
+!!if&i^battle_hero_%(side)^>(NO_HERO);
+  !!HEi^battle_hero_%(side)^:S(SKILL_BALLISTICS)/?(ballisticsLv:y);
+
+  !!if&(ballisticsLv)>(SKILL_NOT_LEARNED);
+    !!if&(side)=(BATTLE_LEFT);
+      !!VR(catPos:y):S119;
+    !!el;
+      !!VR(catPos):S135;
+    !!en;
+
+    !!BU:S(MON_CATAPULT)/1/(catPos)/(side)/-1/(FALSE); [add catapults]
+    !!BU:E(catPos)/?(catStack:y);
+
+    !!if&(catStack)>(NO_STACK);
+      !!BM(catStack):T?(type:y);
+
+      !!if&(type)=(MON_CATAPULT);
+        ; Store stack number to be used later after Tactic Phase
+        !!VRi^wog_55_catapult_%(side)^:S(catStack);
+        ; Set up basic stats except for monster type as setting here would conflict with HD fast troop placements
+        !!HEi^battle_hero_%(side)^:F?(heroAtk:y)/d/d/d;
+
+        !!BM(catStack):A?(catAtk:y);
+        !!VR(atkDelta:y):S(catAtk) -(heroAtk) -10; //Вычитаем геройскую атаку и базовую (чтобы синхронизировать бонус с колчаном и тележкой)
+
+        !!VR(bonusAtk:y):S(heroAtk) +1;
+        ;[2–3 * (атака + 1)] на [2–3 * (атака + 5)]
+        !!VR(bonusAtk:y)&i^js_hota_artillery^:S(heroAtk) +5;
+        !!VR(bonusAtk):+(atkDelta);
+
+        !!VR(minDamage:y):S2 *(bonusAtk);
+        !!VR(maxDamage:y):S3 *(bonusAtk);
+
+        !!BM(catStack):U1/(minDamage) U2/(maxDamage) H250 B1;
+
+        ; Change the memory value of Arrow Tower to Catapult in order to have it shoot adjacent
+        !!UN:C4466213/(UNC_INT)/(MON_NOT_USED_2);
+        !!UN:C4479001/(UNC_INT)/(MON_NOT_USED_2);
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+
+; Change catapult ID to 124 - Must be after Tactics Phase due to HD mod compatibility
+!?FU(OnAfterTacticsPhase)&i^js_ballistics_bonus^;
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!BMi^wog_55_catapult_%i^&i^wog_55_catapult_%i^>(NO_STACK):T(MON_NOT_USED_2);
+!!en;
+
+
+!?FU(OnAfterBattleUniversal)&i^js_ballistics_bonus^;
+; Restore the memory value for Arrow Tower Shoot Adjacent
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
+!!UN:C4479001/(UNC_INT)/(MON_ARROW_TOWERS);
+
+
+!?FU(OnGameLeave)&i^js_ballistics_bonus^;
+!!UN:C4466213/(UNC_INT)/(MON_ARROW_TOWERS);
+!!UN:C4479001/(UNC_INT)/(MON_ARROW_TOWERS);
+
+
+-------------------------- B E F O R E   S T A C K    T U R N --------------------------
+
+
+*?FU(WOG_55_BattleFunc_CheckForDamagedStacks);
+
+
+
+*?FU(OnAfterBattleAction)&i^js_ballistics_bonus^/i^wog_isSiege^<>(TRUE);/x7/x9=0;
+;!IF:L^end battle= %v7002^;
+;!IF:L^mon atk num= %v7003^;
+;!IF:L^= %v7008^;
+
+*!if&v7002>-1;
+  *!FU7061&v7000<20/v7001=58:P73/v7003/1/3/0/2/2/v7008/0/v7002;              [20% cast disease if walking dead attacked]
+  *!FU7061&v7000<10/v7001=60:P74/v7003/1/3/1/4/2/v7008/0/v7002;              [10% cast paralysis if wight attacked]
+  *!FU7061&v7000<100/v7001=(MON_NOT_USED_2):P73/v7003/1/3/0/2/2/v7008/0/v7002;
+  ;#VA(spell:x) (pos:x) (rank:x) (power:x) (noRetaliation:x) (level:x) (specialImmun:x) (type:x) (const:x) (stack:x);
+*!en;
+
+*#VA(attacker:x) (defender:x);
+*!BM(attacker):T?(monType:y);
+*!BM(defender):N?(defNum:y);
+*!IF:L^monType= %(monType), defNum= %(defNum)^;
+
+*!BG:N?(activeStack:y) A?(actionType:y);                      [get current stack # and action type]
+*!IF:L^activeStack= %(activeStack), actionType= %(actionType)^;
+
+*!BM(activeStack):T?(atkMonType:y);                    [get acting monster type, quantity, position, side]
+*!IF:L^atkMonType= %(atkMonType)^;
+*!BG&(actionType)=7:E?(targetStack:y);              [if creature is attacking or shooting get destination stack]
+
+*!if&(targetStack)>(NO_STACK);
+  *!BM(targetStack):T?(defMonType:y) P?(defMonPos:y);                [get type, position, retaliations of target creature stack]
+  *!IF:L^defMonType= %(defMonType), defMonPos= %(defMonPos)^;
+*!en;
+
+
+
+; Critical hit for Catapult in non-siege and non-CB battles
+** start of pre-damage trigger
+!?FU(OnStackToStackDamage)&i^js_ballistics_bonus^/i^wog_isSiege^<>(TRUE)/x7/x9=0; [x7 = shot, x9 = 0.. only for real damage]
+!#VA(attacker:x) (defender:x);
+
+!!BM(attacker):T?(monType:y);
+
+!!if&(monType)=(MON_NOT_USED_2);
+  !!BM(defender):N?(defNum:y);
+
+  *!if&(defNum)>1;                    [Works only when the defending number is greater than 1]
+    !!VR(random:y):R0/0/99;           [random roll - 1% chance per level]
+
+    !!BM(defender):Z?(defStack:y);
+    !!UN:C(defStack)/120/4/?(monLvl:y); 0x78
+    !!FU&(monLvl)<0:E;
+    !!VR(chance:y):S6 -(monLvl);
+    !!HEi^battle_hero_%i(battle_acting_side)^:S(SKILL_BALLISTICS)/?(skillLvl:y);
+    ;!VR(skillPercent:y):S(skillLvl) *10;
+    !!VR(chance):+(skillLvl);
+    !!VR(chance):*10 F0/100;
+
+    !!if&(random)<=(chance);
+      !!BM(defender):Nd-1;            [show animation, set target quantity and reduce target quantity by 1]
+
+      !!if&i^battle_isVisible^;
+        !!VR(logMsg:z):Sz155007;
+        !!MM:S(logMsg);
+        !!BM(defender):V82;
+      !!en;
+    !!en;
+  *!en;
+!!en;
+** end of pre-damage trigger **
