@@ -1644,6 +1644,80 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!en;
 
 
+// Added the text of Keymaster's Tent visiting status when hovering over/right-clicing on Border Gates/Guards
+// by Archer30
+!?FU(gem_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/4240003/(gem_OnBorderGatesHover); [Hint]
+!!SN:E(setHook)/1/4275108/(gem_OnBorderGatesRightClick); [Right-click]
+
+; Hiint
+!?FU(gem_OnBorderGatesHover);
+!#VA(hook:x);
+
+; Check if Keymaster's Tent visited
+!!FU(gem_Border_CheckIfTentVisited):P(hook)/?(result:y);
+
+; Set up new text depending on the status
+!!SN:B6911016/d/?(text:z);
+
+!!if&(result)=0;
+  !!VR(text):+^ %T(gem.map.keymastersTent0)^;
+!!el;
+  !!VR(text):+^ %T(gem.map.keymastersTent1)^;
+!!en;
+
+!!SN:B6911016/d/(text);
+
+; Right-click
+!?FU(gem_OnBorderGatesRightClick);
+!#VA(hook:x);
+
+; Check if Keymaster's Tent visited
+!!FU(gem_Border_CheckIfTentVisited):P(hook)/?(result:y);
+
+; Set up new text depending on the status
+!!SN:B6911016/d/?(text:z);
+
+!!if&(result)=0;
+  !!VR(text):+^
+
+%T(gem.map.keymastersTent0)^;
+!!el;
+  !!VR(text):+^
+
+%T(gem.map.keymastersTent1)^;
+!!en;
+
+!!SN:B6911016/d/(text);
+
+!?FU(gem_Border_CheckIfTentVisited);
+!#VA(hook:x) (result:x);
+
+; Get the subtype
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBX)/4/?(objStruct:y);
+!!UN:C(objStruct)/34/2/?(subtype:y); [dword]
+
+; Check if it is visited
+!!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+!!VR(offset:y):S(subtype) +320356;
+!!UN:C(gameMgr)/(offset)/1/?(isVisited:y); [not visited: 0, visisted: 8]
+!!VR(result):S(isVisited) B;
+
+; Unused implementation
+; This implementation is text free - using the not visited/visited text from the game
+; I felt it wrong using the original text becasue it usually indicates the status of the object itself (instead of the keymaster's tent)
+!?FU(OnGameEnter);
+!!FU:E;
+
+!!UN:C4275108/4/2425366507;
+!!UN:C4275112/1/(OPCODE_NOP_1);
+
+!!UN:C4240003/4/2425366507;
+!!UN:C4240007/1/(OPCODE_NOP_1);
+
+
 ** Fix of the heroes and towns reordering
 !?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_PRESSED);/i^WOG_IsHdMod^=(TRUE);
   !!UN:J8/1/^wog scripts.pac^;  // if wog scripts mod is loaded
