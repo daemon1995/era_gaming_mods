@@ -280,7 +280,7 @@ Enable Artefact to appear on the map
 
 !!VR(result):S1;
 
-
+// Other functions
 !?FU(acm_CountNumUniqueSkillsLearned);
 !#VA(hero:x);
 !#VA(result:x);
@@ -4450,6 +4450,8 @@ Taken from Algor Era Scripts
 *==============================================================================*
 
 *==============================================================================*
+; Archer30: Note that triggering Good Luck may result in damage overflow (lacking value check before MF:D/F multiplication).
+; Also, some physical attacks may happen outside of BG phases, which completley skip luck definition here.
 !?BG0;
 
 !!SN:W^Att_Luck_Type^/0;
@@ -7640,13 +7642,17 @@ Druid                  : Heals two squads after combat, Flat Damage Block, 1 ext
   !!if&y20>y80;                         [decide chance for critical hit]
     !!MF:F?y6;                          [damage dealt]
     !!VRy10:Sy6*y30:100;                [If crit deal Bonus Damage]
-    !!MF:Fy10;                          [Apply new damage]
-    !!VRy11:Sy10-y6;                    [Total Bonus Damage]
-    !!BA:Q?f;                           [Check if quick battle]
-    !!VRz-1&1000:S^SLAYER.wav^;         [find block sound]
-    !!SN&i^battle_isVisible^:Pz-1;                 [play block sound]
-    !!SN&1000:T^AC_Misc.Critical Hit^/?z-1/^damage2^/y11;
-    !!BU&i^battle_isVisible^:Mz-1;
+
+    !!if&y10>y6;                        [If the crit damamg is greater than the original (overflow check)]
+      !!MF:Fy10;                        [Apply new damage]
+
+      !!if&i^battle_isVisible^;
+        !!VRy11:Sy10-y6;                [Total Bonus Damage]
+        !!SN:P^slayer^;                 [play slayer sound]
+        !!SN:T^AC_Misc.Critical Hit^/?z-1/^damage2^/y11;
+        !!BU:Mz-1;
+      !!en;
+    !!en;
   !!en;
 !!en;
 !!en;
@@ -9606,10 +9612,10 @@ Change Heroes Speciali Descriptions
 !!VR(damage):S(level):(divider);        [Damage per Level]
 !!VR(bonusHp):S(level)+9;               [+1% per Health per Level +9%]
 
-; Add in native bonuses
-*!FU(ACM_GetNativeMonSpecBonus):P(level)/(monId)/?(bonusAtk:y)/?(bonusDef:y);
-*!VR(attack):+(bonusAtk);
-*!VR(defense):+(bonusDef);
+; Add in native bonuses (approximate calculation)
+!!FU(ACM_GetNativeMonSpecBonus):P(level)/(monId)/?(bonusAtk:y)/?(bonusDef:y);
+!!VR(attack):+(bonusAtk);
+!!VR(defense):+(bonusDef);
 
 ; The script doesn't deal with War Machines as we don't need the stats to show in non-combat creature dlg
 !?FU(ACM_Hero_GetSpecMonster);
@@ -9619,7 +9625,8 @@ Change Heroes Speciali Descriptions
 !!HE(heroId):X?t/?(monId:y);
 
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(monPtr:y);
-; General
+
+; General (except for Firebirds and war machines)
 !!if&(monId)<>(MON_FIREBIRD)/(monId)<>(MON_BALLISTA);
   !!UN:C(monPtr)/76/4/?(currHp:y);
   !!FU(ACM_GetSpecMonsterStats):P(heroId)/(monId)/?(attack:y)/?(defense:y)/?(damage:y)/?(bonusHp:y);
@@ -9629,6 +9636,11 @@ Change Heroes Speciali Descriptions
   !!VR(hp:y):S(newHp);
   !!UN:C(monPtr)/76/4/d(hp); edit hp
   !!UN:C(monPtr)/92/4/d(damage) C(monPtr)/96/4/d(damage); [edit min/max damage]
+
+  ; Skip all the native bonuses except for speed
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5137895; 4E65E7
+
 ; Ignissa
 !!el&(monId)=(MON_FIREBIRD);
   !!HE(heroId):E?t/?(level:y)/1;        [Check hero level]
@@ -9639,7 +9651,7 @@ Change Heroes Speciali Descriptions
 
   ; Skip all the native bonuses
   !!SN:X?t/0;
-  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5137898;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/5137898; 4E65EA
 !!en;
 
 ; The following code is Replaced by Archer's script
