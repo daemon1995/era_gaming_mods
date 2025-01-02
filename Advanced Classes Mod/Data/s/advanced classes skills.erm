@@ -280,6 +280,20 @@ Enable Artefact to appear on the map
 
 !!VR(result):S1;
 
+// Update stack damaged animation
+; Use when the stack animation stuck at somewhere
+; SN:D sometimes crashes the game, especailly in some bad timing
+; This is usually used after BM:K to show the damaging animation of stacks
+!?FU(ACM_DrawActionPlay);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E4621680/2/(cmbMgr)/-1/1;
+
+// Execute Phoenix Resurrection
+; Usually is used after BM:K
+!?FU(ACM_ExecutePhoenixResurrection);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E4624416/(CALLCONV_THISCALL)/(cmbMgr); 469020
+
 // Other functions
 !?FU(acm_CountNumUniqueSkillsLearned);
 !#VA(hero:x);
@@ -4986,21 +5000,19 @@ Vision of the Eagle: If the skill is granted by the Set and not the actual skill
 
 !!if&y40>=0/y40<=41;                    [If enemy stack is valid]
   !!BMy40:Ky3;                          [apply damage to the target]
+  !!FU(ACM_DrawActionPlay):P;           [update creature animation to avoid using BU R, which can lead to crash]
+
   !!if&i^battle_isVisible^;
     !!VRz5:S^mag_ray.wav^;              [load sound file]
     !!SN:Pz5;                           [Play Sound]
     !!BMy40:V49;                        [Play animation]
     !!SN:T^AC_Misc.Magic Artillery 1^/?z4/^damage^/y3 Iz4/?z4;
     !!BU:Mz4;                           [print line in battlelog]
-    !!FU(ACM_UpdateStackAnimation):P;   [updates creature animation to avoid using BU R, which can lead to crash]
   !!en;
+
   !!SN:W^Magic_Artillery_Shoot_Flag^/1; [reset var after action]
+  !!FU(ACM_ExecutePhoenixResurrection):P;[Revive the stack (if it's a phoenix) in case it's killed]
 !!en;
-
-
-!?FU(ACM_UpdateStackAnimation);
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-!!SN:E4621680/2/(cmbMgr)/-1/1;
 
 
 !?FU(ACM_Generate_Random_Stack);
@@ -10301,26 +10313,26 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 !!BG:N?y1;                              [Attacking Stack]
 !!BMy1:T?y2;                            [Creature Type]
 !!if&y2>=174/y2<=191;                   [if any commander]
-!!SN:W^ACM_Com_%Y5_Passive_4^/?y70;     [Check for 2Supporter ability]
-!!if|y2=177/y2=186/y70=1;               [if Succubus]
-!!COy5:X2/?y30;                         [Get Commander Level]
-!!BG:E?y3;                              [Destination Poistion]
-!!FU&y3=-1:E;                           [Exit if no Monster there]
-!!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y80; [Pass Hero Number and return Passive Modifier]
-!!BMy3:F?y10;                           [Get Monster Flag]
-!!VRy10:&1024;                          [1024 Mind Spell Immunity]
-!!FU&y10>0:E;                           [Exit if creature is Mind Immune]
-!!BMy3:G34/?y11/?y12;                   [34 Anti-Magic]
-!!FU|y11>0/y12>0:E;                     [Exit if Anti Magic]
-!!BMy1:H?y4;                            [Current Hit Points of Succubus]
-!!BMy3:N?y5;                            [Number of Attacked Stack]
-!!BMy3:H?y6;                            [Health of Attacked Stack]
-!!VRy7:Sy5*y6;                          [Get total life of attacked Stack]
-!!VRy31:Sy30*75;
-!!VRy4:+y31*y80:100;                    [Succubus life +75*Level times the hit points of Succubus * Passive Mod]
-!!SN:W^Succubus_Charm_Value_%Y66^/y4;   [Save the value to show it in bonus list]
-!!BMy3&y7<y4:M60/2/3;                   [If value is lower apply hypno to stack]
-!!en;
+  !!SN:W^ACM_Com_%Y5_Passive_4^/?y70;     [Check for 2Supporter ability]
+  !!if|y2=177/y2=186/y70=1;               [if Succubus]
+    !!COy5:X2/?y30;                         [Get Commander Level]
+    !!BG:E?y3;                              [Destination Poistion]
+    !!FU&y3=-1:E;                           [Exit if no Monster there]
+    !!FU(Check_Com_Masteries):Py5/0/0/0/0/0/0/0/0/0/0/?y80; [Pass Hero Number and return Passive Modifier]
+    !!BMy3:F?y10;                           [Get Monster Flag]
+    !!VRy10:&1024;                          [1024 Mind Spell Immunity]
+    !!FU&y10>0:E;                           [Exit if creature is Mind Immune]
+    !!BMy3:G34/?y11/?y12;                   [34 Anti-Magic]
+    !!FU|y11>0/y12>0:E;                     [Exit if Anti Magic]
+    !!BMy1:H?y4;                            [Current Hit Points of Succubus]
+    !!BMy3:N?y5;                            [Number of Attacked Stack]
+    !!BMy3:H?y6;                            [Health of Attacked Stack]
+    !!VRy7:Sy5*y6;                          [Get total life of attacked Stack]
+    !!VRy31:Sy30*75;
+    !!VRy4:+y31*y80:100;                    [Succubus life +75*Level times the hit points of Succubus * Passive Mod]
+    !!SN:W^Succubus_Charm_Value_%Y66^/y4;   [Save the value to show it in bonus list]
+    !!BMy3&y7<y4:M60/2/3;                   [If value is lower apply hypno to stack]
+  !!en;
 !!en;
 
 ***************************Temple Guardian**************************************
@@ -21864,6 +21876,8 @@ Undead stacks heal and with next attack^;                                       
 !!BMx16:Fi K1;                          [set new modified bit]
 !!en;
 
+!!FU(ACM_DrawActionPlay):P;
+
 !!SN&i^battle_isVisible^:W^SimulAnim%X16^/1;       [Show animation]
 !!en;
 
@@ -23045,8 +23059,6 @@ Cant Cleanse That Effect
 .!!en;
 !!en;
 
-!!FU(ACM_UpdateStackAnimation)&i^battle_isVisible^:P; [updates creature animation to avoid using BU R, which can lead to crash]
-
 
 *--------------------------------------------------------------------Take Bonus Extra Conditions Disrupting Ray------------------------------------------------------------------------*
 
@@ -23962,35 +23974,30 @@ Cant Cleanse That Effect
 !!VRy12:Sy20:5+20;                      [AOE Damage is 20%+1% per 5 SP]
 !!VRy10:*y12:100;                       [% of the damage]
 
-!!FU(AC_Function_126):Py1/0/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;       [apply damage to surrounding creatures]
-!!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10;[apply damage to surrounding creatures if same side]
+!!VRy31:S(FALSE);                       [indicator for damage dealt]
 
-!!FU(AC_Function_126):Py1/1/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;       [apply damage to surrounding creatures]
-!!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10;[apply damage to surrounding creatures if same side]
+!!re i/0/5;
+  !!FU(AC_Function_126):Py1/i/?y3;
 
-!!FU(AC_Function_126):Py1/2/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;       [apply damage to surrounding creatures]
-!!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10;[apply damage to surrounding creatures if same side]
+  !!if&y3>=0/y3<=186;
+    !!BU:Ey3/?y8;             [-2 if there is alive stack at that position]
 
-!!FU(AC_Function_126):Py1/3/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;       [apply damage to surrounding creatures]
-!!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10;[apply damage to surrounding creatures if same side]
+    !!if&y8>=0/y8<=41/y4<>y8;
+      !!BMy8:I?y40;       [apply damage to surrounding creatures]
 
-!!FU(AC_Function_126):Py1/4/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;       [apply damage to surrounding creatures]
-!!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10;[apply damage to surrounding creatures if same side]
+      !!if&y40=y30;
+        !!BMy8:Ky10;[apply damage to surrounding creatures if same side]
+        !!VRy31:S(TRUE);
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
-!!FU(AC_Function_126):Py1/5/?y3;
-!!BU&y3>=0/y3<=186:Ey3/?y8;             [-2 if there is alive stack at that position]
-!!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;       [apply damage to surrounding creatures]
-!!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10;[apply damage to surrounding creatures if same side]
+; If damage was dealt by BM:K, refresh the screen and check phoenix type resurrections
+!!if&y31;
+  !!FU(ACM_DrawActionPlay):P;
+  !!FU(ACM_ExecutePhoenixResurrection):P;
+!!en;
 
 !!BG:N?y1;                              [Attacking Stack]
 !!SN:W^Precision_Strike_Creature%Y1^/0; [Disable for creature so it only works once]
@@ -30032,36 +30039,32 @@ SkillRequired=%i(acmSkillRequired)  isSkillPresent=%(isSkillPresent)^;
 !!MF:F?y10;                             [get damage of ballista]
 !!VRy10::3;                             [33% of the damage]
 
+!!VRy31:S(FALSE);                       [Indicator for damage dealt]
+
 !!if&y1>=0/y1<=186;                     [If valid battlefield position]
-  !!FU(AC_Function_126):Py1/0/?y3; !!VRy8&y3=-1:S-1;
-  !!BU&y3>=0/y3<=186:Ey3/?y8;           [-2 if there is alive stack at that position]
-  !!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;     [apply damage to surrounding creatures]
-  !!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10; [apply damage to surrounding creatures if same side]
+  !!re i/0/5;
+    !!FU(AC_Function_126):Py1/0/?y3; 
+    !!VRy8&y3=-1:S-1;
 
-  !!FU(AC_Function_126):Py1/1/?y3; !!VRy8&y3=-1:S-1;
-  !!BU&y3>=0/y3<=186:Ey3/?y8;           [-2 if there is alive stack at that position]
-  !!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;     [apply damage to surrounding creatures]
-  !!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10; [apply damage to surrounding creatures if same side]
+    !!if&y3>=0/y3<=186;
+      !!BU:Ey3/?y8;           [-2 if there is alive stack at that position]
 
-  !!FU(AC_Function_126):Py1/2/?y3; !!VRy8&y3=-1:S-1;
-  !!BU&y3>=0/y3<=186:Ey3/?y8;           [-2 if there is alive stack at that position]
-  !!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;     [apply damage to surrounding creatures]
-  !!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10; [apply damage to surrounding creatures if same side]
+      !!if&y8>=0/y8<=41/y4<>y8;
+        !!BMy8:I?y40;     [apply damage to surrounding creatures]
 
-  !!FU(AC_Function_126):Py1/3/?y3; !!VRy8&y3=-1:S-1;
-  !!BU&y3>=0/y3<=186:Ey3/?y8;           [-2 if there is alive stack at that position]
-  !!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;     [apply damage to surrounding creatures]
-  !!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10; [apply damage to surrounding creatures if same side]
+        !!if&y40=y30;
+          !!BMy8:Ky10; [apply damage to surrounding creatures if same side]
+          !!VRy31:S(TRUE);
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
 
-  !!FU(AC_Function_126):Py1/4/?y3; !!VRy8&y3=-1:S-1;
-  !!BU&y3>=0/y3<=186:Ey3/?y8;           [-2 if there is alive stack at that position]
-  !!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;     [apply damage to surrounding creatures]
-  !!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10; [apply damage to surrounding creatures if same side]
-
-  !!FU(AC_Function_126):Py1/5/?y3; !!VRy8&y3=-1:S-1;
-  !!BU&y3>=0/y3<=186:Ey3/?y8;           [-2 if there is alive stack at that position]
-  !!BMy8&y8>=0/y8<=41/y4<>y8:I?y40;     [apply damage to surrounding creatures]
-  !!BMy8&y8>=0/y8<=41/y4<>y8/y40=y30:Ky10; [apply damage to surrounding creatures if same side]
+; If damage was dealt by BM:K, refresh the screen and check phoenix type resurrections
+!!if&y31;
+  !!FU(ACM_DrawActionPlay):P;
+  !!FU(ACM_ExecutePhoenixResurrection):P;
 !!en;
 
 ************************Ballista Magic Arrow upgrade**********************
@@ -30324,6 +30327,8 @@ First hit works 100%, the next Arrow only has 20% chance to hit
     !!VRi:|813694976;                   [set summoning flag so it vanishes from battlefield on next damage]
     !!BMy1:Fi K1;                       [set new modified bit]
   !!en;
+
+  !!FU(ACM_DrawActionPlay):P;
 !!en;
 
 
@@ -34867,6 +34872,8 @@ Refills Marksman extra shots depending on kill count and mastery
                 !!VRy50:Sy15-1;         [set damage to just nearly kill commander]
               !!en;
               !!BMy8:Ky50;              [Apply damage to commander stack]
+              !!FU(ACM_DrawActionPlay):P;
+              !!FU(ACM_ExecutePhoenixResurrection):P;
               !!MF:F1;                  [apply 1 damage to attacked unit. for some reason the battle log says always 1 damage]
               !!SN:T^AC_Misc.ACM_Com_Avenger_Absorb^/?z1; !!SN:Iz1/?z1; [get text]
               !!BU&i^battle_isVisible^:Mz1; [print message in battle log how much damage was saved by commander]
@@ -35953,7 +35960,12 @@ Death Cloud damage only works on living creatures
           !!if&y8>=0/y8<=41/y1<>y8;     [if a valid creature and not the same ID]
             !!BMy8:I?y40 F?j;           [get side and creature flag]
             !!VRj:&16;                  [Check living flag]
-            !!BMy8&y40=y50/j>0:Ky60;    [apply damage to surrounding creatures if same side]
+
+            !!if&y40=y50/j>0;
+              !!BMy8:Ky60;    [apply damage to surrounding creatures if same side]
+              !!FU(ACM_DrawActionPlay):P;
+              !!FU(ACM_ExecutePhoenixResurrection):P;
+            !!en;
           !!en;
         !!en;  
       !!en;
