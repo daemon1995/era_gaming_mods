@@ -6669,35 +6669,45 @@ x1=Stack, x2=First Aid Skill Level, x3=Heal Capacity, x4= 0 out of combat x4= 1 
 
 
 !?FU(OnAfterBattleUniversal);
+; Archer30: Here we show the after battle msg for the defending player (who's not the turn owner)
+; Is it safe?
+!!OW:C?y31/?y32;
 
 !!BA:O?y1/?y20;                         [Check both Owners after Battle]
 !!SN:W^Hero_Attacker_Owner0^/?y10;      [check saved owner]
 !!if&y1=y10;                            [run if the same]
   !!BA:H0/?y2;                          [get battle hero]
   !!HEy2:O?y30;                         [Get Hero Owner]
-  !!HEy2:A2/6/?y5/?y6;                  [check 6  First Aid Tent]
-  !!SN:W^Tent_Gold_Gain_%Y2^/?y3;       [check upgarde]
-  !!SN:W^Total_Healed_Amount_Att^/?y4;  [check healed amount]
-  !!VRy4:*3;                            [3 times the amount heal in gold]
-  !!OW&y6=1/y3=1/y4>0:Ry1/6/dy4;        [Give gold to player if He has First Aid Tent and Upgrade Bought]
-  !!SN&y6=1/y3=1/y4>0:T^AC_Misc.Treatment_Text^/?z1;
-  !!IF&y6=1/y3=1/y4>0:Q2/36/y4/1/z1;    [If Bonus Show Picture]
-  !!SN&y6=1/y3=1/y4>0/y30>=0:W^Total_Treatment_Gold_%Y2^/dy4; [add gained gold]
+
+  !!if&y30=y32;
+    !!HEy2:A2/6/?y5/?y6;                  [check 6  First Aid Tent]
+    !!SN:W^Tent_Gold_Gain_%Y2^/?y3;       [check upgarde]
+    !!SN:W^Total_Healed_Amount_Att^/?y4;  [check healed amount]
+    !!VRy4:*3;                            [3 times the amount heal in gold]
+    !!OW&y6=1/y3=1/y4>0:Ry1/6/dy4;        [Give gold to player if He has First Aid Tent and Upgrade Bought]
+    !!SN&y6=1/y3=1/y4>0:T^AC_Misc.Treatment_Text^/?z1;
+    !!IF&y6=1/y3=1/y4>0:Q2/36/y4/1/z1;    [If Bonus Show Picture]
+    !!SN&y6=1/y3=1/y4>0/y30>=0:W^Total_Treatment_Gold_%Y2^/dy4; [add gained gold]
+  !!en;
 !!en;
 
 !!BA:H1/?y2;                            [Defender]
 !!FU|y2<0/y20<0:E;
+
 !!SN:W^Hero_Defender_Owner0^/?y30;
 !!if&y20=y30;
   !!HEy2:O?y30;                         [Get Hero Owner]
-  !!HEy2:A2/6/?y5/?y6;                  [6  First Aid Tent]
-  !!SN:W^Tent_Gold_Gain_%Y2^/?y3;
-  !!SN:W^Total_Healed_Amount_Def^/?y4;  [check healed amount]
-  !!VRy4:*3;                            [3 times the amount heal in gold]
-  !!OW&y6=1/y3=1/y4>0:Ry20/6/dy4;       [Give gold to player if He has First Aid Tent and Upgrade Bought]
-  !!SN&y6=1/y3=1/y4>0:T^AC_Misc.Treatment_Text^/?z1;
-  !!IF&y6=1/y3=1/y4>0:Q2/36/y4/1/z1;    [If Bonus Show Picture]
-  !!SN&y6=1/y3=1/y4>0/y30>=0:W^Total_Treatment_Gold_%Y2^/dy4; [add gained gold]
+
+  !!if&y30=y32;
+    !!HEy2:A2/6/?y5/?y6;                  [6  First Aid Tent]
+    !!SN:W^Tent_Gold_Gain_%Y2^/?y3;
+    !!SN:W^Total_Healed_Amount_Def^/?y4;  [check healed amount]
+    !!VRy4:*3;                            [3 times the amount heal in gold]
+    !!OW&y6=1/y3=1/y4>0:Ry20/6/dy4;       [Give gold to player if He has First Aid Tent and Upgrade Bought]
+    !!SN&y6=1/y3=1/y4>0:T^AC_Misc.Treatment_Text^/?z1;
+    !!IF&y6=1/y3=1/y4>0:Q2/36/y4/1/z1;    [If Bonus Show Picture]
+    !!SN&y6=1/y3=1/y4>0/y30>=0:W^Total_Treatment_Gold_%Y2^/dy4; [add gained gold]
+  !!en;
 !!en;
 
 
@@ -7252,7 +7262,7 @@ x5=Current Spell Points
 !!FU&y1=-1:E;                           [Exit if none]
 !!SN:W^H3_Nobility_Hero%X16_Active^/1;  [Set Nobility flag active for that hero]
 
-!?CM1&1000;                             [Town Screen Trigger]
+!?CM1&1000/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^<=147; [Town Screen Trigger. 147 - background of the town]
 !!CA-1:H1/?y5;                          [town Visitor]
 !!FU(Hero_Nobility_Loop)&y5>=0/y5<=155:Py5; [Jump to Nobility Function]
 !!CA-1:H0/?y5;                          [town garrison]
@@ -7357,7 +7367,6 @@ x5=Current Spell Points
     !!FU(eighth_SetOrGet8thMon):P(townId)/?(mon:y)/?(qty:y)/(TRUE); [Legacy]
   !!en;
 
-  *!FU(eighth_SetOrGet8thMonByTownId):P(townId)/?(mon:y)/?(qty:y);
   !!MA:L(mon)/?(level:y);
 
   !!VR(index:y):S(level) +21;
@@ -7366,12 +7375,15 @@ x5=Current Spell Points
   !!VRy6&y(index):+1;
 !!en;
 
-!!SN&y6=0:T^AC_Misc.Nobility Town Fail^/?z2 Iz2/?z2;
-!!IF&y6=0/999:Mz2;
+; Display msg if nothing to increase (no dwelling built)
+; Disabled by Archer30 as it seems to be annoying
+*!SN&y6=0:T^AC_Misc.Nobility Town Fail^/?z2 Iz2/?z2;
+*!IF&y6=0/999:Mz2;
+
 !!SN&y6=0:W^H3_Nobility_Hero%X1_Active^/2;
 !!FU&y6=0:E;                            [exit if no creatures to add]
 
-!!if&y6<>0;
+!!if&y6>0;
   !!SN:T^AC_Misc.Nobility Town^/?z2 Iz2/?z2;
 
   !!if&999;
@@ -7409,8 +7421,6 @@ x5=Current Spell Points
     !!VR(qty):+y(index);
     !!FU(eighth_SetOrGet8thMon):P(townId)/(mon)/(qty)/(FALSE); [Legacy]
   !!en;
-
-  *!FU(eighth_SetOrGet8thMonByTownId):P(townId)/(mon)/dy(index);
 !!en;
 
 !!SN:D;                                 [Added SN:D command. It's used to redraw hero, heroes meeting, adventure map and town screens.]
@@ -12169,7 +12179,8 @@ Close Dialouge
 
 !?FU(OnCombatRound)&v997=0;             [On First visible combat round]
 !!SN:F^PluginExists^/^amethyst2_4^; [Check for Amethyst]
-!!FU&v1=0:E
+!!FU&v1=0:E;
+
 !!re i/0/41;
   !!BMi:T?y1;                           [Creature Type]  
   !!BMi|y1=176/y1=185:U4/17;            [if Temple Guardian Attacker/Defender set to Lightning]
@@ -12429,60 +12440,6 @@ At each level up AI will choose com class if none has been selected. Each level 
 !!VRy1&x1=12:S6547896; !!VRy1&x1=13:S6547992; !!VRy1&x1=21:S6548056; !!VRy1&x1=22:S6547960;
 !!VRy1&x1=23:S6547976; !!VRy1&x1=24:S6548104; !!VRy1&x1=25:S6548088; !!VRy1&x1=26:S6548040;
 !!VRx2:*4; !!VRy1:+x2; !!VRe1:Sx3:100; !!SN:X?y2 Xe1 X?y3 Xy2; !!UN:Cy1/4/y3;
-
-********************************************************************************
-
-!?PI;
-!!FU(ClearSimultaneousAnimationsVars):P;
-
-!?FU(ClearSimultaneousAnimationsVars);
-!!re i/0/(BATTLE_STACK_LAST);		 
-  !!SN:W^SimulAnim%i^;
-!!en;
-
-!?FU(SimultaneousAnimations);
-SimulAnim# are vars that tell which stack need to show animations. 0-19 for attacker, 21-40 for defender.
-x1 animation ID, x2 damage animations for stacks, x3 0 if dead stack don't need to have animations, 1 if vice versa, x4 1 if reset vars.
-
-The way this works is y20-29 will be variable that manage animations on stacks. When y20 has 1, 256, 65536 or S16777216 (256^0, 256^1, 256^2, 256^3), stacks number 0, 1, 2 or 3
-will have animations played. y21 will manage animations for stacks 4, 5, 6, 7; etc. until y24 that manages 16, 17, 18, 19 stack ids. Then, y25-29 manage defender stacks
-animations, y25 is for 21, 22, 23, 24 etc. y20 then is passed, along with y21-29 variables, to some function that does something, need to ask author of original finding, not me.
-Some animations, like projectiles (Lightning Bolt, Disrupting ray) and Armageddon don't work properly.
-
-!!VRy31:S1;                             [first stack in y20-29 vars]
-!!VRy32:S256;                           [second stack in y20-29 vars]
-!!VRy33:S65536;                         [third stack in y20-29 vars]
-!!VRy34:S16777216;                      [fourth stack in y20-29 vars]
-**first argument - main battle struct
-!!UN:C6919200/4/?y10;
-**second argument - pointer to fourty byte array: one byte for array. Let's take y20-y29 for it. y20-y24 attacker (0-19), y25-y29 defender (21-40)
-!!VRy1:S0;
-[:loopSimultaneousAnimations]; loop is label name inside current function
-!!VRy1&y1=20:+1;
-!!SN&y1=20:G[loopSimultaneousAnimations];[skip stack 20]
-
-!!VRy2:Sy1;
-!!VRy2&y1>=20:-1;                       [since stack number 20 does not exist, all 21-40 are moved to 20-39 so when we divide by 4 we'll get correct y25-y29 variables]
-!!VRy3:Sy2 %4;
-!!VRy2::4 +20;                          [get y20-29 var number]
-!!VRyy2&y3=0:S0;                        [null y20-29 variables before loop. When y3=0 when we first encounter corresponding y20-y29 variable.]
-!!VRy3:+31;
-!!VRy5:Syy3;                            [get stack number for y20-29 vars]
-
-!!BMy1:P?y3;
-!!FU|y3<0/y3>186:E;
-!!BU:Ey3/?y3;                           [-1 if stack is dead or not present at position]
-!!SN:W^SimulAnim%Y1^/?y4;
-!!VRy4&y3=-1/x3=0:S-1;
-!!VRyy2&y4=1:Syy2 +y5;                  [set y20-y29 variables if it's animations are set.]
-
-!!VRy1:+1;
-!!SN&y1<41:G[loopSimultaneousAnimations];[loop all stacks]
-**third argument - animation ID (5 - antimagic)
-**fourth argument - is damage animation required (0 - no, 1 - yes)
-!!SN:E5925584/2/y10/?y20/x1/x2;
-!!FU(ClearSimultaneousAnimationsVars)&x4=1:P;
-
 
 ********************************************************************************
 
@@ -21752,7 +21709,7 @@ Undead stacks heal and with next attack^;                                       
 
 *******************************offense spells handling**************************
 !?BR&1000/v997>0/-936;
-!!DO(AC_Function_68)/0/41/1:P;
+!!FU(AC_Function_68):P;                 [Dragon Fire]
 !!SN:W^Incinerate^/0;                   [Reset Incinerate Damage]
 
 !?MR1&1000/-936;
@@ -21855,38 +21812,97 @@ Undead stacks heal and with next attack^;                                       
 
 
 !?FU(AC_Function_68);
+; Create an array to store the stack ids of burned stacks
+!!FU(NewIntArray):P?(affectedStacksList:y);
 
-!!SN&x16=0:W^IsIncinerateAnimation^/0;
-!!BMx16:G21/?y12/?y13;
+!!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+  ; Check if it is a valid stack
+  !!BMi:T?(type:y) N?(num:y);
 
-!!if&y12>0;
-!!SN:W^IsIncinerateAnimation^/1;
-!!SN:W^Incinerate^/?y1;
-!!SN:W^Burned_Stack_%X16^/?y2;          [Get applied damage]
-!!SN:W^Burned_Stack_%X16^/0;            [Reset afterwards]
-!!VRy1:+y2;                             [Add damage from Dragon Stack]
-!!SN:T^AC_Misc.Burn Damage^/?z1/^damage^/y1;
-!!BU&i^battle_isVisible^:Mz1;
+  !!if&(type)>(NO_MON)/(num)>0/(type)<>(MON_ARROW_TOWERS);
+    ; Check if it is burned
+    !!BMi:G(SPELL_FIREBALL)/?(duration:y)/?(level:y);
 
-!!BMx16:N?y2;
-!!BMx16:Ky1;                            [Strike Monster with half damage from previous fire spell]
-!!BMx16:N?y3;
-!!if&y3=0/y2>0;
-!!BMx16:F?i;
-!!VRi:|813694976;
-!!BMx16:Fi K1;                          [set new modified bit]
+    ; Add them to the array if burned
+    !!FU(Array_Push)&(duration)>0:P(affectedStacksList)/i;
+  !!en;
 !!en;
 
-!!SN&i^battle_isVisible^:W^SimulAnim%X16^/1;       [Show animation]
+; Exit if there is no stack affected by Dragon Fire
+!!SN:M(affectedStacksList)/?(size:y);
+!!FU&(size)<=0:E;
+
+; Damage them
+!!VR(incinerate:y):Si^Incinerate^;
+
+!!re i/0/(size)/1/-1;
+  !!SN:M(affectedStacksList)/i/?(targetStack:y);
+  !!VR(damage:y):S(incinerate) +i^Burned_Stack_%(targetStack)^;
+
+  !!BM(targetStack):K(damage);
+
+  ; Check if it is required to remove the body (if it was killed completely)
+  !!BM(targetStack):N?(targetNum:y);
+  !!BM(targetStack)&(targetNum)<=0:Fd|813694976 K1;  [set new modified bit]
+
+  ; Log
+  !!if&i^battle_isVisible^;
+    !!SN:T^AC_Misc.Burn Damage^/?(battleLog:z)/^damage^/(damage);
+    !!MM:S(battleLog);
+  !!en;
 !!en;
 
-!!VRy1:S0;
-!!SN&x16=41:W^IsIncinerateAnimation^/?y1;
-!!FU(SimultaneousAnimations)&y1=1:P8/0/0/1;
-!!BU&y1=1:R;
+; Play animation on multiple stacks
+!!if&i^battle_isVisible^;
+  !!SN:P^Fireblst^;
+  !!FU(ACM_PlayAnimationOnMultipleStacks):P(affectedStacksList)/8/(TRUE);
+!!en;
+
 !!FU(ACM_DrawActionPlay):P;
 
 
+// Play a SPELL animation on multiple stacks at the same time (@feanor and Archer30)
+!?FU(ACM_PlayAnimationOnMultipleStacks);
+!#VA(stacksList:x);                     [Array of Stack numbers for animation]
+!#VA(animation:x);                      [Index of the animation (BM:V)]
+!#VA(playDamagedAnimation:x);           [Optional. Boolean. Whether to play the damaged animation]
+
+!!FU:A?(numArgs:y);
+!!VR(playDamagedAnimation)&(numArgs)<3:S(FALSE);
+
+; Initialise array and variables
+!!FU(NewIntArray):P10/?(stacksForAnimationList:y);
+!!SN:M(stacksList)/?(size:y);
+!!VR(bits[4]:y):C(BIT_0)/(BIT_8)/(BIT_16)/(BIT_24);
+
+; Loop through the array containing stack numbers and set up the array for animation
+!!re i/0/(size)/1/-1;
+  !!SN:M(stacksList)/i/?(stack:y);
+  ; Skip animation for the last stack of each side
+  !!co|(stack)=(BATTLE_ATTACKER_STACK_LAST)/(stack)=(BATTLE_DEFENDER_STACK_LAST);
+
+  ; Fix defender stack number
+  !!VR(stack)&(stack)>(BATTLE_ATTACKER_STACK_LAST):-1;
+
+  ; Set up the array for animation
+  !!VR(slotIndex:y):S(stack) :4;
+  !!VR(bitIndex:y):S(stack) %4;
+
+  *!SN:M(stacksForAnimationList)/(slotIndex)/d|(bits[bitIndex]); [This syntax doesn't work]
+  !!SN:M(stacksForAnimationList)/(slotIndex)/?(value:y);
+  !!VR(value):|(bits[bitIndex]);
+  !!SN:M(stacksForAnimationList)/(slotIndex)/(value);
+!!en;
+
+; Get the address of the array
+!!SN:M(stacksForAnimationList)/?(arrayAddress:y)/0;
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+; first parameter - combatmanager
+; the second parameter is a pointer to an array of forty bytes: one per unit
+; third parameter - animation number
+; fourth parameter - whether to animate the damage (0 - not necessary, 1 - necessary)
+!!SN:E5925584/2/(cmbMgr)/(arrayAddress)/(animation)/(playDamagedAnimation);     [play animation]
 
 *--------------------------------------------------------------------Give Bonus---------------------------------------------------------------------------------*
 
@@ -30283,7 +30299,7 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 
 ***************************Ammo Cart Booby Trap**********************
 *If Strike kills Ammo Cart it explodes and deals 25%+2000 points of damage in melee
-
+; Archer30: The timing of explosion is bad - it happens before the melee attack landing on the ammo cart
 !?MF1&1000;
 !!UN:C42149568/4/?y10;                  [Get Physical Damage type]
 !!if|y10=4462398/y10=4456676;           [Only run when melee or surround damage]
@@ -30303,9 +30319,6 @@ First hit works 100%, the next Arrow only has 20% chance to hit
 !!MF:F?y6;                              [get damage]
 !!BA:Q?f;                               [get battle side]
 !!if&y6>=y10;                           [If damage is biggger than Health of Ammo Cart]
-  !!VRz-1&i^battle_isVisible^:S^ExplosionMine^;
-  !!SN&i^battle_isVisible^:Pz-1;        [play quest sound before showing dialogue]
-  !!BMy1&i^battle_isVisible^:V9;        [Play Inferno Animation]
   !!BMy1:N?y2 H?y4 I?y7;                [get number and health of attackins stack and side]
   !!BA:Hy7/?y99;                        [get attacking hero ID]
   !!if&y99>=0/y99<=155;
@@ -30326,6 +30339,15 @@ First hit works 100%, the next Arrow only has 20% chance to hit
     !!BMy1:F?i;                         [get flag]
     !!VRi:|813694976;                   [set summoning flag so it vanishes from battlefield on next damage]
     !!BMy1:Fi K1;                       [set new modified bit]
+  !!en;
+
+  !!if&i^battle_isVisible^;
+    !!SN:H^monname^/(MON_AMMO_CART)/0/?z3;
+    !!SN:T^AC_Warmachine.Ammo_Cart_Booby_Trap^/?z2/^cart^/z3;
+    !!MM:Sz2;
+
+    !!SN:P^ExplosionMine^;              [play quest sound before showing dialogue]
+    !!BMy1:V9;                          [Play Inferno Animation]
   !!en;
 
   !!FU(ACM_DrawActionPlay):P;
