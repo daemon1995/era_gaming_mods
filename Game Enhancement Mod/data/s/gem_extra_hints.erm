@@ -2,19 +2,13 @@ ZVSE2
 
 
 !?FU(gem_CreateERMHook);
-  !!SN:Ex1/1/4854731/(gem_Before_CB_MSG_Hook);                 [0x4A13CB - for common CB]
-  !!SN:Ex1/1/4857396/(gem_Before_CB_MSG_Hook);                 [0x4A1E34 - for Dragon Utopia]
-
-  !!SN:Ex1/1/4899229/(gem_Crypt_SkipMsgIfVisited);             [0x4AC19D - for plundered Crypt]
 
   !!SN:Ex1/1/4274460/(gem_AdvMgr_Get_Object_RightClick_Descr); [0041391C - bebore get obj type switch]
   !!SN:Ex1/1/4283002/(gem_AdvMgr_BeforeRmcPopup);              [00415A7A - after hiding/showing hero and before jump to popup ]
 
-
   !!SN:Ex1/1/5206294/(gem_BeforeMultyPicDlg);                  [before !_!IF:N create]
   !!SN:Ex1/1/6229606/(gem_OnUniversityShow);  
 
-  !!UN:C4275747/1/4/6685616;                                   ["\n\0" -> "\n\n\0" for getCrBank text]
 
   !!SN:Ex1/1/6287289/(gem_BeforeBaseDlgConstruct);                      [before any dlg construct]
 
@@ -55,8 +49,7 @@ ZVSE2
       !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4282816;                                         [return to "hide hero" part]
     !!en;
 
-  !!el&(objType)=(OBJ_REFUGEE_CAMP);
-    *!IF:M^% OBJ_REFUGEE_CAMP^;
+  !!if&(objType)=(OBJ_REFUGEE_CAMP);
     !!PO(x)/(y)/(z):O?(owner:y);
     !!if&(owner)<>(NO_PLAYER);
 
@@ -74,8 +67,6 @@ ZVSE2
       !!en;
 
     !!en;
-    *!IF:L^%y1^;
-
   !!el&(objType)=(OBJ_UNIVERSITY);
 
     !!OB(x)/(y)/(z):C?(cWord:y);
@@ -104,7 +95,6 @@ ZVSE2
   !!en;
 
 !?FU(gem_AdvMgr_BeforeRmcPopup)&i^gem_isRmcHint^; // this part 
-  *!IF:L^%^;
   !!SN:X?y99/0;                       [it is: return NO_EXEC_DEFAULT]
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4283123;                                  [return to end of the func - before stack increase]
   !!VRi^gem_isRmcHint^:S(FALSE);           [Reset RMC hint flag]
@@ -140,6 +130,7 @@ ZVSE2
 
 !?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
   !!FU(gem_ResetRefugeeVariables):P D;
+  
 !?FU(gem_ResetRefugeeVariables);
   !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(refugees:y);
   !!VRv2:S-1;
@@ -161,23 +152,6 @@ ZVSE2
   !!SN:X?y99/0;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6229627;
 
-!?FU(gem_Before_CB_MSG_Hook);           [Main fuction - visiting CB]
-  !!VRi^gem_isVisit^:S(TRUE);             [Set visit flag]
-  !!OBv998/v999/v1000:T?(objType:y) U?(objSubtype:y);
-  ; Get the information about CB
-  !!FU(gem_CreatureBankCalcGuardsAndSetText):Pv998/v999/v1000/(objType)/(objSubtype);
-  ; Jump over standart cb dialog
-  !!SN:X?y99/0;                           [it is: return NO_EXEC_DEFAULT]
-
-  !!if&(objType)=(OBJ_DRAGON_UTOPIA);     [Dragon Utopia: preventing crash]
-    !!VR(returnAddress:y):S4857435;
-  !!el;
-    !!VR(returnAddress:y):S4854763;
-  !!en;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/(returnAddress:y); [x1 - HookContext* c]
-
-  !!VRi^gem_isVisit^:S(FALSE);            [Reset visit flag]
-
 
 !?OB(OBJ_CRYPT);                        [Reveal the crypt guards if player visited it]
 !!VR(playerBit:y):S1 Sd<<i^timerOwner^; [1 + offset for each next player]
@@ -193,21 +167,7 @@ ZVSE2
   !!CB998:Vd|(playerBit);               [Add object to player as revealed]
 !!en;
 
-!?FU(gem_Crypt_SkipMsgIfVisited);       [Get crypt status. If plundered - skip the dialog with choice and jump to the "minus morale" dialog]
-!!CB998:T?(isVisited:y);
-!!SN:X?y99/0;                         [it is: return NO_EXEC_DEFAULT]
 
-!!if&(isVisited);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4899301; [0x4AC1E5; x1 - HookContext* c]
-!!el;
-  !!VRi^gem_isVisit^:S(TRUE);             [Set visit flag]
-  !!OBv998/v999/v1000:T?(objType:y) U?(objSubtype:y);
-  ; Get the information about CB
-  !!FU(gem_CreatureBankCalcGuardsAndSetText):Pv998/v999/v1000/(objType)/(objSubtype);
-  ; Jump over standart cb dialog
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4899262;
-  !!VRi^gem_isVisit^:S(FALSE);            [Reset visit flag]
-!!en;
 
 
 !?FU(gem_GetCreatureBankId);
