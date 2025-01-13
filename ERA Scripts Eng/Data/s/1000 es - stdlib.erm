@@ -319,6 +319,27 @@ ZVSE2
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/?(heroId:y);
 !!FU(ES_OnResetHero):P(heroId);
 
+!?FU(ES_HOOK_AfterTownDlgCreate); 
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(dlg:y);
+!!FU&(dlg)<=0:E;
+!!UN:P785/?(wogOption:y);
+!!if&(wogOption)=(FALSE);
+  !!SN:F^GetButtonID^/^peons^;
+  !!if&v1>0;
+    !!SN:E6288816/2/(dlg)/v1;  [get item struct]
+    !!SN&v1>0:E6286720/2/v1/6/6;    [hide item]
+  !!en;
+!!en;
+
+!!UN:P724/?(wogOption:y);
+!!if&(wogOption)=(FALSE);
+  !!SN:F^GetButtonID^/^bank^;
+  !!if&v1>0;
+    !!SN:E6288816/2/(dlg)/v1;  [get item struct]
+    !!SN&v1>0:E6286720/2/v1/6/6;    [hide item]
+  !!en;
+!!en;
+
 ************************************
 **** Set up object repalcements ****
 ************************************
@@ -385,7 +406,7 @@ ZVSE2
   !!en;
 !!en;
 
-
+// Get the max spell points of a hero
 !?FU(ES_Hero_GetFullSpellPoints);
 !#VA(hero:x) (result:x);
 
@@ -446,24 +467,6 @@ ZVSE2
 !!VR(distanceY):*2;
 !!VR(distance):+(distanceY) :2;
 
-// Turn a stack around
-!?FU(ES_TurnStackAround);              [by Hawaiing]
-!#VA(stack:x);
-
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(value:y);
-!!VR(value2:y):S(stack) *1352 +21708 +(value);
-!!SN:E4482112/2/(value2)/1;
-
-// Initiate a melee attack
-!?FU(ES_BattleStack_MeleeAttack);       [by Hawaiing]
-!#VA(atkStack:x) (defStack:x);
-!#VA(direction:x);                      [0 for upper, 1 for forward and 2 for lower]
-
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(value:y);
-!!VR(value2:x):S(atkStack) *1352 +21708 +(value);
-!!VR(value3:x):S(defStack) *1352 +21708 +(value);
-!!SN:E4461360/2/(value2)/(value3)/(direction);
-
 // Get town ID in the same position of a hero
 !?FU(ES_Hero_GetTownId);                [by daemon_n]
 !#VA(heroId:x) (townId:x);
@@ -479,29 +482,6 @@ ZVSE2
 
   !!if&(x)=(hX)/(y)=(hY)/(z)=(hZ);
     !!CA(x)/(y)/(z):U?(townId);
-  !!en;
-!!en;
-
-
-
-!?FU(ES_HOOK_AfterTownDlgCreate); 
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(dlg:y);
-!!FU&(dlg)<=0:E;
-!!UN:P785/?(wogOption:y);
-!!if&(wogOption)=(FALSE);
-  !!SN:F^GetButtonID^/^peons^;
-  !!if&v1>0;
-    !!SN:E6288816/2/(dlg)/v1;  [get item struct]
-    !!SN&v1>0:E6286720/2/v1/6/6;    [hide item]
-  !!en;
-!!en;
-
-!!UN:P724/?(wogOption:y);
-!!if&(wogOption)=(FALSE);
-  !!SN:F^GetButtonID^/^bank^;
-  !!if&v1>0;
-    !!SN:E6288816/2/(dlg)/v1;  [get item struct]
-    !!SN&v1>0:E6286720/2/v1/6/6;    [hide item]
   !!en;
 !!en;
 
@@ -732,8 +712,30 @@ The game may fall at any time.^;
 !!VR(exp):Sv1;
 !!VRv1:S(saveV1);
 
+// Check if a stack can shoot 
+!?FU(ES_CheckIfStackCanShoot);
+!#VA(stack:x) (result:x);
 
-!?FU(ES_IfHexIsFree);
+!!VR(result):S(FALSE);
+
+; Check if the stack has any shot left
+!!BM(stack):U3/?(shots:y);
+!!FU&(shots)<=0:E;
+
+; Check if the stack has shooter flag
+!!BM(stack):F?(flags:y);
+!!VR(isShooter:y):S(flags) &(MON_FLAG_SHOOTER);
+!!FU&(isShooter)=(FALSE):E;
+
+; Check if the stack is adjacent to an enemy, and the owner hero doens't have golden bow
+!!BM(stack):Z?(stackStruct:y);
+!!SN:E4466192/(CALLCONV_THISCALL)/(stackStruct)/0; 442610
+!!FU&v1=(FALSE):E;
+
+!!VR(result):S(TRUE);
+
+// Check if a postion on the battlefield if free
+!?FU(ES_CheckIfHexIsFree);
 !#VA(pos:x) (isFree:x);
 
 !!VR(isFree):S(TRUE);
