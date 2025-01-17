@@ -5672,6 +5672,41 @@ Till here Normal Necromancy
 *Shoots enemy before combat and gives +50/100/150/250/500 HP to Ballista WM
 *New script by Daemon because my old one was no longer working with Mixed Neutral :/
 
+; Restore BM:B value before showing battle results
+!?FU(OnSetupBattlefield);
+!!FU(ACM_ResetArtilleryVariables):P;
+
+!?FU(ACM_ResetArtilleryVariables);
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!VRi^acm_artillery_Stack_%i^:S(NO_STACK);
+  !!VRi^acm_artillery_Type_%i^:S(NO_MON);
+  !!VRi^acm_artillery_Num_%i^:S0;
+!!en;
+
+!?FU(ACM_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/4681149/(ACM_OnBeforeBattleResult);
+
+!?FU(ACM_OnBeforeBattleResult);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/8/4/?(winnerSide:y);
+
+!!if&i^acm_artillery_Stack_%(winnerSide)^>(NO_STACK);
+  !!BMi^acm_artillery_Stack_%(winnerSide)^:T?(type:y);
+
+  !!if&(type)=i^acm_artillery_Type_%(winnerSide)^;
+    !!BMi^acm_artillery_Stack_%(winnerSide)^:B?(initNum:y);
+    !!BMi^acm_artillery_Stack_%(winnerSide)^&(initNum)<i^acm_artillery_Num_%(winnerSide)^:Bi^acm_artillery_Num_%(winnerSide)^;
+  !!en;
+
+  !!FU(ACM_ResetArtilleryVariables):P;
+!!en;
+
+; Ballista shoots
+; Archer30: FU(OnAfterTacticsPhase) triggers even without Tactics phase btw
 !?FU(OnAfterTacticsPhase);
 ** artillery
 !!BU:T?t;                               [Check if Tactics phase]
@@ -5715,6 +5750,11 @@ Till here Normal Necromancy
         !!FU(ACM_Generate_Random_Stack):P(side)/?(targetStackId:y);                                                        [return a random enemy stack to shoot]
         
         !!if&(targetStackId)<>(NO_STACK);
+          ; Store the original stack info to be restored later before battle result screen
+          !!VRi^acm_artillery_Stack_%(side)^:S(targetStackId);
+          !!BM(targetStackId):T?i^acm_artillery_Type_%(side)^;
+          !!BM(targetStackId):N?i^acm_artillery_Num_%(side)^;
+
           !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
 
           !#VA(patch[5]:y);
@@ -5732,7 +5772,7 @@ Till here Normal Necromancy
           !!UN:C(cmbMgr)/68/4/p C(cmbMgr)/78520/4/(side) C(cmbMgr)/78524/4/(side) C(cmbMgr)/78528/4/(side) C(cmbMgr)/78536/4/(ballistaStack); 
 
           !!UN:C(ballistaStack:y)/16/4/(oppSide) C(ballistaStack:y)/20/4/(targetStackSideIndex) C(ballistaStack:y)/28/4/p; [set stack target]
-          !!BMi:U3/?(storedShots:y) U3/1 G212/?(storedMorale:y)/d G212/0/d G213/?(storedLuck:y)/d G213/0/d;                [get morale shots and luck]
+          !!BMi:U3/?(storedShots:y) U3/1 G(BMG_FIELD_MORALE)/?(storedMorale:y)/d G(BMG_FIELD_MORALE)/0/d G(BMG_FIELD_LUCK)/?(storedLuck:y)/d G(BMG_FIELD_LUCK)/0/d;                [get morale shots and luck]
           !!VR(newNum:y):Sn;
           !!re k/1/(shootNums);
 
@@ -5748,7 +5788,7 @@ Till here Normal Necromancy
           !!VR(lost:y):Sn -(newNum:y);                                                                                     [reduce number and set new number at battle start]
           !!BM(targetStackId):Bd-(lost:y);
 
-          !!BMi:U3/(storedShots) G213/(storedMorale:y)/d G213/(storedLuck:y)/d;                                            [set back luck/morale]
+          !!BMi:U3/(storedShots) G(BMG_FIELD_MORALE)/(storedMorale:y)/d G(BMG_FIELD_LUCK)/(storedLuck:y)/d;                                            [set back luck/morale]
           !!re j/0/4;
             !!UN:C4470304/j/1/(patch[j]);                                                                              [ restore double damage bonus message]
           !!en;

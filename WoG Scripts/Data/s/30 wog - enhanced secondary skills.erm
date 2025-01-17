@@ -108,7 +108,10 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !#VA(address:x);
 
 ; Artillery 
-!!SN&i^wog_201_enabled^:E(address)/1/4607915/(WOG_201_KillWithArtillery); hook before artifact cast
+!!if&i^wog_201_enabled^;
+  !!SN:E(address)/1/4607915/(WOG_201_KillWithArtillery); hook before artifact cast
+  !!SN:E(address)/1/4681149/(WOG_201_OnBeforeBattleResult);
+!!en;
 ; Pathfinding
 !!SN&i^wog_209_enabled^:E(address)/1/5131985/(WOG_OnGetMovementPointsByMonsterSpeed);
 ; Scouting II
@@ -623,13 +626,43 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 !!VRi^wog_201_Shoot^:S(FALSE);
 
 ** function to handle artillery, hero, skill level
-!?FU(OnAfterTacticsPhase);
+; Restore BM:B value before showing battle results
+!?FU(OnSetupBattlefield)&i^wog_201_enabled^;
+!!FU(WOG_201_ResetArtilleryVariables):P;
+
+!?FU(WOG_201_ResetArtilleryVariables);
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!VRi^wog_201_artillery_Stack_%i^:S(NO_STACK);
+  !!VRi^wog_201_artillery_Type_%i^:S(NO_MON);
+  !!VRi^wog_201_artillery_Num_%i^:S0;
+!!en;
+
+!?FU(WOG_201_OnBeforeBattleResult)&i^wog_201_enabled^;
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/8/4/?(winnerSide:y);
+
+!!if&i^wog_201_artillery_Stack_%(winnerSide)^>(NO_STACK);
+  !!BMi^wog_201_artillery_Stack_%(winnerSide)^:T?(type:y);
+
+  !!if&(type)=i^wog_201_artillery_Type_%(winnerSide)^;
+    !!BMi^wog_201_artillery_Stack_%(winnerSide)^:B?(initNum:y);
+    !!BMi^wog_201_artillery_Stack_%(winnerSide)^&(initNum)<i^wog_201_artillery_Num_%(winnerSide)^:Bi^wog_201_artillery_Num_%(winnerSide)^;
+  !!en;
+
+  !!FU(WOG_201_ResetArtilleryVariables):P;
+!!en;
+
+; Ballista shoots
+!?FU(OnAfterTacticsPhase)&i^wog_201_enabled^;
 !!VRi^wog_201_ShootOnce^:S(TRUE);
 
 !?FU(WOG_201_KillWithArtillery)&i^wog_201_ShootOnce^;
   !!VRi^wog_201_ShootOnce^:S(FALSE);
   !!re (side:y)/0/i^battle_hero_vs_hero^;
     !!HEi^battle_hero_%(side)^:A2/(ART_BALLISTA)/?y99/?(ballista:y) S(SKILL_ARTILLERY)/?(artilleryLvl:y);
+
     !!if&(ballista)/(artilleryLvl);
 
       !!VR(min:y):S(side) *21;
@@ -658,7 +691,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
 
             !!UN:C(ballistaStack:y)/16/4/(oppSide) C(ballistaStack:y)/14/4/(targetStackSideIndex) C(ballistaStack:y)/28/4/p; [set stack target]
 
-            !!BMi:U3/?(storedShots:y) U3/1 G212/?(storedMorale:y)/d G212/0/d G213/?(storedLuck:y)/d G213/0/d;                [get morale shots and luck]
+            !!BMi:U3/?(storedShots:y) U3/1 G(BMG_FIELD_MORALE)/?(storedMorale:y)/d G(BMG_FIELD_MORALE)/0/d G(BMG_FIELD_LUCK)/?(storedLuck:y)/d G(BMG_FIELD_LUCK)/0/d;                [get morale shots and luck]
 
             !!if&i^battle_isVisible^;
               !!VR(msg:z):S^%T(wog.201.ballista_log)^;
@@ -675,7 +708,7 @@ Navigation, Pathfinding, Resistance, Scholar, Scouting is enabled in WoGify Opti
               !!UN:C4470304/j/1/(patch[j]);                                                                              [ restore double damage bonus message]
             !!en;
             restore stack and hero data
-            !!BMi:U3/(storedShots) G213/(storedMorale:y)/d G213/(storedLuck:y)/d;                                            [set back luck/morale]
+            !!BMi:U3/(storedShots) G(BMG_FIELD_MORALE)/(storedMorale:y)/d G(BMG_FIELD_LUCK)/(storedLuck:y)/d;                                            [set back luck/morale]
 
             restore combatManager data
             !!UN:C(cmbMgr)/68/4/(stored[0]) C(cmbMgr)/78520/4/(stored[1]) C(cmbMgr)/78524/4/(stored[2]) C(cmbMgr)/78528/4/(stored[3]) C(cmbMgr)/78536/4/(stored[4]);                                                           [set combat target pos]
