@@ -127,6 +127,7 @@ ZVSE2
 ; Show Trainer main dialogue
 !?FU(trainer_MainDialog);
 !!VRi^trainer_dialogEnabled^:S(TRUE);   [flag for trainer interface]
+!!VRi^trainer_usedGodMode^:S(FALSE);
 
 !!VR(hero:y):Si^trainer_hero^;          [Set trainer hero number]
 
@@ -221,6 +222,14 @@ ZVSE2
 ; Fully update the adventure map dialogue when DL is closed
 !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
 !!SN:E4289408/(CALLCONV_THISCALL)/(advMgr)/1/0;
+
+; Update route if god mode was used
+!!if&i^trainer_player^=i^timerOwner^/i^trainer_usedGodMode^;
+  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+  !!UN:C(advMgr)/80/4/0; // reset movement calculation
+  !!UN:C(advMgr)/84/4/0;
+  !!SN:E4295984/(CALLCONV_THISCALL)/(advMgr)/0/0/1; 0x418D30 AdvMgr_RouteUpdate
+!!en;
 
 !?FU(trainer_UpdateAllTheDialogs);
 !#VA(hero:x) (player:x);
@@ -414,6 +423,9 @@ ZVSE2
   ; Alt Click - God Mode
   !!if&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^;
     !!if&(hero)>(NO_HERO);
+      ; Set up variable
+      !!VRi^trainer_usedGodMode^:S(TRUE);
+
       ; Troops
       !!re (slot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
         !!HE(hero):C0/(slot)/?(type:y)/?(num:y);
@@ -431,12 +443,6 @@ ZVSE2
       ; Fly
       !!HE(hero):Z?(heroStruct:y);
       !!UN:C(heroStruct)/274/(UNC_INT)/(SKILL_EXPERT);
-      !!if&i^trainer_player^=i^timerOwner^;
-        !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-        !!UN:C(advMgr)/80/4/0; // reset movement calculation
-        !!UN:C(advMgr)/84/4/0;
-        !!SN:E4295984/(CALLCONV_THISCALL)/(advMgr)/0/0/1; 0x418D30 AdvMgr_RouteUpdate
-      !!en;
 
       ; Primary Skills
       !!VR(ps:y):Si^trainer_maxPrimSkillValue^ -10;
@@ -479,6 +485,9 @@ ZVSE2
   ; Shift Click - Reversal God Mod
   !!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
     !!if&(hero)>(NO_HERO);
+      ; Set up variable
+      !!VRi^trainer_usedGodMode^:S(TRUE);
+
       ; Troops
       !!re (slot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
         !!HE(hero):C0/(slot)/(NO_MON)/0;
