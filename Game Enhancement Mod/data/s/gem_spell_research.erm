@@ -957,16 +957,17 @@ ZVSE2
   !!VRi^current_researchable_spell_in_town%(townId)^:S-1;
   !!VRi^current_researchable_spell_in_town%(townId)_place^:S-1;
 
-  !!if|(townType)=(TOWN_STRONGHOLD)/(townType)=(TOWN_FORTRESS);
-    !!VR(maxGm:y):S2;
-  !!el&(townType)=(TOWN_CASTLE);
-    !!VR(maxGm:y):S3;
-  !!el;
-    !!VR(maxGm:y):S4;
+  !!VR(maxGuildLevel:y):S4;
+  !!FU(gem_Town_GetStruct):P(townId)/?(town:y);
+  !!re i/4/0/-1;
+    !!SN:E6034016/(CALLCONV_THISCALL)/(town)/i;
+    !!if&v1;
+      !!VR(maxGuildLevel:y):Si;
+      !!br;
+    !!en;
   !!en;
 
-
-  !!re (guildLevel:y)/0/(maxGm);
+  !!re (guildLevel:y)/0/(maxGuildLevel);
     !!SN:M(M_AUTO_ID)/0/(M_INT)/(M_STORED)/?i^srm_town%(townId)_gm%(guildLevel)_store^;;
   !!en;
 
@@ -1004,7 +1005,7 @@ ZVSE2
 
     !!FU(srm_GetSpellLevel):P(spellForCheck)/?(spellLevel:y);
     !!VR(guildLevel):S(spellLevel) -1;
-      !!co|(guildLevel)>(maxGm)/(guildLevel)<0;                                                                          [if spell can't appear then skip round;]
+      !!co|(guildLevel)>(maxGuildLevel)/(guildLevel)<0;                                                                          [if spell can't appear then skip round;]
 
     !!if&(spellForCheck)<=(SPELL_LAST_WOG);
       
@@ -1092,15 +1093,22 @@ ZVSE2
 !?FU(srm_gm_rebuild_visual_set);
   !#VA(townId:x) (guildLevel:x) (townType:x) (hasLibrary:x);
 
-  !!FU(NewStrArray):P?(mgWindowViews:y); 
-  !!FU(Array_Push):P(mgWindowViews)/^CS^/^RM^/^TW^/^IN^/^NC^/^DN^/^ST^/^FR^/^El^; [setting view from MG]
+  !!UN:C6082263/3/4/?(tpmageNamesArray:y);
+  !!VR(tpmageNameOffset:y):S(townType) *4;
+  !!UN:C(tpmageNamesArray)/(tpmageNameOffset)/4/?(nameAddress:y);
+  !!SN:B(nameAddress)/d/?(tpmageName:z);
+  !!DL(SRM_DLG_MAGE_GUILD):A44/(DLG_CMD_SET_PCX)/(tpmageName:z)/0; 
 
-  !!SN:M(mgWindowViews)/(townType)/?(mgCurrentWindowView:z);
-  !!DL(SRM_DLG_MAGE_GUILD):A44/(DLG_CMD_SET_PCX)/^TPMAGE%(mgCurrentWindowView).PCX^/0; 
-
+  !!FU(gem_Town_GetStruct):P(townId)/?(town:y);
   !!VR(maxGuildLevel:y):S4;
-  !!VR(maxGuildLevel)|(townType)=(TOWN_CASTLE):-1;
-  !!VR(maxGuildLevel)|(townType)=(TOWN_STRONGHOLD)/(townType)=(TOWN_FORTRESS):-2;
+
+  !!re i/4/0/-1;
+    !!SN:E6034016/(CALLCONV_THISCALL)/(town)/i;
+    !!if&v1;
+      !!VR(maxGuildLevel:y):Si;
+      !!br;
+    !!en;
+  !!en;
   !!DL(SRM_DLG_MAGE_GUILD):E42/0; disa
 
   !!FU(DL_FindById):P(SRM_DLG_MAGE_GUILD)/?(dlgPtr:y);
