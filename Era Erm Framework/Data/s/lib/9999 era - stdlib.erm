@@ -1769,60 +1769,61 @@ ZVSE2
 !!en;
 
 !?FU(ReadJsonIntArray);
-!#VA(jsonKeysPrefixPtr:x) (intArray:x) (size:x);
-; reads json int array at key into specified array or in the new local one
-; optional (size:x) argument returns size of the keys read;
-!!VR(isNewArray:y):S(FALSE);
-!!if&(intArray)=(NULL);
-  !!VR(isNewArray:y):S(TRUE);
+; Reads integer array from json config into either existing dynamic array or into automatically created local one.
+!#VA(jsonKeyPtr:x); JSON full key like "test.guards" for { "test": { "guards": [1, 2, 3, 4] } }
+!#VA(intArray:x);   IN/OUT. Either existing dynamic array ID or ?(localArrayId:y).
+
+!!FU:S(@intArray)/?(argSyntax:y);
+
+!!if&(argSyntax)=(ARG_SYNTAX_GET);
   !!FU(NewIntArray):P?(intArray);
+  !!SN:F^ExtendArrayLifetime^/(intArray);
 !!el;
   !!SN:M(intArray)/0;
 !!en;
+
 !!VRi:S0;
+
 !!re i;
-  !!VR(jsonKey:z):S^%z(jsonKeysPrefixPtr:x).%i^;
-  !!SN:T^%(jsonKey:z)^/?(jsonStr:z);
-  !!if&(jsonKey)<>(jsonStr);
-    !!VR(int:y):V(jsonStr);
-    !!FU(Array_Push):P(intArray)/(int);
+  !!VR(itemKey:z):S^%z(jsonKeyPtr:x).%i^;
+  !!SN:T^%(itemKey)^/?(itemValueStr:z);
+
+  !!if&(itemKey)<>(itemValueStr);
+    !!VR(itemValue:y):V(itemValueStr);
+    !!FU(Array_Push):P(intArray)/(itemValue);
     !!VRi:+1;
   !!el;
-    !!SN:M(intArray)/?(size);
-    !!if&(isNewArray);
-      !!SN:F^ExtendArrayLifetime^/(intArray);
-    !!en;
     !!br;
   !!en;
 !!en;
 
-!?FU(ReadJsonStringArray);
-!#VA(jsonKeysPrefixPtr:x) (strArray:x) (size:x);
-; reads json string array at key into specified array or in the new local one
-; optional (size:x) argument returns size of the keys read;
-!!VR(isNewArray:y):S(FALSE);
-!!if&(strArray)=(NULL);
-  !!VR(isNewArray:y):S(TRUE);
+!?FU(ReadJsonStrArray);
+; Reads string array from json config into either existing dynamic array or into automatically created local one.
+!#VA(jsonKeyPtr:x); JSON full key like "test.names" for { "test": { "names": ["daemon", "corwin", "deo"] } }
+!#VA(strArray:x);   IN/OUT. Either existing dynamic array ID or ?(localArrayId:y).
+
+!!FU:S(@strArray)/?(argSyntax:y);
+
+!!if&(argSyntax)=(ARG_SYNTAX_GET);
   !!FU(NewStrArray):P?(strArray);
+  !!SN:F^ExtendArrayLifetime^/(strArray);
 !!el;
   !!SN:M(strArray)/0;
 !!en;
+
 !!VRi:S0;
+
 !!re i;
-  !!VR(jsonKey:z):S^%z(jsonKeysPrefixPtr:x).%i^;
-  !!SN:T^%(jsonKey:z)^/?(jsonStr:z);
-  !!if&(jsonKey)<>(jsonStr);
-    !!FU(Array_Push):P(strArray)/(jsonStr);
+  !!VR(itemKey:z):S^%z(jsonKeyPtr:x).%i^;
+  !!SN:T^%(itemKey:z)^/?(itemValueStr:z);
+
+  !!if&(itemKey)<>(itemValueStr);
+    !!FU(Array_Push):P(strArray)/(itemValueStr);
     !!VRi:+1;
   !!el;
-    !!SN:M(strArray)/?(size);
-    !!if&(isNewArray);
-      !!SN:F^ExtendArrayLifetime^/(strArray);
-    !!en;
     !!br;
   !!en;
 !!en;
-
 
 !?FU(LoadIntGlobalsFromJson);
 ; Loads global mod/script settings from json config right into prefixed named global variables.
