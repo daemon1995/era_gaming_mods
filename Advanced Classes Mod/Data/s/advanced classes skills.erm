@@ -4087,7 +4087,7 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
 **Deal Extra damage in the Current Battle Round if Stack Had Moral
 ; New implementation with OnStackToStackDamage for displaying correct damage on mouse hint
 ; by Archer30
-!?FU(OnStackToStackDamage_Quit);
+!?FU(OnStackToStackDamage);
 !#VA(atkStack:x) (defStack:x) (finalDmgConst:x) (finalDmg:x) (basicDmg:x) (dmgBonus:x) (isDistant:x) (distanceArg:x) (isTheoretical:x);
 
 !!BM(atkStack):F?(monFlags:y);
@@ -4102,9 +4102,9 @@ x1=hero, x2=returns chance to attract, x3=returns number of creatures, x4=return
 
     !!if&(level)>=(SKILL_EXPERT)/i^H3_Leadership_0_Hero%(hero)^;
       !!if&i^H3_Leadership_1_Hero%(hero)^=0;
-        !!VR(finalDmgNew:y):S(finalDmg) *11 :10; [Archer30: It's recommended to calculate the final damage based on finalDmgConst]
+        !!VR(finalDmgNew:y):S(finalDmgConst) :10 +(finalDmg); [Archer30: It's recommended to calculate the final damage based on finalDmgConst]
       !!el;
-        !!VR(finalDmgNew):S(finalDmg) *5 :4;
+        !!VR(finalDmgNew):S(finalDmgConst) :4 +(finalDmg);
       !!en;
 
       !!if&(finalDmgNew)>(finalDmg);
@@ -4421,6 +4421,7 @@ Taken from Algor Era Scripts
 
 !?FU(OnAfterBattleUniversal);
 *Master/Grandmaser Luck/Morale gives +4/5
+; Archer30: Note that it means M/GM Leadership/Luck has effect only after a fight
 
 !!BA:H0/?y1;
 !!if&y1>=0/y1<=155;
@@ -4448,6 +4449,32 @@ Taken from Algor Era Scripts
 !!HEy1&y12=1:R0/d1;                     [+1 Moral]
 !!en;
 
+; Archer30's unused implementation. 
+; This is supposed to replace the HE:R implementation but seems not enough
+!?FU(ACM_CreateERMHook);
+!!FU:E;
+
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/5126650/(ACM_OnGetLuckSkillMultiplier);
+
+!?FU(ACM_OnGetLuckSkillMultiplier);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/?(luck:y);
+
+!!if&(luck)=3;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(heroStruct:y);
+  !!UN:C(heroStruct)/26/4/?(hero:y);
+
+  !!if&i^H3_Luck_0_Hero%(hero)^;
+    !!if&i^H3_Luck_1_Hero%(hero)^<>(TRUE);
+      !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/4;
+    !!el;
+      !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EDX)/4/5;
+    !!en;
+  !!en;
+!!en;
 
  ***************************************************************************************************
 * SN:W^Att_Luck_Type^/0;
@@ -8300,8 +8327,6 @@ x3-x5=Town Coordinates
 !!DO(AC_Function_20)/0/155/1:Py1;
 
 !?FU(AC_Function_20);
-!!HEx16:O?y1;                           [Checke Hero Owner]
-!!FU&y1=-1:E;                           [Exit if none]
 !!HEx16:O?y1;                           [check hero owner]
 !!FU&y1<>x1:E;                          [exit if not current player]
 !!SN:W^Master_Adventurer_Hero%X16^/?y10;
