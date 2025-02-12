@@ -2176,42 +2176,48 @@ When clicking on System Icon at Adventure Map run options again
 !!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y99; [Check for TUM]
 !!VRy80:Sc;                             [Set to current day]
 !!SN:W^Neutral_Stack_Weekly_Upgrade^/?y60;
+
 !!if&y60=1/y80>1;
-!!SN:W^Map_Monster_Count^/?y10;
-!!SN:W^Map_Monster_Upgrade_Count^/?y12;
-!!VRy11:Sy10:20 +1;                     [5%]
-!!OBv2/v3/v4:U?y2;                      [Monster Type]
-!!VRy20:S0R5;
+  !!SN:W^Map_Monster_Count^/?y10;
+  !!SN:W^Map_Monster_Upgrade_Count^/?y12;
+  !!VRy11:Sy10:20 +1;                     [5%]
+  !!OBv2/v3/v4:U?y2;                      [Monster Type]
+  !!VRy20:S0R5;
+
   !!if&y2>=0/y2<=118/y12<y11/y20=1;
-  !!MOv2/v3/v4:G?y3;                    [Check Monster Numbers]
-  !!MA:Uy2/?y4;                         [Check if upgradable -2 means no]
-  !!MA:Ly2/?y5;                         [Check Level 0-6]
-    !!if&y4=-1/y99=0;                   [For default upgrade (-1) without TUM]
+    !!MOv2/v3/v4:G?y3;                    [Check Monster Numbers]
+    !!MA:Uy2/?y4;                         [Check if upgradable -2 means no]
+    !!MA:Ly2/?y5;                         [Check Level 0-6]
+
+    !!if&y4=-1/y99=0;                     [For default upgrade (-1) without TUM]
       !!VRy2:+1;
       !!MA:Ly2/?y6;
-        !!if&y5=y6;
-          !!UN:Ov2/v3/v4/1/0;
-          !!UN:Iv2/v3/v4/54/y2/54/y2/-1/0;
-          !!VRy3&y3>4000:S4000;
-          !!MOv2/v3/v4:Gy3;
-          !!SN:W^Map_Monster_Upgrade_Count^/d+1; [No More Upgrades than 6% per week of monsters on map]
-       !!en;
-  !!en;
+
+      !!if&y5=y6;
+        !!UN:Ov2/v3/v4/1/0;
+        !!UN:Iv2/v3/v4/54/y2/54/y2/-1/0;
+        !!VRy3&y3>4000:S4000;
+        !!MOv2/v3/v4:Gy3;
+        !!SN:W^Map_Monster_Upgrade_Count^/d+1; [No More Upgrades than 6% per week of monsters on map]
+      !!en;
+    !!en;
+
     !!if&y99=1;
-    !!if|y4=-1/y4>0;                    [For default upgrade (-1) TUM]
-      !!VRy2&y4=-1:+1;
-      !!VRy2&y4>0:Sy4;
-      !!MA:Ly2/?y6;
+      !!if|y4=-1/y4>0;                    [For default upgrade (-1) TUM]
+        !!VRy2&y4=-1:+1;
+        !!VRy2&y4>0:Sy4;
+        !!MA:Ly2/?y6;
+
         !!if&y5=y6;
           !!UN:Ov2/v3/v4/1/0;
           !!UN:Iv2/v3/v4/54/y2/54/y2/-1/0;
           !!VRy3&y3>4000:S4000;
           !!MOv2/v3/v4:Gy3;
           !!SN:W^Map_Monster_Upgrade_Count^/d+1; [No More Upgrades than 6% per week of monsters on map]
-       !!en;
+        !!en;
+      !!en;
+    !!en;
   !!en;
-  !!en;
-!!en;
 !!en;
 
 !!SN:W^Neutral_Growth_10000^/?y50;
@@ -2886,6 +2892,52 @@ x1=Spell Number, x2=Duration, x3=Level
 
 
 ********************************************************************************
+
+; Archer30: Additional hint for commander is currently disabled as it's not compatible with ACM and GEM
+// Get the string pointer to be used in battle
+!?FU(OnSetupBattlefield)&i^battle_isVisible^;
+!!FU:E;
+
+; Recreate battle strings persistent storage
+!!SN:Mi^diff_battleStrings^;
+!!FU(NewStrArray):P?i^diff_battleStrings^/(M_TEMP);
+
+!?FU(OnAfterBattleUniversal)&i^diff_battleStrings^;
+!!FU:E;
+
+; Free battle strings persistent storage
+!!SN:Mi^diff_battleStrings^;
+!!VRi^diff_battleStrings^:S0;
+
+!?FU(Diff_AllocBattleStr);
+; Stores string in a battle persistent memory and returns its raw address in memory
+!#VA(textPtr:x); string contents to get persistent address for
+!#VA(result:x);  result raw string address
+
+!!SN:Mi^diff_battleStrings^/?(strIndex:y);
+!!FU(Array_Push):Pi^diff_battleStrings^/z(textPtr);
+!!SN:Mi^diff_battleStrings^/?(result)/(strIndex);
+
+// Function to set up new commander description for Difficulty Mod
+!?FU(Diff_SetUpExtraCommanderDesc);
+!#VA(stack:x) (newDescPtr:x);
+
+; Get the original descriptions
+!!BM(stack):Z?(stackStruct:y);
+!!UN:C(stackStruct)/144/(UNC_INT)/?(descPtr:y);
+!!SN:B(descPtr)/(UNC_INT)/?(desc:z);
+
+; Set up combined description
+!!if&(desc)<>^^;
+  !!VR(desc):+^%T(era.endl)^ +^%T(era.endl)^ +^{%z(newDescPtr)}^;
+!!el;
+  !!VR(desc):S^{%z(newDescPtr)}^;
+!!en;
+
+!!FU(Diff_AllocBattleStr):P(desc)/?(newDescAddr:y);
+!!UN:C(stackStruct)/144/(UNC_INT)/(newDescAddr);
+
+
 !?BF&i^battle_human_0^;                 [Create Battle Commander]
 
 !!SN:W^Battle_Commander^/?y1;           [Only Run if Option was selected]
@@ -2934,32 +2986,56 @@ AI player gets Stronger Commander in battle depending on game difficutly
 !!en;
 
 !!if&y2=1;
- !!re i/21/31;
-  !!BMi:T?y3;                           [Get Creature Type and Position]
+  !!re i/21/31;
+
+    !!BMi:T?y3;                           [Get Creature Type and Position]
     !!if&y3>=183/y3<=191;               [If Commander found]
-    !!BMi:Ady13;                        [Set Attack]
-    !!BMi:Ddy11;                        [Set Defense]
-    !!BMi:H?y5; !!VRy5:*y10:100; !!BMi:Hy5 E0; [Set Health and set casts to zero]
-    !!BMi:U1/?y5 U2/?y6; !!VRy5:*y12:100; !!VRy6:*y12:100; !!BMi:U1/y5 U2/y6; [Set Min+Max Damage]
+      !!BMi:Ady13;                        [Set Attack]
+      !!BMi:Ddy11;                        [Set Defense]
+      !!BMi:H?y5; !!VRy5:*y10:100; !!BMi:Hy5 E0; [Set Health and set casts to zero]
+      !!BMi:U1/?y5 U2/?y6; !!VRy5:*y12:100; !!VRy6:*y12:100; !!BMi:U1/y5 U2/y6; [Set Min+Max Damage]
+
+      *!if&i^battle_isVisible^;
+        *!SN&i^H3_Game_Difficulty^=1:T^Diff_Mod.AI_Level_Easy^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=2:T^Diff_Mod.AI_Level_Normal^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=3:T^Diff_Mod.AI_Level_Hard^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=4:T^Diff_Mod.AI_Level_Extreme^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=5:T^Diff_Mod.AI_Level_Insane^/?z-1;
+        *!VRz2:S^%z-1%T(Diff_Mod.Commander)^;
+        *!FU(Diff_SetUpExtraCommanderDesc):Pi/z2;
+      *!en;
+
+      !!br;
     !!en;
- !!en;
+  !!en;
 !!en;
 
 !!BA:O?y1/?y2;                          [Get Owner]
 !!OW:Iy1/?y2;                           [Get if AI or Human]
 
 !!if&y2=1;
- !!re i/0/10;
-  !!BMi:T?y3;                           [Get Creature Type and Position]
+  !!re i/0/10;
+    !!BMi:T?y3;                           [Get Creature Type and Position]
     !!if&y3>=174/y3<=182;               [If Commander found]
-    !!BMi:Ady13;                        [Set Attack]
-    !!BMi:Ddy11;                        [Set Defense]
-    !!BMi:H?y5; !!VRy5:*y10:100; !!BMi:Hy5 E0; [Set Health and set casts to zero]
-    !!BMi:U1/?y5 U2/?y6; !!VRy5:*y12:100; !!VRy6:*y12:100; !!BMi:U1/y5 U2/y6; [Set Min+Max Damage]
+      !!BMi:Ady13;                        [Set Attack]
+      !!BMi:Ddy11;                        [Set Defense]
+      !!BMi:H?y5; !!VRy5:*y10:100; !!BMi:Hy5 E0; [Set Health and set casts to zero]
+      !!BMi:U1/?y5 U2/?y6; !!VRy5:*y12:100; !!VRy6:*y12:100; !!BMi:U1/y5 U2/y6; [Set Min+Max Damage]
+
+      *!if&i^battle_isVisible^;
+        *!SN&i^H3_Game_Difficulty^=1:T^Diff_Mod.AI_Level_Easy^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=2:T^Diff_Mod.AI_Level_Normal^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=3:T^Diff_Mod.AI_Level_Hard^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=4:T^Diff_Mod.AI_Level_Extreme^/?z-1;
+        *!SN&i^H3_Game_Difficulty^=5:T^Diff_Mod.AI_Level_Insane^/?z-1;
+        *!VRz2:S^%z-1%T(Diff_Mod.Commander)^;
+        *!FU(Diff_SetUpExtraCommanderDesc):Pi/z2;
+      *!en;
+
+      !!br;
     !!en;
   !!en;
 !!en;
-
 
 ********************************************************************************
 !?FU(Diff_Funtion_92);
@@ -2980,9 +3056,14 @@ AI player gets Stronger Commander in battle depending on game difficutly
 !!VRy10:Sx3*2+y6;                       [Attack=Attack from Hero *2 + Gameweeks]
 !!VRy11:Sx4*2+y6;                       [Defense=Defense from Hero *2 + Gameweeks]
 !!VRy12:Sx2:10 +2R2;                    [Speed=Herolvl/10 +2-4]
-!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y99; [With TUM battle commander is slightly stronger]
-!!VRy13&y99=0:Sx1:8 +y7 +y8 +50 :2;     [Health=Fight Value/8 +Herlolvl*200 +Week*100 durch 2]
-!!VRy13&y99=1:Sx1:7 +y7 +y8 +50 :2;     [Health=Fight Value/7 +Herlolvl*200 +Week*100 durch 2]
+
+!!if&i^Typhon_Third_Upgrade_Mod_Active^<>(TRUE);
+  !!VRy13:Sx1:8 +y7 +y8 +50 :2;         [Health=Fight Value/8 +Herlolvl*200 +Week*100 durch 2]
+; With TUM, the commander is slightly stronger
+!!el;
+  !!VRy13:Sx1:7 +y7 +y8 +50 :2;         [Health=Fight Value/7 +Herlolvl*200 +Week*100 durch 2]
+!!en;
+
 !!VRy14:Sx1:250 +y9 +5R20;              [Min Damage HP_Value +Hero Level*10]
 !!VRy15:Sx1:150 +y9 +31R45;             [Max Damage]
 !!VRy13|y13<=0/y13>5000000:S5000000;    [prevent overflow - Note that the upper limit for commander HP is far less than INT_MAX! It overflows when bigger than 30000000]
@@ -3005,6 +3086,9 @@ AI player gets Stronger Commander in battle depending on game difficutly
 !!BMx16&x2>=25/y10>=1:M28/10/2;         [Add Air Shield   66% Chance]
 !!BMx16&x2>=30/y10<=1:M27/10/2;         [Add Shield       66% Chance]
 !!BMx16&x2>=45/y10=0:M48/5/2;           [Add Prayer       66% Chance]
+
+; Set up new desc
+*!FU(Diff_SetUpExtraCommanderDesc)&i^battle_isVisible^:Px16/^%T(Diff_Mod.Option_13)^;
 !!en;
 
 

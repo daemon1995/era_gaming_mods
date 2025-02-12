@@ -294,6 +294,25 @@ Enable Artefact to appear on the map
 !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
 !!SN:E4624416/(CALLCONV_THISCALL)/(cmbMgr); 469020
 
+// Check the spell immunity of a stack
+!?FU(ACM_Battle_CanStackReceiveSpell);  [by daemon_n]
+!#VA(stackId:x) (spellID:x) (castingSide:x) (result:x);
+
+!!BM(stackId):Z?(stack:y); I?(side:y);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; [can stack apply buff/debuff] 5A3F90
+!!VR(result):Sv1;
+
+// Check the spell resistance of a stack
+; This function checks the resistance of a stack with random roll, should be used in real casting process
+!?FU(ACM_Battle_CanStackBeAffectedBySpell);
+!#VA(stackId:x) (spellID:x) (castingSide:x) (result:x);
+
+!!BM(stackId):Z?(stack:y);
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E5933392/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; 5A8950
+!!VR(result):Sv1;
+
 // Other functions
 !?FU(acm_CountNumUniqueSkillsLearned);
 !#VA(hero:x);
@@ -7572,20 +7591,28 @@ x5=Current Spell Points
 
 ****************************************************************************************************
 Treasure Chest Enhancement with Advanced Nobility skill
+; Archer30: Since we use OB998&1000:M-1/1/0; + IF:Q here, this script needs to be executed later than any script change CH:B
+; It is better if this script can be placed in a script with a negative number prefix
+
 !?OB101;                                [Object Trigger for Treasure chests]
 
-!!SN:W^Advanced_Classes_Mod_Active^/?y1;
-!!FU&y1<>1:E;                           [Exit if Sorcery script isn't enabled]
-!!HE-1:N?y10;
-!!HE-1:S5/?v5;
 !!OB998:U?v2;                           [v2=0 for standard chest, v2>0 for new chest types, v2>6 for Power Stones]
 !!FU&v2>6:E;                            [Exit if it's a Power Stone]
+
+!!HE-1:S5/?v5;                          [Exit if the hero didn't learn Nobility]
+!!FU&v5=(SKILL_NOT_LEARNED):E;
+
 !!VRv3:S0;
 !!UN&v2>0:Bv2/?v3;                      [v3=0 if standard operation, v3=1 if advanced (scripted)]
-!!CH998&v2>0/v3=0/-875:S?v4;            [Check if chest has an artifact or not]
-!!CH998&v2=0/-875:S?v4;
+!!FU&v3>0:E;
 
-!!FU25539&v5>0/v3=0/v4=0/-875:Pv5/y10;  [Pass Nobility Skill Level and Hero Number]
+!!VRv4:S0;
+!!CH998&v2>0/v3=0:S?v4;                 [Check if chest has an artifact or not]
+!!CH998&v2=0:S?v4;
+!!FU&v4:E;
+
+!!HE-1:N?y10;
+!!FU25539:Pv5/y10;                      [Pass Nobility Skill Level and Hero Number]
 
 
 !?FU25539;                              [Start of Function 5026 - Treasure Chest Enhancement with Advanced Nobility skill]
@@ -8390,7 +8417,7 @@ x3-x5=Town Coordinates
 !!FU|y1<>512/y2<>0/y3<>14:E;            [right-click empty space in hero screen]
 !!HE-1:N?y4;                            [get hero number]
 *!FU(ACM_Select_Commander_Role):Py4;    Testing code
-!!SN:W^Grandmaster_Adventurer_Hero%Y4^/?y1; [check if grandmaster adventurere]
+!!SN:W^Grandmaster_Adventurer_Hero%Y4^/?y1; [check if grandmaster adventurer]
 !!FU&y1=0:E;                            [Exit if no GM Adv]
 
 !!SN:W^Grand_Adv_%Y4_Creature_LvL_1^/?y10; [get creature growths from variable in y10]
@@ -8402,16 +8429,8 @@ x3-x5=Town Coordinates
 !!SN:W^Grand_Adv_%Y4_Creature_LvL_7^/?y16; [get creature growths for level 7 from variable in y16]
 
 show message text how many creatures have been gathered in total per level
-!!IF:M^{Grandmaster Adventurer Creature Bonus}
-
-Level 1 units: %Y10
-Level 2 units: %Y11
-Level 3 units: %Y12
-Level 4 units: %Y13
-Level 5 units: %Y14
-Level 6 units: %Y15
-Level 7 units: %Y16
-^;
+!!SN:T^AC_Misc.GMAdventurerCreatureBonus^/?z2/^bonus1^/y10/^bonus2^/y11/^bonus3^/y12/^bonus4^/y13/^bonus5^/y14/^bonus6^/y15/^bonus7^/y16;
+!!IF:M^%z2^;
 
 
 !?BF&1000;                              [Combat Start]
@@ -10393,6 +10412,8 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
 
 
 ***************************Succubus charming************************************
+; Archer30: Note that this implementation doesn't check the full spell immunity/resistance of the target, which means Black Dragons can also be hypnotized
+; The full immunity/resistance check can be done through FU(ACM_Battle_CanStackBeAffectedBySpell)
 !?BG0;                                  [Charms enemies in combat by casting hypno when attacking]
 
 !!BG:A?y1;
@@ -10421,7 +10442,24 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
     !!VRy31:Sy30*75;
     !!VRy4:+y31*y80:100;                    [Succubus life +75*Level times the hit points of Succubus * Passive Mod]
     !!SN:W^Succubus_Charm_Value_%Y66^/y4;   [Save the value to show it in bonus list]
-    !!BMy3&y7<y4:M60/2/3;                   [If value is lower apply hypno to stack]
+
+    !!if&y7<y4;
+      !!BMy3:M60/2/3;                       [If value is lower apply hypno to stack]
+
+      ; Show cosmetics
+      !!if&i^battle_isVisible^;
+        !!SN:H^monname^/y2/0/?z2;
+        !!BMy3:T?y32 N?y33;
+        !!VRy34:Sy33 -1 B;
+        !!SN:H^monname^/y32/y34/?z3;
+        !!SN:H^spell^/(SPELL_HYPNOTIZE)/(SPELL_TEXT_NAME)/?z4;
+        !!SN:T^AC_Misc.cast0^/?z5/^castMon^/z2/^targetMon^/z3/^spell^/z4;
+        !!MM:Sz5;
+
+        !!SN:P^hypnotiz^;
+        !!BMy3:V21;
+      !!en;
+    !!en;
   !!en;
 !!en;
 
@@ -10458,9 +10496,12 @@ Animate Dead from Soul Eater gets influenced by Spell Modifier from Commander
   !!HEy5&y32>y35:Idy31/1;               [Give extra Mana Per Attack to hero]
   !!HEy5&y35>=y32:Iy33/1;               [Set Spell Points to Max if value would be greater after adding]
   !!FU&y35>=y32:E;                      [Exit to prevent showing Message if no Spell Points were added]
-  !!BA:Q?f;
-  !!SN&i^battle_isVisible^:T^AC_Misc.Temple Guardian^/?z1/^points^/y31;
-  !!BU&i^battle_isVisible^:Mz1;
+
+  !!if&i^battle_isVisible^;
+    !!HEy5:B0/?z2;
+    !!SN:T^AC_Misc.Temple Guardian^/?z1/^points^/y31/^hero^/z2;
+    !!BU:Mz1;
+  !!en;
 !!en;
 !!en;
 !!en;
@@ -21134,15 +21175,6 @@ Undead stacks heal and with next attack^;                                       
 !!en;
 !!en;
 
-
-!?FU(ACM_Battle_CanStackReceiveSpell);
-!#VA(stackId:x) (spellID:x) (castingSide:x) (result:x);
-
-!!BM(stackId):Z?(stack:y);              [I?(side:y);]
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-!!SN:E5914512/(CALLCONV_THISCALL)/(cmbMgr)/(spellID)/(castingSide)/(stack)/1/1; [can stack apply buff/debuff] 5A3F90]
-!!VR(result):Sv1;
-
 *-------------------------------Firewall ---------------------------------------*
 !?FU(OnStackToStackDamage);
 
@@ -23781,9 +23813,10 @@ Cant Cleanse That Effect
 *--------------------------------------------------------------------Earthquake -----------------------------------------------------------------------------*
 !?FU(AC_Function_127);
 
-!!BMx16:H?y1;
+!!BMx16:N?y1;                           [Exit if the stack is killed]
+!!FU&y1<=0:E;
+
 !!BMx16:U3/?y6;                         [save number of shots ]
-!!FU&y1<1:E;
 !!HE-1:Fd/d/?y3/d;
 !!VRy2:S0R99;
 !!VRy4:Sy3 *3 :10;                      [Chance is 15% +3% per 10SP]
