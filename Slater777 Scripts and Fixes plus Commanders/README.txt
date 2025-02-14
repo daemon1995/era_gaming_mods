@@ -1,0 +1,1 @@
+All credits to Heroes 3 community, Legend of the Red Dragon mod and TUM Enchanted mod
