@@ -1,0 +1,42 @@
+Z VSE2
+
+
+; Абилка ассид - кровожадность: если при атаке убито хотя бы 1 существо, атакует второй раз после ответа
+
+
+*?FU(js_BattleStack_DeadShot);
+*#VA(shooter:x) (target:x);
+
+*!VR(kills:y):S0;
+
+*!UN:C(shooter)/76/4/?(shooterQty:y); 0x4C
+*!UN:C(target)/120/4/?(targetLvl:y); 0x78
+
+*!VR(chance:y):S8 -(targetLvl);
+
+*!re i/0/(shooterQty);
+  *!VRr:S0 R100;
+  *!VR(kills)&r<=(chance): +1;
+*!en;
+
+*!if&(kills);
+  *!FU(js_GetStackNumberByStackPtr):P(target)/?(stackNum:y);
+  
+  *!BM(stackNum):N?(monQty:y);
+  *!VR(kills)&(monQty)<(kills):S(monQty);
+  
+  *!if&i^battle_isVisible^;
+    *!SN:T^jsAmetistMod.creature.210.skillLogMsg^/?(logMsg:z)/^number^/(kills);
+    *!MM:S(logMsg);
+    *!SN:P^DEADSHOT^;
+    *!FU(ES_PlayCustomAnimationOnStack):P(stackNum)/^DEADSHOT.def^/1;
+  *!en;
+
+  *!BM(stackNum):Nd-(kills);
+
+  *!if&i^battle_isVisible^;
+    ; Play WNCE animation
+    *!BM(stackNum):K0; костыль, но работает
+    *!FU(arch_DrawActionPlay):P;
+  *!en;
+*!en;
