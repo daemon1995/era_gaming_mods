@@ -1,0 +1,56 @@
+ZVSE2
+
+
+; Абилка морских жриц - слабость и разрушающие лучи
+
+
+!?FU(js_BattleStack_ShotAbilities);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(shooter:y) C(shooter)/52/4/?(shooterNum:y); 0x34
+
+!!FU&(shooterNum)<>(MON_SEA_WITCH)/(shooterNum)<>(MON_SEA_SORCERESS):E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(target:y);
+
+!!FU(js_GetActualStackSideByStackPtr):P(target)/?(side:y);
+
+*!UN:C(target)/248/4/?(targetStackNum:y); 0xF8
+*!VR(targetStackNum)&(side): +(BATTLE_STACKS_PER_SIDE);
+*!SN:E4489088/(CALLCONV_THISCALL)/(shooter)/(targetStackNum); 00447F80 BattleStack_CastDefaultSpell
+
+!!UN:C(target)/588/4/?(hasWeekness:y); 0x24C
+!!UN:C(target)/204/4/?(targetDefense:y); 0xCC
+
+!!if|(hasWeekness)=0/(targetDefense)>0;
+  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/68/4/?(targetHexId:y); 0x44
+  !!SN:E4489088/(CALLCONV_THISCALL)/(shooter)/(targetHexId); 00447F80 BattleStack_CastDefaultSpell
+!!en;
+
+
+!?FU(js_BattleStack_CastDefaultSpell);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(monId:y);
+
+!!FU&(monId)<>(MON_SEA_WITCH)/(monId)<>(MON_SEA_SORCERESS):E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(targetHexId:y);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+
+; ptr2 = (int)BattleMrg + 112 * gex_id;
+!!VR(hexOffset:y):S(targetHexId) *112;
+!!VR(hexPtr:y):S(cmbMgr) +(hexOffset);
+; stack = BattleHex::GetStack((_BattleHex_ *)(ptr2 + 452));
+!!VR(hexPtr): +452;
+!!SN:E5141040/(CALLCONV_THISCALL)/(hexPtr); 004E7230
+!!VR(target:y):Sv1;
+!!UN:C(target)/588/4/?(hasWeekness:y); 0x24C
+
+!!VR(skillLvl:y)&(monId)=(MON_SEA_WITCH):S1;
+!!VR(skillLvl:y)&(monId)=(MON_SEA_SORCERESS):S2;
+
+!!if&(hasWeekness)=0;
+  ; BattleMgr::CastSpell(o_BattleMgr, SPELL_PROTECTION_FROM_WATER, target, 1, -1, 2, 6);
+  !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_WEAKNESS)/(targetHexId)/1/-1/(skillLvl)/3; 005A0140 BattleMgr::CastSpell
+
+!!el;
+  !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_DISRUPTING_RAY)/(targetHexId)/1/-1/(skillLvl)/3; 005A0140 BattleMgr::CastSpell
+!!en;
