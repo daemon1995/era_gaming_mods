@@ -182,44 +182,6 @@ ZVSE2
 !!UN:C4479001/(UNC_INT)/(MON_ARROW_TOWERS);
 
 
--------------------------- B E F O R E   S T A C K    T U R N --------------------------
-
-
-*?FU(WOG_55_BattleFunc_CheckForDamagedStacks);
-
-
-
-*?FU(OnAfterBattleAction)&i^js_ballistics_bonus^/i^wog_isSiege^<>(TRUE);/x7/x9=0;
-;!IF:L^end battle= %v7002^;
-;!IF:L^mon atk num= %v7003^;
-;!IF:L^= %v7008^;
-
-*!if&v7002>-1;
-  *!FU7061&v7000<20/v7001=58:P73/v7003/1/3/0/2/2/v7008/0/v7002;              [20% cast disease if walking dead attacked]
-  *!FU7061&v7000<10/v7001=60:P74/v7003/1/3/1/4/2/v7008/0/v7002;              [10% cast paralysis if wight attacked]
-  *!FU7061&v7000<100/v7001=(MON_NOT_USED_2):P73/v7003/1/3/0/2/2/v7008/0/v7002;
-  ;#VA(spell:x) (pos:x) (rank:x) (power:x) (noRetaliation:x) (level:x) (specialImmun:x) (type:x) (const:x) (stack:x);
-*!en;
-
-*#VA(attacker:x) (defender:x);
-*!BM(attacker):T?(monType:y);
-*!BM(defender):N?(defNum:y);
-*!IF:L^monType= %(monType), defNum= %(defNum)^;
-
-*!BG:N?(activeStack:y) A?(actionType:y);                      [get current stack # and action type]
-*!IF:L^activeStack= %(activeStack), actionType= %(actionType)^;
-
-*!BM(activeStack):T?(atkMonType:y);                    [get acting monster type, quantity, position, side]
-*!IF:L^atkMonType= %(atkMonType)^;
-*!BG&(actionType)=7:E?(targetStack:y);              [if creature is attacking or shooting get destination stack]
-
-*!if&(targetStack)>(NO_STACK);
-  *!BM(targetStack):T?(defMonType:y) P?(defMonPos:y);                [get type, position, retaliations of target creature stack]
-  *!IF:L^defMonType= %(defMonType), defMonPos= %(defMonPos)^;
-*!en;
-
-
-
 ; Critical hit for Catapult in non-siege and non-CB battles
 ** start of pre-damage trigger
 !?FU(OnStackToStackDamage)&i^js_ballistics_bonus^/i^wog_isSiege^<>(TRUE)/x7/x9=0; [x7 = shot, x9 = 0.. only for real damage]
@@ -230,7 +192,7 @@ ZVSE2
 !!if&(monType)=(MON_NOT_USED_2);
   !!BM(defender):N?(defNum:y);
 
-  *!if&(defNum)>1;                    [Works only when the defending number is greater than 1]
+  ;!if&(defNum)>1;                    [Works only when the defending number is greater than 1]
     !!VR(random:y):R0/0/99;           [random roll - 1% chance per level]
 
     !!BM(defender):Z?(defStack:y);
@@ -238,7 +200,6 @@ ZVSE2
     !!FU&(monLvl)<0:E;
     !!VR(chance:y):S6 -(monLvl);
     !!HEi^battle_hero_%i(battle_acting_side)^:S(SKILL_BALLISTICS)/?(skillLvl:y);
-    ;!VR(skillPercent:y):S(skillLvl) *10;
     !!VR(chance):+(skillLvl);
     !!VR(chance):*10 F0/100;
 
@@ -251,6 +212,38 @@ ZVSE2
         !!BM(defender):V82;
       !!en;
     !!en;
-  *!en;
+  ;!en;
 !!en;
-** end of pre-damage trigger **
+
+
+// Катапульта тут не детектится!
+*?FU(js_BattleStack_ShotAbilities)&i^js_ballistics_bonus^/i^wog_isSiege^<>(TRUE);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(shooter:y) C(shooter)/52/4/?(shooterNum:y); 34;
+*!IF:L^shooterNum= %(shooterNum)^;
+*!FU&(shooterNum)<>(MON_NOT_USED_2):E;
+
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(target:y) C(target)/80/4/?(monQty:y); 50
+*!IF:L^monQty= %(monQty)^;
+*!FU&(monQty)<=0:E;
+
+*!UN:C(target)/120/4/?(targetLvl:y); 0x78
+
+*!VR(random:y):R0/0/99;
+*!VR(chance:y):S6 -(targetLvl);
+*!HEi^battle_hero_%i(battle_acting_side)^:S(SKILL_BALLISTICS)/?(skillLvl:y);
+*!VR(chance):+(skillLvl);
+*!VR(chance):*10 F0/100;
+
+*!if&(random)<=(chance);
+  *!FU(js_GetActualStackSideByStackPtr):P(target)/?(side:y);
+  *!UN:C(target)/248/4/?(stackNum:y); 0xF8
+  *!VR(stackNum)&(side): +(BATTLE_STACKS_PER_SIDE);
+
+  *!BM(stackNum):Nd-1;
+
+  *!if&i^battle_isVisible^;
+    *!VR(logMsg:z):Sz155007;
+    *!MM:S(logMsg);
+    *!BM(stackNum):V82;
+  *!en;
+*!en;
