@@ -1,42 +1,34 @@
-Z VSE2
+ZVSE2
 
 
 ; Абилка ассид - кровожадность: если при атаке убито хотя бы 1 существо, атакует второй раз после ответа
 
 
-*?FU(js_BattleStack_DeadShot);
-*#VA(shooter:x) (target:x);
+!?FU(js_CreateERMHook);
 
-*!VR(kills:y):S0;
+!!SN:Ex1/1/4462993/(js_BattleStack_AtackMelee_BeforeReturn); 441991
+!!SN:Ex1/1/4463507/(js_BattleStack_AttackMelee_Pre_BeforeDoubleAttack); 441B93
 
-*!UN:C(shooter)/76/4/?(shooterQty:y); 0x4C
-*!UN:C(target)/120/4/?(targetLvl:y); 0x78
 
-*!VR(chance:y):S8 -(targetLvl);
+!?FU(js_BattleStack_AtackMelee_BeforeReturn);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(killed:y);
+;!IF:L^killed= %(killed)^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(attacker:y) C(attacker)/52/4/?(attackerNum:y); 34
+;!IF:L^attackerNum= %(attackerNum)^;
 
-*!re i/0/(shooterQty);
-  *!VRr:S0 R100;
-  *!VR(kills)&r<=(chance): +1;
-*!en;
+!!if&(killed)>0/(attackerNum)=(MON_AYSSID);
+  !!VRi^js_ayssidBloodlust^:S(TRUE);
+!!en;
 
-*!if&(kills);
-  *!FU(js_GetStackNumberByStackPtr):P(target)/?(stackNum:y);
-  
-  *!BM(stackNum):N?(monQty:y);
-  *!VR(kills)&(monQty)<(kills):S(monQty);
-  
-  *!if&i^battle_isVisible^;
-    *!SN:T^jsAmetistMod.creature.210.skillLogMsg^/?(logMsg:z)/^number^/(kills);
-    *!MM:S(logMsg);
-    *!SN:P^DEADSHOT^;
-    *!FU(ES_PlayCustomAnimationOnStack):P(stackNum)/^DEADSHOT.def^/1;
-  *!en;
 
-  *!BM(stackNum):Nd-(kills);
+!?FU(js_BattleStack_AttackMelee_Pre_BeforeDoubleAttack)&i^js_ayssidBloodlust^;
+;!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(target:y);
 
-  *!if&i^battle_isVisible^;
-    ; Play WNCE animation
-    *!BM(stackNum):K0; костыль, но работает
-    *!FU(arch_DrawActionPlay):P;
-  *!en;
-*!en;
+!!VRi^js_ayssidBloodlust^:S(FALSE);
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(attacker:y) C(attacker)/52/4/?(attackerNum:y); 34
+
+!!if&(attackerNum)=(MON_AYSSID);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4463523; 00441BA3
+!!en;
