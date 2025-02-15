@@ -1,0 +1,44 @@
+ZVSE2
+
+
+; Графический пост-эффект после выстрелов:
+; - гогов
+; - элементалей шторма
+; - злых глаз
+; - элементалей льда
+; - (???) личей 
+; - титанов
+; - полуросликов-гренадеров
+
+
+// TODO: нужно делать одновременное проигрывание двух дефов (WNCE\KILL и пост-выстрела) где-то тут 004687A7
+
+
+*?FU(gem_CreateERMHook);
+*!SN:Ex1/1/4455036/(js_BattleStack_PostShotEffect); 0043FA7C
+
+
+
+*?FU(js_BattleStack_PostShotEffect)&i^battle_isVisible^;
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(shooter:y) C(shooter)/52/4/?(shooterNum:y); 34;
+
+*!if&(shooterNum)=(MON_HALFLING_GRENADIER);
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(target:y);
+  *!FU(js_GetActualStackSideByStackPtr):P(target)/?(side:y);
+  *!UN:C(target)/248/4/?(stackNum:y); 0xF8
+  *!VR(stackNum)&(side): +(BATTLE_STACKS_PER_SIDE);
+
+  *!SN:P^POSTSHOT219^;
+  *!FU(ES_PlayCustomAnimationOnStack):P(stackNum)/^POSTSHOT219.def^/0;
+*!en;
+
+
+*?FU(OnStackToStackDamage)&i^battle_isVisible^/x7/x9=0; [x7 = shot, x9 = 0.. only for real damage]
+*#VA(attackerStackNum:x) (defenderStackNum:x);
+
+*!BM(attackerStackNum):T?(monType:y);
+
+*!if&(monType)=(MON_HALFLING_GRENADIER);
+  *!SN:P^POSTSHOT219^;
+  ;!FU(ES_PlayCustomAnimationOnStack):P(defenderStackNum)/^POSTSHOT219.def^/0;
+*!en;
