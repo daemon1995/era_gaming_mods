@@ -1,0 +1,61 @@
+ZVSE2
+
+
+; Абилка аспидов - чем больше потери отряда, тем больше бонус к урону
+
+
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4469807/(js_BattleStack_CalculateDamageBonus_AfterAllAmplifiers); 44342F
+
+
+!?FU(js_BattleStack_CalculateDamageBonus_AfterAllAmplifiers);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(attacker:y) C(attacker)/52/4/?(attackerNum:y); 34
+
+!!FU&(attackerNum)<>(MON_HASPID):E;
+
+!!FU(js_Revenge_CalcPercentBonus):P(attacker)/?(resultPercent:y);
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(baseDamage:y) C(ebp)/-16/4/?(bonusDamage:y); -10
+;!IF:L^baseDamage= %(baseDamage), bonusDamage= %(bonusDamage)^;
+!!VR(addDamageFloat:e):S(baseDamage) :100 *(resultPercent);
+!!VR(addDamage:y):S(addDamageFloat);
+;!IF:L^addDamage= %(addDamage)^;
+!!UN:C(ebp)/-16/4/d(addDamage);
+
+
+!?FU(OnStackToStackDamage)&x7=0/x9=0/i^battle_isVisible^; [x7=0 = melee, x9 = 0.. only for real damage]
+!#VA(attackerStackNum:x) (defenderStackNum:x);
+
+!!BM(attackerStackNum):Z?(attacker:y);
+!!UN:C(attacker)/52/4/?(attackerNum:y); 34
+
+!!FU&(attackerNum)<>(MON_HASPID):E;
+
+!!FU(js_Revenge_CalcPercentBonus):P(attacker)/?(resultPercent:y);
+
+!!if&(resultPercent);
+  !!SN:T^jsAmetistMod.creature.218.skillLogMsg^/?(logMsg:z)/^number^/(resultPercent);
+  !!MM:S(logMsg);
+!!en;
+
+
+!?FU(js_Revenge_CalcPercentBonus);
+!#VA(attacker:x) (resultPercent:x);
+
+!!UN:C(attacker)/96/4/?(attackerStartQty:y); 60
+!!UN:C(attacker)/192/4/?(attackerHp:y); C0
+!!UN:C(attacker)/76/4/?(attackerCurrQty:y); 4C
+!!UN:C(attacker)/88/4/?(attackerHpLost:y); 58
+
+// Calc percent according to hota formula
+; (number of haspid at the beginning of the battle + 1) * 1 haspid health
+!!VR(upperAttr:y):S(attackerStartQty) +1 *(attackerHp);
+
+; (total health now + 1 haspid health)
+!!VR(lowerAttr:y):S(attackerCurrQty) *(attackerHp) -(attackerHpLost) +(attackerHp);
+
+!!VR(resultFloat:e):S(upperAttr) :(lowerAttr) -1;
+!!FU(Sqrt):P(resultFloat)/?(resultFloat);
+
+!!VR(resultFloat): *100;
+!!VR(resultPercent):S(resultFloat);
