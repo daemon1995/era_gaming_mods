@@ -1,0 +1,158 @@
+ZVSE2
+
+
+!?FU(OnBattleMouseHint)&i^Magog_Activated^;
+!!FU(js_AoeShot_ShowHintAndChangeCursor):P;
+
+// TODO: тут при наведении на кнопки настройки боя, автобой и тд курсор должен меняться на
+// перечеркнутый круг, и кнопки блокируются
+
+
+!?FU(OnKeyPressed_Battle)&x1=(KEY_G)/i^Magog_Activated^=0;
+!!SN:W^Magog_Activated^/1;
+
+!!FU(js_AoeShot_ShowHintAndChangeCursor):P;
+
+
+!?FU(js_AoeShot_ShowHintAndChangeCursor);
+; Проверка на флаг
+!!BG:N?(activeStackNum:y);
+!!BM(activeStackNum):F?f;
+!!VR(aoeShooter:y):Sf &(MON_FLAG_SPLASH_SHOOTER);
+!!FU&(aoeShooter)=0:E;
+
+; Проверка на валидность хекса
+!!CM:D?(mouseHex:y);
+!!FU|(mouseHex)<0/(mouseHex)>186:E;
+
+; Проверка на обычную стрельбу (стек на хексе под мышкой)
+!!BU:E(mouseHex)/?(stackNum:y);
+!!FU&(stackNum)>=0:E;
+
+; Вывод хинта в зависимости от типа стрелка
+!!BM(activeStackNum):T?(shooterNum:y);
+
+!!if|(shooterNum)=(MON_LICH)/(shooterNum)=(MON_POWER_LICH)/(shooterNum)=(MON_DRACOLICH);
+  !!SN:T^jsMod.shotAtArea.Lich^/?(msg:z);
+!!el;|(shooterNum)=(MON_MAGOG)/(shooterNum)=(MON_NOT_USED_2);
+  !!SN:T^jsMod.shotAtArea.Magog^/?(msg:z);
+!!en;
+!!MM:M(msg);
+
+// TODO: тип курсора должен быть разным - облако или пламя
+!!UN:R5/3/0;
+*!SN:E5897136/(CALLCONV_FASTCALL)/(SPELL_FIREBALL)/1/(mouseHex);
+
+*!FU(js_RedrawCursorToAoeSpell):P;
+; CALL_4(void, __fastcall, 0x59EF60, bm, 0, 21, 1); BattleMgr::SpellChosen
+;!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+;!SN:E5893984/(CALLCONV_FASTCALL)/(cmbMgr)/0/(SPELL_FIREBALL)/1; 59EF60 BattleMgr::SpellChosen, строка 185
+;!BG:A7;
+
+!?FU(js_RedrawCursorToAoeSpell);
+; v13 = BattleMgr_MovementShadow; - это настройка в меню битвы (тень перемещения)
+*!UN:C(GAME_SETTING_COMBAT_SHADE_LEVEL)/4/?(movementShadowSetting:y); 698814
+*!IF:L^movementShadowSetting= %(movementShadowSetting)^;
+
+; v14 = (char *)&hex_pos[-1].field_6C + 3;
+; cmbMgr->ActionParam = vSpell;
+; v15 = -(v14 != 0);
+; LOBYTE(v15) = v15 & 0xF7;
+; cmbMgr->Action = v15 + 10;
+; if ( v13 && BattleMgr_CursorShadow )
+;   BattleMgr_SetShadowSettings_12_13(cmbMgr, BattleMgr::ShowGrid, 1ui64, 1);
+; sub_0050D700((LONG *)&this, &side);
+
+; v16 = Battle_GetHex_ByCoordinates((int)this, side);
+!!CM:D?(mouseHex:y);
+; BattleMgr_CursorShadowOnGex(v16);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/64/4/(SPELL_FIREBALL) C(cmbMgr)/60/4/7;
+
+
+!!SN:E5896720/(CALLCONV_FASTCALL)/(mouseHex); 59FA10 BattleMgr_CursorShadowOnGex
+*!SN:E5897136/(CALLCONV_FASTCALL)/(SPELL_FIREBALL)/1/(mouseHex); 59FBB0 BattleMgr_SetCursorShadow
+
+; WndMgr::ProcessDialog(o_WndMgr, 0, CombatMan_SelectSpellTarget, 0);
+!!UN:C(WND_MANAGER)/(UNC_INT)/?(wndMgr:y);
+;!SN:T^jsMod.shotAtArea.Magog^/?(msg:z);
+;!SN:E5911424/(CALLCONV_FASTCALL)/(msg); 5A3380 CombatMan_SelectSpellTarget 5A3380
+!!SN:E5897136/(CALLCONV_THISCALL)/(wndMgr)/0/5911424/0; 602AE0
+
+
+; if ( v13 )
+; {
+;   if ( BattleMgr_CursorShadow ) - это настройка в меню битвы (тень курсора) 698810 (GAME_SETTING_SHOW_COMBAT_MOUSE_HEX)
+;     BattleMgr_SetShadowSettings_12_13(cmbMgr, BattleMgr::ShowGrid, 0x100000001ui64, cmbMgr->Action == CANCEL);
+; }
+; goto LABEL_117;
+; LABEL_117;
+; MouseMgr::SetCursor(o_MouseMgr, 6, 2);
+
+
+; Отмена режима прицельной аое стрельбы
+!?FU(OnBattleScreenMouseClick)&i^Magog_Activated^;
+!!CM:F?(mouseFlag:y) S?(mouseAction:y);
+;!IF:L^mouseFlag= %(mouseFlag), mouseAction= %(mouseAction)^;
+!!FU&(mouseFlag)<>512/(mouseAction)<>14:E; пкм
+
+!!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y) C(cmbMgr)/78560/4/?(cursor:y);
+!!UN:R5/2/(cursor);
+;!SN:P^BUTTON^;
+!!SN:W^Magog_Activated^;
+
+
+; Выстрел
+!?FU(OnBattleScreenMouseClick)&i^Magog_Activated^;
+; Проверка на клик в настройки/автобой и т.д.
+!!CM:I?(mousePlace:y);
+;!IF:L^mousePlace= %(mousePlace)^;
+
+!!if&(mousePlace)>=2000;
+  !!SN:W^Magog_Activated^;
+  !!FU:E;
+!!en;
+
+; Проверка на лкм
+!!CM:F?(mouseFlag:y) S?(mouseAction:y);
+;!IF:L^mouseFlag= %(mouseFlag), mouseAction= %(mouseAction)^;
+!!FU|(mouseFlag)<>0/(mouseAction)<>12:E;
+
+; Проверка на валидность хекса
+!!CM:D?(mouseHex:y);
+!!FU|(mouseHex)<0/(mouseHex)>186:E;
+
+; Проверка на обычную стрельбу (стек на хексе под мышкой)
+!!BU:E(mouseHex)/?(stackNum:y);
+
+!!if&(stackNum)>=0;
+  !!SN:W^Magog_Activated^;
+  !!FU:E;
+!!en;
+
+// Далее - стрельба по площади
+!!CM:R0;
+
+!!BG:N?(activeStackNum:y);
+!!FU(js_GetActualStackSide):P(activeStackNum)/?(side:y);
+!!VR(side):X(TRUE); Переворачиваем значение
+
+; Создание говно-крестьяно-стека опп сайда для цели выстрела (решение достойное книги рекордов гинесса)
+!!BU:S139/0/(mouseHex)/(side)/-1/0; Суммон крестьянина
+!!BU:E(mouseHex)/?(stackNum:y);
+!!BM(activeStackNum):G-95/(mouseHex)/d; Наносимый стеком урон (реальный)
+!!BM(stackNum):G-100/8/d; Видимость появления стека
+!!BM(stackNum):F?f;
+!!VRf:|(MON_FLAG_SUMMONED);
+!!BM(stackNum):Ff;
+
+;!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y); C(cmbMgr)/68/4/?(targetHexId:y); 0x44
+;!VR(shooter:y):S(activeStackNum)*1352+21708+(cmbMgr);
+;!VR(defender:y):S(stackNum)*1352+21708+(cmbMgr);
+
+!!BM(activeStackNum):Z?(shooter:y);
+!!BM(stackNum):Z?(defender:y);
+!!SN:E4453920/(CALLCONV_THISCALL)/(shooter)/(defender); 43F620 BattleStack::Shoot
+!!BU:R;
+!!BG:A12; протратить ход
+!!SN:W^Magog_Activated^;
