@@ -5,19 +5,28 @@ ZVSE2
 *                       [GAMEPLAY SCRIPTS  - scripts for the game]
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
-// Replace Death Ripple stack exp ability with Sorrow
+// Manage stack exp abilities
 ; by Archer30
-; This is because Death Ripple breaks Blind/Paralyze/Stone status on enemies, it is so annoying
+; Replace damaging spells that affect an area with something else
+; This is because they break Blind/Paralyze/Stone status on enemies, it is so annoying
 !?FU(OnAfterErmInstructions);
 !!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExp:y);
 !!FU&(stackExp)=(FALSE):E;
 
+; Replace Death Ripple with Sorrow
 !!EA(MON_LICH):F112/(SPELL_DEATH_RIPPLE)/?(slot:y); [112 - Expert before attack]
-!!EA(MON_LICH):B(slot)/1/74/(SPELL_SORROW)/0/5/10/15/20/25/30/35/40/45/50; [74 - Advanced before attack]
+!!EA(MON_LICH)&(slot)>-1:B(slot)/1/74/(SPELL_SORROW)/0/5/10/15/20/25/30/35/40/45/50; [74 - Advanced before attack]
 !!EA(MON_POWER_LICH):F112/(SPELL_DEATH_RIPPLE)/?(slot:y);
-!!EA(MON_POWER_LICH):B(slot)/1/74/(SPELL_SORROW)/0/5/10/15/20/25/30/35/40/45/50;
+!!EA(MON_POWER_LICH)&(slot)>-1:B(slot)/1/74/(SPELL_SORROW)/0/5/10/15/20/25/30/35/40/45/50;
 !!EA(MON_NIGHTMARE):F112/(SPELL_DEATH_RIPPLE)/?(slot:y);
-!!EA(MON_NIGHTMARE):B(slot)/1/74/(SPELL_SORROW)/0/5/10/15/20/25/30/35/40/45/50;
+!!EA(MON_NIGHTMARE)&(slot)>-1:B(slot)/1/74/(SPELL_SORROW)/0/5/10/15/20/25/30/35/40/45/50;
+
+; Replace Fireball with Curse
+; This is because of the same reason as Death Ripple, plus the area effect isn't considered by AI players
+!!EA(MON_MAGOG):F112/(SPELL_FIREBALL)/?(slot:y); [112 - Expert before attack]
+!!EA(MON_MAGOG)&(slot)>-1:B(slot)/1/74/(SPELL_CURSE)/0/5/10/15/20/25/30/35/40/45/50;
+!!EA(MON_HELL_STEED):F97/(SPELL_FIREBALL)/?(slot:y); [112 - Expert before attack]
+!!EA(MON_HELL_STEED)&(slot)>-1:B(slot)/1/75/(SPELL_CURSE)/0/5/10/15/20/25/30/35/40/45/50;
 
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
@@ -454,7 +463,7 @@ ZVSE2
   !!VRi^gem_InTownKey_A_Pressed^:S(itemId);
   !!FU(gem_CheckUpgradeCostInTown):P(itemId:y);
 
-!?FU(OnKeyReleased)&x1=(KEY_A)/i^gem_InTownKey_A_Pressed^;
+!?FU(OnKeyReleased_Town)&x1=(KEY_A)/i^gem_InTownKey_A_Pressed^;
 !!VRi^gem_InTownKey_A_Pressed^:S(FALSE);
 !!FU(H3Dlg_GetCurrentDlg):P?(currDlg:y);
 !!if&i^gem_townDlg^=(currDlg:y);
@@ -500,6 +509,9 @@ ZVSE2
   !!en;
 
 !?FU(gem_OnOpenCreatureInformationDlg);
+  !!SN:F^GetGameState^/?(mainDialogs[2]:y);
+  !!FU&(mainDialogs[1])<>(DLG_TOWN_SCREEN):E;
+
   !!VRi^gem_MonCanBeUpgraded^:S(FALSE);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/20/4/?(town:y) C(ebp:y)/-20/4/?(upgMonType:y);
   !!if&(town)>0/(upgMonType)<>(NO_MON);
