@@ -13,6 +13,12 @@ ZVSE2
 !!VR(aoeShooter:y):Sf &(MON_FLAG_SPLASH_SHOOTER);
 !!MA&(aoeShooter)=0:X(MON_DRACOLICH)/d|(MON_FLAG_SPLASH_SHOOTER);
 
+; Magic Elems - damage is reduced by 50% to creatures that immune to magic
+; 004439CB - hook
+; 0044A1A0 double Creature::GetDwarfResistance(int spell_id, int MonType, _Hero_ *DHero, _Hero_ *AHero)
+; надо проверить все 5 лвлов заклинаний в формате (int spell_id, int MonType, 0, 0)
+; если все 5 коллов вернут 0.0, то существо иммунно к магии
+
 
 ; Update scouting range after visiting objects that can change scouting radius
 !$OB(HOTA_OBJECT_TYPE)/(HERMITS_SHACK_OBJECT_SUBTYPE);
@@ -20,3 +26,24 @@ ZVSE2
 
 !$OB(HOTA_UNREACHABLE_YT_OBJECT_TYPE)/(OBSERVATORY_OBJECT_SUBTYPE);
 !!FU(gem_UpdateScoutingRange):P(CURRENT_HERO);
+
+
+; При проверке возможности наложения заклинаний Чародеи учитывали только первый отряд с каждой стороны
+!?FU(gem_CreateERMHook);
+!!SN:Ex1/1/4488604/(gem_Enchanters_CastMassSpell_BeforeCheck); 00447D9C
+!!SN:Ex1/1/4488778/(gem_Enchanters_CastMassSpell_BeforeCheckTwo); 00447E4A
+
+
+!?FU(gem_Enchanters_CastMassSpell_BeforeCheck);
+;!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(stack:y); C(stack)/52/4/?(monId:y); 34
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(stackTailCnt:y);
+!!VR(battleStackSize:y):S1352; 0x548
+!!VR(offset:y):S(battleStackSize) *(stackTailCnt);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/d(offset);
+
+
+!?FU(gem_Enchanters_CastMassSpell_BeforeCheckTwo);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackTailCnt:y);
+!!VR(battleStackSize:y):S1352; 0x548
+!!VR(offset:y):S(battleStackSize) *(stackTailCnt);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/d(offset);
