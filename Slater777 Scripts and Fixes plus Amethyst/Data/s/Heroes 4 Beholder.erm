@@ -1,0 +1,88 @@
+ZVSE2
+
+
+; Во время атаки Бехолдеры направляют на врага случайное боевое заклинание. 
+; Возможные заклинания: Проклятие, Ослабляющий луч, Замедление, Печаль, Слабость, Кража магии, Неудача и Забывчивость
+// Debuffs after shooting moved to Handler AfterShotAbilities.erm
+
+
+!?FU(OnAfterErmInstructions);
+!!SN:H^monname^/(MON_EVIL_EYE)/2/?(desc:z);
+!!VR(desc): +^%T(jsMod.creature.75.addDesc)^;
+!!SN:H^monname^/(MON_EVIL_EYE)/2/(desc);
+
+
+!?FU(js_EvilEyeCastSpells);
+!#VA(attacker:x) (target:x);
+
+!!FU(js_EvilEyeGetSpellToCast):P(target)/?(spellId:y);
+
+!!if&(spellId)>0;
+  !!UN:C(target)/56/4/?(targetHexId:y); 38
+  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+
+  ; BattleMgr::CastSpell(o_BattleMgr, SPELL_DRAGONFLY_DISPEL, targetStack->hex_ix, 1, -1, 0, 3
+  !!SN&(spellId)=78:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(spellId)/(targetHexId)/1/-1/0/3; 005A0140 BattleMgr::CastSpell
+  !!SN&(spellId)=(SPELL_FORGETFULNESS):E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(spellId)/(targetHexId)/1/-1/2/3; 005A0140 BattleMgr::CastSpell
+
+  ; pTargetMon->spell_after_attack = SPELL_BLIND;
+  !!if&(spellId)<>78/(spellId)<>(SPELL_FORGETFULNESS);
+    !!UN:C(target)/236/4/(spellId); EC
+  !!en;
+!!en;
+
+
+!?FU(js_EvilEyeGetSpellToCast);
+!#VA(target:x) (spellId:x);
+
+!#VA(debuffs[7]:y);
+!!VR(debuffs[0]):S(SPELL_CURSE);
+!!VR(debuffs[1]):S(SPELL_DISRUPTING_RAY);
+!!VR(debuffs[2]):S(SPELL_SLOW);
+!!VR(debuffs[3]):S(SPELL_SORROW);
+!!VR(debuffs[4]):S(SPELL_WEAKNESS);
+!!VR(debuffs[5]):S(SPELL_MISFORTUNE);
+!!VR(debuffs[6]):S(SPELL_FORGETFULNESS);
+;!VR(debuffs[7]):S78; dragonfly dispell
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!FU(js_GetActualStackSideByStackPtr):P(target)/?(side:y);
+
+; Отдельная проверка на диспел первым делом
+!!SN:E5933392/(CALLCONV_THISCALL)/(cmbMgr)/78/(side)/(target)/1/1; 5A8950 BattleMgr::BattleStack::CanBeAffectedByAbillity
+!!if&v1=1;
+  !!VR(spellId):S78;
+  !!FU:E;
+!!en;
+
+!!SN:E4487072/(CALLCONV_FASTCALL)/78/(target); 4477A0 Battle_CanStackReceiveSpell
+!!if&v1=1;
+  !!VR(spellId):S78;
+  !!FU:E;
+!!en;
+
+; Проверка на иммунитет или на уже имеющийся эффект
+!!VR(spellSumm:y):S0;
+
+!!re i/0/(debuffs[SIZE])/1/-1;
+  !!SN:E5933392/(CALLCONV_THISCALL)/(cmbMgr)/(debuffs[i])/(side)/(target)/1/1; 5A8950 BattleMgr::BattleStack::CanBeAffectedByAbillity
+  ;!IF:M^spellId= %(debuffs[i])^;
+  !!VR(debuffs[i])&v1=0:S-1;
+  !!co&(debuffs[i])=-1;
+
+  !!SN:E4487072/(CALLCONV_FASTCALL)/(debuffs[i])/(target); 4477A0 Battle_CanStackReceiveSpell
+  ;!IF:M^spellId2= %(debuffs[i])^;
+  !!VR(debuffs[i])&v1=0:S-1;
+  !!co&(debuffs[i])=-1;
+
+  !!VR(spellSumm): +(debuffs[i]);
+!!en;
+
+!!FU&(spellSumm)=0:E; Если ни одно заклинание не может быть наложено или уже все наложены
+
+!!re i;
+  !!VR(index:y):S0 R6;
+  !!br&(debuffs[index])<>-1;
+!!en;
+
+!!VR(spellId):S(debuffs[index]);
