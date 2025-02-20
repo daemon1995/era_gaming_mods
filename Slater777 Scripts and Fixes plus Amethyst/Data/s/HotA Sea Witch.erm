@@ -3,57 +3,54 @@ ZVSE2
 
 ; Абилка морских жриц - слабость и разрушающие лучи
 
+!?FU(js_CheckTargetIsAvailableForDisruptingRay);
 
-!?FU(js_BattleStack_SeaWitchCasts);
+
+!?FU(js_BattleStack_SeaWitchTriggersCast);
 !#VA(shooter:x) (target:x);
 
-!!SN:E4487072/(CALLCONV_FASTCALL)/(SPELL_WEAKNESS)/(target); 4477A0 Battle_CanStackReceiveSpell
-!!VR(isNotImmuneToWeakness:y):Sv1;
-!!SN:E4487072/(CALLCONV_FASTCALL)/(SPELL_DISRUPTING_RAY)/(target); 4477A0 Battle_CanStackReceiveSpell
-!!VR(isNotImmuneToDisRay:y):Sv1;
+!!FU(js_BattleStack_SeaWitchProcessing):P(shooter)/(target)/1;
 
-!!if|(isNotImmuneToWeakness)/(isNotImmuneToDisRay);
+
+!?FU(js_BattleStack_SeaWitchCasts);
+!#VA(caster:x) (targetHexId:x);
+
+!!FU(js_GetStackByHexId):P(targetHexId)/?(target:y);
+!!FU(js_BattleStack_SeaWitchProcessing):P(caster)/(target)/0;
+
+
+!?FU(js_BattleStack_SeaWitchProcessing);
+!#VA(shooter:x) (target:x) (isTrigger:x);
+
+!!UN:C(shooter)/244/4/?(side:y); F4
+!!UN:C(shooter)/52/4/?(monId:y); 34
+!!VR(skillLvl:y)&(monId)=(MON_SEA_WITCH):S1;
+!!VR(skillLvl:y)&(monId)=(MON_SEA_SORCERESS):S2;
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/68/4/?(targetHexId:y); 0x44
+
+!!SN:E5913808/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_WEAKNESS)/(skillLvl)/(targetHexId)/(side)/1/0; 005A3CD0 BattleMgr::CanCastSpellAtCoord
+!!VR(isNotImmuneToWeakness:y):Sv1;
+;!IF:L^isNotImmuneToWeakness= %(isNotImmuneToWeakness)^;
+
+!!if&(isNotImmuneToWeakness);/(isNotImmuneToDisRay);
   !!UN:C(target)/588/4/?(hasWeekness:y); 0x24C
   !!UN:C(target)/204/4/?(targetDefense:y); 0xCC
 
-  !!if|(hasWeekness)=0/(targetDefense)>0;
-    !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/68/4/?(targetHexId:y); 0x44
-    !!SN:E4489088/(CALLCONV_THISCALL)/(shooter)/(targetHexId); 00447F80 BattleStack_CastDefaultSpell
-  !!en;
-!!en;
+  !!SN:E5913808/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_DISRUPTING_RAY)/(skillLvl)/(targetHexId)/(side)/1/0; 005A3CD0 BattleMgr::CanCastSpellAtCoord
+  !!VR(isNotImmuneToDisRay:y):Sv1;
 
-
-!?FU(js_BattleStack_CastDefaultSpell);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(monId:y);
-
-!!if|(monId)=(MON_SEA_WITCH)/(monId)=(MON_SEA_SORCERESS);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(targetHexId:y);
-
-  !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-
-  ; ptr2 = (int)BattleMrg + 112 * gex_id;
-  !!VR(hexOffset:y):S(targetHexId) *112;
-  !!VR(hexPtr:y):S(cmbMgr) +(hexOffset);
-  ; stack = BattleHex::GetStack((_BattleHex_ *)(ptr2 + 452));
-  !!VR(hexPtr): +452;
-  !!SN:E5141040/(CALLCONV_THISCALL)/(hexPtr); 004E7230
-  !!VR(target:y):Sv1;
-  !!UN:C(target)/588/4/?(hasWeekness:y); 0x24C
-
-  !!VR(skillLvl:y)&(monId)=(MON_SEA_WITCH):S1;
-  !!VR(skillLvl:y)&(monId)=(MON_SEA_SORCERESS):S2;
-
-  !!SN:E4487072/(CALLCONV_FASTCALL)/(SPELL_WEAKNESS)/(target); 4477A0 Battle_CanStackReceiveSpell
-  !!VR(isNotImmuneToWeakness:y):Sv1;
-  ;!IF:L^isNotImmuneToWeakness= %(isNotImmuneToWeakness)^;
-
-  !!if&(hasWeekness)=0/(isNotImmuneToWeakness);
-    !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_WEAKNESS)/(targetHexId)/1/-1/(skillLvl)/3; 005A0140 BattleMgr::CastSpell
-
-  !!el;
-    !!SN:E4487072/(CALLCONV_FASTCALL)/(SPELL_DISRUPTING_RAY)/(target); 4477A0 Battle_CanStackReceiveSpell
-    !!VR(isNotImmuneToDisRay:y):Sv1;
-    ;!IF:L^isNotImmuneToDisRay= %(isNotImmuneToDisRay)^;
-    !!SN&(isNotImmuneToDisRay):E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_DISRUPTING_RAY)/(targetHexId)/1/-1/(skillLvl)/3; 005A0140 BattleMgr::CastSpell
+  !!if&(hasWeekness)=0;
+    !!if&(isTrigger);
+      !!SN:E4489088/(CALLCONV_THISCALL)/(shooter)/(targetHexId); 00447F80 BattleStack_CastDefaultSpell
+    !!el;
+      !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_WEAKNESS)/(targetHexId)/1/-1/(skillLvl)/3; 005A0140 BattleMgr::CastSpell
+    !!en;
+    
+  !!el&(hasWeekness)/(targetDefense)>0/(isNotImmuneToDisRay);
+    !!if&(isTrigger);
+      !!SN:E4489088/(CALLCONV_THISCALL)/(shooter)/(targetHexId); 00447F80 BattleStack_CastDefaultSpell
+    !!el;
+      !!SN:E5898560/(CALLCONV_THISCALL)/(cmbMgr)/(SPELL_DISRUPTING_RAY)/(targetHexId)/1/-1/(skillLvl)/3; 005A0140 BattleMgr::CastSpell
+    !!en;
   !!en;
 !!en;
