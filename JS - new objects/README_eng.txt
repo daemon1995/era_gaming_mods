@@ -1,4 +1,4 @@
-Hello everyone! As you already know, daemon_n released a great plugin for customizing objects - RMG_CustomizeObjectProperties, also adding new types, such as warehouses. I decided to expand this list with the following objects:
+Hello everyone! As you already know, daemon_n released a great plugin for customizing objects - RMG_CustomizeObjectProperties, also adding new types of objects to the basic WoG mod, such as warehouses/gazebo/magic coliseum. I decided to expand this list with the following objects:
 
 - grave
 - temple of loyalty
