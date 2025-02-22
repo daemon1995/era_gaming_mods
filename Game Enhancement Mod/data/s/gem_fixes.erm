@@ -1556,6 +1556,7 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
   !!if|i^mouse_x^<0/i^mouse_y^<0/i^mouse_x^>(dlgWidth)/i^mouse_y^>(dlgHeight);
     !!CM:R0;
+
   !!en;
 
 
@@ -1830,22 +1831,36 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   // them into combat log
   !!SN:Ex1/1/7786558/(gem_OnAstralAttackMessage);
   !!SN:Ex1/1/7787216/(gem_OnAstralDefendMessage);
-  !!SN:Ex1/1/7772772/(gem_OnBruteGoldBonusMessage);
+
 
   // ART_SLAVAS_RING_OF_POWER's fixes
+  !!UN:C7771553/-1/1/1;         [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3] 
+
   !!SN:Ex1/1/7782812/(gem_OnNPCBattleStackInit);
   !!SN:Ex1/1/7771289/(gem_OnNPCGetRingBonus);
-  !!UN:C7771553/-1/1/1;                 [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3]
+
+  // Fix Brute's Gold bonus overflowing
+  // by Berserker
+  !!SN:Ex1/1/7772754/(gem_Brute_AddGold);
+  !!UN:C7772764/-1/235;                 [jump over Brute Gold Bonus Message]
+
   *!SN:Ex1/1/7779070/(gem_OnNPCBattleDescriptionGet);
 
+!?FU(gem_Brute_AddGold);
+  !!SN:X?(hook:y);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_UINT32)/?(ebp:y);
+  !!UN:C(ebp)/-64/(UNC_INT32)/?(bruteGold:y);
+  !!UN:C(ebp)/-68/(UNC_INT32)/?(playerGold:y);
 
-!?FU(gem_OnBruteGoldBonusMessage); // replace brute message with adv map dlg info panel message
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(strPtr:y) Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-64/4/?(gold:y);
-  !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-  *!FU(GetTextTableString):P^znpc00^/175/1/?(npcMes:z);
-  *!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(npcMes:z)/(RES_GOLD)/(gold); [show message]
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7772811;                            [return to stack end]
+  ; Fix calculated Brute gold bonus overflow
+  !!VR(bruteGold)&(bruteGold)<0:S(INT_MAX);
+  !!FU(gem_SafeAdd):P(playerGold)/(bruteGold)/?(finalGold:y);
+  !!VR(playerGold):S(finalGold) -(bruteGold);
+  !!UN:C(ebp)/-64/(UNC_INT32)/(bruteGold);
+  !!UN:C(ebp)/-68/(UNC_INT32)/(playerGold);
+  ; store gold to display after combat
+  !!VRi^gem_BruteGold^:S(bruteGold);
+
 
 !?FU(gem_OnAstralAttackMessage);
   !!SN:X?y99/0;
@@ -1879,14 +1894,12 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     !!VRs^gem_NPC_DecreeasesArmyMessage%(side)^:S(localStr:z);+^%n %(monName:z), ^;
     !!VRi^gem_NPC_DecreeasesArmyMessage%(side)^:S(TRUE);
   !!en;
+
 !?FU(OnCombatRound)&i^battle_isVisible^/v997=0;
 *!IF:L^%i(battle_humanOnly) %i(battle_isQuick)^;
 
   !!re i/1/0/-1;/(BATTLE_RIGHT);
     !!if&i^gem_NPC_DecreeasesArmyMessage%i^;
-      *!VR(hint:z):S^%T(gem.endl)^;     [Archer30: The script works without new line and looks nicer in battle log dlg]
-      *!MM:S(hint:z);
-
       !!SN:T^gem.battle.armyDecrease%i^/?(head:z);
       !!MM:S(head:z);
       !!VR(hint:z):Ss^gem_NPC_DecreeasesArmyMessage%i^;
@@ -1896,6 +1909,16 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 
 !?FU(OnAfterBattleUniversal);
 !!SN:W^gem_NPC_DecreeasesArmyMessage0^ W^gem_NPC_DecreeasesArmyMessage1^;:S(FALSE);
+!!if&i^gem_BruteGold^;
+  
+  !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
+  !!if&(currPlayer)=(clickedPlayer);
+    !!FU(GetTextTableString):P^znpc00^/175/1/?(npcMes:z);
+    !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(npcMes:z)/(RES_GOLD)/i^gem_BruteGold^; [show message]
+  !!en;
+  !!VRi^gem_BruteGold^:S(NULL);
+!!en;
 
 
 
@@ -1917,16 +1940,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!en;
 
 
-!?FU(gem_OnNPCBattleDescriptionGet);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/1/?(skillLevel:y);                 [get skill value]
-  !!if&(skillLevel)<2;                                                  [if less than 2]
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(npc:y);
-    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER); [check if NPC has a ring]
-    !!if&v1;                                                            [if there is]
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/1/2;                           [set skill cast value as at advanced skill lvl]
-    !!en;
-  !!en;
-
 !?FU(gem_OnNPCBattleStackInit);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/?(skillLevel:y);                 [get skill value]
   !!if&(skillLevel)<2;                                                  [if less than 2]
@@ -1937,46 +1950,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
     !!en;
   !!en;
 
-
-// Fix Brute's Gold bonus overflowing
-// by Berserker
-!?FU(gem_CreateERMHook);
-!!SN:Ex1/1/7772754/(gem_Brute_AddGold);
-
-!?FU(gem_Brute_AddGold);
-!!SN:X?(hook:y);
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_UINT32)/?(ebp:y);
-!!UN:C(ebp)/-64/(UNC_INT32)/?(bruteGold:y);
-!!UN:C(ebp)/-68/(UNC_INT32)/?(playerGold:y);
-
-; Fix calculated Brute gold bonus overflow
-!!VR(bruteGold)&(bruteGold)<0:S(INT_MAX);
-!!FU(gem_Brute_SafeAdd):P(playerGold)/(bruteGold)/?(finalGold:y);
-!!VR(playerGold):S(finalGold) -(bruteGold);
-!!UN:C(ebp)/-64/(UNC_INT32)/(bruteGold);
-!!UN:C(ebp)/-68/(UNC_INT32)/(playerGold);
-
-!?FU(gem_Brute_SafeAdd);
-!#VA(value1:x);
-!#VA(value2:x);
-!#VA(result:x);
-
-!!VR(result):S(value1) +(value2);
-!!VR(sign1:y):S1;
-!!VR(sign1)&(value1)<0:S-1;
-!!VR(sign2:y):S1;
-!!VR(sign2)&(value2)<0:S-1;
-
-!!if&(sign1)=(sign2);
-  !!VR(sign3:y):S1;
-  !!VR(sign3)&(result)<0:S-1;
-
-  ; Overflow changed result sign
-  !!if&(sign1)<>(sign3);
-    !!VR(result)&(sign1)<0:S(INT_MIN);
-    !!VR(result)&(sign1)>=0:S(INT_MAX);
-  !!en;
-!!en;
 
 
 // Fix occasionally commanders receiving incorrect exp with when transfering between campaign zones
@@ -2113,8 +2086,3 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/6236846; 5F2AAE
 !!en;
 
-************************************************************************
-************************************************************************
-****************************** FUNCTIONS *******************************
-************************************************************************
-************************************************************************
