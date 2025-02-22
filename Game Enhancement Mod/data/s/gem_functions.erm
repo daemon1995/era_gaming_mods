@@ -192,6 +192,70 @@ ZVSE2
     !!SN:F^ExtendArrayLifetime^/(array);
   !!en;
 
+!?FU(gem_GetCreatureBankId);
+!#VA(objType:x) (objSubtype:x) (objId:x);
+
+  !!VR(objId):S(NO_OBJ);
+
+  !!if&(objType)=(OBJ_CREATURE_BANK);;
+    !!VR(objId):S(objSubtype);     
+  !!el&(objType)=(OBJ_SHIPWRECK);
+    !!VR(objId):S7;
+  !!el&(objType)=(OBJ_DERELICT_SHIP);
+    !!VR(objId):S8;
+  !!el&(objType)=(OBJ_CRYPT);
+    !!VR(objId):S9;
+  !!el&(objType)=(OBJ_DRAGON_UTOPIA);
+    !!VR(objId):S10;
+  !!en;
+
+; @ JackSlater
+!?FU(gem_BlackMarket_CalcArtCost); 005EC0FA
+!#VA(artId:x) (resId:x) (result:x);
+  !!VR(result):S(NULL);
+  !!if&(artId)<>(NO_ART)/(resId)>=(RES_FIRST)/(resId)<=(RES_LAST_SOD);
+    ; LODWORD(v14) = (unsigned __int16)resCostInGoldMedium[resId];
+    !!VR(offset:y):S(resId) *2;
+    !!UN:C6866146/(offset)/(UNC_INT16)/?(resToGoldRatio:y); 68C4E2
+    ; v14 = (float)SLODWORD(v14);
+    !!VR(resToGoldRatioFloat:e):S(resToGoldRatio);
+    ; v14 = v14 * MARKET_COST[gActivePlayerMarkets + 11];
+    !!UN:C6783812/64/4/?(coeff:e); 678344
+    !!VR(resToGoldRatioFloat): *(coeff);
+    ; Cost = (float)o_ArtSetup[v9].Cost;
+    !!UN:A(artId)/1/?(artCost:y);
+    !!VR(artCostFloat:e):S(artCost);
+    ; if ( v14 == 0.0 || Cost == 0.0 )
+    ;   LODWORD(v10) = 0;
+    !!if|(resToGoldRatioFloat)=0/(artCostFloat)=0;
+      !!VR(result):S0;
+    ; else
+    ;   v14 = Cost / v14;
+    ;   v10 = (__int64)(v14 + 0.5);
+    !!el;
+      !!VR(artCostInResFloat:e):S(artCostFloat) :(resToGoldRatioFloat);
+      !!VR(rounder:e):S1 :2;
+      !!VR(artCostInResFloat): +(rounder);
+      !!VR(result):S(artCostInResFloat);
+    !!en;
+  !!en;
+
+
+
+; @ JackSlater
+!?FU(gem_GetBlackMarketArtIds);
+!#VA(blackMarketId:x) (artIds[7]:x);
+
+  ; (int)&o_Game->BMarkets_Ref.m_first[7 * SetUp]
+  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+  !!UN:C(gameMgr)/128644/4/?(blackMarket0Id:y); 1F684
+
+  !!VR(blackMarket:y):S(blackMarketId) *28 +(blackMarket0Id);
+
+  !!re i/0/6;
+    !!VR(offset:y):Si *(UNC_INT);
+    !!UN:C(blackMarket)/(offset)/(UNC_INT)/?(artIds[i]);
+  !!en;
 
 ************************************************************************
 ************************************************************************

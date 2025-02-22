@@ -1,5 +1,7 @@
 ZVSE2
 
+!#DC(GEM_DLG_BLACK_MARKET) = 510;
+
 
 !?FU(gem_CreateERMHook);
 
@@ -34,6 +36,8 @@ ZVSE2
 
   !!OB(x)/(y)/(z):T?(objType:y) U?(objSubtype:y);
   !!SN:O?(x)/?(y)/?(z);
+  !!VR(showCustomMsg:y):S(FALSE);
+
   !!if|(objType)=(OBJ_CREATURE_BANK)/(objType)=(OBJ_CRYPT)/(objType)=(OBJ_DRAGON_UTOPIA)
   /(objType)=(OBJ_DERELICT_SHIP)/(objType)=(OBJ_SHIPWRECK);
     
@@ -45,8 +49,8 @@ ZVSE2
 
       !!FU(gem_CreatureBankCalcGuardsAndSetText):P(x)/(y)/(z)/(objType)/(objSubtype);
       ; Jump over standart cb dialog
-      !!SN:X?y99/0;                                                                         [it is: return NO_EXEC_DEFAULT]
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4282816;                                         [return to "hide hero" part]
+      !!VR(showCustomMsg:y):S(TRUE);
+
     !!en;
 
   !!el&(objType)=(OBJ_REFUGEE_CAMP);
@@ -56,14 +60,13 @@ ZVSE2
       !!FU(gem_GetRefugeeMonNumByPlayer):P(x)/(y)/(z)/(owner:y)/(clickedPlayer)/?(monNum:y);
       !!if&(monNum)<>-1;
         !!OB(x)/(y)/(z):U?(monType:y);                                                      [G?(growth:y);]
-        !!VRi^gem_isRmcHint^:S(TRUE);                                                       [Set RMC hint flag]
 
         !!VRi^gem_DlgAtRmc^:S(TRUE);
         !!SN:E5577600/(CALLCONV_FASTCALL)/(monType)/?(monNum);
         !!VRi^gem_DlgAtRmc^:S(FALSE);
 
-        !!SN:X?y99/0;                                                                       [it is: return NO_EXEC_DEFAULT]
-        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4282816;                                       [return to "hide hero" part]
+        !!VR(showCustomMsg:y):S(TRUE);
+
       !!en;
 
     !!en;
@@ -76,34 +79,148 @@ ZVSE2
 
       !!VR(cWord):Sd>>5 &(playerBits);
       !!if&(cWord);                       [if object is visited]
-        !!VRi^gem_isRmcHint^:S(TRUE);           [Set RMC hint flag]
 
         !#VA(changeCursorOpps[5]:y);
         
         !!re i/0/(changeCursorOpps[SIZE])/1/-1;
           !!UN:C4890993/i/1/?(changeCursorOpps[i]) C4890993/i/1/(OPCODE_NOP_1); // don't change cursor
         !!en;
+        !!VRi^gem_DlgAtRmc^:S(TRUE);
+
         !!FU(gem_AdvMgr_HeroEnterObject):P(x)/(y)/(z)/(activeHero)/d/1; emulate object visit
+        !!VRi^gem_DlgAtRmc^:S(FALSE);
+
         !!re i/0/(changeCursorOpps[SIZE])/1/-1;
           !!UN:C4890993/i/1/(changeCursorOpps[i]); // restore values
         !!en;
-        !!SN:X?y99/0;                     [it is: return NO_EXEC_DEFAULT]
-        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4282816;                                  [return to "hide hero" part]
+        !!VR(showCustomMsg:y):S(TRUE);
+
       !!en;
 
     !!en;
+  !!el&(objType)=(OBJ_BLACK_MARKET);
+
+
+    !!PO(x)/(y)/(z):O?(owner:y);
+    
+    !!if&(owner)<>(NO_PLAYER);
+      !!OW:T(owner)/?t T(clickedPlayer)/?p;
+
+      !!if&t=p;
+        !!OB(x)/(y)/(z):C?(blackMarketId:y);
+        !#VA:(artIds[7]:y);
+        !!FU(gem_GetBlackMarketArtIds):P(blackMarketId)/?(artIds[0])/?(artIds[1])/?(artIds[2])/?(artIds[3])/?(artIds[4])/?(artIds[5])/?(artIds[6]);
+
+        !!FU(NewIntArray):P7/?(blackMarketArtifacts:y);
+        !!re i/0/7/1/-1;
+          !!SN:M(blackMarketArtifacts)/i/(artIds[i]);
+        !!en;
+        !!FU(gem_ShowBlackMarketDlg):P(clickedPlayer)/(blackMarketArtifacts:y)/?(result:y);
+        !!if&(result:y);
+          !!VR(showCustomMsg:y):S(TRUE);
+        !!en;
+
+      !!en;
+    !!en;
+  !!en;
+  !!if&(showCustomMsg:y);
+    !!VRi^gem_isRmcHint^:S(TRUE);                                                       [Set RMC hint flag]
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4282816;
   !!en;
 
-!?FU(gem_AdvMgr_BeforeRmcPopup)&i^gem_isRmcHint^; // this part 
-  !!SN:X?y99/0;                       [it is: return NO_EXEC_DEFAULT]
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4283123;                                  [return to end of the func - before stack increase]
-  !!VRi^gem_isRmcHint^:S(FALSE);           [Reset RMC hint flag]
+!?FU(gem_ShowBlackMarketDlg);
+!#VA(playerId:x) (artIds:x) (result:x);
+
+!!VR(result:x):S(FALSE);
+
+!!VR(dlgId:x):S(GEM_DLG_BLACK_MARKET);
+
+!!DL(dlgId):N^gem_blmr.txt^;
+!!if&1;
+  !!VR(result:x):S(TRUE);
+  
+
+  // Set dlg text
+  !!FU(GetTextFileString):P^objnames^/(OBJ_BLACK_MARKET)/?(objName:z) P^genrltxt^/169/?(availableText:z);
+  !!DL(dlgId):A36/(DLG_CMD_SET_TEXT)/(objName)/0 A37/(DLG_CMD_SET_TEXT)/(availableText)/0;
+
+  !!FU(DL_FindById):P(dlgId)/?(dlgObj:y);
+  !!UN:C(dlgObj)/(UNC_INT)/?(h3Dlg:y);
+
+  // draw artifacts data
+  !!re i/0/7/1/-1;
+    !!SN:M(artIds)/i/?(artId:y);
+    !!VR(dlgDefId:y):Si *5 +1;
+
+    // draw frame and cost if there is Art
+    !!if&(artId)<>(NO_ART);
+      !!DL(dlgId):A(dlgDefId)/(DLG_CMD_SET_DEF_FRAME)/(artId)/0;
+
+      !!VR(dlgCheapResourcesCostTextId:y):S(dlgDefId) +2;
+      !!FU(gem_BlackMarket_CalcArtCost):P(artId)/(RES_WOOD)/?(woodCost:y);
+      !!DL(dlgId):A(dlgCheapResourcesCostTextId)/(DLG_CMD_SET_TEXT)/^%(woodCost:y)^/0;
+
+      !!VR(dlgResourcesCostTextId:y):S(dlgDefId) +3;
+      !!FU(gem_BlackMarket_CalcArtCost):P(artId)/(RES_GEMS)/?(gemCost:y);
+      !!DL(dlgId):A(dlgResourcesCostTextId)/(DLG_CMD_SET_TEXT)/^%(gemCost:y)^/0;
+
+      !!VR(dlgGoldCostTextId:y):S(dlgDefId) +4;
+      !!FU(gem_BlackMarket_CalcArtCost):P(artId)/(RES_GOLD)/?(goldCost:y);
+      !!DL(dlgId):A(dlgGoldCostTextId)/(DLG_CMD_SET_TEXT)/^%(goldCost:y)^/0;
+    !!el;
+    // hide otherwise
+      !!FU(gem_DlgItem_Show):P(dlgDefId)/(FALSE)/(FALSE)/(FALSE)/(h3Dlg);
+    !!en;
+
+  !!en;
+
+  // count Dlg pos
+  !!CM:A?(x:y)/?(y:y);
+  !!UN:C(h3Dlg)/32/4/?(dlgWidth:y) C(h3Dlg)/36/4/?(dlgHeight:y);
+  !!FU(gem_GetRectCenter):P(x)/(y)/(dlgWidth:y)/(dlgHeight)/?(xPos:y)/?(yPos:y);
+
+  // Set Dlg pos
+  !!FU(DL_Coords):P(dlgId)/(xPos)/(yPos);
+
+  // show dlg
+  !!FU(DL_ShowPopup):P(dlgId);
+
+!!en;
+
+!?FU(OnAdventureMapTileHint);
+  !!if&x4=(OBJ_BLACK_MARKET);
+    !!POx1/x2/x3:O?(owner:y);
+    !!if&(owner)<>(NO_PLAYER);
+      !!OW:C?y99/?(clickedPlayer:y) T(owner)/?t T(clickedPlayer)/?p;
+
+      !!if&t=p;
+        !!OBx1/x2/x3:C?(blackMarketId:y);
+        !#VA(artIds[7]:y);
+        !!FU(gem_GetBlackMarketArtIds):P(blackMarketId)/?(artIds[0])/?(artIds[1])/?(artIds[2])/?(artIds[3])/?(artIds[4])/?(artIds[5])/?(artIds[6]);
+        !!VR(artCounter:y):S0;
+
+        !!re i/0/(artIds[SIZE])/1/-1;
+          !!VR(artCounter)&(artIds[i])>(NO_ART): +1;
+        !!en;
+        !!SN:T^gem.map.7^/?(addHint:z)/^number^/(artCounter);
+        !!MM:M?(origHint:z);
+        !!if&i^GameplayEnhancementsPlugin_AdventureMapHints_AtHint^;
+          !!MM:M^%(origHint:z)%T(gem.endl)%(addHint:z)^;
+        !!el;
+          !!MM:M^%(origHint:z)%(addHint:z)^;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+
+!$OB(OBJ_BLACK_MARKET);
+!!POv998/v999/v1000:Oi^timerOwner^;
 
 
 !$OB(OBJ_UNIVERSITY);
 !!FU(gem_AdvMgr_GetMapItem):Pv998/v999/v1000/?(mapItem:y);
 !!SN:E5228064/(CALLCONV_THISCALL)/(mapItem)/i^timerOwner^; [set object as visited]
-
 
 
 !$OB(OBJ_REFUGEE_CAMP);
@@ -113,6 +230,8 @@ ZVSE2
 !!OW:Ti^timerOwner^/?t;
 !!VRi^gem_LastMonsterNumberForTeam%tAt%(refugeePacked)^:S(monNum) +1;
 
+!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
+  !!FU(gem_ResetRefugeeVariables):P D;
 
 !?FU(gem_GetRefugeeMonNumByPlayer);
 !#VA(x:x) (y:x) (z:x) (lastOwner:x) (clickedPlayer:x) (result:x);
@@ -128,8 +247,11 @@ ZVSE2
     !!en;
   !!en;
 
-!?FU(OnEveryDay)&i^timerWeekDay^=1/i^timerOnce^;
-  !!FU(gem_ResetRefugeeVariables):P D;
+!?FU(gem_AdvMgr_BeforeRmcPopup)&i^gem_isRmcHint^; // this part 
+  !!SN:X?y99/0;                       [it is: return NO_EXEC_DEFAULT]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4283123;                                  [return to end of the func - before stack increase]
+  !!VRi^gem_isRmcHint^:S(FALSE);           [Reset RMC hint flag]
+
   
 !?FU(gem_ResetRefugeeVariables);
   !!UN:U(OBJ_REFUGEE_CAMP)/(ANY_OBJ)/?(refugees:y);
@@ -143,7 +265,7 @@ ZVSE2
     !!PO2:O(NO_PLAYER);
   !!en;
 
-!?FU(gem_OnUniversityShow)&i^gem_isRmcHint^;
+!?FU(gem_OnUniversityShow)&i^gem_DlgAtRmc^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(dlg:y);
 
   !!FU(H3Dlg_CenterAtMouse):P(dlg:y);
@@ -156,6 +278,7 @@ ZVSE2
 !?OB(OBJ_CRYPT);                        [Reveal the crypt guards if player visited it]
 !!VR(playerBit:y):S1 Sd<<i^timerOwner^; [1 + offset for each next player]
 !!CB998:Vd|(playerBit);                 [Add object to player as revealed]
+
 !?OB(OBJ_SHIPWRECK);
 !!VR(playerBit:y):S1 Sd<<i^timerOwner^; [1 + offset for each next player]
 !!CB998:Vd|(playerBit);                 [Add object to player as revealed]
@@ -167,23 +290,6 @@ ZVSE2
   !!CB998:Vd|(playerBit);               [Add object to player as revealed]
 !!en;
 
-
-
-
-!?FU(gem_GetCreatureBankId);
-!#VA(objType:x) (objSubtype:x) (objId:x);
-
-!!if&(objType)=(OBJ_SHIPWRECK);
-  !!VR(objId):S7;
-!!el&(objType)=(OBJ_DERELICT_SHIP);
-  !!VR(objId):S8;
-!!el&(objType)=(OBJ_CRYPT);
-  !!VR(objId):S9;
-!!el&(objType)=(OBJ_DRAGON_UTOPIA);
-  !!VR(objId):S10;
-!!el;
-  !!VR(objId):S(objSubtype);     
-!!en;
 
 
 !?FU(gem_GetCreatureBankNameById);
