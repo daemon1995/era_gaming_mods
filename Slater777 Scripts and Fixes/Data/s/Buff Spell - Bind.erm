@@ -1,0 +1,59 @@
+Z VSE2
+
+
+; Bind now also cuts attack of the binded stack to half (Heroes 4 style)
+
+
+; v16 = hero;
+; this->WeaknessAddedEffect = vEffect;
+; if ( v16 )
+;   this->WeaknessAddedEffect += HeroSpellSpecialityEffect(v16, spell, this->creature_info.level, vEffect);
+; attack = this->creature_info.attack;
+; if ( attack < this->WeaknessAddedEffect )
+;   this->WeaknessAddedEffect = attack;
+; this->creature_info.attack = attack - this->WeaknessAddedEffect;
+; break;
+
+*?FU(js_CreateERMHook);
+*!SN:Ex1/1/4457431/(js_BattleStack_AfterShotAbilities); 4403D7
+
+*!SN:Ex1/1/4474619/(js_BattleStack_ApplySpell_BeforeCaseSwitch); 4446FB
+
+
+*?FU(js_BattleStack_ApplySpell_BeforeCaseSwitch);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(ecx:y);
+;!IF:L^%(ecx)^;
+ускорение 26 (53)
+слабость 18 (45)
+камнекожа 19 (46)
+*!VR(spellId:y):S(ecx) +27;
+
+*!if&(spellId)=72; BIND
+  ; attack = this->creature_info.attack;
+  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(target:y); C(target)/200/4/?(attack:y); 74 + 54 = C8
+  *!UN:C(target)/1284/4/?(arr504:y) C(target)/1288/4/?(arr508:y) C(target)/1292/4/?(arr50C:y); 504 508 50C
+  *!IF:L^%(arr504) %(arr508) %(arr50C)^;
+*!en;
+
+
+*?FU(OnKeyPressed_Battle)&x1=(KEY_Y);
+*!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+*!VR(stacknum:y):S1;
+*!VR(side:y):S1;
+
+*!VR(stacknum)&(side)=1: +(BATTLE_STACKS_PER_SIDE);
+
+*!VR(offset:y):S(stacknum) *1352 +21708; 54CC
+
+*!VR(arr504of:y):S(offset) +1284;
+*!VR(arr508of:y):S(offset) +1288;
+*!VR(arr50Cof:y):S(offset) +1292;
+
+*!UN:C(cmbMgr)/(arr504of)/4/?(arr504:y);
+*!UN:C(cmbMgr)/(arr508of)/4/?(arr508:y);
+*!UN:C(cmbMgr)/(arr50Cof)/4/?(arr50C:y);
+
+*!IF:L^%(arr504) %(arr508) %(arr50C)^;
+
+*!UN:C(arr50C)/4/?(smt:y);
+*!IF:L^%(smt)^;
