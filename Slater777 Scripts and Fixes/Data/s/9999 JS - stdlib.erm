@@ -16,7 +16,7 @@ ZVSE2
 !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
 
 ; ptr2 = (int)BattleMrg + 112 * gex_id;
-!!VR(hexOffset:y):S(hexId) *112;
+!!VR(hexOffset:y):S(hexId) *112; 112 = _BattleStack_ SIZEOF
 !!VR(hexPtr:y):S(cmbMgr) +(hexOffset);
 ; stack = BattleHex::GetStack((_BattleHex_ *)(ptr2 + 452));
 !!VR(hexPtr): +452;
@@ -289,20 +289,6 @@ ZVSE2
 !!en;
 
 
-// Вроде нигде не используется
-*?FU(tum_HOOK_BattleStackKilled);
-*#VA(hook:x);
-
-*!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(stackStruct:y);
-*!FU&(stackStruct)=(NULL):E;
-
-*!UN:C(stackStruct)/244/4/?(side:y) C(stackStruct)/248/4/?(stackOfSide:y);
-*!VR(stackId:y):S(side) *(BATTLE_STACKS_PER_SIDE) +(stackOfSide);
-*!FU|(stackId)<=(NO_STACK)/(stackId)>(BATTLE_STACK_LAST):E;
-
-*!FU(tum_OnBattleStackKilled):P(stackId)/(side);
-
-
 // Get hero Id of the opponent for negative morale/luck artifacts
 !?FU(tum_OnSetCreatureInfoDesc);
 !#VA(hook:x);
@@ -317,6 +303,8 @@ ZVSE2
   !!VRi^tum_luckMoraleDesc_OppHeroIdPlusOne^&(heroId)>(NO_HERO):S(heroId) +1;  
 !!en;
 
+
+***************************************************************************************** Do shot
 
 !?FU(tum_DoAdditionalShot);
 ; x1 - shooterStack, x2 - targetStack
@@ -343,7 +331,7 @@ ZVSE2
 !!en;
 
 
-*****************************************************************************************
+***************************************************************************************** Spell Table
 ; struct _Spell
 ; int Eff_Power // 0x30 // множитель к колдовской силе героя у боевого спелла
 ; int Effect[4] //      // базовая часть урона у боевого спелла. (сила дебафа)/(100-сила бафа)/(множитель суммона) у небоевого
@@ -355,26 +343,37 @@ ZVSE2
 !?FU(js_GetSpellAttr);
 !#VA(spellNum:x) (attrOffset:x) (attrSize:x) (attrValue:x);
 
-!!UN:C6848424/4/?(spellTablePtr:y); 00687FA8
-;!IF:L^spellTablePtr= %(spellTablePtr)^;
+!!VR(spellTablePtr:y):S6848424; 00687FA8
+!!UN:C(spellTablePtr)/4/?(spellTable:y); 
 !!VR(spellStructSize:y):S136; // _Spell_
 !!VR(offsetSpellStruct:y):S(spellStructSize) *(spellNum);
 !!VR(totalOffset:y):S(offsetSpellStruct) +(attrOffset);
-!!UN:C(spellTablePtr)/(totalOffset)/(attrSize)/?(attrValue);
+!!UN:C(spellTable)/(totalOffset)/(attrSize)/?(attrValue);
 ;!IF:L^attrValue= %(attrValue)^;
 
 
 !?FU(js_SetSpellAttr);
 !#VA(spellNum:x) (attrOffset:x) (attrSize:x) (attrValue:x);
 
-!!UN:C6848424/4/?(spellTablePtr:y); 00687FA8
-;!IF:L^spellTablePtr= %(spellTablePtr)^;
+!!VR(spellTablePtr:y):S6848424; 00687FA8
+!!UN:C(spellTablePtr)/4/?(spellTable:y); 
 !!VR(spellStructSize:y):S136; // _Spell_
 !!VR(offsetSpellStruct:y):S(spellStructSize) *(spellNum);
 !!VR(totalOffset:y):S(offsetSpellStruct) +(attrOffset);
-!!UN:C(spellTablePtr)/(totalOffset)/(attrSize)/(attrValue);
+!!UN:C(spellTable)/(totalOffset)/(attrSize)/(attrValue);
 ;!IF:L^attrValue= %(attrValue)^;
 
+
+***************************************************************************************** (deprecated) CrInfo Table = то же, что и MA
+*?FU(js_SetMonAttr);
+*#VA(monNum:x) (attrOffset:x) (attrSize:x) (attrValue:x);
+
+*!VR(monTablePtr:y):S6768560; 006747B0
+*!UN:C(monTablePtr)/4/?(monTable:y);
+*!VR(monStructSize:y):S116; // _MonType_ 0x74
+*!VR(offsetMonStruct:y):S(monStructSize) *(monNum);
+*!VR(totalOffset:y):S(offsetMonStruct) +(attrOffset);
+*!UN:C(monTable)/(totalOffset)/(attrSize)/(attrValue);
 
 *****************************************************************************************
 // Распаковка mixedPosition (она вроде должна быть в какой-то либе?!)
