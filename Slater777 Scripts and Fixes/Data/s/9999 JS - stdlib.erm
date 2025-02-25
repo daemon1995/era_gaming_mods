@@ -1,14 +1,6 @@
 ZVSE2
 
 
-***************************************************************************************** Play WNCE animation
-!?FU(arch_DrawActionPlay);
-; before using it, call BM(stackNum):K0;
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-!!SN:E4621680/2/(cmbMgr)/-1/1; 468570
-
-
-
 ***************************************************************************************** Get stack
 ; Get not destroyed (killed) stack
 !?FU(js_GetStackByHexId);
@@ -41,8 +33,6 @@ ZVSE2
 *!VR(hexPtr): +452;
 
 
-
-
 ***************************************************************************************** Get stack number
 !?FU(js_GetStackNumberByStackPtr);
 !#VA(stackPtr:x) (stackNumber:x);
@@ -69,7 +59,7 @@ ZVSE2
 !!VR(side)&(hypnotizeTurns)>0:X(TRUE);
 
 
-***************************************************************************************** Get and Set Sec Skill Values
+***************************************************************************************** Get Sec Skill Values
 !?FU(js_GetSecSkillValue);
 !#VA(skillId:x) (skillLvl:x) (skillValue:x) (typeValue:x);
 ; typeValue = 0 - integer
@@ -169,12 +159,9 @@ ZVSE2
 !!VR(skillIntegerValue):S(skillValue);
 
 
-*************************************************************************************************** Set Sec Skill Values
+***************************************************************************************** Set Sec Skill Values
 !?FU(gem_SetSecSkillValue);
 !#VA(skillId:x) (skillLvl:x) (skillValue:x);
-
-; Example:
-; ?FU(OnAfterLoadGame); !FU(gem_SetSecSkillValue):P23/2/33; // Advanced (2) Defence (23) reduces damage by 33%
 
 !!FU|(skillLvl)<=0/(skillLvl)>3:E;
 
@@ -287,68 +274,6 @@ ZVSE2
 !!UN:C6977652/(offset)/(SIZEOF_PTR)/?(buildDescPtr:y);
 !!SN:B(buildDescPtr:y)/d/z(desc);
 
-*****************************************************************************************
-
-; Add, set or get hero power on the battlefield
-!?FU(tum_ManageHeroPowerOfSide);
-!#VA(side:x);
-!#VA(power:x);                          [Can be add, get or set]
-
-!!FU:S(@power)/?(powerSyntax:y);
-
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatManager:y);
-!!VR(offset:y):S(UNC_INT) *(side) +21460;
-
-!!if&(powerSyntax)=(ARG_SYNTAX_ADD);
-  !!UN:C(combatManager)/(offset)/(UNC_INT32)/d(power);
-!!el&(powerSyntax)=(ARG_SYNTAX_GET);
-  !!UN:C(combatManager)/(offset)/(UNC_INT32)/?(power);
-!!el;
-  !!UN:C(combatManager)/(offset)/(UNC_INT32)/(power);
-!!en;
-
-
-// Get hero Id of the opponent for negative morale/luck artifacts
-!?FU(tum_OnSetCreatureInfoDesc);
-!#VA(hook:x);
-
-!!VRi^tum_luckMoraleDesc_OppHeroIdPlusOne^:S0;
-
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
-!!UN:C(ebp)/28/4/?(heroStruct:y);
-
-!!if&(heroStruct);
-  !!UN:C(heroStruct)/26/4/?(heroId:y);
-  !!VRi^tum_luckMoraleDesc_OppHeroIdPlusOne^&(heroId)>(NO_HERO):S(heroId) +1;  
-!!en;
-
-
-***************************************************************************************** Do shot
-
-!?FU(tum_DoAdditionalShot);
-; x1 - shooterStack, x2 - targetStack
-!!FU(tum_CheckIsPossibleToShoot):Px1/x2/?(result:y);
-!!SN&(result:y):E4453920/(CALLCONV_THISCALL)/x1/x2; 43F620
-
-
-!?FU(tum_CheckIsPossibleToShoot);
-; x1 - shooterStack, x2 - targetStack, x3 - result
-!!UN:Cx1/52/4/?(shooterType:y); 34
-!!UN:Cx1/76/4/?(shooterQty:y); 4C
-!!UN:Cx1/216/4/?(ammo:y); D8
-!!UN:Cx1/656/4/?(blind:y);  290
-!!UN:Cx1/688/4/?(stoneGaze:y); 2B0
-!!UN:Cx1/704/4/?(paralize:y);  2C0
-
-!!UN:Cx2/52/4/?(targetType:y); 34
-!!UN:Cx2/76/4/?(targetQty:y); 4C
-
-!!if|(shooterType:y)<0/(shooterQty:y)<1/(ammo:y)<1/(blind:y)>0/(stoneGaze:y)>0/(paralize:y)>0/(targetType:y)<0/(targetQty:y)<1;
-  !!VRx3:S(FALSE);
-!!el;
-  !!VRx3:S(TRUE);
-!!en;
-
 
 ***************************************************************************************** Spell Table
 ; struct _Spell
@@ -421,18 +346,7 @@ ZVSE2
 *!FU(WOG_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
 
 
-// чтение массива значений из json (надо тестить)
-*!re i/0/len(arr)/1;
-  *!VR(jsonKey:z):S^key.%i^;
-  *!SN:T^%(jsonKey:z)^/?(jsonValue:z);
-  *!if&(jsonKey)<>(jsonValue);
-    *!VR(result:y):V(jsonValue);
-  *!el;
-    *!br;
-  *!en;
-*!en;
-
-***************************************************************************************** Works with strings
+***************************************************************************************** Work with strings
 !?FU(js_StringReplaceINT);
 // Replace ints with an array of strings 
 !#VA(string:x) (result:x) (substr[10]:x);
