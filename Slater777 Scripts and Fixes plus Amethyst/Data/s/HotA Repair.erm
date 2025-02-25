@@ -1,0 +1,156 @@
+ZVSE2
+
+
+; Спелл монстра ремонт
+// Hooks are off, logic is in amethyst
+// Need to rewrite resurrect here when the spell is being casted
+
+
+!?FU(OnGameEnter);
+;!MA:B(MON_MASTER_GREMLIN)/1; Проблемы с плагином ChooseAttack.dll в GEM
+!!MA:B(MON_MECHANIC)/1;
+!!MA:B(MON_ENGINEER)/1;
+
+
+!?FU(js_BattleStack_CheckCanCastToHex_Repair);
+!#VA(caster:x) (targetHexId:x) (result:x);
+
+; if ( this->creature_info.spells_count <= 0 )
+;   return 0;
+!!UN:C(caster)/220/4/?(spellsQty:y);
+!!if&(spellsQty)<=0;
+  !!VR(result):S0;
+  !!FU:E;
+!!en;
+
+; v6 = this->SpellDuration[0x3C] ? 1 - this->Side : this->Side;
+!!FU(js_GetActualStackSideByStackPtr):P(caster)/?(side:y);
+; if ( !BattleMgr::SideCanCast(o_BattleMgr, v6, 0) )
+;   return 0;
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!SN:E4323856/(CALLCONV_THISCALL)/(cmbMgr)/(side)/0; 41FA10 BattleMgr::SideCanCast
+!!if&v1=0;
+  !!VR(result):S0;
+  !!FU:E;
+!!en;
+
+; stack_target = this->creatureID == PIT_LORD
+;              ? BattleMgr_CastSpell_PitLords_1(o_BattleMgr, v6, targetPos)
+;              : BattleMgr::GetStackToResurrect(o_BattleMgr, v6, targetPos, 1);
+!!FU(js_BattleMgr_GetStackToRepair):P(cmbMgr)/(side)/(targetHexId)/1/?(stackToRepair:y); пример 005A3FD0
+;!IF:L^%(stackToRepair)^;
+
+; if ( !stack_target )
+;   return 0;
+!!if&(stackToRepair)=0;
+  !!VR(result):S0;
+  !!FU:E;
+!!en;
+
+; return Battle_Stack_Get_Resurrect_Count(this, stack_target) > 0;
+!!FU(js_BattleStack_GetRepairCount):P(caster)/(stackToRepair)/?(result);
+
+
+!?FU(js_BattleStack_GetRepairCount);
+!#VA(caster:x) (target:x) (result:x);
+
+!!UN:C(caster)/52/4/?(casterId:y); 34
+
+!!if|(casterId)=(MON_MECHANIC)/(casterId)=(MON_ENGINEER);
+  ; v2 = target_stack;
+  ; Count = this->Count;
+  !!UN:C(caster)/76/4/?(casterCount:y); 4C
+  ; target_stack = (_BattleStack_ *)(target_stack->CountOnBattleStart - target_stack->Count);
+  !!UN:C(target)/76/4/?(targetCount:y); 4C
+  !!UN:C(target)/96/4/?(targetStartingCount:y); 60
+  !!VR(targetDeltaCount:y):S(targetStartingCount) -(targetCount);
+  ; v12 = 100 * Count / v2->creature_info.hit_points;
+  !!VR(power:y):S(casterCount);
+  !!VR(power)&(casterId)=(MON_MECHANIC): *10;
+  !!VR(power)&(casterId)=(MON_ENGINEER): *20;
+  !!UN:C(target)/192/4/?(targetHp:y); C0
+  !!VR(repairCount:y):S(power) :(targetHp);
+  ; p_target_stack = (signed int *)&target_stack;
+  ; if ( (int)target_stack >= v12 )
+  ;   return v12;
+  !!if&(targetDeltaCount)>=(repairCount);
+    !!VR(result):S(repairCount);
+    ;!IF:L^%(result)^;
+  !!en;
+!!en;
+
+
+!?FU(js_BattleStack_Repair);
+!#VA(caster:x) (targetHexId:x);
+
+!!FU(js_GetActualStackSideByStackPtr):P(caster)/?(side:y);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!FU(js_BattleMgr_GetStackToRepair):P(cmbMgr)/(side)/(targetHexId)/1/?(stackToRepair:y); пример 005A3FD0
+
+!!if&(stackToRepair);
+  !!if&i^battle_isVisible^;
+    !!SN:P^REPAIR^;
+    !!FU(js_GetStackNumberByStackPtr):P(stackToRepair)/?(stackNum:y);
+    !!FU(ES_PlayCustomAnimationOnStack):P(stackNum)/^REPAIR.def^/1;
+  !!en;
+
+  !!UN:C(caster)/76/4/?(casterQty:y) C(caster)/52/4/?(casterId:y);
+  !!VR(power:y):S(casterQty);
+  !!VR(power)&(casterId)=(MON_MECHANIC): *10;
+  !!VR(power)&(casterId)=(MON_ENGINEER): *20;
+  ;!FU(js_BattleMgr_Repair):P(cmbMgr)/(stackToRepair)/(power)/0; 005A7870
+  !!SN:E5929072/(CALLCONV_THISCALL)/(cmbMgr)/(stackToRepair)/(power)/0; 5A7870 BattleMgr_ResurrectArchangel
+!!en;
+
+
+
+!?FU(js_BattleMgr_GetStackToRepair);
+!#VA(cmbMgr:x) (side:x) (targetHexId:x) (isCreature:x) (stack:x);
+
+!!if&(targetHexId)>186; BA
+  !!VR(stack):S0;
+  !!FU:E;
+!!en;
+
+!!FU(js_GetStackByHexId):P(targetHexId)/?(stack);
+;!IF:L^targetHexId= %(targetHexId), stack= %(stack)^;
+!!if&(stack);
+  !!UN:C(stack)/244/4/?(stackSide:y); F4
+
+  !!UN:C(stack)/132/4/?f; 84
+  !!VR(undead:y):Sf &(MON_FLAG_UNDEAD);
+  !!VR(alive:y):Sf &(MON_FLAG_ALIVE);
+  !!VR(siegeWeapon:y):Sf &(MON_FLAG_SIEGE_WEAPON);
+
+  !!if&(stackSide)=(side)/(undead)=0/(alive)=0/(siegeWeapon)=0;
+    !!UN:C(stack)/76/4/?(monCount:y); 4C
+    !!UN:C(stack)/96/4/?(monStartingCount:y); 60
+
+    !!if&(monCount)<(monStartingCount);
+      ; BattleMgr::BattleStack::GetMagicResistance(BM, SPELL_RESURRECTION, side, stack, 0, 1, isCreature) > 0.0 )
+      ;!FU(js_GetMagicResistanceToRepair):P(cmbMgr)/(side)/(stack)/0/1/(isCreature); 005A83A0
+      !!FU:E;
+
+    !!en;
+  !!en;
+!!en;
+
+!!VR(stack):S0;
+
+
+;?FU(js_GetMagicResistanceToRepair);
+;#VA(cmbMgr:x) (side:x) (stack:x);
+
+; flags = mon_stacka->creature_info.flags;
+; if ( (flags & CF_CANNOTMOVE) != 0
+; && spell_id != SPELL_RESURRECTION
+; && spell_id != SPELL_ANIMATE_DEAD
+; && spell_id != SPELL_SACRIFICE )
+; {
+;     return 0.0;
+; }
+
+
+;?FU(js_BattleMgr_Repair);
+;#VA(cmbMgr:x) (stack:x) (spellPower:x) (a4:x);
