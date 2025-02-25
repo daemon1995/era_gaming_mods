@@ -1,0 +1,123 @@
+Z VSE2
+
+************************************
+**** Spell Empowering Artifacts ****
+************************************
+// Script by JackSlater and daemon_n
+
+
+*** For Human ***
+*?FU(js_Dlg_SpellBook_Create);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/10/4/?(mode:y);
+
+*!if&(mode); [If not in battle]
+  *!SN:L^erm_hooker.era^/?(hooker:y);
+  *!FU&(hooker)=0:E;
+  *!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
+  *!SN:E(hookingFuncAddress)/1/5134831/(js_CalculateSpellDamage);
+  *!VRi^js_CalculateSpellDamage^:S(TRUE);
+*!en;
+
+
+*?FU(js_DestroySpellBook_Dlg)&i^js_CalculateSpellDamage^;
+*!SN:L^erm_hooker.era^/?(hooker:y);
+*!FU&(hooker)=0:E;
+*!SN:A(hooker)/^UnsetHook^/?(hookingFuncAddress:y);
+*!SN:E(hookingFuncAddress)/1/5134831/(js_CalculateSpellDamage);
+*!VRi^js_CalculateSpellDamage^:S(FALSE);
+
+
+*?FU(OnBeforeBattleUniversal)&i^battle_hasHuman^;
+*!SN:L^erm_hooker.era^/?(hooker:y);
+*!FU&(hooker)=0:E;
+*!SN:A(hooker)/^SetHook^/?(hookingFuncAddress:y);
+*!SN:E(hookingFuncAddress)/1/5134831/(js_CalculateSpellDamage);
+
+
+*?FU(OnAfterBattleUniversal)&i^battle_hasHuman^;
+*!SN:L^erm_hooker.era^/?(hooker:y);
+*!FU&(hooker)=0:E;
+*!SN:A(hooker)/^UnsetHook^/?(hookingFuncAddress:y);
+*!SN:E(hookingFuncAddress)/1/5134831/(js_CalculateSpellDamage);
+
+
+*?FU(js_CalculateSpellDamage);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(heroPtr:y) C(heroPtr)/26/2/?(heroId:y);
+*!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(spellId:y) C(ebp)/12/4/?(damage:e);
+
+*!FU(js_GetBonusSpellDmgPercentage):P(spellId)/(heroId)/?(maxBonusDmgPercentage:y);
+
+*!if&(maxBonusDmgPercentage);
+  *!VR(bonusDmgPercentage:y):S100 +(maxBonusDmgPercentage);
+  *!VR(damage): *(bonusDmgPercentage) :100;
+  *!UN:C(ebp)/12/4/(damage);
+*!en;
+
+
+*** For AI ***
+*?FU(OnMagicBasicResistance)&i^battle_aiOnly^;
+*!BG:A?(actionType:y);
+*!FU&(actionType)<>(BATTLE_ACTION_HERO_CAST):E;
+
+*!BG:Q?(side:y);
+*!BA:H(side)/?(heroId:y);
+*!FU&(heroId)<0:E;
+
+*!MR:S?(spellId:y) D?(damage:y);
+
+*!FU(js_GetBonusSpellDmgPercentage):P(spellId)/(heroId)/?(maxBonusDmgPercentage:y);
+
+*!if&(maxBonusDmgPercentage);
+  *!VR(bonusDmgPercentage:y):S100 +(maxBonusDmgPercentage);
+  *!VR(damage): *(bonusDmgPercentage) :100;
+  *!MR:D(damage);
+*!en;
+
+
+*?FU(js_GetBonusSpellDmgPercentage);
+*#VA(spellId:x) (heroId:x) (maxBonusDmgPercentage:x);
+
+*!SS(spellId):S?(magicSchoolBitSet:y);
+// 1 – школа магии Воздуха
+// 2 – школа магии Огня
+// 4 – школа магии Воды
+// 8 – школа магии Земли
+// у волшебной стрелы битсет 15 (сумма бит всех школ)
+
+*!VR(maxBonusDmgPercentage):S0; [Reset var]
+
+*!re i/1/8;
+  *!VR(schoolBit:y):S(magicSchoolBitSet) &i;
+  
+  *!if&(schoolBit);
+    *!if&(schoolBit)=1;  [Wind]
+      *!VR(bonusDmgPercentage:y):S0; [Reset var]
+      *!HE(heroId):A2/(ART_TRIDENT_OF_THE_TITANS)/d/?(isEquipped:y);          
+      *!VR(bonusDmgPercentage)&(isEquipped): +50;
+      *!VR(maxBonusDmgPercentage)&(bonusDmgPercentage)>(maxBonusDmgPercentage):S(bonusDmgPercentage);
+    *!en;
+
+    *!if&(schoolBit)=2;  [Fire]
+      *!VR(bonusDmgPercentage:y):S0; [Reset var]
+      *!HE(heroId):A2/(ART_PHOENIX_FEATHER_CAPE)/d/?(isEquipped:y);          
+      *!VR(bonusDmgPercentage)&(isEquipped): +50;
+      *!VR(maxBonusDmgPercentage)&(bonusDmgPercentage)>(maxBonusDmgPercentage):S(bonusDmgPercentage);
+    *!en;
+
+    *!if&(schoolBit)=4;  [Water]
+      *!VR(bonusDmgPercentage:y):S0; [Reset var]
+      *!HE(heroId):A2/(ART_EVERCOLD_ICICLE)/d/?(isEquipped:y);          
+      *!VR(bonusDmgPercentage)&(isEquipped): +50;
+      *!VR(maxBonusDmgPercentage)&(bonusDmgPercentage)>(maxBonusDmgPercentage):S(bonusDmgPercentage);
+    *!en;
+
+    *!if&(schoolBit)=8;  [Earth]
+      *!VR(bonusDmgPercentage:y):S0; [Reset var]
+      *!HE(heroId):A2/(ART_EMERALD_SLIPPERS)/d/?(isEquipped:y);          
+      *!VR(bonusDmgPercentage)&(isEquipped): +50;
+      *!VR(maxBonusDmgPercentage)&(bonusDmgPercentage)>(maxBonusDmgPercentage):S(bonusDmgPercentage);
+    *!en;
+  *!en;
+
+  *!VRi:Sd<<1 -1;  [1, 2, 4, 8]
+*!en;

@@ -22,8 +22,8 @@ ZVSE2
 
 ; Set up new real hero magic power
 !?FU(OnSetupBattlefield);
-!!VRi^tum_trueHeroPower_0^:S0;
-!!VRi^tum_trueHeroPower_1^:S0;
+!!VRi^js_trueHeroPower_0^:S0;
+!!VRi^js_trueHeroPower_1^:S0;
 
 !!if&i^battle_hero_vs_hero^;
   !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
@@ -61,26 +61,44 @@ ZVSE2
       !!VR(enemySide:y):Si X(TRUE);
 
       ; Get the new power value
-      !!FU(tum_ManageHeroPowerOfSide):P(enemySide)/?(power:y);
+      !!FU(js_ManageHeroPowerOfSide):P(enemySide)/?(power:y);
       !!VR(newPower:y):S100 -(enemyPowerReductionPercent) *(power) :100 F1/(INT_MAX);
 
       ; Set the value up
-      !!FU(tum_ManageHeroPowerOfSide):P(enemySide)/(newPower:y);
-      !!VRi^tum_trueHeroPower_%(enemySide)^:S(newPower);
+      !!FU(js_ManageHeroPowerOfSide):P(enemySide)/(newPower:y);
+      !!VRi^js_trueHeroPower_%(enemySide)^:S(newPower);
     !!en;
   !!en;
 !!en;
 
 
+; Add, set or get hero power on the battlefield
+!?FU(js_ManageHeroPowerOfSide);
+!#VA(side:x) (power:x);
+
+!!FU:S(@power)/?(powerSyntax:y);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(combatManager:y);
+!!VR(offset:y):S(UNC_INT) *(side) +21460;
+
+!!if&(powerSyntax)=(ARG_SYNTAX_ADD);
+  !!UN:C(combatManager)/(offset)/(UNC_INT32)/d(power);
+!!el&(powerSyntax)=(ARG_SYNTAX_GET);
+  !!UN:C(combatManager)/(offset)/(UNC_INT32)/?(power);
+!!el;
+  !!UN:C(combatManager)/(offset)/(UNC_INT32)/(power);
+!!en;
+
+
 ; Set up text display according to the new power (if changed)
-!?FU(tum_OnDlg_HeroPreview_SpellPowerWrite)|i^tum_trueHeroPower_0^>0/i^tum_trueHeroPower_1^>0;
+!?FU(js_OnDlg_HeroPreview_SpellPowerWrite)|i^js_trueHeroPower_0^>0/i^js_trueHeroPower_1^>0;
 !#VA(hook:x);
 
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/8/4/?(heroStruct:y) C(heroStruct)/26/2/?(heroId:y);
 
 !!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
-  !!if&i^battle_hero_%i^=(heroId)/i^tum_trueHeroPower_%i^>0;
-    !!VR(truePower:y):Si^tum_trueHeroPower_%i^;
+  !!if&i^battle_hero_%i^=(heroId)/i^js_trueHeroPower_%i^>0;
+    !!VR(truePower:y):Si^js_trueHeroPower_%i^;
     !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(txtPtr:y);
     !!SN:B(txtPtr)/d/?(power:z) B(txtPtr)/d/^%(power) (%(truePower))^;
   !!en;

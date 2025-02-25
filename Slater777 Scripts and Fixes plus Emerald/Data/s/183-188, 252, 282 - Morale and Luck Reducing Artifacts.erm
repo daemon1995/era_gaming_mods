@@ -1,11 +1,16 @@
 ZVSE2
 
-****************************************************************************************************
-*Morale and Luck reducing artefacts*
-Script by Daemon_n and JackSlater (26.01.23)
-Updated by Archer30 (25.04.24)
 
-!?FU(tum_MinusMorale);
+; Set up artifact description
+!?FU(OnAfterErmInstructions);
+!!FU(NewIntArray):P10/?i^js_negativeMoraleArtsList^/(M_STORED);
+!!SN:Vi^js_negativeMoraleArtsList^/0/(ART_PENDANT_OF_DOWNFALL)/2/(ART_HIDEOUS_MASK)/1/(ART_RING_OF_SUPPRESSION)/1/(ART_CLOAK_OF_DEATHS_SHADOW)/2/(ART_PENDANT_OF_DESPAIR)/3;
+
+!!FU(NewIntArray):P10/?i^js_negativeLuckArtsList^/(M_STORED);
+!!SN:Vi^js_negativeLuckArtsList^/0/(ART_SHAMANS_PUPPET)/2/(ART_DEMONS_HORSESHOE)/1/(ART_RUNES_OF_IMMINENCY)/1/(ART_CLOAK_OF_DEATHS_SHADOW)/2/(ART_PENDANT_OF_DESPAIR)/3;
+
+
+!?FU(js_MinusMorale);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/20/4/?(oppHero:y);
 
 !!VR(moralReduction:y):S0; [Reset var]
@@ -40,7 +45,7 @@ Updated by Archer30 (25.04.24)
 !!en;
 
 
-!?FU(tum_MinusLuck);
+!?FU(js_MinusLuck);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/16/4/?(oppHero:y);
 
 !!VR(luckChanger:y):S0; [Reset var]
@@ -76,27 +81,33 @@ Updated by Archer30 (25.04.24)
 !!en;
 
 
-; Set up artifact description
-!?FU(OnAfterErmInstructions);
-!!FU(NewIntArray):P10/?i^tum_negativeMoraleArtsList^/(M_STORED);
-!!SN:Vi^tum_negativeMoraleArtsList^/0/(ART_PENDANT_OF_DOWNFALL)/2/(ART_HIDEOUS_MASK)/1/(ART_RING_OF_SUPPRESSION)/1/(ART_CLOAK_OF_DEATHS_SHADOW)/2/(ART_PENDANT_OF_DESPAIR)/3;
+// Get hero Id of the opponent for negative morale/luck artifacts
+!?FU(js_OnSetCreatureInfoDesc);
+!#VA(hook:x);
 
-!!FU(NewIntArray):P10/?i^tum_negativeLuckArtsList^/(M_STORED);
-!!SN:Vi^tum_negativeLuckArtsList^/0/(ART_SHAMANS_PUPPET)/2/(ART_DEMONS_HORSESHOE)/1/(ART_RUNES_OF_IMMINENCY)/1/(ART_CLOAK_OF_DEATHS_SHADOW)/2/(ART_PENDANT_OF_DESPAIR)/3;
+!!VRi^js_luckMoraleDesc_OppHeroIdPlusOne^:S0;
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y);
+!!UN:C(ebp)/28/4/?(heroStruct:y);
+
+!!if&(heroStruct);
+  !!UN:C(heroStruct)/26/4/?(heroId:y);
+  !!VRi^js_luckMoraleDesc_OppHeroIdPlusOne^&(heroId)>(NO_HERO):S(heroId) +1;  
+!!en;
 
 
 ; Negative Morale artifacts
-!?FU(tum_OnAfterSetArtMoraleDesc)&i^tum_luckMoraleDesc_OppHeroIdPlusOne^>0;
+!?FU(js_OnAfterSetArtMoraleDesc)&i^js_luckMoraleDesc_OppHeroIdPlusOne^>0;
 !#VA(hook:x);
 
 !!VR(negativeMoraleArtDesc:z);
-!!VR(oppHero:y):Si^tum_luckMoraleDesc_OppHeroIdPlusOne^ -1;
-!!SN:Mi^tum_negativeMoraleArtsList^/?(size:y);
+!!VR(oppHero:y):Si^js_luckMoraleDesc_OppHeroIdPlusOne^ -1;
+!!SN:Mi^js_negativeMoraleArtsList^/?(size:y);
 
 !!VR(totalMoralReduction:y):S0;
 
 !!re i/0/(size)/1/-1;
-  !!SN:Mi^tum_negativeMoraleArtsList^/i/?(art:y);
+  !!SN:Mi^js_negativeMoraleArtsList^/i/?(art:y);
   !!HE(oppHero):A2/(art)/?(has:y)/?(equipped:y);
 
   !!SN:H^art^/(art)/0/?(artName:z);
@@ -104,7 +115,7 @@ Updated by Archer30 (25.04.24)
 
   !!if&(equipped)>0;
     !!SN:H^art^/(art)/0/?(artName:z);
-    !!SN:Mi^tum_negativeMoraleArtsList^/i/?(moraleReduction:y);
+    !!SN:Mi^js_negativeMoraleArtsList^/i/?(moraleReduction:y);
     !!VR(negativeMoraleArtDesc):+^%T(gem.endl)%(artName) -%(moraleReduction)^;
     !!VR(totalMoralReduction):+(moraleReduction);
   !!en;
@@ -125,23 +136,23 @@ Updated by Archer30 (25.04.24)
 
 ; Negative Luck artifacts
 ; Warning: This will only be executed when Hourglass is not equipped!
-!?FU(tum_OnAfterSetArtLuckDesc)&i^tum_luckMoraleDesc_OppHeroIdPlusOne^>0;
+!?FU(js_OnAfterSetArtLuckDesc)&i^js_luckMoraleDesc_OppHeroIdPlusOne^>0;
 !#VA(hook:x);
 
 !!VR(negativeLuckArtDesc:z):S^^;
-!!VR(oppHero:y):Si^tum_luckMoraleDesc_OppHeroIdPlusOne^ -1;
-!!SN:Mi^tum_negativeLuckArtsList^/?(size:y);
+!!VR(oppHero:y):Si^js_luckMoraleDesc_OppHeroIdPlusOne^ -1;
+!!SN:Mi^js_negativeLuckArtsList^/?(size:y);
 
 !!VR(totalLuckReduction:y):S0;
 
 !!re i/0/(size)/1/-1;
-  !!SN:Mi^tum_negativeLuckArtsList^/i/?(art:y);
+  !!SN:Mi^js_negativeLuckArtsList^/i/?(art:y);
   !!HE(oppHero):A2/(art)/?(has:y)/?(equipped:y);
   !!VRi:+1;
 
   !!if&(equipped)>0;
     !!SN:H^art^/(art)/0/?(artName:z);
-    !!SN:Mi^tum_negativeLuckArtsList^/i/?(luckReduction:y);
+    !!SN:Mi^js_negativeLuckArtsList^/i/?(luckReduction:y);
     !!VR(negativeLuckArtDesc):+^%T(gem.endl)%(artName) -%(luckReduction)^;
     !!VR(totalLuckReduction):+(luckReduction);
   !!en;
