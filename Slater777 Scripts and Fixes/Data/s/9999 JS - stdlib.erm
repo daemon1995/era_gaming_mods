@@ -1,36 +1,70 @@
 ZVSE2
 
 
+***************************************************************************************** Get hex
+!?FU(js_GetHexByHexId);
+!#VA(hexId:x) (hexPtr:x);
+
+!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+
+; ptr2 = (int)BattleMrg + 112 * gex_id;
+!!VR(hexOffset:y):S(hexId) *112; 112 = _BattleHex_ SIZEOF
+!!VR(hexPtr):S(cmbMgr) +(hexOffset);
+; v5 = (_BattleHex_ *)(ptr2 + 452);
+!!VR(hexPtr): +452; 1C4
+
+
 ***************************************************************************************** Get stack
 ; Get not destroyed (killed) stack
 !?FU(js_GetStackByHexId);
 !#VA(hexId:x) (stackPtr:x);
 
-!!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
-
-; ptr2 = (int)BattleMrg + 112 * gex_id;
-!!VR(hexOffset:y):S(hexId) *112; 112 = _BattleStack_ SIZEOF
-!!VR(hexPtr:y):S(cmbMgr) +(hexOffset);
-; stack = BattleHex::GetStack((_BattleHex_ *)(ptr2 + 452));
-!!VR(hexPtr): +452;
+!!FU(js_GetHexByHexId):P(hexId)/?(hexPtr:y);
 !!UN:C(hexPtr)/24/1/?(stackSide:y); 18
-;!IF:L^stackSide= %(stackSide)^;
+
+// If stack is alive
 !!if&(stackSide)>=0;
   !!SN:E5141040/(CALLCONV_THISCALL)/(hexPtr); 004E7230 BattleHex::GetStack
   !!VR(stackPtr):Sv1;
 !!en;
 
 
-*?FU(js_GetDeadStackByHexId);
-*#VA(hexId:x) (stackPtr:x);
+!?FU(js_GetDeadStackByHexId);
+!#VA(hexId:x) (stackPtr:x);
 
-*!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y);
+!!FU(js_GetHexByHexId):P(hexId)/?(hexPtr:y);
+!!UN:C(hexPtr)/24/1/?(stackSide:y); 18
+!!FU&(stackSide)>=0:E;
 
-; ptr2 = (int)BattleMrg + 112 * gex_id;
-*!VR(hexOffset:y):S(hexId) *112; 112 = _BattleStack_ SIZEOF
-*!VR(hexPtr:y):S(cmbMgr) +(hexOffset);
-; stack = BattleHex::GetStack((_BattleHex_ *)(ptr2 + 452));
-*!VR(hexPtr): +452;
+; if ( (*(_BYTE *)(ptr2 + 468) & 2) != 0 )      // 16= 0x10 offset = char ObstacleBits
+;     return 0;
+!!UN:C(hexPtr)/16/1/?(obstacleBits:y);
+!!VR(obstacleBits): &2;
+;!IF:L^obstacleBits= %(obstacleBits)^;
+!!FU&(obstacleBits)<>0:E;
+
+; v8 = *(_DWORD *)(ptr2 + 480) - 1;             // 28= 0x1C offset = int DeadStacksCount
+!!UN:C(hexPtr)/28/4/?(deadStacksCount:y);
+;!IF:L^deadStacksCount= %(deadStacksCount)^;
+!!VR(deadStacksCount): -1;
+; if ( v8 < 0 )
+;   return 0;
+!!FU&(deadStacksCount)<0:E;
+
+; while ( 1 )
+; {
+;   v9 = v5->DeadStackSide[v8];
+!!VR(offset:y):S32; DeadStackSide 0x20 char[14]
+!!VR(offset): +(deadStacksCount);
+!!UN:C(hexPtr)/(offset)/1/?(side:y);
+
+; v10 = &BM->stacks[v9][v5->DeadStackIndex[v8]];
+!!VR(offset:y):S46; DeadStackIndex 0x2E char[14]
+!!VR(offset): +(deadStacksCount);
+!!UN:C(hexPtr)/(offset)/1/?(index:y);
+
+!!VR(index)&(side)>0: +(BATTLE_STACKS_PER_SIDE);
+!!BM(index):Z?(stackPtr);
 
 
 ***************************************************************************************** Get stack number
