@@ -21,34 +21,54 @@ ZVSE2
 *!IF:M^%(str)^;
 
 
+!#SN:L^amethyst2_4.dll^/?i^js_amethyst^;
+
+
 !?FU(OnStartOrLoad);
+!!if&i^js_amethyst^;
+  !!VRi^js_TempleGuardian_spMult^:S2;
+  !!VRi^js_TempleGuardian_spDiv^:S1;
+  !!VRi^js_TempleGuardian_spAdd^:S0;
+
+  !!VRi^js_SoulEater_spMult^:S11;
+  !!VRi^js_SoulEater_spDiv^:S10;
+  !!VRi^js_SoulEater_spAdd^:S0;
+
+  *!VRi^js_%(MON_SOUL_EATER_A)_spMult^:S11;
+  *!VRi^js_%(MON_SOUL_EATER_A)_spDiv^:S10;
+  *!VRi^js_%(MON_SOUL_EATER_A)_spAdd^:S0;
+  *!VRi^js_%(MON_SOUL_EATER_D)_spMult^:Si^js_%(MON_SOUL_EATER_A)_spMult^;
+  *!VRi^js_%(MON_SOUL_EATER_D)_spDiv^:Si^js_%(MON_SOUL_EATER_A)_spDiv^;
+  *!VRi^js_%(MON_SOUL_EATER_D)_spAdd^:Si^js_%(MON_SOUL_EATER_A)_spAdd^;
+!!en;
+*!VR(debug:y):Si^js_%(MON_SOUL_EATER_D)_spMult^;
+*!IF:L^debug= %(debug)^;
+
 !!FU(js_SetCommandersSpells):P;
 
 
 !?FU(js_SetCommandersSpells);
-!!SN:L^amethyst2_4.dll^/?(amet:y);
-
 ; Замок (174/183 Паладин)
 
 ; Оплот (175/184 Знахарь)
 
 ; Башня (176/185 Храмовница) - ремонт (базовая мощность 200)
-!!if&(amet)<>0;
+!!if&i^js_amethyst^;
   !!MA:W(MON_TEMPLE_GUARDIAN_A)/^        
     Spell 1=0
     Spell 2=10
     Spell 3=0
-    CreatureSpellPowerMultiplier=2
-    CreatureSpellPowerDivider=1
-    CreatureSpellPowerAdder=0
+    CreatureSpellPowerMultiplier=%i(js_TempleGuardian_spMult)
+    CreatureSpellPowerDivider=%i(js_TempleGuardian_spDiv)
+    CreatureSpellPowerAdder=%i(js_TempleGuardian_spAdd)
   ^;
   !!MA:W(MON_TEMPLE_GUARDIAN_D)/^        
     Spell 1=0
     Spell 2=10
     Spell 3=0
-    CreatureSpellPowerMultiplier=2
-    CreatureSpellPowerDivider=1
-    CreatureSpellPowerAdder=0
+    CreatureSpellPowerMultiplier=%i(js_TempleGuardian_spMult)
+    CreatureSpellPowerDivider=%i(js_TempleGuardian_spDiv)
+    CreatureSpellPowerAdder=%i(js_TempleGuardian_spAdd)
   ^;
   // Замена def спелла командира
   ; \Data\hmm35wog.pac\dlg_npc1.def
@@ -65,22 +85,22 @@ ZVSE2
 
 ; Некрополис (178/187 Пожиратель Душ)
 // Фикс идиотского решения вог-команды убрать возможность анимейтить мертвый стек
-!!if&(amet)<>0;
+!!if&i^js_amethyst^;
   !!MA:W(MON_SOUL_EATER_A)/^        
     Spell 1=0
     Spell 2=9
     Spell 3=0
-    CreatureSpellPowerMultiplier=11
-    CreatureSpellPowerDivider=10
-    CreatureSpellPowerAdder=0
+    CreatureSpellPowerMultiplier=%i(js_SoulEater_spMult)
+    CreatureSpellPowerDivider=%i(js_SoulEater_spDiv)
+    CreatureSpellPowerAdder=%i(js_SoulEater_spAdd)
   ^;
   !!MA:W(MON_SOUL_EATER_D)/^        
     Spell 1=0
     Spell 2=9
     Spell 3=0
-    CreatureSpellPowerMultiplier=11
-    CreatureSpellPowerDivider=10
-    CreatureSpellPowerAdder=0
+    CreatureSpellPowerMultiplier=%i(js_SoulEater_spMult)
+    CreatureSpellPowerDivider=%i(js_SoulEater_spDiv)
+    CreatureSpellPowerAdder=%i(js_SoulEater_spAdd)
   ^;
   // Замена описания спелла
   !!SN:E7827723/(CALLCONV_CDECL)/23/2/(ZNPC00TXT);
@@ -110,8 +130,8 @@ ZVSE2
 !?FU(js_Hero_GetNecromancyPower_OnEnter);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(heroId:y); 1A
 
-;// функция получения адреса структуры командира
-;inline _Npc_*  GetNpc(_int_ hero_id) {return ((_Npc_ *)(0x28620C0 + 296 * hero_id));}
+!!FU(js_GetCommanderByHeroId):P(heroId)/?(commander:y);
+
 !!VR(commander:y):S(heroId) *(SIZEOF_COMMANDER_STRUCT) +(COMMANDER_TABLE_PTR);
 !!UN:C(commander)/4/4/?(isDead:y);
 ;!IF:L^isDead= %(isDead)^; 0
@@ -131,3 +151,105 @@ ZVSE2
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/(result);
   !!en;
 !!en;
+
+
+!?FU(js_BS_GetResurrectCount_AfterAmethystCalc);
+!!FU(js_BattleMgr_ResurrectArchangelProcessing):Px1/0;
+
+!?FU(js_BattleStack_CanCastAtEmptyHex_AfterCalcMagicPower);
+!!FU(js_BattleMgr_ResurrectArchangelProcessing):Px1/1;
+
+!?FU(js_BattleMgr_ResurrectArchangel_OnEnter);
+!!FU(js_BattleMgr_ResurrectArchangelProcessing):Px1/2;
+
+!?FU(js_BattleStack_GetMagicResistance_OnCheckMagicPower);
+!!FU(js_BattleMgr_ResurrectArchangelProcessing):Px1/3;
+
+
+!?FU(js_BattleMgr_ResurrectArchangelProcessing);
+!#VA(hook:x) (actionType:x);
+; actionType = 0 means it is trigger (mouseover calcs) ON LIVING STACK
+; actionType = 1 means it is trigger (mouseover calcs) ON AN EMPTY HEX (DEAD STACK)
+; actionType = 2 means it is actual spellcasting process (lmc done)
+; actionType = 3 means it is calculations during magic resistance checks
+
+;!IF:L^actionType= %(actionType)^;
+
+!!BG:N?(activeStackNum:y);
+!!BM(activeStackNum):T?(monType:y);
+
+!!if&(monType)>=(MON_COMMANDER_FIRST_A)/(monType)<=(MON_COMMANDER_LAST_D);
+  !!FU(js_GetActualStackSide):P(activeStackNum)/?(side:y);
+  !!BA:H(side)/?(heroId:y);
+  !!FU&(heroId)<0:E;
+
+  !!FU(js_GetCommanderByHeroId):P(heroId)/?(commander:y);
+  !!UN:C(commander)/72/4/?(spLvl:y); 48
+  !!UN:C(commander)/284/4/?(lvl:y); 11C
+
+  // Do math
+  !!if&(spLvl)>0;
+
+    // Basic power value is in amethyst config file or a native value (110)
+    !!if&(actionType)=2;
+      !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/12/4/?(power:y); C
+    !!el;
+      !!UN:C(commander)/12/4/?(type:y); C
+
+      !!if&(type)=2; Temple Guardian
+        !!VR(mult:y):Si^js_TempleGuardian_spMult^;
+        !!VR(div:y):Si^js_TempleGuardian_spDiv^;
+        !!VR(add:y):Si^js_TempleGuardian_spAdd^;
+      !!el&(type)=4; Soul Eater
+        !!VR(mult:y):Si^js_SoulEater_spMult^;
+        !!VR(div:y):Si^js_SoulEater_spDiv^;
+        !!VR(add:y):Si^js_SoulEater_spAdd^;
+      !!en;
+
+      !!FU(js_CalcSpellPowerFromAmethystConfig):P(mult)/(div)/(add)/?(power:y);
+      ;!IF:L^power= %(power)^;
+    !!en;
+
+    !!FU(js_RecalcComandersSpPower):P(power)/(spLvl)/(lvl)/?(power);
+    ;!IF:L^powerAfterRecal= %(power)^;
+
+    !!if&(actionType)=2; patch spellPower during the cast
+      !!UN:C(ebp)/12/4/(power);
+
+    !!el&(actionType)=3; patch spellPower during the magic resistance calcs
+      !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/(power);
+
+    !!el|(actionType)=0/(actionType)=1; patch qty of resurrected creatures
+      !!CM:D?(mouseHexId:y);
+      !!FU(js_GetStackByHexId):P(mouseHexId)/?(target:y);
+      !!FU(js_GetDeadStackByHexId)&(target)=0:P(mouseHexId)/?(target:y);
+      !!UN:C(target)/108/4/?(targetHp:y); 6C
+      ;!IF:L^targetHp= %(targetHp)^;
+
+      !!if&(power)>=(targetHp);
+        !!VR(monResQty:y):S(power) :(targetHp);
+        ;!IF:L^monResQty2= %(monResQty)^;
+        !!UN&(actionType)=0:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/(monResQty);
+        !!UN&(actionType)=1:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-4/4/(monResQty);
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+
+!?FU(js_CalcSpellPowerFromAmethystConfig);
+!#VA(mult:x) (div:x) (add:x) (power:x);
+; 100 - basic number, it is a power of 1 archangel
+!!VR(power):S100 *(mult) :(div) +(add);
+
+
+!?FU(js_RecalcComandersSpPower);
+!#VA(power:x) (spLvl:x) (lvl:x) (newPower:x);
+
+// If max spLvl, do lvl scaling as well
+!!if&(spLvl)=5;
+  !!VR(lvlScaling:y):S(lvl) *10 +10; // cuz if commander is lvl 1, unc returns 0
+!!en;
+
+!!VR(newPower):S(spLvl) *50 +(power) +(lvlScaling);
+;!IF:L^newPower= %(newPower)^;
