@@ -1,0 +1,70 @@
+ZVSE2
+
+
+Вот так можно получить/изменить инфу из znpc00.txt
+
+// Строки 10-18 - skill mouseover hint
+*!SN:E7827723/(CALLCONV_CDECL)/10/1/(ZNPC00TXT); Студент
+
+// Строки 19-27 - skill RMC desc
+*!SN:E7827723/(CALLCONV_CDECL)/19/1/(ZNPC00TXT); Получает 150% опыта Героя
+*!SN:Bv1/d/?(str:z);
+*!IF:M^%(str)^;
+
+
+!?FU(js_SetCommandersSkills);
+; Замок (174/183 Паладин)
+
+; Оплот (175/184 Знахарь)
+
+; Башня (176/185 Храмовница)
+
+; Инферно (177/186 Суккуб)
+
+; Некрополис (178/187 Пожиратель Душ)
+// Замена имени скилла
+!!SN:E7827723/(CALLCONV_CDECL)/14/1/(ZNPC00TXT);
+!!SN:Bv1/d/^%T(jsCommanders.178.skill.name)^;
+// Замена описания скилла
+!!VR(divider:y)&i^hota_necromancy^=0:S2;
+!!VR(divider:y)&i^hota_necromancy^:S4;
+!!SN:T^jsCommanders.178.skill.description^/?(newSkillDesc:z)/^number^/(divider);
+!!SN:E7827723/(CALLCONV_CDECL)/23/1/(ZNPC00TXT);
+!!SN:Bv1/d/(newSkillDesc);
+
+; Темница (179/188 Зверь)
+
+; Цитадель (180/189 Вождь Огров)
+
+; Крепость (181/190 Шаман)
+
+; Сопряжение (182/191 Астральный Дух)
+
+
+
+************************************************************************* SKILLS
+; Некрополис (178/187 Пожиратель Душ) - усилитель некромантии
+!?FU(js_Hero_GetNecromancyPower_OnEnter);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(heroId:y); 1A
+
+!!FU(js_GetCommanderByHeroId):P(heroId)/?(commander:y);
+
+!!VR(commander:y):S(heroId) *(SIZEOF_COMMANDER_STRUCT) +(COMMANDER_TABLE_PTR);
+!!UN:C(commander)/4/4/?(isDead:y);
+;!IF:L^isDead= %(isDead)^; 0
+!!UN:C(commander)/12/4/?(type:y); C
+;!IF:L^type= %(type)^; 4
+
+!!if&(type)=4/(isDead)=0;
+  !!UN:C(commander)/284/4/?(lvl:y); 11C
+  ;!IF:L^lvl= %(lvl)^; 0
+  !!if&(lvl)>0;
+    !!VR(coeffPerLvl:e):S1 :20 *3 :29; +15% на 30лвле
+    ;!VR(coeffPerLvl:e)&i^hota_necromancy^=0:S;
+    !!VR(bonusNecromancy:e):S(lvl) *(coeffPerLvl);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(necroPower:e);
+    !!VR(result:e):S(necroPower) +(bonusNecromancy);
+    ;!IF:L^necroPower= %(necroPower), bonusNecromancy= %(bonusNecromancy), result= %(result)^;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/(result);
+  !!en;
+!!en;
