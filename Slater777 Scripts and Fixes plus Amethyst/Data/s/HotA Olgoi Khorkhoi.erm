@@ -1,0 +1,102 @@
+ZVSE2
+
+
+; Абилка олгоев - сжирают стек, если добивают его, и получают сразу доп ход
+
+
+!?FU(OnSetupBattlefield);
+!!VRi^js_olgoi_defStack^:S(NO_STACK);
+
+
+!?FU(js_OlgoiDevour);
+!#VA(caster:x) (target:x);
+
+!!UN:C(target)/76/4/?(targetCount:y); 4C
+
+!!if&(targetCount)<=0;
+  !!UN:C(target)/56/4/?(targetHexId:y); 38
+  ; Cast empty spell to trigger animation
+  !!if&i^battle_isVisible^;
+    !!SN:P^S227SPEC^;
+    !!SN:E4489088/(CALLCONV_THISCALL)/(caster)/(targetHexId); 00447F80 BattleStack_CastDefaultSpell
+  !!en;
+  
+  // Deleting the dead stack 005A76ED
+  ; BattleMgr_005A7630(&BattleMgr->battleHexes[MonPo->hex_ix], MonPo->Side, MonPo->IndexInSide);
+  !!FU(js_GetHexByHexId):P(targetHexId)/?(hexPtr:y);
+  !!UN:C(target)/244/4/?(side:y) C(target)/248/4/?(indexInSide:y); F4 F8
+  !!SN:E5928496/(CALLCONV_STDCALL)/(hexPtr)/(side)/(indexInSide);
+
+  !!UN:C(target)/132/4/?f; 84
+  !!VR(isDoubleHexed:y):Sf &(MON_FLAG_WIDE);
+  ; if ( (MonPo->creature_info.flags & 1) != 0 )
+  ; {
+  !!if&(isDoubleHexed);
+  ;   IndexInSide = MonPo->IndexInSide;
+  ;   Side = MonPo->Side;
+  ;   SecondOccupedGexNum = BattleStack_GetSecondOccupedGexNum(MonPo);
+    !!SN:E4481984/(CALLCONV_THISCALL)/(target); 004463C0
+    !!VR(secondHexId:y):Sv1;
+    !!FU(js_GetHexByHexId):P(secondHexId)/?(secondHexPtr:y);
+  ;   BattleMgr_005A7630(&BattleMgr->battleHexes[SecondOccupedGexNum], Side, IndexInSide);
+    !!SN:E5928496/(CALLCONV_STDCALL)/(secondHexPtr)/(side)/(indexInSide);
+  ; }
+  !!en;
+  ; BattleMgr_ClearRedrawNeeds(BattleMgr);
+  *!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cbtMgr:y);
+  *!SN:E4797072/(CALLCONV_THISCALL)/(cbtMgr); 00493290 BattleMgr_ClearRedrawNeeds
+!!en;
+
+
+!?FU(OnBeforeBattleAction);
+!!BG:A?(action:y);
+
+!!if&(action)=(BATTLE_ACTION_WALK_AND_ATTACK);
+  *!BG:N?(stackNum:y);
+  !!BMi^battle_acting_stack^:T?(monType:y);
+  !!FU&(monType)<>(MON_OLGOI_KHORKHOI):E;
+
+  !!BMi^battle_acting_stack^:F?f;
+  !!VR(moraled:y):Sf &(MON_FLAG_MORALE);
+
+  ;!IF:L^moraled= %(moraled)^;
+
+  !!if&(moraled)=(FALSE);
+    !!BG:E?(defStack:y);
+    !!VRi^js_olgoi_defStack^&(defStack)>(NO_STACK):S(defStack);
+  !!en;
+!!en;
+
+
+!?FU(OnBattleActionEnd)&i^js_olgoi_defStack^>(NO_STACK);
+!!BMi^js_olgoi_defStack^:N?(defNum:y);
+
+!!BMi^battle_acting_stack^:F?f;
+!!VR(moraled:y):Sf &(MON_FLAG_MORALE);
+;!IF:L^moraled= %(moraled)^;
+
+!!if&(defNum)<=0/(moraled)=0;
+  ; Remove the acted flag so cutthroat can act again
+  !!BMi^battle_acting_stack^:Fd~(MON_FLAG_ACTED) Fd|(MON_FLAG_MORALE);
+
+  ; Show battle log and play animation/sound
+  !!if&i^battle_isVisible^;
+    !!BMi^battle_acting_stack^:N?(monQty:y) T?(type:y);
+    !!VR(isPlural:y):S(monQty) -1 B;
+    !!SN:H^monname^/(type)/(isPlural)/?(monName:z);
+    !!SN:T^jsAmetistMod.creature.227.skillLogMsg^?(battleLog:z)/^monName^/(monName);
+    !!MM:S(battleLog);
+    
+    !!SN:P^MIRTH^;
+    !!BMi^battle_acting_stack^:V20;
+  !!en;
+!!el;
+  !!VRi^js_olgoi_defStack^:S(NO_STACK);
+!!en;
+
+
+!?FU(OnBeforeBattleStackTurn)&i^js_olgoi_defStack^>(NO_STACK);
+!#VA(stack:x);
+
+!!VR(stack):Si^battle_acting_stack^;
+!!VRi^js_olgoi_defStack^:S(NO_STACK);
