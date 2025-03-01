@@ -1,11 +1,12 @@
 ZVSE2
 
 
-;#UN:P71/?i^wog_71_enabled^;
+; Magic Ring and its components grant +5/10/15/50% magic damage
 
 
 !?FU(OnAfterErmInstructions)&i^wog_71_enabled^=0;  // Если не включена опция с таким же эффектом
 !!FU(js_RingOfMagiAddDesc):P;
+!!VRi^js_magic_ring^:S(TRUE);
 
 
 !?FU(js_RingOfMagiAddDesc);
@@ -26,40 +27,28 @@ ZVSE2
 !!SN:H^art^/(ART_RING_OF_THE_MAGI)/1/(artDesc139:z);
 
 
-!?FU(OnBeforeBattleUniversal)&i^wog_71_enabled^=0;
-!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
-  !!VR(bonus:y):S(NULL);
-  !!HEi^battle_hero_%i^:A2/(ART_RING_OF_THE_MAGI)/?y-4/?(isRingOfMagi:y);
+!?FU(js_MagicRing_ApplyBonusDamage)&i^js_magic_ring^;
+!#VA(hero:x) (power:x) (newPower:x);
 
-  !!if&(isRingOfMagi:y);
-    !!VR(bonus:y):S50;
-  !!el;
-    !!re j/0/2;
-      !!VR(artId:y):Sj +(ART_COLLAR_OF_CONJURING);
-      !!HEi^battle_hero_%i^:A2/(artId:y)/?y-4/?(isEqipped:y);
+!!VR(bonusPowerPercent:y):S0;
 
-      !!if&(isEqipped);
-        !!VR(bonusAdd:y):Sj*5 +5;
-        !!VR(bonus):+(bonusAdd);
-      !!en;
+!!FU(js_Hero_WearsArtifact):P(hero)/(ART_RING_OF_THE_MAGI)/?(equipped:y);
+!!if&(equipped);
+  !!VR(bonusPowerPercent):S50;
+  ;!FU:E;
+!!el;
+  !!re i/0/2;
+    !!VR(artId:y):Si +(ART_COLLAR_OF_CONJURING);
+    !!FU(js_Hero_WearsArtifact):P(hero)/(artId)/?(equipped:y);
+
+    !!if&(equipped);
+      !!VR(bonusAdd:y):Si*5 +5;
+      !!VR(bonusPowerPercent): +(bonusAdd);
     !!en;
   !!en;
-
-  !!VRi^wog_71_hero_%i_spellDamageBonus^:S(bonus);
 !!en;
 
-
-!?FU(OnMagicBasicResistance)&i^wog_71_hero_%i(battle_current_side)_spellDamageBonus^>0;
-!!BG:A?(action:y);                      [get active stack #, action type]
-
-!!if&(action)=(BATTLE_ACTION_HERO_CAST);
-  !!MR:D?(basicDmg:y);                  [get spell damage]
-  !!VR(newDmg:y):S(basicDmg) *i^wog_71_hero_%i(battle_current_side)_spellDamageBonus^ :100 +(basicDmg);
-  !!MR&(newDmg)>(basicDmg):D(newDmg);
-!!en;
-
-
-!?FU(OnAfterBattleUniversal);
-!!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
-  !!VRi^wog_71_hero_%i_spellDamageBonus^:S(NULL);
-!!en;
+!!VR(power): *1000;
+!!VR(power): *(bonusPowerPercent);
+!!VR(power): :100;
+!!FU(js_FloatToInt_Ceil):P(power)/?(newPower);
