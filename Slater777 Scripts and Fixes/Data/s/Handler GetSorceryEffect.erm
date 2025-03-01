@@ -1,0 +1,84 @@
+ZVSE2
+
+
+; All cases of empowering damaging spells
+
+
+!?FU(js_Hero_GetSorceryEffect_BeforeSorceryCheck);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(magicSchoolBitSet:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y);
+;!IF:L^hero= %(hero)^;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/12/4/?(powerFloat:e); C
+;!IF:L^powerFloat= %(powerFloat)^;
+!!VR(power:y):S(powerFloat);
+
+; Get the basic damage in order to avoid bonus multiplying
+!!FU(js_GetMagicDamageWithoutOrbs):P(hero)/(magicSchoolBitSet)/(power)/?(basicPower:y);
+
+; Cases
+!!VR(bonusPower:y):S0;
+
+; 1 - Magic Ring
+!!FU(js_MagicRing_ApplyBonusDamage):P(hero)/(basicPower)/?(bonusRingPower:y);
+;!IF:L^bonusRingPower= %(bonusRingPower)^;
+!!VR(bonusPower): +(bonusRingPower);
+
+; other cases
+; other cases
+; other cases
+
+; Patch the value
+!!if&(bonusPower);
+  !!VR(powerFloat): +(bonusPower);
+  !!UN:C(ebp)/12/4/(powerFloat);
+!!en;
+
+
+; In order to prevent bonuses from multiplying (it's too OP) we should rollback calcs with orbs
+; and get basic magic damage without them
+!?FU(js_GetMagicDamageWithoutOrbs);
+!#VA(hero:x) (magicSchoolBitSet:x) (power:x) (powerWithoutOrbs:x);
+
+!!VR(powerFloat:e):S(power);
+!!UN:C6548272/4/?(orbMultiplier:e); 63EB30 (by default 1.500)
+
+// Magic Arrow bitset = 15 (summ of all schoolbits)
+!!re i/1/8;
+  !!VR(schoolBit:y):S(magicSchoolBitSet) &i;
+  
+  !!if&(schoolBit);
+    !!if&(schoolBit)=1;  [Wind]
+      !!FU(js_Hero_WearsArtifact):P(hero)/(ART_ORB_OF_THE_FIRMAMENT)/?(equipped:y);
+      !!VR(powerFloat)&(equipped): :(orbMultiplier);
+      !!br;
+    !!en;
+
+    !!if&(schoolBit)=2;  [Fire]
+      !!FU(js_Hero_WearsArtifact):P(hero)/(ART_ORB_OF_TEMPESTUOUS_FIRE)/?(equipped:y);
+      !!VR(powerFloat)&(equipped): :(orbMultiplier);
+      !!br;
+    !!en;
+
+    !!if&(schoolBit)=4;  [Water]
+      !!FU(js_Hero_WearsArtifact):P(hero)/(ART_ORB_OF_DRIVING_RAIN)/?(equipped:y);
+      !!VR(powerFloat)&(equipped): :(orbMultiplier);
+      !!br;
+    !!en;
+
+    !!if&(schoolBit)=8;  [Earth]
+      !!FU(js_Hero_WearsArtifact):P(hero)/(ART_ORB_OF_SILT)/?(equipped:y);
+      !!VR(powerFloat)&(equipped): :(orbMultiplier);
+      !!br;
+    !!en;
+  !!en;
+
+  !!VRi:Sd<<1 -1;  [1, 2, 4, 8]
+!!en;
+
+!!if&(equipped);
+  !!VR(powerFloat): *1000;
+  !!VR(powerMultByTh:y):S(powerFloat);
+  !!FU(js_FloatToInt_Ceil):P(powerMultByTh)/?(powerWithoutOrbs);
+!!el;
+  !!VR(powerWithoutOrbs):S(power);
+!!en;
