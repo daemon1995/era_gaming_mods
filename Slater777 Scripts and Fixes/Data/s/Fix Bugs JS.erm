@@ -1,6 +1,48 @@
 ZVSE2
 
 
+!?FU(js_CreateERMHook);
+; fix bug: hero amplifiers dont work on creatures targeted spells
+!!SN:Ex1/1/5899869/(js_BattleMgr_CastSpell_BeforeSwitchCase); 5A065D
+; fix bug: faerie dragon casting sound is not played
+!!SN:Ex1/1/4446424/(js_BattleStack_InitAssets_BeforeInitShootingSound); 43D8D8
+
+!?FU(js_BattleMgr_CastSpell_BeforeSwitchCase);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/16/4/?(casterKind:y); 10
+;!IF:L^casterKind= %(casterKind)^;
+!!FU&(casterKind)<>1;
+!!UN:C(ebp)/8/4/?(spellId:y);
+
+!!SS(spellId):O?(targetType:y);
+!!if&(targetType)=-1;
+  !!BG:N?(activeStackNum:y);
+  !!BM(activeStackNum):Z?(stack:y);
+  !!FU(js_GetHeroByStackPtr):P(stack)/?(hero:y);
+  !!if&(hero);
+    !!UN:C(ebp)/-20/4/(hero); -14
+  !!en;
+!!en;
+
+
+!?FU(js_BattleStack_InitAssets_BeforeInitShootingSound);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stack:y) C(stack)/52/4/?(monType:y); 34
+!!FU(js_OnBattleStackShootingAssetLoading):P(monType)/?(result:y);
+
+!!if&(result);
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4446480; 0043D910
+!!en;
+
+
+!?FU(js_OnBattleStackShootingAssetLoading);
+!#VA(monType:x) (result:x);
+
+!!if&(monType)=(MON_FAERIE_DRAGON);
+  !!VR(result):S(TRUE);
+; other cases
+!!en;
+
+
 !?FU(OnAfterErmInstructions);
 ; Uland has advanced wisdom for no reason on lvl 1
 !!HE(HERO_ULAND):Ed/?(lvl:y);
