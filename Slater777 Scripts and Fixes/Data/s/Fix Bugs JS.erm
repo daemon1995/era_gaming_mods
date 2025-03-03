@@ -2,10 +2,28 @@ ZVSE2
 
 
 !?FU(js_CreateERMHook);
+; fix bug: you cant cast fly with better effect if you already have fly effect with worse effect
+!!SN:Ex1/1/4311161/(js_Cast_AdventureMagic_BeforeCheckFlyPower); 41C879
 ; fix bug: hero amplifiers dont work on creatures targeted damaging spells
 !!SN:Ex1/1/5899869/(js_BattleMgr_CastSpell_BeforeSwitchCase); 5A065D
 ; fix bug: faerie dragon casting sound is not played
 !!SN:Ex1/1/4446424/(js_BattleStack_InitAssets_BeforeInitShootingSound); 43D8D8
+
+
+!?FU(js_Cast_AdventureMagic_BeforeCheckFlyPower);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/274/4/?(heroFlyPower:y); 112
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(spellPower:y); 0 - no school, 1 - basic, 2 - adv, 3 - expert
+;!IF:M^heroFlyPower= %(heroFlyPower), spellPower= %(spellPower)^;
+
+!!if&(heroFlyPower)<(spellPower);
+  !!SN:E5084256/(CALLCONV_THISCALL)/(hero)/(ART_ANGEL_WINGS); 4D9460 Hero_WearsArtifactId
+  !!if&v1=0;
+    !!FU&(heroFlyPower)=0/(spellPower)=1:E; no school and basic effects are the same
+    !!SN:X?y99/0;
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4311257; 0041C8D9
+  !!en;
+!!en;
+
 
 !?FU(js_BattleMgr_CastSpell_BeforeSwitchCase);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/16/4/?(casterKind:y); 10
