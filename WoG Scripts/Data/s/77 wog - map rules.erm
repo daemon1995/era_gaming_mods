@@ -71,14 +71,14 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 ; Daily events now starts from the second day only - same mechanism as the original H3
 !?FU(WOG_101_RunMapRulesOnce);
   !!FU(WOG_101_BuildGrailsInTowns)&i^wog_101_map_rule_19_isEnabled^:P;           [build grails in towns - executed once]
-  *!FU(WOG_101_UpgradeTo8thLvl)&i^wog_101_map_rule_14_isEnabled^:P;              [upgrades creatures - executed every day needed for the first player turn]
+
   !!FU(WOG_101_SetDoubledHeroesMovements)&i^wog_101_map_rule_10_isEnabled^:P;    [executed once - needed for the first player turn]
   !!FU(WOG_101_PlaceWarlordsBanner)&i^wog_101_map_rule_20_isEnabled^:P;          [executed once]
-  !!FU(WOG_101_SetHeroes5thLevel)&i^wog_101_map_rule_7_isEnabled^:P;             [executed once]
+
   !!FU(WOG_101_AllowMultiplyCapitols)&i^wog_101_map_rule_13_isEnabled^:P;        [executed once]
   !!FU(WOG_101_AddBoarsOrAirElemsToDwells)&i^wog_101_map_rule_6_isEnabled^:P;    [executed once]
   !!FU(WOG_101_SetDoubledArtifacts)&i^wog_101_map_rule_8_isEnabled^:P;           [executed once]
-  *!FU(WOG_101_PlaceMagicPlains)&i^wog_101_map_rule_3_isEnabled^:Pi^timerOwner^; [executed every day - needed for the first player turn]
+
   !!FU(WOG_101_SetUpMonsters):P;                                                 [executed once]
   !!FU(WOG_101_HideMapInitPlayer)&i^wog_101_map_rule_9_isEnabled^:P;
 
@@ -167,35 +167,39 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 !!en;
 
 
-!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^;
+!?FU(OnEveryDay)&i^timerDay^=1;
   !!UN:P101/?(mapRulesMode:y);                                                               [check wogify options number - 5 means no rules]
   !!FU&(mapRulesMode)=(WOG_NO_MAP_RULES):E;                                                  [Exit timer if map rules are disabled in wogify options]
 
-  !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?(isAnyConflux:y) P234/?(isBannerBanned:y);
+  !!if&i^timerOnce^;
+    !!UN:U(OBJ_TOWN)/(TOWN_CONFLUX)/?(isAnyConflux:y) P234/?(isBannerBanned:y);
 
-  !!FU(NewIntArray):P21/?(rulesList:y);
-  !!FU(WOG_101_ReadOptionsFromMenu):P?(rulesList);
+    !!FU(NewIntArray):P21/?(rulesList:y);
+    !!FU(WOG_101_ReadOptionsFromMenu):P?(rulesList);
 
-  !!SN&(isAnyConflux:y):M(rulesList)/19/d*-1;                                                [clear grails option affection lol]
-  !!SN&(isBannerBanned:y):M(rulesList)/20/d*-1;                                           [clear warlord banners affection lol]
+    !!SN&(isAnyConflux:y):M(rulesList)/19/d*-1;                                                [clear grails option affection lol]
+    !!SN&(isBannerBanned:y):M(rulesList)/20/d*-1;                                           [clear warlord banners affection lol]
 
-  !!if&(mapRulesMode)=(WOG_RULES_FROM_MENU);
-    !!FU(WOG_101_AcceptOptionsFromMenu):P?(rulesList);                                       [accept current options]
-  !!el|(mapRulesMode)=(WOG_RULES_CHOOSE_DEFAULT)/(mapRulesMode)=(WOG_RULES_CHOOSE_EACH_GAME);
-    !!FU(WOG_101_ChooseMapRules):P(mapRulesMode)/?(rulesList:y);                             [choose rules and implement some]
-  !!el|(mapRulesMode)=(WOG_RULES_TWO_RANDOM)/(mapRulesMode)=(WOG_RULES_TWO_RANDOM_FROM_MENU);
-    !!FU(WOG_101_PickRandomOptions):P(mapRulesMode)/?(rulesList:y);                          [pick random]
+    !!if&(mapRulesMode)=(WOG_RULES_FROM_MENU);
+      !!FU(WOG_101_AcceptOptionsFromMenu):P?(rulesList);                                       [accept current options]
+    !!el|(mapRulesMode)=(WOG_RULES_CHOOSE_DEFAULT)/(mapRulesMode)=(WOG_RULES_CHOOSE_EACH_GAME);
+      !!FU(WOG_101_ChooseMapRules):P(mapRulesMode)/?(rulesList:y);                             [choose rules and implement some]
+    !!el|(mapRulesMode)=(WOG_RULES_TWO_RANDOM)/(mapRulesMode)=(WOG_RULES_TWO_RANDOM_FROM_MENU);
+      !!FU(WOG_101_PickRandomOptions):P(mapRulesMode)/?(rulesList:y);                          [pick random]
+    !!en;
+    
+    !!FU(WOG_101_SyncMapRulesVariables):P;
+
+    !!UN:R5/1/1 R7/0/1;                                                                        [Change mouse cursor to "wait" hourglass symbol][Show mouse cursor and disable changing]
+    !!FU(WOG_101_RunMapRulesOnce):P D;
+    !!UN:R7/0/0 R5/0/0;                                                                        [Show mouse cursor and enable changing][Restore default cursor]
+    !!UN:P230/?(showMapRules:y);                                                               [Check if Display Map Rules chosen at Map Start is enabled]
+    !!if&(showMapRules);
+      !!FU(WOG_230_AnnounceMapRules):P D;                                                      [announce rules to humans after 1st player on day 1]
+    !!en;
   !!en;
-  
-  !!FU(WOG_101_SyncMapRulesVariables):P;
 
-  !!UN:R5/1/1 R7/0/1;                                                                        [Change mouse cursor to "wait" hourglass symbol][Show mouse cursor and disable changing]
-  !!FU(WOG_101_RunMapRulesOnce):P D;
-  !!UN:R7/0/0 R5/0/0;                                                                        [Show mouse cursor and enable changing][Restore default cursor]
-  !!UN:P230/?(showMapRules:y);                                                               [Check if Display Map Rules chosen at Map Start is enabled]
-  !!if&(showMapRules);
-    !!FU(WOG_230_AnnounceMapRules):P D;                                                      [announce rules to humans after 1st player on day 1]
-  !!en;
+  !!FU(WOG_101_SetHeroes5thLevel)&i^wog_101_map_rule_7_isEnabled^:Pi^timerOwner^;             [executed once]
 
 
 ** end of timer routine
@@ -422,27 +426,28 @@ WoGify ERM code: 101 (0-5) plus 111-130 (0-1) for individual rules
 
 ** function to make hero at least 5th level if it has owner x1
 !?FU(WOG_101_SetHeroes5thLevel);
+!#VA(playerId:x);
 !#VA(tavernHeroes[2]:y);
 
-  !!re j/0/(PLAYER_LAST);                              [affect all heroes with owner btw]
-    !!OW:Hj/1 Vj/?(tavernHeroes[0])/?(tavernHeroes[1]);
-
+  *!re j/0/(PLAYER_LAST);                              [affect all heroes with owner btw]
+    !!OW:H(playerId)/1 V(playerId)/?(tavernHeroes[0])/?(tavernHeroes[1]);
+    !!VR(heroesNum:y):Sv1;
     !!re i/0/(tavernHeroes[SIZE])/1/-1;
       !!if&(tavernHeroes[i])<>(NO_HERO);
-        !!VRv1:+1;
-        !!VR(vVar:y):Sv1 +1;
+        !!VR(heroesNum:y):+1;
+        !!VR(vVar:y):S(heroesNum:y) +1;
         !!VRv(vVar:y):S(tavernHeroes[i]);
       !!en;
     !!en;
 
-    !!re i/2/v1/1/1;
+    !!re i/2/(heroesNum:y)/1/1;
       !!HEvi:E?(exp:y)/?l/1;
       !!if&(exp)<5000;
         !!VR(exp):-5000 *-1; 
         !!HEvi:Ed(exp:y);
       !!en;
     !!en;
-  !!en;
+  *!en;
 
 
 
