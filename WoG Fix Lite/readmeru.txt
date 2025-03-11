@@ -7,16 +7,14 @@
 Вот почему этот мод совместим со всеми другими модами объектов;
 
 Также были использованы материалы, за авторстом которых стоят:
-Yogdush
-Koven1Nordsiard
-HotA Crew
 Valery
+HotA Crew
 Kuririn
 Fred79
 Mod Design Team
 Docent Picolan
 Astaroth
 Fcst1
-Grayface
 Raistlin
+Grayface
 Dalion
