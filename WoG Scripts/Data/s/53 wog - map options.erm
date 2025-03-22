@@ -5,7 +5,7 @@ ZVSE2
 **  WoGify Name: script25.erm
 
 **  Updated: October 30, 2004
-**  Updated: Jun 2023 by Archer30
+**  Updated: Mar 2025 by Archer30
 
 ** Custom primary skill control for Choose Commander Class enabled by Hermann the Weird
 
@@ -52,48 +52,24 @@ Dialogue Box numbers used: 17
    Ban Spells from appearing in Mage Guilds and Pyramids
 ********************************************************************************
 
-!?FU10802;
+!?FU(WOG_146_BanSpells);
+!!FU(WOG_CheckIfAnySpellBannedByWoGOptions):P?(result:y)/?(bannedSpellsList:y);
+!!FU&(result)<>(TRUE):E;
 
-!!UN:P152/?y1; [Summon Boat: y1=1 if banned]
-!!UN&y1=1:J0/0/1; [Disable Summon Boat]
+!!SN:M(bannedSpellsList)/?(size:y);
 
-!!UN:P153/?y2; [Water Walk: y2=1 if banned]
-!!UN&y2=1:J0/7/1; [Disable Water Walk]
-
-!!UN:P154/?y3; [Town Portal: y3=1 if banned]
-!!UN&y3=1:J0/9/1; [Disable Town Portal]
-
-!!UN:P155/?y4; [Dimension Door: y4=1 if banned]
-!!UN&y4=1:J0/8/1; [Disable Dimension Door]
-
-!!UN:P156/?y5; [Fly: y5=1 if banned]
-!!UN&y5=1:J0/6/1; [Disable Fly]
-
-!!UN:P221/?y6; [Scuttle Boat: y6=1 if banned]
-!!UN&y6=1:J0/1/1; [Disable Scuttle Boat]
-
-!!UN:P222/?y7; [Visions: y7=1 if banned]
-!!UN&y7=1:J0/2/1; [Disable Visions]
-
-!!UN:P223/?y8; [Armageddon: y8=1 if banned]
-!!UN&y8=1:J0/26/1; [Disable Armageddon]
-
-!!UN:P246/?y9; [View Air: y9=1 if banned]
-!!UN&y9=1:J0/5/1; [Disable View Air]
-
-!!UN:P247/?y10; [View Earth: y10=1 if banned]
-!!UN&y10=1:J0/3/1; [Disable View Earth]
-
-!!UN:P249/?y11; [Disguise: y11=1 if banned]
-!!UN&y11=1:J0/4/1; [Disable Disguise]
+!!re i/0/(size)/1/-1;
+  !!SN:M(bannedSpellsList)/i/?(spell:y);
+  !!UN:J0/(spell)/1;
+!!en;
 
 -------------------------------------------------------------------------------
 
  [Prevent Heroes gaining Banned Spells from a Conflux Mage Guild in case Grail is built]
  [Note: there is no check to see if the hero already had the spell]
 !?FU(WOG_CreateERMHook);
-!!UN:P146/?(isBanEnabled:y); [Check if Ban from Mage Guilds option is selected]
-!!SN&(isBanEnabled:y):Ex1/1/6022493/(WOG_OnConfluxGrailGiveSpells);
+!!UN:P146/?(banFromGuildsEnabled:y); [Check if Ban from Mage Guilds option is selected]
+!!SN&(banFromGuildsEnabled:y):Ex1/1/6022493/(WOG_OnConfluxGrailGiveSpells);
 
 !?FU(WOG_OnConfluxGrailGiveSpells);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(spellId:y);
@@ -110,227 +86,231 @@ Dialogue Box numbers used: 17
 -------------------------------------------------------------------------------
 
  [Ban spells from appearing at Spell Shrines]
-!?FU10803;
+!?FU(WOG_BanSpellsFromObjects);
+!!FU(WOG_CheckIfAnySpellBannedByWoGOptions):P?(result:y)/?(bannedSpellsList:y);
+!!FU&(result)<>(TRUE):E;
 
-!!UN:U88/-1/?y1; [Check how many level 1 spell shrines are on map: store in y1]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO10804/1/y1/1&y1>0:P88/1; [Loop through level 1 spell shrines]
+!!UN:P147/?(banFromShrines:y);          [Check if Ban from Spell Shrines option is selected]
 
-!!UN:U89/-1/?y2; [Check how many level 2 spell shrines are on map: store in y2]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO10804/1/y2/1&y2>0:P89/2; [Loop through L2 shrines]
+!!if&(banFromShrines);
+  ; loop through all the Shrines (level 1 - level 3)
+  !!re (objType:y)/(OBJ_SHRINE_OF_MAGIC_INCANTATION)/(OBJ_SHRINE_OF_MAGIC_THOUGHT);
+    !!VR(x:y):S-1;
 
--------------------------------------------------------------------------------
+    !!re i;
+      !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+      !!br&(x)<0;
 
- [Loop through Spell Shrines]
- [Set a random spell that isn't banned or disabled]
- [x1=object type of shrine, x2=level of shrine]
-!?FU10804;
+      ; Check if the spell is banned
+      !!SR(x)/(y)/(z):S?(spell:y);      [Read spell at shrine]
+      !!co|(spell)<=(NO_SPELL)/(spell)>=(SPELL_LAST_WOG); [Skip if the spell isn't in wog options menu]
 
-!!UN:Ux1/-1/-1/2; [Store coordinates of next Shrine in v2/v3/v4]
-!!SRv2/v3/v4:S?y1; [Read spell at shrine: y1]
-!!FU|y1<0/y1>69:E; [Exit if invalid spell]
+      !!FU(WOG_CheckIfSpellBannedByWogOption):P(spell)/?(isBanned:y);
+      !!co&(isBanned)<>(TRUE);
 
-!!FU(WOG_CHECK_SPELL_BAN):Py1/?y30; [Check if spell is banned or disabled: y30>0 if yes]
+      ; Generate a non-banned/disabled spell
+      !!VR(level:y):S(objType) -87;
+      !!FU(WOG_GENERATE_SPELL):P(level)/(level)/0/0/1/0; [export the spell to y-99]
 
-!!if&y30>0;
-  !!FU(WOG_GENERATE_SPELL):Px2/x2/0/0/1/0; [Random non-banned level x2 spell: y-99]
-
-  !!if&y-99<>(NO_SPELL);
-    !!SRv2/v3/v4:Sy-99; [Set a random spell (y-99) that isn't banned or disabled]
-  !!el;
-    !!SRv2/v3/v4:S(SPELL_MAGIC_ARROW); [Set a random spell (y-99) that isn't banned or disabled]
-  !!en;
-!!en;
-
-
--------------------------------------------------------------------------------
-
- [Ban spells from being taught by Scholars]
-!?FU10805;
-
-!!UN:U81/-1/?y1; [Check how many Scholars are on the map: store in y1]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO10806/1/y1/1&y1>0:P; [Loop through Scholars]
-
--------------------------------------------------------------------------------
-
- [Loop through Scholars and substitute a non-banned spell of the same level]
- [to replace any banned spell, or if none available, a secondary skill intead]
-!?FU10806;
-
-!!UN:U81/-1/-1/2; [Store coordinates of next Scholar in v2/v3/v4]
-!!SCv2/v3/v4:T?y1 L?y2; [Get type of Scholar (y1) and spell taught (y2), if any]
-!!VRy2:-1024; [Subtract 1024 to get spell number]
-!!VRy3:S0;    [Clear y3]
-
-!!if&y1=2;
-  !!FU(WOG_CHECK_SPELL_BAN):Py2/?y30;
-
-  !!if|y30=1/y30=3;                     [Replace spell if the spell is banned in wog options]
-    !!FU7779:Py2;                       [Check level of banned spell: y-96]
-
-    !!FU(WOG_GENERATE_SPELL):Py-96/y-96/0/0/1/1/y2; [Generate new non-banned spell of same level: y-99]
-
-    !!if&y-99<>(NO_SPELL);
-      !!VRy5:Sy-99 |1024;                  [Add new non-banned spell of same level: y5]
-      !!SCv2/v3/v4&y-99>=0:T2 Ly5;    [Give Scholar new Spell unless all are banned (y5)]
-    !!el;
-      [If all spells of same level banned (y-99=-1), give a skill instead]
-      !!VRy4:S0 R27; [Random # from 1 to 27 for Secondary Skill replacement (y4)]
-      !!SCv2/v3/v4:T1 Sy4; [Give Scholar Secondary Skill (y4)]
+      ; Fix the spell id if not applicable
+      !!VR(spell:y):Sy-99;
+      !!VR(spell)&(spell)=(NO_SPELL):S(SPELL_MAGIC_ARROW); [fail safe]
+      !!SR(x)/(y)/(z):S(spell);
     !!en;
   !!en;
 !!en;
 
+!!UN:P148/?(banFromScholars:y);         [Check if Ban from Scholars option is selected]
 
--------------------------------------------------------------------------------
+!!if&(banFromScholars);
+  ; loop through all the Scholars
+  !!VR(x:y):S-1;
 
- [Ban spells from being found on Spell Scrolls]
-!?FU10809;
+  !!re i;
+    !!UN:U(OBJ_SCHOLAR)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
 
-!!UN:U93/-1/?y1; [Check how many Spell Scrolls are on the map: store in y1]
-!!VRv2:S-1; [Initialize v2 to -1 to work with new faster UN:U syntax]
-!!DO10810/1/y1/1&y1>0:P; [Loop through Spell Scrolls]
+    ; Next if the Scholar doens't provide a spell
+    !!SC(x)/(y)/(z):T?(scholarType:y);
+    !!co&(scholarType)<>2;
 
--------------------------------------------------------------------------------
+    ; Check if the spell is banned
+    !!SC(x)/(y)/(z):L?(value:y);
+    !!VR(spell:y):S(value) -1024;
+    !!co|(spell)<=(NO_SPELL)/(spell)>=(SPELL_LAST_WOG); [Skip if the spell isn't in wog options menu]
 
- [Loop through Spell Scrolls and substitute a new non-banned spell]
-!?FU10810;
-!!UN:U93/-1/-1/2; [Store coordinates of next Spell Scroll in v2/v3/v4]
-!!ARv2/v3/v4:V?y1; [Store spell number in y1]
-!!FU|y1<0/y1>69:E; [Exit if invalid spell]
-!!FU(WOG_CHECK_SPELL_BAN):Py1/?y30; [Check if spell is banned: y30>0 if yes]
+    !!FU(WOG_CheckIfSpellBannedByWogOption):P(spell)/?(isBanned:y);
+    !!co&(isBanned)<>(TRUE);
 
-!!if&y30>0;
-  !!FU7779:Py1; [Check level of spell on spell scroll: y-96]
-  !!FU(WOG_GENERATE_SPELL):Py-96/y-96/0/0/1/1/y1; [Generate new non-banned spell of same level: y-99]
-  !!if&y-99<>(NO_SPELL);
-    !!OBv2/v3/v4:Cy-99; [Give Spell Scroll new spell (y3)]
-  !!el;
-    !!OBv2/v3/v4:C(SPELL_MAGIC_ARROW); [Give Spell Scroll new spell (y3)]
+    ; Generate a non-banned/disabled spell
+    !!SS(spell):L?(level:y);
+    !!FU(WOG_GENERATE_SPELL):P(level)/(level)/0/0/1/0; [export the spell to y-99]
+
+    ; Fix the spell id if not applicable
+    !!VR(spell:y):Sy-99;
+
+    !!if&(spell)<>(NO_SPELL);
+      !!VR(value):S(spell) |1024;
+      !!SC(x)/(y)/(z):L(spell);
+    !!el;
+      !!VR(primSkillType:y):R0/0/3;     [Random # from 0 to 3 for Primary Skill replacement]
+      !!SC(x)/(y)/(z):T1 S(primSkillType); [Give Scholar Primary Skill]
+    !!en;
+  !!en;
+!!en;
+
+!!UN:P150/?(banFromScrollsAndPandora:y);[Check if Ban from Scolls/Pandora's Boxes option is selected]
+
+!!if&(banFromScrollsAndPandora);
+  ; loop through all the Scrolls
+  !!VR(x:y):S-1;
+
+  !!re i;
+    !!UN:U(OBJ_SPELL_SCROLL)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+
+    ; Check if the spell is banned
+    !!AR(x)/(y)/(z):V?(spell); [Store spell number]
+    !!co|(spell)<=(NO_SPELL)/(spell)>=(SPELL_LAST_WOG); [Skip if the spell isn't in wog options menu]
+
+    !!FU(WOG_CheckIfSpellBannedByWogOption):P(spell)/?(isBanned:y);
+    !!co&(isBanned)<>(TRUE);
+
+    ; Check if the spell is banned
+    !!FU(WOG_CheckIfSpellBannedByWogOption):P(spell)/?(isBanned:y);
+    !!co&(isBanned)<>(TRUE);
+
+    ; Generate a non-banned/disabled spell
+    !!SS(spell):L?(level:y);
+    !!FU(WOG_GENERATE_SPELL):P(level)/(level)/0/0/1/0; [export the spell to y-99]
+
+    ; Fix the spell id if not applicable
+    !!VR(spell:y):Sy-99;
+    !!VR(spell)&(spell)=(NO_SPELL):S(SPELL_MAGIC_ARROW); [fail safe]
+    !!OB(x)/(y)/(z):C(spell);
+  !!en;
+
+  ; loop through all the Pandora's Boxes
+  !!SN:M(bannedSpellsList)/?(size:y);
+  !!VR(x:y):S-1;
+
+  !!re i;
+    !!UN:U(OBJ_PANDORAS_BOX)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+    !!br&(x)<0;
+
+    ; Remove the given banned spell without giving a new one (since there are too many conditions to check without giving a duplicated one)
+    !!re j/0/(size)/1/-1;
+      !!SN:M(bannedSpellsList)/j/?(spell:y);
+      !!PA(x)/(y)/(z):S(spell)/(NO_SPELL);
+    !!en;
   !!en;
 !!en;
 
 -------------------------------------------------------------------------------
 
  [Ban spells from Heroes' starting spells]
-!?FU10811;
-!#VA(usedY[12]:y);
-!!UN:P37/?y1; [Check if Rebalanced Factions script is active: y1=1 if active]
-!!UN:P152/?y2; [Check if Summon Boat is banned: y2=1 if banned]
-!!UN:P153/?y3; [Check if Water Walk is banned: y3=1 if banned]
-!!UN:P154/?y4; [Check if Town Portal is banned: y4=1 if banned]
-!!UN:P155/?y5; [Check if Dimension Door is banned: y5=1 if banned]
-!!UN:P156/?y6; [Check if Fly is banned: y6=1 if banned]
-!!UN:P221/?y7; [Check if Scuttle Boat is banned: y7=1 if banned]
-!!UN:P222/?y8; [Check if Visions is banned: y8=1 if banned]
-!!UN:P223/?y9; [Check if Armageddon is banned: y9=1 if banned]
-!!UN:P246/?y10; [Check if View Air is banned: y10=1 if banned]
-!!UN:P247/?y11; [Check if View Earth is banned: y11=1 if banned]
-!!UN:P249/?y12; [Check if Disguise is banned: y11=1 if banned]
-!!VR(exit:y):S(TRUE);
+; Archer30: No longer teaches the hero another spell 
+!?FU(WOG_146_BanHeroStartingSpells);
+!!FU(WOG_CheckIfAnySpellBannedByWoGOptions):P?(result:y)/?(bannedSpellsList:y);
+!!FU&(result)<>(TRUE):E;
 
-!!re i/2/12;
-  !!if&yi<>(FALSE);
-    !!VR(exit):S(FALSE);
+!!FU(NewIntArray):P11/?(bannedSpells:y);
+!!SN:V(bannedSpells)/0/(SPELL_SUMMON_BOAT)/(SPELL_WATER_WALK)/(SPELL_TOWN_PORTAL)/(SPELL_DIMENSION_DOOR)/(SPELL_FLY)/(SPELL_SCUTTLE_BOAT)
+  /(SPELL_VISIONS)/(SPELL_ARMAGEDDON)/(SPELL_VIEW_AIR)/(SPELL_VIEW_EARTH)/(SPELL_DISGUISE);
+
+; Give another spell
+; If the proposed spell is disabled in the map, the hero will not grant another spell (too much work to work out another spell)
+!!FU(NewIntArray):P11/?(replacingSpells:y);
+!!SN:V(replacingSpells)/0/(SPELL_CURE)/(SPELL_WATER_ELEMENTAL)/(SPELL_RESURRECTION)/(SPELL_AIR_ELEMENTAL)/(SPELL_AIR_ELEMENTAL)/(SPELL_WEAKNESS)
+  /(SPELL_BLIND)/(SPELL_INFERNO)/(SPELL_HASTE)/(SPELL_CURSE)/(SPELL_DISRUPTING_RAY);
+
+!!re k/0/10;
+  !!SN:M(replacingSpells)/k/?(rSpell:y);
+  !!UN:J0/(rSpell)/?(isDisabled:y);
+
+  !!if&(isDisabled);
+    !!SN:M(replacingSpells)/k/(NO_SPELL);
   !!en;
 !!en;
 
-!!if&(exit)=(FALSE);
-  !!FU(NewIntArray):P?(bannedSpells:y);
-  !!FU(Array_Push):P(bannedSpells)/(SPELL_SUMMON_BOAT)/(SPELL_WATER_WALK)/(SPELL_TOWN_PORTAL)/(SPELL_DIMENSION_DOOR)/(SPELL_FLY)/(SPELL_SCUTTLE_BOAT);
-  !!FU(Array_Push):P(bannedSpells)/(SPELL_VISIONS)/(SPELL_ARMAGEDDON)/(SPELL_VIEW_AIR)/(SPELL_VIEW_EARTH)/(SPELL_DISGUISE);
+; Loop through all the heroes
+!!re (hero:y)/0/(HERO_LAST_WOG);
+  !!re j/0/10;
+    !!SN:M(bannedSpells)/j/?(bSpell:y);
+    !!HE(hero):M(bSpell)/?(learned:y);
 
-  !!FU(NewIntArray):P?(replacingSpells:y);
-  !!FU(Array_Push):P(replacingSpells)/(SPELL_CURE)/(SPELL_WATER_ELEMENTAL)/(SPELL_RESURRECTION)/(SPELL_AIR_ELEMENTAL)/(SPELL_AIR_ELEMENTAL)/(SPELL_WEAKNESS);
-  !!FU(Array_Push):P(replacingSpells)/(SPELL_BLIND)/(SPELL_INFERNO)/(SPELL_HASTE)/(SPELL_VIEW_EARTH)/(SPELL_DISRUPTING_RAY);
+    !!if&(learned);
+      !!FU(WOG_CheckIfSpellBannedByWogOption):P(bSpell)/?(isBanned:y);
 
-  !!re (hero:y)/0/(HERO_LAST_WOG);
+      !!if&(isBanned:y);
+        !!HE(hero):M(bSpell)/(FALSE);
 
-      !!re j/0/10;
-        !!SN:M(bannedSpells)/j/?(bSpell:y);
-        !!VR(optId:y):Sj +2;
-        !!HE(hero):M(bSpell)/?(learned:y);
-
-        !!if&(learned)/y(optId);
-          !!SN:M(replacingSpells)/j/?(rSpell:y);
-
-          !!HE(hero):M(bSpell)/(FALSE) M(rSpell)/(TRUE);
-        !!en;
+        ; Give another spell
+        !!SN:M(replacingSpells)/j/?(rSpell:y);
+        !!HE(hero)&(rSpell)>(NO_SPELL):M(rSpell)/(TRUE);
       !!en;
+    !!en;
   !!en;
 !!en;
 
-!!if&y1=(TRUE);
+; Give another spell
+!!UN:P37/?(rebalancedFactionsEnabled:y); [Check if Rebalanced Factions script is active]
+
+!!if&(rebalancedFactionsEnabled);
   !!HE(HERO_GEM):M(SPELL_CURE)/(FALSE);
 !!en;
 
-*!re i/0/(end_value);
-  
-*!en;
-!!FU:E;
-*!DO10812/0/155/1|y2=1/y3=1/y4=1/y5=1/y6=1/y7=1/y8=1/y9=1/y10=1/y11=1/y12=1:Py1/y2/y3/y4/y5/y6/y7/y8/y9/y10/y11/y12; [Loop through all Heroes if anything banned]
+!?FU(WOG_CheckIfAnySpellBannedByWoGOptions);
+!#VA(result:x) (bannedSpellsList:x);
+!#VA(spellIsBanned[11]:y);
+
+!!VR(result):S(FALSE);
+
+!!UN:P152/?(spellIsBanned[0]); [Check if Summon Boat is banned: y2=1 if banned]
+!!UN:P153/?(spellIsBanned[1]); [Check if Water Walk is banned: y3=1 if banned]
+!!UN:P154/?(spellIsBanned[2]); [Check if Town Portal is banned: y4=1 if banned]
+!!UN:P155/?(spellIsBanned[3]); [Check if Dimension Door is banned: y5=1 if banned]
+!!UN:P156/?(spellIsBanned[4]); [Check if Fly is banned: y6=1 if banned]
+!!UN:P221/?(spellIsBanned[5]); [Check if Scuttle Boat is banned: y7=1 if banned]
+!!UN:P222/?(spellIsBanned[6]); [Check if Visions is banned: y8=1 if banned]
+!!UN:P223/?(spellIsBanned[7]); [Check if Armageddon is banned: y9=1 if banned]
+!!UN:P246/?(spellIsBanned[8]); [Check if View Air is banned: y10=1 if banned]
+!!UN:P247/?(spellIsBanned[9]); [Check if View Earth is banned: y11=1 if banned]
+!!UN:P249/?(spellIsBanned[10]); [Check if Disguise is banned: y11=1 if banned]
+
+!!FU(NewIntArray):P?(bannedSpellsList);
+
+!!re i/0/10;
+  !!FU(Array_Push)&(spellIsBanned[i]):P(bannedSpellsList)/(spellIsBanned[i]);
+!!en;
+
+!!SN:M(bannedSpellsList)/?(size:y);
+
+!!if&(size);
+  !!VR(result):S(TRUE);
+  !!SN:F^ExtendArrayLifetime^/(bannedSpellsList);
+!!el;
+  !!VR(bannedSpellsList):S0;
+!!en;
 
 -------------------------------------------------------------------------------
-
------------------------------------
 
  [Ban spells from appearing various places]
 
 !#UN:P146/?v1; [Check if Ban from Mage Guilds option is selected]
-!#FU10802&v1=1:P; [Call function to ban selected spells]
+!#FU(WOG_146_BanSpells)&v1=1:P; [Call function to ban selected spells]
 
 !#UN:P151/?v1; [Check if Ban from Heroes starting spells is selected]
-!#FU10811&v1=1:P; [Call function to ban selected spells]
+!#FU(WOG_146_BanHeroStartingSpells)&v1=1:P; [Call function to ban selected spells]
 
 ; Execute these later in order to work with the latest map conditions
 !?FU(OnAfterErmInited);
-!!UN:P148/?v1; [Check if Ban from Scholars option is selected]
-!!FU10805&v1=1:P; [Call function to ban selected spells]
+!!FU(WOG_BanSpellsFromObjects):P; [Call function to ban selected spells]
 
-!!UN:P150/?v1; [Check if Ban from Spell Scrolls option is selected]
-!!FU10809&v1=1:P; [Call function to ban selected spells]
-
-!?PI;
-!!UN:P147/?v1; [Check if Ban from Spell Shrines option is selected]
-!!FU10803&v1=1:P; [Call function to ban selected spells]
-
-; UN:J value would be reset after loading game!
+; UN:J value would be reset after loading a save!
 !?FU(OnAfterLoadGame);
 !!UN:P146/?v1; [Check if Ban from Mage Guilds option is selected]
-!!FU10802&v1=1:P; [Call function to ban selected spells]
-
--------------------------------------------------------------------------------
-
- [Pandora's Box trigger - for selected spell banning]
-
-!?OB6;
-
- [Check if spell banning for Pandora's Box is enabled]
-!!UN:P150/?y-1;
-
-!!if&y-1<>0;
-
-   !!LE998:S?(spells:y); [Number of spells in Pandora's Box: y-2]
-
-   !!if&(spells)>0;
-     !!re i/0/(spells)/1/-1;
-       !!LE998:Si/?(spell:y);                [Check each spell given by Pandora's Box: y1]
-
-       !!FU(WOG_CHECK_SPELL_BAN):P(spell)/?(result:y);                [Check if spell is banned: =1 or 3 if banned]
-
-       !!if|(result)=1/(result)=3;
-         !!LE998:Si/-1;            [If banned, remove spell from box]
-       !!en;
-     !!en;
-   !!en;
-!!en;
- [Call Function 10814 if banning is enabled]
-
-*?HL(ANY_HERO);
-*!HL:Sd/(SKILL_NECROMANCY)/(SKILL_DIPLOMACY);
--------------------------------------------------------------------------------
+!!FU(WOG_146_BanSpells)&v1=1:P; [Call function to ban selected spells]
 
 -------------------------------------------------------------------------------
 
@@ -340,122 +320,125 @@ Dialogue Box numbers used: 17
 ********************************************************************************
    Artifact Banning
 ********************************************************************************
-
--------------------------------------------------------------------------------
-
- [Disable Combination Artifact parts so Combo Artifacts can't be assembled]
-!?FU10816;
-!!UN:Ax16/5/-1; [Remove Combination part number]
-
 -------------------------------------------------------------------------------
 
  [Disable Artifacts]
+!?FU(WOG_BanArtifacts);
+!!UN:P157/?v1; [Boots of Levitation]
+!!UN&v1=1:A90/1;
 
-!#UN:P157/?v1; [Boots of Levitation]
-!#UN&v1=1:A90/1;
+!!UN:P158/?v1;                          [Angel Wings]
+!!UN&v1=1:A72/1;
 
-!#UN:P158/?v1; [Angel Wings]
-!#UN&v1=1:A72/1;
+!!UN:P159/?v1;                          [Tome of Air Magic]
+!!UN&v1=1:A87/1;
 
-!#UN:P159/?v1; [Tome of Air Magic]
-!#UN&v1=1:A87/1;
+!!UN:P160/?v1;                          [Tome of Earth Magic]
+!!UN&v1=1:A89/1;
 
-!#UN:P160/?v1; [Tome of Earth Magic]
-!#UN&v1=1:A89/1;
+!!UN:P161/?v1;                          [Tome of Fire Magic]
+!!UN&v1=1:A86/1;
 
-!#UN:P161/?v1; [Tome of Fire Magic]
-!#UN&v1=1:A86/1;
+!!UN:P162/?v1;                          [Tome of Water Magic]
+!!UN&v1=1:A88/1;
 
-!#UN:P162/?v1; [Tome of Water Magic]
-!#UN&v1=1:A88/1;
+!!UN:P163/?v1;                          [Spellbinder's Hat]
+!!UN&v1=1:A124/1;
 
-!#UN:P163/?v1; [Spellbinder's Hat]
-!#UN&v1=1:A124/1;
+!!UN:P164/?v1;                          [Sea Captain's Hat]
+!!UN&v1=1:A123/1;
 
-!#UN:P164/?v1; [Sea Captain's Hat]
-!#UN&v1=1:A123/1;
+!!UN:P166/?v1;                          [Recanter's Cloak]
+!!UN&v1=1:A83/1;
 
-!#UN:P166/?v1; [Recanter's Cloak]
-!#UN&v1=1:A83/1;
+!!UN:P167/?v1;                          [Orb of Inhibition]
+!!UN&v1=1:A126/1;
 
-!#UN:P167/?v1; [Orb of Inhibition]
-!#UN&v1=1:A126/1;
+!!UN:P168/?v1;                          [Orb of Vulnerability]
+!!UN&v1=1:A93/1;
 
-!#UN:P168/?v1; [Orb of Vulnerability]
-!#UN&v1=1:A93/1;
+!!UN:P172/?v1;                          [Necklace of Ocean Guidance]
+!!UN&v1=1:A71/1;
 
-!#UN:P172/?v1; [Necklace of Ocean Guidance]
-!#UN&v1=1:A71/1;
+!!UN:P175/?v1;                          [Shackles of War]
+!!UN&v1=1:A125/1;
 
-!#UN:P175/?v1; [Shackles of War]
-!#UN&v1=1:A125/1;
+!!UN:P176/?v1;                          [Magic Wand]
+!!UN&v1=1:A141/1;
 
-!#UN:P176/?v1; [Magic Wand]
-!#UN&v1=1:A141/1;
+!!UN:P226/?v1;                          [Gold Tower Arrow]
+!!UN&v1=1:A142/1;
 
-!#UN:P226/?v1; [Gold Tower Arrow]
-!#UN&v1=1:A142/1;
-
-!#UN:P227/?v1; [Monster's Power]
-!#UN&v1=1:A143/1;
+!!UN:P227/?v1;                          [Monster's Power]
+!!UN&v1=1:A143/1;
 
 ; Set Ban Commander Artifacts as Enabled if Commander is disabled
-!#UN:P(WOG_OPT_DISABLE_COMMANDERS)/?y30;
-!#UN&y30:P238/(TRUE);
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(commanderIsDisabled:y);
+!!UN&(commanderIsDisabled)=(TRUE):P238/(TRUE);
 
-!#UN:P238/?v1; [Commander Artifacts: Note: enables artifacts if not disabled]
-!#UN&v1=1:A146/v1; (Axe of Smashing)
-!#UN&v1=1:A147/v1; (Mithril Mail)
-!#UN&v1=1:A148/v1; (Sword of Sharpness)
-!#UN&v1=1:A149/v1; (Helm of Immortality)
-!#UN&v1=1:A150/v1; (Pendant of Sorcery)
-!#UN&v1=1:A151/v1; (Boots of Haste)
-!#UN&v1=1:A152/v1; (Bow of Seeking)
-!#UN&v1=1:A153/v1; (Dragon Eye Ring)
-!#UN&v1=1:A154/v1; (Hardened Shield)
-!#UN&v1=1:A155/v1; (Slava's Ring of Power)
+!!UN:P238/?v1;                          [Commander Artifacts: Note: enables artifacts if not disabled]
 
-!#UN:P177/?v1; [Slava's Ring of Power]
-!#UN&v1=1:A155/1;
+!!if&v1=1;
+  !!re i/146/155;
+    !!UN:Ai/1;
+  !!en;
+!!en;
+
+!!UN:P177/?v1;                          [Slava's Ring of Power]
+!!UN&v1=1:A155/1;
 
 // Enable Vial of Dragon Blood and Armageddon's Blade for random maps - not directly spawning on the maps though
+!!FU(WOG_CheckRandomMap):P?(isRandMap:y);[Check random map]
 
-!?FU(WOG_234_BanArtifacts);
-!!FU(WOG_CheckRandomMap):P?(isRandMap:y);         [Check random map]
+!!UN:P197/?(vialBanned:y);              [Vial of Dragon Blood]
 
-!!UN:P197/?(vialBanned:y); [Vial of Dragon Blood]
-!!if&(vialBanned);
+!!if&(vialBanned)=(TRUE);
   !!UN:A(ART_VIAL_OF_DRAGON_BLOOD)/1;
 !!el&(isRandMap);
   !!UN:A(ART_VIAL_OF_DRAGON_BLOOD)/0;
 !!en;
 
-!!UN:P224/?(bladeBanned:y); [Armageddon's Blade]
-!!if&(bladeBanned);
+!!UN:P224/?(bladeBanned:y);             [Armageddon's Blade]
+
+!!if&(bladeBanned)=(TRUE);
   !!UN:A(ART_ARMAGEDDONS_BLADE)/1;
 !!el&(isRandMap);
   !!UN:A(ART_ARMAGEDDONS_BLADE)/0;
 !!en;
 
-!!UN:P234/?v1; [Warlord's Banner]
-!!UN:A156/v1; [Note: enables artifact if not disabled]
+!!UN:P(WOG_OPT_STACK_EXPERIENCE)/?(stackExpEnabled:y); [Disable Warlord's Banner if stack exp isn't enabled]
+!!UN&(stackExpEnabled)<>(TRUE):P234/(TRUE);
 
-!!UN:P236/?v1; [Crimson Shield of Retribution]
-!!UN:A157/v1; [Note: enables artifact if not disabled]
+!!UN:P234/?v1;
+!!UN&v1=1:A(ART_WARLORDS_BANNER)/(TRUE);
 
-!!UN:P237/?v1; [Barbarian Lord's Axe of Ferocity]
-!!UN:A158/1; [Note: disables artifact (like other combos) even if not disabled]
+!!UN:P236/?v1;                          [Crimson Shield of Retribution]
+!!UN&v1=1:A(ART_CRIMSON_SHIELD_OF_RETRIBUTION)/(TRUE);
 
-!#FU(WOG_234_BanArtifacts):P;
+!!UN:A(ART_BARBARIAN_LORDS_AXE_OF_FEROCITY)/1; [Note: disables Barbarian Lord's Axe of Ferocity (like other combos) even if not disabled]
+!!UN:P237/?v1;                          [Crimson Shield of Retribution]
 
-!#UN:P241/?v1; [Dragonheart]
-!#UN&v1=1:A159/1;
+!!if&v1=1;
+  !!UN:A(ART_OGRES_CLUB_OF_HAVOC)/5/-1 A(ART_TARG_OF_THE_RAMPAGING_OGRE)/5/-1 A(ART_TUNIC_OF_THE_CYCLOPS_KING)/5/-1 A(ART_CROWN_OF_THE_SUPREME_MAGI)/5/-1;
+!!en;
 
-!#UN:P243/?v1; [Gate Key]
-!#UN&v1=1:A160/1;
+!!UN:P241/?v1;                          [Dragonheart]
+!!UN&v1=1:A159/1;
 
-!#UN:P178/?v1; [Assembling of Combination Artifacts]
-!#DO10816/7/128/1&v1=1:P;
+!!UN:P243/?v1;                          [Gate Key]
+!!UN&v1=1:A160/1;
+
+!!UN:P178/?v1;                          [Assembling of Combination Artifacts]
+
+!!if&v1=1;
+  !!FU(GetMaxArtifactId):P?(lastArt:y);
+
+  !!re i/(ART_CENTAUR_AXE)/(lastArt);
+    !!UN:Ai/5/-1;
+  !!en;
+!!en;
+
+!#FU(WOG_BanArtifacts):P;
 
 -------------------------------------------------------------------------------
 
