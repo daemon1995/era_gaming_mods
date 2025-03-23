@@ -245,12 +245,36 @@ ZVSE2
   !!FU(WOG_54_RemoveOrRestoreWarMachinesOnBattle):Pi^battle_hero_%i^/i/0;
 !!en;
 
-; Disable the placement Catapult in siege if needed
-!?FU(WOG_54_OnPlaceCatapult);
-!!if&i^wog_54_%i(battle_hero_0)_disable%(ART_CATAPULT)^;
-  !!SN:X?t/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4600715;
+; Disable the placement of Ballistas and First Aid Tents from Commanders
+!?FU(WOG_OnNpcPlacesWarMachine)&i^wog_54_enabled^;
+!#VA(hook:x);
+
+; Exit if placing war machine is disabled
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-12/4/?(restrainPlacement:y);
+!!FU&(restrainPlacement):E;
+
+; Exit if the corresponding war machine isn't disabled
+!!UN:C(ebp)/16/4/?(side:y) C(ebp)/20/4/?(commanderStruct:y) C(commanderStruct)/12/4/?(commanderFaction:y);
+
+!!VR(art:y):S(NO_ART);
+
+!!if&(commanderFaction)=(TOWN_RAMPART);
+  !!VR(art):S(ART_FIRST_AID_TENT);
+!!el&(commanderFaction)=(TOWN_STRONGHOLD);
+  !!VR(art):S(ART_BALLISTA);
 !!en;
+
+!!VR(hero:y):Si^battle_hero_%(side)^;
+
+!!FU&i^wog_54_%(hero)_disable%(art)^<>(TRUE):E;
+
+; Prevent placing the war machine
+!!UN:C(ebp)/-12/4/1;
+
+; Disable the placement Catapult in siege if needed
+!?FU(WOG_54_OnPlaceCatapult)&i^wog_54_%i(battle_hero_0)_disable%(ART_CATAPULT)^;
+!!SN:X?t/0;
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4600715;
 
 ; set machines attributes
 !?FU(OnSetupBattlefield)&i^wog_54_enabled^;
@@ -653,7 +677,7 @@ ZVSE2
 
 !?FU(WOG_ShowWarMachineInfo)&i^wog_54_enabled^;
 !#VA(heroId:x);
-!#VA(usedY[10]:y);
+!#VA(usedY[10]:y);                      [legacy]
 
 !!VR(clickedSlot:y):Si^mouse_item^;
 !!VR(clickedSlot)&(clickedSlot)>58:-44; trade right hero fix
@@ -668,7 +692,19 @@ ZVSE2
 !!VR(warMachine)&(clickedSlot)=(MON_FIRST_AID_TENT):S(ART_FIRST_AID_TENT);
 !!HE(heroId):A2/(warMachine)/d/?(wmAmount:y) S(SKILL_BALLISTICS)/?(skillLvl:y) B0/?z7 R2/?(gender:y);
 
-!!FU&(wmAmount)=0:E; exit if no found
+!!if&(wmAmount)=0;
+  ; Allow disabling the war machines of Hierophants and Ogre Leaders
+  !!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(disableCommanders:y);
+
+  !!if&(disableCommanders)=(FALSE);
+    !!CO(heroId):T?(commanderFaction:y);
+
+    !!VR(wmAmount)&(warMachine)=(ART_FIRST_AID_TENT)/(commanderFaction)=(TOWN_RAMPART):S1;
+    !!VR(wmAmount)&(warMachine)=(ART_BALLISTA)/(commanderFaction)=(TOWN_STRONGHOLD):S1;
+  !!en;
+
+  !!FU&(wmAmount)=0:E; exit if not found
+!!en;
 
 !!CM:R0;
 
@@ -719,7 +755,11 @@ ZVSE2
 
 !!if&i^mouse_action^=(MOUSE_LMB_PRESSED);
   !!IF:Q1/(PIC_TYPE_ART)/(warMachine)/(MSG_TYPE_QUESTION)/z154039;
-  !!FU(WOG_54_ManageWarMachineStatus)&1:P(heroId)/(warMachine)/(TRUE);
+
+  !!if&1;
+    !!IP:D-1;
+    !!FU(WOG_54_ManageWarMachineStatus):P(heroId)/(warMachine)/(TRUE) D(heroId)/(warMachine)/(TRUE);
+  !!en;
 !!en;
 
 ********************************* Functions ************************************
