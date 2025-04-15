@@ -12,7 +12,7 @@ ZVSE2
 
 ; Currently the check of whether the target is a henchman is disabled. 
 ; This brings better compatibility but at the same time, it makes henchmen and other speical creatures much more vulnerable.
-; Define in FU(ES_995_CheckIfStackAffectedByDeathStare) to exclue any stack from the Ranged Death Stare effect
+; Define in FU(ES_995_CheckIfStackAffectedByDeathStare) to enable a stack to be affected by the Ranged Death Stare effect.
 
 
 !?FU(OnBattleMouseHint);
@@ -36,9 +36,29 @@ ZVSE2
 !!BU:Ey5/?y6;
 !!FU&y6=-1:E;
 
+; Exit if on the same side
 !!VRy8:Sy6:21;
 !!FU&y2=y8:E;
 
+; Exit if the target is immune to Death Stare
+!!FU(ES_995_CheckIfStackAffectedByDeathStare):Py6/?y83;
+!!FU&y83<>(TRUE):E;
+
+!!BMy6:T?y31;
+
+; Exit if the target is a commander
+!!FU(ES_CheckIfMonsterIsValid):Py31/?y82;
+!!FU&y82<>(TRUE):E;
+
+!!MA:Ly31/?y32;
+
+; Exit if the target is level 8+
+!!if&y32=(MON_MAX_LEVEL);
+  !!MA:F(MON_BLOOD_DRAGON)/?y80 Fy31/?y81;
+  !!FU&y81>=y80:E;;
+!!en;
+
+; Check if the target is in the range
 !!BMy6:P?y5 F?y20;
 !!VRy20:&1;
 !!FU222000:Py4/y5/?v2;
@@ -58,10 +78,6 @@ ZVSE2
 !!VRy12:+1;
 !!FU&y12<v2:E;
 
-!!BMy6:F?y50;
-!!VRy51:Sy50&262144;
-!!FU&y51<>0:E;
-
 !!BMy1:N?y30;
 
 ; Henchmen, for the current side
@@ -79,24 +95,6 @@ ZVSE2
     *!VRy30:Sy75;
   *!en;
 *!en;
-
-!!BMy6:T?y31;
-
-; Exit if the target is a commander
-!!FU(ES_CheckIfMonsterIsValid):Py31/?y82;
-!!FU&y82<>(TRUE):E;
-
-!!MA:Ly31/?y32;
-
-; Exit if the target is level 8+
-!!if&y32=(MON_MAX_LEVEL);
-  !!MA:F(MON_BLOOD_DRAGON)/?y80 Fy31/?y81;
-  !!FU&y81>=y80:E;;
-!!en;
-
-; Exit if the target is just special (for 3rd party scripts)
-!!FU(ES_995_CheckIfStackAffectedByDeathStare):Py6/?y83;
-!!FU&y83<>(TRUE):E;
 
 !!VRy33:S600+y32;
 !!VRv600:C36/22/11/8/6/4/2;
@@ -167,9 +165,29 @@ ZVSE2
 !!BU:Ey5/?y6;
 !!FU&y6=-1:E;
 
+; Exit if on the same side
 !!VRy8:Sy6:21;
 !!FU&y2=y8:E;
 
+; Exit if the target is immune to Death Stare
+!!FU(ES_995_CheckIfStackAffectedByDeathStare):Py6/?y83;
+!!FU&y83<>(TRUE):E;
+
+!!BMy6:T?y31;
+
+; Exit if the target is a commander
+!!FU(ES_CheckIfMonsterIsValid):Py31/?y82;
+!!FU&y82<>(TRUE):E;
+
+!!MA:Ly31/?y32;
+
+; Exit if the target is level 8+
+!!if&y32=(MON_MAX_LEVEL);
+  !!MA:F(MON_BLOOD_DRAGON)/?y80 Fy31/?y81;
+  !!FU&y81>=y80:E;
+!!en;
+
+; Check if the target is in the range
 !!BMy6:P?y5 F?y20;
 !!VRy20:&1;
 !!FU222000:Py4/y5/?v2;
@@ -189,10 +207,6 @@ ZVSE2
 !!VRy12:+1;
 !!FU&y12<v2:E;
 
-!!BMy6:F?y50;
-!!VRy51:Sy50&262208;
-!!FU&y51<>0:E;
-
 !!BMy1:N?y30;
 
 *!UN:P49/?y99;
@@ -209,24 +223,6 @@ ZVSE2
     *!VRy30:Sy75;
   *!en;
 *!en;
-
-!!BMy6:T?y31;
-
-; Exit if the target is a commander
-!!FU(ES_CheckIfMonsterIsValid):Py31/?y82;
-!!FU&y82<>(TRUE):E;
-
-!!MA:Ly31/?y32;
-
-; Exit if the target is level 8+
-!!if&y32=(MON_MAX_LEVEL);
-  !!MA:F(MON_BLOOD_DRAGON)/?y80 Fy31/?y81;
-  !!FU&y81>=y80:E;
-!!en;
-
-; Exit if the target is just special (for 3rd party scripts)
-!!FU(ES_995_CheckIfStackAffectedByDeathStare):Py6/?y83;
-!!FU&y83<>(TRUE):E;
 
 !!VRy33:S600+y32;
 !!VRv600:C36/22/11/8/6/4/2;
@@ -312,6 +308,13 @@ ZVSE2
 // Function to check if the targeted stack can be affected ranged death stare (for 3rd party scripts)
 !?FU(ES_995_CheckIfStackAffectedByDeathStare);
 !#VA(stack:x) (result:x);
+
+!!VR(result):S(FALSE);
+
+; Skip non-alive units
+!!BM(stack):F?(flags:y);
+!!VR(isAlive:y):S(flags) &(MON_FLAG_ALIVE);
+!!FU&(isAlive)=0:E;
 
 !!VR(result):S(TRUE);
 

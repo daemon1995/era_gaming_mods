@@ -19,7 +19,7 @@ Hotkey for battlefiled:
 Press F2 to change the type of special terrains.
 Press F3 to use additional cheats.
 
-TrainerX can be loaded during the game. Press F12 to update your mod settings.
+TrainerX can be loaded during the game. Press F12 to update your mod settings and activate the trainer.
 (If you have any issue with some descriptions after pressing F12, save and load again)
 
 Compatibility: Compatible with Advanced Classes Mod (M/GM level secondary skills) and Third Upgrade Mod (new creatures and artifacts)

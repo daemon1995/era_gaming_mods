@@ -242,7 +242,7 @@ ZVSE2
 !!en;
 
 !!UN:J0/(spell)/?(disabled:y); [Check if spell is enabled (0) or disabled (1)]
-!!FU(WOG_CheckIfSpellIsBannedByWogOption):P(spell)/?(banned:y);
+!!FU(WOG_CheckIfSpellBannedByWogOption):P(spell)/?(banned:y);
 
 !!VR(result):S0; [Set to 0 if spell is available]
 !!VR(result)&(banned):S1; [Set to 1 if spell is banned]
@@ -250,7 +250,7 @@ ZVSE2
 !!VR(result)&(disabled)/(banned):S3; [Set y-94 to 3 if spell is banned and disabled]
 !!VRy-94:S(result);                     [legacy]
 
-!?FU(WOG_CheckIfSpellIsBannedByWogOption);
+!?FU(WOG_CheckIfSpellBannedByWogOption);
 !#VA(spell:x) (result:x);
 
 !!VR(result):S(FALSE);
@@ -1094,7 +1094,7 @@ Returned Values:
   !!VRy10&y3=1:S593 +y11; [new index number]
   !!VRvy10&y3=1:C16/19/0/-1/0/0/0; [lost bottle] [table of Y water objects]
 
-  !!FU671&y20>0:P82/-1/0/y20/20; [replace 20% of sea chests]
+  !!FU671&y20>0:P(OBJ_SEA_CHEST)/-1/0/y20/20; [replace 20% of sea chests]
 
 
   ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1442,6 +1442,7 @@ Returned Values:
 
 !?FU674;
 !#VA(objType:x);
+!#VA(usedY[10]:y);
 
 !!VRy1:Sv955 *7 +602; [now vy1 is footprint]
 !!VRy2:Sy1 +1; [now vy2 is terrain required]
@@ -1450,7 +1451,59 @@ Returned Values:
 
 !!TR952:T?y5/d/d/d/d/d/d/d; [get terrain]
 !!VRy4&vy2<>-1/vy2<>y5:S0; [wrong terrain]
-!!VRy4&(objType)=(OBJ_DRAGON_UTOPIA)/y5=8:S0; [Skip Utopias on water]
+
+; Skip Utopias on water
+; It makes no sense to have Battle Academy placed on water
+!!VRy4&(objType)=(OBJ_DRAGON_UTOPIA)/y5=8:S0;
+
+; Make sure Lost bottle (replacing Sea Chests) is accessible
+; Unlike Sea Chests Lost bottles cannot be visited from above
+; Here we check tiles to make sure Lost Bottles don't block the path after placing
+!!if&(objType)=(OBJ_SEA_CHEST);  
+  !!if&y5<>8;                           [If the sea chest isn't on the sea for some reason, don't replace it]
+    !!VRy4:S0;
+
+  !!el&v953>0;                          [When the y is bigger than 0 (no point checking when there is nothing above)]
+    !#VA(x[3]:y) (canBeAccessed[3]:y);
+    !!UN:X?(size:y)/?(hasUnderground:y);
+
+    ; Set up coordinates
+    !!VR(yAbove:y):Sv953 -1;
+    !!VR(x[0]):Sv952 -1;
+    !!VR(x[1]):Sv952;
+    !!VR(x[2]):Sv952 +1;
+
+    ; Check out the passability of tiles above the chest
+    !!re i/0/2;
+      !!VR(canBeAccessed[i]):S(FALSE);
+
+      ; Next if the tile is out of range
+      !!co|(x[i])<=-1/(x[i])>=(size);
+
+      !!TR(x[i])/(yAbove)/v954:T?(terrainType:y)/d/d/d/d/d/d/d P?(passable:y);
+      !!VR(canBeAccessed[i])&(terrainType)=8/(passable):S(TRUE);
+    !!en;
+
+    ; If any of the tiles above can be accessed, check out the two tiles besides the chest
+    !!if|(canBeAccessed[0])/(canBeAccessed[1])/(canBeAccessed[2]);
+      !!re i/0/2;
+        ; Next if it is the tile of the chest
+        !!co&i=1;
+
+        ; Next if the tile is out of range
+        !!co|(x[i])<=-1/(x[i])>=(size);
+
+        !!TR(x[i])/v953/v954:T?(terrainType:y)/d/d/d/d/d/d/d P?(passable:y);
+
+        !!if&(terrainType)=8/(passable);
+          !!br|(canBeAccessed[1])/(canBeAccessed[i]);
+        !!en;
+      !!en;
+
+      !!VRy4&i=(x[SIZE]):S0;
+    !!en;
+  !!en;
+!!en;
 
 !!FU686:P0/-1; [test square above yellow for redness]
 !!VRy6:Sv966;
@@ -1967,7 +2020,7 @@ Returned Values:
 !!AR(x)/(y)/(z):Vd(random);             [gold amount = 100 * AR:V value for ]
 
 // Allow to pick up Lost Bottles after defeating the guards
-; This script allow to pick up Lost Bottles and remove it from the map. These bottles are known to block H3 pathfinding and becomes a problem for custom maps.
+; This script allow to pick up Lost Bottles and remove it from the map. These bottles are known to block H3 pathfinding and become a problem for custom maps.
 ; AI players will never pick up Lost Bottles
 !$OB(OBJ_CREATURE_BANK)/19&(ERM_FLAG_IS_HUMAN);
 ; Exit if the Utopia has not been cleared

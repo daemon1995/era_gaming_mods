@@ -34,30 +34,48 @@ ZVSE2
 
 // Hero sprites in battle
 !?FU(OnAfterErmInstructions);
-!!FU(NewStrArray):P36/?i^gem_heroBattleDefsList^/(M_STORED);
+!!FU(NewStrArray):P18/?i^gem_heroBattleDefsList0^/(M_STORED) P18/?i^gem_heroBattleDefsList1^/(M_STORED);
 
-!!SN:Vi^gem_heroBattleDefsList^/0/^CH00.def^/^CH01b.DEF^/^CH02.def^/^CH03b.DEF^/^CH04b.DEF^/^CH05.def^/^CH06.def^/^CH07b.def^/^CH08.def^/^CH09b.DEF^/^CH010.def^/^CH011b.DEF^/^CH013.DEF^/^CH013b.def^/^CH014.def^/^CH015.def^/^ch16.def^/^CH17.def^;
-!!SN:Vi^gem_heroBattleDefsList^/18/^CH00b.DEF^/^CH01.def^/^CH02b.DEF^/^CH03.def^/^CH04.def^/^CH05b.DEF^/^CH06b.DEF^/^CH07.def^/^CH08b.def^/^CH09.def^/^CH010b.def^/^CH11.def^/^CH012.def^/^CH012b.DEF^/^CH014.def^/^CH015.def^/^CH16b.def^/^CH17b.DEF^;
+!!SN:Vi^gem_heroBattleDefsList0^/0/^CH00.def^/^CH01b.DEF^/^CH02.def^/^CH03b.DEF^/^CH04b.DEF^/^CH05.def^/^CH06.def^/^CH07b.def^/^CH08.def^/^CH09b.DEF^/^CH010.def^/^CH011b.DEF^/^CH013.DEF^/^CH013b.def^/^CH014.def^/^CH015.def^/^ch16.def^/^CH17.def^;
+!!SN:Vi^gem_heroBattleDefsList1^/0/^CH00b.DEF^/^CH01.def^/^CH02b.DEF^/^CH03.def^/^CH04.def^/^CH05b.DEF^/^CH06b.DEF^/^CH07.def^/^CH08b.def^/^CH09.def^/^CH010b.def^/^CH11.def^/^CH012.def^/^CH012b.DEF^/^CH014.def^/^CH015.def^/^CH16b.def^/^CH17b.DEF^;
 
-!?FU(gem_OnSetUpBattleHeroSprite)&i^gem_heroBattleDefsList^;
+!!SN:Mi^gem_heroBattleDefsList1^/?(size:y);
+!!FU(gem_AddCombatHeroDefs):Pi^gem_heroBattleDefsList0^/i^gem_heroBattleDefsList1^/(size);
+
+
+
+!?FU(gem_OnSetUpBattleHeroSprite)&i^gem_heroBattleDefsList0^/i^gem_heroBattleDefsList1^;
 !#VA(hook:x);
 
 ; Get the index of the sprite
 !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EAX)/4/?(heroStruct:y);
 !!FU&(heroStruct)=(NULL):E;
 
-!!UN:C(heroStruct)/48/4/?(index:y);
 !!UN:C(heroStruct)/981/4/?(isFemale:y);
-!!VR(index:y)&(isFemale):+18;
-!!FU&(index)<0/(index)>35:E;            [failed safe]
+!!VR(array:y):Si^gem_heroBattleDefsList%(isFemale:y)^;
 
-; Load the filename pointer to the memory
-!!SN:Mi^gem_heroBattleDefsList^/?(memAddr:y)/(index);
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/(memAddr);
+!!SN:M(array)/?(size:y);
+!!UN:C(heroStruct)/48/4/?(heroClass:y);
 
-; Jump
-!!SN:X?t/0;
-!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4599933;
+*!UN:C(heroStruct)/48/4/?(heroClass:y);
+*!UN:C6806764/4/?(heroTypesInfoTable:y);
+
+*!VR(offset:y):S64 *(heroClass) ;
+*!UN:C(heroTypesInfoTable)/(offset)/4/?(townType:y);
+
+*!UN:C
+!!if&(heroClass:y)>=0/(heroClass)<(size:y);
+    ; Load the filename pointer to the memory
+  !!SN:M(array)/?(memAddr:y)/(heroClass);
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/(memAddr);
+
+  ; Jump
+  !!SN:X?t/0;
+  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4599933;
+
+!!en;
+
+
 
 // Optimised Mana Vortex interaction
 ; Mana Vortex is now activated manually and can only be used by a guest hero. Additionally, AI hero allies cannot use Mana Vortex in the player's castle.
