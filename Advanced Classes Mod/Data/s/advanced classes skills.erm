@@ -4,7 +4,7 @@ ZVSE2
                  Advanced Classes Mod 1.09 for ERA 3.x
 ********************************************************************************
 
-A Mod by Perry R. 2016-2024.
+A Mod by Perry R. 2016-2025.
 Contributors: Credits in the readme.txt
 
 Content:
@@ -612,7 +612,10 @@ thanks to Daemon :)
 
 It simply skips the condition of "don't check resistance when it's a monster spell"
 this should make creature casts respecting dwarv type golem resistance
-!!UN:C5899743/(UNC_INT16)/(OPCODE_NOP_2);[5A05DF by Archer]
+by Archer30
+; Disable as it also affects the resistance of retaliation for some reason. Also, creature spell casters are already bad. 
+; If we really need this feature, we should use a hook
+*!UN:C5899743/(UNC_INT16)/(OPCODE_NOP_2);[5A05DF by Archer]
 
 ; Building - Necromancy Amplifier
 !!UN:C6977844/4/?(ptr:y);
@@ -3942,7 +3945,7 @@ Creature speed   Base movement
 !!VRy3&y70<=1/y3<=5:S5R5;               [If Monster level 1 and 2 and below 6 set to 5-10]
 
 !!VRy22:*y3;                            [Total Hiring Costs]
-!!VRy22&y22<1:S2000000000;              [Set to 2 Billions in case of overflow]
+!!VRy22&y22<1:S2100000000;              [Set to 2.1 Billions in case of overflow]
 !!SN:W^acm_Classic_Diplomacy^/?y97;
 !!SN:W^ACM_Diplomacy_Price_Default^/?y58;
 !!SN:W^ACM_Diplomacy_Price_Old_Diplo^/?y59;
@@ -5424,12 +5427,13 @@ Till here Normal Necromancy
 
 !!if&(specType)=0/(specSkill)=(SKILL_ESTATES);
   !!HE(heroId):E?(exp:y)/?(level:y)/1;
-  !!VR(specGold:y):S(gold) *(level) *5 :100;
+  !!VR(specGold:y):S(gold) *(level) :10; [10% per level]
   !!VR(gold):+(specGold);
 !!en;
 
 ; Compatibility with WoG Scripts
 ; Here we copy the part from WoG Scripts, but it won't be executed twice as we jumped over later
+; Currently, both options are disbaled in ACM due to wrong description
 !!if&i^wog_estates_ignore_native_calculation^=0; [Adds bonus from scripts]
   !!if&i^wog_203_enabled^;              [Estates I]
     !!FU(WOG_203_Hero_GetEstatesIBonus):P(heroId)/(skillLvl)/?(result:y); [if hero has estates, is in use and it's that hero's owner's turn, continue in function 7005 - if enabled]
@@ -7458,7 +7462,7 @@ x5=Current Spell Points
 
 !!CA(CURRENT_TOWN):U?(townId:y);
 
-!!if&i^tum_8thDwell_%(townId)^;
+!!if&i^eighth_8thDwell_%(townId)^;
   !#VA(usedY[70]:y);                    [Don't place this at the start of the function, it would corrupt IF:N dlg monster numbers for some reason]
 
   !!if|i^tum_reborn_on^/i^tum_full_on^;
@@ -7488,7 +7492,7 @@ x5=Current Spell Points
 
   !!if&999;
     ; Compatibility with 8th mon (from TUM)
-    !!if&i^tum_8thDwell_%(townId)^;
+    !!if&i^eighth_8thDwell_%(townId)^;
       !!IF:Ny51/y41/y52/y42/y53/y43/y54/y44/y55/y45/y56/y46/y57/y47/(PIC_TYPE_MONSTER)/(picSubtype);
     !!el;
       !!IF:Ny51/y41/y52/y42/y53/y43/y54/y44/y55/y45/y56/y46/y57/y47;
@@ -7514,7 +7518,7 @@ x5=Current Spell Points
 !!en;
 
 ; Compatibility with 8th mon (from TUM)
-!!if&i^tum_8thDwell_%(townId)^;
+!!if&i^eighth_8thDwell_%(townId)^;
   !!if|i^tum_reborn_on^/i^tum_full_on^;
     !!FU(eighth_SetOrGet8thMonByTownId):P(townId)/(mon)/dy(index);
   !!el;
@@ -8699,8 +8703,14 @@ Ranged units get +50 speed to act first in battle
 !!FU|y1=183/y1=184/y1=185/y1=186/y1=187/y1=188/y1=189/y1=190/y1=191:E;
 !!BMx16:F?i;                            [Give Pepp to Shooters]
 !!VRi:&4;                               [Check for Shooter]
-!!BMx16&x1=1/i>0:Sd50;
-!!BMx16&x1=2/i>0:Sd-50;
+!!FU&i=0:E;
+
+!!if&x1=1;
+  !!BMx16:Sd50;
+!!el&x1=2;
+  !!BMx16:S?y30;
+  !!BMx16&y30>50:Sd-50;
+!!en;
 
 Hunter gets +50% MR in first Battle Round, also works for AI
 !?MR2;                                  [Magic Resistance Trigger]
@@ -10971,10 +10981,10 @@ Fire Mage Commander class script, cast Fireball with attacks. Scales as 8 times 
 
 ; Cast the spell
 !!VRi^acm_fireMageSpell^:Sy21;
-!!VRi^acm_fireMageStack^:Sy2;
-!!FU(ACM_GetActualStackSide):Py2/?i^acm_fireMageSide^;
+!!VRi^acm_fireMageStack^:S(atkStack);
+!!FU(ACM_GetActualStackSide):P(atkStack)/?i^acm_fireMageSide^;
 
-!!BMy2:Cy21/y3/3/3/0;                   [Cast Expert Spell at Stack Position]
+!!BM(atkStack):Cy21/y3/3/3/0;            [Cast Expert Spell at Stack Position]
 
 !!VRi^acm_fireMageSpell^:S0;
 !!VRi^acm_fireMageStack^:S0;
@@ -12551,7 +12561,7 @@ At each level up AI will choose com class if none has been selected. Each level 
 
 !!VRx4:Sx3*3*y20:100;                   [To give back value with 3% speciality increase]
 *!VRx4:Sx3*2*y20:100;                   [To give back value with 2% speciality increase]
-!!VRx4&x2=13:Sx3*10*y20:100;            [Make exception 10% for Estate to show correct info in hero spec icon]
+!!VRx4&x2=13:Sx3*10*y20:100;             [Make exception 10% for Estate to show correct info in hero spec icon]
 
 
 ********************************************************************************
@@ -15776,8 +15786,9 @@ Glittering Surcoat of Quicksand 168
 !!BMx16:T?y1;
 !!FU|y1=145/y1=146/y1=147/y1=148/y1=149:E; [Execlude Warmachines]
 !!BMx16:S?y1;
+!!FU&y1<=3:E;
+
 !!VRy2:Sy1-1;
-!!VRy2&y2<1:S1;
 !!BMx16:Sy2;
 
 ********************************************************************************
@@ -18906,7 +18917,7 @@ The Champions Honor full set grants Warmachine Upgrades at level up with a 20%/5
 
 ********************************************************************************
 *Set Artifact Descriptions at Map Start*
-!?FU(OnGameEnter);
+!?FU(OnAfterErmInited);
 
 !!UN:P102/?y2;                          [Check for Artifact Boost]
 !!UN:P71/?y3;                           [Check for Enhanced Artifacts]
@@ -19999,7 +20010,7 @@ Heals over the maximum HP of your creatures, reviving them if possible.^;
 *!DO(AC_Function_105)/21/41/1&y1=0:P;
 *!SN:W^Heal_Cast1^/1;                                                           [call funktion for heal defender]
 !!en;
-!!SN&v9280=1:W^Slow_Cast0^/0;
+!!SN&v9280=1:W^Slow_Cast0^/0;           [Archer: is this correct? Why ^Slow_Cast^ under Improved Cure??]
 !!SN&v9280=0:W^Slow_Cast1^/0;
 !!en;
 
@@ -20713,10 +20724,14 @@ Undead stacks heal and with next attack^;                                       
 !!MR:S?y4;                              [Spell Number]
 !!FU&y4<>11:E;                          [Exit if not Landmine spell]
 
-!!BG:A?y2;
-!!if|y2=2/y2=6;                        [if walk or attack]
+; Archer: Here we assume only the acting side can trigger the mine - this is not correct
+; In some mods, a stack can be forced to move when they are attacked or under the effect of a custom spell
+; Also, a mine can be triggered in any event, not just Walk and Attack - here 
+*!BG:A?y2;
+*!FU&y2<>2/y2<>6:E;                     [if walk or attack]
+
 !!BG:N?y1;                              [active stack]
-!!BG:Q?y3;                              [current attacking side]
+!!SN:W^battle_current_side^/?y3;        [current attacking side]
 
 !!if&y3=0;
 !!SN:W^H3_Fire Magic_0_Hero%V9282^/?y11;[Fire Magic Bonus handling]
@@ -20730,23 +20745,23 @@ Undead stacks heal and with next attack^;                                       
 !!FU|y81<3/y11<>1:E;
 !!en;
 
+!!BMy1:S?y6;                            [save speed in y6]
+!!FU&y6<=3:E;                           [Cannot be less than 3 speed]
+
 !!BMy1:T?y10;                           [monter type? attacking]
 !!MA:Ly10/?y11;                         [monster level of stack]
-!!BMy1:S?y6;                            [save speed in y6]
 
 !!VRy5&y11<=3:S1R1;                     [1-2 Monster til level 4]
 !!VRy5&y11=4:S1R2;                      [1-3 Monster  level 5]
 !!VRy5&y11>=5:S2R3;                     [2-5 Monster bigger level 5]
 
-!!VRy6:-y5;
-!!VRy6&y6=1:S2;                         [Cannot be less than 2 speed]
-!!VRy6&y6=0:S2;
-!!VRy6&y6=-1:S2;
-!!VRy6&y6=-2:S2;
-!!BMy1&y6>0:Sy6;                        [reduce speed by 3]
+!!VRy30:Sy6 -y5 F3/(INT_MAX);           [Get the new speed]
+!!BMy1:Sy30;                            [Set the new speed]
 
-!!SN:T^AC_Misc.Landmine Damage^/?z-1/^damage^/y5;
-!!BU:Mz-1;
+!!if&i^battle_isVisible^;
+  !!VRy5:Sy6 -y30;                      [Get the actual reduced speed]
+  !!SN:T^AC_Misc.Landmine Damage^/?z-1/^damage^/y5;
+  !!BU:Mz-1;
 !!en;
 
 *-------------------------------Landmine 2-------------------------------------*
@@ -20791,8 +20806,11 @@ Undead stacks heal and with next attack^;                                       
 !!BMy1:V9;                              [show inferno animation]
 !!MR:Fy12;                              [apply damage]
 
-!!SN:T^AC_Misc.Landmine Damage 2^/?z-1;
-!!BU:Mz-1;
+!!if&i^battle_isVisible^;
+  !!SN:T^AC_Misc.Landmine Damage 2^/?z-1;
+  !!BU:Mz-1;
+!!en;
+
 !!VRy90:-1;
 !!SN:W^landmine_var^/y90;               [Decrease big mines amount by 1 @alf]
 !!en;
@@ -21888,7 +21906,7 @@ Undead stacks heal and with next attack^;                                       
 !!BMy1:S?y10;                           [Save Current Speed in y10]
 !!VRy10:-1;                             [speed decrease value =-1]
 !!VRy10&y56=1:-1;                       [with GM Water value =-2]
-!!VRy10&y10<=2:S2;                      [Cannot be slower than 2]
+!!VRy10&y10<=3:S3;                      [Cannot be slower than 3]
 !!BMy1:Sy10;
 !!en;
 !!en;
