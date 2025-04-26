@@ -5427,7 +5427,7 @@ Till here Normal Necromancy
 
 !!if&(specType)=0/(specSkill)=(SKILL_ESTATES);
   !!HE(heroId):E?(exp:y)/?(level:y)/1;
-  !!VR(specGold:y):S(gold) *(level) :10; [10% per level]
+  !!VR(specGold:y):S(gold) *(level) :20; [5% per level]
   !!VR(gold):+(specGold);
 !!en;
 
@@ -12561,7 +12561,7 @@ At each level up AI will choose com class if none has been selected. Each level 
 
 !!VRx4:Sx3*3*y20:100;                   [To give back value with 3% speciality increase]
 *!VRx4:Sx3*2*y20:100;                   [To give back value with 2% speciality increase]
-!!VRx4&x2=13:Sx3*10*y20:100;             [Make exception 10% for Estate to show correct info in hero spec icon]
+!!VRx4&x2=(SKILL_ESTATES):Sx3*5*y20:100;[Make exception 10% for Estate to show correct info in hero spec icon]
 
 
 ********************************************************************************
@@ -17137,20 +17137,24 @@ Life Artifacts +2%, +4%, +6%
 !#VA(regenHp:x);                        [Amount of HP regen]
 !#VA(reviveNum:x);                      [Out. Number of creature revived]
 !#VA(actualRegenHp:x);                  [Out. Actual amount of HP regenerated. By default this equals to regen Hp unless the stack is neally full]
-!#VA(mustRevive:x);                     [OPT. Activate the effect only when it's possible to revive at least one (like the limit of Archangel spell). FALSE means not limited]
+; Optional modes
+; Mode 1: Activate the effect only when it's possible to revive at least one (like the limit of Archangel spell)
+; Mode 2: Allow the exessive amount of healing to increase the number of creature in the stack (breaking through the limit of BM:B)
+; These 2 modes have nothing in common, you can only activate one of them.
+!#VA(mode:x);
 
 ; Initialise vars
 !!FU:A?(numArgs:y);
-!!VR(mustRevive)&(numArgs)<5:S(FALSE);
+!!VR(mode)&(numArgs)<(@mode):S0;
 
-!!VR(reviveNum):S(FALSE);
+!!VR(reviveNum):S0;
 !!VR(actualRegenHp):S(regenHp);
 
 ; Calculations
 !!BM(stack):H?(hp:y) L?(lostHp:y) N?(num:y) B?(initNum:y);
 
-; Exit if the heal amount is no bigger than the HP of one unit if it's set to Must Revive mode
-!!FU&(regenHp)<(hp)/(mustRevive):E;
+; Exit if the healing amount is no bigger than the HP of one unit if it's set to mode 1
+!!FU&(regenHp)<(hp)/(mode)=1:E;
 
 !!VR(totalCurrHp:y):S(hp) *(num) -(lostHp);
 !!VR(totalInitHp:y):S(hp) *(initNum);
@@ -17158,8 +17162,8 @@ Life Artifacts +2%, +4%, +6%
 ; Exit if it overflows
 !!FU|(totalCurrHp)<=0/(totalInitHp)<=0:E;
 
-; Exit if nothing to heal
-!!if&(totalInitHp)<=(totalCurrHp);
+; Exit if nothing to heal - except for mode 2
+!!if&(totalInitHp)<=(totalCurrHp)/(mode)<>2;
   !!VR(actualRegenHp):S0;
   !!FU:E;
 !!en;
@@ -17168,9 +17172,15 @@ Life Artifacts +2%, +4%, +6%
 !!VR(totalNewHp:y):S(totalCurrHp) +(regenHp);
 
 ; Fix overflows
-!!VR(totalNewHp)&(totalNewHp)<(totalCurrHp):S(totalInitHp);
-; Deal with overheal
-!!if&(totalNewHp)>(totalInitHp);
+!!if&(totalNewHp)<(totalCurrHp);
+  ; Get the bigger hp between the current Hp and the initial Hp
+  !!VR(biggerHp:y):S(totalCurrHp);
+  !!VR(biggerHp)&(totalInitHp)>(totalCurrHp):S(totalInitHp);
+  !!VR(totalNewHp):S(biggerHp);
+!!en;
+
+; Deal with overheal - except for mode 2
+!!if&(totalNewHp)>(totalInitHp)/(mode)<>2;
   !!VR(overhealHp:y):S(totalNewHp) -(totalInitHp);
   !!VR(actualRegenHp):S(regenHp) -(overhealHp);
   !!VR(totalNewHp):S(totalInitHp);
