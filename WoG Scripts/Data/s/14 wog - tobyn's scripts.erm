@@ -37,9 +37,6 @@ ZVSE2
 !!if&i^wog_193_enabled^;
   !!SN:Ex1/1/5121389/(WOG_Hero_SSkillSet);                                    [set new skill value by game native way]
   !!SN:Ex1/1/5121366/(WOG_Hero_SSkillAdd);                                    [add new skill value by game native way]
-
-  !!SN:Ex1/1/7620989/(WOG_ERM_Hero_BeforeSkillAffection);                     [.text 004E2540  00000061  0000000C  00000005  R . . . B T .] 74497D
-  !!SN:Ex1/1/7621364/(WOG_ERM_Hero_AfterSkillAffection);                      [.text 004E2540  00000061  0000000C  00000005  R . . . B T .] 744AF4
 !!en;
 
 
@@ -215,7 +212,7 @@ ZVSE2
 ** USES hero var w47 (resource choice)
 **      FU(WOG_191_ShowEstatesSkillDlg)-FU2344
 ** calls library fcts FU(WOG_Hero_GetLuckLevel) (luck), FU(WOG_GetSkillInfoByClick) (skill click)
-** uses flag 236, uses v2333 (modifier for ExpEst gold/day), v2334 (lvl 10 msg status)
+** uses v2333 (modifier for ExpEst gold/day), v2334 (lvl 10 msg status)
 ** temp uses vars (v2331,v2332)
 ** ONLY ACTIVE if i^wog_191_enabled^=1 (wogify option 191)
 
@@ -256,9 +253,9 @@ ZVSE2
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
 
 
-  !!HE(heroId):X?(specType:y)/?(specSkill:y); better use this way so far as game uses __int64 (rax => eax+ [ebp-8])
+  !!HE(heroId):X?(specType:y)/?(specSubtype:y); better use this way so far as game uses __int64 (rax => eax+ [ebp-8])
   
-  !!if&(specType)=0/(specSkill)=(SKILL_ESTATES);
+  !!if&(specType)=0/(specSubtype)=(SKILL_ESTATES);
     !!HE(heroId):E?(exp:y)/?(level:y)/1;
     !!VR(specGold:y):S(gold) *(level) *5 :100;
     !!VR(gold):+(specGold);
@@ -309,11 +306,9 @@ ZVSE2
   !!VR(result)&(result)<0:S(maxGold);   [If the value become negative (due to super high level), set the addtional gold to the max value]
   !!VR(result):F0/(maxGold);
 
-  ; Manage daily gold bonus from selection (level 10+ only)
-  !!if&(level)>=10;
-    !!IF:W(heroId);
-    !!VR(result)&w47=14:+350;
-  !!en;
+  ; Manage daily gold bonus from selection
+  !!IF:W(heroId);
+  !!VR(result)&w47=14:+350;
 !!en;
 
 ; Initialise w-var
@@ -337,9 +332,16 @@ ZVSE2
 !#VA(usedY[20]:y);
 
 !!OW:H(CURRENT_PLAYER)/2332/x16;                     store x16th hero of that player in v2332
-!!IF:V236/1 Wv2332;                    set w var reference to current hero, set flag 236
-!!HEv2332:S(SKILL_ESTATES)/?(estatesLvl:y) E?(exp:y)/?(heroLvl:y)/1 X?y14/?y13/d/d/d/d/d; get Estates expertise (estatesLvl), hero experience (exp) and level (heroLvl), hero skill spec (y14=0 and y13=(SKILL_ESTATES) if Estates)
-!!FU&(estatesLvl)=0/w47=0:E;                     exit if that hero has no Estates and no w47
+!!HEv2332:S(SKILL_ESTATES)/?(estatesLvl:y); get Estates expertise (estatesLvl)
+!!FU&(estatesLvl)<=(SKILL_NOT_LEARNED):E;                     exit if that hero has no Estates
+
+!!IF:Wv2332;                    set w var reference to current hero
+
+!!HEv2332:E?(exp:y)/?(heroLvl:y)/1 X?y14/?y13/d/d/d/d/d; hero experience (exp) and level (heroLvl), hero skill spec (y14=0 and y13=(SKILL_ESTATES) if Estates)
+
+; indicator: is Estate specialist
+!!VRy30:S(FALSE);
+!!VRy30&y14=0/y13=(SKILL_ESTATES):S(TRUE);
 
 *!VRy10:S1;                            full modifier for Expert Estates and in general to avoid division by zero
 *!VRy10&(estatesLvl)=2:S2;                       half for Advanced Estates
@@ -351,33 +353,39 @@ ZVSE2
 *!OW&(estatesLvl)>0:R-1/6/?y17;                  check current treasure (player's current gold)
 *!OW&(estatesLvl)>0/y17<0:R-1/6/0;               no negative treasure allowed
 
-  change w47 state automatically (init w47 for lvl 1..9 or change w47 for lvl 10+ or reset unlucky Mithril)
+; change w47 state automatically (init w47 for lvl 1..9 or change w47 for lvl 10+ or reset unlucky Mithril)
 *!VRw47&(estatesLvl)=0:S0;                       (if no Estates then reset w47 because hero may have unlearned Estates)
 !!VRw47&w47=0/(estatesLvl)>(SKILL_NOT_LEARNED)/(heroLvl)<10:R0/1/6;       lvl 1..9 inits w47 with random 1..6, meaning +1 (Wood+Ore|Mercury|Sulfur|Crystal|Gem|350 Gold)
 
-*!VRw47&w47<8/y13=(SKILL_ESTATES)/y14=0:S8;         Estates specialty allows cycling/choosing from the beginning
-!!VRw47&w47<8/y13=(SKILL_ESTATES)/y14=0:+8;         Estates specialty sets random resource to daily (even for low-level), Expert allows choosing as if lvl10+
+*!VRw47&w47<8/y30:S8;         Estates specialty allows cycling/choosing from the beginning
+!!VRw47&w47<8/y30:+8;         Estates specialty sets random resource to daily (even for low-level), Expert allows choosing as if lvl10+
 
 !!VRy5:S41 +(estatesLvl);                        set correct Estates pic for msg below
 !!VRy6:S(NO_PIC_TYPE);                 init pic to none
-!!VRy6&(estatesLvl)=(SKILL_EXPERT)/(heroLvl)>=10/i^wog_36_enabled^:S(PIC_TYPE_RES_MITHRIL);           set Mithril pic if Expert Estates and lvl10+ and Mithril active
 
-!!VR(playerBit:y):S1 Sd<<i^timerOwner^;
-!!VRy12:Sv2334 &(playerBit);
-
-!!IF:V236/(TRUE);
-
-!!if&(ERM_FLAG_IS_HUMAN);
-  !!VRz-1:S^^;
-  !!VRz-1&i^wog_36_enabled^:Sz164014;              Mithril selection line added to lvl 10 msg if Mithril active
-  !!IF&w47<8/(estatesLvl)>(SKILL_NOT_LEARNED)/(heroLvl)>=10/y12=0:Q236/(PIC_TYPE_SEC_SKILL)/y5/y6/0/(MSG_TYPE_QUESTION)/z164015; human only msg once hero has reached lvl 10
+!!if&(estatesLvl)=(SKILL_EXPERT)/i^wog_36_enabled^/(heroLvl)>=10;
+  !!VRy6:S(PIC_TYPE_RES_MITHRIL);           set Mithril pic if Expert Estates and lvl10+ and Mithril active
 !!en;
 
-!!VRv2334&-236:|(playerBit);                   that color won't receive the message any more if Cancel was clicked
+; Show Estates II tutorial
+!!if&(ERM_FLAG_IS_HUMAN);
+  !!VR(playerBit:y):S1 Sd<<i^timerOwner^;
+  !!VRy12:Sv2334 &(playerBit);
 
-!!VRy11&w47<8/(estatesLvl)>(SKILL_NOT_LEARNED)/(heroLvl)>=10:S1;            indicator: no cycling/choice yet, Estates present, lvl 10+
+  !!VRz-1:S^^;
+  !!VRz-1&i^wog_36_enabled^:Sz164014;              Mithril selection line added to lvl 10 msg if Mithril active
 
-!!if&y11=1;
+  !!if&y12=0/(estatesLvl)=(SKILL_EXPERT);
+    ; human only msg once hero has reached lvl 10 or is a Estate specialist
+    !!if|(heroLvl)>=10/y30;
+      !!IF:Q1/(PIC_TYPE_SEC_SKILL)/y5/y6/0/(MSG_TYPE_MES)/z164015;
+      !!VRv2334:|(playerBit);                   that color won't receive the message any more
+    !!en;
+  !!en;
+!!en;
+
+; no cycling/choice yet, Estates present, lvl 10+
+!!if&w47<8/(estatesLvl)>(SKILL_NOT_LEARNED)/(heroLvl)>=10;
   !!VRw47:S8;                      init w47 resource cycling
   !!VRw47&(estatesLvl)=(SKILL_EXPERT)/i^wog_36_enabled^:S15;        init w47 Mithril cycling if Mithril script active and Exp Estates and lvl10+
 !!en;
@@ -386,7 +394,7 @@ ZVSE2
 
   prepare resources according to w47 state
 !!VR(res:y):S0;                             init resource var (res)
-!!VR(res)&w47>0/w47<8/(heroLvl)>=i^timerWeekDay^:Sw47; lvl<10, check for weekday if to give resource type w47 at all that day - Archer30: why do we check (heroLvl)>=i^timerWeekDay^ here??
+!!VR(res)&w47>0/w47<8:Sw47; lvl<10, check for weekday if to give resource type w47 at all that day
 !!VR(res)&w47=8:Si^timerWeekDay^;               lvl 10+  cycling, give respective weekday resource
 !!VR(res)&w47>8/w47<15:Sw47 -8;           lvl 10+  give chosen resource type (w47 -8)
 
@@ -463,14 +471,26 @@ ZVSE2
 
 !!CM:R0;
 
-!!VR(msgType:y):S(mouseAction) -10;                      if left-click  then init y16:=2 (OK/Cancel buttons)
 !!HE(CURRENT_HERO):N?(hero:y);
 !!IF:W(hero);                              set w var reference to current hero
-!!HE(hero):S(SKILL_ESTATES)/?(skillLvl:y) E?(heroExp:y)/?(heroLvl:y)/1 X?(specType:y)/?(specSkill:y)/d/d/d/d/d; get Estates expertise (y1), hero experience (y2) and level (y3), skill specialty (y20=0 and y19=13 is Estates)
+!!HE(hero):S(SKILL_ESTATES)/?(skillLvl:y);
 !!FU&(skillLvl)<=(SKILL_NOT_LEARNED):E;
 
-!!VRw47&w47=0/(heroLvl)<10:S1 R5;               init w47 with random 1..6 for lvl 1..9 and no init
-!!VRw47&w47<8/(heroLvl)>=10:S8;                 init w47 with cycling (no lvl 10 msg displayed then)
+!!HE(hero):E?(heroExp:y)/?(heroLvl:y)/1 X?(specType:y)/?(specSubtype:y)/d/d/d/d/d; get Estates expertise (y1), hero experience (y2) and level (y3), skill specialty (y20=0 and y19=13 is Estates)
+
+!!VR(msgType:y):S(mouseAction) -10;                      if left-click  then init (msgType) =2 (OK/Cancel buttons)
+!!VR(msgType)&(msgType)=(MSG_TYPE_QUESTION)/(skillLvl)<(SKILL_EXPERT):S(MSG_TYPE_MES);
+
+; init w47 with random 1..6 for lvl 1..9
+!!if&(heroLvl)<10;
+  !!VRw47&w47=0:R0/1/6;
+; init w47 with cycling
+!!el;
+  !!VRw47&w47<8:S8;
+!!en;
+
+; Estates specialty sets random resource to daily (even for low-level), Expert allows choosing as if lvl10+
+!!VRw47&w47<8/(specType)=0/(specSubtype)=(SKILL_ESTATES):+8;
 
 !!VR(stringNum:y):S164015 +i^timerWeekDay^;
 !!VRz-3:Sz(stringNum);
@@ -856,8 +876,6 @@ lvl 10+ and cycling
 *!IF:M^WOG_193_SetSkillToShow^;
 
 !?FU(WOG_ERM_Hero_BeforeSkillAffection);
-!!UN:P904/(TRUE);                       [Archer30: Temp solution for HE:S unknown error when setting a skill to NOT_LEARNED]
-
 !!if&i^wog_193_HE_S_do_not_affect^=(FALSE)/i^wog_193_HE_S_Affection^=(NULL);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-84/4/?(skillId:y);
 
@@ -871,8 +889,6 @@ lvl 10+ and cycling
 *!IF:M^WOG_ERM_Hero_BeforeSkillAffection^;
 
 !?FU(WOG_ERM_Hero_AfterSkillAffection);
-!!UN:P904/(FALSE);                      [Archer30: Temp solution for HE:S unknown error when setting a skill to NOT_LEARNED]
-
 !!if&i^wog_193_HE_S_Affection^;
   !!VR(skillId:y):Si^wog_193_HE_S_Affection^;
   !!VRi^wog_193_HE_S_Affection^:S0;

@@ -29,15 +29,26 @@ ZVSE2
 !!UN:P741/?(wogOption:y);               [провер€ем включена ли опци€ 741 в y1]
 !!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
 
-!!BG:A?(action:y) Q?(side:y) E?(target:y); [тип действи€/сторона/целевой отр€д]
+!!BG:A?(action:y); [тип действи€/сторона/целевой отр€д]
 !!FU&(action)<>(BATTLE_ACTION_HERO_CAST)/(action)<>(BATTLE_ACTION_MONSTER_CAST):E; [выход, если не каст геро€/монстра]
+
+!!BG:E?(target:y);
 !!FU&(target)=(NO_STACK):E;             [выход, ecли не целевой каст]
+
+!!BG:Q?(side:y);
 !!FU&(target)<=(BATTLE_ATTACKER_STACK_LAST)/(side)=(BATTLE_LEFT):E; [выход, если не каст на вражеский отр€д]
 !!FU&(target)>=(BATTLE_DEFENDER_STACK_FIRST)/(side)=(BATTLE_RIGHT):E; [...]
 
+; Exit if it is not a single targeting spell (leading to crash if not skipping - eh not really?)
+*!BG:S?(spell:y);
+*!SS(spell):F?(flags:y);
+*!VR(isSingleTargeting:y):S(flags) &16;
+*!FU&(isSingleTargeting)=0:E;
+
 ; Exit if the target is a War Zealot
 !!BM(target):T?(type:y);
-!!FU&(type)=(MON_WAR_ZEALOT):E;
+!!FU(ES_741_CheckIfMonIsEligible):P(type)/?(result:y);
+!!FU&(result):E;
 
 !!VR(opposSide:y):S(side) X1;           [invert side]
 !!FU(ES_741_GetInterceptTarget):P(opposSide)/?(intercTarget:y);
@@ -73,18 +84,22 @@ ZVSE2
 
 ; Loop through all the stack and try to find War a zealot stack as the new spell target
 !!re i/(firstStack)/(lastStack);
-  !!BMi:T?(type:y) N?(num:y) G(SPELL_MAGIC_MIRROR)/?(round:y)/?(strength:y);
+  !!BMi:N?(num:y);
+  !!co&(num)<=0;
+
+  !!BMi:T?(type:y);
+  !!FU(ES_741_CheckIfMonIsEligible):P(type)/?(result:y);
+  !!co&(result)<>(TRUE);
 
   ; Redirect the spell to the War Zealot if odds is favoured
-  !!if&(type)=(MON_WAR_ZEALOT)/(num)>0/(round)>0;
-    !!VR(random:y):R0/1/100;
+  !!BMi:G(SPELL_MAGIC_MIRROR)/?(round:y)/?(strength:y);
+  !!co&(round)<=0;
 
-    !!if&(num)>(random);
-      !!VR(newTarget):Si;
+  !!VR(random:y):R0/1/100;
+  !!co&(random)>(num);
 
-      !!br;
-    !!en;
-  !!en;
+  !!VR(newTarget):Si;
+  !!br;
 !!en;
 
 !?FU(ES_741_GetRedirectTarget);
@@ -112,5 +127,11 @@ ZVSE2
   !!FU(Array_Shuffle):P(livingStacks);  [Shuffle the array]
   !!FU(Array_Pop):P(livingStacks)/?(newTarget); [Get the last item of the array and remove the item from the array]
 !!en;
+
+!?FU(ES_741_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_WAR_ZEALOT):S(TRUE);
 
 ** end

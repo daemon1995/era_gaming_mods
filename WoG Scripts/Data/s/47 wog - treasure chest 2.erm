@@ -316,19 +316,36 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
  [Initialize v1 to -1]
 !!VRv1:S-1;
 
- [Store number of mines in y1]
-!!UN:U53/-1/?y1;
+ [Store number of mines in (numTotalMines)]
+!!OW:C?(player:y);
+!!VR(numTotalMines:y):S0;
+!!VR(numUnownedMines:y):S0;
 
-!!PO998:V3/?y3; get pre-set rndm #
-!!VRy3&y3>y1:Sy1; fixed by algor
+; loop through all the mines
+!!VR(x:y):S-1;
 
- [Part 1 of checking for owned status of mine]
-!!UN&y1>0:U53/-1/y3/4; [Store location of first mine checked for new UN:U syntax: v4/v5/v6]
-!!DO5207/y3/y1/1&y1>0:Py3;
+!!re i;
+  !!UN:U(OBJ_MINE)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
 
- [Part 2 of checking for owned status of mine]
-!!VRv4:S-1; [Initialize v4 to -1 to work with new faster UN:U syntax]
-!!DO5207/1/y1/1&y1>0/y3<>1/v1=-1:P0;
+  !!MN(x)/(y)/(z):O?(owner:y);
+  !!VR(numUnownedMines)&(owner)<>(player):+1;
+
+  !!VR(numTotalMines):+1;
+!!en;
+
+!!if&(numUnownedMines)>=2;              [If there are at least 2 unowned mines - never capture the last mine, as it may break the victory condition]
+  !!PO998:V3/?(poValue:y);              [get pre-set rndm #]
+  !!VR(poValue)&(poValue)>(numTotalMines):S(numTotalMines); [fixed by algor]
+
+   [Part 1 of checking for owned status of mine]
+  !!UN:U53/-1/(poValue)/4;              [Store location of first mine checked for new UN:U syntax: v4/v5/v6]
+  !!DO5207/(poValue)/(numTotalMines)/1:P(poValue);
+
+   [Part 2 of checking for owned status of mine]
+  !!VRv4:S-1;                           [Initialize v4 to -1 to work with new faster UN:U syntax]
+  !!DO5207/1/(numTotalMines)/1&(poValue)<>1/v1=-1:P0;
+!!en;
 
  [If no valid mine is found, change v3 to 2 (Tomes of Knowledge) result]
 !!VRv3&v1=-1:S2;
@@ -345,8 +362,17 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!UN|x1=0/x16>x1:U53/-1/-1/4;
 
  [Check owner of mine - store in y1. Check type of mine - store in y2]
-!!MNv4/v5/v6:O?y1 R?y2;
+!!MNv4/v5/v6:O?y1;
 !!FU&y1<>-1:E;
+
+; Skip if the mine is guarded
+!!re j/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST);
+  !!MNv4/v5/v6:Mj/?y30/?y31;
+
+  !!FU&y30>(NO_MON):E;
+!!en;
+
+!!MNv4/v5/v6:R?y2;
 
  [Check current player - store in y3]
 !!OW:C?y3;
@@ -361,9 +387,9 @@ Note: Function 5209 is used in the update of WoGify: script00.erm.
 !!if&999;
   !!FU(GetTextFileString):P^minename^/y2/?z1;
   !!VRo:Sy2*4;
-  !!UN:C6781304/o/4/?v2;
+  !!UN:C6781304/o/4/?v2;                [Get the type of the mine]
   !!IF:Q2/y2/v2/1/z131025;
-  !!UN:Lv4/v5/v6/1000; [Move view for 2.5 seconds to mine]
+  !!UN:Lv4/v5/v6/1000;                  [Move the view for 1 second to the mine]
 !!en;
 
  [Set x16 to 999 to exit loop]
