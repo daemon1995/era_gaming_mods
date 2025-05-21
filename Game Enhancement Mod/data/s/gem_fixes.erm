@@ -541,6 +541,36 @@ ZVSE2
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/(exp);
 
 
+// Fix tavern hero generation
+// by Archer30
+; Occasionally, the tavern may generate a hero who has already been recruited by another player.
+; When this occurs, the tavern can no longer display hero portraits correctly. 
+; (Reference: https://discord.com/channels/665742159307341827/1058335681144950795/1331221338735775786)
+; This fix double-checks the hero's owner using ERM (HE:O) when retrieving available hero IDs.
+; It also corrects the owner data in the game manager ([game manager + 319256 + hero ID]) if it is incorrectly set to -1.
+
+; The issue might originate from the HD Mod's "Invite Hero" feature. Some game manager data may not be properly set when the invited hero is placed in a tavern.
+!?FU(gem_CreateERMHook);
+!#VA(setHook:x);
+
+!!SN:E(setHook)/1/4961464/(gem_OnGenerateRandomHeroCheckOwner);
+
+!?FU(gem_OnGenerateRandomHeroCheckOwner);
+!#VA(hook:x);
+
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ESI)/4/?(heroId:y);
+!!HE(heroId):O?(owner:y);
+!!FU&(owner)=(NO_OWNER):E;
+
+; Fix the wrong data in game manager
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_ECX)/4/?(gameMgr:y);
+!!VR(address:y):S(heroId) +(gameMgr) +319256;
+!!UN:C(address)/1/(NO_OWNER);
+
+!!SN:X?t/0;
+!!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4961523;
+
+
 // Fix resetting AI thinking radius to 4096 after loading a save game with HD mod feature
 // by Archer30
 ; This is not a fix but simiply setting UN:J4 to ERA default, should secure the gameplay in most cases
@@ -663,8 +693,10 @@ ZVSE2
 !!SN:Ex1/1/4435778/(gem_AI_GetCloneCastValue);
 
 // disable message about hiring army from dwelling after combat;
-!!SN:Ex1/1/4856136/(gem_OnDwellingFreeJoin);
-!!SN:Ex1/1/4856798/(gem_OnDwellingJoinMessage);
+; Archer30: Tried to fix the issue of not mentioning the the hero's amry is full but failed
+; Discussion: https://discord.com/channels/665742159307341827/1366008155565457489
+!!SN:Ex1/1/4856136/(gem_OnDwellingFreeJoin); 4A1948
+!!SN:Ex1/1/4856798/(gem_OnDwellingJoinMessage); 4A1BDE
 
 !?FU(gem_OnDwellingFreeJoin);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(dwellingMons:y);
