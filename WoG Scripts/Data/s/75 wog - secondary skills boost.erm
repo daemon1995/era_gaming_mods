@@ -335,9 +335,13 @@ ZVSE2
 
 ; This script works in all the battles (mostly, it could make the degraded troops lose stack exp after battle). 
 ; Yet as for balance purpose, it's decided to be active only in battles against neutral creatues.
-; If &i^wog_isNeutralBattle^ and VR(numDegradeUnits[0]):S0; are taken out, this script will work with all the battles (Stack exp after battle has to be fixed though).
+; If i^wog_216_nonNeutralBattle_enabled^ is TRUE, this script will work with all the battles (Stack exp after battle has to be fixed though).
 ; FU(OnAfterBattleSetup) seems to be the only valid timing.
-!?FU(OnAfterBattleSetup)&i^wog_isNeutralBattle^;
+
+*#UN:P216/?(wogOption:y);
+*#VRi^wog_216_nonNeutralBattle_enabled^&(wogOption):S(TRUE);
+
+!?FU(OnAfterBattleSetup)|i^wog_isNeutralBattle^/i^wog_216_nonNeutralBattle_enabled^;
 !!UN:P216/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -363,8 +367,8 @@ ZVSE2
   !!en;
 !!en;
 
-; Prevent the attacking hero to be degraded (since this script now works for Neutral battle only)
-!!VR(numDegradeUnits[0]):S0;
+; Prevent the attacking hero to be degraded if attacking neutral creatures (should we check out random heroes here?)
+!!VR(numDegradeUnits[0])&i^wog_isNeutralBattle^:S0;
 
 ; Exit if no one has Resistance
 !!FU&(numDegradeUnits[0])=0/(numDegradeUnits[1])=0:E;
@@ -447,7 +451,10 @@ ZVSE2
 ** End of pre-battle trigger for resistance
 
 
-!?FU(OnBattlefieldVisible)&i^battle_isVisible^/i^wog_isNeutralBattle^;
+!?FU(OnBattlefieldVisible)&i^battle_isVisible^;
+!!FU&i^wog_isNeutralBattle^<>(TRUE)/i^wog_216_nonNeutralBattle_enabled^<>(TRUE):E;
+
+
 !!UN:P216/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
@@ -483,7 +490,9 @@ ZVSE2
 !!FU(WOG_PlayAnimationOnMultipleStacks):P(stacksList)/57;
 
 ; Show battle log on the first round, as tactics phase could break it
-!?FU(OnBattleRound)&i^battle_round^=0/i^battle_isVisible^/i^wog_isNeutralBattle^/i^wog_216_sideDowngraded^;
+!?FU(OnBattleRound)&i^battle_round^=0/i^battle_isVisible^/i^wog_216_sideDowngraded^;
+!!FU&i^wog_isNeutralBattle^<>(TRUE)/i^wog_216_nonNeutralBattle_enabled^<>(TRUE):E;
+
 ; Set up text - ert legacy
 !!VRz3:S^^;
 
@@ -516,7 +525,7 @@ ZVSE2
 ** End of battle trigger for resistance
 
 
-!?FU(OnAfterBattleUniversal)&i^wog_isNeutralBattle^;
+!?FU(OnAfterBattleUniversal)|i^wog_isNeutralBattle^/i^wog_216_nonNeutralBattle_enabled^;
 !!UN:P216/?(wogOption:y);
 !!FU&(wogOption)<>(TRUE):E;
 
