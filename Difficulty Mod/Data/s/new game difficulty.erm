@@ -438,9 +438,8 @@ This Section handels the Dialogue 44 were you can Configure_Neutrals (Left Side)
 
 
 !?DL&i^dlg_id^=44/i^mouse_action^=(MOUSE_LMB_PRESSED); [checkboxes switch between check and cancel for Mixed Neutrals - Archer]
-!!if|i^mouse_item^=71/i^mouse_item^=70;
+!!if&i^mouse_item^=71;
   !!SN:P^button.wav^;
-
   !!if&i^mix_on^<>(TRUE);
     !!IF:M0/(MSG_TYPE_POPUP)/^%T(Diff_Mod.Mixed_Neutrals_Missing)^;
   !!el;
@@ -451,12 +450,11 @@ This Section handels the Dialogue 44 were you can Configure_Neutrals (Left Side)
         !!VRi^mix_enabled^:S(TRUE);
       !!en;
     !!en;
-
-    !!DL44&i^mouse_item^=71:A71/(DLG_CMD_SET_DEF_FRAME)/i^mix_enabled^;
-
-    !!FU(Configure_Mixed_Neutrals)&i^mix_enabled^:P;
+    !!DL44&i^mouse_item^=71:A71/(DLG_CMD_SET_DEF_FRAME)/i^mix_enabled^;    
+    !!FU(Configure_Mixed_Neutrals)&i^mix_enabled^:P; [show mixed neutral option screen]
   !!en;
 !!en;
+
 
 !?DL&v998=44/v1000=14;                  [Show right click information for faces and all options]
 
@@ -600,15 +598,6 @@ This Section handels the Dialogue 44 were you can Configure_Neutrals (Left Side)
 !?DL&v998=44/v999=30722/v1000=13;       [Close Dialogue with Confirm Button Save all Settings]
 !!SN:W^Neutrals_Difficulty_Enabled^/1;
 !!DL:C1;
-
-
-!?DL&v998=44/v999=70/v1000=13;
-!!SN:W^mix_enabled^/?y1;
-
-!!if&y1=1;
-!!DL:C1;
-!!FU(Configure_Mixed_Neutrals):P;       [open the Neutrals difficulty settings]
-!!en;
 
 
 !?FU(Neutrals_reset);
@@ -2267,13 +2256,14 @@ When clicking on System Icon at Adventure Map run options again
 Growth Beyond 4000 option
 Calculate and set increased stack size for neutral units when the combat starts
 *Custom_growth limit can be set here*
-!#SN:W^Growth_Limit_Lvl_1^/20000;       [Set growth limit for level 1 creatures, in this example 20000]
-!#SN:W^Growth_Limit_Lvl_2^/18000;       [...]
-!#SN:W^Growth_Limit_Lvl_3^/16000;       [...]
-!#SN:W^Growth_Limit_Lvl_4^/14000;       [...]
-!#SN:W^Growth_Limit_Lvl_5^/12000;       [...]
-!#SN:W^Growth_Limit_Lvl_6^/10000;       [...]
-!#SN:W^Growth_Limit_Lvl_7^/8000;        [Set growth limit for level 7 creatures]
+!?FU(OnGameEnter);
+!!SN:W^Growth_Limit_Lvl_1^/40000;       [Set growth limit for level 1 creatures, in this example 40000]
+!!SN:W^Growth_Limit_Lvl_2^/30000;       [...]
+!!SN:W^Growth_Limit_Lvl_3^/25000;       [...]
+!!SN:W^Growth_Limit_Lvl_4^/20000;       [...]
+!!SN:W^Growth_Limit_Lvl_5^/16000;       [...]
+!!SN:W^Growth_Limit_Lvl_6^/12000;       [...]
+!!SN:W^Growth_Limit_Lvl_7^/10000;       [Set growth limit for level 7 creatures]
 
 
 !?FU(OnBeforeBattleUniversal)&1000;     [Before battle only run for humans]
@@ -2281,14 +2271,11 @@ Calculate and set increased stack size for neutral units when the combat starts
 !!FU&i^mix_enabled^=(TRUE):E;           [Exit if growth is handled by Mixed Neutral Mod]
 !!SN:W^Neutral_Growth_10000^/?y50;
 !!FU&y50=0:E;
-
 !!BA:P?y1/?y2/?y3;                      [get monsters or battle coordinates]
 !!SN:W^Growth_X%Y1_Y%Y2_Z%Y3^/?y4;      [check if this stack should have grown beyond 4000]
 !!FU&y4=0:E;                            [Exit if stack has not grown to 4000]
-
 !!MOy1/y2/y3:G?y50;                     [Get stack size]
 !!FU&y50<3900:E;                        [Exit if stack has not regrown to 4000]
-
 !!BA:H0/?y50;                           [Attacking Hero Number]
 !!SN:W^Growth_Happened^/y50;
 
@@ -2296,7 +2283,6 @@ Calculate and set increased stack size for neutral units when the combat starts
 !!VRy6:Sy5 -y4 :7 -1;                   [Weeks passed]
 !!FU&y5<=7:E;                           [Exit in first Week]
 !!FU&y6=-1:E;                           [Exit if its the same week as it hit 4000. Growth first starts next week]
-
 !!FU(Dif_Mod_Calc_Stack_Size):Py1/y2/y3/?y10; [Pass coordinates of stack, and return stack size in y10]
 
 !!VRy30:S0;                             [Check the number of stacks and determine how many stacks have troops]
@@ -2388,20 +2374,19 @@ x1=x-cord, x2=y-cord, x3=z-cord, x4 returns current stack size
 !#VA(cd[3]:x) (result:x);
 !!VR(result):S(NULL);                   [initialize to zero]
 !!VR(thisMonWeeksPassed:y):Si^timerDay^ -i^Growth_X%X1_Y%X2_Z%X3^ :7; [calculate the weeks that have passed for this stack since it had grown to 4000]
-!!if&(thisMonWeeksPassed);              [if positive value]
+!!if&(thisMonWeeksPassed)>=0;           [if positive value or zero]
   !!VR(baseValue:e):S4000;              [at this point we assume stack must be at least 4000]
   !!VR(multiply:e):S11 :10;             [muliply by 10%]
   !!re i/0/(thisMonWeeksPassed)/1/-1;   [y6 holds the amount of weeks after the stack has reached 4000. So it must be looped that many times to get the current stack size]
     !!VR(baseValue): *(multiply);       [muliply by 10%]
   !!en;
   !!VR(baseValue)&(baseValue)>1000000:S1000000; [This is the MonDaemon Max limit]
-
   !!OBx1/x2/x3:T?y20 U?y21;             [Get Type and Subtype]
   !!if&y20=(OBJ_MONSTER);
-    !!MA:Ly21/?y28;                       [Get Level of First Monster to decide the growth Limit, if stack has grown more it will be reduced to max value]
+    !!MA:Ly21/?y28;                     [Get Level of First Monster to decide the growth Limit, if stack has grown more it will be reduced to max value]
+    !!VRy28:+1;                         [to get correct variable]
     !!VR(baseValue):F4000/i^Growth_Limit_Lvl_%y28^;
   !!en;
-
   !!VR(result):S(baseValue);            [return stack size in x4]
 !!en;
 
@@ -2422,8 +2407,10 @@ x1=x-cord, x2=y-cord, x3=z-cord, x4 returns current stack size
   !!FU(Dif_Mod_Calc_Stack_Size):P(x)/(y)/(z)/?y10; [call fkt to get real stack size in y10 to set correct text]
 
   !!VRy10&y10=4000:S1000;               [1000+ up to 4000]
-  !!VRy10&y10>4000/y10<=10000:S4000;    [4000+ up to 10000]
-  !!VRy10&y10>10000/y10<=20000:S10000;  [10000+ up to 20000]
+  !!VRy10&y10>4000/y10<=6000:S4000;     [4000+ up to 6000]
+  !!VRy10&y10>6000/y10<=10000:S6000;    [6000+ up to 10000]
+  !!VRy10&y10>10000/y10<=16000:S10000;  [10000+ up to 16000]
+  !!VRy10&y10>16000/y10<=20000:S16000;  [16000+ up to 20000]
   !!VRy10&y10>20000/y10<=40000:S20000;
   !!VRy10&y10>40000/y10<=100000:S40000;
   !!VRy10&y10>100000/y10<=200000:S100000;
@@ -3050,22 +3037,22 @@ AI player gets Stronger Commander in battle depending on game difficutly
 !!VRy6:Sc+6:7;                          [Set weeks]
 !!VRy7:Sx2*200;                         [Hero level mal 200]
 !!VRy8:Sc+6:7*100;                      [Week mal 100]
-!!VRy9:Sx2*4;                           [Hero level mal 4 for Damage]
+!!VRy9:Sx2*5;                           [Hero level mal 5 for Damage]
 
 **Calculate the Strength of Battle Commander**
 !!VRy10:Sx3*2+y6;                       [Attack=Attack from Hero *2 + Gameweeks]
 !!VRy11:Sx4*2+y6;                       [Defense=Defense from Hero *2 + Gameweeks]
-!!VRy12:Sx2:10 +2R2;                    [Speed=Herolvl/10 +2-4]
+!!VRy12:Sx2:10 +1R1;                    [Speed=Herolvl/10 +1-2]
 
-!!if&i^Typhon_Third_Upgrade_Mod_Active^<>(TRUE);
-  !!VRy13:Sx1:8 +y7 +y8 +50 :2;         [Health=Fight Value/8 +Herlolvl*200 +Week*100 durch 2]
-; With TUM, the commander is slightly stronger
-!!el;
-  !!VRy13:Sx1:7 +y7 +y8 +50 :2;         [Health=Fight Value/7 +Herlolvl*200 +Week*100 durch 2]
-!!en;
+!!SN:W^Typhon_Third_Upgrade_Mod_Active^/?y99; [With TUM battle commander is slightly stronger]
+!!VRy13&y99=0:Sx1:9 +y7 +y8 +50 :2;     [Health=Fight Value/9 +Herlolvl*200 +Week*100 durch 2]
+											  
+	 
+!!VRy13&y99=1:Sx1:8 +y7 +y8 +50 :2;     [Health=Fight Value/8 +Herlolvl*200 +Week*100 durch 2]
+	 
 
-!!VRy14:Sx1:250 +y9 +5R20;              [Min Damage HP_Value +Hero Level*10]
-!!VRy15:Sx1:150 +y9 +31R45;             [Max Damage]
+!!VRy14:Sx1:275 +y9 +5R30;              [Min Damage HP_Value +Hero Level*10]
+!!VRy15:Sx1:200 +y9 +31R55;             [Max Damage]
 !!VRy13|y13<=0/y13>5000000:S5000000;    [prevent overflow - Note that the upper limit for commander HP is far less than INT_MAX! It overflows when bigger than 30000000]
 !!VRy12&y13>=500000:+1; !!VRy12&y13>=1000000:+1; !!VRy12&y13>=5000000:+1; [Add additional speed for very high commander HP]
 !!SN:W^Is_Battle_Replay^/?y80;
@@ -3085,7 +3072,7 @@ AI player gets Stronger Commander in battle depending on game difficutly
 !!VRy10:S0R2;
 !!BMx16&x2>=25/y10>=1:M28/10/2;         [Add Air Shield   66% Chance]
 !!BMx16&x2>=30/y10<=1:M27/10/2;         [Add Shield       66% Chance]
-!!BMx16&x2>=45/y10=0:M48/5/2;           [Add Prayer       66% Chance]
+*!BMx16&x2>=45/y10=0:M48/5/2;           [Add Prayer       66% Chance]
 
 ; Set up new desc
 *!FU(Diff_SetUpExtraCommanderDesc)&i^battle_isVisible^:Px16/^%T(Diff_Mod.Option_13)^;
@@ -5553,19 +5540,8 @@ Exp_Health_Set
   !!en;
 !!en;
 
-****************************************************************************************************
-
-
-
-                                       TEST SECTION
-
-
-
 
 ****************************************************************************************************
-
-*#SN:W^Legacy_of_the_Silence_Active^/1;  [Set Mod Active] Test
-
 !?FU(OnCombatRound)&v997=0/i^Is_Raid_Boss_Fight^=0;
 AI neutral players or heroes gets Stronger Commander in battle
 !!SN:W^Dif_Mod_Neutral_Commander^/?y1;
@@ -5576,7 +5552,7 @@ AI neutral players or heroes gets Stronger Commander in battle
 
 !!BA:O?y1/?y2;                          [Get Owner]
 !!OW:Iy1/?y2;                           [Get if AI or Human]
-!!if&y2=0;
+!!if&y2=0;                              [if Human]
  !!re i/0/20;                           [search for own commander]
   !!BMi:T?y3 P?y4;                      [Get Creature Type and Position]
     !!if&y3>=174/y3<=182;               [If Commander found]
@@ -5590,16 +5566,69 @@ AI neutral players or heroes gets Stronger Commander in battle
 !!en;
 !!FU|y13<30/y16<1:E;                    [Exit if no commander found]
 
+
+
 !!BA:O?y1/?y2;                          [Get Owner]
 !!if&y2=-1;                             [if neutral AI]
  !!re i/21/41;                          [loop defender stacks]
   !!BMi:T?y3 P?y4;                      [Get Creature Type and Position]
     !!if&y3>=183/y3<=191/y4=98;         [If Commander at position 98 found]
-      !!VRy20:S20R100; !!VRy10:*y20:100; !!BMi:Ay10; [Set Attack]
-      !!VRy20:S20R100; !!VRy11:*y20:100; !!BMi:Dy11; [Set Defense]
+      !!VRy20:S20R110; !!VRy10:*y20:100; !!BMi:Ay10; [Set Attack]
+      !!VRy20:S20R110; !!VRy11:*y20:100; !!BMi:Dy11; [Set Defense]
       !!VRy20:S30R110; !!VRy13:*y20:100; !!BMi:Hy13; [Set Health]
-      !!VRy20:S30R110; !!VRy14:*y20:100; !!VRy15:*y20:100; !!BMi:U1/y14 U2/y15; [Set Min+Max Damage]
+      !!VRy20:S40R120; !!VRy14:*y20:100; !!VRy15:*y20:100; !!BMi:U1/y14 U2/y15; [Set Min+Max Damage]
       !!VRy20:S30R60; !!VRy16:*y20:100+1; !!VRy16&y16<4:S4; !!BMi:Sy16; [Set Speed 4 is minimum speed]
     !!en;
  !!en;
 !!en;
+
+
+!?FU(OnCombatRound)&v997=0/i^Is_Raid_Boss_Fight^=0;
+AI neutral players or heroes gets Stronger Henchmen in battle
+!!SN:W^Dif_Mod_Neutral_Commander^/?y1;
+!!FU&y1=0:E;                            [Exit if Mod was disabled in options]
+
+!!BA:O?y1/?y2;                          [Get Owner]
+!!OW:Iy1/?y2;                           [Get if AI or Human]
+!!if&y2=0;                              [if Human]
+ !!re i/0/20;                           [search for own commander]
+  !!BMi:T?y3 P?y4 G4/?y5/?y6;           [Get Creature Type, Position and check for Disguise]
+    !!if&y4=20/y5>0;                    [If Henchmen found and has Disguies applied]
+      !!BMi:A?y10;                      [Get Attack]
+      !!BMi:D?y11;                      [Get Defense]
+      !!BMi:H?y13;                      [Get Health]
+      !!BMi:U1/?y14 U2/?y15;            [Set Min+Max Damage]
+      !!BMi:S?y16;                      [Get Speed]
+    !!en;
+  !!en;
+!!en;
+!!FU|y13<30/y16<1:E;                    [Exit if no commander found]
+
+!!BA:O?y1/?y2;                          [Get Owner]
+!!if&y2=-1;                             [if neutral AI]
+ !!re i/21/41;                          [loop defender stacks]
+  !!BMi:T?y3 P?y4 G4/?y5/?y6;           [Get Creature Type, Position and check for Disguise]
+    !!if&y4=30/y5>0;                    [If Henchmen at position 30 found nd has Disguies applied]
+      !!BMi:A?y30; !!VRy20:S30R70; !!VRy10:*y20:100; !!VRy30:+y10; !!BMi:Ay30; [Add Attack]
+      !!BMi:D?y30; !!VRy20:S30R70; !!VRy11:*y20:100; !!VRy30:+y11; !!BMi:Dy30; [Add Defense]
+      !!BMi:H?y30; !!VRy20:S40R80; !!VRy13:*y20:100; !!VRy30:+y13; !!BMi:Hy30; [Set Health]
+      !!BMi:U1/?y30; !!VRy20:S50R80; !!VRy14:*y20:100; !!VRy30:+y14;  !!BMi:U1/y30; [Set Min+Max Damage]
+      !!BMi:U2/?y30; !!VRy20:S50R100; !!VRy15:*y20:100; !!VRy30:+y15; !!BMi:U2/y30; [Set Min+Max Damage]
+      !!BMi:Sd1;                        [just add one speed]
+    !!en;
+ !!en;
+!!en;
+
+
+****************************************************************************************************
+
+
+
+                                       TEST SECTION
+
+
+
+
+****************************************************************************************************
+
+*#SN:W^Legacy_of_the_Silence_Active^/1;  [Set Mod Active] Test
