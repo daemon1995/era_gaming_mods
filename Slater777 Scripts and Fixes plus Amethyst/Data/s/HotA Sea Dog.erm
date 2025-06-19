@@ -2,8 +2,12 @@ ZVSE2
 
 
 ; Sea Dogs ability - Accurate Shot
+; This ability doesnot work if shooting with obstacle penalty
 ; This chance is 2% or 3% per Sea Dog in the stack (if shooting with/without range penalty), and is not cumulative
-; Accurate shot cannot kill more enemies than are equal to 1% of the number of Sea Dogs in a stack (rounded up)
+; Accurate shot cannot kill more enemies than are equal to 1% of the number of Sea Dogs in a stack (rounded up). For example:
+;    1-49 Sea Dogs may kill 0-1 enemy units with accurate shot
+;    50-99 Sea Dogs may kill 0-2 enemy units with accurate shot
+;    100-149 Sea Dogs may kill 0-3 enemy units with accurate shot
 
 
 !?FU(js_BattleStack_DeadShot);
@@ -20,6 +24,7 @@ ZVSE2
 !!SN:E4616432/(CALLCONV_THISCALL)/(cmbMgr)/(shooter)/(shooterHex)/(targetHex); 004670F0 BattleMgr_Stack_Has_ShotObstacklePenalty
 !!VR(isShotObstacklePenalty:y):Sv1;
 ;!IF:L^obs= %(isShotObstacklePenalty)^;
+!!FU&(isShotObstacklePenalty):E;
 
     ; if ( BattleMgr_Stack_HasDistancePenalty(o_BattleMgr, st_A, st_D) )
     ;   v16 = v16 * 0.5;
@@ -31,18 +36,15 @@ ZVSE2
 
 !!VR(chance:y):S3;
 
-!!if|(isShotObstacklePenalty)/(hasDistancePenalty);
+!!if&(hasDistancePenalty);
   !!VR(chance:y):S2;
 !!en;
 ;!IF:L^chance= %(chance)^;
 
 
 !!UN:C(shooter)/76/4/?(shooterQty:y); 0x4C
-!!VR(shooterQtyFloat:e):S(shooterQty);
-!!VR(maximumKillsMultByTh:y):S(shooterQty) *10; 1% (div by 100) and mult by 1000
-;!IF:L^maximumKillsMultByTh= %(maximumKillsMultByTh)^;
-!!FU(js_FloatToInt_Ceil):P(maximumKillsMultByTh)/?(maximumKills:y);
-;!IF:L^maximumKills= %(maximumKills)^;
+!!VR(maximumKills:y):S(shooterQty) :50 +1;
+;IF:L^maximumKills= %(maximumKills)^;
 
 
 !!VR(kills:y):S0;
