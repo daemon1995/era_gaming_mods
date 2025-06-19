@@ -1,81 +1,9 @@
 ZVSE2
 
 
-!?FU(js_CreateERMHook);
-; fix bug: you cant cast fly with better effect if you already have fly effect with worse effect
-!!SN:Ex1/1/4311161/(js_Cast_AdventureMagic_BeforeCheckFlyPower); 41C879
-; fix bug: hero amplifiers dont work on creatures targeted damaging spells
-!!SN:Ex1/1/5899869/(js_BattleMgr_CastSpell_BeforeSwitchCase); 5A065D
-; fix bug: faerie dragon casting sound is not played
-!!SN:Ex1/1/4446424/(js_BattleStack_InitAssets_BeforeInitShootingSound); 43D8D8
-
-
-!?FU(js_Cast_AdventureMagic_BeforeCheckFlyPower);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/274/4/?(heroFlyPower:y); 112
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(spellPower:y); 0 - no school, 1 - basic, 2 - adv, 3 - expert
-
-!!if&(heroFlyPower)<(spellPower);
-  !!FU&(heroFlyPower)=0/(spellPower)=1:E; no school and basic effects are the same
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4311174; 0041C886
-!!en;
-
-
-!?FU(js_BattleMgr_CastSpell_BeforeSwitchCase);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/16/4/?(casterKind:y); 10
-;!IF:L^casterKind= %(casterKind)^;
-!!FU&(casterKind)<>1;
-!!UN:C(ebp)/8/4/?(spellId:y);
-
-!!SS(spellId):O?(targetType:y);
-!!if&(targetType)=-1;
-  !!BG:N?(activeStackNum:y);
-  !!BM(activeStackNum):Z?(stack:y);
-  !!FU(js_GetHeroByStackPtr):P(stack)/?(hero:y);
-  !!if&(hero);
-    !!UN:C(ebp)/-20/4/(hero); -14
-  !!en;
-!!en;
-
-
-!?FU(js_BattleStack_InitAssets_BeforeInitShootingSound);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(stack:y) C(stack)/52/4/?(monType:y); 34
-!!FU(js_OnBattleStackShootingAssetLoading):P(monType)/?(result:y);
-
-!!if&(result);
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4446480; 0043D910
-!!en;
-
-
-!?FU(js_OnBattleStackShootingAssetLoading);
-!#VA(monType:x) (result:x);
-
-!!if&(monType)=(MON_FAERIE_DRAGON);
-  !!VR(result):S(TRUE);
-; other cases
-!!en;
-
-*************************************************************************************************
-
 !?FU(OnAfterErmInstructions);
-; Uland has advanced wisdom for no reason on lvl 1
-!!HE(HERO_ULAND):Ed/?(lvl:y);
-!!HE(HERO_ULAND)&(lvl)=1:S(SKILL_WISDOM)/1;
-
 ; Turn off artifact helper
 !!SN:W^artefact_helper^;
-
-; Give dracolich missed flag
-!!MA:X(MON_DRACOLICH)/?f;
-!!VR(aoeShooter:y):Sf &(MON_FLAG_SPLASH_SHOOTER);
-!!MA&(aoeShooter)=0:X(MON_DRACOLICH)/d|(MON_FLAG_SPLASH_SHOOTER);
-
-; Magic Elems - damage is reduced by 50% to creatures that immune to magic
-; 004439CB - hook
-; 0044A1A0 double Creature::GetDwarfResistance(int spell_id, int MonType, _Hero_ *DHero, _Hero_ *AHero)
-; надо проверить все 5 лвлов заклинаний в формате (int spell_id, int MonType, 0, 0)
-; если все 5 коллов вернут 0.0, то существо иммунно к магии
 
 
 ; Allow creatures to cast destroy undead
