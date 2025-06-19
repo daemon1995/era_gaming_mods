@@ -99,8 +99,6 @@ ZVSE2
 
 ; Prevent reseting Disguise from henchman stack
 !!SN:E(setHook)/1/4473430/(WOG_OnResetSpellFromStack);
-; Manage henchmen's banners before battle result
-!!SN&i^hench_stackExpEnabled^:E(setHook)/1/4681149/(WOG_OnBeforeBattleResult);
 
 !?FU(WOG_OnResetSpellFromStack);
 !#VA(hook:x);
@@ -176,15 +174,15 @@ ZVSE2
 
     !!if&(holdingArt)=(ART_WARLORDS_BANNER)/i^hench_banner_%(hero)^<0;
 
-      !!if&w119;
+      *!if&w119;
         !!VRi^hench_banner_%(hero)^:S0; [Equip banner and set the Health boost]
         !!FU(hench_OpenBannerDlg):P(hero);
         !!UN:C6916824/4/(NO_ART);
         !!UN:R5/0/0;                    [Refresh cursor]
-      !!el;
-        !!SN:T^henchmen.strings.bannerDead^/?(bannerDead:z);
-        !!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/(MSG_TYPE_MES)^%(bannerDead)^;
-      !!en;
+      *!el;
+        *!SN:T^henchmen.strings.bannerDead^/?(bannerDead:z);
+        *!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/(MSG_TYPE_MES)^%(bannerDead)^;
+      *!en;
 
     ; Show henchman info if not holding banner
     !!el;
@@ -421,6 +419,7 @@ ZVSE2
 !!IF:G1/1/256/1/2/3/4/5/6/7/8/9/10;
 !!FU(IntLog2):Pv1/?(choice);
 
+; If chosed any creature from the hero's army
 !!if&(choice)<7;
   !!HE(hero):C0/(choice)/?(mon:y)/?(qty:y)/?(stackExp:y);
   !!EX(hero)/(choice):R?(hasArt:y)/?(art:y)/?(artOpt:y)/?(artQty:y); [Note: artQty=0 to 3, means 1 to 4 Warlord's Banner]
@@ -455,8 +454,13 @@ ZVSE2
 
   !!VRw118:S(mon);
   !!VRw119:S(TRUE);
-!!el&(choice)=7;
-  !!VRi^hench_stackExp_%(hero)^&i^hench_stackExpEnabled^/(choice)=7:S0; [Enhanced]
+
+; If chosed to dimiss the henchman
+!!el;
+  !!if&i^hench_stackExpEnabled^;
+    !!VRi^hench_stackExp_%(hero)^:S0; [Enhanced]
+    !!VRi^hench_banner_%(hero)^&i^hench_bannerEnabled^:S-1;
+  !!en;
 
   !!VRw117:S0;
   !!VRw118:S-2;
@@ -722,29 +726,22 @@ ZVSE2
   !!VRw119&i^henchmen_side_1^:S(TRUE);
 !!en;
 
-; Manage banner after battle if any henchman is killed
-!?FU(WOG_OnBeforeBattleResult);
+!?FU(OnAfterBattleUniversal)&i^hench_enabled^;
 !!re i/(BATTLE_LEFT)/i^battle_hero_vs_hero^;
-  ; Next if the henchman is alive
-  !!VR(hero:y):Si^battle_hero_%i^;
-  !!IF:W(hero);
-  !!co&w119;
+  ; Reward the henchman exp if won the battle
+  !!FU(hench_GiveExpAfterBattle):Pi^battle_hero_%i^/i;
 
-  ; Reset stack exp
-  !!VRi^hench_stackExp_%(hero)^:S0;
+  ; Reset stack exp after battle if the henchman is killed [Enhanced]
+  !!if&i^hench_stackExpEnabled^;
+    ; Next if the henchman is alive
+    !!VR(hero:y):Si^battle_hero_%i^;
+    !!IF:W(hero);
+    !!co&w119;
 
-  ; Bring the banner to the hero
-  !!if&i^hench_banner_%(hero)^>-1;
-    !!VRi^hench_banner_%(hero)^:S-1;
-    !!HE(hero):A(ART_WARLORDS_BANNER);
+    ; Reset stack exp
+    !!VRi^hench_stackExp_%(hero)^:S0;
   !!en;
 !!en;
-
-; Reward the henchman exp if won the battle
-!?FU(OnAfterBattleUniversal)&i^hench_enabled^;[Enhanced]
-!!BA:H0/?(atkHero:y) H1/?(defHero:y);
-!!FU(hench_GiveExpAfterBattle)&(atkHero)>(NO_HERO):P(atkHero)/(BATTLE_LEFT);
-!!FU(hench_GiveExpAfterBattle)&(defHero)>(NO_HERO):P(defHero)/(BATTLE_RIGHT);
 
 !?FU(hench_GiveExpAfterBattle);
 !#VA(hero:x) (side:x);
@@ -968,7 +965,7 @@ ZVSE2
 
 !!if&i^hench_bannerEnabled^;
   !!FU(hench_ManageHenchBanner):P(hero);
-  !!FU(hench_OpenBannerDlg)&i^hench_banner_%(hero)^>=0/w118>(NO_MON)/w119:P(hero);
+  !!FU(hench_OpenBannerDlg)&i^hench_banner_%(hero)^>=0/w118>(NO_MON):P(hero);
 !!en;
 
 !!IF&i^hench_bannerEnabled^<>(TRUE)/i^hench_reviveAnywhere^<>(TRUE):Mz149000;  [henchman help]
@@ -982,9 +979,9 @@ ZVSE2
 !!if&w118>(NO_MON)/w119<>(TRUE);
   !!FU&i^hench_reviveAnywhere^:E;
   
-  !!SN:T^henchmen.strings.bannerDead^/?z-1;
-  !!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/1^%z-1^;
-  !!FU:E;
+  *!SN:T^henchmen.strings.bannerDead^/?z-1;
+  *!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/1^%z-1^;
+  *!FU:E;
 !!en;
 
 !!if&i^hench_banner_%(hero)^<0;

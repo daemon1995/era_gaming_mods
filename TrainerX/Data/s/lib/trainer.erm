@@ -3819,20 +3819,29 @@ ZVSE2
   !!CA(x)/(y)/(z)&(obj)=(OBJ_TOWN):O(NO_OWNER);
   
   ; delete objects except for hero and obelisk
-  !!UN&(obj)<>(OBJ_HERO)/(obj)<>(OBJ_OBELISK):O(x)/(y)/(z)/1;
+  !!if&(obj)<>(OBJ_HERO)/(obj)<>(OBJ_OBELISK)/(obj)<>(OBJ_BOAT);
+    !!UN:O(x)/(y)/(z)/1;
     
   ; Kill hero
-  !!if&(obj)=(OBJ_HERO);
+  !!el&(obj)=(OBJ_HERO);
     !!HE(x)/(y)/(z):N?(hero:y);
     !!HE(hero):O(NO_OWNER);
     !!HE(hero):K;                       [Secure the kill]
     !!UN:L(x)/(y)/(z)/10;
+
   ; Delete obelisk only if visited
   !!el&(obj)=(OBJ_OBELISK);
     !!OW:C?(player:y);
     !!MT(x)/(y)/(z):N?(obelisk:y);
     !!UN:L(player)/(obelisk)/?(isVisited:y); [This syntax is different from UN:L + map coordniates]
     !!UN&(isVisited):O(x)/(y)/(z);
+
+  ; Delete a boat - not finished yet
+  !!el&(obj)=(OBJ_BOAT);
+    !!UN:C4313567/2/?(patch:y) C4313567/2/6635;
+    !!UN:C(ADV_MANAGER)/4/?(advManager:y);
+    !!SN:E4312944/(CALLCONV_THISCALL)/(advManager)/(SKILL_EXPERT);
+    !!UN:C4313567/2/(patch);
   !!en;
 
   ; Complete seer huts quests when removing heroes and monsters
@@ -3856,7 +3865,7 @@ ZVSE2
 
   ; Update if deleted object was hero or town
   !!UN|(obj)=(OBJ_TOWN)/(obj)=(OBJ_HERO):R1;
-  !!SN:P^killfade.wav^;
+  !!SN&(obj)<>(OBJ_BOAT):P^killfade.wav^;
 !!en;
 
 !!if&i^trainer_objChoice^=4;            [place any map object]
@@ -3953,11 +3962,17 @@ ZVSE2
 !?FU(trainer_ObjScannerTelpt);
 !#VA(x:x) (y:x) (z:x) (obj:x);
 
+; Exit if there is a chance to have hero overlapping
+!!if|(obj)=(OBJ_HERO)/(obj)=(OBJ_PRISON);
+  !!TR(x)/(y)/(z):E?(isNotYellow:y);
+  !!FU&(isNotYellow)<>(TRUE):E;
+!!en;
+
 !!if&i^key_alt^;                        [if alt is pressed, move current hero]
   !!OW:A(CURRENT_PLAYER)/?(activeHero:y);
 
   !!if&(activeHero)>(NO_HERO);
-    !!HE(activeHero)|(x)>-1/(y)>-1/(z)>-1:P(x)/(y)/(z)/1;[don't teleport if clicked on outside of the map]
+    !!HE(activeHero)|(x)>-1/(y)>-1/(z)>-1:P(x)/(y)/(z)/1;[don't teleport if clicked somewhere outside of the map]
     !!FU:E;                             [exit the funciton if teleported, otherwise pop up dialogue if there is no current hero]
   !!en;
 !!en;
@@ -4067,7 +4082,7 @@ ZVSE2
 !!el|(obj)=(OBJ_CREATURE_GENERATOR_1)/(obj)=(OBJ_CREATURE_GENERATOR_4);
   !!DW(x)/(y)/(z):O?(owner);
 !!el|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE);
-  !!MN(x)/(y)/(z):O?(owner)/1;           [set for owner and redraw]
+  !!MN(x)/(y)/(z):O?(owner)/1;          [check for owner without redraw]
 !!el&(obj)=(OBJ_GARRISON);
   !!GR(x)/(y)/(z):O?(owner);
 !!el&(obj)=(OBJ_SHIPYARD);
@@ -4115,7 +4130,7 @@ ZVSE2
   !!DW(x)/(y)/(z):O(ownerNew);
   !!VR(sound):S^Military.wav^;
 !!el|(obj)=(OBJ_MINE)/(obj)=(OBJ_MINE_2)/(obj)=(OBJ_LIGHTHOUSE);
-  !!MN(x)/(y)/(z):O(ownerNew)/0;           [set for owner and redraw]
+  !!MN(x)/(y)/(z):O(ownerNew);          [set for owner and redraw]
   !!VR(sound):S^flagmine.wav^;
 !!el&(obj)=(OBJ_GARRISON);
   !!GR(x)/(y)/(z):O(ownerNew);

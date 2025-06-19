@@ -5,6 +5,7 @@ ZVSE2
 
 ** Option 192 by Tobyn
 ** Rewritten by igrik (03.03.2021)
+** Updated by Archer30 (08.05.2025)
 
 * Enables ownership transference of own heroes,
 * towns, mines, dwellings, lighthouses, 
@@ -20,6 +21,17 @@ ZVSE2
 
 !#UN:P(WOG_OPT_TRANSFER_OWNER)/?(wogOption:y);
 !#VRi^wog_192_dwellingEnabled^&(wogOption):S(TRUE); [Switch for dwelling transfer]
+
+; Array for Towns and Mines
+!?FU(OnAfterErmInstructions);
+!!UN:P(WOG_OPT_TRANSFER_OWNER)/?(wogOption:y);  
+!!FU&(wogOption)<>(TRUE):E;
+
+!!FU(NewIntArray):P?i^wog_192_transferedObjects^/(M_STORED);
+
+; Reset the array every week
+!?FU(OnEveryDay)&i^timerOnce^/i^timerWeekDay^=1/i^timerDay^>1/i^wog_192_transferedObjects^;
+!!SN:Mi^wog_192_transferedObjects^/0;
 
 !?FU(OnAdventureMapLeftMouseClick)&999/i^key_shift^/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^mouse_item^=(ITEM_ADVMAP_ADVENTURE_MAP);
 !!UN:P(WOG_OPT_TRANSFER_OWNER)/?(wogOption:y);  
@@ -38,13 +50,32 @@ ZVSE2
 ; get object params
 !!OB(x)/(y)/(z):T?(objectType:y) U?(objectSubype:y);
 
+; get object entrance coordinates
+!!SN:O?(x)/?(y)/?(z);
+
 ; checking for allowed objects
 !!VR(isAllowedObjects:y):S(FALSE);
 
 ; list of allowed objects
-!!VR(isAllowedObjects)&(objectType)=(OBJ_TOWN):S(TRUE);
-!!VR(isAllowedObjects)&(objectType)=(OBJ_MINE):S(TRUE);
+; For towns and mines, they can only be transfered once a week (for all players)
+!!if|(objectType)=(OBJ_TOWN)/(objectType)=(OBJ_MINE);
+  !!SN:Mi^wog_192_transferedObjects^/?(size:y);
 
+  !!re i/0/(size)/1/-1;
+    !!SN:Mi^wog_192_transferedObjects^/0/?(packedValue:y);
+    !!FU(UnpackUnion):P(packedValue)/?(packedX:y)/8/?(packedY:y)/8/?(packedZ:y)/8/?(packedOwner:y)/8;
+
+    *!if&(packedX)=(x)/(packedY)=(y)/(packedZ)=(z)/(packedOwner)=i^timerOwner^;
+      *!IF:M^%T(wog.192.cooldown)^;
+      *!CM:R0;
+      *!FU:E;
+    *!en;
+  !!en;
+
+  !!VR(isAllowedObjects):S(TRUE);
+!!en;
+
+; For dwellings
 !!if&i^wog_192_dwellingEnabled^;
   !!if&(objectType)=(OBJ_CREATURE_GENERATOR_1);
     !!re i/80/88;
@@ -65,6 +96,7 @@ ZVSE2
   !!VR(isAllowedObjects)&(objectType)=(OBJ_CREATURE_GENERATOR_4):S(TRUE);
 !!en;
 
+; For Gardens, Water Wheels and Windmills (Era Scripts Mod feature)
 !!UN:P879/?(capture:y);
 !!if&(capture);
   !!VR(isAllowedObjects)&(objectType)=(OBJ_MYSTICAL_GARDEN):S(TRUE);
@@ -76,9 +108,6 @@ ZVSE2
 !!VR(isAllowedObjects)&(objectType)=(OBJ_GARRISON_2):S(TRUE);
 
 !!FU&(isAllowedObjects)<>(TRUE):E;
-
-; get object entrance coordinates
-!!SN:O?(x)/?(y)/?(z);
 
 ; init owner var
 !!VR(owner:y):S-1;
@@ -103,8 +132,6 @@ ZVSE2
 
 !!FU(WOG_SetupMultiPlayerDlg):P^%T(wog.192.mainMsg)^/(TRUE)/?(chosenPicture:y)/?(newOwner:y);
 
-
-
 !!if&(chosenPicture)<>(NO_PLAYER);
   ; передаём объекты: эти не нуждаются в настройке
   !!DW(x)/(y)/(z)&(objectType)=(OBJ_CREATURE_GENERATOR_1):O(newOwner)/1;
@@ -118,11 +145,13 @@ ZVSE2
   ; передаём объекты: эти нуждаются в настройке
   !!FU(WOG_192_TownTransferOwner)&(objectType)=(OBJ_TOWN):P(x)/(y)/(z)/(newOwner);
   !!FU(WOG_192_MineTransferOwner)&(objectType)=(OBJ_MINE):P(x)/(y)/(z)/(newOwner);
+
+  ; Set as transfered in the array
+  !!if|(objectType)=(OBJ_TOWN)/(objectType)=(OBJ_MINE);
+    !!FU(PackUnion):P(x)/8/(y)/8/(z)/8/i^timerOwner^/8/?(packedValue);
+    !!FU(Array_Push):Pi^wog_192_transferedObjects^/(packedValue);
+  !!en;
 !!en;
-
-
-
-
 
 ; ==================================================================================================
 

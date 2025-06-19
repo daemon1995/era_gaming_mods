@@ -89,6 +89,11 @@ ZVSE2
 
 !!SN:E(setHook)/1/6025347/(WOG_OnCaptureTown); [Trigger on a town got captured]
 
+; These 2 hooks were used for Warfare (option 193)
+; But now they are needed globally to execute UN:P904 in order to skip the HE:S unknown erm error
+!!SN:E(setHook)/1/7620989/(WOG_ERM_Hero_BeforeSkillAffection);                     [.text 004E2540  00000061  0000000C  00000005  R . . . B T .] 74497D
+!!SN:E(setHook)/1/7621364/(WOG_ERM_Hero_AfterSkillAffection);                      [.text 004E2540  00000061  0000000C  00000005  R . . . B T .] 744AF4
+
 ; Prevent Spellbinder's Hat from removing when 124 War Machine is destroyed
 !?FU(OnGameEnter)|i^wog_54_enabled^/i^wog_55_enabled^;
 !!UN:C5084413/2/5867 C5084415/1/(OPCODE_NOP_1);
@@ -355,7 +360,7 @@ ZVSE2
 !!UN:C(ADV_MANAGER)/(UNC_UINT32)/?(advMgr:y);
 !!UN:C(mapItem)/(UNC_UINT32)/?(objSetup:y) C(mapItem)/30/(UNC_UINT32)/?(objType:y);
 !!SN&(quiet)=0:E4894976/(CALLCONV_STDCALL)/(objType)/(objSetup);
-!!SN:E4882784/(CALLCONV_THISCALL)/(advMgr)/(hero)/(mapItem)/(packed); AdvMgr_Enter2Object_Player
+!!SN:E4882784/(CALLCONV_THISCALL)/(advMgr)/(hero)/(mapItem)/(packed)/(TRUE); AdvMgr_Enter2Object_Player
 
 !!if&(mobilizeHero)=0;
   !!re i/0/4;
@@ -1050,6 +1055,13 @@ The game may fall at any time.^;
   *!UN:C(ebp)/20/4/?(npc:y) C(npc)/12/4/?(npcType:y);
 
 // Bug fixes
+// Avoid Unknown erm error for HE:S
+!?FU(WOG_ERM_Hero_BeforeSkillAffection);
+!!UN:P904/(TRUE);
+
+!?FU(WOG_ERM_Hero_AfterSkillAffection);
+!!UN:P904/(FALSE);
+
 // HD MOD WAR MACHINES SWAP FIX
 !?FU(WOG_OnBeforeHeroSwap)&1000;
   !!SN:F^GetModuleHandleA^/^HD_WOG.dll^;
@@ -1264,6 +1276,35 @@ The game may fall at any time.^;
 
 !!FU(WOG_ReadTxtString):P6974640/(objType);
 !!VR(string):Z^%z1^;
+
+!?FU(WOG_GetRealObjectName);
+!#VA(objType:x) (objSubtype:x) (string:x);
+
+!!SN:F^PluginExists^/^RMG_CustomizeObjectProperties^;
+!!VRs:S(FALSE);
+!!VRt:Sv1;
+!!if&v1;
+  !!SN:L^RMG_CustomizeObjectProperties.era^/?p;
+  !!VRt:Sp;
+
+  !!if&p;
+    !!SN:Ap/^GetObjectName^/?f;
+    !!VRt:Sf;
+
+    !!if&f;
+      !!SN:Ef/(CALLCONV_CDECL)/(objType)/(objSubtype);
+      !!if&v1;
+        !!SN:Bv1/d/?(result:z);
+        !!VRs:S(TRUE);
+      !!en;
+    !!en;
+  !!en;
+!!en;
+!!if&s=(FALSE);
+  !!FU(WOG_GetObjectName):P(objType)/?(result:z);
+!!en;
+!!VR(string):Z(result:z);
+
 
 !?FU(WOG_GetGeneralText);
 !#VA(index:x) (string:x);

@@ -2,10 +2,6 @@ ZVSE2
 ** Author orig.  : DracoLich
 ** Updated by    : Archer30
 ** Name          : Capture the mills and leprechaun's gardens
-** Name rus.     : «ахват мельниц и садов лепрекона
-** Changes rus.  : [Algor] вынос опции в отдельный файл дл€ мода ERA, построчные комментарии
-**                 [Algor] вынос текстов в ert-файл
-**                 [Algor] технологи€ быстрого поиска дл€ UN:U
 ** Options       : 879
 ** Dialogs       : -
 ** Variables     : -
@@ -18,6 +14,9 @@ ZVSE2
 28.07.2022 Fully rewritten by daemon_n
 15.10.2023 Updated by daemon_n: Added graphics with flags;
 15.10.2023 Updated by daemon_n: Now supported capture status in MP game during enemy turn but not added in replay turn;
+Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten visit and auto visit logic / graphics is by @JackSlater
+
+!#DC(ES_OBJ_WAREHOUSE) = 142;
 
 !?FU(ES_CreateERMHook);
 !#VA(address:x);
@@ -25,9 +24,8 @@ ZVSE2
 !!UN:P879/?(isCaptureObjOpt:y);
 
 !!if&(isCaptureObjOpt);
-  !!SN:E(address)/1/4864048/(ES_OnPlayerVisit_MillOrGarden); [Trigger on player visiting Mysticism Garden]
-  !!SN:E(address)/1/4880976/(ES_OnPlayerVisit_MillOrGarden); [Trigger on player viisiting Water Wheel]
-  !!SN:E(address)/1/4881456/(ES_OnPlayerVisit_MillOrGarden); [Trigger on player visiting Wind Mill]
+  !!SN:E(address)/1/4882852/(ES_OnPlayerVisitObject); [Trigger on player visiting Any Object] 4A81A4]
+
   !!SN:E(address)/1/4263804/(ES_OnMapItem_GetOwner);
   !!SN:E(address)/1/4263370/(ES_OnMapItem_Draw);
   !!SN:E(address)/1/5183597/(ES_Hook_OnPlayerDefeated);
@@ -43,25 +41,53 @@ ZVSE2
 
 !!if&(isCaptureObjOpt);
   //replace wind mill grass
-  !!re i/0/7;(end_value);
-    !!SN:R^AVMwndd0.def:0_%i.png^/^Data\Defs\ESwind00.def\0_%i.png^;;
+  !!re i/0/7;                           [(end_value);]
+    !!SN:R^AVMwndd0.def:0_%i.png^/^Data\Defs\ESwind00.def\0_%i.png^; [;]
   !!en;
   //replace wind mill snow
-  !!re i/0/7;(end_value);
-    !!SN:R^AVMwmsn0.def:0_%i.png^/^Data\Defs\ESwind10.def\0_%i.png^;;
+  !!re i/0/7;                           [(end_value);]
+    !!SN:R^AVMwmsn0.def:0_%i.png^/^Data\Defs\ESwind10.def\0_%i.png^; [;]
   !!en;
 
   //replace OBJ_WATER_WHEEL
-  !!re i/0/7;(end_value);
-    !!SN:R^AVMwwhl0.def:0_%i.png^/^Data\Defs\ESwtr00.def\0_%i.png^;;
+  !!re i/0/7;                           [(end_value);]
+    !!SN:R^AVMwwhl0.def:0_%i.png^/^Data\Defs\ESwtr00.def\0_%i.png^; [;]
   !!en;
 
     //replace OBJ_WATER_WHEEL snow
-  !!SN:R^AVMwwsn0.def:0_0.png^/^Data\Defs\ESwtr10.def\0_0.png^;;
+  !!SN:R^AVMwwsn0.def:0_0.png^/^Data\Defs\ESwtr10.def\0_0.png^; [;]
 
   //replace OBJ_MYSTICAL_GARDEN
-  !!re i/0/14;(end_value);
-    !!SN:R^avtmyst0.def:0_%i.png^/^Data\Defs\ESmyst0.def\0_%i.png^;;
+  !!re i/0/13;                          [(end_value);]
+    !!SN:R^avtmyst0.def:0_%i.png^/^Data\Defs\ESmyst0.def\0_%i.png^; [;]
+    !!SN:R^avtmystd0.def:0_%i.png^/^Data\Defs\ESmystd0.def\0_%i.png^; [;]
+  !!en;
+
+  //replace warehouses
+
+  //wood
+  !!SN:R^avwrhswd.def:0_0.png^/^Data\Defs\ESwrhswd.def\0_0.png^;
+  //mercury
+  !!re i/0/7;                           [(end_value);]
+    !!SN:R^avwrhsmc.def:0_%i.png^/^Data\Defs\ESwrhsmc.def\0_%i.png^;
+  !!en; 
+  //ore
+  !!SN:R^avwrhsor.def:0_0.png^/^Data\Defs\ESwrhsor.def\0_0.png^;
+  //sulfur
+  !!re i/0/11;                          [(end_value);]
+    !!SN:R^avwrhssf.def:0_%i.png^/^Data\Defs\ESwrhssf.def\0_%i.png^;
+  !!en; 
+  //crystall
+  !!re i/0/7;                           [(end_value);]
+    !!SN:R^avwrhscr.def:0_%i.png^/^Data\Defs\ESwrhscr.def\0_%i.png^;
+  !!en;  
+  //gem
+  !!re i/0/7;                           [(end_value);]
+    !!SN:R^avwrhsgm.def:0_%i.png^/^Data\Defs\ESwrhsgm.def\0_%i.png^;
+  !!en;
+  //gold
+  !!re i/0/5;                           [(end_value);]
+    !!SN:R^avwrhsgl.def:0_%i.png^/^Data\Defs\ESwrhsgl.def\0_%i.png^;
   !!en;
 !!en;
 
@@ -79,7 +105,7 @@ ZVSE2
 !?FU(ES_OnMapItem_Draw);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(mapitem:y) C(mapitem:y)/56/4/?(objType:y);
 
-!!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
+!!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
   !!UN:C6916676/4/?(noShowObjectcts:y);
 
   !!if&(noShowObjectcts)=0;
@@ -89,51 +115,41 @@ ZVSE2
   !!en; 
 !!en;
 
-!?FU(ES_OnPlayerVisit_MillOrGarden)&i^ES_879_isAuto^=(FALSE);
-  !!FU(ES_879_OnVisitResourceObject):Px1/?(packedCoords:y)/?(oldOwner:y)/?(newOwner:y);
-  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
-  
-  !!IP:D(ANY_PLAYER);
-  !!FU(ES_879_MP_SendObjectOwner):D(x)/(y)/(z)/i^timerOwner^;
+!?FU(ES_OnPlayerVisitObject)&i^ES_879_isAuto^=(FALSE); [4A81A4]
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/(UNC_INT)/?(objType:y);
+  !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
+    
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(packedCoords:y);
+    !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
+    
+    !!PO(x)/(y)/(z):O?(oldOwner:y);
 
-!?FU(ES_879_MP_SendObjectOwner);
-!#VA (packedCoords[3]:x) (newOwner:x) (newRes:x) (newVal:x);
+    !!VR(ownerChanged:y):S(FALSE);
+
+    !!if&(oldOwner)=(NO_OWNER);
+      !!PO(x)/(y)/(z):V0/0 V1/0;          [res type and num]
+      !!VR(ownerChanged):S(TRUE);
+    !!el;
+      !!OW:T(oldOwner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
+
+      !!if&(team)<>(newTeam);
+        !!PO(x)/(y)/(z):V0/0 V1/0;        [res type and num]
+        !!VR(ownerChanged):S(TRUE);
+      !!en;
+    !!en;
+
+    !!if&(ownerChanged);
+      !!IP:D(ANY_PLAYER);
+      !!FU(ES_879_MP_SetObjectOwner):D(x)/(y)/(z)/i^timerOwner^ P(x)/(y)/(z)/i^timerOwner^;
+    !!en;
+
+  !!en;
+
+!?FU(ES_879_MP_SetObjectOwner);
+!#VA (packedCoords[3]:x) (newOwner:x);
 
 !!POx1/x2/x3:O(newOwner);
 
-!?FU(ES_879_OnVisitResourceObject);
-!#VA(addr:x) (packedCoords:x) (oldOwner:x); (newOwner:x) (newRes:x) (newVal:x);
-
-  *!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESP)/4/?(esp:y) C(esp)/16/4/0; emulate AI visit to block message
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(packedCoords);
-  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
-  !!PO(x)/(y)/(z):O?(oldOwner);
-
-  !!if&(oldOwner)=(NO_OWNER);
-    !!PO(x)/(y)/(z):Oi^timerOwner^;
-    !!PO(x)/(y)/(z):V0/0 V1/0;          [res type and num]
-  !!el;
-    !!OW:T(oldOwner)/?(team:y) Ti^timerOwner^/?(newTeam:y);
-
-    !!if&(team)<>(newTeam);
-      !!PO(x)/(y)/(z):Oi^timerOwner^;
-      !!PO(x)/(y)/(z):V0/0 V1/0;        [res type and num]
-    !!en;
-  !!en;
-
-
-// after local visit send new owner to all players - MP support
-!$OB(OBJ_MYSTICAL_GARDEN);
-  !!IP:D(ANY_PLAYER);
-  !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
-
-!$OB(OBJ_WINDMILL);
-  !!IP:D(ANY_PLAYER);
-  !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
-
-!$OB(OBJ_WATER_WHEEL);
-  !!IP:D(ANY_PLAYER);
-  !!FU(ES_879_MP_SendObjectOwner):Dv998/v999/v1000/i^timerOwner^;(newOwner);
 
 
 !?FU(OnEveryDay)&i^timerWeekday^=1/i^timerDay^>1/i^timerOnce^; [поставка ресурсов владельцам мельниц/садов каждый первый день недели, начина€ с 8го дн€]
@@ -162,45 +178,63 @@ ZVSE2
   !!en;
 
   !!VRi^ES_879_isAuto^:S(TRUE);
-  !!FU(ES_879_IterateObjects):P4864048/(OBJ_MYSTICAL_GARDEN)/(hero)/(liveArr);
-  !!FU(ES_879_IterateObjects):P4880976/(OBJ_WATER_WHEEL)/(hero)/(liveArr);
-  !!FU(ES_879_IterateObjects):P4881456/(OBJ_WINDMILL)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P(OBJ_MYSTICAL_GARDEN)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P(OBJ_WATER_WHEEL)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P(OBJ_WINDMILL)/(hero)/(liveArr);
+  !!FU(ES_879_IterateObjects):P(ES_OBJ_WAREHOUSE)/(hero)/(liveArr);
   !!UN:C(hero)/34/1/(NO_OWNER);
   !!VRi^ES_879_isAuto^:S(FALSE);
 
 
 !?FU(ES_879_IterateObjects); 
-!#VA(funcAddr:x) (objType:x) (hero:x) (liveArr:x);
+!#VA(objType:x) (hero:x) (liveArr:x);
 !#VA(x:y) (y:y) (z:y); 
 
-!!VR(x):S-1;                                                  [init as start]
+!!VR(x):S-1;                            [init as start]
 !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-!!re i;                                                       [endless loop]
+!!re i;                                 [endless loop]
   !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y)/(z); 
-  !!br&(x)<0;                                                 [exit loop if nothing found]
+  !!br&(x)<0;                           [exit loop if nothing found]
 
-  !!PO(x)/(y)/(z):O?(owner:y);                                [get obj owner]
+  !!PO(x)/(y)/(z):O?(owner:y);          [get obj owner]
 
-  !!if&(owner)<>(NO_OWNER);                                    [if there is one]
-    !!SN:V(liveArr)/(owner)/?(isAlive:y);                     [check if lives]
+  !!if&(owner)<>(NO_OWNER);             [if there is one]
+    !!SN:V(liveArr)/(owner)/?(isAlive:y);[check if lives]
 
     !!if&(isAlive);
-      !!UN:C(hero)/34/1/(owner);                              [set hero as obj owner color]
+      !!UN:C(hero)/34/1/(owner);        [set hero as obj owner color]
       !!OB(x)/(y)/(z):T?(heroCheck:y);
 
       !!if&(heroCheck)=(OBJ_HERO);
-        !!HE(x)/(y)/(z):Z?(badHero:y);
-        !!SN:E5077328/(CALLCONV_THISCALL)/(badHero);         [hide hero if it is there]
+        !!FU(ES_AdvMgr_HideHero):P(x)/(y)/(z); [hide hero if it is there]
       !!en;
 
-      !!FU(ES_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);  [get mapItem]
       !!FU(ES_879_AdjustStoredRes):P(x)/(y)/(z)/(objType);
-      !!SN:E(funcAddr)/(CALLCONV_THISCALL)/(advMgr)/(hero)/(mapItem)/0; [visit mapItem as AI]
+      !!FU(ES_879_AdvMgr_HeroEnterObjectAsAi):P(x)/(y)/(z)/(hero);
+
     !!el;
-      !!PO(x)/(y)/(z):O(NO_OWNER) V0/0 V1/0;                            [set no owner if is dead]
-      !!FU(ES_879_MP_SendObjectOwner):P(x)/(y)/(z)/(NO_OWNER);
+      !!PO(x)/(y)/(z):O(NO_OWNER) V0/0 V1/0; [set no owner if is dead]
+      !!FU(ES_879_MP_SetObjectOwner):P(x)/(y)/(z)/(NO_OWNER);
     !!en;
   !!en;
+!!en;
+
+!?FU(ES_879_AdvMgr_HeroEnterObjectAsAi);
+!#VA(x:x) (y:x) (z:x) (hero:x);
+
+!#VA(storedOpp[5]:y);
+!!re i/0/4;
+  !!UN:Ci/4882831/(UNC_INT8)/?(storedOpp[i]) Ci/4882831/(UNC_INT8)/(OPCODE_NOP_1);
+!!en;
+
+!!FU(ES_PackedCoords):P(x)/(y)/(z)/?(packed:y);
+!!FU(ES_AdvMgr_GetMapItem):P(x)/(y)/(z)/?(mapItem:y);
+!!UN:C(ADV_MANAGER)/(UNC_UINT32)/?(advMgr:y);
+!!UN:C(mapItem)/(UNC_UINT32)/?(objSetup:y) C(mapItem)/30/(UNC_UINT32)/?(objType:y);
+!!SN:E4882784/(CALLCONV_THISCALL)/(advMgr)/(hero)/(mapItem)/(packed)/(FALSE); [AdvMgr_Enter2Object_Player]
+
+!!re i/0/4;
+  !!UN:Ci/4882831/(UNC_INT8)/(storedOpp[i]);
 !!en;
 
 !?FU(ES_879_AdjustStoredRes);
@@ -214,22 +248,37 @@ ZVSE2
   !!WM(x)/(y)/(z):B?(resCoeff:y);
   !!VR(value:y):S(resCoeff)*500;
   !!VR(resType):S(RES_GOLD);
-!!el;
+!!el&(objType)=(OBJ_WINDMILL);
   !!ML(x)/(y)/(z):B?(resType:y)/?(value:y);
+!!el&(objType)=(ES_OBJ_WAREHOUSE);
+  !!OB(x)/(y)/(z):C?(cWord:y);
+  !!VR(resType):S(cWord) &(BITS_5_MASK);
+  !!VR(value):S(cWord) Sd>>13 &(BITS_10_MASK);
+
+  !!if&(resType)=(RES_MITHRIL);         [replace resType with gold if there is no mithril]
+    !!UN:B0/?(mithrilEnabled:y);
+    !!if&(mithrilEnabled)=(FALSE);
+      !!VR(resType):S(RES_GOLD);
+    !!en;
+  !!en;
+
+  !!if&(resType)=(RES_GOLD);
+    !!VR(value):*500;
+  !!en;
 !!en;
 
 !!PO(x)/(y)/(z):V0/(resType) V1/(value);
 
 
 !?FU(ES_HOOK_OnObjectHintGetType);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y) C(ebx)/30/2/?t;(objType:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(ebx:y) C(ebx)/30/2/?t; [(objType:y);]
 
-!!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+!!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL)/t=(ES_OBJ_WAREHOUSE);
   !!VRi^es_879_hint_object_type^:St;
 !!en;
 
 !?FU(OnAdventureMapTileHint)&i^es_879_hint_object_type^;
-!#VA(x:x) (y:x) (z:x);             Object entrance coordinates
+!#VA(x:x) (y:x) (z:x);                  [Object entrance coordinates]
 
 !!PO(x)/(y)/(z):O?(owner:y);
 
@@ -247,9 +296,9 @@ ZVSE2
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(mapItem:y);
 
 !!if&(mapItem)>(BIT_16);
-  !!UN:C(mapItem:y)/30/2/?t;(objType:y);
+  !!UN:C(mapItem:y)/30/2/?t;            [(objType:y);]
 
-  !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL);
+  !!if|t=(OBJ_MYSTICAL_GARDEN)/t=(OBJ_WATER_WHEEL)/t=(OBJ_WINDMILL)/t=(ES_OBJ_WAREHOUSE);
     !!VRi^es_879_rmc_hint_object_type^:St;
   !!en;
 !!en;
@@ -279,19 +328,19 @@ ZVSE2
 ; get size of the map
 !!UN:X?(mapSize:y)/?(hasUnderground:y); 
 ; pass once through all cells of the map
-!!re l/0/(hasUnderground)/1;  coord z
-  !!re k/0/(mapSize)/1/-1;    coord y
-    !!re i/0/(mapSize)/1/-1;  coord x
+!!re l/0/(hasUnderground)/1;            [coord z]
+  !!re k/0/(mapSize)/1/-1;              [coord y]
+    !!re i/0/(mapSize)/1/-1;            [coord x]
       !!OBi/k/l:T?(objType:y);
 
-      !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
+      !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
         !!TRi/k/l:E?(isYellowSquare:y); 
-        !!VR(isYellowSquare):X(TRUE);  reverse param isYellowSquare
+        !!VR(isYellowSquare):X(TRUE);   [reverse param isYellowSquare]
 
         !!if&(isYellowSquare);
           !!FU(ES_AdvMgr_GetMapItem):Pi/k/l/?(mapItem:y);
           !!POi/k/l:O?(owner:y);
-          !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/i/k/l/(owner)/3;
+          !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/i/k/l/(owner)/3/0;
         !!en;
       !!en;
     !!en;
@@ -303,8 +352,11 @@ ZVSE2
 !#VA(x:x) (y:x) (z:x);
 !#VA(objType:x);
 !#VA(owner:x);
+!!UN:P879/?(isCaptureObjOpt:y);
 
-!!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL);
-  !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
-  !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/3;
+!!if&(isCaptureObjOpt);
+  !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
+    !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+    !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/3/0;
+  !!en;
 !!en;
