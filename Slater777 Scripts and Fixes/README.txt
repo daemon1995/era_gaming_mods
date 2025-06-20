@@ -11,21 +11,6 @@ All settings can be tweaked here:
 
 Changelog:
 
-New objects:
-from HotA:
-- Prospector (works as Mystical Garden)
-- Oil Pump (works as Water Mill)
-- Colosseum of the Magi
-
-- Warehouses
-- HotA creature banks
-
-- Gazebo
-- Watering Place
-- Mineral Spring
-
-
-
 Skills changes:
 - Ballistics: adds a catapult to a non-siege battle
 - Eagle Eye: adds a 10/20/30% chance for critical damage when casting a battle spell (artifacts and hero specs also have this bonus);
