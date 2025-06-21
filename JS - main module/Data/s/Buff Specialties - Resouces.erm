@@ -1,0 +1,48 @@
+ZVSE2
+
+
+; Resource specialization has been strengthened - for every 4 levels the hero brings an additional unit of resource (or 350 gold)
+
+
+!?FU(OnAfterErmInstructions);
+!!VR(jsonKey:z):S^jsMod.settings.buffResourceSpecialties.value^; Check json setting
+!!SN:T(jsonKey)/?(value:z);
+!!VR(jsOpt:y):V(value);
+
+!!FU&(jsOpt)=0:E;
+
+!!VRi^js_buffResourceSpecialties^:S(TRUE);
+
+!!re i/0/(HERO_LAST_WOG);
+  !!HEi:X?(specType:y)/?(specSubtype:y)/d/d/d/d/d;
+
+  !!if&(specType)=2/(specSubtype)>=(RES_WOOD)/(specSubtype)<=(RES_GOLD);
+    !!SN:H^spec^/i/2/?(specDesc:z);
+    !!VR(specDesc): +^%T(jsMod.secSkill.resource.desc.spec)^;
+    !!SN:H^spec^/i/2/(specDesc);
+  !!en;
+!!en;
+
+
+!?FU(OnEveryDay)&i^timerOnce^/i^js_buffResourceSpecialties^;
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:O?(owner:y);
+
+  !!if&(owner)>(NO_OWNER);
+    !!HEi:X?(specType:y)/?(specSubtype:y);
+
+    !!if&(specType)=2/(specSubtype)>=(RES_WOOD)/(specSubtype)<=(RES_GOLD);
+      !!HEi:Ed/?(heroLvl:y);
+      !!VR(resQty:y):S(heroLvl) :4;
+
+      !!if&(resQty)>0;
+        !!if&(specSubtype)=(RES_GOLD);
+          !!VR(resQty): *350;
+        !!en;
+
+        !!OW:R(owner)/(specSubtype)/d(resQty);
+
+      !!en;
+    !!en;
+  !!en;
+!!en;

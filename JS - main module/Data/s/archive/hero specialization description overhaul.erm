@@ -1,0 +1,256 @@
+Z VSE2
+
+
+[Некорректный расчет цифр для спецы по существам!] - дело в double и ceil
+
+
+
+!?FU(OnAfterErmInstructions);
+!!FU&i^wog_39_enabled^:E; // wog option hero spec boost
+// neutral town :E
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!FU(js_Hero_RedrawHeroSpecBonus):Pi;
+!!en;
+
+
+!?FU(js_Hero_RedrawHeroSpecBonus);
+!#VA(heroId:x);
+
+!!HE(heroId):X?(specType:y)/?(specSubtype:y);
+
+*!if&(specType)=1; // creature specialist
+  *!HE(heroId):X?(specType:y)/?(monId:y);
+  *!SN:H^-spec^/(heroId)/2/^^; // reset heroSpecDesc
+  *!SN:H^spec^/(heroId)/2/?(origDesc:z);
+  *!FU(js_GetAdditionalMonSpecText):P(heroId)/(monId)/?(msg:z);
+  *!SN:H^spec^/(heroId)/2/^%(origDesc:z)%(msg)^;
+*!el&(specType)=0; // secSkill specialist
+*!if&(specType)=0;
+!!if&(specType)=0/(specSubtype)<>(SKILL_MYSTICISM);
+  !!HE(heroId):X?(specType:y)/?(skillId:y);
+  !!SN:H^-spec^/(heroId)/2/^^; // reset heroSpecDesc
+  !!SN:H^spec^/(heroId)/2/?(origDesc:z);
+  !!FU(js_GetAdditionalSkillSpecText):P(heroId)/(skillId)/?(msg:z);
+  !!SN:H^spec^/(heroId)/2/^%(origDesc:z)%(msg)^;
+*!el&(specType)=3; // spell specialist 63EAA8
+
+!!en;
+
+
+!?FU(js_GetAdditionalMonSpecText);
+!#VA(heroId:x) (monId:x) (result:x);
+
+!!if&(monId)<>(MON_BALLISTA);
+  !!SN:H^monname^/(monId)/1/?(monName:z);
+!!el;
+  !!SN:H^monname^/(monId)/0/?(monName:z);
+!!en;
+
+!!SN:T^jsMod.heroSpecDescOverhaul.monster.desc^/?(monBonus:z)/^monName^/(monName);
+!!FU(js_Hero_GetSpecMonsterBonusStr):P(heroId)/(monId)/?(bonus:z);
+!!VR(monBonusStr:z):S^%T(gem.endl)%T(gem.endl)%(monBonus)%T(gem.endl)%(bonus)^;
+
+!!FU(GetUpgradedMonster):P(monId)/?(upgMonType:y);
+
+!!if&(upgMonType)<>(NO_MON);
+  !!SN:H^monname^/(upgMonType)/1/?(upgMonName:z);
+  !!SN:T^jsMod.heroSpecDescOverhaul.monster.desc^/?(upgMonBonus:z)/^monName^/(upgMonName);
+  !!FU(js_Hero_GetSpecMonsterBonusStr):P(heroId)/(upgMonType)/?(bonus:z);
+  !!VR(upgMonBonusStr:z):S^%T(gem.endl)%T(gem.endl)%(upgMonBonus)%T(gem.endl)%(bonus)^;
+!!el;
+  !!VR(upgMonBonusStr:z):S^^;
+!!en;
+
+!!VR(result):Z^%(monBonusStr)%(upgMonBonusStr)^;
+
+
+!?FU(js_Hero_GetSpecMonsterBonusStr);
+!#VA(heroId:x) (monId:x) (result:x);
+
+!!FU(js_Hero_GetSpecMonsterBonus):P(heroId)/(monId)/?(attackBonus:y)/?(defenseBonus:y);
+!!SN:T^jsMod.heroSpecDescOverhaul.monster.table1^/?(str:z)/^attack^/(attackBonus)/^defense^/(defenseBonus);
+
+// monsters which do receive +1 speed bonus
+!!if&(monId)<>(MON_BALLISTA);
+  !!VR(str): +^%T(jsMod.heroSpecDescOverhaul.monster.table3)^;
+!!en;
+
+!!VR(result):Z(str);
+
+
+!?FU(js_Hero_GetSpecMonsterBonus);
+!#VA(heroId:x) (monId:x) (attackBonus:x) (defenseBonus:x);
+
+!!HE(heroId):E?s/?(level:y);
+!!MA:L(monId)/?(monLvl:y) A(monId)/?(attack:y) D(monId)/?(defense:y);
+
+; koeff = (double)(Hero->Level / (creatureInfo->level + 1)) * 0.05;
+!!VR(monLvlBonus:y):S(monLvl) +1;
+!!FU(js_GetPercentBoost):P(monId)/?(percentBoost:y);
+!!VR(coeff:e):S(level) :(monLvlBonus) :(percentBoost);
+*!IF:L^my_coeff= %(coeff)^;
+
+; creatureInfo->attack = (__int64)(ceil((double)o_pCreatureInfo[v14].attack * koeff) + (double)creatureInfo->attack);
+!!VR(attackBonusFloat:e):S(coeff) * (attack);
+*!IF:L^attackBonusFloat= %(attackBonusFloat)^;
+
+*!SN:E6394519/(CALLCONV_CDECL)/(attackBonusFloat)/?(attackBonusFloatRounded:e); 619297
+*!IF:L^attackBonusFloatRounded= %(attackBonusFloatRounded)^;
+
+//0.4 => +0 бонус => 3
+//0.4 + 3.4 = 3.8 => 4
+!!VR(rounder:e): S5 :10;
+!!VR(floatWithRounder:e):S(attackBonusFloat) +(rounder);
+!!VR(attackBonus):S(attackBonusFloat);
+!!VR(intWithRounder:y):S(floatWithRounder);
+!!VR(attackBonus)&(attackBonus)<(intWithRounder): +1;
+;!IF:L^attackBonus= %(attackBonus)^;
+
+;!FU(js_RoundFloatUp):P(attackBonusFloat)/?(attackBonus);
+
+; creatureInfo->defence = (__int64)(ceil((double)o_pCreatureInfo[v14].defence * koeff) + (double)creatureInfo->defence);
+!!VR(defenseBonusFloat:e):S(coeff) * (defense);
+*!IF:L^defenseBonusFloat= %(defenseBonusFloat)^;
+!!VR(floatWithRounder:e):S(defenseBonusFloat) +(rounder);
+!!VR(defenseBonus):S(defenseBonusFloat);
+!!VR(intWithRounder:y):S(floatWithRounder);
+!!VR(defenseBonus)&(defenseBonus)<(intWithRounder): +1;
+;!IF:L^defenseBonus= %(defenseBonus)^;
+
+;!FU(js_RoundFloatUp):P(defenseBonusFloat)/?(defenseBonus);
+
+
+// For future work - percent customization
+!?FU(js_GetPercentBoost);
+!#VA(monId:x) (result:x);
+
+*!if&(monId)<>(MON_BALLISTA);
+  !!VR(result):S20;
+*!el;
+  *!VR(result):S20;
+*!en;
+
+
+//float is lost when passed to the function
+!?FU(js_RoundFloatUp);
+!#VA(float:x) (result:x);
+
+!!VR(rounder:e): S5 :10;
+!!VR(floatWithRounder:e):S(float) +(rounder);
+!!VR(int:y):S(float);
+!!VR(intWithRounder:y):S(floatWithRounder);
+!!VR(int)&(int)<(intWithRounder): +1;
+!!VR(result):S(int);
+
+
+********************************************************************************
+!?FU(js_GetAdditionalSkillSpecText);
+!#VA(heroId:x) (skillId:x) (result:x);
+
+!!SN:H^secskill^/(skillId)/0/?(skillName:z);
+
+!!VR(specBonusLine:z):S^%T(jsMod.heroSpecDescOverhaul.secSkill.desc1)^;
+!!VR(totalSkillEffectLine:z):S^%T(jsMod.heroSpecDescOverhaul.secSkill.desc2)^;
+!!FU(js_Hero_GetSpecSkillBonusStr):P(heroId)/(skillId)/?(specBonusStr:z)/?(totalSkillEffectStr:z);
+*!VR(result):Z^%T(gem.endl)%T(gem.endl)%(specBonusLine)%T(gem.endl)%(specBonusStr)%T(gem.endl)%T(gem.endl)%(totalSkillEffectLine)%T(gem.endl)%(totalSkillEffectStr)^;
+!!VR(result):Z^%T(gem.endl)%T(gem.endl)%(totalSkillEffectLine)%T(gem.endl)%T(gem.endl)%(totalSkillEffectStr)^;
+
+
+!?FU(js_Hero_GetSpecSkillBonusStr);
+!#VA(heroId:x) (skillId:x) (specBonusStr:x) (totalSkillEffectStr:x);
+
+!!FU(js_Hero_GetSkillBonuses):P(heroId)/(skillId)/?(specBonus:y)/?(absSpecEffect:y)/?(typeValue:y); typeValue = 0 - int, typeValue = 1 - percent (float*100)
+!!SN:T^jsMod.heroSpecDescOverhaul.secSkill.table1^/?(specBonusSt:z)/^specBonus^/(specBonus);
+
+!!if&(typeValue)=1;
+  !!SN:T^jsMod.heroSpecDescOverhaul.secSkill.table2^/?(totalSkillEffectSt:z)/^absSpecEffect^/(absSpecEffect);
+!!el&(typeValue)=0;
+  !!SN:T^jsMod.heroSpecDescOverhaul.secSkill.table3^/?(totalSkillEffectSt:z)/^absSpecEffect^/(absSpecEffect);
+!!en;
+
+
+!!VR(specBonusStr):Z(specBonusSt);
+!!VR(totalSkillEffectStr):Z(totalSkillEffectSt);
+
+
+!?FU(js_Hero_GetSkillBonuses);
+!#VA(heroId:x) (skillId:x) (specBonus:x) (totalSkillEffect:x) (typeValue:x);
+
+!!FU(js_Hero_GetPercentSpecSkillBonus):P(heroId)/(skillId)/?(specBonus);
+!!FU(js_Hero_GetAbsSpecSkillBonus):P(heroId)/(skillId)/(specBonus)/?(totalSkillEffect)/?(typeValue);
+
+
+!?FU(js_Hero_GetPercentSpecSkillBonus);
+!#VA(heroId:x) (skillId:x) (result:x);
+
+!!HE(heroId):E?s/?(level:y);
+!!VR(percentBoost:y):S20; // тут можно потом кастомить бонус в зависимости от skillId
+!!VR(coeff:e):S(level) :(percentBoost);
+!!VR(resultFloat:e):S(coeff) *100; // проценты
+!!VR(result):S(resultFloat);
+
+
+!?FU(js_Hero_GetAbsSpecSkillBonus);
+!#VA(heroId:x) (skillId:x) (specBonus:x) (absSkillDifference:x) (typeValue:x);
+
+!!HE(heroId):S(skillId)/?(skillLvl:y);
+
+!!if&(skillLvl)=0;
+  !!VR(absSkillDifference):S0;
+!!el;
+  !!FU(js_GetSecSkillValue):P(skillId)/(skillLvl)/?(skillValue:y)/?(typeValue);
+
+  !!VR(specBonusFloat:e):S(specBonus) :100 +1;
+  !!VR(skillValueFloat:e):S(skillValue);
+  !!VR(specBonusFloat): *(skillValueFloat);
+
+  !!if&(typeValue)=1; // percent (float*100)
+    ; res = (Level * 0.050000001 + 1.0) * float(skillValue));
+    !!VR(absSkillDifferenceFloat:e):S(specBonusFloat) -(skillValueFloat);
+    !!VR(absSkillDifference):S(absSkillDifferenceFloat);
+  !!el&(typeValue)=0; // int
+    ; Summ = (__int64)((Level * 0.050000001 + 1.0) * float(skillValue));
+    !!VR(specBonusInt:y):S(specBonusFloat);
+
+    !!if&(skillId)=(SKILL_MYSTICISM);
+      !!VR(specBonusInt): +1;
+    !!en;
+
+    !!VR(absSkillDifference):S(specBonusInt) -(skillValue);
+  !!en;
+!!en;
+
+
+********************************************************************************
+!?FU(OnHeroGainLevel);
+!!FU&i^wog_39_enabled^:E;
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(js_Hero_RedrawHeroSpecBonus):P(heroId);
+
+
+!$OB63/51; // рынок времени
+!!FU&i^wog_39_enabled^:E;
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(js_Hero_RedrawHeroSpecBonus):P(heroId);
+
+!$OB81; // ученый
+!!FU&i^wog_39_enabled^:E;
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(js_Hero_RedrawHeroSpecBonus):P(heroId);
+
+!$OB104; // университет
+!!FU&i^wog_39_enabled^:E;
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(js_Hero_RedrawHeroSpecBonus):P(heroId);
+
+!$OB113; // хижина ведьмы
+!!FU&i^wog_39_enabled^:E;
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(js_Hero_RedrawHeroSpecBonus):P(heroId);
+
+
+!$OB144/5; // лачуга отшельника
+!!FU&i^wog_39_enabled^:E;
+!!HE(CURRENT_HERO):N?(heroId:y);
+!!FU(js_Hero_RedrawHeroSpecBonus):P(heroId);

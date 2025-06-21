@@ -1,0 +1,56 @@
+ZVSE2
+
+
+; Mysticism now allows the hero to restore 10/20/30% of his maximum spell points per day, but no less than 5/10/15
+; The option is incompatible with WoG-options: mysticism I, II
+
+
+// Incompatible options
+!?FU(js_CheckMysticismOptions);
+; x1 - result
+!!UN:P35/?y1; Mysticism I
+!!UN:P207/?y2; Mysticism II
+
+!!VRx1:S(FALSE);
+
+!!if|y1/y2;
+  !!VRx1:S(TRUE);
+!!en;
+
+
+!?FU(OnAfterErmInstructions);
+!!VR(jsonKey:z):S^jsMod.settings.hotaMysticism.value^; Check json setting
+!!SN:T(jsonKey)/?(value:z);
+!!VR(jsOpt:y):V(value);
+!!FU&(jsOpt)=0:E;
+
+!!FU(js_CheckMysticismOptions):P?(activeSettings:y);
+!!FU&(activeSettings:y):E;
+
+!!VRi^js_hota_mysticism^:S(TRUE);
+
+!!SN:H^secskill^/(SKILL_MYSTICISM)/(SKILL_BASIC)/^%T(jsMod.secSkill.mysticism.desc.basic)^;
+!!SN:H^secskill^/(SKILL_MYSTICISM)/(SKILL_ADVANCED)/^%T(jsMod.secSkill.mysticism.desc.advanced)^;
+!!SN:H^secskill^/(SKILL_MYSTICISM)/(SKILL_EXPERT)/^%T(jsMod.secSkill.mysticism.desc.expert)^;
+
+!!FU(gem_SetSecSkillValue):P(SKILL_MYSTICISM)/(SKILL_BASIC)/5;           
+!!FU(gem_SetSecSkillValue):P(SKILL_MYSTICISM)/(SKILL_ADVANCED)/10;             
+!!FU(gem_SetSecSkillValue):P(SKILL_MYSTICISM)/(SKILL_EXPERT)/15;
+
+
+!?FU(js_OnAfterCalcMysticismPower);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(hero:y) C(hero)/26/4/?(number:y);
+!!HE(number):S(SKILL_MYSTICISM)/?(skillLvl:y);
+
+!!if&(skillLvl)>0;
+  !!FU(WOG_Hero_GetFullSpellPoints):P(number)/?(manaCap:y);
+  !!VR(manaCapFloat:e):S(manaCap);
+  !!VR(manaRestoreFloat:e):S1 :10 *(skillLvl) *(manaCapFloat); // 10% за лвл мистицизма
+  !!VR(manaRestore:y):S(manaRestoreFloat);
+
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/?(mysticismPower:y);
+
+  !!if&(manaRestore)>(mysticismPower);
+    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/4/(manaRestore);
+  !!en;
+!!en;

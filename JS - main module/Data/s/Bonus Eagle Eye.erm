@@ -1,0 +1,119 @@
+ZVSE2
+
+
+; Eagle Eye: adds a 10/20/30% chance for critical damage when casting a battle spell (Eagle Eye artifacts and hero spec also empower a chance)
+; The option is incompatible with WoG-options: critical sorcery
+
+
+// Incompatible options
+!?FU(js_CheckEagleEyeOptions);
+; x1 - result
+!!UN:P789/?y1; Critical Sorcery
+
+!!VRx1:S(FALSE);
+
+!!if&y1;
+  !!VRx1:S(TRUE);
+!!en;
+
+
+!?FU(OnAfterErmInstructions);
+!!VR(jsonKey:z):S^jsMod.settings.bonusEagleEye.value^; Check json setting
+!!SN:T(jsonKey)/?(value:z);
+!!VR(jsOpt:y):V(value);
+
+!!FU&(jsOpt)=0:E;
+
+!!FU(js_CheckEagleEyeOptions):P?(activeSettings:y);
+!!FU&(activeSettings):E;
+
+!!VRi^js_eagleeye_bonus^:S(TRUE);
+!!FU(js_EagleEyeAddDesc):P;
+
+
+!?FU(js_EagleEyeAddDesc);
+!!FU(js_EagleEyeAddSkillDesc):P;
+!!FU(js_EagleEyeAddSpecDesc):P;
+!!FU(js_EagleEyeAddArtDesc):P;
+
+
+!?FU(js_EagleEyeAddSkillDesc);
+!!SN:H^secskill^/(SKILL_EAGLE_EYE)/(SKILL_BASIC)/?(descBaseEagle:z);
+!!SN:T^jsMod.secSkill.eagleEye.desc.addDesc^/?(addDesc1:z)/^percent^/10;
+!!VR(descBaseEagle:z): +(addDesc1:z);
+!!SN:H^secskill^/(SKILL_EAGLE_EYE)/(SKILL_BASIC)/(descBaseEagle:z);
+
+!!SN:H^secskill^/(SKILL_EAGLE_EYE)/(SKILL_ADVANCED)/?(descAdvEagle:z);
+!!SN:T^jsMod.secSkill.eagleEye.desc.addDesc^/?(addDesc2:z)/^percent^/20;
+!!VR(descAdvEagle:z): +(addDesc2:z);
+!!SN:H^secskill^/(SKILL_EAGLE_EYE)/(SKILL_ADVANCED)/(descAdvEagle:z);
+
+!!SN:H^secskill^/(SKILL_EAGLE_EYE)/(SKILL_EXPERT)/?(descExpEagle:z);
+!!SN:T^jsMod.secSkill.eagleEye.desc.addDesc^/?(addDesc3:z)/^percent^/30;
+!!VR(descExpEagle:z): +(addDesc3:z);
+!!SN:H^secskill^/(SKILL_EAGLE_EYE)/(SKILL_EXPERT)/(descExpEagle:z);
+
+
+!?FU(js_EagleEyeAddSpecDesc);
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:X?(spec:y)/?(spec2:y);
+
+  !!if&(spec)=0/(spec2)=(SKILL_EAGLE_EYE);
+    !!SN:H^spec^/i/2/?(descSpecEagle:z);
+    !!VR(addDesc:z):S^%T(jsMod.secSkill.eagleEye.desc.spec)^;
+    !!VR(descSpecEagle): +(addDesc:z);
+    !!SN:H^spec^/i/2/(descSpecEagle:z);
+  !!en;
+!!en;
+
+
+!?FU(js_EagleEyeAddArtDesc);
+!!SN:H^art^/(ART_BIRD_OF_PERCEPTION)/1/?(artDesc63:z);
+!!SN:T^jsMod.secSkill.eagleEye.desc.addDesc^/?(desc1:z)/^percent^/5;
+!!VR(artDesc63:z): +(desc1:z);
+!!SN:H^art^/(ART_BIRD_OF_PERCEPTION)/1/(artDesc63:z);
+
+!!SN:H^art^/(ART_STOIC_WATCHMAN)/1/?(artDesc64:z);
+!!SN:T^jsMod.secSkill.eagleEye.desc.addDesc^/?(desc2:z)/^percent^/10;
+!!VR(artDesc64:z): +(desc2:z);
+!!SN:H^art^/(ART_STOIC_WATCHMAN)/1/(artDesc64:z);
+
+!!SN:H^art^/(ART_EMBLEM_OF_COGNIZANCE)/1/?(artDesc65:z);
+!!SN:T^jsMod.secSkill.eagleEye.desc.addDesc^/?(desc3:z)/^percent^/15;
+!!VR(artDesc65:z): +(desc3:z);
+!!SN:H^art^/(ART_EMBLEM_OF_COGNIZANCE)/1/(artDesc65:z);
+
+
+!?FU(OnMagicCorrectedResistance)&i^js_eagleeye_bonus^; [перед расчетом сопротивления]
+!!BG:A?y1;                    [y1 - тип действия (1 - герой колдует заклинание)]
+!!FU&y1<>(BATTLE_ACTION_HERO_CAST):E; [выход, если не колдовство героя]
+
+!!BG:S?y2 Q?y3;               [y2/y3 - номер заклинания/сторона]
+!!MR:F?y4;                    [y4 - конечный урон заклинания]
+!!FU&y4<=0:E;                 [выход, если маг.урона нет]
+
+!!BA:Hy3/?y5;                 [y2 - номер колдующего героя]
+!!FU&y5<0:E;                  [выход, если героя нет (а вдруг?:)]
+!!UN:C42231940/4/?y6;         [y6 - номер отряда-цели заклинания]
+!!UN:C6919200/4/?y7;          [...]
+!!VRy6:-y7 -21708 :1352;      [...]
+
+!!HEy5:S(SKILL_EAGLE_EYE)/?y9;               [y9 - Уровень навыка Орлоглаза героя (0..3)]
+!!HEy5:X?y7/?y8/d/d/d/d/d;    [y7=0,y8=25 для специалистов по Орлоглазу]
+!!VRy9&y7=0/y8=(SKILL_EAGLE_EYE):+1;         [y9 - Уровень навыка Орлоглаза героя (0..3) + 1 для специалистов]
+!!VRy9:*10;                   [y9 шанс критического удара заклианния 10% за каждый уровень навыка/специализацию]
+!!HEy5:A2/(ART_BIRD_OF_PERCEPTION)/?i/?y11 A2/(ART_STOIC_WATCHMAN)/?i/?y12 A2/(ART_EMBLEM_OF_COGNIZANCE)/?i/?y13; A2/139/?i/?y14; [y11-y14 - Ожерелье/Кольцо/Накидка/Сборник Мага надетые на героя]
+!!VRy9&y11>0:+5;              [+5% крит за Ожерелье]
+!!VRy9&y12>0:+10;             [+10% крит за Кольцо]
+!!VRy9&y13>0:+15;             [+15% крит за Накидку]
+
+!!VRy10:S0 R99;               [y10 -случайное число (0..99)]
+
+!!if&y10<y9;
+  !!VRy4:*3 :2;               [y4 - полуторный урон при критическом эффекте]
+  !!MR:Fy4;                   [установка полуторного урона при критическом эффекте]
+
+  !!BMy6&i^battle_isVisible^:V82; [дополнительная анимация на целевом стеке при критическом эффекте]
+!!en;
+
+** end

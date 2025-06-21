@@ -1,0 +1,38 @@
+ZVSE2
+
+
+; Allow creatures to cast destroy undead
+!?FU(js_AI_Battle_DamageSpell_GetCastToHexVal_BeforeCases);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/16/4/?(spellId:y);
+;!IF:L^spellId= %(spellId)^;
+
+!!if&(spellId)=(SPELL_DESTROY_UNDEAD);
+  ; Check if at least one friendly stack is undead
+  !!BG:N?(stackNumber:y);
+  ;!IF:L^stackNumber= %(stackNumber)^;
+  !!FU(js_GetActualStackSide):P(stackNumber)/?(side:y);
+  !!VR(firstStack:y):S(BATTLE_STACKS_PER_SIDE) *(side) +(BATTLE_STACK_FIRST);
+  !!VR(lastStack:y):S(BATTLE_STACKS_PER_SIDE) *(side) +(BATTLE_ATTACKER_STACK_LAST);
+
+  !!re i/(firstStack)/(lastStack)/1/-1;
+    !!BMi:Z?(stackPtr:y);
+    !!UN:C(stackPtr)/132/4/?f C(stackPtr)/76/4/?(monQty:y); 84 4‘
+    !!VR(isUndead:y):Sf &(MON_FLAG_UNDEAD);
+    !!br&(isUndead)/(monQty)>0;
+  !!en;
+  !!FU&(isUndead)/(monQty)>0:E;
+
+  ; if ( !Stack )
+  ;  goto LABEL_17;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(stack:y);
+  !!FU&(stack)=0:E;
+
+  ; Check if undead stack is on the hex
+  !!UN:C(stack)/132/4/?f; 84
+  !!VR(isUndead:y):Sf &(MON_FLAG_UNDEAD);
+  !!FU&(isUndead)=0:E;
+
+  ; Jump into the single target spell calculations
+  !!SN:X?y99/0;
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4440891; 0043C33B
+!!en;

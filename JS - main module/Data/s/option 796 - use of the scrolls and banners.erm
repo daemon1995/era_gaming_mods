@@ -1,0 +1,283 @@
+ZVSE2
+** Author orig.  : Algor
+** Updated by    : Archer30
+** Name          : Use of the scrolls and banners
+** Name rus.     : Использование свитков и знамён
+** Options       : 796
+
+
+; The destruction of spell scrolls does not give mana, the destruction of artifacts does not give experience. The option is used for the possibility to clean up a backpack
+
+
+!?FU(OnAfterErmInstructions);
+!!VR(jsonKey:z):S^jsMod.settings.alternativeUseOfBannersAndArtifacts.value^; Check json setting
+!!SN:T(jsonKey)/?(value:z);
+!!VR(jsOpt:y):V(value);
+!!FU&(jsOpt)=0:E;
+
+!!VRi^js_use_artifacts_and_banners^:S(TRUE);
+
+
+!?FU(OnEveryDay)&i^timerDay^>1/i^js_use_artifacts_and_banners^=0; [в начале дня]
+!!UN:P796/?y1;                [проверяем включена ли опция 796 в y1]
+!!OW:Ii^timerOwner^/?y2;      [y2=1 если ИИ, y2=0 если человек]
+!!FU|y1=0/y2=0:E;             [выход если опция не включена или если ходит человек]
+
+!!OW:Hi^timerOwner^/1/0;      [v1 - количество героев текущего игрока]
+!!VRy3:Sv1;                   [y3 - количество героев текущего игрока]
+!!DO(ES_796_CheckHeroStatus_AI)/1/y3/1&y3>0:P;       [вызов FU(ES_796_CheckHeroStatus_AI) для каждого героя текущего игрока]
+
+!?FU(ES_796_CheckHeroStatus_AI);                     [Разрушение свитков и знамён - AI проверка необходимости разрушения]
+!!OW:Hi^timerOwner^/1/x16;    [v1=номер героя]
+!!VRy3:Sv1;                   [y3=номер героя]
+!!HEy3:I?y1/1;                [y1 - мана героя]
+!!VRy1:*5;                    [y1 - порог маны при котором разрушать свиток 1/5=20%]
+!!FU(ES_Hero_GetFullSpellPoints):Py3/?y2;             [y2 - макс. мана героя]
+!!DO(ES_796_CheckArtifacts_AI)/19/82/1&y2>y1:P1/y3; [если маны у героя меньше 20%, ищем в рюкзаке (слоты 19-82) свиток (x1=1) для уничтожения]
+!!HEy3:Y65/?y1/d/d;           [проверяем наличие бонуса скорости в y1]
+!!DO(ES_796_CheckArtifacts_AI)/19/82/1&y1<500:P2/y3;[если бонус скорости меньше 500, ищем в рюкзаке (слоты 19-82) знамя (x1=2) для уничтожения]
+!!HEy3:E?i/?y1;               [y1 - уровень героя]
+!!DO(ES_796_CheckArtifacts_AI)/19/82/1&y1<15:P3/y3; [если уровень героя меньше 15, в рюкзаке (слоты 19-82) артефакт (x1=3) для уничтожения]
+
+!?FU(ES_796_CheckArtifacts_AI);                     [AI поиск и разрушение свитка/знамени]
+** x1=1 - разрушить свиток, x1=2 - разрушить знамя, x2 - номер героя, x16 - номер слота (рюкзака)
+!!HEx2:A1/?y1/x16;            [y1 - номер артефакта в слоте]
+!!UN:J2/?y11;                 [y11 - выбранный человеком уровень сложности]
+!!VRy11&y11=0:S80;            [y11 - бонус к эффективности пожертвований, равен бонусу уровня сложности]
+!!VRy11&y11=1:S100;           [...]
+!!VRy11&y11=2:S130;           [...]
+!!VRy11&y11=3:S160;           [...]
+!!VRy11&y11=4:S200;           [...]
+
+!!if&x1=1/y1>1000; 
+  !!VRy2:Sy1-1001;            [y2 - номер заклинания на свитке]
+  !!SSy2:L?y10;               [получаем уровень заклинания в y10]
+  !!VRy2:Sy10 *15 *y11 :100;  [бонус маны в y2 как 15*уровень заклинания + бонус за уровень сложности]
+  !!HEx2:I?y3/1;              [Получение текущей маны в y3]
+  !!VRy3:+y2;                 [увеличение текущей маны на y2]
+  !!HEx2:Iy3/1;               [Установка нового значения маны]
+
+  !!FU(ES_796_RemoveArtFromSlot):Px2/x16; [Удаление свитка из слота]
+
+  !!VRx16:+64;                [переход на конец цикла]
+
+!!el&x1=2/y1=156; 
+  !!VRy12:S500 *y11 :100;     [бонус движения с учетом уровня сложности]
+  !!VRy13:S3 *y11 :100;       [длительность бонуса с учетом уровня сложности]
+  !!HEx2:Y65/y12/y13/1;       [Добавление очков передвижения за подаренное знамя]
+
+  !!FU(ES_796_RemoveArtFromSlot):Px2/x16; [Удаление знамени из слота рюкзака]
+
+  !!VRx16:+64;                [переход на конец цикла]
+
+!!el&x1=3/y1<>156/y1>0/y1<1000; 
+  !!UN:Ay1/3/?y4 Ay1/5/?y5;   [y4 - класс артефакта (2/4/8/16), y5 - часть сборника (-1 = нет)]
+  !!FU|y4<2/y4>4/y5<>-1:E;    [пропуск "ценных" артефактов или частей борников]
+  !!FU&y1>=146/y1<=156:E;     [пропуск командирских артефактов и знамен]
+  !!FU&y1>=161/y1<=170:E;     [пропуск "пустых" артефактов]
+  !!VRy2&y4=2:S500;           [y2 - базовое кол-во опыта, получаемое в зависимости от класса артефакта (50% от опыта за пожертвование на алтаре)]
+
+  !!VRy2&y4=4:S750;           [...]
+  !!VRy2&y4=8:S1500;          [...]
+  !!VRy2&y4=16:S3000;         [...]
+  !!HEx2:S21/?y3;             [уровень навыка "Обучение" героя]
+  !!VRy3:*5 +100;             [y3 = 100/105/110/115% - коэффициент полученного опыта]
+  !!VRy2:*y3 :100 *y11 :100;  [y2 - опыт получаемый с учетом Обучения и уровня сложности]
+  !!HEx2:Edy2;                [Добавление y2 очков опыта герою]
+
+  !!FU(ES_796_RemoveArtFromSlot):Px2/x16; [Удаление артефакта из слота рюкзака]
+
+  !!VRx16:+64;                [переход на конец цикла]
+!!en; 
+
+; Set up global variable to prevent sacrificing artifact on hero leveling up (possible with clicking on the hero's portrait on leveling up)
+!?FU(OnHeroGainLevel);
+!!UN:P796/?y1;                [проверяем включена ли опция 796 в y1]
+!!FU&y1=0:E;                  [выход если опция не включена]
+!!VRi^es_796_during_hero_screen^:S(TRUE);
+
+!?FU(OnAfterHeroGainLevel)&i^es_796_during_hero_screen^;
+!!VRi^es_796_during_hero_screen^:S(FALSE);
+
+; The trigger is placed in 1000 es - stdlib.erm
+!?FU(ES_796_ManageHeroScreenMouseAction);
+!!FU&i^mouse_action^<>(MOUSE_LMB_PRESSED)/i^mouse_action^<>(MOUSE_RMB_PRESSED):E;
+
+!!UN:P796/?(wogOption:y);               [проверяем включена ли опция 796]
+!!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
+
+; Exit if the hero does not belong to the interacting player
+!!OW:C?(player:y)/?(interactPlayer:y);  [Get the player who's clicking the mouse button]
+!!HE(CURRENT_HERO):O?(owner:y);
+!!FU&(interactPlayer)<>(owner):E;
+
+!!VR(slot:y):S(NO_ART_SLOT);
+!!VR(item:y):Si^mouse_item^;
+
+!!if&(item)>=2/(item)<=14|(item)=20;
+  !!VR(slot):S(item) -2;
+!!el&(item)>=40/(item)<=44;
+  !!VR(slot):S(item) -21;
+!!en;
+
+!!FU&(slot)=(NO_ART_SLOT):E;
+
+!!HE(CURRENT_HERO):N?(hero:y);
+!!FU(ES_796_PrepareToSacrificeArt):P(hero)/(slot);
+
+; The trigger is placed in 1000 es - stdlib.erm
+!?FU(ES_796_ManageHeroesMeetingScreenMouseAction);
+!!FU&i^mouse_action^<>(MOUSE_LMB_PRESSED)/i^mouse_action^<>(MOUSE_RMB_PRESSED):E;
+
+!!UN:P796/?(wogOption:y);               [проверяем включена ли опция 796]
+!!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
+
+!!VR(hero:y):S(NO_HERO);
+!!VR(item:y):Si^mouse_item^;
+
+!!if&(item)>=27/(item)<=39|(item)=45;
+  !!VR(slot:y):S(item) -27;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=89/(item)<=93;
+  !!VR(slot):S(item) -70;
+  !!CM:H?(hero)/?(otherHero:y);
+!!el&(item)>=46/(item)<=58|(item)=64;
+  !!VR(slot):S(item) -46;
+  !!CM:H?(otherHero)/?(hero);
+!!el&(item)>=94/(item)<=98;
+  !!VR(slot):S(item) -75;
+  !!CM:H?(otherHero)/?(hero);
+!!en;
+
+!!FU&(hero)=(NO_HERO):E;
+
+!!FU(ES_796_PrepareToSacrificeArt):P(hero)/(slot);
+
+!?FU(ES_796_PrepareToSacrificeArt);
+!#VA(hero:x) (slot:x);
+
+!!HE(hero):A1/?(art:y)/(slot);
+!!VR(art)&(art)=(ART_META_SPELL_SCROLL_FIRST):S(ART_SPELL_SCROLL);
+
+!!if&(art)>=(ART_META_SPELL_SCROLL_FIRST);
+  !!VR(spell:y):S(art) -(ART_META_SPELL_SCROLL_FIRST);
+  !!FU(ES_796_SacrificeArt):P1/(spell)/(hero)/(slot);
+!!el&(art)=(ART_WARLORDS_BANNER);
+  !!FU(ES_796_SacrificeArt):P2/(FALSE)/(hero)/(slot);
+!!el&(art)>(NO_ART);
+  !!FU(ES_796_SacrificeArt):P3/(art)/(hero)/(slot);
+!!en;
+
+!?FU(ES_796_SacrificeArt);                     [Разрушение свитков и знамён в слоте рюкзака по правому клику (диалог)]
+** x1=1(свиток)/2(знамя)/3(артефакт), x2=#заклинания (свиток)/0 (знамя)/#артефакта (артефакт)
+!#VA(mode:x) (id:x) (hero:x) (slot:x) ;
+
+; Spell Scrolls
+!!if&(mode)=1;
+  !!CM:R0;
+  !!VRi^es_796_askedToSacrifice^:S(TRUE);
+
+  !!SN:H^spell^/(id)/0/?z1;             [получаем название заклинания на свитке в z1]
+  !!SS(id):L?(manaGiven:y);             [получаем уровень заклинания]
+
+  !!if&i^js_use_artifacts_and_banners^;
+    !!VR(manaGiven):*0;
+  !!el;
+    !!VR(manaGiven):*15;                 [расчитываем стоимость получаемой при разрушении маны в y1 как 15*уровень заклинания]
+  !!en;
+
+  !!SN:T^es.796.scroll^/?z2/^spell^/z1/^sp^/(manaGiven); [получаем текст вопроса в z2]
+  !!IF:Q1/(PIC_TYPE_SPELL)/(id)/(MSG_TYPE_QUESTION)/z2;          [Вопрос: разрушить ли свиток]
+  !!FU&-1:E;                            [выход, если ответ отрицательный]
+
+  !!HE(hero):Id(manaGiven)/1;           [Установка нового значения маны]
+  !!FU(ES_796_RemoveArtFromSlot):P(hero)/(slot);
+  !!SN:D;                               [Обновление экрана героя]
+
+; Warlord's Banners
+!!el&(mode)=2;
+  !!CM:R0;
+  !!VRi^es_796_askedToSacrifice^:S(TRUE);
+
+  !!SN:T^es.796.banner^/?z2;            [получаем текст вопроса в z2]
+  !!IF:Q1/(PIC_TYPE_ART)/(ART_WARLORDS_BANNER)/(MSG_TYPE_QUESTION)/z2; [Вопрос: подарить ли знамя]
+  !!FU&-1:E;                            [выход, если ответ отрицательный]
+
+  !!HE(hero):Y65/500/3/1;               [Добавление +500 очков передвижения на 3 дня за подаренное знамя]
+  !!FU(ES_796_RemoveArtFromSlot):P(hero)/(slot); [Удаление знамени из слота рюкзака]
+  !!SN:D;                               [Обновление экрана героя]
+
+; Normal Artifacts
+!!el&(mode)=3;
+  !!UN:A(id)/3/?(artLevel:y);           [класс артефакта (2/4/8/16)]
+  !!FU&(artLevel)<=(ART_LEVEL_SPECIAL):E;[разрушение книги/грааля/БМ запрещено]
+
+  !!CM:R0;
+  !!VRi^es_796_askedToSacrifice^:S(TRUE);
+
+  !!if&i^js_use_artifacts_and_banners^;
+    !!VR(basicExpGiven:y):S0;
+  !!el;
+    !!VR(basicExpGiven:y)&(artLevel)=(ART_LEVEL_TREASURE):S500;           [базовое кол-во опыта, получаемое в зависимости от класса артефакта (50% от опыта за пожертвование на алтаре)]
+    !!VR(basicExpGiven)&(artLevel)=(ART_LEVEL_MINOR):S750;           [...]
+    !!VR(basicExpGiven)&(artLevel)=(ART_LEVEL_MAJOR):S1500;          [...]
+    !!VR(basicExpGiven)&(artLevel)=(ART_LEVEL_RELIC):S3000;         [...]
+  !!en;
+
+  !!HE(hero):S(SKILL_LEARNING)/?(learningLevel:y); [уровень навыка "Обучение" героя]
+  !!VR(expGiven:y):S(learningLevel) +20 *(basicExpGiven) :20;
+  !!SN:T^es.796.art^/?z2/^exp^/(expGiven); [получаем текст вопроса в z2]
+  !!IF:Q1/(PIC_TYPE_ART)/(id)/(MSG_TYPE_QUESTION)/z2;          [Вопрос: пожертвовать ли артефакт]
+  !!FU&-1:E;                  [выход, если ответ отрицательный]
+
+  !!HE(hero):Ed(expGiven);    [Добавление y2 очков опыта герою]
+  !!FU(ES_796_RemoveArtFromSlot):P(hero)/(slot); [Удаление артефакта из слота рюкзака]
+  !!SN:D;                     [Обновление экрана героя]
+!!en; 
+
+!?FU(OnBeforeBattleUniversal)&1000/i^js_use_artifacts_and_banners^=0; [перед не-теоретической битвой]
+!!UN:P796/?y1;                [проверяем включена ли опция 796 в y1]
+!!FU&y1=0:E;                  [выход если опция не включена]
+
+!!BA:H0/?y1 H1/?y2 O?y3/?y4;  [y1,y2 - сражающиеся герои, y3,y4 - сражающиеся игроки]
+!!OW:Iy3/?y5;                 [y7 - номер ИИ-героя (-1, если нет)]
+!!OW&y2>=0:Iy4/?y6;           [y8 - номер героя-человека (-1, если нет)]
+!!VRy7:S-1;
+!!VRy8:S-1;                   [...]
+!!VRy7&y5=1:Sy1;              [...]
+!!VRy8&y5=0:Sy1;              [...]
+!!VRy7&y6=1/y2>=0:Sy2;        [...]
+!!VRy8&y6=0/y2>=0:Sy2;        [...]
+!!FU|y7<0/y8<0:E;             [выход, если нет ИИ-героя или героя-человека]
+
+!!HEy7:Ed/?y9;
+!!HEy8:Ed/?y10;               [y9/y10 - уровни героев ИИ/человека]
+!!VRy11:Sy9 -y10;             [y11 - разница уровней героев (в пользу ИИ)]
+!!HEy7:I?y1/1;                [y1 - мана ИИ-героя]
+!!FU(ES_Hero_GetFullSpellPoints):Py7/?y2;             [y2 - макс. мана ИИ-героя]
+!!VRy3:Sy2 *80 :100;          [y3 - 80% макс. маны ИИ-героя]
+!!VRy4:Sy2 *60 :100;          [y4 - 60% макс. маны ИИ-героя]
+!!VRy5:Sy2 *40 :100;          [y5 - 40% макс. маны ИИ-героя]
+!!DO(ES_796_CheckArtifacts_AI)/19/82/1&y5>y1/y11<=10:P1/y7; [если маны у ИИ-героя меньше 40%, и он сильнее героя-человека не более чем на 10 уровней, уничтожаем свиток из рюкзака]
+!!HEy7:I?y1/1;                [y1 - мана ИИ-героя]
+!!DO(ES_796_CheckArtifacts_AI)/19/82/1&y4>y1/y11<=5:P1/y7; [если маны у ИИ-героя меньше 60%, и он сильнее героя-человека не более чем на 5 уровней, уничтожаем свиток из рюкзака]
+!!HEy7:I?y1/1;                [y1 - мана ИИ-героя]
+!!DO(ES_796_CheckArtifacts_AI)/19/82/1&y3>y1/y11<=0:P1/y7; [если маны у ИИ-героя меньше 80%, и он НЕ сильнее героя-человека, уничтожаем свиток из рюкзака]
+
+// Remove artifact from a given slot
+; This function is needed as FU(UnequipArtFromSlot) cannot be used to remove artifact from the backpack. 
+!?FU(ES_796_RemoveArtFromSlot);         [by Archer30]
+!#VA(hero:x) (slot:x);
+
+!!FU&(slot)<=(NO_ART_SLOT):E;
+
+; Execute FU(UnequipArtFromSlot) if the artifact is equipped
+!!if&(slot)<=18;
+  !!FU(UnequipArtFromSlot):P(hero)/(slot);
+; Use HE:A if the artifact is in the backpack
+!!el;
+  !!HE(hero):A1/?(art:y)/(slot);
+  !!HE(hero):A3/(art)/1/0;
+!!en;
+
+** end

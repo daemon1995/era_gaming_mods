@@ -1,0 +1,46 @@
+ZVSE2
+
+
+; Advanced and Expert Slow's effect is reduced: the enemy's speed is lowered to 50% of normal +1. For example, the Zombie's base speed is 4. Without Horn of the Abyss, Advanced Slow halves the speed to 2 (4 × 0.5). With Horn of The Abyss, Advanced Slow reduces the speed to 3 (4 × 0.5 + 1)
+
+
+!?FU(OnAfterErmInstructions);
+!!VR(jsonKey:z):S^jsMod.settings.hotaSpellSlow.value^; Check json setting
+!!SN:T(jsonKey)/?(value:z);
+!!VR(jsOpt:y):V(value);
+!!FU&(jsOpt)=0:E;
+
+!!VRi^js_hota_slow^:S(TRUE);
+
+!!VR(substr:z):S^%T(jsMod.spell.54.desc.common.toReplace)^;
+!!VR(addDesc:z):S^%T(jsMod.spell.54.desc.common.replacer)^;
+
+!!re i/4/5;
+  // 4 - desc with adv school
+  // 5 - desc with exp school
+
+  !!SN:H^spell^/(SPELL_SLOW)/i/?(spellDesc:z); // desc adv
+  !!FU(js_StringReplaceString):P(spellDesc)/(substr)/(addDesc)/?(newSpellDesc:z);
+  !!SN:H^spell^/(SPELL_SLOW)/i/(newSpellDesc);
+!!en;
+
+
+!?FU(js_OnCalcSlowEffect);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(battleStackPtr:y) C(battleStackPtr)/1224/4/?(slowMul:e); 4C8
+
+!!FU(js_GetSpellAttr):P(SPELL_SLOW)/60/4/?(spellEffect:y); // эффект продвинутой медлительности
+!!VR(slowMulAdvLvl:e):S(spellEffect) :100;
+
+!!if&(slowMul)=(slowMulAdvLvl); // Если каст провинутой или экспертной медлительности
+  !!UN:C(battleStackPtr)/100/4/?(speed:y); 64
+  !!VR(bonus:e):S1 :(speed);
+  !!VR(slowMul): +(bonus);
+  !!FU(js_GetSpellAttr):P(SPELL_SLOW)/56/4/?(spellEffect:y); // эффект базовой медлительности
+  !!VR(slowMulBaseLvl:e):S(spellEffect) :100;
+
+  !!if&(slowMul)>(slowMulBaseLvl);
+    !!VR(slowMul):S(slowMulBaseLvl);
+  !!en;
+
+  !!UN:C(battleStackPtr)/1224/4/(slowMul);
+!!en;
