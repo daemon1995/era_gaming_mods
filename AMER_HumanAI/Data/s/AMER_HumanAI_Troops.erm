@@ -13,6 +13,7 @@ ZVSE2
 **  --------------------------------------------------
 **  Consts:
 !#DC(HUAI_SENDTROOPS_LOWTIER) = 2;  //The <= tier of troop that a donor hero will always keep one of after sending troops.
+!#DC(HUAI_UNSAFETOWN_DAYS) = 7;		//The number of days that an AI's town will remain "unsafe" when it is threatened. This prevents funnelTroops from sending troops away from the town.
 **  --------------------------------------------------
 
 
@@ -86,15 +87,58 @@ ZVSE2
     !!re i/1/i^huAI_townVisitedCount^:;
         !!VR(hero:y):Si^huAI_townVisited_%i_hero^;
         !!VR(town:y):Si^huAI_townVisited_%i_Id^;
+        !!VRi^huAI_townVisited_%i_hero^:S0;                     //Remove vars as we finish with them.
+        !!VRi^huAI_townVisited_%i_Id^:S0;
+	
+		!!FU(huAI_IsTownSafe):P(town)/?(isFunnelTroopsSafe:y);
+		!!co&(isFunnelTroopsSafe)=(FALSE):;						//If it is not safe, co to checking next town.
         
         !!CA0/(town):P?(x:y)/?(y:y)/?(z:y);                     //Get xyz of town.
         !!FU(huAI_SendTroops):P2/(town)/(x)/(y)/(z)/(hero);     //Try to send troops from town to hero.
-        
-        !!VRi^huAI_townVisited_%i_hero^:S0;                     //Remove vars as we finish with them.
-        !!VRi^huAI_townVisited_%i_Id^:S0;
     !!en:;
     
     !!VRi^huAI_townVisitedCount^:S0;
+**  --------------------------
+
+
+
+**  --------------------------
+**  Get if an AI town is threatened (if it is okay to funnelTroops away from it).
+**  Uses @SadnessPower's plugin to detect if safe or not. Thanks to @SadnessPower for this!
+**	If it is unsafe, the town is flagged unsafe for (HUAI_UNSAFETOWN_DAYS) days.
+!?FU(huAI_IsTownSafe);
+    !#VA(town:x);
+    !#VA(returnBool:x);					//OUT: 0 if unsafe, 1 if safe.
+	
+	!!VR(returnBool):S(TRUE);			//Default return true.
+	!!VR(day:y):Sc;     				//Get day.
+	
+	!!if&(day)=i^huAI_townLastUnsafe_%(town)^:;					//Check if we already flagged this town as unsafe today.
+		!!VR(returnBool):S(FALSE);								//If we did there is nothing left to do, so exit.
+		!!FU:E;
+	!!en:;
+	
+	!!SN:L^HumanAI.era^/?(plugin:y);							//Use plugin to check if town is threatened. Thanks to SadnessPower for this plugin and guidance for its use.
+	!!SN:A(plugin)/^isFunnelTroopsSafeForTown^/?(address:y);	//Function from plugin to check if there are threats to the town before funnelling away.
+	
+	!!SN:E(address)/1/(town);
+	!!VR(savedv1:y):Sv1;										//Store old v1 value.
+	!!VR(isFunnelTroopsSafe:y):Sv1;                         	//Get if it is safe to funnel troops away from the town.
+	!!VRv1:S(savedv1);											//Restore old v1 value.
+	
+	!!if&(isFunnelTroopsSafe)=(FALSE):;
+		!!VR(returnBool):S(FALSE);
+		!!VRi^huAI_townLastUnsafe_%(town)^:S(day);				//Flag this town as unsafe for extra days, since it was unsafe.
+	!!el&i^huAI_townLastUnsafe_%(town)^>0:;
+		!!VR(dayDiff:y):S(day)-i^huAI_townLastUnsafe_%(town)^;	//If it was safe, we still need to check if the town was flagged unsafe recently.
+		!!if&(dayDiff)<=(HUAI_UNSAFETOWN_DAYS):;				//If it was, we still return unsafe and update the flag to the current day.
+			!!VR(returnBool):S(FALSE);							//Return false if it was flagged unsafe within (HUAI_UNSAFETOWN_DAYS).
+			!!VRi^huAI_townLastUnsafe_%(town)^:S(day);			//Update this town's unsafe flag to the current day.
+		!!el:;
+			!!VRi^huAI_townLastUnsafe_%(town)^:S0;				//If the town is safe AND it was not flagged unsafe recently, clear its var for being unsafe.
+		!!en:;
+	!!en:;
+	
 **  --------------------------
     
     
@@ -242,6 +286,8 @@ ZVSE2
     !#VA(donorSuccess:x);               //OUT: Returns 1 if success.
         
     !!VR(donorSuccess):S(FALSE);        //Default return failure.
+	
+	!!HE(receivingHero):O?(owner:y);	//Get receiving hero's owner.
     
     !!re (receivingSlot:y)/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST):;
     
@@ -262,7 +308,7 @@ ZVSE2
         //This is still not accurate, but it is efficient and good enough for this.
         //Minus 1 to troop index, then get its upgrade. If they match, degrade was found.
         !!VR(degradedMon:y):S-1;
-        !!if&(donorMon)>0:;                                                     //Don't attempt this if it's creature index 0, else we'll error since -1 is not valid.
+        !!if&i^huAI_funnelTroops_upgradeUnits^>0&(donorMon)>0:;          		//Don't attempt this if it's creature index 0, else we'll error since -1 is not valid.
             !!VR(degradedMon:y):S(donorMon)-1;                                  //(degradedMon) might become *de*graded version of the troop passed.
             !!FU(GetUpgradedMonster):P(degradedMon)/?(degradedMonUpgrade:y);    //Get upgrade of degraded mon.
             !!VR(degradedMon)&(degradedMonUpgrade)<>(donorMon):S-1;             //If the upgrade of degraded mon is *not* the original mon, then this method of finding degrade failed.
@@ -272,28 +318,78 @@ ZVSE2
         
         !!if|(existingMon)=(donorMon)/(existingMon)=(degradedMon)/(existingMon)=(upgradedMon):;        //Hero has passed troop, it's degrade, or its upgrade.
             
+			!!VR(paymentSuccess:y):S(TRUE);			//Set paymentSuccess default TRUE, so the check succeeds if the config option is not used.
+			
             //!IF:M^donorMon%(donorMon), existingMon%(existingMon), degradedMon%(degradedMon), upgradedMon%(upgradedMon)^;       TEST
             !!if&(existingMon)=(degradedMon):;
-                !!HE(receivingHero):P?(receivingX:y)/?(receivingY:y)/?(receivingZ:y);
-                !!FU(huAI_SetArmy):P0/(receivingHero)/(receivingX)/(receivingY)/(receivingZ)/(receivingSlot)/(donorMon)/-1;     //Donor has upgraded troops, and ours are degrade, so upgrade our troops before combining stacks.
+				!!if&i^huAI_funnelTroops_upgradeUnits^=2:;			//If funnelTroops setting is 2, then only upgrade if the cost can be payed.
+					!!FU(huAI_SendTroops_CanPayForUpgrade):P(owner)/(existingMon)/(donorMon)/(existingMonCount)/(TRUE)/?(paymentSuccess);	//Pay for upgrade if possible.
+				!!en:;
+				!!if&(paymentSuccess)=(TRUE):;
+					!!HE(receivingHero):P?(receivingX:y)/?(receivingY:y)/?(receivingZ:y);
+					!!FU(huAI_SetArmy):P0/(receivingHero)/(receivingX)/(receivingY)/(receivingZ)/(receivingSlot)/(donorMon)/-1;     //Donor has upgraded troops, and ours are degrade, so upgrade our troops before combining stacks.
+				!!en:;
             !!el:;
                 !!if&(existingMon)<>(donorMon):;
-                    !!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorArmySlot)/(existingMon)/-1;    //We are using receiving hero's monID, so convert donorHero's monID to that one before combining stacks.
+					!!if&i^huAI_funnelTroops_upgradeUnits^=2:;			//If funnelTroops setting is 2, then only upgrade if the cost can be payed.
+						!!FU(huAI_SendTroops_CanPayForUpgrade):P(owner)/(existingMon)/(donorMon)/(donorMonCount)/(TRUE)/?(paymentSuccess);	//Pay for upgrade if possible.
+					!!en:;
+					!!if&(paymentSuccess)=(TRUE):;
+						!!FU(huAI_SetArmy):P(donorType)/(donorID)/(x)/(y)/(z)/(donorArmySlot)/(existingMon)/-1;    //We are using receiving hero's monID, so convert donorHero's monID to that one before combining stacks.
+					!!en:;
                 !!en:;
             !!en:;
             //!EX(receivingHero)/(receivingSlot):T?(extReceivingType:y);            TEST
             //!EX(x)/(y)/(z)/(donorArmySlot)/(donorType):T?(extDonorType:y);        TEST
             //!IF&(extReceivingType)<>(extDonorType):M^[hecReceivingType%(existingMon) extReceivingType%(extReceivingType)], [hecDonorType%(donorMon) extDonorType%(extDonorType)]^;           TEST
-            !!if&(donorType)>0:;
-                !!EX(receivingHero)/(receivingSlot):C(donorType)/(x)/(y)/(z)/(donorArmySlot);     //combine donor's mon into receivingHero's mon.
-            !!el:;
-                !!EX(receivingHero)/(receivingSlot):C(donorType)/(donorID)/(donorArmySlot);     //combine donor's mon into receivingHero's mon.
-            !!en:;
-            !!VR(donorSuccess):S(TRUE);             //Return success.
-            !!FU:E;                                 //Exit since we're done with this troop.
+			!!if&(paymentSuccess)=(TRUE):;				//Only continue if payment was successful (or no payment was required).
+				!!if&(donorType)>0:;
+					!!EX(receivingHero)/(receivingSlot):C(donorType)/(x)/(y)/(z)/(donorArmySlot);     //combine donor's mon into receivingHero's mon.
+				!!el:;
+					!!EX(receivingHero)/(receivingSlot):C(donorType)/(donorID)/(donorArmySlot);     //combine donor's mon into receivingHero's mon.
+				!!en:;
+				!!VR(donorSuccess):S(TRUE);             //Return success.
+				!!FU:E;                                 //Exit since we're done with this troop.
+			!!en:;
         !!en:;
         
     !!en:;
+	
+	
+!?FU(huAI_SendTroops_CanPayForUpgrade);
+**  Determine if passed player can afford to upgrade a stack.
+**  If (doPayment) is 1, resources are deducted from (owner) if they can pay.
+	!#VA(owner:x);				//Player whose resources will be checked.
+	!#VA(monID:x);				//ID of mon to upgrade.
+	!#VA(targetMonID:x);		//The ID to upgrade monID into.
+	!#VA(monCount:x);			//The number of monID.
+	!#VA(doPayment:x);			//If TRUE, then resources will be deducted from (owner).
+	!#VA(returnBool:x);			//OUT: Returns TRUE if (owner) can pay to upgrade (monCount) of (monID) into (targetMonID). Else FALSE.
+	
+    !!VR(returnBool):S(TRUE);        //Default return true.
+	
+	!!re (count:y)/0/1:;									//Loop twice. Once to check if we can pay, second time to actually pay.
+		!!re (res:y)/(RES_FIRST)/(RES_LAST_SOD):;			//Loop every resource.
+			!!MA:C(monID)/(res)/?(monCost:y);				//Get mon cost for this resource.
+			!!MA:C(targetMonID)/(res)/?(upgrCost:y);		//Get upgrade mon cost for this resource.
+			!!VR(upgrCost):-(monCost);						//Get cost of upgrading mon (difference between mon and its upgrade).
+			!!VR(upgrCost):*(monCount);						//Multiply cost by number of mons to upgrade.
+			!!VR(upgrCost)&(upgrCost)<0:S0;					//If upgrCost is negative, something went wrong. Set cost to zero.
+			!!if&(upgrCost)>0:;								//If cost is > 0, we need to see if owner can pay it.
+				!!OW:R(owner)/(res)/(ownerRes:y);			//Get amount of resource that owner has.
+				!!if&(count)=0:;							//If count = 0, this loop is for determining if owner can pay for the upgrade.
+					!!if&(ownerRes)<(upgrCost):;			//If owner does not have enough, then owner cannot pay and we return false.
+						!!VR(returnBool):S(FALSE);
+						!!FU:E;
+					!!en:;
+				!!el&(doPayment)=(TRUE):;				//Else if we want to do payment, this loop is for paying the cost. We know owner can pay the cost at this point.
+					!!VR(ownerRes):-(upgrCost);			//Subtract cost to find the new value for owner's resource.
+					!!OW:R(owner)/(res)/(ownerRes);		//Set owner's resource to new value.
+				!!en:;
+			!!en:;
+		!!en:;
+	!!en:;
+	
 **  --------------------------
     
     
@@ -305,7 +401,6 @@ ZVSE2
 **  Testing revealed issues with coordinate-based references for heroes,
 **  as sometimes the wrong hero is returned.
 !?FU(huAI_SetArmy);
-[1, 112, 16, 18, 0, 2, 103, -1]
     !#VA(armyType:x);       //Same as types for EX:C. 0=heroID, 1=heroXYZ, 2=townXYZ, 3=mineXYZ, 4=garrisonXYZ.
     !#VA(armyID:x);         //Only needed if using armyType = 0 (heroID).
     !#VA(x:x);              //xyz only needed if using armyType > 0.

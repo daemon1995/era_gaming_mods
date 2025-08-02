@@ -1,7 +1,7 @@
                     Human AI
 
       Written by Matteo "Ameranth" T. 2022.
-            Last updated:3-24-2023.
+            Last updated:6-26-2025.
         
         
             -Dedicated to my father-
