@@ -165,7 +165,7 @@ ZVSE2
 !!FU&(slot)=(NO_ART_SLOT):E;
 
 !!HE(CURRENT_HERO):N?(hero:y);
-!!FU(gem_ManageArtifactMouseAction):P(hero)/(slot);
+*!FU(gem_ManageArtifactMouseAction):P(hero)/(slot);
 
 !?FU(OnHeroesMeetScreenMouseClick)&i^mouse_action^=(MOUSE_RMB_PRESSED);
 !!VR(hero:y):S(NO_HERO);
@@ -1766,132 +1766,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 !!en;
 
 !!VRi^gem_NPC_canShoot^:S(FALSE);
-
-!?FU(gem_CreateERMHook);
-  // Removing message about deacreasing army before combat and placing
-  // them into combat log
-  !!SN:Ex1/1/7786558/(gem_OnAstralAttackMessage);
-  !!SN:Ex1/1/7787216/(gem_OnAstralDefendMessage);
-
-
-  // ART_SLAVAS_RING_OF_POWER's fixes
-  !!UN:C7771553/-1/1/1;         [Change the number to check the skill level at 0x76959C cmp     dword ptr [eax+edx*4+38h], 2 / jg      short loc_7695E3] 
-
-  !!SN:Ex1/1/7782812/(gem_OnNPCBattleStackInit);
-  !!SN:Ex1/1/7771289/(gem_OnNPCGetRingBonus);
-
-  // Fix Brute's Gold bonus overflowing
-  // by Berserker
-  !!SN:Ex1/1/7772754/(gem_Brute_AddGold);
-  !!UN:C7772764/-1/235;                 [jump over Brute Gold Bonus Message]
-
-  *!SN:Ex1/1/7779070/(gem_OnNPCBattleDescriptionGet);
-
-!?FU(gem_Brute_AddGold);
-  !!SN:X?(hook:y);
-  !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_UINT32)/?(ebp:y);
-  !!UN:C(ebp)/-64/(UNC_INT32)/?(bruteGold:y);
-  !!UN:C(ebp)/-68/(UNC_INT32)/?(playerGold:y);
-
-  ; Fix calculated Brute gold bonus overflow
-  !!VR(bruteGold)&(bruteGold)<0:S(INT_MAX);
-  !!FU(gem_SafeAdd):P(playerGold)/(bruteGold)/?(finalGold:y);
-  !!VR(playerGold):S(finalGold) -(bruteGold);
-  !!UN:C(ebp)/-64/(UNC_INT32)/(bruteGold);
-  !!UN:C(ebp)/-68/(UNC_INT32)/(playerGold);
-  ; store gold to display after combat
-  !!VRi^gem_BruteGold^:S(bruteGold);
-
-
-!?FU(gem_OnAstralAttackMessage);
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7786697;
-  !!FU(gem_PreapareNpcMessage):P(BATTLE_RIGHT);
-
-!?FU(gem_OnAstralDefendMessage);
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7787355;
-  !!FU(gem_PreapareNpcMessage):P(BATTLE_LEFT);
-
-!?FU(gem_PreapareNpcMessage);
-!#VA(side:x) (localStr:z);
-  !!VRo:S(side) *56;                        [weird offset btw - 14 intead of 7]
-
-  !!re i/0/(ARMY_SLOT_LAST);                [iterate all army slots]
-    !!UN:C42338576/o/4/?t C42338604/o/4/?n; [take stolen army types and numbers]
-    !!if&n;
-      !!VRs:Sn -1 B;
-      !!SN:H^monname^/t/s/?(monName:z) T^gem.battle.astralCustomText^/?(add:z)/^monNum^/n/^monName^/(monName:z);
-      !!VR(localStr:z):+(add:z);
-    !!en;
-    !!VRo:+4;
-  !!en;
-
-  !!SN:K(localStr:z)/?(size:y);d-2;
-  !!if&(size)>2;
-    !!VR(size):-2;
-    !!FU(Substr):P(localStr)/0/(size)/?(localStr);
-    !!VR(localStr):+^%T(gem.period)^;
-    !!VRs^gem_NPC_DecreeasesArmyMessage%(side)^:S(localStr:z);+^%n %(monName:z), ^;
-    !!VRi^gem_NPC_DecreeasesArmyMessage%(side)^:S(TRUE);
-  !!en;
-
-!?FU(OnCombatRound)&i^battle_isVisible^/v997=0;
-*!IF:L^%i(battle_humanOnly) %i(battle_isQuick)^;
-
-  !!re i/1/0/-1;/(BATTLE_RIGHT);
-    !!if&i^gem_NPC_DecreeasesArmyMessage%i^;
-      !!SN:T^gem.battle.armyDecrease%i^/?(head:z);
-      !!MM:S(head:z);
-      !!VR(hint:z):Ss^gem_NPC_DecreeasesArmyMessage%i^;
-      !!MM:S(hint:z);
-    !!en;
-  !!en;
-
-!?FU(OnAfterBattleUniversal);
-!!SN:W^gem_NPC_DecreeasesArmyMessage0^ W^gem_NPC_DecreeasesArmyMessage1^;:S(FALSE);
-!!if&i^gem_BruteGold^;
-  
-  !!OW:C?(currPlayer:y)/?(clickedPlayer:y);
-  !!if&(currPlayer)=(clickedPlayer);
-    !!FU(GetTextTableString):P^znpc00^/175/1/?(npcMes:z);
-    !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-    !!SN:E4284352/(CALLCONV_THISCALL)/(advMgr)/(npcMes:z)/(RES_GOLD)/i^gem_BruteGold^; [show message]
-  !!en;
-  !!VRi^gem_BruteGold^:S(NULL);
-!!en;
-
-
-
-
-!?FU(gem_OnNPCGetRingBonus);
-!!if&x1;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(npc:y) Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(skillIndex:y); [получаем указатель на NPC и индекс проверяемого навыка]
-
-  !!VR(skillLevelPtr:y):S(skillIndex) *(SIZEOF_DWORD) +(npc) +56;                                [we get a pointer to the value of the skill being checked]
-
-  !!UN:C(skillLevelPtr)/4/?(skillLevel:y);                                                       [get skill value]
-  !!if&(skillLevel)<2;                                                                           [if less than 2]
-    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER);                          [check if NPC has a ring]
-    !!if&v1;                                                                                     [if there is]
-      !!SN:X?y99/0;
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/7771478; [jumping directly to the calculation of bonuses from the ring, bypassing the addition of standard bonuses]
-    !!en;
-  !!en;
-!!en;
-
-
-!?FU(gem_OnNPCBattleStackInit);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/?(skillLevel:y);                 [get skill value]
-  !!if&(skillLevel)<2;                                                  [if less than 2]
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?(npc:y);
-    !!SN:E7791165/(CALLCONV_THISCALL)/(npc)/(ART_SLAVAS_RING_OF_POWER); [check if NPC has a ring]
-    !!if&v1;                                                            [if there is]
-      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/1/2;                           [set skill cast value as at advanced skill lvl]
-    !!en;
-  !!en;
-
-
 
 // Fix occasionally commanders receiving incorrect exp with when transfering between campaign zones
 // by Archer30
