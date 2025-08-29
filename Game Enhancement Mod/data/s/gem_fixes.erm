@@ -672,20 +672,6 @@ ZVSE2
   !!UN:C(hook)/(STRUCT_HOOK_CONTEXT_RET)/4/4604712; 464328
 !!en;
 
-** Shackles of war (retreat vs neutrals bttles with SW)
-!?FU(OnBeforeBattleAction)|i^battle_hero_1^<=(NO_HERO)/i^wog_72_randHeroActive^; [Works when the defender has no hero OR is a random hero (WoG Scripts)]
-!!BG:A?(actionType:y);
-
-!!if&(actionType)=(BATTLE_ACTION_RETREAT);
-  !!UN:C4689325/1/(ART_GRAIL);          [replace checked artId on hero to Grail from Shakles]
-!!en;
-
-!?FU(OnAfterBattleUniversal);
-!!UN:C4689325/1/(ART_SHACKLES_OF_WAR);           [set back correct art id]
-
-!?FU(OnGameLeave);
-!!UN:C4689325/1/(ART_SHACKLES_OF_WAR);           [set back correct art id]
-
 !?FU(OnBattleScreenMouseClick)&i^mouse_battleHex^>=(BATTLE_HEX_FIRST)/i^mouse_battleHex^<=(BATTLE_HEX_LAST);
 !!BU:Ei^mouse_battleHex^/?(stackId:y);
 
@@ -1368,59 +1354,6 @@ C(ebp)/16/4/d-i^gem_MonPlusLuckPower^ C(ebp)/20/4/di^gem_MonPlusLuckPower^;
 ******************************* LUCK FIXES *****************************
 ************************************************************************
 ************************************************************************
-
-!?FU(OnBeforeCombatLuckEvent);
-!#VA(stackId:x) (stackLuck:x) (luckLimit:x) (isRange:x) (maxChance:x) (damageMultiplier:x);
-
-!?FU(gem_CreateERMHook);
-!!SN:Ex1/1/4461853/(gem_CheckMeleeNegativeLuck);
-!!SN:Ex1/1/4453947/(gem_CheckRangeNegativeLuck);
-
-!?FU(gem_CheckMeleeNegativeLuck);
-!!SN:X?y99/0;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4461866;                                                 [Jump over hero check]
-!!FU(gem_CheckNegativeLuck):Px1;
-
-!?FU(gem_CheckRangeNegativeLuck);
-!!SN:X?y99/0;
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4453960;                                                 [Jump over hero check]
-!!FU(gem_CheckNegativeLuck):Px1;
-
-!?FU(gem_CheckNegativeLuck);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(currentStackPtr:y) C(currentStackPtr)/1260/4/?(luck:y); 
-!!UN:C(currentStackPtr)/248/4/?(currentStack:y) C(currentStackPtr)/244/4/?(side:y);
-
-!!VR(currentStack)&(side): +(BATTLE_STACKS_PER_SIDE);                                         [For right side]
-
-!!if&(luck)<0;
-  !!UN:C4605324/1/?(maxBadLuck:y);                                                            [Read max value from bad morale and use it for misfortune]
-  !!VR(maxBadLuck)&(maxBadLuck:y)<0: *-1;                                                             
-  !!VR(luck):*-1 F1/(maxBadLuck);
-  !!VR(rand:y):R0/1/12;
-  !!if&(rand)<=(luck);
-    !!UN:C(currentStackPtr)/112/4/-1;                                                         [set stack atrr "isLucky" to -1]
-    !!BA:Q?(isQuick:y);
-    !!if&(isQuick)=0;
-      !!FU(GetTextFileString):P^genrltxt^/45/?(str:z);
-      !!BM(currentStack):T?t N?n;
-      !!VRn:-1 F0/1;
-      !!SN:H^monname^/t/n/?(name:z);
-      !!SN:E6388190/(CALLCONV_CDECL)/?(varStr:z)/(str:z)/(name);                              [Replace %s in str with name and put result into varStr]
-      !!MM:S(varStr:z);
-      !!SN:P^BADLUCK^;
-      !!BM(currentStack):V48;
-    !!en;
-  !!en;
-!!en;
-
-!?FU(OnStackToStackDamage_Quit)&x9=0;                                                         [(x1 - atck stack, x2 - def stack, x4 - final dmg)]
-!!BMx1:Z?(structure:y);
-!!UN:C(structure)/112/4/?(isLucky:y);
-
-!!if&(isLucky)=-1;
-  !!VRx4:Sd>>1;                                                                               [decrease base damage]
-  !!UN:C(structure)/112/4/(NULL);                                                             [reset luck flag]
-!!en;
 
 ************************************************************************
 ************************************************************************

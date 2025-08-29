@@ -40,6 +40,68 @@ ZVSE2
   !!SN:Ex1/1/4496378/(WOG_DlgCreatureSplit_BeforeSettingNumber);
   !!SN:Ex1/1/4496839/(WOG_DlgCreatureSplit_AfterSplit);
 
+  !!SN:Ex1/1/5118932/(WOG_DlgHero_AfterCreate);
+  !!SN:Ex1/1/5958399/(WOG_DlgHeroMeeting_AfterCreate);
+
+
+!?FU(WOG_CreateTextItemAtArtSlot);
+!#VA(dlg:x) (artSlot:x) (text:x) (result:x);
+!!SN:E6386834/(CALLCONV_CDECL)/80;
+!!VR(mem:y):Sv1;
+!!if&(mem);
+  *!FU(FunctionName):P;
+  *!VR(artSlot):+19;
+  !!SN:E6288816/(CALLCONV_THISCALL)/(dlg)/(artSlot);
+  !!VR(artSlotDef:y):Sv1;
+  !!if&(artSlotDef);
+    !!UN:C(artSlotDef)/24/2/?(xPos:y) C(artSlotDef)/26/2/?(yPos:y);
+    !!UN:C(artSlotDef)/28/2/?(width:y) C(artSlotDef)/30/2/?(height:y);
+
+    !!VR(itemSize:y):S20;
+    !!VR(textX:y):S(xPos)+(width) -(itemSize:y);
+    !!VR(textY:y):S(yPos)+(height) -(itemSize:y);
+    !!VR(artSlot):*-1;+240;
+    !!SN:E6014624/(CALLCONV_THISCALL)/(mem)/(textX)/(textY)/(itemSize:y)/(itemSize:y)/z(text)/6681324/1/(artSlot)/10/0/8; // create text item
+    !!UN:C(mem)/22/2/d~2;
+    !!VR(itemsVec:y):S(dlg) +48;
+    !!VR(itemsVecEnd:y):S(dlg) +56;
+    !!UN:C(itemsVecEnd)/4/?(end:y);
+    !!SN:E6283984/(CALLCONV_THISCALL)/(itemsVec)/(end)/1/?(mem);                        [add item into array list]
+    !!SN:E6287984/(CALLCONV_THISCALL)/(dlg)/(mem:y)/-1;                                 [add item to dlg list]
+    !!VR(result:x):S(mem);
+  !!en;
+!!en;
+
+!?FU(WOG_DlgText_SetText);
+!#VA(dlgTextPtr:x) (text:x);
+!!if&(dlgTextPtr);
+  !!SN:E5753424/(CALLCONV_THISCALL)/(dlgTextPtr:x)/z(text:x);
+!!en;
+
+!?FU(OnLoadHeroScreen);
+!!IF:Wx1;
+!!re i/0/2;
+  !!if&i^wog_73_hero_screen_text_item_%i^;
+    !!VR(wVar:y):Si+81;
+    !!FU(WOG_DlgText_SetText):Pi^wog_73_hero_screen_text_item_%i^/^%w(wVar:y)^;
+  !!en;
+!!en;
+
+!?FU(OnCloseHeroScreen);
+!!re i/0/2;
+  !!VRi^wog_73_hero_screen_text_item_%i^:S(NULL);
+!!en;
+
+!?FU(WOG_DlgHero_AfterCreate);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(dlg:y);
+!!if&(dlg);
+  !!re i/0/2;
+    !!VR(slotIndex:y):Si+(ART_SLOT_BALLISTA) +2;
+    !!FU(WOG_CreateTextItemAtArtSlot):P(dlg)/(slotIndex)/^^/?i^wog_73_hero_screen_text_item_%i^;
+  !!en;
+!!en;
+
+
 !?FU(OnAfterErmInstructions)&i^WOG_73_enabled^;
   !!FU(WOG_73_Initialization):P;
 
@@ -437,16 +499,9 @@ ZVSE2
 !?FU(WOG_73_Func_MonArt);
 !#VA(type:x);
 !!if&(type)<(MON_BALLISTA);
-  
-  !!if&(type)=(ART_BALLISTA);                                         [if ballista slot]
-    !!VR(type):S(MON_BALLISTA);  
-  !!el&(type)=(ART_AMMO_CART);                                         [if ammo slot]
-    !!VR(type):S(MON_AMMO_CART);  
-  !!el&(type)=(ART_FIRST_AID_TENT);                                         [if ammo slot]
-    !!VR(type):S(MON_FIRST_AID_TENT);  
-  !!en;
+  !!SN:E5572448/(CALLCONV_FASTCALL)/(type);eCreatures __thiscall WarMachineArt__CreatureId(eArtifacts artId)
+  !!VR(type):Sv1;
 !!el;
-00550760 add that later pls
   !!if&(type)=(MON_BALLISTA);                                         [if ballista slot]
     !!VR(type):S(ART_BALLISTA);  
   !!el&(type)=(MON_AMMO_CART);                                         [if ammo slot]
@@ -1207,6 +1262,22 @@ ZVSE2
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDX)/4/?i^WOG_73_Swap_WM_receiver^;
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4496940;
 
+!?FU(WOG_DlgHeroMeeting_AfterCreate);
+  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(swapMgr:y);
+  !!if&(swapMgr);
+    !!UN:C(swapMgr)/56/4/?(dlg:y);
+    !!if&(dlg:y);
+      !!re (side:y)/0/1;
+        !!IF:Wi^swap_hero_%(side)^;
+        !!re i/0/2;
+          !!VR(wVar:y):S81 +i;
+          !!VR(slotIndex:y):S(side:y)*19 +i +40;
+          !!FU(WOG_CreateTextItemAtArtSlot):P(dlg)/(slotIndex)/^%w(wVar:y)^/?i^wog_73_hero_meeting_screen_text_item_%(side)_%i^;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+
 !?FU(WOG_73_Func_TransferMachinesInMeetingScreen);
 !#VA(sender:x) (receiver:x) (wVar:x) (value:x);
   !!IF:W(sender);
@@ -1222,6 +1293,15 @@ ZVSE2
     !!HEi^swap_hero_0^:A2/i/d/?i^WM_Machine_%i_Hero_0^;
     !!HEi^swap_hero_1^:A2/i/d/?i^WM_Machine_%i_Hero_1^;
   !!en;
+
+  !!re (side:y)/0/1;
+    !!re i/0/2;
+      !!VR(artId:y):Si +(ART_BALLISTA);
+      !!VR(machinesNum:y):Si^WM_Machine_%(artId:y)_Hero_%(side)^;
+      !!FU(WOG_DlgText_SetText):Pi^wog_73_hero_meeting_screen_text_item_%(side)_%i^/^%(machinesNum)^;
+    !!en;
+  !!en;
+
 
 
 !?FU(WOG_73_Func_AI_TransferMachinesWhenHeroMeeting);
