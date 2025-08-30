@@ -58,7 +58,7 @@ ZVSE2
 
 ** Initialization Code
 !#UN:P71/?i^wog_71_enabled^;  [Check if Enhanced Artifacts II is enabled in WoGify Options]
-!#UN:P219/?i^wog_219_enabled^; [Check if Enhanced Commander Artifacts is enabled in WoGify Options]
+!#UN:P219/1 P219/?i^wog_219_enabled^; [Check if Enhanced Commander Artifacts is enabled in WoGify Options]
 
 !?FU(WOG_CreateERMHook)&i^wog_71_enabled^;
 !!SN:Ex1/1/4288967/(WOG_71_OnMonsterClickDiplomacy); [hooks for the artifacts decreasing mon gression]
@@ -75,7 +75,6 @@ ZVSE2
 
   !!VR(artSlots[0]):C4/6/4/1/3/8/5/7/5/7;[set axe of smashing etc right slots ]
   !!VR(skillBitSet[0]):C1/2/1/2/4/8/1/12/2/15;
-
   ; Set up the array for random skills in order to generate different skills - Archer30
   ; If Warfare is enabled, War Machines skills will be skipped (fewer issues and less imba)
   !!FU(NewIntArray):P?(secondarySkillList:y);
@@ -146,35 +145,55 @@ ZVSE2
 
 ** end of Initialization Code
 
+!?FU(OnGameEnter)&i^wog_219_enabled^;
+!!FU(WOG_71_SetPrimarySkillsBonus):P1;
+
+!?FU(OnGameLeave)&i^wog_219_enabled^;
+!!FU(WOG_71_SetPrimarySkillsBonus):P0;
+
+
+!?FU(WOG_71_SetPrimarySkillsBonus);
+!#VA(set:x);
+!#VA(pSkills[4]:y);
+
+!!UN:C5123732/1/4/?(artPSkillsTable:y);
+
+!!if&x1;
+  !!re (artId:y)/(ART_AXE_OF_SMASHING)/(ART_SLAVAS_RING_OF_POWER);
+    !!FU(UnpackUnion):Pi^wog_219_art_%(artId)^/?(psValue:y)/8/?(psBitSet:y)/8/?(sSkill:y)/8;
+    !!re i/0/3;
+      !!VR(bitMask:y):S1 Sd<<i &(psBitSet:y);
+      !!if&(bitMask);
+        !!VR(pSkills[i]):S(psValue:y);
+        !!VR(artSkillTableOffset:y):S4 *(artId) +i;
+        !!UN:C(artPSkillsTable)/(artSkillTableOffset)/1/(pSkills[i]);
+      !!en;
+    !!en;
+  !!en;
+!!el;
+  !!re (artId:y)/(ART_AXE_OF_SMASHING)/(ART_SLAVAS_RING_OF_POWER);
+    !!VR(artSkillTableOffset:y):S4 *(artId);
+    !!UN:C(artPSkillsTable)/(artSkillTableOffset)/4/0; // set stats to 0
+  !!en;
+!!en;
+
+
 !?FU(OnBeforeBattleUniversal);
 !!VRi^wog_219_inCombat^:S(TRUE);
 !?FU(OnAfterBattleUniversal);
 !!VRi^wog_219_inCombat^:S(FALSE);
 
-; WARNING: using (CURRENT_HERO) isn't ideal as it conflict with HD backpack
-; Report: https://discord.com/channels/665742159307341827/1246447170622587011
 !?FU(OnEquipArt)&v998>=(ART_AXE_OF_SMASHING)/v998<=(ART_SLAVAS_RING_OF_POWER)/i^wog_219_enabled^;
-!!FU(WOG_219_ArtProc):Pv998/1;
+!!FU(WOG_219_ArtProc)&i^wog_219_inCombat^=0:Pv998/1;
 
 !?FU(OnUnequipArt)&v998>=(ART_AXE_OF_SMASHING)/v998<=(ART_SLAVAS_RING_OF_POWER)/i^wog_219_enabled^;
-!!FU(WOG_219_ArtProc):Pv998/-1;
+!!FU(WOG_219_ArtProc)&i^wog_219_inCombat^=0:Pv998/-1;
 
 !?FU(WOG_219_ArtProc);
 !#VA(artId:x) (value:x);
-!#VA(pSkills[4]:y);
-
 !!FU(UnpackUnion):Pi^wog_219_art_%(artId)^/?(psValue:y)/8/?(psBitSet:y)/8/?(sSkill:y)/8;
 
-!!re i/0/3;
-  !!VR(bitMask:y):S1 Sd<<i &(psBitSet:y);
-
-  !!if&(bitMask);
-    !!VR(pSkills[i]):S(psValue:y) *(value);
-  !!en;
-!!en;
-
-!!HE(CURRENT_HERO):Fd(pSkills[0])/d(pSkills[1])/d(pSkills[2])/d(pSkills[3]) S(sSkill)/?(lvl:y);
-!!FU&i^wog_219_inCombat^:E;
+!!HE(CURRENT_HERO):S(sSkill)/?(lvl:y);
 
 !!if&(value)>0;
   !!HE(CURRENT_HERO)&(lvl)<(SKILL_EXPERT):S(sSkill)/d1;
