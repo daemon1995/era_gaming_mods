@@ -225,19 +225,27 @@ ZVSE2
 !!SN:E5128928/(CALLCONV_THISCALL)/(heroStruct);                             [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
 !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1/0;       [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
 
+
 ; Fully update the adventure map dialogue when DL is closed
 !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
-!!SN:E4289408/(CALLCONV_THISCALL)/(advMgr)/1/0;
-
 ; Update route if god mode was used
-!!if&i^trainer_player^=i^timerOwner^/i^trainer_usedGodMode^;
+!!if&i^trainer_map_view_changed^;
+  !!VRi^trainer_map_view_changed^:S(FALSE);
+  *!if&i^trainer_player^=i^timerOwner^;
+    
+  *!en;
   !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
 
   !!SN:E4295984/(CALLCONV_THISCALL)/(advMgr)/1/1/1; 0x418D30 AdvMgr_RouteUpdate
-  !!UN:C(advMgr)/236/4/-1; // reset movement calculation
+  !!SN:E4254688/(CALLCONV_THISCALL)/(advMgr)/0/0;0x040EBE0 AdvMan::ResetMovementFlag - the same as the commented line down below
+  *!UN:C(advMgr)/236/4/-1; // reset movement calculation
   !!UN:C(INPUT_MANAGER)/4/?(inputMgr:y);
   !!SN:E5164240/(CALLCONV_THISCALL)/(inputMgr);
 !!en;
+
+!!SN:E4289408/(CALLCONV_THISCALL)/(advMgr)/1/0; 0x417380 AdvMgr_FullUpdate
+
+
 
 !?FU(trainer_UpdateAllTheDialogs);
 !#VA(hero:x) (player:x);
@@ -473,7 +481,7 @@ ZVSE2
     !!UN:X?(size:y)/?(hasTwoLv:y); get map size
     !!UN:S0/0/0/(player)/356;
     !!UN&(hasTwoLv)>0:S0/0/1/(player)/356;
-
+    !!VRi^trainer_map_view_changed^:S(TRUE); set flag for the further route updates
     ; Resources
     !!re i/(RES_FIRST)/(RES_LAST_WOG);
       !!co&i=(RES_MITHRIL)/i^mithril_on^<>(TRUE);
@@ -551,6 +559,8 @@ ZVSE2
     !!if&(x)>-1/(y)>-1/(z)>-1;
       !!UN:L(x)/(y)/(z)/0;
       !!UN:S(x)/(y)/(z)/i^timerOwner^/2;[Reveal the map for the current player]
+      !!VRi^trainer_map_view_changed^:S(TRUE); set flag for the further route updates
+
       !!SN:P^Lighthouse.wav^;
     !!en;
     
@@ -2447,6 +2457,8 @@ ZVSE2
 !!if&i^key_ctrl^/i^key_shift^=(FALSE)/i^key_alt^=(FALSE);
   !!HEi^trainer_hero^:P?(x:y)/?(y:y)/?(z:y);
   !!UN:S(x)/(y)/(z)/(player)/20;
+  !!VRi^trainer_map_view_changed^:S(TRUE); set flag for the further route updates
+
 ; Shift Click - Hide the whole map for every player
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
   !!re (player:y)/(PLAYER_FIRST)/(PLAYER_LAST);
@@ -2461,6 +2473,8 @@ ZVSE2
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^;
   !!UN:S0/0/0/(player)/356;
   !!UN&(hasTwoLv)>0:S0/0/1/(player)/356;
+  !!VRi^trainer_map_view_changed^:S(TRUE); set flag for the further route updates
+
 ; Normal Click - Reveal the whole map with confirmation
 !!el;
   !!SN:T^trainer.reveal^/?z2/^colour^/s^trainer_player^;
@@ -2472,6 +2486,8 @@ ZVSE2
 
   !!UN:S0/0/0/(player)/356;
   !!UN&(hasTwoLv)>0:S0/0/1/(player)/356;
+  !!VRi^trainer_map_view_changed^:S(TRUE); set flag for the further route updates
+
 !!en;
 
 !!SN:P^Lighthouse.wav^;
