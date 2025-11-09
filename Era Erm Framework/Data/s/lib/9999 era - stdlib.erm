@@ -1921,6 +1921,58 @@ ZVSE2
 !!SN:F^FindClose^/(searchHandle);
 
 !!VRv1:S(savedV1);
+
+!?FU(GetModList);
+!#VA(arrayId:x); returns string array of the loaded mods (list.txt)
+!#VA(toLower:x); OPT set mod name to lower case or keep original; is FALSE by default
+!#VA(reverse:x); OPT reverse mod list order; is FALSE by default
+
+!!FU:A?(numArgs:y);
+!!if&(numArgs)<(@arrayId);
+  !!SN:F^ShowErmError^/^GetModList: invalid arguments number^;
+  !!FU:E;
+!!el;
+  !!VR(toLower)&(numArgs)<(@toLower):S(FALSE);                   [reset to false]
+  !!VR(reverse)&(numArgs)<(@reverse):S(FALSE);                   [reset to false]
+!!en;
+
+!!VR(savedV1:y):Sv1;
+
+!!SN:L^vfs.dll^/?(dll:y) A(dll)/^GetSerializedModListA^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL);
+!!VR(dataAddress:y):Sv1;
+
+!!UN:C(dataAddress)/(SIZEOF_INT)/?(modsNum:y);
+
+!!VR(modNameLenAddress:y):S(dataAddress:y) +(SIZEOF_INT);        [get first mod name len address]
+
+!!if&(modsNum);
+  
+  !!FU(NewStrArray):P(modsNum)/?(arrayId);
+  !!re i/0/(modsNum)/1/-1;
+
+    !!UN:C(modNameLenAddress:y)/(SIZEOF_INT)/?(modNameLen:y);    [get mod name len]
+    !!VR(modNameAddress:y):S(modNameLenAddress) +(SIZEOF_INT);   [shift to real mod name address]    
+    !!SN:B(modNameAddress)/d/?(modNameRaw:z);                       [get mod name]
+    !!FU(Substr):P(modNameRaw)/0/(modNameLen)/?(modName:z);         [remove null terminator]
+    !!VR(modNameLenAddress):+(modNameLen) +(SIZEOF_INT);         [add offset for the next mod in the list;]
+
+    !!if&(toLower);
+      !!FU(StrToLower):P(modName)/?(modName);                    [set name to lower case]
+    !!en;
+    !!SN:K(modName)/?(after:y);
+
+    !!SN:M(arrayId)/i/(modName);                                 [assign mod name]
+
+  !!en;
+  !!if&(reverse);
+    !!FU(Array_Revert):P(arrayId);
+  !!en;
+  !!SN:F^ExtendArrayLifetime^/(arrayId);                         [return saved array]
+!!en;
+
+!!SN:A(dll)/^MemFree^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL)/(dataAddress); [Clear allocated memory from era.dll function;]
+!!VRv1:S(savedV1);
+
 ; ============== END FILE SYSTEM ==============
 
 

@@ -380,101 +380,6 @@ ZVSE2
     !!IF:M^There are no numbers in the text you entered^;
   !!en;
 
-!?FU(gem_GetModList);
-!#VA(modListArrayID:x) (modsAmount:x) (modListGlobalVar:x); 
-  !!FU:A?(numArgs:y);
-
-  *!if&(numArgs)<2;
-    *!SN:F^ShowErmError^/^Substr: invalid arguments number. Expected at least {2} arguments^;
-    *!FU:E;
-  *!en;
-
-
-  !!SN:L^vfs.dll^/?(dll:y) A(dll)/^GetMappingsReportA^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL);
-  !!SN:Bv1/v1/?s^gem_modList^;
-  !!VR(savedV1:y):Sv1;
-  !!SN:A(dll)/^MemFree^/?(funcAddr:y) E(funcAddr)/(CALLCONV_STDCALL)/(savedV1);
-  !!SN:Ks^gem_modList^/?(textLength:y);
-
-  !!VR(garbageLength:y):S(NULL);
-  !!VR(endOfGarbage:y):S(NULL);
-  !!VR(skipNextText:y):S(FALSE);
-  !!FU(NewIntArray):P?(modNamesEndings:y);
-  !!VRs^gem_modListCut^:S^^;
-
-  !!re i/0/(textLength)/1/-1;
-
-    !!SN:Ks^gem_modList^/i/?(textSymbol:z);
-
-    !!if&(textSymbol)=^$^;
-      !!VRi:+10;
-      !!VRk:Si+1;
-      !!VR(modStart:y):Sk;
-      !!co;
-    !!en;
-
-    !!if&(textSymbol)=^[^;
-      !!if&(garbageLength);
-        !!VRi:+(garbageLength);
-        !!co;
-      !!el;
-        !!VR(startOfTextGarbage:y):Si;
-        !!VR(skipNextText):S(TRUE);
-      !!en;
-    !!en;
-
-    !!if&(textSymbol)=^]^;
-        !!VR(garbageLength):Si -(startOfTextGarbage);
-        !!VR(skipNextText):S(FALSE);
-        !!co;
-    !!en;
-
-    !!VRs^gem_modListCut^&(skipNextText)=(FALSE):+^%(textSymbol)^;
-  !!en;
-
-  !!SN:Ks^gem_modListCut^/?(textLength:y);
-
-  !!FU(NewStrArray):P?(modListArrayID);
-
-  !!re i/0/(textLength)/1/-1;
-    !!SN:Ks^gem_modListCut^/i/?(textSymbol);
-
-    !!if&(textSymbol)=^\^;
-      !!VR(modsAmount):+1;
-      !!co;
-    !!en;
-
-    !!VRs^gem_mod_no_%(modsAmount)^:+(textSymbol);
-  !!en;
-
-  !!VRs^gem_modList^:S^^;
-  !!VRs^gem_modListCut^:S^^;
-
-  !!re i/1/(modsAmount);
-    !!VRs^gem_mod_no_%i^:M6/?(latSymbol:y);
-    !!VR(latSymbol):+1;
-    !!VRs^gem_mod_no_%i^:M1/s^gem_mod_no_%i^/0/(latSymbol);
-    !!FU(Array_Push):P(modListArrayID)/s^gem_mod_no_%i^;
-
-    !!if&(numArgs)>2;                                   [if user asked mod list]
-      !!VRs^gem_modListCut^:+^%s(gem_mod_no_%i)%T(gem.endl)^;                                             [add mod to the list on the next line]
-    !!en;
-
-    !!VRs^gem_mod_no_%i^:S^^;                           [remove global var]
-  !!en;
-
-  !!SN:F^ExtendArrayLifetime^/(modListArrayID);         [return id of array with mod list]
-
-  !!if&(numArgs)>2;                                     [if user asked mod list]
-
-    !!VRs^gem_modListCut^:M6/?(latSymbol);
-
-    !!VR(latSymbol):+1;
-    !!VRs^gem_modListCut^:M1/s^gem_modListCut^/0/(latSymbol);
-    !!VR(modListGlobalVar):Z^{~text align=left}%s(gem_modListCut)}^;
-  !!en;
-
-
 
 
 !?FU(StringReplaceINT);
@@ -507,7 +412,7 @@ ZVSE2
 
 
 
-!?FU(gem_CheckModFolderNameExists);         [that function get mod list in array from !FU(gem_GetModList) and compare each folder with]
+!?FU(gem_CheckModFolderNameExists);         [that function gets mod list in array from !FU(GetModList) and compare each folder with]
 !#VA(modNameForCheck:x) (isExist:x);
   !!VR(emptyStr:z):S^%z(modNameForCheck)^ H1;
   !!if|-1/(emptyStr)=^^;        [show error if mod name is not string or empty]
@@ -516,21 +421,9 @@ ZVSE2
   !!en;
 
   !!VR(textModNameForCheck:z):S^%z(modNameForCheck)^;
-  !!FU(gem_GetModList):P?(modListArrayID:y)/?(modsAmount:y);
-
-  !!FU(StrToLower):P(textModNameForCheck)/?(textModNameForCheck);
-
-  !!re i/0/(modsAmount)/1/-1;
-    !!SN:M(modListArrayID)/i/?(modName:z);
-    !!FU(StrToLower):P(modName)/?(modName);
-
-    !!if&(textModNameForCheck)=(modName);
-      !!VR(isExist):S(TRUE);
-      !!FU:E;    
-    !!en;
-  !!en;
-
-  !!VR(isExist):S(FALSE);
+  !!FU(GetModList):P?(mods:y);
+  !!FU(Array_IndexOf):P(mods:y)/z(modNameForCheck)/?(result:y)/1; [result is '-1' if not there;]
+  !!VR(isExist):S(result) +1 B;
 
 
 
