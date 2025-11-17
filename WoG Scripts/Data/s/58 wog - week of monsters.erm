@@ -100,11 +100,10 @@ ZVSE2
 --------------------------------------------------------------------------------------
 !?FU(WOG_CreateERMHook)&i^wog_20_enabled^;
 !!SN:Ex1/1/5032547/(WOG_20_HOOK_OnNewWeekMessage);
+!!SN:Ex1/1/5032552/(WOG_20_HOOK_OnAfterWeekMessage);
+
 !!SN:Ex1/1/5016726/(WOG_20_HOOK_OnNewMonth);4C8C96
 !!SN:Ex1/1/5014935/(WOG_20_HOOK_OnNewWeek);004C8597
-
-5016726
-5014678
 
 
 !!UN:P200/?(isRefugeeSync:y);
@@ -240,7 +239,14 @@ ZVSE2
 !?FU(WOG_20_HOOK_OnNewWeekMessage);
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
 !!FU(WOG_20_GetWeekDescription):Pi^wog_20_week_type^/i^wog_20_week_subtype^/?(descrition:z);
-!!SN:B(textBuffer)/d/^%(descrition)^;
+!!FU(WOG_20_GetWeekPictureName):Pi^wog_20_week_type^/i^wog_20_week_subtype^/?(defName:z);
+!!SN:B(textBuffer)/d/^%(defName)%T(era.endl)%T(era.endl)%(descrition)^;
+!!UN:C5203412/2/4/d100 C5203503/1/4/d100;
+
+!?FU(WOG_20_HOOK_OnAfterWeekMessage);
+!!UN:C5203412/2/4/d-100 C5203503/1/4/d-100;
+
+
 
 !?FU(WOG_20_HOOK_RefugeeIteration)&i^wog_20_sync_refugee^;
 !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/i^wog_20_week_subtype^; replace refugee mon id by own 
@@ -287,9 +293,34 @@ ZVSE2
 
 !!IF:Q1/(picType:y)/(picSubType:y)/(MSG_TYPE_POPUP)/(weekMsg:z); [Display Week of Monsters info]
 
-s^wog_35_prediction_%i^
+!!CM:R0;                                                         [Disable standard right-click message]
+!?FU(WOG_20_GetWeekPictureName);
+!#VA(weekType:x) (weekSubType:x) (result:x);
+!!VR(result:x):Z^^;
+  !!if&(weekType:x)=(WOG_20_RESOURCE_WEEK);
+    !!if&(weekSubType:x)=0;
+      !!VR(result:x):Z^{~>AVMsawr0.def:0:0 block}^;
+    !!el&(weekSubType:x)=1;
+      !!VR(result:x):Z^{~>AVMalch0.def:0:0 block}^;
+    !!el&(weekSubType:x)=2;
+      !!VR(result:x):Z^{~>AVMORDR0.def:0:0 block}^;
+    !!el&(weekSubType:x)=3;
+      !!VR(result:x):Z^{~>AVMsulf0.def:0:0 block}^;
+    !!el&(weekSubType:x)=4;
+      !!VR(result:x):Z^{~>AVMCRGR0.def:0:0 block}^;
+    !!el&(weekSubType:x)=5;
+      !!VR(result:x):Z^{~>AVMGESW0.def:0:0 block}^;
+    !!el&(weekSubType:x)=6;
+      !!VR(result:x):Z^{~>avmgogr0.def:0:0 block}^;
+    !!en;
 
-!!CM:R0;                                [Disable standard right-click message]
+  !!el|(weekType:x)=(WOG_20_MONSTER_WEEK)/(weekType:x)=(WOG_20_PLAYER_WEEK);
+    !!VR(monId:y):S(weekSubType) +2;
+    !!VR(result:x):Z^{~>twcrport.def:0:%(monId) block}^;
+  !!el&(weekType:x)=(WOG_20_INFERNO_WEEK);                                  [Inferno buildings]
+    !!VR(result:x):Z^{~>HALLINFR.def:0:26 block}^;                          [Deity of Fire]
+  !!en;
+
 
 !?FU(WOG_20_GetWeekDescription);
 !#VA(weekType:x) (weekSubType:x) (result:x);
