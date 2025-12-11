@@ -1,6 +1,7 @@
 ZVSE2
 ** Author orig.  : Algor
 ** Updated by    : Archer30
+** Rewritten by  : daemon_n (December 11th 2025)
 ** Name          : Land Navigation
 ** Name rus.     : Сухопутная навигация
 ** Options       : 773
@@ -9,69 +10,6 @@ ZVSE2
 ; i^es_773_landMode^ - If the water area is less than 15% of the map, land mode would be activated and replaces Navigation skills/disable navi artifacts on the map.
 ; i^es_773_navigationBonuses_enabled^ - movement points bonuses for sailing can be disabled with this variable in order to be compatible with mods
 
-
-** Замена Навигации на Логистику и бан водных заклинаний/артефактов, если воды на карте менее 15%
-!?FU(OnAfterErmInstructions);           [пост-инструкция]
-!!UN:P773/?(landNavi:y);                [проверяем включена ли опция 773]
-!!FU&(landNavi)=(FALSE):E;              [Could be 0/1/2 depending on the water percentage]
-
-; Set up new skill description
-!!VR(basicDesc:z):S^%T(es.773.desc1)^;
-!!VR(advancedDesc:z):S^%T(es.773.desc2)^;
-!!VR(expertDesc:z):S^%T(es.773.desc3)^;
-
-; Add in Navaigation description if enabled
-!!UN:P208/?(navigation:y);
-
-!!if&(navigation);
-  !!VR(basicDesc):+z175137;
-  !!VR(advancedDesc):+z175138;
-  !!VR(expertDesc):+z175139;
-!!en;
-
-; Change the descriptions
-!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_BASIC)/(basicDesc);
-!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_ADVANCED)/(advancedDesc);
-!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_EXPERT)/(expertDesc);
-
-!!if&i^es_773_landMode^;
-  !!FU(ES_773_SetUpSSAndSpec):P(TRUE);
-
-  ; Ban Navigation Skill for Hero Lvl Up
-  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
-  !!VR(skillBanPtr:y):S(gameMgr) +(SKILL_NAVIGATION) +321112;
-  !!UN:C(skillBanPtr)/(UNC_INT8)/1;
-!!el;
-  !!FU(ES_773_SetUpSSAndSpec):P(FALSE);
-!!en;
-
-!?FU(OnAfterLoadGame)&i^es_773_landMode^;
-; Ban Navigation Skill for Hero Lvl Up
-!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
-!!VR(skillBanPtr:y):S(gameMgr) +(SKILL_NAVIGATION) +321112;
-!!UN:C(skillBanPtr)/(UNC_INT8)/1;
-
-!?FU(ES_773_SetUpSSAndSpec);
-!#VA(isLandMode:x);
-
-!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
-  !!HEi:X?(spec:y)/?(spec2:y);
-
-  !!if&(isLandMode);
-    ; Remove Navigation and add the level to Logistics
-    !!HEi:S(SKILL_NAVIGATION)/?(naviLv:y) S(SKILL_LOGISTICS)/?(logLv:y);
-    !!VR(newLogLv:y):S(naviLv) +(logLv) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
-    !!HEi:S(SKILL_NAVIGATION)/(SKILL_NOT_LEARNED) S(SKILL_LOGISTICS)/(newLogLv);
-    ; Set up new spec
-    !!if&(spec)=0/(spec2)=(SKILL_NAVIGATION);
-      !!HEi:X(spec)/(SKILL_LOGISTICS);
-      !!SN:H^spec^/i/2/^%T(es.773.logSpec)^;
-    !!en;
-  !!el;
-    ; Set up new spec description
-    !!SN&(spec)=0/(spec2)=(SKILL_NAVIGATION):H^spec^/i/2/^%T(es.773.spec)^;
-  !!en;
-!!en;
 
 !?FU(ES_OnIterateAllMapObjects)&i^es_773_landMode^;
 !#VA(x:x) (y:x) (z:x);
@@ -114,107 +52,110 @@ ZVSE2
   !!SC(x)/(y)/(z)&(type)=1/(ss)=(SKILL_NAVIGATION):S(SKILL_LOGISTICS); [Type 1 for secondary skills]
 !!en;
 
-!?OB(OBJ_BOAT);               [Посадка в лодку]
-!!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
-!!FU&y1=0:E;                  [Выход, если опция не включена]
+** Замена Навигации на Логистику и бан водных заклинаний/артефактов, если воды на карте менее 15%
+!?FU(OnAfterErmInstructions);           [пост-инструкция]
+!!UN:P773/?(landNavi:y);                [проверяем включена ли опция 773]
+!!FU&(landNavi)=(FALSE):E;              [Could be 0/1/2 depending on the water percentage]
 
-!!HE(CURRENT_HERO):W?y1;      [y1 - ОД героя]
-!!IF:W(CURRENT_HERO);         [выбор текущего героя]
-!!VRw101:Sy1;                 [y1 - ОД героя при посадке(высадке) в лодку]
+; Set up new skill description
+!!VR(basicDesc:z):S^%T(es.773.desc1)^;
+!!VR(advancedDesc:z):S^%T(es.773.desc2)^;
+!!VR(expertDesc:z):S^%T(es.773.desc3)^;
 
-!$OB(OBJ_BOAT);               [Посадка в лодку - пост-триггрер]
-!!UN:P773/?y1;                [проверяем включена ли опция 773 в y1]
-!!FU&y1=0:E;                  [Выход, если опция не включена]
+; Add in Navaigation description if enabled
+!!UN:P208/?(navigation:y);
 
-!!VRy1:S0;
-
-!!if&i^es_773_navigationBonuses_enabled^;
-  !!HE(CURRENT_HERO):S5/?y1 X?y2/?y3/d/d/d/d/d; [y1 - Hero navigation level (0..3), y2=0 and y3=5 for Navigation specialist]
-  !!VRy1&y2=0/y3=5:+1;                        [y1 - Hero navigation level taking into account specialization (0..4)
+!!if&(navigation);
+  !!VR(basicDesc):+z175137;
+  !!VR(advancedDesc):+z175138;
+  !!VR(expertDesc):+z175139;
 !!en;
 
-!!VRy2:S6 -y1 *100;                         [y2 - cost of boarding (disembarking) a boat in MP (Base cost 600 MP and minus 100 MP for each Navigation level/Navigation Specialization)]
-!!HE(CURRENT_HERO):A2/123/d/y3;             [y3=1, if the hero is wearing a Sea Captain Hat]
-!!VRy2&y3=1:S0;                             [we reset the cost of boarding (disembarkation) if the hero is wearing a Sea Captain Hat]
-!!IF:W(CURRENT_HERO);                       [select current hero]
-!!VRw101:-y2;                               [w101 - estimated hero's AP after landing]
-!!HE(CURRENT_HERO)&w101>0:Ww101;            [return unused AP to the hero. If there is not enough AP, the “AP debt” remains in w101 to be written off the next day]
+; Change the descriptions
+!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_BASIC)/(basicDesc);
+!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_ADVANCED)/(advancedDesc);
+!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_EXPERT)/(expertDesc);
 
-
-!?OB(OBJ_ANCHOR_POINT);                     [Alighting]
-!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
-!!FU&y1=0:E;                                [Exit if option is not enabled]
-
-!!HE(CURRENT_HERO):W?y1;                    [y1 - hero's MP]
-!!IF:W(CURRENT_HERO);                       [select current hero]
-!!VRw101:Sy1;                               [y1 - hero’s M when boarding (disembarking) the boat]
-
-
-!$OB(OBJ_ANCHOR_POINT);                     [Boat disembarkation - post-trigger]
-!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
-!!FU&y1=0:E;                                [Exit if option is not enabled]
-
-!!VRy1:S0;
-
-!!if&i^es_773_navigationBonuses_enabled^;
-  !!HE(CURRENT_HERO):S5/?y1 X?y2/?y3/d/d/d/d/d; [y1 - Hero navigation level (0..3), y2=0 and y3=5 for Navigation specialist]
-  !!VRy1&y2=0/y3=5:+1;                        [y1 - Hero navigation level taking into account specialization (0..4)
+!!if&i^es_773_landMode^;
+  !!FU(ES_773_SetUpSSAndSpec):P(TRUE);
+!!el;
+  !!FU(ES_773_SetUpSSAndSpec):P(FALSE);
 !!en;
 
-!!VRy2:S6 -y1 *100;                         [y2 - cost of boarding (disembarking) a boat in MP (Base cost 600 MP and minus 100 MP for each Navigation level/Navigation Specialization)]
-!!HE(CURRENT_HERO):A2/123/d/y3;             [y3=1, if the hero is wearing a Sea Captain Hat]
-!!VRy2&y3=1:S0;                             [we reset the cost of boarding (disembarkation) if the hero is wearing a Sea Captain Hat]
-!!IF:W(CURRENT_HERO);                       [select current hero]
-!!VRw101:-y2;                               [w101 - estimated hero's AP after landing]
-!!HE(CURRENT_HERO)&w101>0:Ww101;            [return unused AP to the hero. If there is not enough MP, the MP debt” remains in w101 to be written off the next day]
+!?FU(ES_773_SetUpSSAndSpec);
+!#VA(isLandMode:x);
 
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:X?(spec:y)/?(spec2:y);
 
-!?FU(OnEveryDay)&i^timerDay^>1;             [every day for all players starting from the 2nd day we write off debts for boarding the boat]
-!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
-!!FU&y1=0:E;                                [Exit if option is not enabled]
+  !!if&(isLandMode);
+    ; Remove Navigation and add the level to Logistics
+    !!HEi:S(SKILL_NAVIGATION)/?(naviLv:y) S(SKILL_LOGISTICS)/?(logLv:y);
+    !!VR(newLogLv:y):S(naviLv) +(logLv) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
+    !!HEi:S(SKILL_NAVIGATION)/(SKILL_NOT_LEARNED) S(SKILL_LOGISTICS)/(newLogLv);
+    ; Set up new spec
+    !!if&(spec)=0/(spec2)=(SKILL_NAVIGATION);
+      !!HEi:X(spec)/(SKILL_LOGISTICS);
+      !!SN:H^spec^/i/2/^%T(es.773.logSpec)^;
+    !!en;
+  !!el;
+    ; Set up new spec description
+    !!SN&(spec)=0/(spec2)=(SKILL_NAVIGATION):H^spec^/i/2/^%T(es.773.spec)^;
+  !!en;
+!!en;
 
-!!OW:H-1/1/0;                               [v1 - number of heroes of the current player]
-!!DO(ES_773_WriteOffMovementDebtFromPreviousTurn)/1/v1/1&v1>0:P; [for each hero of the current player we write off debts for boarding the boat]
+!?FU(OnStartOrLoad)&i^es_773_navigationBonuses_enabled^;
+!!UN:C5131324/3/4/?(navigationSkillValuesPointer:y);
 
-!?FU(ES_773_WriteOffMovementDebtFromPreviousTurn); [we write off debts for boarding the boat]
-!!OW:H-1/2/x16;                             [v2-number of the current player's hero]
-!!IF:Wv2;                                   [select v2 hero]
-!!VRw101&w101>0:S0;                         [reset w101 if there is no debt]
-!!FU&w101>-1:E;                             [exit if there is no debt]
+!!UN:C(navigationSkillValuesPointer)/4/?(navigationBasicSkillValue:y);
 
-!!HEv2:W?y1/1;                              [y1 - hero's MP]
-!!VRy2:Sy1 +w101;                           [y2 - hero's MP]
-!!VRy2&y2<0:S0;                             [after write-off]
-!!HEv2:Wy2;                                 [set the hero's MP]
-!!VRw101:+y1;                               [write off debt (w101)]
-!!VRw101&w101>-1:S0;                        [reset w101 if there is no debt]
+!!re i/(SKILL_BASIC)/(SKILL_EXPERT);
+  !!VR(offset:y):Si*4;
+  !!UN:C(navigationSkillValuesPointer)/(offset)/4/?(navigationSkillValue:y);
+  !!VRi^es_773_original_skill_value_%i^:S(navigationSkillValue:y);
+  !!VR(decreaseValue:y):S(navigationSkillValue) -(navigationBasicSkillValue) *4 :5;
+  !!UN:C(navigationSkillValuesPointer)/(offset)/4/d-(decreaseValue:y);
+  !!UN:C(navigationSkillValuesPointer)/(offset)/4/?(navigationSkillValue:y);
+!!en;
 
+// restore original values
+!?FU(OnGameLeave)&i^es_773_navigationBonuses_enabled^;
 
-!?FU(OnEveryDay)&i^timerDay^>1/i^es_773_navigationBonuses_enabled^; [every day for all players starting from the 2nd we recalculate the Navigation bonus (replacing it with the standard ones for Logistics 10/20/30%)]
-!!UN:P773/?y1;                              [check if option 773 is enabled in y1]
-!!FU&y1=0:E;                                [Exit if option is not enabled]
+!!UN:C5131324/3/4/?(navigationSkillValuesPointer:y);
+!!UN:C(navigationSkillValuesPointer)/4/?(navigationBasicSkillValue:y);
+!!re i/(SKILL_BASIC)/(SKILL_EXPERT);
+  !!VR(offset:y):Si*4;
+  !!if&i^es_773_original_skill_value_%i^;
+    !!UN:C(navigationSkillValuesPointer)/(offset)/4/i^es_773_original_skill_value_%i^;
+  !!en;
+!!en;
 
-!!OW:H-1/1/0;                               [v1 - number of heroes of the current player]
-!!DO(ES_773_RecalcNaviBonus)/1/v1/1&v1>0:P; [for each hero of the current player we recalculate the Navigation bonus]
+!?FU(ES_CreateERMHook);
+!!if&i^es_773_navigationBonuses_enabled^;
+  // change hero movepoints on the boat
+  !!SN:Ex1/1/4842304/(ES_773_OnHeroBoarding); [UN_BOARDING (ANCOR_VISIT)]
+  !!SN:Ex1/1/4853000/(ES_773_OnHeroBoarding); [BOARDING (BOAT_VISIT)]
+!!en;
 
-!?FU(ES_773_RecalcNaviBonus);               [we recalculate the Navigation bonus]
-!!OW:H-1/2/x16;                             [v2-number of the current player's hero]
-!!HEv2:P?y1/?y2/?y3;                        [y1-y3 - hero coordinates]
-!!TRy1/y2/y3:T?y4/d/d/d/d/d/d/d;            [y4=8, if the hero is on the water (in a boat)]
-!!FU&y4<>8:E;                               [exit if the hero is not on the water]
+!!if&i^es_773_landMode^;
+  ; Ban Navigation Skill for Hero Lvl Up
+  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+  !!VR(skillBanPtr:y):S(gameMgr) +(SKILL_NAVIGATION) +321112;
+  !!UN:C(skillBanPtr)/(UNC_INT8)/1;
+!!en;
 
-!!HEv2:S5/?y1 X?y2/?y3/d/d/d/d/d Ed/?y4;    [y1 - Hero Navigation Level (0..3), y2=0 and y3=5 for Navigation Specialist, y4 - Hero Level]
-!!FU&y1=0:E;                                [exit if the hero has no navigation]
+!?FU(ES_773_Hero_AdjustBoardingCost);
+!#VA(heroId:x);
+!!HE(heroId):S(SKILL_NAVIGATION)/?(skillLvl:y) X?t/?s/d/d/d/d/d; [calc skills bonus]
+!!VR(skillLvl:y)&t=0/s=(SKILL_NAVIGATION):+1;                    [+1 for speciality]
+!!HE(heroId):W?(currentPoints:y)/1;
 
-!!VRy5:Sy1 *600;                            [y5 - recalculation from Navigation level]
-!!VRy7:Sy5;
-!!VRy6&y2=0/y3=5:Sy1 *30 *y4;               [y6 - recalculation from Navigation specialization]
-!!VRy8:Sy6;
-!!VRy5&y2=0/y3=5:+y6;                       [y5 - general recalculation from the level of Navigation and specialization]
+!!VR(cost:y):S-100 * (skillLvl:y) +600;                          [200-600]
+!!VR(currentPoints):-(cost) F0/(INT_MAX);                        [decrease and limit value]
+!!HE(heroId):W(currentPoints:y)/1;                               [set new cost no redraw]
 
-!!HEv2:W?y6/1;                              [y6 - hero's current MP]
-!*IF:M^y1_NavigationLevel = %y1, y2=%y2 y3=%y3, y7_recalculation from Navigation level = %y7, y8_fromSpecialization = %y6, y5_total = %y5, y6_actualMovement = %y6^;
-!!VRy6:+y5;                                 [y6 - recalculated hero's MP]
-!!HEv2:Wy6;                                 [updating the hero's MP]
-
-** end
+!?FU(ES_773_OnHeroBoarding);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!FU(ES_773_Hero_AdjustBoardingCost):P(heroId);
+!!SN:X?y99/0;                            [skip default]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/d2; [lol works for boarding/unboarding]
