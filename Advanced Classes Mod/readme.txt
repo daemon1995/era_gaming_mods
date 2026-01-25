@@ -1,8 +1,8 @@
 
-Advanced Classes Mod 1.094
+Advanced Classes Mod 1.1
 
 A Mod by Perry R, for Heroes of Might and Magic 3, ERA3 
-with the help of AlfWithCake, anti-victor, Daemon_n, Sandris, Berserker and Archer
+
 _________________________________________________
  
  CONTENTS
@@ -22,7 +22,7 @@ _________________________________________________
  1. Main Features 
 
 Advanced Classes Mod is a huge gameplay improving modification based on the Wake of Gods. The core of the mod is a new class and skill system for Heroes 3. To avoid bugs neraly the complete WoG mod has been rewritten. Making ACM very stable. 
-Now it is possible to play three very distinct classes, each with their own strengths and weaknesses.
+Now it is possible to play three very distinct hero classes (Warrior, Mage , Adventurer), each with their own strengths and weaknesses.
 
 - New Master and Grandmaster level for every Secondary Skill
 - Greatly improve the usefulness of weaker skills
@@ -34,21 +34,30 @@ Now it is possible to play three very distinct classes, each with their own stre
 - Completely reworked the Magic-System, now all spells scale with Spell Power and much more
 - New Master and Grandmaster level for every combat spell, with new effects and powers
 - Reworked Commander abilities, they are now much more combat active and actually fun to use
-- 9 new base Commander classes and 18 specialisations, each with unique abilities
+- 9 new base Commander classes and 18 specialisations, each with unique abilities. Making a total of 27 choices.
+- Added 24 unique warmachine upgrades to be purchased in the town
 - Most artifacts are improved and are part of a set with interesting bonuses
 - Added 3 new secret class sets
-- New settings for increased difficulty of Neutral Units and computer players (AI)
+- New settings for increased difficulty of Neutral Units and computer players (AI) in form of the Difficulty mod
 - Good compatibility with WoG options
 
 
  2. Important Informations 
 
 - The Help and Readme folder contains a lot of additional information about heroes, spells and skills. If you are in doubt how a skill work you can look it up there. All ingame options provide additional information when right-clicked ingame.
-- Right and left-click on Hero Portrait in hero-screen will show you important information about your current class points and skills, which determine your hero development. Use this often!
-- Right click the experience icon in the hero-screen will open the bonus-list, it will show you a lot of additional information about hero attributes and commander classes.
+- Right and left-click on Hero Portrait in hero-screen will show you important information about your current class points and skills, which determine your hero development. Use this often! 
+- Right click the experience icon in the hero-screen will open the bonus-list, it will show you a lot of additional information about hero attributes and commander classes. 
 
 
- 2.1 Brief Overview of some important changes or difference to WoG mechanics
+ 2.1 Important key shortcuts
+ 
+- Key shortcut for class table: press "W" in hero screen.
+- Key shortcut for bonus list: press "E" in hero screen.
+- Key shortcut for advanced hero class: press "A" in hero screen.
+- Key shortcut for spell upgrade list press: "R" in hero screen.
+
+
+ 2.2 Brief Overview of some important changes or difference to WoG mechanics
  
 Heroes:
 - most heroes specializations have been reworked and significantly improved in their usefulnes, especially magic heroes, there are also some new and unique specialities. Every hero should now be "mainable". Speciality scaling per level decreased to 3% instead of 5%. Some heroes have changed starting secondary skills to better match their speciality. 
@@ -58,33 +67,34 @@ Artifacts:
 
 Warmachines:
 - cleaned up the mess with the buggy Warmachine scripts 1,2,3. Now only 1 Warmachine of each type and no more 20 Ballistas nonsense. Functionallity of WoG Warmachine scripts I-III are included, just interpreted in a new way. 
-  Tents now resurrect in combat but have a limited heal power called "Heal Capacity". Heal Capacity is indicated by the "damage" value from your tent during combat and is 2% of your total army HP + other bonuses. Ammo Carts and Ballistas are improved and can be upgraded. You can buy over 20 unique upgrades for your WM in the towns. The upgrades are devided in "Enchantments" which can be bought at the Mage Guild and "Upgrades" which can be obtained at the Blacksmith.
+Tents now resurrect in combat but have a limited heal power called "Heal Capacity". Heal Capacity is shown in the bonus list and by right-clicking your tent during combat and is 2% of your total army HP + other bonuses, like skills, artifacts, WM-upgrades. Ammo Carts and Ballistas are improved and can be upgraded in the town. You can buy over 20 unique upgrades for your WM in the towns. The upgrades are devided in "Enchantments" which can be bought at the Mage Guild and "Upgrades" which can be obtained at the Blacksmith. Your hero can only buy one ultimate upgrade per upgrade/enchantment-master. But these upgrades are difficult to obtain. If your hero has learned more than 10 secondary skills, upgrades cannot be further promoted as to level 1. This is to prevent people playing with 28 skills to abuse the power of the ugprades and adds replay value.
 
 Spells:
-- by far the most work went into the rework of the magic system. Now all spells scale with spell power! The strength of your spells is dependant of your characters Magic Strength (MS), a new primary stat introduced in ACM. Caster heroes are now clearly better spellcasters than a Tazar with Earth Magic. Reduced the power of the Slow spell and moved to level 3. Spell point costs increased. Mulitcasting in the same battleround will increase spell point costs until the next battleround. 
+- by far the most work went into the rework of the magic system. Now all spells scale with spell power! The strength of your spells is dependant of your characters Magic Strength (MS), a new primary stat introduced in ACM. Caster heroes are now clearly better spellcasters than a Tazar with Earth Magic. Reduced the power of the Slow spell and moved to level 3. Spell point costs increased, especially for expert level. Mulitcasting in the same battleround will increase spell point costs until the next battleround, this should avoid using to many spells in the same round. 
 
 Commanders:
 - disabled most of the old WoG commander features and remade them. Commanders now require at least 1 point in Magic skill to be able to cast. Spells are made much more useful, read description. All Commanders now profit from carring out actual attacks in combat, some can even increase their damage or health permanently by killing whole squads.
 - When doing your first kill in combat you can choose a commander class. Each class has different attributes, that can be viewed by right-clicking the experience icon in the hero screen and the additional right click on the commander class text field.
 - when reaching a certain kill count with your commander you can choose a new class, that usually specialises in a certain ability
+- the mastery of your commander is unlocked when reaching half of your maximum kill counts.
 
 Eagle Eye:
 - Spells are now learned directly in combat and you get permanent spell power. And some more goodies are on this skill.
 
 Luck/Morale:
-- Morale now cappes at +6, each point of Morale increases you chance to gain extra move by ~3%. Luck increased to +6 max but damage scaling for Luck>6. Chance to land a lucky hit is capped by 15%. At some point only the damage of your Luck hits will increase. Check out the new window in the Heros Screen.
+- Morale now cappes at max +6. Each point of Morale increases you chance to gain extra move by ~3% (instead of 5%). Luck increased to +6 max but damage scaling for Luck>6. Chance to land a lucky hit is capped by 15%. At some point only the damage of your Luck hits will increase. Check out the new window in the Heros Screen.
 
 Diplomacy:
-- Reworked complete skills. Now gives a chance to attract creatures from your actual army, you can directly hire them for an increased price. This makes Diplomacy more useful and predictable, also it cannot happen that a random free join of thousands neutrals give you an insta win.
+- Reworked complete skills. Now gives a chance to attract creatures from your actual army and not the stack found on the adventure map, you can directly hire them for an increased price. This makes Diplomacy more useful and predictable, also it cannot happen that a random free join of thousands neutrals give you an insta win. The free joining of stacks from adventure map is more or less disabled.
 
 Fire Shield:
 - Returned damage is now additionaly dependant on your Spell Power and can exceede the original damage amount, this gives much more tactical depth to this spell. Some creatures are now immune to Fire Shield, like Dragons and other fire affinite units. Fire Shields that are passivly granted due to SE or other abilites will just return 20% damage.   
 
 Summoning Elementals:
-- HP of summons is now dependant on your MS, also summons can grant buffs to your army while alive on the battlefield. Summoing Air is available early but therefore very weak.
+- HP of summons is now dependant on your MS, also summons can grant buffs to your army while alive on the battlefield. Summoing Air is available early but therefore very weak. The higher level summon spells like earth will have better scaling.
 
 Navigation:
-- Skill deleted and replaced with Nobility skill. Nobility can increase creature growth in towns once per week. 
+- Skill deleted and replaced with Nobility skill. Nobility can increase creature growth in towns once per week. The increased movement on water will still be applied when you pick Nobility. 
 
 Creatures stats and Town lineups
 - no changes were made to creatures or towns. I'll leave that to other mods.
@@ -107,13 +117,13 @@ Answer: Feel free to use any setting you like. There are no specific ACM setting
 Answer: Browse to Heroes3/Mods/Advanced Classes Mod/Data/s and check the 80 wog - disable options.erm file. Each option has a brief explanation as why it is disabled. If you want to enable it nevertheless you must delete both entries in the file. There are always two.
 
 - What damage does my Artillery do, how much will my Tent heal in combat? How much Magic Pierce has my hero? What is my total magical crit chance? How can I check the new stats of my commander?
-Answer: Right-click on the Experience icon in your hero screen. Most numbers are displayed there. Some fields offer even more details when right-clicked, like commander class.
+Answer: Right-click on the Experience icon in your hero screen (press:"E"). Most numbers are displayed there. Some fields offer even more details when right-clicked, like commander class.
 
 - Why can't I level up some skills to Master?
-Answer: You dont have enough class points to get offered Master level for that skill. Check your current class points and level.
+Answer: You dont have enough class points to get offered Master level for that skill. Check your current class points and level (press:"W").
 
 - What happens if I learn a secondary skill and later forget it? Will I keep all bonuses?
-Answer: No. When you unlearn secondary skills, you will lose M/GM level and maybe even drop out of your current class.
+Answer: No. When you unlearn secondary skills, you will lose just this particular M/GM level and maybe even drop out of your current class.
 
 - Right-Click on the Kingdom Overview
 Answer: The poor Kingdom Overview will show your income including your spendings of the previous day. So keep that in mind, numbers might be negative if you spend more then you have income. The money calculation is done at the moment of your click, so do it early in your turn.
@@ -179,12 +189,14 @@ The mod is intended to be played with only 8 hero secondary skills. If you want 
 - perhaps some more, please report in the ERA Modding Discord server
 
 6. Credits
--Whole Heroes Community for support .
+-Whole Heroes Community for support!
 -Berserker for creating ERA, without him the mod would not be possible.
--AlfWithCake and anti-victor as team members.
--Daemon_n for testing and super translation into Russian language! Community support and designing the Difficulty Mod.
--Archer for support, fixes coding and help in the chinese community.
+-Daemon_n for testing, maintaining the assembly and super translation into Russian language! Community support and designing the Difficulty Mod.
+-Archer for support, countless fixes, code improvements, coding and help in the chinese community.  
+-Elmore for creating the heroes 3 launcher, an excellent tool for the community to share modifications
 -Sandris for amazing pictures for class skills and Warmachine upgrades pictures.
+-Fanofheroes for pimped up secondary skill pictures
+-AlfWithCake and anti-victor as team members, who especially helped in the early days of the mod
 -Sagamosa Mod for inspiration and graphics.
 
 
