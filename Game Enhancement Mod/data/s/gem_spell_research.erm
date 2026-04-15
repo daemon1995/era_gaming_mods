@@ -87,6 +87,8 @@ ZVSE2
     !!FU(gem_DlgItem_Show):P7/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!DL(SRM_DLG_MAGE_GUILD):S1;
     [AFTER DLG CLOSES]
+    !!UN:C7505216/1/18;                   [return shadow after DL closing]
+
     // cancel standard action
     !!SN:X?t/0;
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/6109572;
@@ -440,7 +442,6 @@ ZVSE2
     !!VRi^srm_spell_%i^&i^srm_spell_%i^:S(NULL);
   !!en;
   !!DL:C1;
-  !!UN:C7505216/1/18;                   [return shadow after DL closing]
 
 !?FU(srm_GetSpellName);
 !#VA(spellId:x) (nameType:x) (spellName:x);
@@ -524,15 +525,22 @@ ZVSE2
 
     !!VR(paymentLevel:y):S10;
 
-    !!re (resType:y)/(RES_FIRST)/(RES_GOLD);
-      !!OW:R(clickedPlayer)/(resType)/?(resValue:y);
+    !!re (resType:y)/(RES_FIRST)/(RES_MITHRIL);
+      !!OW:R(clickedPlayer)/(resType)/?(resAmount:y);
       !!VR(dlgElementID:y):S50 +(resType);
-      !!DL(SRM_DLG_MAGE_GUILD):A(dlgElementID)/(DLG_CMD_SET_TEXT)/^%(resValue)^/0;
-      !!co|(resType)=(RES_WOOD)/(resType)=(RES_ORE);
-      !!VR(paymentLevel)&(paymentLevel)>(resValue)/(resType)<>(RES_GOLD):S(resValue);
-      !!VR(paymentLevel)&(resValue)<1000/(resType)=(RES_GOLD):S0;
-    !!en;
+      !!if&(resAmount)<10000;
+        !!VR(resText:z):S^%(resAmount)^;
+      !!el&(resAmount)<1000000;
+        !!FU(DecorateInt):P(resAmount)/?(resText:z);
+      !!el;
+        !!FU(FormatQuantity):P(resAmount)/?(resText:z)/7/4;
+      !!en;
 
+      !!DL(SRM_DLG_MAGE_GUILD):A(dlgElementID)/(DLG_CMD_SET_TEXT)/(resText:z)/0;
+      !!co|(resType)=(RES_WOOD)/(resType)=(RES_ORE);
+      !!VR(paymentLevel)&(paymentLevel)>(resAmount)/(resType)<>(RES_GOLD):S(resAmount);
+      !!VR(paymentLevel)&(resAmount)<1000/(resType)=(RES_GOLD):S0;
+    !!en;
 
     !!VR(paymentLevel)::2;
 
