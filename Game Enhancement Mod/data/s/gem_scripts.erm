@@ -20,7 +20,7 @@ The following functions are executed in gem_settigns.erm
 
 !?FU(gem_LoadBattleOptionsFromIni);
 !!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
-!!UN:C6916044/4/?(quickCombat:y);
+!!UN:C(GAME_SETTING_QUICK_COMBAT)/4/?(quickCombat:y);
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/1;[read from ini, default 1]
 !!FU(ReadIniInts)&i^gem_Quick_Combat_Check^:P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/8;[if quick combat battle option is on]
 !!FU(ReadIniInts)&i^gem_Quick_Combat_Check^=(FALSE)/(quickCombat)=(TRUE):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/2;[if quick combat battle option is off and quick combat system option is on]
@@ -44,7 +44,7 @@ The following functions are executed in gem_settigns.erm
 **** Fix Quick Combat Syetem Option reverting changes at turn end
 
 !?FU(OnEveryDay)&i^timerDay^>1/i^timerIsAi^=(FALSE);
-!!UN:C6916044/4/?(quickCombat:y);
+!!UN:C(GAME_SETTING_QUICK_COMBAT)/4/?(quickCombat:y);
 !!VR(battleType:y):Si^Current_Battle_Type%i(gem_CurPlay)^;
 !!if&(battleType)=1/(quickCombat)=(TRUE);[change battle type if system option mismatches]
   !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S2;
@@ -85,7 +85,7 @@ ________________________________________________________________________________
 !#VA(battleType:x) (playSound:x);
 
   !!VR(setAuto:y):S(battleType) -1 F0/1;
-  !!UN:C6916044/4/(setAuto);
+  !!UN:C(GAME_SETTING_QUICK_COMBAT)/4/(setAuto);
 
   !!if&(playSound);
     !!FU(IntLog2):P(battleType)/?(stringId:y);
@@ -107,23 +107,11 @@ ________________________________________________________________________________
     !!FU:E;                             [and exit func]
   !!en;
 
-!?FU(gem_CreateERMHook);
-!!SN:Ex1/1/4337680/(gem_AI_CastSpell);
-
-!?FU(gem_AI_CastSpell); // jump
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/?(activeSide:y);
-  !!VR(owner:y):Si^battle_owner_%(activeSide)^;
-
-!!if&i^battle_human_%(activeSide)^/
-i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
-  !!SN:X?y99/0;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4337852;
-!!en;
-
 
 ; Archer30: We put this as late as possible as we want to decide which mode to battle after knowing all the info
 ; It would be even better if the script is placed in a script with negative number prefix and get rid of _Quit, so that the script can be quited with SN:Q (Freelancer's Guild)
 !?FU(OnBeforeBattleUniversal_Quit)&i^battle_humanOnly^=(FALSE)/i^battle_isNetwork^=(FALSE)/i^battle_aiOnly^=(FALSE)/i^gem_isTutorial^=(FALSE);     [before Human battle]
+
   !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
   !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
     !!BA:Q0;
@@ -135,7 +123,8 @@ i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
     !!FU:E; 
   !!en;
 
-  !!UN:C6916044/4/?(isAutoBattleState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
+  !!UN:C(GAME_SETTING_QUICK_COMBAT)/4/?(isAutoBattleState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
+  !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/?(isAutoBattleSpellCastingState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
 
 
   !!if&(isAutoBattleState)=(FALSE)/i^Current_Battle_Type%(currPlayer)^>(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^<(GEM_BATTLE_TYPE_ASK_BEFORE_START):;
@@ -169,12 +158,16 @@ i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA):;                   [if choisen]
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
+    !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/(TRUE);
+    !!VRi^gem_auto_battle_spell_casting_state^:S(isAutoBattleSpellCastingState:y) +1;
     !!BA:Q1;                              [set auto]
     !!FU:E;                               [end]
   !!en;
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE):;
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
+    !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/(FALSE);
+    !!VRi^gem_auto_battle_spell_casting_state^:S(isAutoBattleSpellCastingState:y) +1;
     !!BA:Q1;                              [set auto]
     !!FU:E;                               [end]
   !!en;                                   [final] 
@@ -191,14 +184,16 @@ i^Current_Battle_Type_Choice%(owner)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE);
 
 
 !?FU(OnAfterBattle)&i^battle_humanOnly^=(FALSE)/(ERM_FLAG_IS_HUMAN);
+  !!VR(isAutoBattleSpellCastingState:y):Si^gem_auto_battle_spell_casting_state^ -1;
+  !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/(isAutoBattleSpellCastingState);
+  !!VRi^gem_auto_battle_spell_casting_state^:S(NULL);
 
-  !!if&i^battle_humanOnly^=(FALSE);
-    !!if&i^gem_OnlyOneBattleReplayIsAllowed^;
-      !!VRi^gem_replay_counter^:S0;
-    !!en;
-
-    !!FU(gem_SetCombatButtonState):Pi^Current_Battle_Type%i(timerOwner)^;
+  !!if&i^gem_OnlyOneBattleReplayIsAllowed^;
+    !!VRi^gem_replay_counter^:S0;
   !!en;
+
+  !!FU(gem_SetCombatButtonState):Pi^Current_Battle_Type%i(timerOwner)^;
+  !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/?(isAutoBattleSpellCastingState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
 
 
 !?FU(OnGameEnter)&999;
