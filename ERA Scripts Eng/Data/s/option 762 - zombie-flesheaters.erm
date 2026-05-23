@@ -31,30 +31,26 @@ ZVSE2
 ; Get the attacker/defender stack
 !!MF:N?(defStack:y);
 !!VR(atkStack:y):Si^es_attackStack^;
+!!BM(defStack):F?(monFlags:y);
 
 ; Check if the attacking monster is a flesh eater
 !!BM(atkStack):T?(type:y);
-!!FU(ES_762_CheckIfMonIsEligible):P(type)/?(result:y);
+!!FU(ES_762_CheckIfMonIsEligible):P(type)/(monFlags)/?(result:y);
 
 !!if&(result);
   !!MF:F?(finalDmg:y);
 
   ; Check if the defending monster is a living one
-  !!BM(defStack):F?(monFlags:y);
-  !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);
-  !!VR(isClone:y):S(monFlags) &(MON_FLAG_CLONE);
   !!VRi^es_762_isSummoned^:S(monFlags) &(MON_FLAG_SUMMONED);
 
-  !!if&(isAlive)/(isClone)=(FALSE);
-    ; Check if the defending monster would be be killed by the flesh eater
-    !!BM(defStack):N?(num:y) H?(hp:y) L?(lostHp:y);
-    !!VR(defCurrTotalHp:y):S(num) *(hp) -(lostHp);
+  ; Check if the defending monster would be be killed by the flesh eater
+  !!BM(defStack):N?(num:y) H?(hp:y) L?(lostHp:y);
+  !!VR(defCurrTotalHp:y):S(num) *(hp) -(lostHp);
 
-    ; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
-    !!if&(finalDmg)>=(defCurrTotalHp);
-      !!VRi^es_762_regenHp^:+(defCurrTotalHp);
-      !!BM(defStack):Fd|813694976 E0;    [Clone, Sacrified, No Colouring]
-    !!en;
+  ; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
+  !!if&(finalDmg)>=(defCurrTotalHp);
+    !!VRi^es_762_regenHp^:+(defCurrTotalHp);
+    !!BM(defStack):Fd|813694976 E0;    [Clone, Sacrified, No Colouring]
   !!en;
 !!en;
 
@@ -117,9 +113,15 @@ ZVSE2
 
 // Funciton to check if the targeted monster is eligible for flesh eating
 !?FU(ES_762_CheckIfMonIsEligible);
-!#VA(mon:x) (result:x);
+!#VA(mon:x) (flags:x) (result:x);
 
 !!VR(result):S(FALSE);
+
+!!VR(isAlive:y):S(flags) &(MON_FLAG_ALIVE);
+!!VR(isClone:y):S(flags) &(MON_FLAG_CLONE);
+
+!!FU&(isAlive)/(isClone)=(FALSE):E;
+
 !!VR(result)&(mon)=(MON_ZOMBIE):S(TRUE);
 
 ** end
