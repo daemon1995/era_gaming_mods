@@ -419,11 +419,12 @@ ZVSE2
   !!en;
 !!en;
 
-!!SN:E4696752/(CALLCONV_FASTCALL)/(monId:x); [is mon a war machine]
-!!VRv1:&1;                                   [check byte]
-!!VR(isWarMachine:y):Sv1;
-!!if|(isWarMachine)/(monId)=(MON_GHOST);
+; Don't place the stack if it is a ghost or a level 8+ monster
+!!if&(monId)=(MON_GHOST);
   !!VR(needToPlaceAnywhere):S(FALSE);
+!!el;
+  !!MA:F(monId)/?(fv:y) F(MON_BLOOD_DRAGON)/?(bloodDragonFv:y);
+  !!VR(needToPlaceAnywhere)&(fv)>=(bloodDragonFv):S(FALSE);
 !!en;
 
 
@@ -519,7 +520,7 @@ ZVSE2
 
 
 !!if&(size:y);                                            [if there are living players]
-  !!FU(Array_Shuffle):P?(livingPlayers);                  [huffle them]
+  !!FU(Array_Shuffle):P?(livingPlayers);                  [Shuffle them]
 
   !!re i/0/(size)/1/-1;                                   [loop living players]
     
@@ -556,7 +557,8 @@ ZVSE2
           !!SN:M(heroArmy)/0/?(monster);                  [take first mon as result]
           !!VR(player):S(playerId:y);                     [take player as result]
           !!VR(hero):S(randomPlayerHero:y);               [take hero as result]
-          !!FU:E;                                         [end all the loops]
+
+          !!FU:E;                                         [end the function]
         !!en;
       !!en;
     !!en;
@@ -570,7 +572,11 @@ ZVSE2
   !!VR(excludeMon):S(NO_MON);
 !!en;
 
-!!FU(WOG_GetRandomMonster):P?(monster)/(MON_MIN_LEVEL)/(MON_MAX_LEVEL)/(maxFv)/(excludeMon);
+; If no monster from a player was chosen, choose a random monster that isn't stronger than Blood Dragons (weakest level 8)
+!!MA:F(MON_BLOOD_DRAGON)/?(bloodDragonFv:y);
+!!VR(maxFvForRandMon:y):S(bloodDragonFv) -1;
+
+!!FU(WOG_GetRandomMonster):P?(monster)/(MON_MIN_LEVEL)/(MON_MAX_LEVEL)/(maxFvForRandMon)/(excludeMon);
 
 --------------------------------------------------------------------------------------
 

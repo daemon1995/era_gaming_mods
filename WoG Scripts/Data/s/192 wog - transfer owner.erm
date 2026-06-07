@@ -215,27 +215,27 @@ ZVSE2
 ; ПРОБЛЕМА 2: если передать город со стражей (но без героя), то стража просто исчезнет
 ; РЕШЕНИЕ: сохранить стражу перед передачей, а после передачи вернуть её городу
 
-; Get a hero in the garrison
-!!CA(x)/(y)/(z):H0/?(heroUpId:y) H1/?(heroDownId:y) U?(townId:y); 
+; Get the heros in the town
+!!CA(x)/(y)/(z):H0/?(heroUpId:y) H1/?(heroDownId:y) U?(townId:y);
 
 ; if the harrison hero exists - can't transfer the town
-!!if|(heroUpId)<>(NO_HERO)/(heroDownId)<>(NO_HERO);
-  !!IF:M^%T(wog.192.heroInTown)^;
-  !!FU:E;
-!!en;
+*!if|(heroUpId)<>(NO_HERO)/(heroDownId)<>(NO_HERO);
+  *!IF:M^%T(wog.192.heroInTown)^;
+  *!FU:E;
+*!en;
 
 ; если активный герой стоит на входе в город, его номер невозможно прочитать
 ; ни через координаты объекта, ни через CA:H1
 ; поэтому проверяем через номер координаты активного героя и сравниваем с координатами города
-!!OW:A(CURRENT_PLAYER)/?(heroActId:y);
-!!if&(heroActId)<>(NO_HERO);
-  !!HE(heroActId):P?(heroX:y)/?(heroY:y)/?(heroZ:y);
+*!OW:A(CURRENT_PLAYER)/?(heroActId:y);
+*!if&(heroActId)<>(NO_HERO);
+  *!HE(heroActId):P?(heroX:y)/?(heroY:y)/?(heroZ:y);
 
-  !!if&(heroX)=(x)/(heroY)=(y)/(heroZ)=(z);
-    !!IF:M^%T(wog.192.heroInTown)^;
-    !!FU:E;
-  !!en;
-!!en;
+  *!if&(heroX)=(x)/(heroY)=(y)/(heroZ)=(z);
+    *!IF:M^%T(wog.192.heroInTown)^;
+    *!FU:E;
+  *!en;
+*!en;
 
 ; destroy capitol
 !!if&i^wog_101_map_rule_14_isEnabled^=(FALSE);
@@ -268,6 +268,18 @@ ZVSE2
 
 ; set new town owner
 !!CA(x)/(y)/(z):O(newOwnerId);
+
+; Set up new hero owner
+!!if&(heroUpId)>(NO_HERO);
+  !!HE(heroUpId):Z?(heroStruct:y);
+  !!UN:C(heroStruct)/34/1/(newOwnerId);
+  !!HE(heroUpId)&(newOwnerId)=(NO_OWNER):K;[Kill the hero]
+!!en;
+
+!!if&(heroDownId)>(NO_HERO);
+  !!HE(heroDownId):O(newOwnerId);
+  !!HE(heroDownId)&(newOwnerId)=(NO_OWNER):K; [Secure the kill]
+!!en;
 
 ; restore the guards in the town
 !!re i/(ARMY_SLOT_FIRST)/(ARMY_SLOT_LAST)/1;
