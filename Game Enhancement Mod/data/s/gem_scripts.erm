@@ -68,35 +68,8 @@ ________________________________________________________________________________
 *                       [ scripts for the battles]
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
-!?FU(OnKeyPressed_AdvMap)&x1=(KEY_W)/999/i^gem_isTutorial^=(FALSE);     
-
-  !!VR(curentBattleType:y):Si^Current_Battle_Type%i(timerOwner)^ Sd<<1;
-  !!if&(curentBattleType)>(GEM_BATTLE_TYPE_ASK_BEFORE_START);
-    !!VR(curentBattleType):S(GEM_BATTLE_TYPE_NO_AUTO);
-  !!en;
-  !!VRi^Current_Battle_Type%i(timerOwner)^:S(curentBattleType);
-  !!FU(gem_SetCombatButtonState):P(curentBattleType);                 
-  !!FU(gem_SetAutoCombatState):P(curentBattleType)/(TRUE);
-
-
-
-
-!?FU(gem_SetAutoCombatState);
-!#VA(battleType:x) (playSound:x);
-
-  !!VR(setAuto:y):S(battleType) -1 F0/1;
-  !!UN:C(GAME_SETTING_QUICK_COMBAT)/4/(setAuto);
-
-  !!if&(playSound);
-    !!FU(IntLog2):P(battleType)/?(stringId:y);
-    !!VR(stringId):+1;
-    !!SN:T^gem.map.battle%(stringId)^/?(msg:z);
-    !!IF:L^%(msg:z)^;
-    !!FU(gem_SaveBattleOptionsToIni):P;     [save options]
-  !!en;
 
 **  Disable autobattle vs human players (by daemon_n)
-** Spell Points Delete in the autobattle, supports battle replay
 !?FU(OnBeforeBattleForThisPcDefender);
 
   !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
@@ -114,12 +87,10 @@ ________________________________________________________________________________
 
   !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
   !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
-    !!BA:Q0;
     !!FU:E;                             [and exit func]
   !!en;
   !!UN:C6885977/1/?(isGoSolo:y);
   !!if&(isGoSolo);
-    !!BA:Q1;
     !!FU:E; 
   !!en;
 
@@ -127,48 +98,19 @@ ________________________________________________________________________________
   !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/?(isAutoBattleSpellCastingState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
 
 
-  !!if&(isAutoBattleState)=(FALSE)/i^Current_Battle_Type%(currPlayer)^>(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^<(GEM_BATTLE_TYPE_ASK_BEFORE_START):;
-    !!VRi^Current_Battle_Type%(currPlayer)^:S(GEM_BATTLE_TYPE_NO_AUTO); [to know his choice]
-    
-    !!BA:Q0;
-    !!FU:E;                             [and exit func]
-  !!en;
-
-  !!VRi^Current_Battle_Type%(currPlayer)^&(isAutoBattleState)=(TRUE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):S(GEM_BATTLE_TYPE_AUTO_MANA);
-
-
-  !!if&i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START):;                                 [if choising]
-     !!VRi^Current_Battle_Type_Choice%(currPlayer)^&i^Current_Battle_Type_Choice%(currPlayer)^=(NULL):S(GEM_BATTLE_TYPE_NO_AUTO);
-
-     !!SN:T^gem.map.battlelist1^/?z-1;
-     !!SN:T^gem.map.battlelist2^/?z-2;
-     !!SN:T^gem.map.battlelist3^/?z-3;
-     !!SN:T^gem.map.battlelist4^/?z-4;
-     !!IF:G1/1/i^Current_Battle_Type_Choice%(currPlayer)^/-1/-2/-3/-4;                  [show message]
-     !!SN:W^Current_Battle_Type_Choice%(currPlayer)^/v1;  [store choice]
-  !!el;
-    !!VRi^Current_Battle_Type_Choice%(currPlayer)^:Si^Current_Battle_Type%(currPlayer)^;
-  !!en;
-
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):;                   [if choisen]
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S1;
-    !!BA:Q0;                              [set no auto]
+    *!BA:Q0;                              [set no auto]
     !!FU:E;                               [and exit func]
   !!en;
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA):;                   [if choisen]
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
-    !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/(TRUE);
-    !!VRi^gem_auto_battle_spell_casting_state^:S(isAutoBattleSpellCastingState:y) +1;
-    !!BA:Q1;                              [set auto]
     !!FU:E;                               [end]
   !!en;
 
   !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE):;
     !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
-    !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/(FALSE);
-    !!VRi^gem_auto_battle_spell_casting_state^:S(isAutoBattleSpellCastingState:y) +1;
-    !!BA:Q1;                              [set auto]
     !!FU:E;                               [end]
   !!en;                                   [final] 
 
@@ -184,88 +126,9 @@ ________________________________________________________________________________
 
 
 !?FU(OnAfterBattle)&i^battle_humanOnly^=(FALSE)/(ERM_FLAG_IS_HUMAN);
-  !!VR(isAutoBattleSpellCastingState:y):Si^gem_auto_battle_spell_casting_state^ -1;
-  !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/(isAutoBattleSpellCastingState);
-  !!VRi^gem_auto_battle_spell_casting_state^:S(NULL);
-
   !!if&i^gem_OnlyOneBattleReplayIsAllowed^;
     !!VRi^gem_replay_counter^:S0;
   !!en;
-
-  !!FU(gem_SetCombatButtonState):Pi^Current_Battle_Type%i(timerOwner)^;
-  !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/?(isAutoBattleSpellCastingState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
-
-
-!?FU(OnGameEnter)&999;
-!!if&i^gem_Quick_Combat_Check^;
-  !!re i/0/(PLAYER_LAST);
-    !!OW:Ii/?(isAi:y)/?(isDead:y);
-
-    !!if&(isAi)=(FALSE)/(isDead)=(FALSE);
-      !!SN:W^Current_Battle_Type%i^/(GEM_BATTLE_TYPE_ASK_BEFORE_START);  [ set "ask -before battle"]
-    !!en;
-  !!en;
-
-  !!SN:W^gem_Quick_Combat_Check^/(FALSE);
-!!en;
-
-!!FU(gem_SetCombatButtonState):Pi^Current_Battle_Type%i(timerOwner)^;
-
-!?FU(OnGameEnter);
-  !!re i/(PLAYER_FIRST)/(PLAYER_LAST):;
-    !!VRi^Current_Battle_Type%i^&i^Current_Battle_Type%i^=0:S(GEM_BATTLE_TYPE_NO_AUTO);
-  !!en:;
-
-  !!FU(gem_SetAutoCombatState):Pi^Current_Battle_Type%i(timerOwner)^/(FALSE);
-
-!?FU(OnEveryDay)&1000;
-
-!!FU(gem_SetCombatButtonState):Pi^Current_Battle_Type%i(timerOwner)^;&i^timerDay^>0
-!!FU(gem_SetAutoCombatState):Pi^Current_Battle_Type%i(timerOwner)^/0;
-
-
-!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^gem_isTutorial^=(FALSE);
-!#VA(bttns[4]:x);
-!!VR(bttns[0]):Ci^manualf_Button_ID^/i^automf_Button_ID^/i^autowm_Button_ID^/i^choiceB_Button_ID^;
-!!re i/0/(bttns[SIZE])/1/-1;
-  !!if&(bttns[i])=i^mouse_item^;
-
-    !!VRi^Current_Battle_Type%i(timerOwner)^:S1 Sd<<i;
-    !!FU(gem_SetCombatButtonState):Pi^Current_Battle_Type%i(timerOwner)^;
-    !!FU(gem_SetAutoCombatState):Pi^Current_Battle_Type%i(timerOwner)^/(TRUE);
-    !!br;
-  !!en;
-!!en;
-
-
-!?FU(gem_SetCombatButtonState)&999;
-  !#VA(battleType:x);
-  !!UN:J8/1/^gem_interface.pac^; !!FU&-1:E;
-  !!SN:F^GetButtonID^/^indicator^; !!FU&v1<1:E;
-
-  !!FU(IntLog2):P(battleType:x)/?(setFrame:y);
-  !!VR(setFrame:y):*2;S(battleType:x) -1;i^Current_Battle_Type%i(gem_CurPlay)^;
-  !!VR(setFrame)&(setFrame)=(GEM_BATTLE_TYPE_ASK_BEFORE_START):-1;
-  !!FU(H3Dlg_GetRootDlg):P?(rootDlg:y);
-  !!FU(H3Dlg_GetCurrentDlg):P?(currentDlg:y);
-
-  !!if&(rootDlg)=(currentDlg);
-    !!FU(gem_DlgDefProc):Pv1/(setFrame);
-    !!SN:D;  
-  !!el;
-    !!FU(gem_DlgDefProc):Pv1/(setFrame)/d/d/d/(rootDlg);
-  !!en;
-
-
-
-right-click msg of Lord buttons
-!?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=i^mithrilB_Button_ID^;
-!!OW:Cd/?(clickedPlayer:y);
-!!OW:R(clickedPlayer)/(RES_MITHRIL)/?(resNumber:y);
-!!VR(hasMithril:y):S(resNumber) B;
-!!SN:T^gem.map.button6rmc.%(hasMithril)^/?z1/^mithril^/(resNumber);
-!!CM:R0;
-!!IF:M0/4/^%z1^;  
 
 
 **************************************************
@@ -276,15 +139,6 @@ right-click msg of Lord buttons
 IMPORTANT!!!
 This part of code needs to be executed LATER than GEM. Please don't change the filename of the script without testing
 
-
-**** Save GEM Battle Mode selection to ini
-
-!?FU(gem_SaveBattleOptionsToIni);
-!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
-!!FU(WriteIniInts):P(filePath)/^main^/^gem_battleMode^/?i^Current_Battle_Type%i(gem_CurPlay)^;
-!!FU(SaveIni):P(filePath);
-
-
 **** Save GEM Settings to ini
 
 !?FU(OnCustomDialogEvent)&v998=505/v999>=30721/v999<=30722/v1000=13;
@@ -294,7 +148,7 @@ This part of code needs to be executed LATER than GEM. Please don't change the f
 !!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
 *!SN:L^BattleSave.dll^/?(battleSavePlugin:y);
 !!FU(WriteIniInts):P(filePath)/^main^/^gem_control_units^/?i^gem_option_1_%i(gem_CurPlay)^; [save battle save option only when plugin is disabled]
-!!FU(WriteIniInts):P(filePath)/^main^/^gem_newButtons^/?i^gem_option_2_%i(gem_CurPlay)^;
+*!FU(WriteIniInts):P(filePath)/^main^/^gem_newButtons^/?i^gem_option_2_%i(gem_CurPlay)^;
 !!FU(WriteIniInts):P(filePath)/^main^/^gem_allyHeroScreen^/?i^gem_option_3_%i(gem_CurPlay)^;
 !!FU(WriteIniInts):P(filePath)/^main^/^gem_spellResearch^/?i^gem_option_5_%i(gem_CurPlay)^;
 !!FU(WriteIniInts):P(filePath)/^main^/^gem_adventureMapObjectHints^/?i^gem_option_6_%i(gem_CurPlay)^;

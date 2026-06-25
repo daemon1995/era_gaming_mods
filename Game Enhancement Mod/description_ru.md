@@ -1,4 +1,4 @@
-**Game Enchacement Mod** (aka GEM)
+**Game Enhancement Mod** (aka GEM)
 Автор: daemon_n
 
 Представляю мод, привносящий множество изменений на основе плагинов и скриптов:

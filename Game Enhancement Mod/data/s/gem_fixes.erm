@@ -475,53 +475,6 @@ ZVSE2
 !!UN&(mapExpansion)<2:C(gameMgr)/128664/(UNC_INT)/2;
 
 
-// Divide all the AI values by 5 in order to prevent negative values after gathering massive amount of troops
-// by Archer30
-!?FU(OnAfterErmInstructions);
-; Divide AI values only when Peasant's AI value is original (15)
-!!MA:I(MON_PEASANT)/?(aiValuePeasant:y);
-
-!!if&(aiValuePeasant)=15;
-  !!FU(GetMaxMonsterId):P?(lastMon:y);
-  !!VR(arraySize:y):S(lastMon) +1;
-  !!FU(NewIntArray):P(arraySize)/?i^gem_origAiValues^/(M_STORED);
-
-  !!re i/(MON_FIRST)/(lastMon);
-    !!MA:Ii/?(aiValue:y);
-    !!SN:Vi^gem_origAiValues^/i/(aiValue);
-  !!en;
-
-  !!VRi^gem_aiValuesDivided^:S(TRUE);
-!!en;
-
-!!FU(gem_ManageAIValues):P1;
-
-!?OB(OBJ_ALTAR_OF_SACRIFICE);
-!!FU(gem_ManageAIValues):P0;
-
-!$OB(OBJ_ALTAR_OF_SACRIFICE);
-!!FU(gem_ManageAIValues):P1;
-
-!?FU(gem_ManageAIValues)&i^gem_aiValuesDivided^;
-!#VA(mode:x);                           [0 - restoration, 1 - division]
-
-!!FU(GetMaxMonsterId):P?(lastMon:y);
-
-; Restoration
-!!if&(mode)=0;
-  !!re i/(MON_FIRST)/(lastMon);
-    !!SN:Vi^gem_origAiValues^/i/?(aiValue:y);
-    !!MA:Ii/(aiValue);
-  !!en;
-; Division
-!!el;
-  !!re i/(MON_FIRST)/(lastMon);
-    !!MA:Ii/d:5;
-  !!en;
-
-  !!VRi^gem_aiValuesDivided^:S(TRUE);
-!!en;
-
 
 // Other stuff
 !?FU(OnGameEnter);
@@ -529,13 +482,14 @@ ZVSE2
   !!TL:E1; enable mulpiplayer timer
 
   // Fix of the speed overload
-  !!SN:F^GetModuleHandleA^/^BattleSpeed.era^; [check plugin is loaded]
-  !!if&v1<1;
-    !!UN:C6916156/4/?(gameSpeed:y);     [if not loaded and speed >2]
-    !!UN&(gameSpeed)>2:C6916156/4/2;    [set speed to 2]
-  !!el;
-    !!UN:C4203475/6/4/8;             [set gosolo speed as 9]
-  !!en;
+  *!SN:F^GetModuleHandleA^/^BattleSpeed.era^; [check plugin is loaded]
+  *!if&v1<1;
+    !!UN:C6916156/4/?(gameSpeed:y) C5289302/2/1/?(maxSpeed:y);     [if not loaded and speed >2]
+    !!UN&(gameSpeed)>(maxSpeed):C6916156/4/2;    [set speed to 2]
+  *!el;
+    !!UN:C4203475/6/4/9;             [set gosolo speed as 9]
+  *!en;
+  
 *!UN:C5021668/1/144; cartographer lvl revie only upper level
   // 4 lines of the creature description instead of 3 
 

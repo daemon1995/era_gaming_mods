@@ -1,4 +1,4 @@
-﻿**Game Enchacement Mod** (aka GEM)
+﻿**Game Enhancement Mod** (aka GEM)
 Author: daemon_n
 
 I present a mod that introduces numerous changes based on plugins and scripts:
