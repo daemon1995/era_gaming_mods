@@ -214,20 +214,22 @@ ZVSE2
 
 !!FU(trainer_UpdateAllTheDialogs):P(hero)/(player);
 
-; Open the main dialogue with hooks set
-!!FU(trainer_HandleHooks):P1;
+; Open the main dialogue with native hover capture enabled
+!!FU(trainer_SetHoverCapture):P1;
 !!DL(TRAINER_MAIN_DLG):S1;
-!!FU(trainer_HandleHooks):P0;
+!!FU(trainer_SetHoverCapture):P0;
 
-; call scouting update range fix from GEM
-!!HE(hero):Z?(heroStruct:y) P?(x:y)/?(y:y)/?(z:y) O?(owner:y);
-!!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
-!!SN:E5128928/(CALLCONV_THISCALL)/(heroStruct);                             [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
-!!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1/0;       [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
+!!if&(hero)>(NO_HERO);
+  ; call scouting update range fix from GEM
+  !!HE(hero):Z?(heroStruct:y) P?(x:y)/?(y:y)/?(z:y) O?(owner:y);
+  !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
+  !!SN:E5128928/(CALLCONV_THISCALL)/(heroStruct);                             [int __thiscall GetScootingRadius(_Hero_ *this) 4E42E0]
+  !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/(x)/(y)/(z)/(owner)/v1/0;       [char __thiscall OpenArea(_GameMgr_ *this, int x, int y, int z, int player, int radius, int a7); 49CDD0]
 
-; call max movepoints update
-!!SN:E5132288/(CALLCONV_THISCALL)/(heroStruct);
-!!UN:C(heroStruct)/73/4/v1;
+  ; call max movepoints update
+  !!SN:E5132288/(CALLCONV_THISCALL)/(heroStruct);
+  !!UN:C(heroStruct)/73/4/v1;
+!!en;
 
 ; Update route building
 !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
@@ -832,10 +834,10 @@ ZVSE2
     !!HE(hero)&(owned)<=0:A4/(ART_SPELL_BOOK);
   !!el;
     !!HE(hero):Mi/(FALSE);
-    !!FU(trainer_UpdateSpellBook):P(hero);
   !!en;
 !!en;
 
+!!FU(trainer_UpdateSpellBook)&(isLearning)=(FALSE):P(hero);
 !!FU(trainer_UpdateSpellTable):Pi^trainer_spellTablePage^/(hero);
 !!FU(trainer_UpdateArtTable)&i^trainer_artTablePage^=10:P10/(hero);
 !!SN:P^openbook.wav^;
@@ -877,28 +879,14 @@ ZVSE2
 !!VR(picSubtype:y):S(school) *3 +3 +2;
 !!IF:Q1/(PIC_TYPE_SEC_SKILL)/(picSubtype)/(MSG_TYPE_POPUP)^%(schoolName)^;
 
-; Unequip artifacts and equip them back to update the hero's spell book after removing spells
+; Rebuild the artifact-provided spell list without changing equipped artifacts
 !?FU(trainer_UpdateSpellBook);
 !#VA(hero:x);      Hero ID or (CURRENT_HERO).
 
-!#VA(equippedArts[19]:y);
-!#VA(equippedArtMods[19]:y);
-
-!!re (slot:y)/0/(equippedArts[SIZE])/1/-1;
-  !!FU(GetArtAtSlot):P(hero)/(slot)/?(art:y)/?(artMod:y);
-  !!VR(equippedArts[slot]):S(NO_ART);
-  !!VR(equippedArtMods[slot]):S(artMod);
-
-  !!if&(art)<>(ART_HIGHLIGHTED_SLOT)/(art)<>(ART_ARTIFACT_LOCK);
-    !!VR(equippedArts[slot]):S(art);
-    !!FU(UnequipArtFromSlot):P(hero)/(slot);
-  !!en;
-!!en;
-
-!!re (slot:y)/0/(equippedArts[SIZE])/1/-1;
-  !!VR(art):S(equippedArts[slot]);
-  !!FU(EquipArtToSlot)&(art)<>(NO_ART):P(hero)/(art)/(equippedArtMods[slot])/(slot);
-!!en;
+!!FU&(hero)<=(NO_HERO):E;
+!!HE(hero):Z?(heroStruct:y);
+!!FU&(heroStruct)<=0:E;
+!!SN:E5085248/(CALLCONV_THISCALL)/(heroStruct); [0x4D9840 Hero::ArtifactsSpellsProcedure]
 
 ***************************** END SPELLS ******************************
 
@@ -1047,7 +1035,7 @@ ZVSE2
 ; Click on the title to deal with all the secondary skills
 ; Work for Ctrl/Shift/Alt clicks only!
 ; This code is just repeating the one from above
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=116/i^mouse_action^=(MOUSE_LMB_PRESSED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=116/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
 !!VR(hero:y):Si^trainer_hero^;
 !!VR(ssLvChanged:y):S(FALSE);
 
@@ -2315,7 +2303,7 @@ ZVSE2
 !!FU(trainer_CheckIfZ1FirstCharIsNum):P?(result:y);
 
 !!if&(result)/(spell)>=(SPELL_FIRST)/(spell)<=(SPELL_LAST_WOG);
-  !!VR(art:y):S(spell) +1001;
+  !!VR(art:y):S(spell) +(ART_META_SPELL_SCROLL_FIRST);
   !!FU(trainer_PassCustomArtToHero):P(hero)/(art);
 !!el;
   !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
@@ -2326,7 +2314,8 @@ ZVSE2
   !!en;
 
   !!if&i<=(SPELL_LAST_WOG);
-    !!FU(trainer_PassCustomArtToHero):P(hero)/i;
+    !!VR(art:y):Si +(ART_META_SPELL_SCROLL_FIRST);
+    !!FU(trainer_PassCustomArtToHero):P(hero)/(art);
   !!el;
     !!IF:M^%T(trainer.noScroll)^;
   !!en;
@@ -2447,6 +2436,7 @@ ZVSE2
 
 ; Ctrl Click - Reveal a radius of 20 squares around the hero
 !!if&i^key_ctrl^/i^key_shift^=(FALSE)/i^key_alt^=(FALSE);
+  !!FU&i^trainer_hero^<=(NO_HERO):E;
   !!HEi^trainer_hero^:P?(x:y)/?(y:y)/?(z:y);
   !!UN:S(x)/(y)/(z)/(player)/20;
 
@@ -3145,7 +3135,7 @@ ZVSE2
 !!VRw117&(expAdd)<>0:+(expAdd);               [calculate new exp]
 !!VRw117|(expAdd)=0/w117<0:S0;             [restrain value, renove all exp if input was 0 or current exp < 0]
 
-!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=228/i^mouse_item^<=234/i^mouse_action^=(MOUSE_LMB_RELEASED);
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^>=228/i^mouse_item^<=234/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^trainer_hero^>(NO_HERO);
 !!VR(slot:y):Si^mouse_item^ -228;
 !!VRi^trainer_hero^:S?(hero:y);
 !!HE(hero):C0/(slot)/?(type:y)/?(num:y);
@@ -3161,25 +3151,15 @@ ZVSE2
 
 **** End Henchmen ****
 
-// daemon_n's scrolling support, mousewheel events
-!?FU(trainer_HandleHooks);
-!#VA(doesSetHook:x);
+// Native plugin-owned scrolling support, mousewheel events
+!?FU(trainer_SetHoverCapture);
+!#VA(isEnabled:x);
 
 !!VRi^trainer_dlg_item^:S(NULL);              [clear variables data]
 !!VRi^trainer_Dlg_mouseX^:S(NULL);
 !!VRi^trainer_Dlg_mouseY^:S(NULL);
-
-!!SN:L^EraPlugins\erm_hooker.era^/?(hooker:y);
-
-!!if&(hooker:y)<>0;
-  !!if&(doesSetHook:x);
-    !!VR(funcName:z):S^SetHook^;
-  !!el;
-    !!VR(funcName:z):S^UnsetHook^;
-  !!en;
-  !!SN:A(hooker:y)/(funcName:z)/?(function:y);
-  !!SN:E(function:y)/1/6287088/(trainer_DlgItem_ShowHint);              [005FEEF0 6287088 DlgItem_ShowHint_callParentVMT4]
-!!en;
+!!SN:W^TrainerX.Hover.Capture^/(isEnabled);
+!!SN:W^TrainerX.Hover.Item^/-1;
 
 **** Second Henchmen ****
 
@@ -3472,11 +3452,12 @@ ZVSE2
   !!VR(itemAction:y):S(itemStructure) +52;
   !!UN:C(itemAction)/4/?(currentFrame);
 
-!?FU(trainer_DlgItem_ShowHint);
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(dlgItem:y);
-  !!UN&(dlgItem:y)>0:C(dlgItem:y)/16/2/?i^trainer_dlg_item^;
-
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_CMD_DLG)/i^dlg_action^=(DLG_ACTION_MOUSE_WHEEL); [buttons adding primary skills]
+  !!SN:W^TrainerX.Native.Hover.Available^/?(hoverAvailable:y);
+  !!FU&(hoverAvailable)<>(TRUE):E;
+  !!SN:W^TrainerX.Hover.Item^/?(hoveredItem:y);
+  !!FU&(hoveredItem)<0:E;
+  !!VRi^trainer_dlg_item^:S(hoveredItem);
 
   //NPC Secondary Skills
   !!if&i^trainer_dlg_item^>=40/i^trainer_dlg_item^<=45;
@@ -3500,6 +3481,11 @@ ZVSE2
 
 
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^dlg_action^=(DLG_ACTION_MOUSE_WHEEL); [buttons adding primary skills]
+  !!SN:W^TrainerX.Native.Hover.Available^/?(hoverAvailable:y);
+  !!FU&(hoverAvailable)<>(TRUE):E;
+  !!SN:W^TrainerX.Hover.Item^/?(hoveredItem:y);
+  !!FU&(hoveredItem)<0:E;
+  !!VRi^trainer_dlg_item^:S(hoveredItem);
 
   //base coefficients
   !!VR(mult:y):Si^mouse_action^;
@@ -3983,6 +3969,9 @@ ZVSE2
 !?FU(trainer_ObjScannerTelpt);
 !#VA(x:x) (y:x) (z:x) (objType:x);
 
+!!UN:X?(mapSize:y)/?(hasTwoLv:y);
+!!FU|(x)<0/(y)<0/(z)<0/(x)>=(mapSize)/(y)>=(mapSize)/(z)>(hasTwoLv):E;
+
 !!OB(x)/(y)/(z):U?(objSubtype:y);
 
 ; Exit if there is a chance to have hero overlapping
@@ -3999,7 +3988,7 @@ ZVSE2
   !!OW:A(CURRENT_PLAYER)/?(activeHero:y);
 
   !!if&(activeHero)>(NO_HERO);
-    !!HE(activeHero)|(x)>-1/(y)>-1/(z)>-1:P(x)/(y)/(z)/1;[don't teleport if clicked somewhere outside of the map]
+    !!HE(activeHero)&(x)>-1/(y)>-1/(z)>-1:P(x)/(y)/(z)/1;
     !!FU:E;                             [exit the funciton if teleported, otherwise pop up dialogue if there is no current hero]
   !!en;
 !!en;
@@ -4338,17 +4327,9 @@ ZVSE2
 !!FU(trainer_ShowAddCheats_advMap):P;
 
 !?FU(trainer_ShowAddCheats_advMap);
-; set up option (artfact) names
-!#VA(artNames[7]:z);
-
-!!SN:H^art^/(ART_BLACKSHARD_OF_THE_DEAD_KNIGHT)/0/?(artNames[0]) H^art^/(ART_BLACKSHARD_OF_THE_DEAD_KNIGHT)/0/^%T(trainer.addCoordOff)^;
-!!SN:H^art^/(ART_SPECULUM)/0/?(artNames[1]) H^art^/(ART_SPECULUM)/0/^%T(trainer.addCoordOn)^;
-!!SN:H^art^/(ART_SHIELD_OF_THE_YAWNING_DEAD)/0/?(artNames[2]) H^art^/(ART_SHIELD_OF_THE_YAWNING_DEAD)/0/^%T(trainer.addEventsOff)^;
-!!SN:H^art^/(ART_SPYGLASS)/0/?(artNames[3]) H^art^/(ART_SPYGLASS)/0/^%T(trainer.addEventsOn)^;
-!!SN:H^art^/(ART_SPIRIT_OF_OPPRESSION)/0/?(artNames[4]) H^art^/(ART_SPIRIT_OF_OPPRESSION)/0/^%T(trainer.addBuilderOff)^;
-!!SN:H^art^/(ART_BADGE_OF_COURAGE)/0/?(artNames[5]) H^art^/(ART_BADGE_OF_COURAGE)/0/^%T(trainer.addBuilderOn)^;
-!!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/?(artNames[6]) H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/^%T(trainer.addDate)^;
-!!SN:T^trainer.titleAdd^/?(titleAdd:z);
+; Back up only the five artifacts actually displayed by IF:N. Five names plus
+; five descriptions use ERA's full allowance of 10 function-local z-strings.
+!#VA(artNames[5]:z) (artDescriptions[5]:z);
 
 ; set up option (artifact) icons
 !!if&i^trainer_coord_on^;
@@ -4357,7 +4338,10 @@ ZVSE2
   !!VR(coordIcon):S(ART_BLACKSHARD_OF_THE_DEAD_KNIGHT);
 !!en;
 
-!!if&i^trainer_events_on^;
+!!VR(eventsEnabled:y):S(FALSE);
+!!SN:W^TrainerX.Overlay.Events.Enabled^/?(eventsEnabled);
+
+!!if&(eventsEnabled);
   !!VR(eventsIcon:y):S(ART_SPYGLASS);
 !!el;
   !!VR(eventsIcon):S(ART_SHIELD_OF_THE_YAWNING_DEAD);
@@ -4369,18 +4353,62 @@ ZVSE2
   !!VR(builderIcon):S(ART_SPIRIT_OF_OPPRESSION);
 !!en;
 
-; show dialogue
-!!IF:N(PIC_TYPE_ART)/(coordIcon)/(PIC_TYPE_ART)/(eventsIcon)/(PIC_TYPE_ART)/(builderIcon)/(PIC_TYPE_ART)/(ART_HOURGLASS_OF_THE_EVIL_HOUR);
-!!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%(titleAdd)^/?(choice:y)/(TEXT_ALIGN_CENTER)/(DLG_NO_SELECTION);
+!!VR(passabilityEnabled:y):S(FALSE);
+!!SN:W^TrainerX.Overlay.Passability.Enabled^/?(passabilityEnabled);
 
-; restore names of artifacts
-!!SN:H^art^/(ART_BLACKSHARD_OF_THE_DEAD_KNIGHT)/0/(artNames[0]);
-!!SN:H^art^/(ART_SPECULUM)/0/(artNames[1]);
-!!SN:H^art^/(ART_SHIELD_OF_THE_YAWNING_DEAD)/0/(artNames[2]);
-!!SN:H^art^/(ART_SPYGLASS)/0/(artNames[3]);
-!!SN:H^art^/(ART_SPIRIT_OF_OPPRESSION)/0/(artNames[4]);
-!!SN:H^art^/(ART_BADGE_OF_COURAGE)/0/(artNames[5]);
-!!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/(artNames[6]);
+!!if&(passabilityEnabled);
+  !!VR(passabilityIcon:y):S(ART_EMBLEM_OF_COGNIZANCE);
+!!el;
+  !!VR(passabilityIcon):S(ART_BIRD_OF_PERCEPTION);
+!!en;
+
+; Save and temporarily replace names/descriptions for the active state icons.
+!!SN:H^art^/(coordIcon)/0/?(artNames[0]) H^art^/(coordIcon)/1/?(artDescriptions[0]);
+!!SN:H^art^/(passabilityIcon)/0/?(artNames[1]) H^art^/(passabilityIcon)/1/?(artDescriptions[1]);
+!!SN:H^art^/(eventsIcon)/0/?(artNames[2]) H^art^/(eventsIcon)/1/?(artDescriptions[2]);
+!!SN:H^art^/(builderIcon)/0/?(artNames[3]) H^art^/(builderIcon)/1/?(artDescriptions[3]);
+!!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/?(artNames[4]) H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/?(artDescriptions[4]);
+
+!!if&i^trainer_coord_on^;
+  !!SN:H^art^/(coordIcon)/0/^%T(trainer.addCoordOn)^ H^art^/(coordIcon)/1/^%T(trainer.addCoordDescOn)^;
+!!el;
+  !!SN:H^art^/(coordIcon)/0/^%T(trainer.addCoordOff)^ H^art^/(coordIcon)/1/^%T(trainer.addCoordDescOff)^;
+!!en;
+
+!!if&(passabilityEnabled);
+  !!SN:H^art^/(passabilityIcon)/0/^%T(trainer.addPassabilityOn)^ H^art^/(passabilityIcon)/1/^%T(trainer.addPassabilityDescOn)^;
+!!el;
+  !!SN:H^art^/(passabilityIcon)/0/^%T(trainer.addPassabilityOff)^ H^art^/(passabilityIcon)/1/^%T(trainer.addPassabilityDescOff)^;
+!!en;
+
+!!if&(eventsEnabled);
+  !!SN:H^art^/(eventsIcon)/0/^%T(trainer.addEventsOn)^ H^art^/(eventsIcon)/1/^%T(trainer.addEventsDescOn)^;
+!!el;
+  !!SN:H^art^/(eventsIcon)/0/^%T(trainer.addEventsOff)^ H^art^/(eventsIcon)/1/^%T(trainer.addEventsDescOff)^;
+!!en;
+
+!!if&i^trainer_builder_on^;
+  !!SN:H^art^/(builderIcon)/0/^%T(trainer.addBuilderOn)^ H^art^/(builderIcon)/1/^%T(trainer.addBuilderDescOn)^;
+!!el;
+  !!SN:H^art^/(builderIcon)/0/^%T(trainer.addBuilderOff)^ H^art^/(builderIcon)/1/^%T(trainer.addBuilderDescOff)^;
+!!en;
+
+!!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/^%T(trainer.addDate)^ H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/^%T(trainer.addDateDesc)^;
+
+; The F6 menu is pure ERM. All five controls remain selectable independently
+; of native renderer initialization; the plugin only consumes overlay state.
+!!VR(selectablePicsMask:y):S31;
+
+; show dialogue
+!!IF:N(PIC_TYPE_ART)/(coordIcon)/(PIC_TYPE_ART)/(eventsIcon)/(PIC_TYPE_ART)/(passabilityIcon)/(PIC_TYPE_ART)/(builderIcon)/(PIC_TYPE_ART)/(ART_HOURGLASS_OF_THE_EVIL_HOUR);
+!!IF:N(MSG_TYPE_CHOOSE_PIC_OR_CANCEL)/^%T(trainer.titleAdd)^/?(choice:y)/(TEXT_ALIGN_CENTER)/(DLG_NO_SELECTION)/(selectablePicsMask);
+
+; Restore the original metadata after IF:N closes.
+!!SN:H^art^/(coordIcon)/0/(artNames[0]) H^art^/(coordIcon)/1/(artDescriptions[0]);
+!!SN:H^art^/(passabilityIcon)/0/(artNames[1]) H^art^/(passabilityIcon)/1/(artDescriptions[1]);
+!!SN:H^art^/(eventsIcon)/0/(artNames[2]) H^art^/(eventsIcon)/1/(artDescriptions[2]);
+!!SN:H^art^/(builderIcon)/0/(artNames[3]) H^art^/(builderIcon)/1/(artDescriptions[3]);
+!!SN:H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/0/(artNames[4]) H^art^/(ART_HOURGLASS_OF_THE_EVIL_HOUR)/1/(artDescriptions[4]);
 
 ; execute accoridng to choices
 !!if&(choice)=0;
@@ -4388,13 +4416,47 @@ ZVSE2
 !!el&(choice)=1;
   !!FU(trainer_SetUpDisplayEvents):P;
 !!el&(choice)=2;
-  !!FU(trainer_SetUpBuilderMode):P;
+  !!FU(trainer_SetUpPassability):P;
 !!el&(choice)=3;
+  !!FU(trainer_SetUpBuilderMode):P;
+!!el&(choice)=4;
   !!FU(trainer_ChangeIngameDate):P;
 !!en;
 
 ; re-open the dialog with updated pictures
 !!FU(trainer_ShowAddCheats_advMap)&(choice)<>-1:P;
+
+// Event Overlay
+!?FU(trainer_SetUpDisplayEvents);
+!!VR(eventsEnabled:y):S(FALSE);
+!!SN:W^TrainerX.Overlay.Events.Enabled^/?(eventsEnabled);
+
+!!if&(eventsEnabled);
+  !!SN:W^TrainerX.Overlay.Events.Enabled^/(FALSE);
+  !!IF:L^%T(trainer.addEventsOff)^;
+!!el;
+  !!SN:W^TrainerX.Overlay.Events.Enabled^/(TRUE);
+  !!IF:L^%T(trainer.addEventsOn)^;
+  !!SN:P^Military.wav^;
+!!en;
+
+!!SN:D;
+
+// Passability Overlay
+!?FU(trainer_SetUpPassability);
+!!VR(passabilityEnabled:y):S(FALSE);
+!!SN:W^TrainerX.Overlay.Passability.Enabled^/?(passabilityEnabled);
+
+!!if&(passabilityEnabled);
+  !!SN:W^TrainerX.Overlay.Passability.Enabled^/(FALSE);
+  !!IF:L^%T(trainer.addPassabilityOff)^;
+!!el;
+  !!SN:W^TrainerX.Overlay.Passability.Enabled^/(TRUE);
+  !!IF:L^%T(trainer.addPassabilityOn)^;
+  !!SN:P^Military.wav^;
+!!en;
+
+!!SN:D;
 
 // Builder Mode
 !?FU(trainer_SetUpBuilderMode);

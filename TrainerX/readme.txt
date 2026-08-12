@@ -3,7 +3,6 @@ TrainerX
 A modpack of cheat mods, including:
 New Cheats - Author: Archer30
 Trainer - Author: Valery, Archer30
-Display Events - Author: Valery, Gamecreator
 Select your Battlefield - Author: Valery, Archer30
 Special thanks to Jim Vogan, daemon_n, MoP, igrik and Algor
 

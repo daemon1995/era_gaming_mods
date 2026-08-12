@@ -3,7 +3,6 @@
 这是一个作弊mod合集，包括：
 新作弊功能 - 作者：Archer30
 修改器 - 作者：Valery、Archer30
-显示事件 - 作者：Valery、Gamecreator
 选择战场 - 作者：Valery、Archer30
 特别鸣谢：Jim Vogan、daemon_n、MoP、igrik和Algor
 

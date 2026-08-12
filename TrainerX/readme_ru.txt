@@ -3,7 +3,6 @@ TrainerX
 A modpack of cheat mods, including:
 Новые читы - Автор: Archer30
 Чит-мод - Автор: Valery, Archer30
-Отображение событий - Авторы: Valery, Gamecreator
 Выберите поле боя - Автор: Valery, Archer30
 Отдельное спасибо Джиму Вогану, daemon_n, MoP, igrik и Algor
 
