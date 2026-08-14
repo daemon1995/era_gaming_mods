@@ -2373,6 +2373,71 @@ ZVSE2
 !!FU(H3Dlg_UpdateItemRange):P(rootDlg)/(ITEM_ADVMAP_HINT)/(ITEM_ADVMAP_HINT);
 !!FU(H3Dlg_DrawItemOnScreen):P(rootDlg)/(ITEM_ADVMAP_HINT);
 
+!?FU(AdvMap_SetInfoPanelText);
+; Immediately shows adventure map info panel text.
+!#VA(text:x) (timeToDisplay:x);
+
+!!VRs^temp_text^:Sz(text);
+!!SN:Ks^temp_text^/?(length:y);
+!!if&(length)<1;
+  !!FU:E;
+!!en;
+!!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+!!VR(h3stringPtr:y):S(advMgr) + 936;                                   [get string address]
+!!SN:E4211072/(CALLCONV_THISCALL)/(h3stringPtr)/s^temp_text^/(length); [assign string]
+!!UN:C(advMgr)/916/4/7;                                                [set panel type: display text]
+!!UN:C(advMgr)/920/4/7;                                                [set panel type: display text]
+
+!!FU:A?(numArgs:y);
+!!if&(numArgs)<(@timeToDisplay);
+  !!VR(timeToDisplay):S5000;
+!!en;
+
+!!SN:E5212528/(CALLCONV_CDECL);                                        [get time]
+!!VRv1:+(timeToDisplay);
+!!UN:C(advMgr)/924/4/v1;                                               [set end time]
+
+!!SN:E4283712/(CALLCONV_THISCALL)/(advMgr)/1/1/1;                      [update sceen]
+!!VRs^temp_text^:S^^;
+
+!?FU(AdvMap_SetInfoPanelDef);
+; Immediately shows adventure map info panel text and def
+!#VA(text:x) (defName:x) (defFrameId:x) (timeToDisplay:x);
+
+!!FU:A?(numArgs:y);
+!!if&(numArgs)<(@timeToDisplay);
+  !!VR(timeToDisplay):S5000;
+!!en;
+!!if&(numArgs)<(@defName);
+  !!FU(AdvMap_SetInfoPanelText):P(text);
+  !!FU:E;
+!!en;
+
+!!VRs^temp_text^:Sz(text);
+!!SN:Ks^temp_text^/?(length:y);
+!!UN:C(ADV_MANAGER)/4/?(advMgr:y);
+
+!!VR(h3stringPtr:y):S(advMgr) + 936;                                   [get string address]
+!!SN:E4211072/(CALLCONV_THISCALL)/(h3stringPtr)/s^temp_text^/(length); [assign string]
+
+!!SN:E5212528/(CALLCONV_CDECL);                                        [get time]
+!!VRv1:+(timeToDisplay);
+!!UN:C(advMgr)/924/4/v1;                                               [set end time]
+!!UN:C(advMgr)/916/4/6;                                                [set panel type: display resource]
+!!UN:C(advMgr)/920/4/6;                                                [set panel type: display resource]
+!!UN:C(advMgr)/928/4/(defFrameId);                                     [set panel frameId: display resource]
+
+!!VRz1:Sz(defName);
+!!SN:B?z1/?(zVarAddr:y);
+!!UN:C4526205/1/4/?(storedLoadedDefName1:y) C4526205/1/4/(zVarAddr:y); [replace resource def name]
+!!UN:C4526261/1/4/?(storedLoadedDefName2:y) C4526261/1/4/(zVarAddr:y);
+
+!!SN:E4283712/(CALLCONV_THISCALL)/(advMgr)/1/1/1;                      [update sceen]
+!!UN:C4526205/1/4/(storedLoadedDefName1:y);                            [restore data]
+!!UN:C4526261/1/4/(storedLoadedDefName2:y);                            [restore data]
+!!VRs^temp_text^:S^^;
+
+
 !#DC(NO_RADIO_DLG_ITEM)         = -1;
 !#DC(RADIO_DLG_MAX_ITEMS)       = 12;
 !#DC(RADIO_DLG_FLAG_BTN_CANCEL) = 1;
@@ -2697,6 +2762,34 @@ ZVSE2
 !!el;
   !!SN:E7814514/(CALLCONV_CDECL)/z(textPtr)/z(defNamePtr);
 !!en;
+
+!?FU(PrepareMessageBoxText);
+!#VA(text[16]:x);
+; Prepares text for next shown message box
+!!FU:A?(argsNum:y);
+!!if&(argsNum)<1;
+  !!FU:E;
+!!en;
+!!VR(remainder:y):S(argsNum) %2;
+!!VR(namesNum:y):S(argsNum) :2 +(remainder);
+!!VR(hintsNum:y):S(argsNum) -(namesNum);
+
+!!FU(NewStrArray):P(namesNum)/?(names:y) P(namesNum)/?(hints:y);
+  
+!!VRo:S0;
+!!re i/1/(argsNum)/2;
+  !!VR(var:y):Sxi;
+  !!SN:M(names)/o/z(var);
+  !!VRl:Si +1;
+  !!if&l<(argsNum);
+    !!VR(var:y):Sxl;
+    !!SN:M(hints)/o/z(var);
+  !!en;
+  !!VRo:+1;
+!!en;
+!!SN:M(names)/?(numItems:y)/?(itemsType:y)/?t/?(namesAddr:y);
+!!SN:M(hints)/?(numItems:y)/?(itemsType:y)/?t/?(hintsAddr:y);
+!!SN:F^wog native dialogs:PrepareMessageBoxText^/(namesAddr)/(hintsAddr)/(namesNum);
 
 ; ============= END DIALOGS =============
 
