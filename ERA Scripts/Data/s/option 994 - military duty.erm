@@ -1,0 +1,82 @@
+ZVSE2
+** Author orig.  : Algor
+** Updated by    : Archer30
+** Name          : Military duty
+** Name rus.     : Воинская обязанность
+** Options       : 994
+
+** Каждое воскресенье невыкупленные существа из захваченных внешних жилищ прибывают для найма в первый город игрока, с подходящим отстроенным зданием.
+** Если города с подходящим отстроенным зданием у игрока нет, существа остаются во внешних жилищах.
+** Порядок выбора города из нескольких подходящих, определяется порядком в списке городов игрока,
+** который может быть изменен при использовании WoG-опци 244 "Сортировка списка героев и городов"
+** Существа "8го уровня" воинской обязанности не подлежат и попадают в города героя стандартным для них путем.
+; Level 8 creatures won't move to towns as they are too gorgours to handle.
+
+
+!#UN:P994/?i^es_994_enabled^; [Here we use a global variable so it can be compatible with scripts]
+
+!?FU(OnEveryDay)&i^timerWeekday^=7/i^es_994_enabled^;
+!!FU(ES_994_CheckForAllDwellings):P(OBJ_CREATURE_GENERATOR_1) P(OBJ_CREATURE_GENERATOR_4);
+
+!?FU(ES_994_CheckForAllDwellings);
+!#VA(objType:x);
+
+!!MA:F(MON_BLOOD_DRAGON)/?(bloodDragonFv:y);
+!!OW:Wi^timerOwner^/?(townQty:y);
+!!VR(lastTown:y):S(townQty) -1;
+
+!!VR(x:y):S-1;
+
+; loop through all the dwellings
+!!re k;
+  !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y:y)/(z:y);
+  !!br&(x)<0;
+
+  !!DW(x)/(y)/(z):O?(owner:y);
+  !!co&(owner)<>i^timerOwner^;
+
+  ; Loop through all the slots
+  !!re i/0/3;
+    !!DW(x)/(y)/(z):Mi/?(mon:y)/?(num:y); [тип и кол-во доступных существ в 1м слоте жилища]
+
+    !!if&(mon)>(NO_MON)/(num)>0;      [если в слоте жилища есть существа]
+      !!MA:O(mon)/?(townType:y) L(mon)/?(level:y) F(mon)/?(fv:y); [тип города, которому принадлежит существо / уровень существа]
+
+      !!if&(townType)>(NO_TOWN)/(fv)<(bloodDragonFv);
+        !!UN:T(townType)/(level)/0/?(nonUpgMon:y); [тип существа для найма в подходящем городе (баз.)]
+        !!UN:T(townType)/(level)/1/?(upgMon:y);
+
+        !!if|(nonUpgMon)=(mon)/(upgMon)=(mon);
+          !!if&(nonUpgMon)=(mon);
+            !!VR(dwell:y):S(level) +30;
+          !!el;
+            !!VR(dwell):S(level) +37;
+          !!en;
+
+          !!re j/0/(lastTown);
+            !!OW:W(owner)/j/?(townId:y);
+            !!CA0/(townId):T?(loopTownType:y) B3/(dwell);
+
+            !!br&(loopTownType)=(townType)/1;
+          !!en;
+
+          !!if&j<=(lastTown);         [если город найден]
+            !!VR(dwell)&(dwell)<37:+7;
+            !!CA0/(townId):B3/(dwell);[f1=1, если отстроено улучшенное жилище]
+
+            ; Increase the quantity of available creatures depending on upgraded or degraded building is built
+            !!if&1;                   [если отстроено улучшенное жилище]
+              !!CA0/(townId):M1/(level)/d/d(num); [увеличиваем кол-во доступных улучшенных существ]
+            !!el;                     [иначе]
+              !!CA0/(townId):M1/(level)/d(num)/d; [увеличиваем кол-во доступных неулучшенных существ]
+            !!en;
+
+            !!DW(x)/(y)/(z):Mi/d/0;   [удаляем существ из слота внешнего жилища]
+          !!en;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+** end

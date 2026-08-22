@@ -1,0 +1,181 @@
+ZVSE2
+** Author orig.  : Algor
+** Rewritten by  : Archer30
+** Name          : Tyrant
+** Name rus.     : “иран
+** Options       : 770
+
+; A tyrant would appear in the game and flag most of the map objects. The colour of the tyrant depends on the whatever colour is available in the game (Chosen from Pink to Red by order).
+; Note: This script would disable Extension Heroes option (if enabled) on erm instructions to prevent other players having special heroes at the start. 
+; After the tyrant is set up, Extension Heroes would be re-enabled if it was enabled.
+
+
+!?FU(OnAfterErmInstructions);           [событи€ в начале игры]
+!!UN:P770/?(wogOption:y);               [провер€ем включена ли опци€ 770]
+!!FU&(wogOption)<>(TRUE):E;             [Выход, если опци€ не включена]
+
+; Get the colour of the tyrant (Check every available colour from Pink to Red)
+!!re i/(PLAYER_LAST)/(PLAYER_FIRST)/-1;
+  !!OW:Ii/?(isAi:y)/?(hasLost:y);
+
+  !!if&(isAi)/(hasLost);
+    !!VRi^es_770_tyrantPlayer^:Si;
+
+    !!br;
+  !!en;
+!!en;
+
+; Exit if tyrant is not available in this game (all 8 players are occupied)
+!!if&i<(PLAYER_FIRST);
+  !!FU(ES_770_DisableTyrant):P;
+  !!FU:E;
+!!en;
+
+; Set up variables
+!!OW:Ii^es_770_tyrantPlayer^/1/0 Ti^es_770_tyrantPlayer^/-1; [активируем розового »»-игрока без союзов]
+
+; Get how many heroes allowed for the tyrant
+!!UN:P106/?(hourglassOn:y);
+
+; Create the array of all the available extension heroes
+!!FU(NewIntArray):P?(availHeros:y);
+
+!!re i/(HERO_SIR_MULLICH)/(HERO_LAST_WOG);
+  !!co&(hourglassOn)/i=i^wog_106_Asmodeus^;
+
+  !!HEi:O?(heroOwner:y) P?(x:y)/?(y:y)/?(z:y);
+
+  !!FU(Array_Push)&(heroOwner)=(NO_OWNER)/(x)=-1/(y)=-1/(z)=-1:P(availHeros)/i;
+!!en;
+
+!!FU(Array_Shuffle):P(availHeros);
+
+; For AI, the hero limit is difficulty + 2 (easy difficulty the Ai would have a max of 2 heroes active)
+!!UN:J2/?(diff:y);
+!!UN:C6129162/(UNC_INT8)/?(memoryLimit:y);
+!!VR(activeHeroLimit:y):S(diff) +2 F2/(memoryLimit);
+
+; Search for neutral towns to be occupied by the tyrant
+!!UN:U(OBJ_TOWN)/(ANY_OBJ)/?(num:y);    [оличество городов в (num)]
+!!VR(lastId:y):S(num) -1;               [максимальный номер города на карте]
+!!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
+!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_TOWN)/(availHeros)/(activeHeroLimit); [передача ничейных городов розовому игроку]
+
+; Exit the script if there is no neutral town on the map
+!!OW:Wi^es_770_tyrantPlayer^/?(townNum:y);
+
+!!if&(townNum)=0/(hasLost);
+  !!OW:Ii^es_770_tyrantPlayer^/1/1;           [деактивируем розового »»-игрока, если “иран не получил ни одного города и на старте не было розового игрока]
+  !!VRi^es_770_tyrantPlayer^:S0;
+  !!FU(ES_770_DisableTyrant):P;
+  !!FU:E;                               [Выход, если “иран не получил ни одного города и на старте не было розового игрока]
+!!en;
+
+!!UN:U(OBJ_MINE)/-1/?(num);             [оличество шахт в (num)]
+!!VR(lastId):S(num) -1;                 [максимальный номер шахты]
+!!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
+!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_MINE);      [передача ничейных шахт розовому игроку]
+
+!!UN:U(OBJ_CREATURE_GENERATOR_1)/-1/?(num); [оличество жилищ (тип 17) в (num)]
+!!VR(lastId):S(num) -1;                 [максимальный номер жилища]
+!!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
+!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_CREATURE_GENERATOR_1); [передача ничейных жилищ розовому игроку]
+
+!!UN:U(OBJ_CREATURE_GENERATOR_4)/-1/?(num); [оличество жилищ (тип 20) в (num)]
+!!VR(lastId):S(num) -1;                 [максимальный номер жилища]
+!!VRv2:S-1;                             [инициализаци€ v2 дл€ быстрого поиска]
+!!DO(ES_770_SearchForObjects)/0/(lastId)/1:P(OBJ_CREATURE_GENERATOR_4); [передача ничейных жилищ розовому игроку]
+
+!!UN:J2/?(diff:y);                      [уровень сложности (0..4)]
+!!VR(coef:y):S(diff) +(townNum);        [уровень сложности (0..4) + количество городов “ирана]
+!!VR(normRes:y):S(coef) *5;             [дерево/руда 5 за каждый стартовый город и уровень сложности]
+!!VR(rareRes:y):S(coef) *3;             [минералы 3 за каждый стартовый город и уровень сложности]
+!!VR(gold:y):S(coef) *10000;            [золото 10000 за каждый стартовый город и уровень сложности]
+!!OW:Ri^es_770_tyrantPlayer^/(RES_WOOD)/(normRes) Ri^es_770_tyrantPlayer^/(RES_ORE)/(normRes) Ri^es_770_tyrantPlayer^/(RES_GOLD)/(gold);
+!!OW:Ri^es_770_tyrantPlayer^/(RES_MERCURY)/(rareRes) Ri^es_770_tyrantPlayer^/(RES_SULFUR)/(rareRes) Ri^es_770_tyrantPlayer^/(RES_CRYSTAL)/(rareRes) Ri^es_770_tyrantPlayer^/(RES_GEMS)/(rareRes); [даем “ирану ресурсы]
+
+; Manage hero availabilities
+; Check if extension heroes option was enabled by the player, re-enable the option if it was
+!!if&i^wog_100_enabled^;
+  !!UN:P100/(TRUE);                     [re-enable disabled extension heroes option]
+  !!FU(WOG_100_EnableExtensionHeroes):P;[This function is in WoG Scripts - 53 wog - map options]
+; Make all of the special heroes that are available to be recruited by the tyrant if extension heroes was not enabled
+!!el;
+  !!VR(tyrantPlayerBit:y):S1 Sd<<i^es_770_tyrantPlayer^;
+
+  !!re i/(HERO_SIR_MULLICH)/(HERO_LAST_WOG);
+    !!co&(hourglassOn)/i=i^wog_106_Asmodeus^;
+
+    !!HEi:O?(heroOwner:y);
+
+    !!if&(heroOwner)=i^es_770_tyrantPlayer^;
+      !!HEi:R3/(TRUE)/(tyrantPlayerBit);
+    !!el&(heroOwner)=(NO_OWNER);
+      !!HEi:P?(x:y)/?(y:y)/?(z:y);
+      !!HEi&(x)=-1/(y)=-1/(z)=-1:R3/(TRUE)/(tyrantPlayerBit);
+    !!en;
+  !!en;
+!!en;
+
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerIsHuman^;
+!!UN:P770/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Get the player colour name of the Tyrant
+!!FU(GetTextFileString):P^plcolors^/i^es_770_tyrantPlayer^/?(tyrantName:z);
+
+; Play sound
+!!SN:P^Graveyard^;
+
+; Show message
+!!SN:T^es.770.msg^/?(msg:z)/^tyrant^/(tyrantName);
+!!IF:Q1/(PIC_TYPE_FLAG)/i^es_770_tyrantPlayer^/(MSG_TYPE_MES)/^%(msg)^;
+
+!?FU(ES_770_SearchForObjects);          [передача ничейного объекта розовому игроку]
+!#VA(objType:x) (availHeros:x) (activeHeroLimit:x);
+
+!!UN:U(objType)/(ANY_OBJ)/-1/2;         [получаем координаты объекта в v2-v4]
+
+!!if&(objType)=(OBJ_TOWN);
+  ; Check if the town is neutral, give to the tyrant is positive
+  !!CA2:O?(owner:y);
+
+  ; Build the tavern if eligible
+  !!if&(owner)=(NO_OWNER);
+    !!CA2:Oi^es_770_tyrantPlayer^ U?(townId:y);
+    !!FU(ES_CheckBuildingEligibility):P(townId)/5/?(tavernIsEligible:y);
+
+    !!if&(tavernIsEligible);
+      !!CA2:B1/5;                       [5 - tavern]
+
+      ; Check the number of the tyrant's heroes, give more if fewer than the global hero limit
+      !!OW:Oi^es_770_tyrantPlayer^/?(numActiveHeroes:y)/?(dummy:y)/?(dummy)/?(dummy)/?(dummy)/?(dummy)/?(dummy)/?(dummy)/?(dummy);
+      !!SN:M(availHeros)/?(size:y);
+
+      !!if&(numActiveHeroes)<(activeHeroLimit)/(size)>0;
+        !!FU(Array_Pop):P(availHeros)/?(hero:y);     [Get the hero of the end of the array and remove from the array]
+        !!HE(hero):Pv2/v3/v4 Oi^es_770_tyrantPlayer^;
+      !!en;
+    !!en;
+  !!en;
+!!el&(objType)=(OBJ_MINE);
+  !!MN2:O?(owner)/1;                                 [текущий хоз€ин шахты]
+  !!MN2&(owner)=(NO_OWNER):Oi^es_770_tyrantPlayer^/1;         [смена хоз€ина ничейной шахты]
+; Take dwellings with no guards
+!!el&(objType)=(OBJ_CREATURE_GENERATOR_1);
+  !!DW2:O?(owner)/1 G0/d/?(num:y);                   [текущий хоз€ин жилища (тип 17), количество охранников]
+  !!DW2&(owner)=(NO_OWNER)/(num)=0:Oi^es_770_tyrantPlayer^/1; [смена хоз€ина ничейного жилища  без охраны (1-4 уровни)]
+!!el&(objType)=(OBJ_CREATURE_GENERATOR_4);
+  !!DW2:O?(owner)/1 G0/d/?(num);                     [текущий хоз€ин жилища (тип 20), количество охранников]
+  !!DW2&(owner)=(NO_OWNER)/(num)=0:Oi^es_770_tyrantPlayer^/1; [смена хоз€ина ничейного жилища без охраны (1-4 уровни)]
+!!en;
+
+!?FU(ES_770_DisableTyrant);
+!!UN:P770/(FALSE);
+
+!!if&i^wog_100_enabled^;
+  !!UN:P100/(TRUE);                     [re-enable disabled extension heroes option]
+  !!FU(WOG_100_EnableExtensionHeroes):P;[This function is in WoG Scripts - 53 wog - map options]
+!!en;
+
+** end

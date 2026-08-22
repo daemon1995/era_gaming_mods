@@ -1,0 +1,100 @@
+ZVSE2
+** Author orig.  : Berserker
+** Rewritten by daemon_n Aug 28 2022 -- feeling so bad last 3 days ;(
+** Updated by    : Archer30
+** Name          : Gnolls-marauders strike first
+** Name rus.     : Гноллы-Марадеры атакуют первыми
+** Changes rus.  : [Algor] вынос опции в отдельный файл для мода ERA
+** Options       : 996
+
+; Gnolls-marauders strike first: option 996
+
+
+!?FU(OnAfterErmInstructions);
+!!UN:P996/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Set up new description
+!!SN:H^monname^/(MON_GNOLL_MARAUDER)/2/?(desc:z);
+!!SN:H^monname^/(MON_GNOLL_MARAUDER)/2/^%(desc)%T(es.996.desc)^;
+
+; Raise fight value
+!!MA:F(MON_GNOLL_MARAUDER)/?(fv:y);
+!!VR(fv):*105 :100;
+!!MA:F(MON_GNOLL_MARAUDER)/(fv);
+
+!?FU(ES_CreateERMHook);
+!#VA(address:x);
+
+!!UN:P996/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!SN:E(address)/1/4463326/(ES_HOOK_BeforeStackAttackMelee); [Trigger right before melee attack, obviously before retaliation] 441ADE
+
+!?FU(ES_HOOK_BeforeStackAttackMelee);
+!!UN:P996/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/(UNC_INT)/?(actingStack:y) C(actingStack)/52/(UNC_INT)/?(attMonType:y) Cx1/(STRUCT_HOOK_CONTEXT_EBX)/(UNC_INT)/?(actingStackdir:y);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/(UNC_INT)/?(targetStack:y) C(targetStack)/52/(UNC_INT)/?(defMonType:y);
+
+!!FU(ES_996_CheckIfMonIsEligible):P(attMonType)/?(attResult:y);                                       [Check if the defender is eligible for triggering strike first while the attacker doesn't]
+!!FU(ES_996_CheckIfMonIsEligible):P(defMonType)/?(defResult:y);
+
+!!if&(attResult)<>(TRUE)/(defResult);
+  !!UN:C(actingStack)/132/(UNC_INT)/?f;                                                               [get attacker flags]
+  !!VR(noRetaliation:y):Sf &(MON_FLAG_NO_RETALIATION);
+  !!VR(warMachine:y):Sf &(MON_FLAG_SIEGE_WEAPON);
+
+  !!if&(noRetaliation)=(warMachine);                                                                  [if both flags == 0]
+    !!UN:C(targetStack)/1108/(UNC_INT)/?(retaliation:y);                                              [get retals]
+    !!FU(ES_996_CheckStackCanAct):P(targetStack)/?(result:y);                                         [get target stack can act]
+
+    !!if&(retaliation)>0/(result);                                                                    [if can act]
+      !!SN:X?(oldRet:y)/0;                                                                            [disable standard action]
+
+      !!UN:C(COMBAT_MANAGER)/(UNC_INT)/?(cmbMgr:y) C(cmbMgr)/78528/(UNC_INT)/?(currentActiveSide:y);
+      !!VR(newSide:y):S(currentActiveSide) X1;
+      !!UN:C(cmbMgr)/78528/(UNC_INT)/(newSide);                                                       [change active side]
+      
+      !!UN:C(targetStack)/236/4/?(spellId:y);
+      !!UN:C(targetStack)/236/4/(NO_SPELL);
+
+      !!SN:E4461360/(CALLCONV_THISCALL)/(targetStack)/(actingStack)/(actingStackdir);                 [prevent hit] 441330
+
+      !!UN:C(cmbMgr)/78528/(UNC_INT)/(currentActiveSide);                                             [ret active side]
+
+      !!FU(ES_996_CheckStackCanAct):P(actingStack)/?(result:y);                                       [get original stack can act]
+
+      !!if&(result);
+        !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/8/(UNC_INT)/?(targetStackDir:y); [ebp+8 get target direction]
+
+        !!UN:C(targetStack)/236/4/(spellId:y);
+
+        !!SN:E4461360/(CALLCONV_THISCALL)/(actingStack)/(targetStack)/(targetStackDir);               [do "retal" damage by stack] 441330
+        !!UN:C(actingStack)/1168/(UNC_INT)/0;                                                         [reset steps made (for chivalry)]
+      !!en;
+
+      !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/(UNC_INT)/4463480;                                           [return to new address where decreasing retal] 441B78
+    !!en;
+  !!en;
+!!en;
+
+!?FU(ES_996_CheckStackCanAct);
+!#VA(stackPtr:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!UN:C(stackPtr)/656/(UNC_INT)/?(blindDur:y)
+     C(stackPtr)/688/(UNC_INT)/?(stoneDur:y)
+     C(stackPtr)/704/(UNC_INT)/?(paralyzDur:y)
+     C(stackPtr)/76/(UNC_INT)/?(monNum:y);
+!!if&(paralyzDur)=(NULL)/(blindDur)=(NULL)/(stoneDur)=(NULL)/(monNum)>0;
+  !!VR(result):S(TRUE);
+!!en;
+
+// Funciton to check if the targeted monster is eligible for strike first
+!?FU(ES_996_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_GNOLL_MARAUDER):S(TRUE);

@@ -1,0 +1,1199 @@
+ZVSE2
+** Author orig.  : Algor
+** Name          : achievements
+** Name rus.     : достижения
+** Options       : 760
+** Dialogs       : 79
+
+** В игру вводится сиситема достижений, получая которые герои приобретают дополнительные бонусы.
+** Каждое достижение имеет ранг от 1 до 9.
+
+** Реализованные достижения
+** 0 - Кладоискатель
+** 1 - Снабженец
+** 2 - Драконоборец
+** 3 - Налетчик
+** 4 - Студент
+** 5 - Ревизор
+** 6 - Душегуб
+** 7 - Инквизитор
+** 8 - Головорез
+** 9 - Курьер
+** 10 - Ведьмак
+** 11 - Защитник
+** 12 - Захватчик
+** 13 - Палач
+** 14 - Эрудит
+
+
+!#SN:W^opt760.12.s^/-1;                 [фикс первого боя, поскольку в ином значении вражеский отряд пропускал ход в 1 раунде tns to PerryR]
+** Сдвиг/скрытие кнопки "Достижения" (спс igrik)
+!?FU(OnPreHeroScreen);         // перед обновлением экрана героя
+!!UN:P760/?y1;                          // проверка опции
+!!UN:C6916808/4/?y2;                    // адрес структуры диалога героя
+!!SN:F^GetButtonID^/^stars^;            // получаем ID кнопки stars
+!!FU&v1<1:E;
+
+!!VRy3:Sv1;                             // перезаписываем ID кнопки
+!!SN:E6288816/2/y2/y3;                  // получаем структуру кнопки
+!!FU&v1=0:E;
+
+!!VRy4:Sv1;                             // перезаписываем структуру кнопки
+!!SN&y1=0:E6286720/2/y4/6/6;            // скрываем кнопку (если опция отключена)
+!!SN:F^GetModuleHandleA^/^HD_WOG.dll^;  // HD-мод: 0 - значит НЕ включен
+!!FU&v1<>0|y1=0:E;                      // выход, если HD включен или опция выключена
+
+!!UN&y4<>0:Cy4/24/2/d15;                // сдвигаем кнопку, если HD нет и опция ВКЛ
+!!SN:E6288816/2/y2/110;                 // получаем структуру текста "Журнал заданий" id=110
+!!SN&v1<>0:E6286720/2/v1/6/6;           // прячем текст "уволить героя"
+
+** Показ текущих достижений героя по ЛКМ на кнопке достижений в окне героя
+!?FU(OnHeroScreenMouseClick);           // Клик в окне героя
+  !!UN:P760/?y1;
+  !!FU&y1=0:E;                          // выход если опция 760 не включена
+
+  !!CM:I?y1 F?y2 S?y3;                    // y1-y3 - параметры клика
+  !!SN:F^GetButtonID^/^stars^;
+  !!VRy4:Sv1;                             // y4 - ID кнопки достижений
+  !!FU|y1<>y4/y2<>0/y3<>13:E;             // выход если не отпущена ЛКМ на кнопке достижений
+
+  ** подготовка диалога
+  !!DL79:N^opt760_1.txt^;                 // подгрузка 79 диалога (достижения)
+
+  !!if&-1;                                // если диалог не найден
+    !!IF:M0/4/^ERROR: Dialog {opt760_1.txt} not found!^; // выводим сообщение об ошибке
+    !!FU:E;                               // и выходим
+  !!en; 
+
+  !!OW:C?y1/?y2;
+  !!FU(DL_SetPlayerColor):P79/y2;
+  !!HE-1:N?y1 B0/?z1;                     // y1/z1 - номер/имя героя
+  ** сортировка достижений по рангу
+  !!SN:M-1/15/0/0 W^opt760.s^/v1;         // Mi^opt760.s^ - массив достижений упорядоченный по убыванию ранга
+  !!VRk:S0;
+
+  !!re j/9/0/-1;                          // для каждого возможного ранга (9..0)
+    !!re i/0/14; 
+      !!SN:W^opt760.h%Y1a%Vir^/?y2;       // y2 - ранг достижения i
+      !!SN&y2=j:Mi^opt760.s^/k/i;
+      !!VRk&y2=j:+1;                      // сохраняем номер достижения искомого ранга
+    !!en; 
+  !!en; 
+
+  ** настройка элементов диалога
+  !!SN:T^opt760.HintOk^/?z2;
+  !!DL79:H1/z2;                           // установка подсказки "Закрыть окно" на кнопку OK
+  !!SN:T^opt760.Hint1^/?z3;
+  !!DL79:A5/3/z3/1;                       // установка постоянной подсказки
+  !!SN:T^opt760.Header1^/?z4/^HeroName^/z1;
+  !!DL79:A4/3/z4/1;                       // установка заголовка диалога
+
+  !!re i/0/14;                            // для элементов слота достижения
+    !!VRy2:S10 +i;
+    !!VRy3:S30 +i;                        // y2/y3 - индексы иконок/рамок и подсказок
+    !!SN:Mi^opt760.s^/i/?y5;              // y5 - номер достижения в слоте
+    !!SN:W^opt760.h%Y1a%Y5r^/?y6;         // y6 - ранг достижения у героя
+
+    !!if&y6>0;                            // если есть хоть один ранг достижения
+      !!VRz5:S^opt760%Y5.def^;
+      !!DL79:Ay2/9/z5/1;                  // установка иконки достижения
+      !!FU(ES_760_GetEffect):Py5/y6/?y9;       // y9 - эффект ранга достижения
+      !!SN:T^opt760.d%Y5^/?z5/^Effect^/y9;
+      !!VRzy3:Sz5;
+      !!DL79:Hy2/zy3;                     // установка подсказки достижения
+      !!DL79:Ay3/4/y6/1;                  // активация рамки ранга с нужным рангом
+    !!el;                                 // если нет ни одного ранга достижения
+      !!SN:T^opt760.NoDescr^/?z5;
+      !!VRzy3:Sz5;
+      !!DL79:Hy2/zy3;                     // установка подсказки для неполученного достижения
+    !!en; 
+  !!en; 
+
+  !!VRg:S0;
+  !!VRh:Sy1;                              // g/h - режим подсказки/номер героя для передачи в диалог
+  !!DL79:S;                               // отображение диалога 79
+  !!SN:Mi^opt760.s^;                      // удаление временного массива
+
+!?FU(ES_760_ShowAchievedAchievementDlg);  // показ получения героем x1 достижения x2 ранга x3
+** подготовка диалога
+!#VA(heroId:x) (achievement:x) (rank:x);
+
+!!FU&(heroId)<=(NO_HERO):E;
+
+!!UN:C6885977/1/?y1; gosolo
+!!FU&y1:E;
+!!DL79:N^opt760_2.txt^;                 // подгрузка 79 диалога (достижения)
+
+!!if&-1;                                // если диалог не найден
+  !!IF:M0/4/^ERROR: Dialog {opt760_2.txt} not found!^; // выводим сообщение об ошибке
+  !!FU:E;                               // и выходим
+!!en; 
+!!OW:C?y1/?y2;
+!!FU(DL_SetPlayerColor):P79/y2;
+
+!!HE(heroId):B0/?z1;                    // z1 - номер/имя героя
+!!FU(ES_760_GetEffect):P(achievement)/(rank)/?y1;   // y1 - эффект достижения
+!!SN:T^opt760.d%X2^/?z2/^Effect^/y1;
+!!DL79:A7/3/z2/1;                       // установка текста получения достижения
+!!SN:T^opt760.Header2^/?z3/^HeroName^/z1;
+!!DL79:A4/3/z3/1;                       // установка заголовка
+!!SN:T^opt760.HintOk^/?z4;
+!!DL79:H1/z4;                           // установка подсказки "Закрыть окно" на кнопку OK
+!!FU(Fun_GetHeroPortrait):P(heroId)/1/5;
+!!DL79:A5/11/z5/1;                      // установка портрета героя
+!!VRz6:S^opt760%X2.def^;
+!!DL79:A8/9/z6/1;                       // установка иконки достижения
+!!DL79:A9/4/x3/1;                       // установка ранга достижения
+!!DL79:S;                               // отображение диалога 79    
+
+!?FU(ES_760_GetEffect);              // возврат в x3 эффекта x2-го ранга достижения x1
+  !!VRx3&x1=0:S500 *x2;                   // Кладоискатель - 500
+  !!VRx3&x1=1:S25 *x2;                    // Снабженец - 25
+  !!VRx3&x1=2:S1 *x2;                     // Драконоборец - 1
+  !!VRx3&x1=3:S1 *x2;                     // Налетчик - 1
+  !!VRx3&x1=4:S1 *x2;                     // Искатель - 1
+  !!VRx3&x1=5:S1 *x2;                     // Ревизор - 1
+  !!VRx3&x1=6:S2 *x2;                     // Душегуб - 2
+  !!VRx3&x1=7:S2 *x2;                     // Инквизитор - 2
+  !!VRx3&x1=8:S2 *x2;                     // Головорез - 2
+  !!VRx3&x1=9:S200 *x2;                   // Курьер - 200
+  !!VRx3&x1=10:S10 *x2;                   // Ведьмак - 10
+  !!VRx3&x1=11:S5 *x2;                    // Защитник - 5
+  !!VRx3&x1=12:S10 *x2;                   // Захватчик - 10
+  !!VRx3&x1=13:S1 *x2;                    // Палач - 1
+  !!VRx3&x1=14:S10 *x2;                   // Эрудит - 10
+
+** обработка действий в диалоге
+!?DL&v998=79/v1000=13;                  // обработка диалога (отпущена ЛКМ)
+  !!DL79&v999=1:C1;                       // Кнопка ОК - Закрыть диалог
+
+  !!if&v999>=10/v999<=24;                 // Кнопки достижений
+    !!VRg:-1 *-1;                         // смена режима подсказки
+
+    !!re i/0/14; 
+      !!VRy3:S30 +i;                      // y3 - индекс z-переменной с подсказкой
+      !!SN:Mi^opt760.s^/i/?y1;            // y1 - номер достижения в слоте
+      !!SN:W^opt760.h%Vha%Y1r^/?y2;       // y2 - ранг достижения у героя
+
+      !!if&g=0/y2>0;                      // для режима эффектов
+        !!FU(ES_760_GetEffect):Py1/y2/?y4; // y4 - эффект ранга достижения
+        !!SN:T^opt760.d%Y1^/?z5/^Effect^/y4;
+        !!VRzy3:Sz5; // установка подсказки достижения
+      !!el&y2>0;                          // для режима условий
+        !!SN:T^opt760.c%Y1^/?z5;
+        !!VRzy3:Sz5; // установка подсказки достижения
+      !!en; 
+    !!en; 
+
+    !!VRy5:Sv999 +20;
+    !!DL79:A2/3/zy5/1;  // Обновление текущей подсказки
+  !!en; 
+
+!?FU(OnAfterErmInstructions);
+!!UN:J2/?y1;vopt760_dlvl;                // vopt760_dlvl - выбранный игроком уровень сложности (0..4)
+!!SN:W^opt760_dlvl^/y1;
+** Достижение 0: Кладоискатель +500 золота/опыта в найденных сундуках
+** ранг дается за каждые 4 открытых сундука базового типа
+
+!$OB(OBJ_TREASURE_CHEST)/0;                              // после взятия базового сундука
+  !!UN:P760/?y1;
+  !!FU&y1=0:E;                            // выход если опция не включена
+
+  !!HE-1:N?y77 P?y1/?y2/?y3;              // y77/y1/y2/y3 - номер/координаты текущего героя
+  !!FU&y1<0:E;                            // выход, если герой не на карте (например, проиграл бой за сундук)
+
+  !!SN:W^opt760.h%Y77a0r^/?y2;            // y2 - ранг достижения Кладоискатель
+  !!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+  !!SN:W^opt760.h%Y77a0c^/?y1;            // увеличиваем счетчик достижения
+  !!VRy1:+1;                              // ...
+  !!SN:W^opt760.h%Y77a0c^/y1;             // ...
+  !!VRy1:%3;                              // y1=0 если получен новый ранг достижения
+
+  !!if&y1=0;                              // при получении нового ранга, если ранг еще не максимальный
+    !!VRi^opt760.h%Y77a0r^:+1;            // увеличиваем текущий ранг достижения
+    !!OW:C?y4 Iy4/?y3;                    // y3=0, для игрока человека
+    !!if&y3=0;
+      !!FU(ES_AlternativeAchivementsPopup):Py77/0/i^opt760.h%Y77a0r^/?y4;
+      !!FU&y4=(TRUE):E;
+      !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/0/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+    !!en;
+  !!en; 
+
+
+; The trigger is in 1000 es - stdlib for ACM compatibility
+!?FU(ES_760_IncreaseTreasureChestValue);
+  !!UN:P760/?y1;
+  !!FU&y1=0:E;                  [выход если опция не включена]
+
+  !!CH998:S?y1;                 [y1 - тип бонуса (0-золото/опыт)]
+  !!if&y1=0;                    [если в сундуке золото/опыт]
+    !!CH998:B?y1;               [y1 - кол-во золота/опыта (0-15)]
+    !!HE-1:N?y77;               [y77 - номер текущего героя]
+    !!SN:W^opt760.h%Y77a0r^/?y2;
+    !!SN:W^opt760_dlvl^/?y3;    [y2 - ранг достижения Кладоискатель]
+    !!VRy2&-1000/y2>0:+y3;      [бонус ИИ-героям за уровень сложности]
+    !!VRy2&y2>9:S9;                       
+    !!VRy2:+y1 F1/15 -y1;       [y2 - увеличенное кол-во золота/опыта... ...но не более 15]
+    !!CH998:Bdy2;               [обновляем параметры награды в сундуке]
+  !!en; 
+
+** Достижение 1: Снабженец +25% шанс увеличить кучу ресурсов на 1(100 для золота)
+** ранг дается за каждые 10 поднятых куч ресурсов
+!?OB(OBJ_RESOURCE);                       // перед взятием ресурса
+  !!UN:P760/?y1;
+  !!FU&y1=0:E;                            // выход если опция не включена
+
+  !!OB998:U?y1 U?i^es_760_res_type^;       // y1 - тип ресурса
+  !!AR998:V?y2;                           // y2 - кол-во ресурса
+  !!HE-1:N?y77;                           // y77 - номер текущего героя
+  !!SN:W^opt760.h%Y77a1r^/?y3;            // y2 - ранг достижения Снабженец
+  !!SN:W^opt760_dlvl^/?y6;
+  !!VRy3&-1000/y3>0:+y6;
+  !!VRy3&y3>9:S9;                         // бонус ИИ-героям за уровень сложности
+  !!VRy4:S0;
+  !!VRy4&y3>3:+1;                         // y4 +1 ресурс, если ранг достижения 4+
+  !!VRy4&y3>7:+1;                         // y4 +1 ресурс, если ранг достижения 8+
+  !!VRy3:%4;                              // не 100% шанс получить +1 к ресурсу
+  !!VRy5:S1 R3;                           // y5 - случ. число (1..4)
+  !!VRy4&y3>=y5:+1;                       // y4 +1 ресурс, если выпал шанс получить +1 к ресурсу
+  !!AR998:Vdy4 V?i^es_760_res_num^;                           // обновляем количество ресурса
+
+!$OB(OBJ_RESOURCE);                       // после взятия ресурса
+  !!UN:P760/?y1;
+  !!FU&y1=0:E;                            // выход если опция не включена
+
+  !!HE-1:N?y77 P?y1/?y2/?y3 O?y4;         // y77/y1/y2/y3/y4 - номер/координаты/владелец текущего героя
+  !!FU|y1<0/y4<0:E;                       // выход, если герой не на карте (например, проиграл бой за ресурсы)
+
+  !!SN:W^opt760.h%Y77a1r^/?y2;            // y2 - ранг достижения Снабженец
+  !!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+  !!SN:W^opt760.h%Y77a1c^/?y1;            // увеличиваем счетчик достижения
+  !!VRy1:+1;                              // ...
+  !!SN:W^opt760.h%Y77a1c^/y1;             // ...
+  !!VRy1:%5;                              // y1=0 если получен новый ранг достижения
+
+  !!if&y1=0;                              // при получении нового ранга, если ранг еще не максимальный
+    !!SN:W^opt760.h%Y77a1r^/?y2;          // увеличиваем текущий ранг достижения
+    !!VRy2:+1;                            // ...
+    !!SN:W^opt760.h%Y77a1r^/y2;           // ...
+    !!OW:Iy4/?y3;                         // y3=0, для игрока человека
+    !!if&y3=0;
+      !!FU(ES_AlternativeAchivementsPopup):Py77/1/i^opt760.h%Y77a1r^/?y4;
+      !!VRi^es_760_res_type^:S0;
+      !!VRi^es_760_res_num^:S0;
+      !!FU&y4=(TRUE):E;
+      !!FU(ES_760_ShowAchievedAchievementDlg):Py77/1/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+    !!en;
+  !!en; 
+
+
+
+** Достижение 2: Драконоборец -1 к защите и скорости всех живых вражеских драконов
+** ранг дается за каждую разграбленную Утопию Драконов
+!?OB(OBJ_DRAGON_UTOPIA);                [before visiting Dragon Utopia]
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if the option is not enabled]
+
+!!CB998:T?y1;                           [y1 - bank state (0 - full, 1 - empty)]
+!!UN&y1=0:P760/2;                       [option value 2 if Utopia is full]
+
+!$OB(OBJ_DRAGON_UTOPIA);                [after taking Dragon Utopia]
+!!UN:P760/?y1;
+!!UN&y1>0:P760/1;                       [y1 - option state, reset state]
+
+!!OB998:T?y3;
+!!VRy2&y2<>25:S1;                       [y2, y3 - object type, if not Utopia (rebuilt), we assume that Utopia is plundered]
+!!CB998&y3=25:T?y2;                     [y2 - Utopia state (0 - full, 1 - empty)]
+!!FU|y1<>2/y2=0:E;                      [exit if Utopia is not plundered]
+
+!!HE-1:N?y77;                           [y77 - number of the current hero]
+!!SN:W^opt760.h%Y77a2r^/?y2;            [y2 - achievement rank Dragonslayer]
+!!FU&y2>=9:E;                           [exit if the achievement level is already maximum]
+!!SN:W^opt760.h%Y77a2c^/?y1;            [y1, increase the achievement counter]
+!!VRy1:+1;                              [y1, ...]
+!!SN:W^opt760.h%Y77a2c^/y1;             [...]
+!!VRy1:%1;                              [y1=0 if a new achievement rank is received]
+
+!!if&y1=0;                              [when receiving a new rank, if the rank is not yet maximum]
+  !!SN:W^opt760.h%Y77a2r^/?y2;          [y2, increase the current achievement rank]
+  !!VRy2:+1;                            [y2, ...]
+  !!SN:W^opt760.h%Y77a2r^/y2;           [...]
+  !!OW:C?y4 Iy4/?y3;                    [y4, y3=0, for a human player]
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/2/y2; [show hero x1 achieving x2 rank x3 (only for human player)]
+!!en;
+
+!?FU(OnSetupBattlefield);
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if option is not enabled]
+
+!!VRi^opt760.da^:S(FALSE);              [reset Dragonslayer animation flag]
+
+!?FU(OnBattlefieldVisible);             [when setting up the battlefield]
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if the option is not enabled]
+
+!!BA:H0/?y1 H1/?y2;                     [y1/y2 - numbers of fighting heroes]
+!!SN:W^opt760.h%Y1a2r^/?y3;             [y3 - achievement rank Dragon Slayer Attacker]
+!!SN:W^opt760_dlvl^/?y6;
+!!HEy1:O?h;
+!!OW&h>=0:Ih/?h;
+!!VRy3&h=1/y3>0:+y6;
+!!VRy3&y3>9:S9;                         [y3, bonus to AI heroes for difficulty level]
+!!SN:W^opt760.h%Y2a2r^/?y4;             [y4 - achievement rank of the Defender's Dragon Slayer]
+
+!!if&y2>=0;
+   !!HEy2:O?h;
+   !!OW&h>=0:Ih/?h;
+   !!VRy4&h=1/y4>0:+y6;
+   !!VRy4&y4>9:S9;                      [y4, bonus to AI heroes for difficulty level]
+!!en;
+
+!!FU(NewIntArray)&i^battle_isVisible^:P?y30;
+
+!!if&y3>0;
+   !!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST); [for all units of the Defender]
+     !!br&y3<=0;                        [bypass broken condition in if]
+
+     !!BMi:F?y5 D?y6 S?y7;              [y5/y6/y7 - flags/defense/squad speed]
+     !!VRy5:&2147483664;                [y5=2147483664 if the unit is a living dragon]
+
+     !!if&y5=2147483664;                [if there are living dragons in the squad]
+       !!VRy6:-y3;
+       !!VRy6&y6<0:S0;                  [y6, reduce protection, minimum 0]
+       !!VRy7:-y3;
+       !!VRy7&y7<1:S1;                  [y7, reduce speed, minimum 1]
+       !!BMi:Dy6 Sy7;                   [update parameters]
+
+       !!FU(Array_Push)&i^battle_isVisible^:Py30/i;
+     !!en;
+   !!en;
+!!en;
+
+!!if&y4>0;
+   !!re i/(BATTLE_ATTACKER_STACK_FIRST)/(BATTLE_ATTACKER_STACK_LAST); [for all Attacker units]
+     !!br&y4<=0; // bypass broken condition in if
+
+     !!BMi:F?y5 D?y6 S?y7;              [y5/y6/y7 - flags/defense/squad speed]
+     !!VRy5:&2147483664;                [y5=2147483664 if the unit is a living dragon]
+
+     !!if&y5=2147483664;                [if there are living dragons in the squad]
+       !!VRy6:-y4;
+       !!VRy6&y6<0:S0;                  [y6, reduce protection, minimum 0]
+       !!VRy7:-y4;
+       !!VRy7&y7<1:S1;                  [y7, reduce speed, minimum 1]
+       !!BMi:Dy6 Sy7;                   [update parameters]
+
+       !!FU(Array_Push)&i^battle_isVisible^:Py30/i;
+     !!en;
+   !!en;
+!!en;
+
+!!if&i^battle_isVisible^;
+   !!SN:My30/?y31;
+
+   !!if&y31;
+     !!VRi^opt760.da^:S(TRUE);
+     !!SN:P^WEAKNESS^;
+     !!FU(ES_PlayAnimationOnMultipleStacks):Py30/19/(FALSE);
+   !!en;
+!!en;
+
+; Show battle log on the first round, as tactics phase could break it
+!?FU(OnBattleRound)&i^battle_round^=0/i^opt760.da^/i^battle_isVisible^;
+!!SN:T^opt760.b2^/?z1;
+!!MM:Sz1;
+
+** Достижение 3: Налетчик +1 скорости существ при нападении на Банк существ
+** ранг дается за каждые 3й разграбленный банк существ
+!?OB(OBJ_CREATURE_BANK);                // перед посещением Банка существ
+!!OB998:U?(subtype:y);
+!!FU&(subtype)>=13/(subtype)<=16:E;
+
+!!UN:P760/?(wogOption:y);
+!!FU&(wogOption)=(FALSE):E;
+
+!!CB998:T?(isVisited:y);                // состояние банка (0 - полон, 1 - пуст)
+!!UN&(isVisited)<>(TRUE):P760/3;        // значение опци 3, если банк полон
+
+!$OB(OBJ_CREATURE_BANK);                // после взятия Банка существ
+!!OB998:U?(subtype:y);
+!!FU&(subtype)>=13/(subtype)<=16:E;
+
+!!UN:P760/?(wogOption:y);
+!!UN&(wogOption)>0:P760/1;              // состояние опции, сброс состояния
+!!CB998:T?(isVisited:y);                // состояние банка (0 - полон, 1 - пуст)
+!!FU|(wogOption)<>3/(isVisited)=0:E;    // выход если Банк не разграблен
+
+!!HE(CURRENT_HERO):N?(hero:y);          // номер текущего героя
+!!FU&i^opt760.h%(hero)a3r^>=9:E;        // выход, если уровень достижения уже максимальный
+
+!!VRi^opt760.h%(hero)a3c^:+1;           // увеличиваем счетчик достижения
+!!VR(raiderRank:y):Si^opt760.h%(hero)a3c^;
+!!VR(raiderRank):%3;                    // если получен новый ранг достижения
+
+!!if&(raiderRank)=0;                    // при получении нового ранга, если ранг еще не максимальный
+  !!VRi^opt760.h%(hero)a3r^:+1;         // увеличиваем текущий ранг достижения
+  !!FU(ES_760_ShowAchievedAchievementDlg)&i^timerIsHuman^:P(hero)/3/i^opt760.h%(hero)a3r^; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+!!en;
+
+!?FU(OnAfterTacticsPhase);              // перед началом боя активируем достижение Налетчик
+!!UN:P760/?y1;
+!!FU&y1<>3:E;                           // выход если опция не включена или бой не в Банке существ
+
+!!BA:H0/?y1;                            // y1 - номер героя
+!!SN:W^opt760.h%Y1a3r^/?y2;             // y2 - ранг достижения Налетчик
+!!SN:W^opt760_dlvl^/?y6;
+!!HEy1:O?h;
+!!OW&h>=0:Ih/?h;
+!!VRy2&h=1/y2>0:+y6;
+!!VRy2&y2>9:S9;                         // бонус ИИ-героям за уровень сложности
+
+!!re i/0/20&y2>0;                       // для всех отрядов героя
+  !!BMi:N?y3;
+  !!BMi&y3>0:Sdy2;                      // повышение скорости на ранг достижения
+!!en; 
+
+** Achievement 4: Student +1 Knowledge
+** rank is given for every 3 spells learned in shrines
+!?OB88;
+!!FU(ES_760_Pre4):P;                 // перед посещением Святыни 1
+
+!?OB89;
+!!FU(ES_760_Pre4):P;                 // перед посещением Святыни 2
+
+!?OB90;
+!!FU(ES_760_Pre4):P;                 // перед посещением Святыни 3
+
+!?FU(ES_760_Pre4);                   // перед посещением святыни
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход если опция не включена
+
+!!UN:P760/1;                            // значение опци 1
+!!SR998:S?y1;                           // y1 - заклинание в святыне
+!!HE-1:A2/0/d/?y2 My1/?y4;              // y2/y3/y4 наличие книжки/известность заклинания
+!!HE-1:Y43/d/?y5/2;                     // y5 - длительность проклятия, запрещающего посещать святыни
+!!FU&y5>1/y5<1000:E;                    // выход, если герою запрещено богами посещать святыни
+
+!!UN&y2=1/y4=0:P760/4;                  // значение опци 4 (новое заклинание в святыне), есть книга, заклинание неизвестно
+
+!$OB88;
+!!FU(ES_760_Post4):P;                // после посещения Святыни 1
+
+!$OB89;
+!!FU(ES_760_Post4):P;                // после посещения Святыни 2
+
+!$OB90;
+!!FU(ES_760_Post4):P;                // после посещения Святыни 3
+
+!?FU(ES_760_Post4);                  // после посещения святыни
+!!UN:P760/?y1;
+!!FU&y1<>4:E;                           // выход, если не изучение заклинания
+
+!!UN:P760/1;                            // восстанавливаем значение опции 760 в 1
+!!SR998:S?y1;
+!!HE-1:My1/?y2;                         // y1/y2 - заклинание в святыне/известность герою
+!!FU&y2<>1:E;                           // выход если заклинание не изучено
+
+!!HE-1:N?y77;                           // y77 - номер текущего героя
+!!SN:W^opt760.h%Y77a4r^/?y2;            // y2 - ранг достижения Искатель Мудрости
+!!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+!!SN:W^opt760.h%Y77a4c^/?y1;            // увеличиваем счетчик достижения
+!!VRy1:+1;                              // ...
+!!SN:W^opt760.h%Y77a4c^/y1;             // ...
+!!VRy1:%3;                              // y1=0 если получен новый ранг достижения
+
+!!if&y1=0;                              // при получении нового ранга, если ранг еще не максимальный
+  !!SN:W^opt760.h%Y77a4r^/?y2;          // увеличиваем текущий ранг достижения
+  !!VRy2:+1;                            // ...
+  !!SN:W^opt760.h%Y77a4r^/y2;           // ...
+  !!OW:C?y4 Iy4/?y3;                    // y3=0, для игрока человека
+  !!HE-1:Fd/d/d/d1;                     // увеличиваем Знание на 1
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/4/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+!!en; 
+
+** Достижение 5: Ревизор При захвате нейтрального производства получает ресурсы накопленные за 1 день его работы
+** ранг дается за каждые 2 захваченные неработающие шахты
+!?OB53;                                 // перед посещением шахты
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход если опция не включена
+
+!!UN:P760/1;                            // значение опци 1
+!!MN998:O?y1;                           // y1 - текущий владелец
+!!UN&y1=-1:P760/5;                      // значение опци 5 (захват нейтральной шахты)
+
+!$OB53;                                 // после захвата шахты
+!!UN:P760/?y1;
+!!FU&y1<>5:E;                           // выход если не захват нейтральной шахты
+
+!!UN&y1>0:P760/1;                       // восстанавливаем значение опции 760 в 1, если опция включена
+!!HE-1:N?y77 P?y1/?y2/?y3 O?y4;         // y77/y1/y2/y3/y4 - номер/координаты/владелец текущего героя
+!!FU|y1<0/y4<0:E;                       // выход, если герой не на карте (например, проиграл бой за шахту)
+
+!!MN998:O?y1 R?y5;                      // y1/y5 - текущий владелец шахты/производимый ресурс
+!!FU&y1<>y4:E;                          // выход, если шахта не захвачена
+
+!!SN:W^opt760.h%Y77a5r^/?y2;            // y2 - ранг достижения Ревизор
+!!OW:Iy4/?y3;                           // y3=0, для игрока человека
+
+!!if&y2>0;                              // если ранг достижения Ревизор не нулевой, даем ресурсы
+  !!VRy6:Sy2;                           // кол-во получаемого ресурса равно уровню достижения...
+  !!SN:W^opt760_dlvl^/?y7;
+  !!VRy6&-1000/y2>0:+y7;    // бонус ИИ-героям за уровень сложности
+  !!VRy6|y5=0/y5=2:*2;                  // для дерева/руды множитель 2
+  !!VRy6&y5=6:*1000;                    // для золота множитель 1000
+  !!OW:Ry4/y5/dy6;                      // увеличиваем ресурсы игрока
+
+  !!if&y3=0;                            // для игрока-человека выводим сообщение
+    !!HE-1:B0/?z1;                      // z1 - имя героя-ревизора
+    !!SN:T^opt760.m5^/?z2/^HeroName^/z1;// z2 - текст сообщения об обнаружении ресурсов
+    !!IF:Q1/y5/y6/1/2;                  // показ сообщения
+  !!en; 
+!!en; 
+
+!!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+!!VRi^opt760.h%Y77a5c^:+1 %2;           // увеличиваем счетчик достижения
+
+!!if&i^opt760.h%Y77a5c^=0;              // при получении нового ранга, если ранг еще не максимальный
+  !!VRi^opt760.h%Y77a5r^:+1;            // увеличиваем текущий ранг достижения
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/5/i^opt760.h%Y77a5r^; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+!!en; 
+
+** Достижение 6/7/8: Душегуб/Инквизитор/Головорез Мирные существа фракции в бою с героем имеют повышенную атаку и сниженную защиту.
+
+!?OB(OBJ_MONSTER);                      [attack creatures]
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if the option is not enabled]
+
+!!VRi^opt760.gf^:S-1;
+!!VRi^opt760.gv^:S-1;
+
+!!OB998:U?y1;                           [y1 - type of creatures]
+!!MO998:G?y2;                           [y2 - number of creatures]
+!!MA:Fy1/?y3 Oy1/?y4;                   [y3/y4 - FV/race of one creature]
+!!FU&y4<=(NO_TOWN):E;                   [exit if the battle is with neutrals]
+
+!!VRi^opt760.gf^:Sy4 :3;                [faction of creature]
+!!VRi^opt760.gv^:Sy3 *y2;               [FV of the unit]
+
+!?FU(OnAfterBattleUniversal)&i^es_isNeutralBattle^; [end of battle]
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if the option is not enabled]
+
+!!SN:W^opt760.gf^/?y11 W^opt760.gv^/?y12;[y11, y12, getting signs of extermination]
+!!SN:W^opt760.gf^/-1 W^opt760.gv^/-1;   [reset signs of extermination]
+!!FU&y11<0:E;                           [exit if not extermination]
+
+!!BA:H0/?y1 P?i/?j/?k;                  [i, j, k, y1/i/j/k - number/coordinates of the attacking hero]
+!!HEy1:O?y2;                            [y2 - owner player]
+!!FU|i<0/y2<0:E;                        [exit if the hero loses the battle]
+
+!!VRy5:Sy11 +6;                         [y5 - achievement number 6/7/8]
+!!SN:W^opt760.h%Y1a%Y5r^/?y3;           [y3 - achievement rank Enemy of the People]
+
+!!if&y3<9;                              [if the rank is not yet maximum]
+  !!SN:W^opt760.h%Y1a%Y5c^/?y10;        [y10, increase the achievement counter]
+  !!VRy10:+y12;                         [y10, ...]
+  !!SN:W^opt760.h%Y1a%Y5c^/y10;         [...]
+  !!FU(ES_760_GetCurrentRank):Py10/?y13; [y13 - current achievement rank]
+
+  !!if&y13>y3;                          [when receiving a new rank, if the rank is not yet maximum]
+    !!SN:W^opt760.h%Y1a%Y5r^/y13;       [increase the current achievement rank]
+    !!FU(ES_760_ShowAchievedAchievementDlg)&i^timerIsHuman^:Py1/y5/y13; [show hero x1 achieving x2 rank x3 (only for human player)]
+  !!en;
+!!en;
+
+!?FU(ES_760_GetCurrentRank);            [Returns the Enemy of the People achievement rank to x2 for x1 FV]
+!!VRx2:S0;                              [x2, default rank is zero]
+!!VRy1:S20000;                          [y1, 20k - FV for the first rank, each subsequent one is doubled]
+
+!!re i/1/9;                             [enumerate possible ranks]
+  !!if&x1>=y1;                          [if there is enough FV for the next rank]
+    !!VRx2:Si;                          [x2, save the returned rank]
+    !!VRy1:*2;                          [y1, the required FV for each subsequent rank is doubled]
+  !!el;                                 [if FV is not enough]
+    !!br;                               [interrupt search]
+  !!en;
+!!en;
+
+!?FU(OnSetupBattlefield);
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if the option is not enabled]
+
+!!VRi^opt760.ea^:S0;                    [reset the Dragon Slayer animation flag]
+
+!?FU(OnBattlefieldVisible)&i^es_isNeutralBattle^; [when setting up the battlefield, activate the achievement]
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            [exit if the option is not enabled]
+
+!!FU&i^opt760.gf^<0:E;
+
+!!HEi^battle_hero_0^:N?y3;
+!!VRy4:S6 +i^opt760.gf^;                [y4 - achievement number Enemy of the People]
+!!SN:W^opt760.h%Y3a%Y4r^/?y5;           [y5 - achievement rank]
+!!SN:W^opt760_dlvl^/?y6;
+!!HEy3:O?h;
+!!OW&h>=0:Ih/?h;
+!!VRy5&h=1/y5>0:+y6;
+!!VRy5&y5>9:S9;                         [y5, bonus to AI heroes for difficulty level]
+!!FU&y5<1:E;                            [exit if the achievement rank is zero]
+
+!!SN:W^opt760.ea^/y4;
+!!FU(NewIntArray)&i^battle_isVisible^:P?y30;
+
+; Increase the attack and decrease def when it's a human player's battle
+!!if&i^battle_human_0^;
+   !!re i/(BATTLE_DEFENDER_STACK_FIRST)/(BATTLE_DEFENDER_STACK_LAST); [modification of creature parameters for a non-theoretical battle]
+     !!BMi:T?y1 N?y2;                   [y1/y2 - type/number of creatures in the squad]
+
+     !!if&y1>(NO_MON)/y2>0;             [if the squad exists]
+       !!BMi:A?y3 D?y4;                 [y3/y4 - attack/defense of the unit]
+       !!VRy3:+y5 +y5;
+       !!VRy4:-y5 -y5 F0/(INT_MAX);
+       !!BMi:Ay3 Dy4;                   [update squad parameters]
+
+       !!FU(Array_Push)&i^battle_isVisible^:Py30/i;
+     !!en;
+   !!en;
+!!en;
+
+!!if&i^battle_isVisible^;
+  !!SN:P^FRENZY^;
+  !!FU(ES_PlayAnimationOnMultipleStacks):Py30/28/(FALSE);
+!!en;
+
+; Show battle log on the first round, as tactics phase could break it
+!?FU(OnBattleRound)&i^battle_round^=0/i^es_isNeutralBattle^/i^opt760.ea^>5/i^battle_isVisible^;
+!!SN:T^opt760.b%i(opt760.ea)^/?z1;
+!!MM:Sz1;
+
+** Achievement 9: Courier +200 to the hero's AP for completing each visionary task
+; Warning: Using HE:Y for movement points will make the hero not being able to dig (the max movement points is not set/updated)
+!?OB83;                                 // перед посещением Хижины провидца
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход если опция не включена
+!!QU998:Q?y1;
+!!UN&y1>0:P760/9;                       // значение опци 9, если в хижине есть задание
+
+!$OB83;                                 // после посещения Хижины провидца
+!!UN:P760/?y1;
+!!UN&y1>0:P760/1;                       // y1 - состояние опции, сброс состояния
+!!QU998:Q?y2;                           // y2 - задание в хижине
+!!FU|y1<>9/y2>0:E;                      // выход если задание не выполнено посетителем
+
+!!HE-1:N?y77;                           // y77 - номер текущего героя
+!!SN:W^opt760.h%Y77a9r^/?y2;            // y2 - ранг достижения Курьер
+!!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+!!SN:W^opt760.h%Y77a9c^/?y1;            // увеличиваем счетчик достижения
+!!VRy1:+1;                              // ...
+!!SN:W^opt760.h%Y77a9c^/y1;             // ...
+!!VRy1:%1;                              // y1=0 если получен новый ранг достижения
+
+!!if&y1=0;                              // при получении нового ранга, если ранг еще не максимальный
+  !!HEy77:Y65/200/999/2;                // герой получает +200 к базовым ОД
+  !!SN:W^opt760.h%Y77a9r^/?y2;          // увеличиваем текущий ранг достижения
+  !!VRy2:+1;                            // ...
+  !!SN:W^opt760.h%Y77a9r^/y2;           // ...
+  !!OW:C?y4 Iy4/?y3;                    // y3=0, для игрока человека
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/9/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+!!en; 
+
+** Достижение 10: Ведьмак В начале раунда герой имеет 10% шанс/ранг наслать порчу на один из вражеских отрядов.
+
+; This function is executed in 1000 es - stdlib in order to be sooner than Advanced Witch Huts (option 194 from WoG Scripts)
+!?FU(ES_760_StoreSecSkillLevel);
+!!WH998:S?(secSkill:y);
+
+!!if&(secSkill)>(NO_SKILL);
+  !!HE(CURRENT_HERO):S(secSkill)/?(witchSkill:y);
+  !!VRi^es_760_prevSecSkillLvPlusOne^:S(witchSkill) +1;                           // Номер навыка у ведьмы/уровень навыка у героя
+!!en;
+
+; Warning: Different triggers should be used depending on whether Advanced Witch Huts is enabled, as OB:S on ! ?OB blocks the execution of ! $OB
+; The following script must be executed later than Advaned Witch Huts
+; Both triggers probably can be replaced with 4AA766
+!?OB(OBJ_WITCH_HUT)&i^es_760_prevSecSkillLvPlusOne^;
+!!FU(ES_760_ExecuteWitchHutsAchievement):P;
+
+!$OB(OBJ_WITCH_HUT)&i^es_760_prevSecSkillLvPlusOne^;
+!!FU(ES_760_ExecuteWitchHutsAchievement):P;
+
+!?FU(ES_760_ExecuteWitchHutsAchievement);
+!!UN:P760/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;             [выход если опция не включена]
+
+!!WH998:S?y2;
+!!FU&y2=(NO_SKILL):E;
+
+!!HE(CURRENT_HERO):Sy2/?y3;             // y2/y3 - Номер навыка у ведьмы/уровень навыка у героя
+!!VRy30:Si^es_760_prevSecSkillLvPlusOne^ -1;
+!!FU&y3=y30:E;                           // выход если опция не включена или обучения не было
+
+!!HE(CURRENT_HERO):N?y77;               // y77 - номер текущего героя
+!!SN:W^opt760.h%Y77a10r^/?y2;           // y2 - ранг достижения Курьер
+!!OW:C?y5 Iy5/?y6;                      // y6=0, для игрока человека
+
+; Increase the rank of achievement if the hero learn a new skill from the Withch Hut (not counting when advancing a skill)
+!!if&y30=(SKILL_NOT_LEARNED)/y2<9;                   // если был получен новый навык и ранг достижения не максимален
+  !!VRy2:+1;                            // повышаем ранг достижения
+  !!SN:W^opt760.h%Y77a10r^/y2;          // ...
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y6=0:Py77/10/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+
+; Decrease the rank of achievement if the hero forget a skill from the Witch Hut
+!!el&y1=(SKILL_NOT_LEARNED)/y2>0;                         // если навык был забыт и ранг достижения не нулевой
+  !!VRy2:-1;                            // понижаем ранг достижения
+  !!SN:W^opt760.h%Y77a10r^/y2;          // ...
+
+  !!if&y6=0;                            // для игрока-человека
+    !!HE(CURRENT_HERO):B0/?z1;                      // z1 - имя героя получившего достижение
+    !!SN:T^opt760.m10^/?z2/^HeroName^/z1/^Rang^/y2; // z2 - текст сообщения
+    !!IF:M1/2;                          // показ сообщения
+  !!en; 
+!!en;
+
+; Reset the variable
+!!VRi^es_760_prevSecSkillLvPlusOne^:S0;
+
+!?FU(OnBeforeBattleUniversal);          // перед битвой
+!!UN:P760/?y1;                          // [y1 - состояние опции
+!!SN&y1<>0:W^opt760.10.0^/0 W^opt760.10.1^/0; // сброс шансов срабатывания порчи
+
+!?FU(OnBattlefieldVisible);             // при отображении поля боя
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BA:H0/?y1 H1/?y2;
+!!VRy4:S0;                              // y1/y2 - сражающиеся герои, инициализация y4
+!!SN:W^opt760.h%Y1a10r^/?y3;            // y3 -ранг достижения атакующего
+!!SN:W^opt760_dlvl^/?y6;
+!!HEy1:O?h;
+!!OW&h>=0:Ih/?h;
+!!VRy3&h=1/y3>0:+y6;
+!!VRy3&y3>9:S9; // бонус ИИ-героям за уровень сложности
+!!VRy3:*10;                             // y3 - шанс наслать порчу у атакующего героя
+!!SN&y2>=0:W^opt760.h%Y77a10r^/?y4;     // y4 - ранг достижения защищающегося
+
+!!if&y2>=0; 
+  !!VRh:S-1;
+  !!HEy2&y2>=0:O?h;
+  !!OW&h>=0:Ih/?h;
+  !!VRy3&h=1/y3>0:+y6;
+  !!VRy3&y3>9:S9;                       // бонус ИИ-героям за уровень сложности
+!!en; 
+
+!!VRy4:*10;                             // y4 - шанс наслать порчу у защищающегося героя
+!!SN:W^opt760.10.0^/y4;                 // шанс получить порчу у атакующей стороны
+!!SN:W^opt760.10.1^/y3;                 // шанс получить порчу у защищающейся стороны
+
+!?FU(OnBattleRound)&i^battle_round^>=0; // в начале каждого раунда
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!VRy1:S0 R99;
+!!VRy2:S0 R99;                          // y1/y2 - случайные числа для сторон
+!!SN:W^opt760.10.0^/?y3 W^opt760.10.1^/?y4; // y3/y4 - шансы получить порчу у сторон
+!!FU&y3<=y1/y4<=y2:E;                   // выход, если насылание порчи не сработало
+
+!!VRy5:C-1/-1;                          // y5/y6 - количество действующих отрядов атакующего/защищающегося
+
+!!re i/0/41;                            // подсчет действующих отрядов
+  !!BMi:T?y11 N?y12;                    // y11/y12 - тип/численность отрядв
+  !!VRy5&y11>=0/y12>0/i<21:+1;          // y5 - количество действующих отрядов атакующего
+  !!VRy6&y11>=0/y12>0/i>20:+1;          // y6 - количество действующих отрядов защищающегося
+!!en; 
+
+!!VRy7:S1 Ry5;
+!!VRy8:S1 Ry6;                          // номера отрядов, получающих порчу
+!!VRy5:C0/0;                            // инициализация y5/y6
+
+!!re i/0/41;                            // подсчет действующих отрядов
+  !!BMi:T?y11 N?y12;                    // y11/y12 - тип/численность отрядв
+
+  !!if&y11>=0/y12>0/i<21;               // найден действующий отряд атакующего
+    !!VRy5:+1;                          // y5 - количество действующих отрядов атакующего
+
+    !!if&y5=y7/y3>y1;                   // насылание порчи на отряд атакующего
+      !!BMi:M73/3/3;                    // накладывание болезни
+
+      !!if&i^battle_isVisible^;         // для нетеоретической битвы
+        !!SN:T^opt760.b10^/?z1;         // z1 - текст сообщения порчи
+        !!MM:Sz1;
+        !!SN:P^DISEASE^;
+        !!BMi:V69;                      // вывод текста в лог битвы, звук и анимация болезни
+      !!en; 
+    !!en;   
+  !!en;   
+
+  !!if&y11>=0/y12>0/i>20;               // найден действующий отряд защищающегося
+    !!VRy6:+1;                          // y6 - количество действующих отрядов
+
+    !!if&y6=y8/y4>y2;                   / насылание порчи на отряд атакующего
+      !!BMi:M73/3/3;                    // накладывание болезни
+
+      !!if&i^battle_isVisible^;         // для нетеоретической битвы
+        !!SN:T^opt760.b10^/?z1;         // z1 - текст сообщения порчи
+        !!MM:Sz1;
+        !!SN:P^DISEASE^;
+        !!BMi:V69;                      // вывод текста в лог битвы, звук и анимация болезни
+      !!en; 
+    !!en;   
+  !!en;   
+!!en; 
+
+** Достижение 11: Защитник Городские башни имеют 5% шанс отравить отряд врага
+** Достижение 12: Захватчик Катапульта после выстрела имеет 10% шанс получить второй ход.
+
+!?FU(OnBattleRound)&i^battle_round^=0;  // в начале нулевого раунда
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BA:S?y1;
+!!FU&y1=0:E;                            // выход, если битва не осадная
+
+!!SN:W^opt760.11.d^/-1;                 // сброс номера отряда получающего урон от стен
+!!SN:W^opt760.12.s^/-1;                 // сброс номера отряда катапульты для повторного хода
+!!SN:W^opt760.12.r^/-1;                 // сброс номера раунда в котором выпадал повторный ход
+!!SN:W^opt760.11.1^/0;                  // отравленного выстрела башни у защищающегося героя
+!!SN:W^opt760.12.0^/0;                  // шанс повторной атаки катапульты у атакующего героя
+!!BA:H0/?y1 H1/?y2;                     // y1/y2 - атакующий/защищающийся герои
+
+!!if&y2>=0; 
+  !!SN:W^opt760.h%Y2a11r^/?y4;          / y4 - ранг достижения Защитник у защищающегося
+  !!SN:W^opt760_dlvl^/?y6;
+  !!HEy2:O?h;
+  !!OW&h>=0:Ih/?h;
+  !!VRy4&h=1/y4>0:+y6;
+  !!VRy4&y4>9:S9;                       // бонус ИИ-героям за уровень сложности
+  !!VRy4:*5;
+  !!SN:W^opt760.11.1^/y4;               // установка шанса отравляющего выстрела
+!!en; 
+
+!!SN:W^opt760.h%Y1a12r^/?y3;            / y3 - ранг достижения Захватчик у атакующего
+!!HEy1:O?h;
+!!OW&h>=0:Ih/?h;
+!!VRy3&h=1/y3>0:+y6;
+!!VRy3&y3>9:S9;                         // бонус ИИ-героям за уровень сложности
+!!VRy3:*10;
+!!SN:W^opt760.12.0^/y3;                 // установка шанса повторного хода катапульты
+
+!?FU(OnMonsterPhysicalDamage);          // при получении физического урона отрядом
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!MF:W?y1 N?y3;                         // y1/y3 - тип урона/отряд, получающий урон
+!!BMy3:T?y4;
+!!FU&y4>=145/y4<=148:E;                 // отравление не действует на боевые машины
+!!FU&y1<>2:E;                           // выход, если не атака стен
+
+!!SN:W^opt760.11.1^/?y1;                // y1 - шанс отравленного выстрела
+!!VRy2:S0 R99;                          // y2 - случайное число
+!!FU&y2>=y1:E;                          // выход, если выстрел не отравленный
+
+!!BMy3:G71/?i/?j;
+!!VRi:+1;
+!!BMy3:M71/i/0; // накладывание яда (повторное наложение увеличиает длительность)
+
+!!if&i^battle_isVisible^;               // для нетеоретической битвы
+  !!SN:T^opt760.b11^/?z1;               // z1 - текст сообщения об отравлении
+  !!VRz2:S^POISON^;                     // z2 - звуковой файл яда
+  !!MM:Sz1;
+  !!SN:P2;
+  !!BMy3:V67;                           // вывод текста в лог битвы, звук и анимация яда
+!!en; 
+
+!?FU(OnBeforeBattleAction);             // перед действием
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BA:S?y1;
+!!FU&y1=0:E;                            // выход, если битва не осадная
+
+!!BG:N?y1 A?y2;
+!!BMy1:T?y3;                            // y1/y2/y3 - номер отряда/действие/тип отряда
+!!FU|y2<>9/y3<>145:E;                   // выход, если не атака стен катапультой
+
+!!SN:W^opt760.12.0^/?y2;                // y2 - шанс повторной атаки катапульты
+!!VRy3:S0 R99;                          // y3 - случайное число
+!!SN:W^opt760.12.r^/?y4;                // y4 - номер раунда в котором катапульте выпадал повторный ход
+!!SN&y3<y2/y4<v997:W^opt760.12.s^/y1;   // сохранение номера отряда катапульты, если в текущем раунде повторных ход не выпадал
+
+!?FU(OnBattleRegeneratePhase);          // фаза регенерации
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!SN:W^opt760.12.s^/?y1;                // отряд катапульты, получающий второй ход
+!!SN&y1>=0:Xd/d/1;                      // блок регенерации, если повторная атака катапультой
+
+!?FU(OnBattleStackObtainsTurn);         // при получении хода отрядом
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!SN:W^opt760.12.s^/?y1;                // отряд катапульты, получающий второй ход
+!!FU&y1<0:E;                            // выход, если нет повторного хода катапульты
+
+!!SN:W^opt760.12.s^/-1;                 // сброс признака повторного хода катапульты
+!!SN:W^opt760.12.r^/v997;               / сохранение раунда повторного хода катапульты
+!!VRy2:Sy1 :21;
+!!VRy3:Sy1 %21;                         // y2/y3 - сторона/отряд катапульты
+!!SN:Xy2/y3;                            // передача хода катапульте
+
+!?FU(OnAfterBattleUniversal);           // после боя
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BA:S?y1;
+!!FU&y1=0:E;                            // выход, если битва не осадная
+
+!!BA:H0/?y1 H1/?y2;                     // y1/y2 - атакующий/защищающийся герои
+!!HEy1:O?y3;                            // y3 - владелец атакующего героя
+!!HEy2&y2>=0:O?y4;                      // y4 - владелец защищающегося героя (если есть)
+
+!!if&y3>-1;                             // если победил атакующий герой
+  !!VRy77:Sy1;                          // y77 - номер героя
+  !!SN:W^opt760.h%Y77a12r^/?y2;         // y2 - ранг достижения Захватчик
+  !!FU&y2>=9:E;                         // выход, если уровень достижения уже максимальный
+
+  !!SN:W^opt760.h%Y77a12c^/?y1;         // увеличиваем счетчик достижения
+  !!VRy1:+1;                            // ...
+  !!SN:W^opt760.h%Y77a12c^/y1;          // ...
+  !!VRy1:%2;                            // y1=0 если получен новый ранг достижения
+
+  !!if&y1=0;                            // при получении нового ранга, если ранг еще не максимальный
+    !!SN:W^opt760.h%Y77a12r^/?y2;       // увеличиваем текущий ранг достижения
+    !!VRy2:+1;                          // ...
+    !!SN:W^opt760.h%Y77a12r^/y2;        // ...
+    !!OW:Iy3/?y3;                       // y3=0, для игрока человека
+    !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/12/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+  !!en; 
+!!el; 
+  !!if&y2>=0/y4>-1;                     // если победил защищающийся герой
+    !!VRy77:Sy2;                        / y77 - номер героя
+    !!SN:W^opt760.h%Y77a11r^/?y2;       // y2 - ранг достижения Защитник
+    !!FU&y2>=9:E;                       // выход, если уровень достижения уже максимальный
+
+    !!SN:W^opt760.h%Y77a11c^/?y1;       // увеличиваем счетчик достижения
+    !!VRy1:+1;                          // ...
+    !!SN:W^opt760.h%Y77a11c^/y1;        // ...
+    !!VRy1:%1;                          // y1=0 если получен новый ранг достижения
+
+    !!if&y1=0;                          // при получении нового ранга, если ранг еще не максимальный
+      !!SN:W^opt760.h%Y77a11r^/?y2;     // увеличиваем текущий ранг достижения
+      !!VRy2:+1;                        // ...
+      !!SN:W^opt760.h%Y77a11r^/y2;      // ...
+      !!OW:Iy4/?y3;                     // y3=0, для игрока человека
+      !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/11/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+    !!en; 
+  !!en; 
+!!en; 
+
+** Достижение 13: Палач Вражеские отряды при получении хода с вероятностью 1% застывают в ужасе
+
+!?FU(OnBattleRound)&v997=0;             // в начале нулевого раунда
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!SN:W^opt760.13.0^/0;                  // сброс шанса оцепенения отрядов атакующего
+!!SN:W^opt760.13.1^/0;                  // сброс шанса оцепенения отрядов защищающегося
+!!BA:H0/?y1 H1/?y2;                     // y1/y2 - атакующий/защищающийся герои
+!!SN:W^opt760.h%Y1a13r^/?y3;            // y3 - ранг достижения Палач у защищающегося
+!!SN:W^opt760_dlvl^/?y6;
+!!HEy1:O?h;
+!!OW&h>=0:Ih/?h;
+!!VRy3&h=1/y3>0:+y6;
+!!VRy3&y3>9:S9;                         // бонус ИИ-героям за уровень сложности
+!!SN:W^opt760.13.1^/y3;                 // установка шанса оцепенения отрядов атакующего
+
+!!if&y2>=0;                             // если есть защищающийся герой
+  !!SN:W^opt760.h%Y2a13r^/?y4;          // y4 - ранг достижения Палач у защищающегося
+  !!HEy2:O?h;
+  !!OW&h>=0:Ih/?h;
+  !!VRy4&h=1/y4>0:+y6;
+  !!VRy4&y4>9:S9;                       // бонус ИИ-героям за уровень сложности
+  !!SN:W^opt760.13.0^/y4;               // установка шанса оцепенения отрядов атакующего
+!!en; 
+
+!?FU(OnBeforeBattleAction)&i^battle_hero_vs_hero^;
+!!UN:P760/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Exit if not walking or shooting
+!!BG:A?(action:y);
+!!FU&(action)<>(BATTLE_ACTION_WALK_AND_ATTACK)/(action)<>(BATTLE_ACTION_SHOOT):E;
+
+; Exit if not alive
+!!BMi^battle_acting_stack^:F?(flags:y);
+!!VR(isAlive:y):S(flags) &(MON_FLAG_ALIVE);
+!!FU&(isAlive)=0:E;
+
+; Check acted flag for mod compatibility
+!!VR(isActed:y):S(flags) &(MON_FLAG_ACTED);
+!!FU&(isActed):E;
+
+; Exit if the creature is stronger than the weakest level 8
+!!BMi^battle_acting_stack^:T?(type:y);
+!!MA:F(MON_BLOOD_DRAGON)/?(bloodFv:y) F(type)/?(fv:y);
+!!FU&(fv)>=(bloodFv):E;
+
+; Exit if not lucky
+!!VR(random:y):R0/0/99;
+!!FU&i^battle_acting_side^=(BATTLE_LEFT)/i^opt760.13.0^<=(random):E;                    // выход если оцепенение не сработало для отряда атакующего
+!!FU&i^battle_acting_side^=(BATTLE_RIGHT)/i^opt760.13.1^<=(random):E;                    // выход если оцепенение не сработало для отряда защищающегося
+
+; Set the destination to -1 so the monster won't attack (but will still walk)
+!!BG:D-1;
+!!BMi^battle_acting_stack^:Fd|(MON_FLAG_ACTED);
+
+!!if&i^battle_isVisible^;               // для нетеоретической битвы
+  !!SN:T^opt760.b13^/?(msg:z);          // текст сообщения об оцепенении
+  !!MM:S(msg);
+  !!SN:P^FEAR^;
+  !!BMi^battle_acting_stack^:V15;       // вывод текста в лог битвы, звук и анимация страха
+!!en; 
+
+!?FU(OnBeforeBattleAction);             // перед действием в бою
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BG:A?y1;
+!!SN:W^opt760.13.a^/y1;                 // сохраняем последнее выполненное действие
+
+!?FU(OnAfterBattleUniversal);           // после боя
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BA:H0/?y1 H1/?y2;
+!!FU&y2<1:E;                            // y1/y2 - атакующий/защищающийся герои, выход, если не битва двух героев
+
+!!SN:W^opt760.13.a^/?y3;
+!!FU|y3=4/y3=5:E;                       // выход, если герой сбежал/откупился
+
+!!HEy1:O?y3;
+!!HEy2:O?y4;                            // y3/y4 - владельцы атакующеего/защищающегося героя
+!!FU&y3<0/y4<0:E;                       // выход, если оба героя погибли
+
+!!VRy77&y3>=0:Sy1;
+!!VRy77&y4>=0:Sy2;                      // y77 - победивший герой
+!!SN:W^opt760.h%Y77a13r^/?y2;           // y2 - ранг достижения Палач
+!!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+!!SN:W^opt760.h%Y77a13c^/?y1;           // увеличиваем счетчик достижения
+!!VRy1:+1;                              // ...
+!!SN:W^opt760.h%Y77a13c^/y1;            // ... 
+!!VRy1:%2;                              // y1=0 если получен новый ранг достижения
+
+!!if&y1=0;                              // при получении нового ранга, если ранг еще не максимальный
+  !!SN:W^opt760.h%Y77a13r^/?y2;         // увеличиваем текущий ранг достижения
+  !!VRy2:+1;                            // ...
+  !!SN:W^opt760.h%Y77a13r^/y2;          // ...
+  !!OW:C?y4 Iy4/?y3;                    // y3=0, для игрока человека
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/13/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+!!en; 
+
+** Достижение 14: Эрудит Герой имеет 10% шанс получить дополнительный случайный параметр при обучении на карте
+
+!?OB51;
+!!FU(ES_760_Pre14):P3;               // Перед посещением объекта Лагерь наемников
+
+!?OB23;
+!!FU(ES_760_Pre14):P1;               // Перед посещением объекта Башня Марлетто
+
+!?OB61;
+!!FU(ES_760_Pre14):P4;               // Перед посещением объекта Звездная ось
+
+!?OB32;
+!!FU(ES_760_Pre14):P2;               // Перед посещением объекта Сад просвящения
+
+!?OB47;
+!!FU(ES_760_Pre14):P8;               // Перед посещением объекта Школа магии
+
+!?OB107;
+!!FU(ES_760_Pre14):P9;               // Перед посещением объекта Школа войны
+
+!?OB4;
+!!FU(ES_760_Pre14):P7;               // Перед посещением объекта Арена
+
+!?OB41;
+!!FU(ES_760_Pre14):P6;               // Перед посещением объекта Библиотека просвещения
+
+!?FU(ES_760_Pre14);                  // Перед посещением повышающих объектов
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход если опция 760 не включена
+
+!!HE(CURRENT_HERO):Vx1/?y1;
+!!SN:W^opt760.14.v^/y1;                 // сохранение посещенных героем объектов данного типа
+
+!$OB51;
+!!FU(ES_760_Post14):P3;              // После посещения объекта Лагерь наемников
+
+!$OB23;
+!!FU(ES_760_Post14):P1;              // После посещения объекта Башня Марлетто
+
+!$OB61;
+!!FU(ES_760_Post14):P4;              // После посещения объекта Звездная ось
+
+!$OB32;
+!!FU(ES_760_Post14):P2;              // После посещения объекта Сад просвящения
+
+!$OB47;
+!!FU(ES_760_Post14):P8;              // После посещения объекта Школа магии
+
+!$OB107;
+!!FU(ES_760_Post14):P9;              // После посещения объекта Школа войны
+
+!$OB4;
+!!FU(ES_760_Post14):P7;              // После посещения объекта Арена
+
+!$OB41;
+!!FU(ES_760_Post14):P6;              // После посещения объекта Библиотека просвещения
+
+!?FU(ES_760_Post14);                 // После посещения повышающих объектов
+!!UN:P760/?y1;
+!!FU&y1=0:E;                            // выход если опция 760 не включена
+
+!!HE(CURRENT_HERO):Vx1/?y1;
+!!SN:W^opt760.14.v^/?y2;                // получение посещенных героем объектов данного типа
+!!FU&y1=y2:E;                           // выход, если объект не активирован при данном посещении
+
+!!HE(CURRENT_HERO):N?y77 B0/?z1;
+
+!!OW:C?y4 Iy4/?y3;                      // y3=0, для игрока человека
+** активация достижения
+!!SN:W^opt760.h%Y77a14r^/?y2;           // y2 - ранг достижения Эрудит
+!!SN:W^opt760_dlvl^/?y6;
+
+!!VRy2&-1000/y2>0:+y6;
+!!VRy2&y2>9:S9;                         // бонус ИИ-героям за уровень сложности
+!!VRy1:S0 R9;
+
+!!if&y1<y2;                             // если выпал шанс дополнительного повышения
+  !!VRy1:S31 R3;                        // y1 - случайный параметр для полвышения (31..34)
+  !!HEy77&y1=31:Fd1/d/d/d;              // повышение выпавшего параметра
+  !!HEy77&y1=32:Fd/d1/d/d;              // ...
+  !!HEy77&y1=33:Fd/d/d1/d;              // ...
+  !!HEy77&y1=34:Fd/d/d/d1;              // ...
+
+  !!if&y3=0;                            // для игрока-человека
+    !!SN:T^opt760.m14^/?z2/^HeroName^/z1; // z2 - текст сообщения
+    !!IF:Q1/y1/1/1/2;                   // показ сообщения
+  !!en; 
+!!en; 
+** получение ранга достижения
+!!FU&y2>=9:E;                           // выход, если уровень достижения уже максимальный
+
+!!SN:W^opt760.h%Y77a14c^/?y1;           // увеличиваем счетчик достижения
+!!VRy1:+1;                              // ...
+!!SN:W^opt760.h%Y77a14c^/y1;            // ... 
+!!VRy1:%3;                              // y1=0 если получен новый ранг достижения
+
+!!if&y1=0;                              // при получении нового ранга, если ранг еще не максимальный
+  !!SN:W^opt760.h%Y77a14r^/?y2;         // увеличиваем текущий ранг достижения
+  !!VRy2:+1;                            // ...
+  !!SN:W^opt760.h%Y77a14r^/y2;          // ...
+  !!FU(ES_760_ShowAchievedAchievementDlg)&y3=0:Py77/14/y2; // показ получения героем x1 достижения x2 ранга x3 (только для игрока-человека)
+!!en; 
+
+** end

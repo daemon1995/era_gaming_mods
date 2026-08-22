@@ -1,0 +1,125 @@
+ZVSE2
+** Author orig.  : Algor (Idea: Ivor)
+** Rewritten by  : Archer30
+** Name          : zombie-flesheaters
+** Name rus.     : зомби-трупоеды
+** Options       : 762
+
+
+!?FU(OnAfterErmInstructions);
+!!UN:P762/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Set up new names and description
+!!SN:H^monname^/(MON_ZOMBIE)/0/^%T(es.762.singName)^;
+!!SN:H^monname^/(MON_ZOMBIE)/1/^%T(es.762.plurName)^;
+!!SN:H^monname^/(MON_ZOMBIE)/2/?(desc:z);
+!!SN:H^monname^/(MON_ZOMBIE)/2/^%(desc)%T(es.762.desc)^;
+; Increase the fight value
+!!MA:F(MON_ZOMBIE)/?(fv:y);
+!!VR(fv):*105 :100;
+!!MA:F(MON_ZOMBIE)/(fv);
+
+!?FU(OnMonsterPhysicalDamage);
+!!UN:P762/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+; Exit if not direct melee or strike all around
+!!UN:C42149568/(UNC_INT)/?(dmgType:y);
+!!FU&(dmgType)<>4456676/(dmgType)<>4462398:E;
+
+; Get the attacker/defender stack
+!!MF:N?(defStack:y);
+!!VR(atkStack:y):Si^es_attackStack^;
+
+; Check if the attacking monster is a flesh eater
+!!BM(atkStack):T?(type:y);
+!!FU(ES_762_CheckIfMonIsEligible):P(type)/?(result:y);
+
+!!if&(result);
+  !!MF:F?(finalDmg:y);
+
+  ; Check if the defending monster is a living one
+  !!BM(defStack):F?(monFlags:y);
+  !!VR(isAlive:y):S(monFlags) &(MON_FLAG_ALIVE);
+  !!VR(isClone:y):S(monFlags) &(MON_FLAG_CLONE);
+  !!VRi^es_762_isSummoned^:S(monFlags) &(MON_FLAG_SUMMONED);
+
+  !!if&(isAlive)/(isClone)=(FALSE);
+    ; Check if the defending monster would be be killed by the flesh eater
+    !!BM(defStack):N?(num:y) H?(hp:y) L?(lostHp:y);
+    !!VR(defCurrTotalHp:y):S(num) *(hp) -(lostHp);
+
+    ; Store the hp of the def stack if it would be killed, set up flags for the victim to disappear 
+    !!if&(finalDmg)>=(defCurrTotalHp);
+      !!VRi^es_762_regenHp^:+(defCurrTotalHp);
+      !!BM(defStack):Fd|813694976 E0;    [Clone, Sacrified, No Colouring]
+    !!en;
+  !!en;
+!!en;
+
+!?FU(ES_OnAfterMelee)&i^es_762_regenHp^;
+!#VA(atkStack:x) (defStack:x);
+
+; Warning: 
+; In some case the attacker's killed, or the defender wasn't killed, quit the flesh eating scene
+; However, the defender would still suffer from clone flag/0 spell. Will be fixed if reported
+!!BM(atkStack):N?(atkNum:y);
+!!BM(defStack):N?(defNum:y);
+
+!!if&(atkNum)>0/(defNum)<=0;
+  ; Remove the clone flag from the defender
+  !!BM(defStack):Fd~(MON_FLAG_CLONE);
+  !!BM(defStack)&i^es_762_isSummoned^=(FALSE):Fd~(MON_FLAG_SUMMONED);
+
+  ; Calculate the new HP and number of the flesheater
+  !!VR(noHpLost:y):S(FALSE);
+  !!BM(atkStack):H?(hp:y) L?(lostHp:y) B?(startNum:y);
+
+  !!VR(totalStartHp:y):S(startNum) *(hp);
+  !!VR(totalHp:y):S(atkNum) *(hp) -(lostHp);
+  !!VR(noHpLost)&(totalStartHp)=(totalHp):S(TRUE);
+
+  !!VR(newTotalHp:y):S(totalHp) +i^es_762_regenHp^ F(totalHp)/(totalStartHp);
+  !!VR(newCurrHp:y):S(newTotalHp) %(hp);
+  !!VR(newNum:y):S(newTotalHp) :(hp) +1;
+
+  !!if&(newCurrHp)=0;
+    !!VR(newCurrHp):S(hp);
+    !!VR(newNum):-1;
+  !!en;
+
+  !!VR(hpDrained:y):S(newTotalHp) -(totalHp);
+  !!VR(resNum:y):S(newNum) -(atkNum);
+
+  !!VR(newLostHp:y):S(hp) -(newCurrHp);
+
+  ; Set up new number and hp for the Zombises
+  !!BM(atkStack):N(newNum) L(newLostHp);
+
+  ; Show battle log and play animation/sound
+  !!if&i^battle_isVisible^/(noHpLost)<>(TRUE);
+    !!BM(atkStack):T?(type:y);
+    !!VR(isPlural:y):S(atkNum) -1 B;
+    !!SN:H^monname^/(type)/(isPlural)/?(flesheaterName:z);
+    !!SN:T^es.762.battleLog%(isPlural)^/?(battleLog:z)/^flesheater^/(flesheaterName)/^hp^/(hpDrained)/^resNum^/(resNum);
+    !!MM:S(battleLog);
+    
+    ; Play sound and animation
+    !!SN:P^ANIMDEAD^;
+    !!BM(atkStack):V74;
+  !!en;
+!!en;
+
+; Restore the global variable
+!!VRi^es_762_regenHp^:S0;
+!!VRi^es_762_isSummoned^:S0;
+
+// Funciton to check if the targeted monster is eligible for flesh eating
+!?FU(ES_762_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_ZOMBIE):S(TRUE);
+
+** end

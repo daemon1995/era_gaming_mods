@@ -1,0 +1,604 @@
+ZVSE2
+** Author orig.  : Algor
+** Updated by    : Archer30 and deamon_n
+** Name          : Hardcore heroes
+** Name rus.     : Смертные герои
+** Options       : 788
+
+; This script might not be fully compatible with Hero Specialty Boost option
+
+
+!?FU(OnBeforeBattleAction);             // перед действием в бою
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;             // выход, если опция не включена
+
+!!BG:A?i^es_788_lastBattleAction^;      // сохраняем последнее выполненное действие
+
+; This function is executed in 1000 es - stdlib in order to be sooner than random heroes (option 72 from WoG Scripts)
+!?FU(ES_788_Rebirth);                   // Перерождение героя
+!#VA(hero:x);
+!#VA(usedY[30]:y);
+
+; Exit if the hero is not neutral
+; Double check to make sure there is no crash when FU(ES_788_Rebirth) is called by external scripts by any chance
+!!HE(hero):O?(owner:y);
+!!FU&(owner)<>(NO_OWNER):E;
+
+; Exit if the defeated hero is Asmodeus
+!!FU&(hero)=i^wog_106_Asmodeus^:E;
+
+; Reset the hero
+!!HE(hero):Z?(heroPtr:y);
+!!SN:E5081488/(CALLCONV_THISCALL)/(heroPtr)/(hero);
+; Reset the hero's exp (this is not done with SN:E5081488)
+!!HE(hero):E0;
+; Restore the original starting army
+!!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameManager:y);
+!!SN:E5018608/(CALLCONV_THISCALL)/(gameManager)/(hero)/0/0;
+; Restore Movement Points
+!!SN:E5132288/(CALLCONV_THISCALL)/(heroPtr);
+!!HE(hero):Gv1 Wv1/1;
+
+; Unlearn all the spells
+!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);  // для каждого заклинания
+  !!HE(hero):Mi/0;                      // удаляем заклинание
+!!en;
+
+; Remove war machines
+!!HE(hero):A-(ART_BALLISTA) A-(ART_FIRST_AID_TENT);
+
+; Manage random seed
+; This is to prevent generating the same random numbers when fighting in the same location again and again
+; Restoring the seed is futile (as the seed can be more than 4 bytes)
+!!UN:C6814692/4/?(seed:y);
+!!VR(newSeed:y):S(seed) +i^es_788_counter^;
+!!VRi^es_788_counter^:+1;
+!!VR(random:y):R0/(newSeed);
+
+!!HE(hero):B2/?y2;
+!!VRy1:Sy2 :2;                          // y1 - раса героя 0..8
+!!VRy2:%2 *2 -1;
+!!VRi:R0/0/2;
+!!VRy2&i=2:S0;                          // y2 - класс героя -1/0/1 = Воин/Странник/Маг
+
+** установка первичных параметров
+!!VRy11:R0/1/2 -y2;
+!!VRy12:R0/1/2 -y2;                      // y11/y12/y13/y14 - первичные параметры нового героя
+!!VRy13:R0/2/3 +y2;
+!!VRy14:R0/2/3 +y2;                      // ...
+!!HE(hero):Fy11/y12/y13/y14;                // Установка первичных параметров
+
+** выбор специализации
+!!VRy3:R0/0/1;
+!!VRy4:R0/0/1;                           // y3 - тип специализации 0 - втор.навык, 1 - существо/ресурс/заклинание, y4=1 для альтернативной специализации (50% шанс)
+
+; Set up i values and give Ballista if lucky
+; Warriors
+!!if&y2=-1;
+  !!if&y3=0;                        // воин со вторичным навыком
+    !!VRi:R0/0/3;                          // i - случайное число 0..3
+  !!el;                            // воин с существом
+    !!VRk:R0/0/7;
+
+    ; 1/8 chance to become Ballista Specialist
+    !!if&k<=6;             
+      !!UN:Ty1/k/0/?i;                  // i - случайное негрейженное существо расы героя
+    !!el;
+      !!VRi:S(MON_BALLISTA);
+    !!en;
+  !!en;
+; Adventurers
+!!el&y2=0;
+  !!if&y3=0;                         // странник со вторичным навыком
+    !!VRi:R0/0/3;                          // i - случайное число 0..3
+  !!el;                         // странник с ресурсом
+    !!VRi:R0/(RES_FIRST)/(RES_LAST_SOD); // i - случайное число
+  !!en;
+; Mages
+!!el&y2=1;
+  !!if&y3=0;                         // маг со вторичным навыком
+    !!VRi:R0/0/3;                          // i - случайное число 0..3
+  !!el;                         // маг с заклинанием
+    !!VRi:R0/0/10;                         // i - случайное число 0..10
+  !!en;
+!!en;
+
+; Reset the specialty icon (if it was set by UN:G2 before)
+!!UN:G2/(hero)/3/-1;
+
+; Set Up new specialty (give Ballista for Ballista specialists)
+!!FU(ES_788_SetUpNewSpecialty):P(hero)/y2/y3/y4/i;
+
+; Add in spell book if the hero is a Mage
+; By default the spell book is given with internal function so only Alchemists and Death Knights start with a spell book
+!!HE(hero)&y2=1:A1/(ART_SPELL_BOOK)/17;                 // выдам катапульту и книгу всем героям
+
+; Set up reborn flags (set the last 16 bit to 788 to ensure the variable is not 0)
+!!VR(positiveHeroType:y):Sy2 +1;                         [Set hero type to positive number in order to be packed]
+!!FU(PackUnion):P(positiveHeroType)/2/y3/1/y4/1/i/12/788/16/?i^es_788_rebornFlags_%(hero)^;
+
+; Reset secondary skills and teach the specialty skill
+; Teach Estates if the hero is a resources master
+!!re i/(SEC_SKILL_FIRST)/(SEC_SKILL_LAST); // для каждого втор.навыка
+  !!HE(hero):Si/(SKILL_NOT_LEARNED);        // удаляем все вторичные навыки героя
+!!en; 
+
+!!HE(hero):X?j/?k/d/d/d/d/d;                // j/k - параметры специализации героя
+!!HE(hero)&j=0:Sk/(SKILL_ADVANCED);         // для спецов по втор.навыку даем этот навык на продвинутом уровне
+!!HE(hero)&j=2:S(SKILL_ESTATES)/(SKILL_BASIC); // для спецов по ресурсам даем базовое Имущество
+
+!!if&j=3;                               // для спецов по заклинаниям первым навыком даем профильную Школу Магии
+  !!SSk:S?l;
+  !!VRy10:S4;                           // y10 - навык профильной Школы. По умолчалию или для мультипрофильных заклинаний - Вода
+  !!VRy11:Sl &1;
+  !!VRy10&y11>0:S15;                    // ...
+  !!VRy11:Sl &2;
+  !!VRy10&y11>0:S14;                    // ...
+  !!VRy11:Sl &8;
+  !!VRy10&y11>0:S17;                    // ...
+  !!VRy11:Sl &4;
+  !!VRy10&y11>0:S16;                    // ...
+  !!HE(hero):Sy10/1;                        // даем базовый навык профильной Школы
+!!en; 
+
+!!if|j=1/j=6;                           // для спецов по существам первым навыком даем Нападение/Тактику/Стрельбу для пеших/летунов/стрелков
+  !!MA:Xk/?l;
+  !!VRy10:S22;                          // y10 - профильный навык. По-умолчанию - Нападение
+  !!VRy11:Sl &2;
+  !!VRy10&y11>0:S19;                    // для летающих существ - Тактика
+  !!VRy11:Sl &4;
+  !!VRy10&y11>0:S1;                     // для стреляющих существ - Стрельба
+  !!HE(hero):Sy10/1;                        // даем базовый профильный навык
+!!en; 
+
+!!if&j<>0;                              // для спецов не по втор.навыку подбираем второй базовый навык
+  !!if&y2=-1;                           // для Воинов
+    !!VRi:R0/0/5;
+    !!HE(hero)&i=0/y1<>4:S6/1;              // Лидерство
+    !!HE(hero)&i=0/y1=4:S12/1;              // Некромантия
+    !!HE(hero)&i=1:S9/1;                    // Удача
+    !!HE(hero)&i=2:S10/1;                   // Баллистика
+    !!HE(hero)&i=3:S20/1;                   // Артиллерия
+    !!HE(hero)&i=4:S23/1;                   // Доспехи
+    !!HE(hero)&i=5:S27/1;                   // Первая помощь
+  !!el&y2=0;                            // для Странников
+    !!VRi:R0/0/6;
+    !!HE(hero)&i=0:S0/1;                    // Поиск Пути
+    !!HE(hero)&i=1:S2/1;                    // Логистика
+    !!HE(hero)&i=2:S3/1;                    // Разведка
+    !!HE(hero)&i=3:S4/1;                    // Дипломатия
+    !!HE(hero)&i=4:S11/1;                   // Зоркость
+    !!HE(hero)&i=5:S18/1;                   // Грамотность
+    !!HE(hero)&i=6:S21/1;                   // Обучение
+  !!el&y2=1;                            // для Магов
+    !!VRi:R0/0/4;
+    !!HE(hero)&i=0/y1<>4:S7/1;              // Мудрость
+    !!HE(hero)&i=0/y1=4:S12/1;              // Некромантия
+    !!HE(hero)&i=1:S8/1;                    // Мистицизм
+    !!HE(hero)&i=2:S24/1;                   // Интеллект
+    !!HE(hero)&i=3:S25/1;                   // Волшебство
+    !!HE(hero)&i=4:S26/1;                   // Сопротивление
+  !!en; 
+!!en;
+
+; Reset global variables for Achievementes and Assassins (Night Scouting)
+** удаление достижений
+!!re i/0/14;                            // для каждого достижения
+  !!SN:W^opt760.h%(hero)a%Vir^/0;           // обнуляем достижение
+  !!SN:W^opt760.h%(hero)a%Vic^/0;           // обнуляем счетчик достижения
+!!en; 
+
+** удаление ассасинов
+!!SN:W^opt795.11.%(hero)^/?y15 W^opt795.11.%(hero).rebirth^/y15 W^opt795.11.%(hero)^/0; // удаление ассасинов
+
+** очистка командира/артефактов командира
+!!UN:P(WOG_OPT_DISABLE_COMMANDERS)/?(isDisabled:y) P(WOG_OPT_COMMANDERS_NEED_HIRING)/?(needHiring:y) P51/?(isEnhanced:y);                // i/j/k - статус опций Командиры / Обязательный найм командиров / Измененные командиры
+
+!!if&(isDisabled)=(FALSE);                               // если командиры разрешены
+
+  !!VR(npcStruct:y):S(SIZEOF_COMMANDER_STRUCT) *(hero) +(ADDR_WOG_COMMANDERS_TABLE);
+  !!SN:E7772852/(CALLCONV_THISCALL)/(npcStruct);                                    [init NPC (resets all data)]
+  !!UN:C(heroPtr)/81/4/?(heroExp:y);
+  !!if&(heroExp:y)>0;
+    !!SN:E7771729/(CALLCONV_THISCALL)/(npcStruct)/(heroExp)/1;                      [Add NPC experience from hero and use auto level ups]
+  !!en;
+  !!VR(isEnabled:y):S(needHiring) X1;
+  !!UN:C(npcStruct)/4/(isEnabled);                                                   [enable NPC if NeedHiring is FALSE]
+
+  !!if&(isEnhanced:y);                                                              [если включены измененные командиры, раздаем расовые бонусные навыки]
+    !!FU(WOG_51_SetNpcAbilities):P(hero);                                           [delegate npc abilities to the original script]
+  !!en;
+!!en;
+
+** обнуление благословений/проклятий
+!!HE(hero):Y0/0/0/3;                        // удаление всех благословений/проклятий
+
+; Reset all the w-vars, special treatments for war machiens and henchmen
+!!IF:W(hero);                               // w-переменные текущего героя
+
+!!re i/1/200;
+  !!VRwi:S0;
+!!en;
+
+; Enhanced War Machines
+!!UN:P73/?(wm3:y);
+
+!!if&(wm3);
+  !!HE(hero):A2/(ART_BALLISTA)/?(has:y)/?(equipped:y);
+  !!VRw81&(equipped)>0:S1;
+  !!HE(hero):A2/(ART_FIRST_AID_TENT)/?(has)/?(equipped:y);
+  !!VRw83&(equipped)>0:S1;
+!!en;
+
+; Henchmen
+!!UN:P49/?(hench:y);
+!!VRw118&(hench):S(NO_MON);
+
+; Adventure Cave
+!!UN:P30/?(advCave:y);
+
+!!if&(advCave);
+  !!VRw62:S-1; [hero paying for Rogue attack]
+  !!VRw63:S-1; [artifact stolen by Rogues]
+!!en;
+
+; Reset known global vars
+; Enhanced War Machines I
+!!UN:P54/?(wm1:y);
+
+!!if&(wm1);
+  !!re (wmArt:y)/(ART_BALLISTA)/(ART_AMMO_CART);
+    !!VRi^wog_54_%(hero)_disable%(wmArt)^:S0;
+  !!en;
+!!en;
+
+; Estates II
+!!VRi^wog_191_dailyResPlusOne_%(hero)^:S0;
+
+
+// Set up new specialty
+!?FU(ES_788_SetUpNewSpecialty);
+!#VA(hero:x) (heroType:x) (random1:x) (random2:x) (subtype:x);
+
+; Set up variable to determine whether to set hero spec desc
+; If it's not valid (due to banned secondary skills), FU(ES_788_Rebirth) will be executed again
+!!VR(isNotValid:y):S(FALSE);
+
+!!HE(hero):B2/?(class:y);
+!!VR(faction:y):S(class) :2;
+
+; Warriors
+!!if&(heroType)=-1;
+  ; Skill Master (Warrior)
+  !!if&(random1)=0;            // воин со вторичным навыком
+    !#VA(skillsList[4]:y);
+
+    !!VR(skillsList):C(SKILL_ARCHERY)/(SKILL_OFFENCE)/(SKILL_ARMORER)/(SKILL_FIRST_AID);
+    !!VR(skillsList[3])&(faction)=(TOWN_NECROPOLIS):S(SKILL_NECROMANCY); [Necropolis heroes won't learn First Aid, only Necromancy]
+    !!VR(skill:y):S(skillsList[subtype]);
+
+    ; Check if the skill is banned
+    !!FU(ES_GameMgr_Skill_isBanned):P(skill)/?(isNotValid:y);
+
+    !!if&(isNotValid)=(FALSE);
+      !!HE(hero):X0/(skill)/0/0/0/0/0;
+      !!SN:T^es.788.skillMaster^/?(spec:z);
+      !!HE(hero)&(skill)=(SKILL_FIRST_AID):A1/(ART_FIRST_AID_TENT)/15;
+    !!en;
+  !!el;                                                  // воин с существом
+    ; Creature Specialist
+    ; Question: What about the compatibility with Hero Specialty Boost (WoG)?
+    !!HE(hero):X1/(subtype)/0/0/0/0/0;                   // специалист по существам
+    !!HE(hero)&(subtype)=(MON_BALLISTA):A1/(ART_BALLISTA)/13;      [Give Ballista]
+
+    !!UN:P740/?(enhCreaSpec:y);         [Enhanced Creature specialty (ES)]
+
+    !!if&(enhCreaSpec);
+      !!SN:T^es.740.spec^/?(spec);
+    !!el;
+      !!SN:T^es.788.creaSpec^/?(spec);
+    !!en;
+
+    ; Creature Trainer
+    !!if&(random2)=1;                                                // специалисты по лучшению существ
+      !!VR(isValidCreature:y):S(TRUE);
+      !!if&(subtype)=(MON_MONK);
+        !!VR(mon2:y):S(MON_ZEALOT);
+        !!VR(mon3:y):S(MON_WAR_ZEALOT);
+      !!el&(subtype)=(MON_GREMLIN);
+        !!VR(mon2):S(MON_MASTER_GREMLIN);
+        !!VR(mon3):S(MON_SANTA_GREMLIN);
+      !!el&(subtype)=(MON_STONE_GOLEM);
+        !!VR(mon2):S(MON_IRON_GOLEM);
+        !!VR(mon3):S(MON_GOLD_GOLEM);
+      !!el&(subtype)=(MON_WALKING_DEAD);
+        !!VR(mon2):S(MON_ZOMBIE);
+        !!VR(mon3):S(MON_MUMMY);
+      ; Scholar of Death
+      !!el&(subtype)=(MON_CAVALIER);
+        !!VR(mon2):S(MON_CHAMPION);
+        !!VR(mon3):S(MON_DREAD_KNIGHT);
+      !!el&(subtype)=(MON_UNICORN);
+        !!VR(mon2):S(MON_WAR_UNICORN);
+        !!VR(mon3):S(MON_NIGHTMARE);
+      !!el&(subtype)=(MON_GREEN_DRAGON);
+        !!VR(mon2):S(MON_GOLD_DRAGON);
+        !!VR(mon3):S(MON_DIAMOND_DRAGON);
+      !!el&(subtype)=(MON_RED_DRAGON);
+        !!VR(mon2):S(MON_BLACK_DRAGON);
+        !!VR(mon3):S(MON_BLOOD_DRAGON);
+      !!el;
+        !!VR(isValidCreature:y):S(FALSE);
+      !!en;
+
+      !!if&(isValidCreature);
+        !!HE(hero):X6/(subtype)/0/0/0/(mon2)/(mon3);
+        !!SN:H^monname^/(subtype)/1/?(mon1Name:z) H^monname^/(mon2)/1/?(mon2Name:z) H^monname^/(mon3)/1/?(mon3Name:z);
+
+        !!if|(subtype)=(MON_MONK)/(subtype)=(MON_GREMLIN)/(subtype)=(MON_STONE_GOLEM)/(subtype)=(MON_WALKING_DEAD);
+          !!SN:T^es.788.creaTrainer^/?(spec)/^mon1^/(mon1Name)/^mon2^/(mon2Name)/^upg^/(mon3Name);
+        !!el;
+          !!SN:T^es.788.scholarOfDeath^/?(spec)/^mon1^/(mon1Name)/^mon2^/(mon2Name)/^upg^/(mon3Name);
+        !!en;
+      !!en;
+    !!en; 
+  !!en;
+
+; Adventurers
+!!el&(heroType)=0;
+  ; Skill Master (Adventurer)
+  !!if&(random1)=0;                                      // странник со вторичным навыком
+    !!VR(skillsList):C(SKILL_LOGISTICS)/(SKILL_NAVIGATION)/(SKILL_EAGLE_EYE)/(SKILL_ESTATES);
+    !!VR(skillsList[1])&i^es_773_landMode^:S(SKILL_LOGISTICS);
+    !!VR(skill):S(skillsList[subtype]);
+
+    ; Check if the skill is banned
+    !!FU(ES_GameMgr_Skill_isBanned):P(skill)/?(isNotValid:y);
+
+    !!if&(isNotValid)=(FALSE);
+      !!HE(hero):X0/(skill)/0/0/0/0/0;
+      !!SN:T^es.788.skillMaster^/?(spec:z);
+    !!en;
+  ; Supplier
+  !!el;                                                  // странник с ресурсом
+    !!HE(hero):X2/(subtype)/0/0/0/0/0;                   // специалист по ресурсам
+
+    !!if&(subtype)<>(RES_GOLD);
+      !!SN:T^es.788.supplier0^/?(spec);
+    !!el;
+      !!SN:T^es.788.supplier1^/?(spec);
+    !!en;
+  !!en;
+
+; Mages
+!!el&(heroType)=1;
+  ; Skill Master (Mage)
+  !!if&(random1)=0;                                      // маг со вторичным навыком
+    !!VR(skillsList):C(SKILL_MYSTICISM)/(SKILL_INTELLIGENCE)/(SKILL_SORCERY)/(SKILL_RESISTANCE);
+    !!VR(skill):S(skillsList[subtype]);
+
+    ; Check if the skill is banned
+    !!FU(ES_GameMgr_Skill_isBanned):P(skill)/?(isNotValid:y);
+
+    !!if&(isNotValid)=(FALSE);
+      !!HE(hero):X0/(skill)/0/0/0/0/0;
+      !!SN:T^es.788.skillMaster^/?(spec:z);
+    !!en;
+
+  !!el;                                               // маг с заклинанием
+    ; Aura of Curse
+    ; Warning: Must make sure there is no other definition for Summon Boat, Scuttle Boat, Visions and View Earth
+    !!if&(random2)=1/(subtype)>=7/(subtype)<=10;      // специалисты по аурам-проклятиям
+      !!VR(curseType:y):S(subtype) -7;  [index: 0-3]
+
+      !!HE(hero):X3/(curseType)/0/0/0/0/0;
+      !!UN:G2/(hero)/3/353;
+      !!SN:T^es.788.auraOfCurse%(curseType)^/?(spec);
+    ; Battlemage
+    !!el;
+      ; Check if the spell is disabled (map editor) or banned (wog options)
+      ; Note that here we use the same variable name (isNotValid) for the convenience of scripting
+      !#VA(spellsList[11]:y);
+
+      !!VR(spellsList):C15/16/17/20/21/23/22/18/19/26/25;
+      !!VR(spellsList[10])&(faction)=(TOWN_NECROPOLIS):S24;
+      !!VR(spell:y):S(spellsList[subtype]);
+
+      !!UN:J0/(spell)/?(isNotValid);
+
+      !!if&(isNotValid)=(FALSE);
+        !!FU10932:P(spell)/?(isNotValid); [WoG legacy. same function as FU(WOG_CHECK_SPELL_BAN)]
+
+        !!if&(isNotValid)=(FALSE);
+          !!HE(hero):X3/(spell)/0/0/0/0/0;
+          !!HE(hero):M(spell)/(TRUE);
+          !!SN:T^es.788.battlemage^/?(spec);
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Set up specailty text if the specialty is valid
+!!if&(isNotValid)=(FALSE);
+  !!SN:H^spec^/(hero)/2/^%(spec)%T(es.788.reborn)^;
+; Reroll if the specialty is not valid
+!!el;
+  !!FU(ES_788_Rebirth):P(hero);
+!!en;
+
+** Подержка специализаций на заклинаниях перерожденных героев
+!?FU(OnMagicCorrectedResistance);       // при нанесении урона заклинанием
+!!UN:P788/?y1;
+!!FU&y1=0:E;                            // выход, если опция не включена
+
+!!BG:A?y1;
+!!FU&y1<>1:E;                           // выход, если не каст героя
+
+!!BG:H?y1;
+!!FU&i^es_788_rebornFlags_%y1^=0:E;                            // выход, если герой-кастер не перерожденный
+
+!!HEy1:X?i/?j/d/d/d/d/d;
+!!FU&i<>3:E;                            // выход, если герой не спец по заклинанию
+
+!!MR:S?y2;
+!!FU&y2<>j:E;                           // выход, если каст непрофильного заклинания
+
+!!MR:F?y2;
+!!HEy1:E?k/?l/1;                        // y2/l - наносимый урон/уровень героя
+!!VRy3:Sy2 *l *5 :100 +y2;
+!!MR:Fy3;                               // установка бонуса к урону в размере 5% за уровень героя
+
+** Подержка аур-проклятий перерожденных героев
+// Aura of Curse - Must be executed later than anything else to have a wider range of effect
+!?FU(OnBattleRound_Quit)&i^battle_round^=0;
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!re i/(BATTLE_LEFT)/(BATTLE_RIGHT);
+  !!co&i^battle_hero_%i^=(NO_HERO);
+
+  ; Skip if not reborn hero
+  !!VR(hero:y):Si^battle_hero_%i^;
+  !!co&i^es_788_rebornFlags_%(hero)^=0;
+
+  !!HE(hero):X?(type:y)/?(subtype:y)/d/d/d/d/d;
+
+  !!if&(type)=3/(subtype)>=0/(subtype)<=3;
+    !!FU(NewIntArray)&i^battle_isVisible^:P?(affectedStacksList:y);
+
+    !!re i/(BATTLE_STACK_FIRST)/(BATTLE_STACK_LAST);
+      !!BMi:T?(type:y) N?(num:y);
+      !!co|(type)<=(NO_MON)/(type)=(MON_ARROW_TOWERS)/(num)<=0;
+
+      ; Attack
+      !!if&(subtype)=0;
+        !!BMi:A?(atk:y);
+
+        !!if&(atk)>=1;
+          !!VR(atk)::2;
+          !!BMi:A(atk);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      ; Defense
+      !!el&(subtype)=1;
+        !!BMi:D?(def:y);
+
+        !!if&(def)>=1;
+          !!VR(def)::2;
+          !!BMi:D(def);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      ; Damage
+      !!el&(subtype)=2;
+        !!BMi:U1/?(minDmg:y) U2/?(maxDmg:y);
+
+        !!if&(minDmg)<(maxDmg);
+          !!BMi:U2/(minDmg);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      ; Speed
+      !!el;
+        !!BMi:S?(spd:y);
+
+        !!if&(spd)>=2;
+          !!VR(spd)::2;
+          !!BMi:S(spd);
+          !!FU(Array_Push)&i^battle_isVisible^:P(affectedStacksList)/i;
+        !!en;
+      !!en;
+    !!en;
+
+    !!if&i^battle_isVisible^;
+      !!SN:M(affectedStacksList)/?(size:y);
+
+      !!if&(size)>0;
+        ; Text
+        !!HE(hero):B0/?(heroName:z);
+        !!SN:T^es.788.battleLog%(subtype)^/?(battleLog:z)/^hero^/(heroName);
+        !!MM:S(battleLog);
+
+        ; Play the sound and animation
+        !!if&(subtype)=0;
+          !!SN:P^WEAKNESS^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/56;
+        !!el&(subtype)=1;
+          !!SN:P^DISRUPTR^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/14;
+        !!el&(subtype)=2;
+          !!SN:P^CURSE^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/40;
+        !!el;
+          !!SN:P^MUCKMIRE^;
+          !!FU(ES_PlayAnimationOnMultipleStacks):P(affectedStacksList)/19;
+        !!en;
+      !!en;
+    !!en;
+  !!en;
+!!en;
+
+; Set up new specialty campaign carry over for reborn heroes
+!?FU(OnWinGame);
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+!!VR(filePath:z):S^Runtime/mortal heroes.ini^;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!FU(WriteIniInts)&i^es_788_rebornFlags_%i^:P(filePath)/^rebornHero^/^%i^/i^es_788_rebornFlags_%i^;
+!!en;
+
+!!FU(SaveIni):P(filePath);
+
+!?FU(OnTransferHero);
+!#VA(hero:x);
+
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!VR(filePath:z):S^Runtime/mortal heroes.ini^;
+!!FU(ReadIniInts):P(filePath)/^rebornHero^/^%(hero)^/?i^es_788_rebornFlags_%(hero)^/0;
+
+!!if&i^es_788_rebornFlags_%(hero)^<>0;
+  !!FU(UnpackUnion):Pi^es_788_rebornFlags_%(hero)^/?(heroType:y)/2/?(random1:y)/1/?(random2:y)/1/?(subtype:y)/12/?(dummy:y)/16;
+  !!VR(heroType):-1;                    [correct hero type from unpacked value]
+  !!FU(ES_788_SetUpNewSpecialty):P(hero)/(heroType)/(random1)/(random2)/(subtype);
+
+  ; Save a copy of initial flags to be used when restarting game
+  !!VRi^es_788_rebornFlags_%(hero)_init^:Si^es_788_rebornFlags_%(hero)^;
+!!en;
+
+; Remove ini OnAfterErmInstructions as there is no OnTransferHero on the victory of the the last zone of a campaign
+!?FU(OnAfterErmInstructions);
+!!VR(filePath:z):S^Runtime/mortal heroes.ini^;
+!!FU(FileExists):P(filePath)/?(result:y);
+
+!!if&(result);
+  !!FU(ClearIniCache):P(filePath);
+  !!FU(DeleteFile):P(filePath)/?(result);
+!!en;
+
+; Restore initial flags on restarting game
+!?FU(OnGameLeave);
+!!UN:P788/?(wogOption:y);
+!!FU&(wogOption)<>(TRUE):E;
+
+!!SN:F^IsCampaign^;
+!!FU&v1<>(TRUE):E;
+
+; Check if it is a restarting map event
+!!UN:C6911784/4/?(value:y);
+!!FU&(value)<>107:E;
+
+!!VR(filePath:z):S^Runtime/mortal heroes.ini^;
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!FU(WriteIniInts)&i^es_788_rebornFlags_%i_init^:P(filePath)/^rebornHero^/^%i^/i^es_788_rebornFlags_%i_init^;
+!!en;
+
+!!FU(SaveIni):P(filePath);
+
+** end

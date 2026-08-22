@@ -1,0 +1,161 @@
+ZVSE2
+** Author orig.  : Algor
+** Updated by    : Archer30
+** Rewritten by  : daemon_n (December 11th 2025)
+** Name          : Land Navigation
+** Name rus.     : Сухопутная навигация
+** Options       : 773
+
+; This script uses two global variables initialised in 1000 es - stdlib.erm
+; i^es_773_landMode^ - If the water area is less than 15% of the map, land mode would be activated and replaces Navigation skills/disable navi artifacts on the map.
+; i^es_773_navigationBonuses_enabled^ - movement points bonuses for sailing can be disabled with this variable in order to be compatible with mods
+
+
+!?FU(ES_OnIterateAllMapObjects)&i^es_773_landMode^;
+!#VA(x:x) (y:x) (z:x);
+!#VA(objType:x);
+!#VA(objSubtype:x);
+!#VA(isYellowSquare:x);                 [boolean]
+!#VA(isPassable:x);                     [boolean]
+
+; check: is entry to the object
+!!FU&(isYellowSquare)<>(TRUE):E;
+; check objects
+!!FU&(objType)<>(OBJ_WITCH_HUT)/(objType)<>(OBJ_UNIVERSITY)/(objType)<>(OBJ_SCHOLAR):E;
+
+; Manipulate objects according to types
+!!if&(objType)=(OBJ_WITCH_HUT);
+  !!WH(x)/(y)/(z):S?(ss:y);
+  !!WH(x)/(y)/(z)&(ss)=(SKILL_NAVIGATION):S(SKILL_LOGISTICS);
+!!el&(objType)=(OBJ_UNIVERSITY);
+  !!UR(x)/(y)/(z):S?(ss1:y)/?(ss2:y)/?(ss3:y)/?(ss4:y);
+
+  ; Replace navigation to different secondary skills according to existing ones
+  !!if|(ss1)=(SKILL_NAVIGATION)/(ss2)=(SKILL_NAVIGATION)/(ss3)=(SKILL_NAVIGATION)/(ss4)=(SKILL_NAVIGATION);
+    !!if&(ss1)<>(SKILL_LOGISTICS)/(ss2)<>(SKILL_LOGISTICS)/(ss3)<>(SKILL_LOGISTICS)/(ss4)<>(SKILL_LOGISTICS);
+      !!VR(newSs:y):S(SKILL_LOGISTICS);
+    !!el&(ss1)<>(SKILL_PATHFINDING)/(ss2)<>(SKILL_PATHFINDING)/(ss3)<>(SKILL_PATHFINDING)/(ss4)<>(SKILL_PATHFINDING);
+      !!VR(newSs):S(SKILL_PATHFINDING);
+    !!el&(ss1)<>(SKILL_SCOUTING)/(ss2)<>(SKILL_SCOUTING)/(ss3)<>(SKILL_SCOUTING)/(ss4)<>(SKILL_SCOUTING);
+      !!VR(newSs):S(SKILL_SCOUTING);
+    !!el&(ss1)<>(SKILL_LEARNING)/(ss2)<>(SKILL_LEARNING)/(ss3)<>(SKILL_LEARNING)/(ss4)<>(SKILL_LEARNING);
+      !!VR(newSs):S(SKILL_LEARNING);
+    !!en;
+
+    !!UR(x)/(y)/(z)&(ss1)=(SKILL_NAVIGATION):S(newSs)/d/d/d;
+    !!UR(x)/(y)/(z)&(ss2)=(SKILL_NAVIGATION):Sd/(newSs)/d/d;
+    !!UR(x)/(y)/(z)&(ss3)=(SKILL_NAVIGATION):Sd/d/(newSs)/d;
+    !!UR(x)/(y)/(z)&(ss4)=(SKILL_NAVIGATION):Sd/d/d/(newSs);
+  !!en;
+!!el&(objType)=(OBJ_SCHOLAR);
+  !!SC(x)/(y)/(z):T?(type:y) S?(ss:y);
+  !!SC(x)/(y)/(z)&(type)=1/(ss)=(SKILL_NAVIGATION):S(SKILL_LOGISTICS); [Type 1 for secondary skills]
+!!en;
+
+** Замена Навигации на Логистику и бан водных заклинаний/артефактов, если воды на карте менее 15%
+!?FU(OnAfterErmInstructions);           [пост-инструкция]
+!!UN:P773/?(landNavi:y);                [проверяем включена ли опция 773]
+!!FU&(landNavi)=(FALSE):E;              [Could be 0/1/2 depending on the water percentage]
+
+; Set up new skill description
+!!VR(basicDesc:z):S^%T(es.773.desc1)^;
+!!VR(advancedDesc:z):S^%T(es.773.desc2)^;
+!!VR(expertDesc:z):S^%T(es.773.desc3)^;
+
+; Add in Navaigation description if enabled
+!!UN:P208/?(navigation:y);
+
+!!if&(navigation);
+  !!VR(basicDesc):+z175137;
+  !!VR(advancedDesc):+z175138;
+  !!VR(expertDesc):+z175139;
+!!en;
+
+; Change the descriptions
+!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_BASIC)/(basicDesc);
+!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_ADVANCED)/(advancedDesc);
+!!SN:H^secskill^/(SKILL_NAVIGATION)/(SKILL_EXPERT)/(expertDesc);
+
+!!if&i^es_773_landMode^;
+  !!FU(ES_773_SetUpSSAndSpec):P(TRUE);
+!!el;
+  !!FU(ES_773_SetUpSSAndSpec):P(FALSE);
+!!en;
+
+!?FU(ES_773_SetUpSSAndSpec);
+!#VA(isLandMode:x);
+
+!!re i/(HERO_FIRST)/(HERO_LAST_WOG);
+  !!HEi:X?(spec:y)/?(spec2:y);
+
+  !!if&(isLandMode);
+    ; Remove Navigation and add the level to Logistics
+    !!HEi:S(SKILL_NAVIGATION)/?(naviLv:y) S(SKILL_LOGISTICS)/?(logLv:y);
+    !!VR(newLogLv:y):S(naviLv) +(logLv) F(SKILL_NOT_LEARNED)/(SKILL_EXPERT);
+    !!HEi:S(SKILL_NAVIGATION)/(SKILL_NOT_LEARNED) S(SKILL_LOGISTICS)/(newLogLv);
+    ; Set up new spec
+    !!if&(spec)=0/(spec2)=(SKILL_NAVIGATION);
+      !!HEi:X(spec)/(SKILL_LOGISTICS);
+      !!SN:H^spec^/i/2/^%T(es.773.logSpec)^;
+    !!en;
+  !!el;
+    ; Set up new spec description
+    !!SN&(spec)=0/(spec2)=(SKILL_NAVIGATION):H^spec^/i/2/^%T(es.773.spec)^;
+  !!en;
+!!en;
+
+!?FU(OnStartOrLoad)&i^es_773_navigationBonuses_enabled^;
+!!UN:C5131324/3/4/?(navigationSkillValuesPointer:y);
+
+!!UN:C(navigationSkillValuesPointer)/4/?(navigationBasicSkillValue:y);
+
+!!re i/(SKILL_BASIC)/(SKILL_EXPERT);
+  !!VR(offset:y):Si*4;
+  !!UN:C(navigationSkillValuesPointer)/(offset)/4/?(navigationSkillValue:y);
+  !!VRi^es_773_original_skill_value_%i^:S(navigationSkillValue:y);
+  !!VR(decreaseValue:y):S(navigationSkillValue) -(navigationBasicSkillValue) *4 :5;
+  !!UN:C(navigationSkillValuesPointer)/(offset)/4/d-(decreaseValue:y);
+  !!UN:C(navigationSkillValuesPointer)/(offset)/4/?(navigationSkillValue:y);
+!!en;
+
+// restore original values
+!?FU(OnGameLeave)&i^es_773_navigationBonuses_enabled^;
+
+!!UN:C5131324/3/4/?(navigationSkillValuesPointer:y);
+!!UN:C(navigationSkillValuesPointer)/4/?(navigationBasicSkillValue:y);
+!!re i/(SKILL_BASIC)/(SKILL_EXPERT);
+  !!VR(offset:y):Si*4;
+  !!if&i^es_773_original_skill_value_%i^;
+    !!UN:C(navigationSkillValuesPointer)/(offset)/4/i^es_773_original_skill_value_%i^;
+  !!en;
+!!en;
+
+!?FU(ES_CreateERMHook);
+!!if&i^es_773_navigationBonuses_enabled^;
+  // change hero movepoints on the boat
+  !!SN:Ex1/1/4842304/(ES_773_OnHeroBoarding); [UN_BOARDING (ANCOR_VISIT)]
+  !!SN:Ex1/1/4853000/(ES_773_OnHeroBoarding); [BOARDING (BOAT_VISIT)]
+!!en;
+
+!!if&i^es_773_landMode^;
+  ; Ban Navigation Skill for Hero Lvl Up
+  !!UN:C(GAME_MANAGER)/(UNC_INT)/?(gameMgr:y);
+  !!VR(skillBanPtr:y):S(gameMgr) +(SKILL_NAVIGATION) +321112;
+  !!UN:C(skillBanPtr)/(UNC_INT8)/1;
+!!en;
+
+!?FU(ES_773_Hero_AdjustBoardingCost);
+!#VA(heroId:x);
+!!HE(heroId):S(SKILL_NAVIGATION)/?(skillLvl:y) X?t/?s/d/d/d/d/d; [calc skills bonus]
+!!VR(skillLvl:y)&t=0/s=(SKILL_NAVIGATION):+1;                    [+1 for speciality]
+!!HE(heroId):W?(currentPoints:y)/1;
+
+!!VR(cost:y):S-100 * (skillLvl:y) +600;                          [200-600]
+!!VR(currentPoints):-(cost) F0/(INT_MAX);                        [decrease and limit value]
+!!HE(heroId):W(currentPoints:y)/1;                               [set new cost no redraw]
+
+!?FU(ES_773_OnHeroBoarding);
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_ESI)/4/?(hero:y) C(hero)/26/4/?(heroId:y);
+!!FU(ES_773_Hero_AdjustBoardingCost):P(heroId);
+!!SN:X?y99/0;                            [skip default]
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/d2; [lol works for boarding/unboarding]

@@ -1,0 +1,137 @@
+ZVSE2
+** Author orig.  : Algor
+** Rewritten by  : Archer30
+** Name          : Zealots interceptors
+** Name rus.     : ‘анатики-перехватчики
+** Options       : 741
+
+** ‘анатики ¬ойны получают шанс перехватить (перенаправить на себ€) целевое вражеское заклинание
+** Ўанс перехвата = (ол-во фанатиков в отр€де)%
+** ѕерехваченное заклинание далее может быть отражено во врага со стандартной веро€тностью.
+** FV ‘анатиков повышено на 5%
+
+
+!?FU(OnAfterErmInstructions);   [пост-инструкци€: установка описаний]
+!!UN:P741/?(wogOption:y);       [провер€ем включена ли опци€ 741 в y1]
+!!FU&(wogOption)<>(TRUE):E;     [выход если опци€ не включена]
+
+; Change the descriptino of War Zealots
+!!SN:H^monname^/(MON_WAR_ZEALOT)/2/?(desc:z);
+!!VR(newDesc:z):S(desc) +^%T(es.741.desc)^;
+!!SN:H^monname^/(MON_WAR_ZEALOT)/2/(newDesc);
+
+; Raise fight value
+!!MA:F(MON_WAR_ZEALOT)/?(fv:y);         [FV ‘анатиков]
+!!VR(fv):*105 :100;                     [увеличиваем FV на 5%]
+!!MA:F(MON_WAR_ZEALOT)/(fv);            [обновл€ем FV ‘анатиков]
+
+!?FU(OnBeforeBattleAction);             [перед действием в бою]
+!!UN:P741/?(wogOption:y);               [провер€ем включена ли опци€ 741 в y1]
+!!FU&(wogOption)<>(TRUE):E;             [выход если опци€ не включена]
+
+!!BG:A?(action:y); [тип действи€/сторона/целевой отр€д]
+!!FU&(action)<>(BATTLE_ACTION_HERO_CAST)/(action)<>(BATTLE_ACTION_MONSTER_CAST):E; [выход, если не каст геро€/монстра]
+
+!!BG:E?(target:y);
+!!FU&(target)=(NO_STACK):E;             [выход, ecли не целевой каст]
+
+!!BG:Q?(side:y);
+!!FU&(target)<=(BATTLE_ATTACKER_STACK_LAST)/(side)=(BATTLE_LEFT):E; [выход, если не каст на вражеский отр€д]
+!!FU&(target)>=(BATTLE_DEFENDER_STACK_FIRST)/(side)=(BATTLE_RIGHT):E; [...]
+
+; Exit if it is not a single targeting spell (leading to crash if not skipping - eh not really?)
+*!BG:S?(spell:y);
+*!SS(spell):F?(flags:y);
+*!VR(isSingleTargeting:y):S(flags) &16;
+*!FU&(isSingleTargeting)=0:E;
+
+; Exit if the target is a War Zealot
+!!BM(target):T?(type:y);
+!!FU(ES_741_CheckIfMonIsEligible):P(type)/?(result:y);
+!!FU&(result):E;
+
+!!VR(opposSide:y):S(side) X1;           [invert side]
+!!FU(ES_741_GetInterceptTarget):P(opposSide)/?(intercTarget:y);
+!!FU&(intercTarget)=(NO_STACK):E;
+
+!!if&i^battle_isVisible^;
+  !!SN:P^MIRRORIM^;                     [вывод звука бешенства]
+  !!BM(intercTarget):V75;               [анимаци€ ѕоглощени€ маны на отр€де ‘анатиков]
+!!en;
+
+!!BM(intercTarget):P?(intercPos:y) G(SPELL_MAGIC_MIRROR)/?(round:y)/?(level:y); [y7 - позици€ отр€да]
+!!FU&(round)=0:E;
+
+!!BG:E(intercTarget) D(intercPos);      [переопределение цели и позиции]
+!!SS(SPELL_MAGIC_MIRROR):E(level)/?(chance:y); [шанс срабатывани€ экспертного ¬олшебного зеркала]
+!!VR(random:y):R0/1/100;                [случайное число (1..100)]
+!!FU&(chance)<(random):E;               [выход, если отражение не сработало]
+
+!!FU(ES_741_GetRedirectTarget):P(side)/?(redirectTarget:y);
+!!FU&(redirectTarget)=(NO_STACK):E;
+
+!!BM(intercTarget)&i^battle_isVisible^:V3;[јнимаци€ ¬олшебное зеркало на отр€де ‘анатиков]
+!!BM(redirectTarget):P?(redirectPos:y); [позици€ отр€да дл€ перенаправлени€]
+!!BG:E(redirectTarget) D(redirectPos);  [переопределение цели и позиции]
+
+!?FU(ES_741_GetInterceptTarget);
+!#VA(side:x) (newTarget:x);
+
+; Initialization
+!!VR(newTarget):S(NO_STACK);
+!!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
+!!VR(lastStack:y):S(firstStack) +20;
+
+; Loop through all the stack and try to find War a zealot stack as the new spell target
+!!re i/(firstStack)/(lastStack);
+  !!BMi:N?(num:y);
+  !!co&(num)<=0;
+
+  !!BMi:T?(type:y);
+  !!FU(ES_741_CheckIfMonIsEligible):P(type)/?(result:y);
+  !!co&(result)<>(TRUE);
+
+  ; Redirect the spell to the War Zealot if odds is favoured
+  !!BMi:G(SPELL_MAGIC_MIRROR)/?(round:y)/?(strength:y);
+  !!co&(round)<=0;
+
+  !!VR(random:y):R0/1/100;
+  !!co&(random)>(num);
+
+  !!VR(newTarget):Si;
+  !!br;
+!!en;
+
+!?FU(ES_741_GetRedirectTarget);
+!#VA(side:x) (newTarget:x);
+
+; Initialization
+!!VR(newTarget):S(NO_STACK);
+!!VR(firstStack:y):S(side) *(BATTLE_STACKS_PER_SIDE);
+!!VR(lastStack:y):S(firstStack) +20;
+
+!!FU(NewIntArray):P?(livingStacks:y);    [Create the array]
+
+; Loop through all the stacks, add any valid stack number to the array
+!!re i/(firstStack)/(lastStack);
+  !!BMi:T?(type:y) N?(num:y);
+
+  !!FU(Array_Push)&(type)>(NO_MON)/(num)>0:P(livingStacks)/i;
+!!en;
+
+; Check if the array has at least one item
+!!SN:M(livingStacks)/?(size:y);
+
+; Return a random item from he array if applicable
+!!if&(size)>0;
+  !!FU(Array_Shuffle):P(livingStacks);  [Shuffle the array]
+  !!FU(Array_Pop):P(livingStacks)/?(newTarget); [Get the last item of the array and remove the item from the array]
+!!en;
+
+!?FU(ES_741_CheckIfMonIsEligible);
+!#VA(mon:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!VR(result)&(mon)=(MON_WAR_ZEALOT):S(TRUE);
+
+** end
