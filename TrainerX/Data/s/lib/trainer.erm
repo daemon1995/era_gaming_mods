@@ -457,16 +457,12 @@ ZVSE2
       !!HE(hero):Z?(heroStruct:y);
       !!UN:C(heroStruct)/274/(UNC_INT)/(SKILL_EXPERT);
 
-      ; Primary Skills
-      !!VR(ps:y):Si^trainer_maxPrimSkillValue^ -10;
-      !!HE(hero):F(ps)/(ps)/(ps)/(ps);
-
       ; Spells
-      !!re (spell:y)/(SPELL_FIRST)/(SPELL_LAST_WOG);
+      !!re (spell:y)/(SPELL_FIRST)/i^maxSpellId^;
+        !!FU(trainer_IsHeroSpell):P(spell)/?(spellAvailable:y);
+        !!co&(spellAvailable)=(FALSE);
         !!co&(spell)=(SPELL_TITANS_LIGHTNING_BOLT);
         
-        !!HE(hero):M=(spell)/1;
-        ; Forcefully learn in order to be compatible with New Spells
         !!HE(hero):M(spell)/(TRUE);
       !!en;
 
@@ -514,11 +510,11 @@ ZVSE2
       !!HE(hero):Z?(heroStruct:y);
       !!UN:C(heroStruct)/274/(UNC_INT)/-1;
 
-      ; Primary Skills
-      !!HE(hero):F0/0/1/1;
-
       ; Spells
-      !!re (spell:y)/(SPELL_FIRST)/(SPELL_LAST_WOG);
+      !!re (spell:y)/(SPELL_FIRST)/i^maxSpellId^;
+        !!FU(trainer_IsHeroSpell):P(spell)/?(spellAvailable:y);
+        !!co&(spellAvailable)=(FALSE);
+
         !!HE(hero):M(spell)/(FALSE);
       !!en;
 
@@ -526,17 +522,17 @@ ZVSE2
       !!FU(UnequipArtFromSlot):P(hero)/(ART_SLOT_SPELL_BOOK);
     !!en;
 
-    ; Hide the whole map for all the players (should be hiding the whole map for the current player)
-    *!UN:X?(size:y)/?(hasTwoLv:y); get map size
+    ; Hide the whole map for every player, as with Shift-click on the telescope button
+    !!UN:X?(size:y)/?(hasTwoLv:y); get map size
 
-    *!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-      *!OW:Ii/?(isAi:y)/?(hasLost:y);
+    !!re (mapPlayer:y)/(PLAYER_FIRST)/(PLAYER_LAST);
+      !!OW:I(mapPlayer)/?(isAi:y)/?(hasLost:y);
 
-      *!if&(hasLost)<>(TRUE);
-        *!UN:H0/0/0/(player)/356;
-        *!UN&(hasTwoLv)>0:H0/0/1/i/356;
-      *!en;
-    *!en;
+      !!if&(hasLost)<>(TRUE);
+        !!UN:H0/0/0/(mapPlayer)/356;
+        !!UN&(hasTwoLv)>0:H0/0/1/(mapPlayer)/356;
+      !!en;
+    !!en;
 
     ; Resources
     !!re i/(RES_FIRST)/(RES_LAST_WOG);
@@ -599,24 +595,72 @@ ZVSE2
 !!IF:Q1/(PIC_TYPE_FLAG)/i^trainer_player^/(PIC_TYPE_FLAG)/i^trainer_player^/(MSG_TYPE_MES)^%T(trainer.help)^;
 
 **************************** SPELLS ************************************
-; Dynamic spell panel depedning on the schools of spells in mods
+; New Spells extends the native HE:M and SN:H receivers, so TrainerX uses the
+; same commands for legacy and external spell IDs.
+
+; Return whether a spell is structurally a hero spell. Vanilla/WoG IDs retain
+; their existing behaviour even when map restrictions disable them. Extended
+; IDs must be level 1..5 and must not carry the native creature-spell flag.
+!?FU(trainer_IsHeroSpell);
+!#VA(spell:x) (result:x);
+
+!!VR(result):S(FALSE);
+!!FU&(spell)<(SPELL_FIRST):E;
+!!FU&(spell)>i^maxSpellId^:E;
+
+!!if&(spell)<=(SPELL_LAST_WOG);
+  !!VR(result):S(TRUE);
+!!el;
+  !!SS(spell):L?(level:y) F?(flags:y);
+  !!VR(creatureFlag:y):S(flags) &8;
+  !!VR(result)&(level)>=1/(level)<=5/(creatureFlag)=0:S(TRUE);
+!!en;
+
+; Pick a structurally valid hero spell for generated spell scrolls. Map and
+; UN:J0 restrictions intentionally do not affect TrainerX.
+!?FU(trainer_GetRandomAvailableSpell);
+!#VA(result:x);
+
+!!FU(NewIntArray):P?(availableSpells:y);
+
+!!re i/(SPELL_FIRST)/i^maxSpellId^;
+  !!FU(trainer_IsHeroSpell):Pi/?(spellAvailable:y);
+  !!FU(Array_Push)&(spellAvailable):P(availableSpells)/i;
+!!en;
+
+!!SN:M(availableSpells)/?(numSpells:y);
+!!VR(lastIndex:y):S(numSpells) -1;
+!!VR(randomIndex:y):R0/0/(lastIndex);
+!!SN:M(availableSpells)/(randomIndex)/?(result);
+
+; Dynamic spell panel depending on the schools and extended spell IDs in mods.
 !?FU(trainer_CreateSpellArrays);
-!!SN:Mi^trainer_airSpells^ Mi^trainer_fireSpells^ Mi^trainer_waterSpells^ Mi^trainer_earthSpells^;
-!!FU(NewIntArray):P?i^trainer_airSpells^/(M_TEMP) P?i^trainer_fireSpells^/(M_TEMP) P?i^trainer_waterSpells^/(M_TEMP) P?i^trainer_earthSpells^/(M_TEMP);
+!!FU(GetMaxSpellId):P?i^maxSpellId^;
+!!VRi^trainer_spellTableMaxPage^:S3;
 
-!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
-  !!co|i=(SPELL_TITANS_LIGHTNING_BOLT)/i=(SPELL_MAGIC_ARROW)/i=(SPELL_VISIONS); [Assume that Titan's Lightning Bolt is always an air spell, Magic Arrow and Visions are always all schools]
+!!SN:Mi^trainer_airSpells^ Mi^trainer_fireSpells^ Mi^trainer_waterSpells^ Mi^trainer_earthSpells^ Mi^trainer_newSpells^;
+!!FU(NewIntArray):P?i^trainer_airSpells^/(M_TEMP) P?i^trainer_fireSpells^/(M_TEMP) P?i^trainer_waterSpells^/(M_TEMP) P?i^trainer_earthSpells^/(M_TEMP) P?i^trainer_newSpells^/(M_TEMP);
 
-  !!SSi:S?(school:y);
+!!re i/(SPELL_FIRST)/i^maxSpellId^;
+  !!FU(trainer_IsHeroSpell):Pi/?(spellAvailable:y);
+  !!co&(spellAvailable)=(FALSE);
 
-  !!if&(school)=1;
-    !!FU(Array_Push):Pi^trainer_airSpells^/i;
-  !!el&(school)=2;
-    !!FU(Array_Push):Pi^trainer_fireSpells^/i;
-  !!el&(school)=4;
-    !!FU(Array_Push):Pi^trainer_waterSpells^/i;
-  !!el&(school)=8;
-    !!FU(Array_Push):Pi^trainer_earthSpells^/i;
+  !!if&i>(SPELL_LAST_WOG);
+    !!FU(Array_Push):Pi^trainer_newSpells^/i;
+  !!el;
+    !!co|i=(SPELL_TITANS_LIGHTNING_BOLT)/i=(SPELL_MAGIC_ARROW)/i=(SPELL_VISIONS); [Assume that Titan's Lightning Bolt is always an air spell, Magic Arrow and Visions are always all schools]
+
+    !!SSi:S?(school:y);
+
+    !!if&(school)=1;
+      !!FU(Array_Push):Pi^trainer_airSpells^/i;
+    !!el&(school)=2;
+      !!FU(Array_Push):Pi^trainer_fireSpells^/i;
+    !!el&(school)=4;
+      !!FU(Array_Push):Pi^trainer_waterSpells^/i;
+    !!el&(school)=8;
+      !!FU(Array_Push):Pi^trainer_earthSpells^/i;
+    !!en;
   !!en;
 !!en;
 
@@ -625,6 +669,18 @@ ZVSE2
 !!FU(trainer_EnsureArraySizes):Pi^trainer_fireSpells^/1;
 !!FU(trainer_EnsureArraySizes):Pi^trainer_waterSpells^/0;
 !!FU(trainer_EnsureArraySizes):Pi^trainer_earthSpells^/1;
+
+; Add as many extended pages as are needed. The first one is the fifth page.
+; Undefined and creature-only records were rejected above, so the array stays
+; dense. Map and UN:J0 restrictions do not hide spells from TrainerX.
+!!SN:Mi^trainer_newSpells^/?(newSpellCount:y);
+
+!!if&(newSpellCount)>0;
+  !!VR(newSpellPageCount:y):S(newSpellCount) +(TRAINER_SPELL_PER_PAGE) -1 :(TRAINER_SPELL_PER_PAGE);
+  !!VRi^trainer_spellTableMaxPage^:S3 +(newSpellPageCount);
+!!en;
+
+!!VRi^trainer_spellTablePage^&i^trainer_spellTablePage^>i^trainer_spellTableMaxPage^:S0;
 
 !?FU(trainer_EnsureArraySizes);
 !#VA(array:x) (offset:x);
@@ -639,11 +695,26 @@ ZVSE2
     !!VR(currMissing:y):S(missingSpells) -i;
 
     !!if&(array)=i^trainer_airSpells^/(currMissing)=1; [Add in Titan's Lightning Bolt at the end of the Air Spell array]
-      !!FU(Array_Push):P(array)/(SPELL_TITANS_LIGHTNING_BOLT);
+      !!FU(trainer_IsHeroSpell):P(SPELL_TITANS_LIGHTNING_BOLT)/?(spellAvailable:y);
+      !!if&(spellAvailable);
+        !!FU(Array_Push):P(array)/(SPELL_TITANS_LIGHTNING_BOLT);
+      !!el;
+        !!FU(Array_Push):P(array)/(NO_SPELL);
+      !!en;
     !!el&(fillingSpell)=0;
-      !!FU(Array_Push):P(array)/(SPELL_MAGIC_ARROW);
+      !!FU(trainer_IsHeroSpell):P(SPELL_MAGIC_ARROW)/?(spellAvailable);
+      !!if&(spellAvailable);
+        !!FU(Array_Push):P(array)/(SPELL_MAGIC_ARROW);
+      !!el;
+        !!FU(Array_Push):P(array)/(NO_SPELL);
+      !!en;
     !!el;
-      !!FU(Array_Push):P(array)/(SPELL_VISIONS);
+      !!FU(trainer_IsHeroSpell):P(SPELL_VISIONS)/?(spellAvailable);
+      !!if&(spellAvailable);
+        !!FU(Array_Push):P(array)/(SPELL_VISIONS);
+      !!el;
+        !!FU(Array_Push):P(array)/(NO_SPELL);
+      !!en;
     !!en;
   !!en;
 ; Remove excessive items if there is
@@ -651,38 +722,46 @@ ZVSE2
   !!FU(Array_Resize):P(array)/(TRAINER_SPELL_PER_PAGE);
 !!en;
 
+; Resolve a visible page slot to its spell ID. School pages own fixed arrays;
+; every later page is an 18-item window into the dense extended-spell array.
+!?FU(trainer_GetSpellFromPage);
+!#VA(page:x) (slot:x) (spell:x);
+
+!!VR(spell):S(NO_SPELL);
+!!FU&(slot)<0:E;
+!!FU&(slot)>=(TRAINER_SPELL_PER_PAGE):E;
+
+!!if&(page)=0;
+  !!SN:Mi^trainer_airSpells^/(slot)/?(spell);
+!!el&(page)=1;
+  !!SN:Mi^trainer_fireSpells^/(slot)/?(spell);
+!!el&(page)=2;
+  !!SN:Mi^trainer_waterSpells^/(slot)/?(spell);
+!!el&(page)=3;
+  !!SN:Mi^trainer_earthSpells^/(slot)/?(spell);
+!!el&(page)>=4;
+  !!VR(newPage:y):S(page) -4;
+  !!VR(newSpellIndex:y):S(newPage) *(TRAINER_SPELL_PER_PAGE) +(slot);
+  !!SN:Mi^trainer_newSpells^/?(newSpellCount:y);
+  !!FU&(newSpellIndex)>=(newSpellCount):E;
+  !!SN:Mi^trainer_newSpells^/(newSpellIndex)/?(spell);
+!!en;
+
 ; Update the table of spells
 !?FU(trainer_UpdateSpellTable);
 !#VA(page:x);
 !#VA(hero:x);                           [possible to be NO_HERO, in this case, set spellLearned to FALSE]
 
-!!if&(page)=0;
-  !!VR(spellArray:y):Si^trainer_airSpells^;
-!!el&(page)=1;
-  !!VR(spellArray):Si^trainer_fireSpells^;
-!!el&(page)=2;
-  !!VR(spellArray):Si^trainer_waterSpells^;
-!!el&(page)=3;
-  !!VR(spellArray):Si^trainer_earthSpells^;
-!!en;
-
-!!SN:M(spellArray)/?(size:y);
-
-!!re (arrayIndex:y)/0/(size)/1/-1;
-  !!SN:M(spellArray)/(arrayIndex)/?(spell:y);
+!!re (arrayIndex:y)/0/(TRAINER_SPELL_PER_PAGE)/1/-1;
+  !!FU(trainer_GetSpellFromPage):P(page)/(arrayIndex)/?(spell:y);
   !!VR(item:y):S(arrayIndex) +36;
   !!VR(cadre:y):S(spell) +1;
 
   !!VR(spellLearned:y):S(FALSE);
 
-  !!if&(hero)>(NO_HERO);
+  !!if&(hero)>(NO_HERO)/(spell)<>(NO_SPELL);
     !!HE(hero):M=(spell)/1;
-
-    !!if&1;
-      !!VR(spellLearned):S(TRUE);
-    !!el;
-      !!VR(spellLearned):S(FALSE);
-    !!en;
+    !!VR(spellLearned)&1:S(TRUE);
   !!en;
 
   !!VR(highlight:y):S(arrayIndex) +196;
@@ -691,11 +770,21 @@ ZVSE2
   !!DL(TRAINER_MAIN_DLG):A(highlight)/(DLG_CMD_SET_DEF_FRAME)/(spellLearned);
 !!en;
 
-!!DL(TRAINER_MAIN_DLG):A11/(DLG_CMD_SET_DEF_FRAME)/(page); [School icon]
+; Pages 5+ alternate the two original extended-spell emblems (DEF frames 4/5).
+!!VR(schoolFrame:y):S(page);
+!!if&(page)>=4;
+  !!VR(schoolFrame):S(page) -4;
+  !!VR(schoolFrame):%2;
+  !!VR(schoolFrame):+4;
+  !!DL(TRAINER_MAIN_DLG):H54/^%T(trainer.newSpells)^;
+!!el;
+  !!DL(TRAINER_MAIN_DLG):H54/^MAGIC SCHOOL^;
+!!en;
+!!DL(TRAINER_MAIN_DLG):A11/(DLG_CMD_SET_DEF_FRAME)/(schoolFrame); [School icon]
 
 ; Right button for the next page
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=14/i^mouse_action^=(MOUSE_LMB_RELEASED);
-!!if&i^trainer_spellTablePage^<3;
+!!if&i^trainer_spellTablePage^<i^trainer_spellTableMaxPage^;
   !!VRi^trainer_spellTablePage^:+1;
 !!el;
   !!VRi^trainer_spellTablePage^:S0;
@@ -708,7 +797,7 @@ ZVSE2
 !!if&i^trainer_spellTablePage^>0;
   !!VRi^trainer_spellTablePage^:-1;
 !!el;
-  !!VRi^trainer_spellTablePage^:S3;
+  !!VRi^trainer_spellTablePage^:Si^trainer_spellTableMaxPage^;
 !!en;
 
 !!FU(trainer_UpdateSpellTable):Pi^trainer_spellTablePage^/i^trainer_hero^;
@@ -723,61 +812,60 @@ ZVSE2
 !!VR(spellBookGiven:y):S(FALSE);        [Variable for determine which sound to be played]
 !!HE(hero):A2/(ART_SPELL_BOOK)/?(bookOwned:y)/?(equipped:y);
 
-!!if&(page)=0;
-  !!VR(spellArray:y):Si^trainer_airSpells^;
-!!el&(page)=1;
-  !!VR(spellArray):Si^trainer_fireSpells^;
-!!el&(page)=2;
-  !!VR(spellArray):Si^trainer_waterSpells^;
-!!el&(page)=3;
-  !!VR(spellArray):Si^trainer_earthSpells^;
-!!en;
-
-!!SN:M(spellArray)/(index)/?(spell:y);
+!!FU(trainer_GetSpellFromPage):P(page)/(index)/?(spell:y);
+!!FU&(spell)=(NO_SPELL):E;
 
 ; Ctrl Click - Give Spell book/Learn spells of current page
 !!if&i^key_ctrl^/i^key_shift^=(FALSE)/i^key_alt^=(FALSE)/(spell)<>(SPELL_TITANS_LIGHTNING_BOLT);
   !!HE(hero)&(bookOwned)<=0:A4/(ART_SPELL_BOOK);
 
-  !!re (indexLoop:y)/0/17;
-    !!co&(page)=0/(indexLoop)=17;       [Skip Titan's Lightning Bolt]
+  !!re (indexLoop:y)/0/(TRAINER_SPELL_PER_PAGE)/1/-1;
+    !!FU(trainer_GetSpellFromPage):P(page)/(indexLoop)/?(spell:y);
+    !!co|(spell)=(NO_SPELL)/(spell)=(SPELL_TITANS_LIGHTNING_BOLT);
 
-    !!SN:M(spellArray)/(indexLoop)/?(spell:y);
-
+    !!VR(spellLearned:y):S(FALSE);
     !!HE(hero):M=(spell)/1;
-    !!VR(spellUpdated)&-1:S(TRUE);
-    ; Forcefully learn in order to be compatible with New Spells
+    !!VR(spellLearned)&1:S(TRUE);
+    !!VR(spellUpdated)&(spellLearned)=(FALSE):S(TRUE);
     !!HE(hero):M(spell)/(TRUE);
   !!en;
-; Shift Click - Remove all spells
+; Shift Click - Remove spells of current page
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE)/(spell)<>(SPELL_TITANS_LIGHTNING_BOLT);
-  !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
-    !!HE(hero):M=i/1;
-    !!VR(spellUpdated)&1:S(TRUE);
-    ; Forcefully unlearn in order to be compatible with New Spells
-    !!HE(hero):Mi/(FALSE);
+  !!re (indexLoop:y)/0/(TRAINER_SPELL_PER_PAGE)/1/-1;
+    !!FU(trainer_GetSpellFromPage):P(page)/(indexLoop)/?(spell:y);
+    !!co|(spell)=(NO_SPELL)/(spell)=(SPELL_TITANS_LIGHTNING_BOLT);
+
+    !!VR(spellLearned:y):S(FALSE);
+    !!HE(hero):M=(spell)/1;
+    !!VR(spellLearned)&1:S(TRUE);
+    !!VR(spellUpdated)&(spellLearned):S(TRUE);
+    !!HE(hero):M(spell)/(FALSE);
   !!en;
 
   !!FU(trainer_UpdateSpellBook):P(hero); [unequip and equip back all the artifacts to make spells from arts reappear in the book]
-; Alt Click - Give spell book/Learn all spells
+; Alt Click - Give spell book/Learn spells of current page
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^/(spell)<>(SPELL_TITANS_LIGHTNING_BOLT);
   !!HE(hero)&(bookOwned)<=0:A4/(ART_SPELL_BOOK);
 
-  !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
-    !!co&i=(SPELL_TITANS_LIGHTNING_BOLT);
-    
-    !!HE(hero):M=i/1;
-    !!VR(spellUpdated)&-1:S(TRUE);
-    ; Forcefully learn in order to be compatible with New Spells
-    !!HE(hero):Mi/(TRUE);
+  !!re (indexLoop:y)/0/(TRAINER_SPELL_PER_PAGE)/1/-1;
+    !!FU(trainer_GetSpellFromPage):P(page)/(indexLoop)/?(spell:y);
+    !!co|(spell)=(NO_SPELL)/(spell)=(SPELL_TITANS_LIGHTNING_BOLT);
+
+    !!VR(spellLearned:y):S(FALSE);
+    !!HE(hero):M=(spell)/1;
+    !!VR(spellLearned)&1:S(TRUE);
+    !!VR(spellUpdated)&(spellLearned)=(FALSE):S(TRUE);
+    !!HE(hero):M(spell)/(TRUE);
   !!en;
 ; Normal Click - Forget the selected spell if learned, otherwise learn it
 !!el;
   !!VR(spellUpdated):S(TRUE);
 
+  !!VR(spellLearned:y):S(FALSE);
   !!HE(hero):M=(spell)/1;
+  !!VR(spellLearned)&1:S(TRUE);
 
-  !!if&1;
+  !!if&(spellLearned);
     !!HE(hero):M(spell)/(FALSE);
     !!FU(trainer_UpdateSpellBook):P(hero);
   !!el;
@@ -826,7 +914,10 @@ ZVSE2
 !!en;
 
 ; Proceed only if confirmed by players or Alt/Shift is pressed
-!!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
+!!re i/(SPELL_FIRST)/i^maxSpellId^;
+  !!FU(trainer_IsHeroSpell):Pi/?(spellAvailable:y);
+  !!co&(spellAvailable)=(FALSE);
+
   !!if&(isLearning);
     !!HE(hero)&i<>(SPELL_TITANS_LIGHTNING_BOLT):Mi/(TRUE);
 
@@ -848,23 +939,17 @@ ZVSE2
 !!VR(page:y):Si^trainer_spellTablePage^;
 !!VR(index:y):Si^mouse_item^ -196;
 
-!!if&(page)=0;
-  !!VR(spellArray:y):Si^trainer_airSpells^;
-!!el&(page)=1;
-  !!VR(spellArray):Si^trainer_fireSpells^;
-!!el&(page)=2;
-  !!VR(spellArray):Si^trainer_waterSpells^;
-!!el&(page)=3;
-  !!VR(spellArray):Si^trainer_earthSpells^;
-!!en;
+!!FU(trainer_GetSpellFromPage):P(page)/(index)/?(spell:y);
+!!FU&(spell)=(NO_SPELL):E;
 
-!!SN:M(spellArray)/(index)/?(spell:y);
+!!SN:H^spell^/(spell)/(SPELL_TEXT_DESCR)/?(spellDesc:z);
+!!IF:Q1/(PIC_TYPE_SPELL)/(spell)/(MSG_TYPE_POPUP)^%(spellDesc)^;
 
-!!SN:H^spell^/(spell)/(SPELL_TEXT_DESCR)/?(spellDesc:z); [store spell description in z3]
-!!IF:Q1/9/(spell)/(MSG_TYPE_POPUP)^%(spellDesc)^;      [display spell graphic and name]
-
-; Show info of the school by right-clicking
+; Show legacy school info by right-clicking. Extended-spell tabs intentionally
+; have no school-information RMB action.
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=54/i^mouse_action^=(MOUSE_RMB_PRESSED);
+!!FU&i^trainer_spellTablePage^>=4:E;
+
 !!if&i^trainer_spellTablePage^=0;
   !!VR(school:y):S(SKILL_AIR_MAGIC);
 !!el&i^trainer_spellTablePage^=1;
@@ -1036,6 +1121,10 @@ ZVSE2
 ; Work for Ctrl/Shift/Alt clicks only!
 ; This code is just repeating the one from above
 !?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=116/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
+!!FU&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^=(FALSE):E;
+!!FU&i^key_ctrl^/i^key_shift^:E;
+!!FU&i^key_ctrl^/i^key_alt^:E;
+!!FU&i^key_shift^/i^key_alt^:E;
 !!VR(hero:y):Si^trainer_hero^;
 !!VR(ssLvChanged:y):S(FALSE);
 
@@ -1062,20 +1151,13 @@ ZVSE2
         !!VRi^H3_%z10_1_Hero%(hero)^:S(TRUE); [Give Grand Master Level]
       !!en;
     !!en;
-  ; Shift Click - reduce skill level by 1
+  ; Shift Click - unlearn every secondary skill
   !!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
-    !!VR(ssLvNew)|(ssLv)=(SKILL_NOT_LEARNED)/(ssLv)=(SKILL_BASIC):S(SKILL_NOT_LEARNED);
-    !!VR(ssLvNew)&(ssLv)=(SKILL_ADVANCED):S(SKILL_BASIC);
-    !!VR(ssLvNew)&(ssLv)=(SKILL_EXPERT):S(SKILL_ADVANCED);
+    !!VR(ssLvNew):S(SKILL_NOT_LEARNED);
 
-    !!if&(ssLv)=(SKILL_EXPERT)/i^Advanced_Classes_Mod_Active^;
-      !!if&(skillMasterOn)/(skillGrandMasterOn)=(FALSE);
-        !!VR(ssLvNew):S(SKILL_EXPERT);
-        !!VRi^H3_%z10_0_Hero%(hero)^:S(FALSE);
-      !!el&(skillMasterOn)/(skillGrandMasterOn);
-        !!VR(ssLvNew):S(SKILL_EXPERT);
-        !!VRi^H3_%z10_1_Hero%(hero)^:S(FALSE);
-      !!en;
+    !!if&i^Advanced_Classes_Mod_Active^;
+      !!VRi^H3_%z10_0_Hero%(hero)^:S(FALSE);
+      !!VRi^H3_%z10_1_Hero%(hero)^:S(FALSE);
     !!en;
   ; Alt Click - Set sec skill level to max
   !!el&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^;
@@ -1447,6 +1529,47 @@ ZVSE2
 
 !!FU(trainer_UpdatePrimSkills):P(hero);
 
+; Click on the title to change all four primary skills.
+; Only a single Ctrl, Shift or Alt modifier has an effect.
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(TRAINER_MAIN_DLG)/i^mouse_item^=19/i^mouse_action^=(MOUSE_LMB_PRESSED)/i^trainer_hero^>(NO_HERO);
+!!VR(hero:y):Si^trainer_hero^;
+!!FU(trainer_GetMaxPrimarySkillValue):P?(psCap:y);
+!!VRi^trainer_maxPrimSkillValue^:S(psCap);
+!!VR(handled:y):S(FALSE);
+
+!!HE(hero):F?(atk:y)/?(def:y)/?(pwr:y)/?(knl:y);
+
+; Ctrl Click - increase every primary skill by 10
+!!if&i^key_ctrl^/i^key_shift^=(FALSE)/i^key_alt^=(FALSE);
+  !!VR(atkNew:y):S(atk) +10 F0/(psCap);
+  !!VR(defNew:y):S(def) +10 F0/(psCap);
+  !!VR(pwrNew:y):S(pwr) +10 F1/(psCap);
+  !!VR(knlNew:y):S(knl) +10 F1/(psCap);
+  !!VR(handled):S(TRUE);
+; Shift Click - set every primary skill to its minimum legitimate value
+!!el&i^key_ctrl^=(FALSE)/i^key_shift^/i^key_alt^=(FALSE);
+  !!VR(atkNew):S0;
+  !!VR(defNew):S0;
+  !!VR(pwrNew):S1;
+  !!VR(knlNew):S1;
+  !!VR(handled):S(TRUE);
+; Alt Click - set every primary skill to the current game maximum
+!!el&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^;
+  !!VR(atkNew):S(psCap);
+  !!VR(defNew):S(psCap);
+  !!VR(pwrNew):S(psCap);
+  !!VR(knlNew):S(psCap);
+  !!VR(handled):S(TRUE);
+!!en;
+
+!!FU&(handled)=(FALSE):E;
+!!HE(hero):F(atkNew)/(defNew)/(pwrNew)/(knlNew);
+
+!!if|(atk)<>(atkNew)/(def)<>(defNew)/(pwr)<>(pwrNew)/(knl)<>(knlNew);
+  !!FU(trainer_UpdatePrimSkills):P(hero);
+  !!SN:P^button.wav^;
+!!en;
+
 !?FU(trainer_UpdatePrimSkills);
 !#VA(hero:x);
 
@@ -1550,7 +1673,7 @@ ZVSE2
   !!VR(psBonus:y):S-10;
 ; Alt Click - set primary skill to max
 !!el&i^key_ctrl^=(FALSE)/i^key_shift^=(FALSE)/i^key_alt^;
-  !!VR(psNew):S(psCap) -10;              [Slightly lower than max to prevent overflow easily]
+  !!VR(psNew):S(psCap);
 ; LMB- Dialogue for input needed Primary skill value
 !!el;
   !!FU(GetTextFileString):P^priskill^/(psType)/?z2;
@@ -2120,7 +2243,7 @@ ZVSE2
   !!el&(art)=(ART_SPELL_BOOK);
     !!HE(hero)&(bookOwned)<=0:A4/(art);
   !!el&(art)=(ART_SPELL_SCROLL);
-    !!VR(spell:y):R0/(SPELL_FIRST)/(SPELL_LAST_WOG);
+    !!FU(trainer_GetRandomAvailableSpell):P?(spell:y);
     !!VR(scroll:y):S(spell) +(ART_META_SPELL_SCROLL_FIRST);
     !!HE(hero):A4/(scroll);
   !!en;
@@ -2166,11 +2289,11 @@ ZVSE2
   !!el&(art)=(ART_SPELL_BOOK);
     !!HE(hero)&(bookOwned)<=0:A4/(art);
   !!el&(art)=(ART_SPELL_SCROLL);
-    !!VR(spell):R0/(SPELL_FIRST)/(SPELL_LAST_WOG);
+    !!FU(trainer_GetRandomAvailableSpell):P?(spell);
     !!VR(scroll):S(spell) +(ART_META_SPELL_SCROLL_FIRST);
     !!HE(hero):A4/(scroll);
 
-    !!VR(spell):R0/(SPELL_FIRST)/(SPELL_LAST_WOG);
+    !!FU(trainer_GetRandomAvailableSpell):P?(spell);
     !!VR(scroll):S(spell) +(ART_META_SPELL_SCROLL_FIRST);
     !!HE(hero):A4/(scroll);
   !!en;
@@ -2293,7 +2416,7 @@ ZVSE2
 !?FU(trainer_GiveSpellScroll);
 !#VA(hero:x);
 
-!!SN:T^trainer.titleScroll^/?z2/^hero^/s^trainer_heroName^ T^trainer.legendScroll^/?z3/^max^/(SPELL_LAST_WOG);
+!!SN:T^trainer.titleScroll^/?z2/^hero^/s^trainer_heroName^ T^trainer.legendScroll^/?z3/^max^/i^maxSpellId^;
 !!IF:D30/2/3/^^;
 !!IF:E1/30;                             [1 = index of v, 30 = number of extended dialog]
 !!VRz1:H1;                              [check if text entered, flag 1=1 if yes]
@@ -2301,19 +2424,23 @@ ZVSE2
 
 !!VR(spell:y):Vz1;
 !!FU(trainer_CheckIfZ1FirstCharIsNum):P?(result:y);
+!!FU(trainer_IsHeroSpell):P(spell)/?(spellAvailable:y);
 
-!!if&(result)/(spell)>=(SPELL_FIRST)/(spell)<=(SPELL_LAST_WOG);
+!!if&(result)/(spell)>=(SPELL_FIRST)/(spell)<=i^maxSpellId^/(spellAvailable);
   !!VR(art:y):S(spell) +(ART_META_SPELL_SCROLL_FIRST);
   !!FU(trainer_PassCustomArtToHero):P(hero)/(art);
 !!el;
-  !!re i/(SPELL_FIRST)/(SPELL_LAST_WOG);
+  !!re i/(SPELL_FIRST)/i^maxSpellId^;
+    !!FU(trainer_IsHeroSpell):Pi/?(spellAvailable);
+    !!co&(spellAvailable)=(FALSE);
+
     !!SN:H^spell^/i/(SPELL_TEXT_NAME)/?z2;
     !!FU(trainer_CompareStrings):Pz1/z2/?(result:y);
 
     !!br&(result)=0;
   !!en;
 
-  !!if&i<=(SPELL_LAST_WOG);
+  !!if&i<=i^maxSpellId^;
     !!VR(art:y):Si +(ART_META_SPELL_SCROLL_FIRST);
     !!FU(trainer_PassCustomArtToHero):P(hero)/(art);
   !!el;
@@ -3675,10 +3802,10 @@ ZVSE2
   !!if&i^trainer_dlg_item^>=196/i^trainer_dlg_item^<=213|i^trainer_dlg_item^=54/i^trainer_dlg_item^=10;
     !!VRi^trainer_spellTablePage^:Sd-i^mouse_action^ S?(page:y);
 
-    !!if&(page)>3;
+    !!if&(page)>i^trainer_spellTableMaxPage^;
       !!VR(page):S0;
     !!el&(page)<0;
-      !!VR(page):S3;
+      !!VR(page):Si^trainer_spellTableMaxPage^;
     !!en;
 
     !!FU(trainer_UpdateSpellTable):P(page)/i^trainer_hero^;
