@@ -304,3 +304,55 @@ The game may fall at any time.^;
 !!el&(strPtr1Lower)>(strPtr2Lower);
   !!VR(result):S1;
 !!en;
+
+// Hide the explored map for a specific player
+!?FU(trainer_HideWholeMapForPlayer);
+; Hides the explored map for one player while preserving every other
+; player's shroud. Current sight around heroes, towns, and other owned
+; objects is restored afterward under the original alliances.
+;
+; This is pure ERM for the ERA/SoD executable used by this build. Calling
+; UN:H directly cannot target one player: its owner argument preserves that
+; player's whole team and hides the area from everybody else.
+!#VA(player:x);
+
+!!FU&(player)<(PLAYER_FIRST):E;
+!!FU&(player)>(PLAYER_LAST):E;
+
+!!UN:X?(mapSize:y)/?(hasUnderground:y);
+!!UN:C(GAME_MANAGER)/(UNC_UINT32)/?(gameManager:y);
+!!FU&(gameManager)=0:E;
+
+!!VR(mapCenter:y):S(mapSize) :2;
+
+; ResetVisibility preserves the team of its player argument. Put every
+; non-target player on one temporary team and the target on another, then
+; pass any non-target player as the preserved player.
+!!VR(preservedPlayer:y):S(PLAYER_FIRST);
+!!if&(player)=(PLAYER_FIRST);
+  !!VR(preservedPlayer):S(PLAYER_FIRST) +1;
+!!en;
+
+!#VA(originalTeams[8]:y);
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!OW:Ti/?(originalTeams[i]);
+
+  !!if&i=(player);
+    !!OW:Ti/1;
+  !!el;
+    !!OW:Ti/0;
+  !!en;
+!!en;
+
+; Call the native reset without UN:H's immediate global sight recalculation;
+; otherwise the temporary team would leak current sight between other players.
+!!re (mapLevel:y)/0/(hasUnderground);
+  !!SN:E4837440/(CALLCONV_THISCALL)/(gameManager)/(mapCenter)/(mapCenter)/(mapLevel)/(preservedPlayer)/(mapSize); [game::ResetVisibility, 0x49D040]
+!!en;
+
+!!re i/(PLAYER_FIRST)/(PLAYER_LAST);
+  !!OW:Ti/(originalTeams[i]);
+!!en;
+
+; Reopen only the legitimate current sight using the restored alliances.
+!!SN:E5011728/(CALLCONV_THISCALL)/(gameManager); [game::ResetAllPlayerVisibility, 0x4C7910]
