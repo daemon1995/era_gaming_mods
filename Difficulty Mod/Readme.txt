@@ -1,7 +1,7 @@
 
 
                  ************** Difficulty Mod ****************
-                 ************** version: 1.04 ******************
+                 ************** version: 1.043 ******************
                  ************  Daemon & Perry  **************
                  
 
@@ -17,6 +17,7 @@ The mod has to offer (all optional):
 -Increased stats of neutrals over time
 -Extra growth for low-level troops
 -Random spell buffs for neutrals
+-Optional suppression of neutral creature buff casts
 -Random abilities for neutrals (temporary disbaled)   
 -Battle commander option
 -Battle rewards option
@@ -34,7 +35,7 @@ The mod has to offer (all optional):
 How to play with this mod:
 - Select the options you like at map start
 - Additional informations are available on right-clicking 
-- Clicking "Confirm" will save all your settings, Clicking "Cancel" will reset all your options
+- Clicking "Confirm" will save all your settings. Clicking "Cancel" discards the current changes and restores the last saved options.
 - Enter a day at which the AI starts to receive bonuses (Payday) This will allow you to built up your hero
 - Dont use the highest AI difficulty when you are new to this mod, start with Easy or Normal and Payday at day 50
 - If you want, also use progressive-difficulty option to change the AI level during the game to a harder one. This allows for a smooth game progression. Like from Hard to Expert. Or from Extreme to Insane.
@@ -67,6 +68,33 @@ You can conduct the priority order for equipping by reading the code. The lower 
 Visit Homepage: http://heroescommunity.com or http://wforum.heroes35.net for Updates.
 
 Changelog:
+1.043
+- fixed progressive AI difficulty being reset when loading a save or reopening settings; increases remain local to the current map
+- fixed the AI useful spells toggle and the fallback for invalid hero level limits
+- corrected the neutral growth default from 10% to 110%, including the previous erroneous saved value
+- mixed neutrals and enhanced henchmen now save or cancel only their own settings
+- added the optional "No buff casts" setting for neutral creatures. When enabled, fixed beneficial creature spells are disabled while offensive spells, random spell pools, healing and resurrection remain available
+
+
+
+1.042
+- added a persistent "Hide at map start" option to the Difficulty Mod start menu; manual access remains available
+- fixed persistent settings when the automatic Difficulty Mod startup dialog is replaced by Ingame Menu
+- the enabled state of neutral difficulty and all progressive AI fields are now stored in Runtime/difficulty mod.ini
+- Cancel now restores the last saved configuration instead of allowing temporary defaults to overwrite it
+- Mixed Neutrals and Enhanced Henchmen settings now use the same reliable confirm/cancel persistence when opened from Ingame Menu
+- fixed three malformed INI write operands which could prevent individual Mixed Neutrals values from being stored
+- fixed Mixed Neutrals being reset when its configuration was opened from the original Difficulty Mod window
+- isolated the Mixed Neutrals labels from temporary z variables used for numeric dialog updates
+- fixed the Stack Experience activation checkbox when the standalone configuration is opened from Difficulty Mod
+- replaced monster arts from the splash screen with upscaled versions (thanks to Suft - the HD Remastered god)
+- increased the default growth limit of neutral stack size when the grow beyond 4000 option is activated
+- slighty reduced the speed and damage scaling of battle commanders, also removed the possibilty that they spawn with active Prayer spell
+- fixed small configuration error when opening mixed neutral setting window
+- balance change: Neutral Stats Gain option now counts up from zero, meaning even on Easy setting it will grant a buff during the first weeks and before the first period starts. My opinion is, that with the many game options that are provided, the human player has a big advantage over neutral stacks and often the game is already over before the stats from neutrals are increased, if played on lower settings.
+- Neutral Stat Gains option now provides +1 speed to neutral stacks, starting from game month 5. Updated description.
+
+
 1.041
 - Now CB difficulty settings also work on TUM CBs
 - Important fix for MP hotseat gaming with Neutral Commander boost option enabled, stats of defending commander wont be overwritten by that script anymore

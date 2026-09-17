@@ -30,12 +30,14 @@ ZVSE2
 !!FU(mix_RegisterRegularMonsterRange)&(lastMon)>(MON_LAST_WOG):P197/(lastMon);
 
 !?FU(difm_LoadOptionsFromIni);
+; x1: 0 = all, 1 = henchmen only, 2 = mixed neutrals only.
 !!VR(filePath:z):S^Runtime/difficulty mod.ini^;
+!!if&x1=0;
 
 !!FU(ReadIniInts):P(filePath)/^main^/
   ^Stack_Size_Enable^/?i^Stack_Size_Enable^/0/
   ^Health_Grow_Enable^/?i^Health_Grow_Enable^/0/
-  ^Guarded_Object_growth_Rate^/?i^Guarded_Object_growth_Rate^/10/
+  ^Guarded_Object_growth_Rate^/?i^Guarded_Object_growth_Rate^/110/
   ^Guarded_Object_Faktor^/?i^Guarded_Object_Faktor^/3;
 
 !!FU(ReadIniInts):P(filePath)/^main^/
@@ -81,8 +83,7 @@ ZVSE2
   ^Stack_Size_Mod_L7^/?i^Stack_Size_Mod_L7^/0;
 
 !!FU(ReadIniInts):P(filePath)/^main^/
-  ^Stack_Size_Mod_L8^/?i^Stack_Size_Mod_L8^/0/
-  ^mix_enabled^/?i^mix_enabled^/(FALSE);
+  ^Stack_Size_Mod_L8^/?i^Stack_Size_Mod_L8^/0;
 
 !!FU(ReadIniInts):P(filePath)/^main^/
   ^AI_Recover_Losses^/?i^AI_Recover_Losses^/1/
@@ -91,7 +92,16 @@ ZVSE2
   ^AI_has_no_DD^/?i^AI_has_no_DD^/0;
 
 !!FU(ReadIniInts):P(filePath)/^main^/
-  ^AI_Artifacts_Eq^/?i^AI_Artifacts_Eq^/1;
+  ^AI_Artifacts_Eq^/?i^AI_Artifacts_Eq^/1/
+  ^Neutrals_Difficulty_Enabled^/?i^Neutrals_Difficulty_Enabled^/0/
+  ^Progressive_Difficulty^/?i^Progressive_Difficulty^/0/
+  ^Progressive_Difficulty2^/?i^Progressive_Difficulty2^/0;
+
+!!FU(ReadIniInts):P(filePath)/^main^/
+  ^Difficulty_day^/?i^Difficulty_day^/0/
+  ^Difficulty_day2^/?i^Difficulty_day2^/0/
+  ^AI_Hell_Mod^/?i^AI_Hell_Mod^/0/
+  ^Hide_At_Map_Start^/?i^Dif_Mod_Hide_At_Map_Start^/0;
 
 !!FU(ReadIniInts):P(filePath)/^main^/
   ^Additionals_troops^/?i^Additionals_troops^/0/
@@ -104,24 +114,30 @@ ZVSE2
   ^H3_Game_Difficulty^/?i^H3_Game_Difficulty^/0; 
 
 !!FU(ReadIniInts):P(filePath)/^main^/
-  ^Stack_Exp_Rebalance_On^/?i^Stack_Exp_Rebalance_On^/0/
-  ^Exp_WoG_Stats^/?i^Exp_WoG_Stats^/0/  
-  ^Aggression_Neutrals^/?i^Aggression_Neutrals^/0;  
-
-!!FU(ReadIniInts):P(filePath)/^main^/
-  ^Exp_WoG_Abilities^/?i^Exp_WoG_Abilities^/0/
-  ^Exp_WoG_Neutrals^/?i^Exp_WoG_Neutrals^/0/
-  ^Exp_TUM_Stats^/?i^Exp_TUM_Stats^/0/  
-  ^Exp_TUM_Abilities^/?i^Exp_TUM_Abilities^/0;
-
-!!FU(ReadIniInts):P(filePath)/^main^/
-  ^Exp_TUM_Neutrals^/?i^Exp_TUM_Neutrals^/0/
   ^Dif_Mod_Neutral_Commander^/?i^Dif_Mod_Neutral_Commander^/0/
   ^Dif_Mod_Neutral_boost^/?i^Dif_Mod_Neutral_boost^/0/
   ^Dif_Mod_AI_Scaling^/?i^Dif_Mod_AI_Scaling^/0;
 
 
+
+!!FU(ReadIniInts):P(filePath)/^main^/
+  ^Aggression_Neutrals^/?i^Aggression_Neutrals^/0/
+  ^Neutral_No_Buff_Casts^/?i^Neutral_No_Buff_Casts^/0;
+!!VRi^Neutral_No_Buff_Casts^:F0/1;
+; Repair the former invalid default and preserve this map's committed AI level.
+!!VRi^Guarded_Object_growth_Rate^&i^Guarded_Object_growth_Rate^=10:S110;
+!!VRi^H3_Game_Difficulty^&i^difm_mapDifficulty^>=0:Si^difm_mapDifficulty^;
+!!en;
+
+
+
 ; Mixed Neutrals
+!!if|x1=0/x1=2;
+!!FU(ReadIniInts):P(filePath)/^main^/^mix_enabled^/?i^mix_enabled^/(FALSE);
+!!FU(ReadIniInts):P(filePath)/^mixed neutrals^/
+  ^mix_stackCountPreset^/?i^mix_stackCountPreset^/4;
+!!VRi^mix_stackCountPreset^:F0/4;
+
 !!FU(ReadIniInts):P(filePath)/^mixed neutrals^/
   ^mix_minNumNeutralStacks^/?i^mix_minNumNeutralStacks^/i^mix_minNumNeutralStacks^/
   ^mix_maxNumNeutralStacks^/?i^mix_maxNumNeutralStacks^/i^mix_maxNumNeutralStacks^/
@@ -148,6 +164,8 @@ ZVSE2
 
 
 ; Enhanced Henchmen
+!!en;
+!!if|x1=0/x1=1;
 !!FU(ReadIniInts):P(filePath)/^enhanced Henchmen^/
   ^battleExpStatic^/?i^hench_battleExpStatic^/i^hench_battleExpStatic^/
   ^battleExpRandom^/?i^hench_battleExpRandom^/i^hench_battleExpRandom^/
@@ -162,16 +180,26 @@ ZVSE2
 
 !!FU(ReadIniInts):P(filePath)/^enhanced Henchmen^/
   ^battleExpAIPct^/?i^hench_battleExpAIPct^/i^hench_battleExpAIPct^;
+!!en;
 
 
 !?FU(difm_SaveOptionsToIni);
+; x1 uses the same section scope as the loader.
 !!VR(filePath:z):S^Runtime/difficulty mod.ini^;
+!!if&x1=0;
+!!VR(configDifficulty:y):Si^H3_Game_Difficulty^;
+!!if&i^difm_progressiveBase^>=0/i^H3_Game_Difficulty^=i^difm_mapDifficulty^;
+  !!VR(configDifficulty):Si^difm_progressiveBase^;
+!!el;
+  !!VRi^difm_progressiveBase^:S-1;
+!!en;
+!!VRi^difm_mapDifficulty^:Si^H3_Game_Difficulty^;
 
 !!FU(WriteIniInts):P(filePath)/^main^/
   ^Stack_Size_Enable^/i^Stack_Size_Enable^/
   ^Health_Grow_Enable^/i^Health_Grow_Enable^/
   ^Guarded_Object_growth_Rate^/i^Guarded_Object_growth_Rate^/
-  ^Guarded_Object_Faktor^/i^Guarded_Object_Faktor^/;
+  ^Guarded_Object_Faktor^/i^Guarded_Object_Faktor^;
 
 !!FU(WriteIniInts):P(filePath)/^main^/
   ^Guarded_Object_Commander_Bonus_Att^/i^Guarded_Object_Commander_Bonus_Att^/
@@ -216,8 +244,7 @@ ZVSE2
   ^Stack_Size_Mod_L7^/i^Stack_Size_Mod_L7^;
 
 !!FU(WriteIniInts):P(filePath)/^main^/
-  ^Stack_Size_Mod_L8^/i^Stack_Size_Mod_L8^/
-  ^mix_enabled^/?i^mix_enabled^;
+  ^Stack_Size_Mod_L8^/i^Stack_Size_Mod_L8^;
 
 !!FU(WriteIniInts):P(filePath)/^main^/
   ^AI_Recover_Losses^/i^AI_Recover_Losses^/
@@ -226,7 +253,16 @@ ZVSE2
   ^AI_has_no_DD^/i^AI_has_no_DD^;
 
 !!FU(WriteIniInts):P(filePath)/^main^/
-  ^AI_Artifacts_Eq^/i^AI_Artifacts_Eq^;
+  ^AI_Artifacts_Eq^/i^AI_Artifacts_Eq^/
+  ^Neutrals_Difficulty_Enabled^/i^Neutrals_Difficulty_Enabled^/
+  ^Progressive_Difficulty^/i^Progressive_Difficulty^/
+  ^Progressive_Difficulty2^/i^Progressive_Difficulty2^;
+
+!!FU(WriteIniInts):P(filePath)/^main^/
+  ^Difficulty_day^/i^Difficulty_day^/
+  ^Difficulty_day2^/i^Difficulty_day2^/
+  ^AI_Hell_Mod^/i^AI_Hell_Mod^/
+  ^Hide_At_Map_Start^/i^Dif_Mod_Hide_At_Map_Start^;
 
 !!FU(WriteIniInts):P(filePath)/^main^/
   ^Additionals_troops^/i^Additionals_troops^/
@@ -236,29 +272,29 @@ ZVSE2
 
 !!FU(WriteIniInts):P(filePath)/^main^/
   ^AIPayday^/i^AIPayday^/
-  ^H3_Game_Difficulty^/i^H3_Game_Difficulty^;    
+  ^H3_Game_Difficulty^/(configDifficulty);
+
 
 !!FU(WriteIniInts):P(filePath)/^main^/
-  ^Stack_Exp_Rebalance_On^/i^Stack_Exp_Rebalance_On^/
-  ^Exp_WoG_Stats^/i^Exp_WoG_Stats^/
-  ^Aggression_Neutrals^/i^Aggression_Neutrals^;
-
-!!FU(WriteIniInts):P(filePath)/^main^/
-  ^Exp_WoG_Abilities^/i^Exp_WoG_Abilities^/
-  ^Exp_WoG_Neutrals^/i^Exp_WoG_Neutrals^/
-  ^Exp_TUM_Stats^/i^Exp_TUM_Stats^/
-  ^Exp_TUM_Abilities^/i^Exp_TUM_Abilities^;  
-
-!!FU(WriteIniInts):P(filePath)/^main^/
-  ^Exp_TUM_Neutrals^/i^Exp_TUM_Neutrals^/
   ^Dif_Mod_Neutral_Commander^/i^Dif_Mod_Neutral_Commander^/
   ^Dif_Mod_Neutral_boost^/i^Dif_Mod_Neutral_boost^/
   ^Dif_Mod_AI_Scaling^/i^Dif_Mod_AI_Scaling^;  
 
 
 
+!!FU(WriteIniInts):P(filePath)/^main^/
+  ^Aggression_Neutrals^/i^Aggression_Neutrals^/
+  ^Neutral_No_Buff_Casts^/i^Neutral_No_Buff_Casts^;
+!!en;
+
+
 
 ; Mixed Neutrals
+!!if|x1=0/x1=2;
+!!FU(WriteIniInts):P(filePath)/^main^/^mix_enabled^/i^mix_enabled^;
+!!FU(WriteIniInts):P(filePath)/^mixed neutrals^/
+  ^mix_stackCountPreset^/i^mix_stackCountPreset^;
+
 !!FU(WriteIniInts):P(filePath)/^mixed neutrals^/
   ^mix_minNumNeutralStacks^/i^mix_minNumNeutralStacks^/
   ^mix_maxNumNeutralStacks^/i^mix_maxNumNeutralStacks^/
@@ -280,11 +316,13 @@ ZVSE2
 !!FU(WriteIniInts):P(filePath)/^mixed neutrals^/
   ^mix_minRelativeMonLevel^/i^mix_minRelativeMonLevel^/
   ^mix_maxRelativeMonLevel^/i^mix_maxRelativeMonLevel^/
-  ^mixconf_displayExactStackQuantities^/?i^mixconf_displayExactStackQuantities^/
-  ^mixconf_showRegularViewDialog^/?i^mixconf_showRegularViewDialog^;
+  ^mixconf_displayExactStackQuantities^/i^mixconf_displayExactStackQuantities^/
+  ^mixconf_showRegularViewDialog^/i^mixconf_showRegularViewDialog^;
 
 
 ; Enhanced Henchmen
+!!en;
+!!if|x1=0/x1=1;
 !!FU(WriteIniInts):P(filePath)/^enhanced Henchmen^/
   ^battleExpStatic^/i^hench_battleExpStatic^/
   ^battleExpRandom^/i^hench_battleExpRandom^/
@@ -299,6 +337,13 @@ ZVSE2
 
 !!FU(WriteIniInts):P(filePath)/^enhanced Henchmen^/
   ^battleExpAIPct^/i^hench_battleExpAIPct^;
+!!en;
 
 
 !!FU(SaveIni):P(filePath);
+
+
+; Named variables from a loaded game can replace the values read during PI.
+; Restore Runtime options while retaining the committed difficulty of this map.
+!?FU(OnStartOrLoad);
+!!FU(difm_LoadOptionsFromIni):P;
