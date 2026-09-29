@@ -92,7 +92,7 @@ ZVSE2
 ** - script76.erm: Commander Sanctuary [by Fnord]
 ** - script77.erm: WoG Cheat Menu [by Fnord]
 
-** Variables Used: v600-v705, v950-v966
+** Variables Used: v600-v705, v951-v966
 ** Flags Used: 9,870 (used by Anders' Mithril script section]
 ** Functions Used: 8-9, 670-686, 5209
 ** Dialogs Used: 1
@@ -548,7 +548,6 @@ Returned Values:
 
 !#IF:V870/0; [Flag 870 will be set to true by Mithril script if in use]
 !#TM19:S1/1/1/255; [timer day one for all players]
-!#VRv950:S0; [assume we haven't done the conversion yet]
 
 !#VRi^wog_195_objReplaceMult^:S100;   [Default percentage of the original WoG replacement chance]
 !#VRi^wog_195_howlingHollow_on^:S(TRUE);    [compatibility setting with mods - Archer]
@@ -557,23 +556,25 @@ Returned Values:
 
 
 ** Timer routine
+!?FU(WOG_IFY_ShowMessage);
+!#VA(textTop:x) (textBelow:x) (textHint:x) (picName:x);
+!!VRv1:S0;
+!!VRz1:Sz(textTop:x);S^%T(wog.248.before.top)^;
+!!VRz2:Sz(textBelow:x);S^%T(wog.248.before.below)^;
+!!VRz3:Sz(picName:x);S^../data/zvs/lib1.res/wogoption2.bmp^;
+!!VRz4:Sz(textHint:x);S^%T(wog.248.before.hint)^;
+!!VRz-1:S^^;
+!!IF:D1/1/-1/2/3/-1/-1/-1/4/-1/-1/-1/-1/-1/-1/-1;
+!!IF:F1/-1/-1/-1/-1/0;          [enabled cancel button]
+!!IF:E1/1;                [display WoGification dialogue box if enabled]
 
-!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^/v950=0;
-
+!?FU(OnEveryDay)&i^timerDay^=1/i^timerOnce^/i^wog_wogification_completed^=0;
 
 !!UN:P248/?(displayMessage:y);  [check if "Display WoGification Messages" is enabled: y26]
-!!VR(displayMessage:y):S1;
+*!VR(displayMessage:y):S1;
 
 !!if&(displayMessage:y);
-  !!VRv1:S0;
-  !!VRz1:S^%T(wog.248.before.top)^;
-  !!VRz2:S^%T(wog.248.before.below)^;
-  !!VRz3:S^../data/zvs/lib1.res/wogoption2.bmp^;
-  !!VRz4:S^%T(wog.248.before.hint)^;
-  !!VRz-1:S^^;
-  !!IF:D1/1/-1/2/3/-1/-1/-1/4/-1/-1/-1/-1/-1/-1/-1;
-  !!IF:F1/-1/-1/-1/-1/0;          [enabled cancel button]
-  !!IF:E1/1;                [display WoGification dialogue box if enabled]
+  !!FU(WOG_IFY_ShowMessage):P^%T(wog.248.before.top)^/^%T(wog.248.before.below)^/^%T(wog.248.before.hint)^/^../data/zvs/lib1.res/wogoption2.bmp^;
 !!en;
 
 !!UN:R5/1/1;                    [Change cursor to "wait" hourglass cursor]
@@ -583,15 +584,8 @@ Returned Values:
 !!FU(WOG_IFY_Begin):P;
 
 ** setup of and display dialogue box for closing WoGification message
-
 !!if&(displayMessage:y);
-  !!VRz1:S^%T(wog.248.after.top)^;
-  !!VRz2:S^%T(wog.248.after.below)^;
-  !!VRz3:S^../data/zvs/lib1.res/wogoption.bmp^;
-  !!VRz4:S^%T(wog.248.after.hint)^;
-  !!IF:D1/1/-1/2/3/-1/-1/-1/4/-1/-1/-1/-1/-1/-1/-1;
-  !!IF:F1/-1/-1/-1/-1/(FALSE); [remove cancel button]
-  !!IF:E1/1; [display WoGification dialogue box if enabled]
+  !!FU(WOG_IFY_ShowMessage):P^%T(wog.248.after.top)^/^%T(wog.248.after.below)^/^%T(wog.248.after.hint)^/^../data/zvs/lib1.res/wogoption.bmp^;
 !!en;
 
 !!UN:R7/0/0; [Show mouse cursor and enable changing]
@@ -599,24 +593,21 @@ Returned Values:
 
 
 ** function to do conversion
-!?FU(WOG_IFY_Begin)&v950=0;
+!?FU(WOG_IFY_Begin)&i^wog_wogification_completed^=(FALSE);
 
-!!VRv950:S1;                    [note we've done conversion]
+!!VRi^wog_wogification_completed^:S(TRUE); [note we've done conversion]
 
-!!UN:X?v957/?v958;              [get map size and underground flag]
+!!UN:X?v957/?v958;                         [get map size and underground flag]
 
-!!UN:P900/?y22;                 [Check if Stack Experience is enabled: y22]
-!!UN:P143/?y23;                 [Check if New Artifacts is enabled: y23]
-!!UN:P234/?y24;                 [Check if Warlord's Banner is disabled: y24]
+!!UN:P900/?y22;                            [Check if Stack Experience is enabled: y22]
+!!UN:P143/?y23;                            [Check if New Artifacts is enabled: y23]
+!!UN:P234/?y24;                            [Check if Warlord's Banner is disabled: y24]
 
-!!if|y22=0/y24=1;               [If Stack Experience is disabled, disable Warlord's Banner]
-  !!UN:A156/1 P234/1 P234/?y24; [set "banned" and set "blocked"]
+!!if|y22=0/y24=1;                          [If Stack Experience is disabled, disable Warlord's Banner]
+  !!UN:A156/1 P234/1 P234/?y24;            [set "banned" and set "blocked"]
 !!en;
 
 
- [If Stack Experience enabled, New WoG Artifacts enabled, and]
- [Warlord's Banners not banned, add Banners to Creature Banks]
-!!FU(WOG_IFY_CreatureBanks_AddWarlordBanners)&y22=1/y23=1/y24=0:P;
 
 ** Convert Objects
 ** table fields: type/subtype/footprint/terrain/back wall/edge x/edge y
@@ -1380,6 +1371,14 @@ Returned Values:
 !!VRy1&y3=1:Sv957; [get map size]
 !!VRy1&y3=1::9; [get size-dependent number from 4-16]
 !!DO685/1/y1/1&y3=1:P; [try to add 4-16 bits of SoD terrain]
+
+
+!!UN:P900/?y22;                            [Check if Stack Experience is enabled: y22]
+!!UN:P143/?y23;                            [Check if New Artifacts is enabled: y23]
+!!UN:P234/?y24;                            [Check if Warlord's Banner is disabled: y24]
+[If Stack Experience enabled, New WoG Artifacts enabled, and]
+[Warlord's Banners not banned, add Banners to Creature Banks]
+!!FU(WOG_IFY_CreatureBanks_AddWarlordBanners)&y22=1/y23=1/y24=0:P;
 
 ** redraw screen
 
