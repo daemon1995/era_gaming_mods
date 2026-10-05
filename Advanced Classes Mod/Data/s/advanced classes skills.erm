@@ -18622,69 +18622,44 @@ Also show if Mastery is active or not
 !!FU&y1=0:E;
 
 !!SN:Ay1/^SetHook^/?y2;
-!!SN:Ey2/1/4621577/(ACM_beforeCreatureInfoDlg_Show); [right click] 468509
-!!SN:Ey2/1/4621584/(ACM_beforeCreatureInfoDlg_Show); [left click] 468510
+!!SN:Ey2/1/7752717/(ACM_BeforeCombatCreatureInfoDlgCtor); [any click] 764C0D
 
+!?FU(ACM_BeforeCombatCreatureInfoDlgCtor); 764C0D
+!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/8/4/?(stack:y);         [get stack from stack lmao]
+!!UN:C(stack:y)/52/4/?t;                     [get creature type]
+!!SN:F^IsCommanderId^/t;
+!!FU&v1=(FALSE):E;
+!!MW:Cv998/v999/v1000/?(isWandering:y);             [check if wandering monster and get WM number]
+!!FU&(isWandering:y)/t>=(MON_COMMANDER_FIRST_D):E;
 
-!?FU(ACM_beforeCreatureInfoDlg_Show);
-!!MW:Cv998/v999/v1000/?y10;             [check if wandering monster and get WM number]
-!!UN:Cx1/24/4/?y1;                      [get creature dlg]
+!!FU(ACM_UpdateDynamicNPCCombatDescription):P(stack:y);
 
-!!if&y1>0;
-  !!UN:Cx1/8/4/?y2 Cy2/8/4/?y3;         [get stack from stack lmao]
-  !!UN:Cy3/52/4/?t;                     [get creature type]
+!?FU(ACM_UpdateDynamicNPCCombatDescription);
+!#VA(stack:x) (textPtr:x);
 
-    !!if&t>=174/t<=191;                 [if npc]
-    !!FU&y10>0/t>=183:E;                [make compatible with Raid Boss Mod to set description of defender battle commander]
-***Perrys code
-      !!UN:Cy3/244/4/?y23 Cy3/248/4/?y2;[get monster side and index]
-      !!VRy21:Sy23 *21 +y2;             [get stack id]
-      !!BMy21:I?y23 S?y24;              [get monster type and side index]
-      !!BHy23:N?y25;                    [Get hero or commander ID]
+!!UN:C(stack:x)/244/4/?(side:y) C(stack:x)/248/4/?(index:y);[get monster side and index]
+!!VR(stackId:y):S(side:y) *21 +(index:y);                   [get stack id]
+!!BH(side:y):N?(heroId:y);                    [Get hero or commander ID]
 
-      !!if&y25>=0;                      [if any commander and a hero]
-        !!VRz4:S^^; !!VRz6:S^^; !!VRz11:S^^;
-        !!FU(Check_Com_Masteries):Py25/?y26/?y27/?y28/?y29/0/0/0/0/0/?y50; [Pass Hero Number and return commander class]
-        !!SN&y29>0:T^AC_Misc.Commander_Opt_%Y29^/?z4; [get text strings]
-        !!SN&y29=0:T^AC_Misc.Commander_Opt_No_Class^/?z4; [...]
-        !!SN&y26=0:T^AC_Misc.Com_Mastery_Disabled^/?z3; [...]
-        !!SN&y26=1:T^AC_Misc.Com_Mastery_active^/?z3; [...]
-        !!FU(Set_Com_Battle_Description)&y29>0:Py29/y25/y27/y50/y26/y24/y23/?t/?t/1;
-        !!COy25:X2/?y40;                [Get Commander Level]
-        !!SN:T^AC_Misc.Com_Battle_Text^/?z-1/^level^/y40/^kills^/y27/^mastery^/z3/^class^/z4/^maxkills^/y28; [Set text to show]
-        !!VRz-1:+z11;                   [combine z1 and z11]
-***End
-
-        !!VRy6:S0;
-        !!SN:F^PluginExists^/^new_battle_interface_dlg^;
-        !!VRy6&v1:V^%T(gem_plugin.combat_dlg.enable.creature_info)^;
-
-        !!if&y6;
-          !!FU(H3Dlg_Coords):Py1/?y4/?y5;[get Dlg Position]
-          !!VRy2:V^%T(gem_plugin.combat_dlg.creature_info.description.x)^ Sdy4; [find x]
-          !!VRy3:V^%T(gem_plugin.combat_dlg.creature_info.description.y)^ Sdy5; [find y]
-          !!SN:E6289824/(CALLCONV_THISCALL)/y1/y2/y3; [find item there]
-          !!VRy5:Sv1;                   [save]
-        !!el;
-          !!VRy4:S-1;
-          !!SN:E6288816/2/y1/y4;
-          !!VRy5:Sv1;                   [save]
-        !!en;
-
-        !!if&y5>0;                      [if found]
-          !!UN:Cy5/24/2/?y6 Cy5/26/2/?y7;[get original item position]
-          !!UN:Cy5/28/2/?y8 Cy5/30/2/?y9;[get original item size]
-          !!UN:Cy5/64/4/?y10;           [get font]
-          !!VRy11:Sy10 +4;              [get font name ptr]
-          !!SN:By11/d/?z-2;             [get font name]
-          !!VRy12:S9598952;             [set item address]
-          !!SN:E6286720/2/y5/6/6;       [hide original description text item]
-          !!SN:E6014624/2/y12/y6/y7/y8/y9/z-1/z-2/4/-2/0/0/8; [create new DlgText item with new id at z2 address]
-          !!SN:E6287984/2/y1/y12/-1;    [add item to dlg list]
-        !!en;
-    !!en;
+!!if&(heroId:y)>=0;                      [if any commander and a hero]
+  !!VRz4:S^^; !!VRz6:S^^; !!VRz11:S^^;
+  !!FU(Check_Com_Masteries):P(heroId:y)/?y26/?y27/?y28/?y29/0/0/0/0/0/?y50; [Pass Hero Number and return commander class]
+  !!SN&y29>0:T^AC_Misc.Commander_Opt_%Y29^/?z4; [get text strings]
+  !!SN&y29=0:T^AC_Misc.Commander_Opt_No_Class^/?z4; [...]
+  !!SN&y26=0:T^AC_Misc.Com_Mastery_Disabled^/?z3; [...]
+  !!SN&y26=1:T^AC_Misc.Com_Mastery_active^/?z3; [...]
+  !!BM(stackId:y):S?(speed:y);                                [get monster type and side index]
+  !!FU(Set_Com_Battle_Description)&y29>0:Py29/(heroId:y)/y27/y50/y26/(speed:y)/(side:y)/?t/?t/1;
+  !!CO(heroId:y):X2/?y40;                [Get Commander Level]
+  !!SN:T^AC_Misc.Com_Battle_Text^/?(npcDesc:z)/^level^/y40/^kills^/y27/^mastery^/z3/^class^/z4/^maxkills^/y28; [Set text to show]
+  !!VR(npcDesc:z):+z11;                   [combine z1 and z11]
+  !!VR(strAddr:y):S16 *(side) +42337360;
+  !!SN:K(npcDesc:z)/?(textLen:y);
+  !!SN:E4211072/(CALLCONV_THISCALL)/(strAddr:y)/(npcDesc)/(textLen:y);
+  !!UN:Cv1/4/4/?(textPtr:y);
+  !!VR(descAddr:y):S116 +(stack) +28;
+  !!UN:C(descAddr)/4/(textPtr:y);
 !!en;
-
 
 !?FU(Set_Com_Battle_Description);
 x1=commader class (1-29), x2=hero ID, x3=kill count, x4=passive mod, x5=Mastery, x6=speed, x7=Side, x8= 0 or 1  1- means Return only base value (ignore kill count)
