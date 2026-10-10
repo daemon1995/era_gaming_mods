@@ -16,23 +16,13 @@ IMPORTANT!!!
 This part of code needs to be executed SOONER than GEM. Please don't change the filename of the script without testing
 The following functions are executed in gem_settigns.erm
 
-**** Load from ini, default GEM Battle Mode depending on whether Quick Combat/Qucik Combat Battle Option is enabled
-
-!?FU(gem_LoadBattleOptionsFromIni);
-!!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
-!!UN:C(GAME_SETTING_QUICK_COMBAT)/4/?(quickCombat:y);
-!!FU(ReadIniInts):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/1;[read from ini, default 1]
-!!FU(ReadIniInts)&i^gem_Quick_Combat_Check^:P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/8;[if quick combat battle option is on]
-!!FU(ReadIniInts)&i^gem_Quick_Combat_Check^=(FALSE)/(quickCombat)=(TRUE):P(filePath)/^main^/^gem_battleMode^/?i^gem_battleMode_ini^/2;[if quick combat battle option is off and quick combat system option is on]
-!!VRi^Current_Battle_Type%i(gem_CurPlay)^:Si^gem_battleMode^;
-
 
 **** Load GEM settings from ini
 
 !?FU(gem_LoadGemSettingsFromIni);
 !!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_control_units^/?i^gem_option_1_ini^/1; [read from ini, default 1]
-!!FU(ReadIniInts):P(filePath)/^main^/^gem_newButtons^/?i^gem_option_2_ini^/1; [read from ini, default 1]
+*!FU(ReadIniInts):P(filePath)/^main^/^gem_newButtons^/?i^gem_option_2_ini^/1; [read from ini, default 1]
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_allyHeroScreen^/?i^gem_option_3_ini^/1; [read from ini, default 1]
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_enemyHeroScreen^/?i^gem_option_4_ini^/1; [read from ini, default 1]
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_spellResearch^/?i^gem_option_5_ini^/1;
@@ -41,95 +31,9 @@ The following functions are executed in gem_settigns.erm
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_artifact_hints_primary_skills^/?i^gem_option_8_ini^/1;
 !!FU(ReadIniInts):P(filePath)/^main^/^gem_artifact_hints_combinations^/?i^gem_option_9_ini^/1;
 
-**** Fix Quick Combat Syetem Option reverting changes at turn end
-
-!?FU(OnEveryDay)&i^timerDay^>1/i^timerIsAi^=(FALSE);
-!!UN:C(GAME_SETTING_QUICK_COMBAT)/4/?(quickCombat:y);
-!!VR(battleType:y):Si^Current_Battle_Type%i(gem_CurPlay)^;
-!!if&(battleType)=1/(quickCombat)=(TRUE);[change battle type if system option mismatches]
-  !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S2;
-!!el&(battleType)=2/(quickCombat)=(FALSE);
-  !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S1;
-!!el&(battleType)=4/(quickCombat)=(FALSE);
-  !!VRi^Current_Battle_Type%i(gem_CurPlay)^:S1;
-!!en;
-
-
 **** End Game Enhancement Mod Part 1/2
 
-// Check if it is in Tutorial
-; Disable GEM swithcing battle feature if it is
-
-
 ____________________________________________________________________________________________________
-
-; --------------------------------------------------------------------------------------------------
-; --------------------------------------------------------------------------------------------------
-*                       [ scripts for the battles]
-; --------------------------------------------------------------------------------------------------
-; --------------------------------------------------------------------------------------------------
-
-**  Disable autobattle vs human players (by daemon_n)
-!?FU(OnBeforeBattleForThisPcDefender);
-
-  !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
-
-  !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
-    !!VRi^gem_replay_counter^:S1;
-    !!BA:Q0;
-    !!FU:E;                             [and exit func]
-  !!en;
-
-
-; Archer30: We put this as late as possible as we want to decide which mode to battle after knowing all the info
-; It would be even better if the script is placed in a script with negative number prefix and get rid of _Quit, so that the script can be quited with SN:Q (Freelancer's Guild)
-!?FU(OnBeforeBattleUniversal_Quit)&i^battle_humanOnly^=(FALSE)/i^battle_isNetwork^=(FALSE)/i^battle_aiOnly^=(FALSE)/i^gem_isTutorial^=(FALSE);     [before Human battle]
-
-  !!OW:Cd/?(currPlayer:y); I(currPlayer)/?(isAi:y); [check current player color]
-  !!if&(currPlayer)<>i^timerOwner^/i^gem_several_PC^;
-    !!FU:E;                             [and exit func]
-  !!en;
-  !!UN:C6885977/1/?(isGoSolo:y);
-  !!if&(isGoSolo);
-    !!FU:E; 
-  !!en;
-
-  !!UN:C(GAME_SETTING_QUICK_COMBAT)/4/?(isAutoBattleState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
-  !!UN:C(GAME_SETTING_COMBAT_AUTO_SPELLS)/4/?(isAutoBattleSpellCastingState:y);[СѓР·РЅР°С‚СЊ Р°РІС‚Рѕ]
-
-
-  !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_NO_AUTO):;                   [if choisen]
-    !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S1;
-    *!BA:Q0;                              [set no auto]
-    !!FU:E;                               [and exit func]
-  !!en;
-
-  !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA):;                   [if choisen]
-    !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
-    !!FU:E;                               [end]
-  !!en;
-
-  !!if&i^Current_Battle_Type_Choice%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE)/i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_ASK_BEFORE_START)|i^Current_Battle_Type%(currPlayer)^=(GEM_BATTLE_TYPE_AUTO_MANA_FREE):;
-    !!VRi^gem_replay_counter^&i^gem_OnlyOneBattleReplayIsAllowed^=(TRUE):S(NULL);
-    !!FU:E;                               [end]
-  !!en;                                   [final] 
-
-
-//remove extra replay bttns
-!?FU(gem_DlgBattleResults_AfterCreate)&i^gem_OnlyOneBattleReplayIsAllowed^/i^gem_replay_counter^/i^battle_humanOnly^=(FALSE)/1000;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(dlg:y);
-  !!FU(gem_DlgItem_Show):P0/0/0/0/(dlg:y); [remove fram pcx]
-  !!FU(gem_DlgItem_Show):P30723/0/0/0/(dlg:y); [remove button]
-
-!?FU(OnBattleReplay)&i^battle_humanOnly^=(FALSE)/i^gem_OnlyOneBattleReplayIsAllowed^;
-  !!VRi^gem_replay_counter^:+1;
-
-
-!?FU(OnAfterBattle)&i^battle_humanOnly^=(FALSE)/(ERM_FLAG_IS_HUMAN);
-  !!if&i^gem_OnlyOneBattleReplayIsAllowed^;
-    !!VRi^gem_replay_counter^:S0;
-  !!en;
-
 
 **************************************************
 **** Game Enhancement Mod Part 2/2 - Archer30 ****
