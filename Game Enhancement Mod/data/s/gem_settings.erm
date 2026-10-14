@@ -2,170 +2,163 @@ ZVSE2
 
 !#DC(GEM_DLG_GEM_SETTINGS) = 505;
 !#DC(GEM_DLG_HOTKEYS_HELP) = 555;
-!#DC(GEM_SETTINGS_LAST_OPTION_ID) = 9;
+!#DC(GEM_SETTINGS_FIRST_CHECKBOX_ID) = 1;
+!#DC(GEM_SETTINGS_LAST_CHECKBOX_ID) = 10;
+!#DC(GEM_SETTINGS_FIRST_NAME_ID) = 11;
+!#DC(GEM_SETTINGS_LAST_NAME_ID) = 20;
 
-!?FU(OnAfterErmInstructions);
-  !!FU(gem_LoadGemSettingsFromIni):P;
+!?FU(gem_GetSettingsArray);
+!#VA(result:x);
+!!FU(NewStrArray):P8/?(result:x);
+!!SN:V(result:x)/0/^gem_control_units^/^gem_allyHeroScreen^/^gem_enemyHeroScreen^/^gem_spellResearch^/
+^gem_adventureMapObjectHints^/^gem_ignore_siege_weapon^/^gem_artifact_hints_primary_skills^/^gem_artifact_hints_combinations^;
+!!SN:F^ExtendArrayLifetime^/(result);
 
-  !!re i/(PLAYER_FIRST)/(PLAYER_LAST);
-    !!VRi^Current_Battle_Type%i^:Si^gem_battleMode_ini^;
-    !!VRi^Current_Battle_Type%i^&i^gem_isTutorial^:S1; [Set to manual (no auto) if in Tutorial map]
-
-    !!re j/1/(GEM_SETTINGS_LAST_OPTION_ID);
-      !!VRi^gem_option_%j_%i^:Si^gem_option_%j_ini^;
-    !!en;
-    !!VRi^gem_control_units_option_%i^:Si^gem_option_1_ini^;
-    !!VRi^gem_buttons_option_%i^:Si^gem_option_2_ini^;
-    !!VRi^gem_window_option_%i^:Si^gem_option_3_ini^;
+!?FU(gem_SaveGEMSettingsToIni);
+!#VA(optionsArray:x);
+!!SN:M(optionsArray)/?(size:y);
+!!if&(size);
+    !!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
     
-    !!VRi^gem_spellResearch_option_%i^:Si^gem_option_5_ini^;
-    !!VRi^gem_enemy_window_option_%i^:Si^gem_option_4_ini^;
-    !!VRi^gem_adventure_map_object_hints_option_%i^:Si^gem_option_6_ini^;
-    !!VRi^gem_ignore_siege_weapon_%i^:Si^gem_option_7_ini^;
-    !!VRi^gem_artifact_hints_primary_skills_%i^:Si^gem_option_8_ini^;
-    !!VRi^gem_artifact_hints_combinations_%i^:Si^gem_option_9_ini^;
-   
-  !!en;
+    !!re i/0/(size)/1/-1;
+        !!SN:M(optionsArray)/i/?(optionName:z);
+        !!FU(WriteIniInts):P(filePath)/^main^/(optionName:z)/?i^%(optionName:z)^; [save battle save option only when plugin is disabled]
+    !!en;
+    !!FU(SaveIni):P(filePath);
+!!en;
+
+!?FU(gem_LoadGemSettingsFromIni);
+!#VA(optionsArray:x);
+!!SN:M(optionsArray)/?(size:y);
+!!if&(size);
+    !!VR(filePath:z):S^Runtime/game_enhancement_mod.ini^;
+    
+    !!re i/0/(size)/1/-1;
+        !!SN:M(optionsArray)/i/?(optionName:z);
+        !!FU(ReadIniInts):P(filePath)/^main^/(optionName:z)/?i^%(optionName:z)^/1; [save battle save option only when plugin is disabled]
+    !!en;
+!!en;
 
 
 
-
-!?FU(OnStartOrLoad);
+!?FU(gem_InitSettings);
 !!SN:F^ERA_SystemOptionsExtension:RegisterErmCallbackButton^/^gem.settings.dlg^/^gem.settings.dlg.name^/^gem.settings.dlg.hint^/(gem_ShowModSettingsDlg);
+!!FU(gem_GetSettingsArray):P?(optionList:y);
+!!FU(gem_LoadGemSettingsFromIni):P(optionList:y);
+
+!?FU(OnAfterLoadGame);
+!!FU(gem_InitSettings):P;
+!#FU(gem_InitSettings):P;
+
+
 
 !?FU(gem_ShowModSettingsDlg);
+!#VA(isRightClick:x);
 !!UN:J8/1/^gem_interface.pac^;
 !!FU&-1:E;
-!!FU(gem_Dlg_Setting_Creating):P(FALSE); 
+
+!!FU(gem_GetSettingsArray):P?(optionsArray:y);
+!!VRi^gem_settings_array_id^:S(optionsArray);
+
+!!FU(gem_Dlg_Setting_Creating):P(optionsArray)/(isRightClick);
 !!DL(GEM_DLG_GEM_SETTINGS):S1;
-!!FU(gem_options_applying):P;
 
-!?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_RELEASED);  
-  !!SN:F^GetButtonID^/^gem_map_menu^;
-  !!if&v1=i^mouse_item^;
-    !!FU(gem_ShowModSettingsDlg):P;
-  !!en;
 
+!!OW:C?(currPlayer:y)/?(clickedPlayer:y);
+
+!!if&(currPlayer:y)=(clickedPlayer);
+    !!FU(gem_SaveGEMSettingsToIni):P(optionsArray);
+!!en;
+
+
+*!FU(gem_options_applying):P;
+
+*?FU(OnAdventureMapLeftMouseClick)&999/i^mouse_action^=(MOUSE_LMB_RELEASED);  
+  *!SN:F^GetButtonID^/^gem_map_menu^;
+  *!if&v1=i^mouse_item^;
+    *!FU(gem_ShowModSettingsDlg):P;
+  *!en;
+
+!?FU(OnKeyPressed_AdvMap)&x1=(KEY_Q);
+!!FU(gem_ShowModSettingsDlg):P;
 
 !?FU(OnAdventureMapRightMouseClick)&i^mouse_item^=i^gem_map_menu_Button_ID^/i^gem_map_menu_Button_ID^;&999;
-  !!CM:R(FALSE);           disable default reaction
-  !!FU(gem_Dlg_Setting_Creating):P(TRUE);
-  !!FU(DL_ShowPopup):P(GEM_DLG_GEM_SETTINGS);
+    *!CM:R(FALSE);           disable default reaction
+    *!FU(gem_Dlg_Setting_Creating):P(TRUE);
+    *!FU(DL_ShowPopup):P(GEM_DLG_GEM_SETTINGS);
 
 !?FU(gem_Dlg_Setting_Creating);
-!#VA(isRmc:x);
-!#VA(usedY[5]:y);
-  *!FU(gem_DlgReload):P^gem_sttngs.txt^;
-  !!DL(GEM_DLG_GEM_SETTINGS):N^gem_sttngs.txt^;
-  !!OW:Cd/?(clickedPlayer:y);
-  !!FU(gem_DlgSetColor):P(GEM_DLG_GEM_SETTINGS)/(clickedPlayer); 
-  *!UN:
-  !!FU(DL_FindById):P(GEM_DLG_GEM_SETTINGS)/?(dlg:y);
-  !!UN:C(dlg)/4/?(dlg);
-  *!SN:E6247440/(CALLCONV_THISCALL)/(dlg)/^CDEVIL.def^/(TOWN_INFERNO)/0;
-*!IF:L^%^;
-  !!UN:V?y1/?y1/?y3/?y1/?y1;d
+!#VA(optionsArray:x) (isRmc:x);
 
-  !!if&y3<2;
-    !!re i/0/(GEM_SETTINGS_LAST_OPTION_ID);
-      !!SN:W^gem_option_%i_%i(gem_CurPlay)^/?y2; W^gem_option_%i_%i(gem_CurPlay)_before^/y2;
-      !!DL(GEM_DLG_GEM_SETTINGS):Ai/4/y2/1;
-      !!SN:T^gem.settings.line%i^/?z-1;
-      !!VRy2:Si +1;
-      !!SN:T^gem.settings.hint%i^/?zy2;
-      !!DL(GEM_DLG_GEM_SETTINGS):Ai/3/^{~}%z-1{~}^/1 Hi/zy2;
-    !!en;
-  !!el;
-    !!re i/0/(GEM_SETTINGS_LAST_OPTION_ID);
-      !!VRi&i=4:+1;
-      !!if&x1=1;
-        !!SN:W^gem_option_%i_%(clickedPlayer)^/?y1;
-      !!el;
-        !!SN:W^gem_option_%i_%i(gem_CurPlay)^/?y1;
-      !!en;
-      !!DL(GEM_DLG_GEM_SETTINGS):Ai/4/y1/1;
-      !!SN:T^gem.settings.line%i^/?z-1;
-      !!VRy2:Si +1;
-      !!SN:T^gem.settings.hint%i^/?zy2;
-      !!DL(GEM_DLG_GEM_SETTINGS):Ai/3/^{~}%z-1{~}^/1 Hi/zy2; 
-    !!en;
+!!FU(gem_DlgReload):P^gem_sttngs.txt^;
+!!DL(GEM_DLG_GEM_SETTINGS):N^gem_sttngs.txt^;
+!!OW:Cd/?(clickedPlayer:y);
+!!FU(gem_DlgSetColor):P(GEM_DLG_GEM_SETTINGS)/(clickedPlayer); 
+!!FU(DL_FindById):P(GEM_DLG_GEM_SETTINGS)/?(dlg:y);
+!!UN:C(dlg)/4/?(dlg);
+!!FU(gem_DlgDefButton_AddHotkey):P30722/1/(dlg);
 
-    !!re i/4/4;
-
-      !!DL(GEM_DLG_GEM_SETTINGS):Ai/4/0/1;
-
-      !!SN:T^gem.settings.line%i^/?z-1;
-      !!VRy2:Si +1;
-      !!SN:T^gem.settings.hint%i^/?zy2;
-      !!DL(GEM_DLG_GEM_SETTINGS):Ai/3/^{~808080}%z-1{~}^/1 Hi/zy2; 
-    !!en;
-  !!en;
-
-  !!if&(isRmc);
-    !!FU(DL_FindById):P(GEM_DLG_GEM_SETTINGS)/?(dlgPtr:y);
-    !!UN:C(dlgPtr)/(UNC_INT)/?(dlg:y);
-    !!FU(gem_DlgItem_Show):P30722/(FALSE)/(FALSE)/(FALSE)/(dlg);
-  !!en;
+!!DL(GEM_DLG_GEM_SETTINGS):A0/(DLG_CMD_SET_TEXT)/^%T(gem.settings.dlg.title)^/1;
 
 
-!?DL&v998=(GEM_DLG_GEM_SETTINGS)/v999>=1/v999<=(GEM_SETTINGS_LAST_OPTION_ID)/v1000=(MOUSE_RMB_PRESSED);
+!!SN:M(optionsArray)/?(size:y);
+!!re (defId:y)/(GEM_SETTINGS_FIRST_CHECKBOX_ID)/(GEM_SETTINGS_LAST_CHECKBOX_ID);
 
-  !!SN:T^gem.settings.opt%v999^/?z-1;
-  !!if&v999=4;
-    !!UN:V?y1/?y1/?y3/?y1/?y1;
-    !!SN&y3>1:T^gem.settings.opt+^/?z-2;
-  !!en;
-  !!IF:M0/4/^%Z-1%Z-2^;
+    !!VRi:S(defId:y) -(GEM_SETTINGS_FIRST_CHECKBOX_ID);
+    !!VR(textId:y):Si +(GEM_SETTINGS_FIRST_NAME_ID);
 
+    !!if&i<(size);
+        !!SN:M(optionsArray)/i/?(varName:z);
+        !!VR(zIndex:y):Si +1;
+        !!SN:T^gem.settings.%(varName).name^/?(name:z) T^gem.settings.%(varName).hint^/?z(zIndex);
 
-!?DL&v998=(GEM_DLG_GEM_SETTINGS)/v999>=30721/v999<=30722/v1000=13;  [Get Player choice what to configure when release L-click on images]
-!!DL(GEM_DLG_GEM_SETTINGS):C1;
+        !!VR(state:y):Si^%(varName)^ B;
+        !!DL(GEM_DLG_GEM_SETTINGS):A(defId:y)/(DLG_CMD_SET_DEF_FRAME)/(state)/1 H(defId)/z(zIndex);
 
-
-
-; --------------------------------------------------------------------------------------------------
-!?FU(gem_options_applying);
-  !!VRi^gem_control_units_option_%i(gem_CurPlay)^:Si^gem_option_1_%i(gem_CurPlay)^;
-  *!VRi^gem_buttons_option_%i(gem_CurPlay)^:Si^gem_option_2_%i(gem_CurPlay)^;
-  !!VRi^gem_window_option_%i(gem_CurPlay)^:Si^gem_option_3_%i(gem_CurPlay)^;
-  !!VRi^gem_spellResearch_option_%i(gem_CurPlay)^:Si^gem_option_5_%i(gem_CurPlay)^;
-  !!VRi^gem_adventure_map_object_hints_option_%i(gem_CurPlay)^:Si^gem_option_6_%i(gem_CurPlay)^;
-  !!VRi^gem_ignore_siege_weapon_%i(gem_CurPlay)^:Si^gem_option_7_%i(gem_CurPlay)^;
-  !!VRi^gem_artifact_hints_primary_skills_%i(gem_CurPlay)^:Si^gem_option_8_%i(gem_CurPlay)^;
-  !!VRi^gem_artifact_hints_combinations_%i(gem_CurPlay)^:Si^gem_option_9_%i(gem_CurPlay)^;
-
-  !!UN:V?y1/?y1/?y3/?y1/?y1;d
-  !!if&y3<2;
-    !!VRi^gem_enemy_window_option_%i(gem_CurPlay)^:Si^gem_option_4_%i(gem_CurPlay)^;
-  !!en;
-
-
-; клики на опции ЛКМ
-!?DL&v998=(GEM_DLG_GEM_SETTINGS)/v999>=1/v999<=(GEM_SETTINGS_LAST_OPTION_ID)/v1000=(MOUSE_LMB_PRESSED); 
-  !!UN:V?y1/?y1/?y3/?y1/?y1;
-
-  !!if&y3<2;
-    !!SN:P^Button.wav^;
-    !!OW:C?y1;
-    !!if&i^gem_option_%v999_%y1^=1;
-      !!VRi^gem_option_%v999_%y1^:S0;
+        !!DL(GEM_DLG_GEM_SETTINGS):A(textId:y)/(DLG_CMD_SET_TEXT)/(name)/1 H(textId)/z(zIndex);
     !!el;
-      !!VRi^gem_option_%v999_%y1^:S1;
+        !!FU(gem_DlgItem_Show):P(textId:y)/(FALSE)/(FALSE)/(FALSE)/(dlg);
+        !!FU(gem_DlgItem_Show):P(defId:y)/(FALSE)/(FALSE)/(FALSE)/(dlg);
     !!en;
-    !!DL(GEM_DLG_GEM_SETTINGS):Av999/4/i^gem_option_%v999_%y1^/1;
-  !!el;
-    !!FU(gem_settings_check)&v999<4:Pv999;
-  !!en;
+!!en;
 
-!?FU(gem_settings_check);установка галочек на клики
-!#VA(optionIndex:x);
-  !!OW:C?y1;
-  !!if&i^gem_option_%x1_%y1^=0;
-    !!VRi^gem_option_%x1_%y1^:S1;
-  !!el;
-    !!VRi^gem_option_%x1_%i(gem_CurPlay)^:S0;
-  !!en;
-  !!DL(GEM_DLG_GEM_SETTINGS):Ax1/(DLG_CMD_SET_DEF_FRAME)/i^gem_option_%x1_%y1^/1;
+// hide (OK) bttn
+!!if&(isRmc);
+    *!FU(gem_DlgItem_Show):P30722/(FALSE)/(FALSE)/(FALSE)/(dlg);
+!!en;
+
+!?FU(OnCustomDialogEvent)&i^dlg_id^=(GEM_DLG_GEM_SETTINGS)/i^mouse_item^>0;
+
+!!VR(itemId:y):Si^mouse_item^;
+!!VR(itemAction:y):Si^mouse_action^;
+
+!!if&(itemAction)=(MOUSE_LMB_RELEASED);
+    !!DL(GEM_DLG_GEM_SETTINGS)&(itemId:y)=30722:C1;
+!!el|(itemAction)=(MOUSE_LMB_PRESSED)/(itemAction)=(MOUSE_RMB_PRESSED);
+    !!VR(optionId:y):S-1;
+    !!if&(itemId:y)>=(GEM_SETTINGS_FIRST_CHECKBOX_ID)/(itemId:y)<=(GEM_SETTINGS_LAST_CHECKBOX_ID);
+        !!VR(optionId:y):S(itemId:y) -(GEM_SETTINGS_FIRST_CHECKBOX_ID);
+    !!el&(itemId:y)>=(GEM_SETTINGS_FIRST_NAME_ID)/(itemId:y)<=(GEM_SETTINGS_LAST_NAME_ID);
+        !!VR(optionId:y):S(itemId:y) -(GEM_SETTINGS_FIRST_NAME_ID);
+    !!el;
+        !!FU:E;
+    !!en;
+
+    !!SN:Mi^gem_settings_array_id^/(optionId)/?(varName:z);
+
+    !!if&(itemAction)=(MOUSE_LMB_PRESSED);
+        !!SN:P^Button.wav^;
+        !!VR(state:y):Si^%(varName)^ B X1;
+        !!VRi^%(varName)^:S(state);
+        
+        !!VR(defId:y):S(optionId) + (GEM_SETTINGS_FIRST_CHECKBOX_ID);
+        !!DLi^dlg_id^:A(defId)/(DLG_CMD_SET_DEF_FRAME)/(state)/1;
+    !!el;
+        !!SN:T^gem.settings.%(varName).rmc^/?(msg:z);
+        !!IF:M0/4/(msg:z);
+    !!en;
+!!en;
+
 
 *********************************************************
 **** HELP DLG ****
@@ -180,7 +173,6 @@ ZVSE2
     !!VRx1:S(TRUE);
   !!en;
   !!VRi^gem_hotkeysDL_opened^:S(TRUE);
-  *!SN:P^BUTTON.wav^;
   !!DL(GEM_DLG_HOTKEYS_HELP):N^gem_help.txt^;
   !!FU&-1:E;
   !!OW:C?y99/?(clickedPlayer:y);
@@ -211,7 +203,6 @@ ZVSE2
 
 !?DL&v998=(GEM_DLG_HOTKEYS_HELP)/v999=30722/v1000=13;
   !!DL(GEM_DLG_HOTKEYS_HELP):C1;
-  *!UN:C7505216/1/18;                 [; после закрытия диалога - вернуть параметр тени на место]
 
 !?FU(OnKeyPressed_Battle)&i^key^=(KEY_F1);
   !!FU(gem_hotkeysDL_start):P?x2;
