@@ -226,12 +226,18 @@ Recommendations for Neutral Units Bonuses:
 ; For other bonuses, we set at the start of battle on FU(OnAfterTacticsPhase) and FU(OnCombatRound)
 
 // Set up neutral experience
-!?FU(OnBeforeBattleUniversal)&i^Encounter_Type^>0/i^battle_human_0^;
+!?FU(OnBeforeBattleUniversal)&i^Encounter_Type^>0;
+!!FU&i^battle_human_0^=0/i^Neutral_exp^<>6:E;
 !!UN:P231/?(neutralExp:y); [Check if Neutral Stack Experience is enabled]
 
 !!if&(neutralExp:y);
   ; Turn on stack experience if not enabled yet
   !!UN:P(WOG_OPT_STACK_EXPERIENCE)/1;
+  !!if&i^Neutral_exp^=6;
+    !!VRi^wog_231_base_exp_rank^:S40;
+    !!VRi^wog_231_hero_lvl^:S10;
+    !!FU:E;
+  !!en;
   !!VRy-1:Si^timerDay^ -1; [Subtract 1 from current day: y2]
   !!UN:J2/?y2; [Player chosen difficulty level: y2]
 
@@ -266,7 +272,8 @@ Recommendations for Neutral Units Bonuses:
 !?FU(WOG_BattleStack_InitParams)&i^wog_231_base_exp_rank^;
 !#VA(stackId:x) (side:x);
 
-!!if&(side)=(BATTLE_RIGHT)/i^Encounter_Type^<>3;
+!!if&(side)=(BATTLE_RIGHT);
+  !!FU&i^Encounter_Type^=3/i^Neutral_exp^<>6:E;
   !!FU5401:Px1/i^wog_231_base_exp_rank^/i^wog_231_hero_lvl^;
 !!en;
 
@@ -276,6 +283,11 @@ Recommendations for Neutral Units Bonuses:
 !!BMx1:T?y1 N?y2; [Creature type (y1), number (y2)]
 !!FU|y1<0/y2<1:E; [Exit if no stack at this number]
 !!FU&y1>=(MON_COMMANDER_FIRST_A)/y1<=(MON_COMMANDER_LAST_D):E; [Exit if it's a Commander]
+!!if&i^Neutral_exp^=6;
+  !!VRy5:Sx1 *-1 -1;
+  !!EAy5:E10/12/d/d; [Ace: set rank 10 directly, including day 1]
+  !!FU:E;
+!!en;
 
 !!MA:Ly1/?y3; [Creature level: y3]
 !!VRy3::2 +1; [Divide by 2 (dropping fractions) and add 1 to get level divisor (1..4): y3]
@@ -297,7 +309,7 @@ This option is for everyone who wants to have stronger AI players and the diffic
 
 !!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
 !!DO1000/21/41/1&v2=1/i^Health_Grow_Enable^:P; [Add Att, Def, HP, only Run when selected and not for AI]
-!!DO(Dif_Mod_Static_Boost)/21/41/1&i^Dif_Mod_Neutral_boost^:P; [Add Att, Def, HP, and speed]
+!!DO(Dif_Mod_Static_Boost)/21/41/1&i^Dif_Mod_Neutral_boost^:P; [Immediate neutral Attack, Defense and HP bonus]
 
 !?FU(OnCombatRound)&i^battle_round^=0/(ERM_FLAG_IS_HUMAN);
 !!UN:P57/?v2;                           [Check if Neutral Units script is enabled in WoGify Options: v2]
@@ -326,26 +338,21 @@ This option is for everyone who wants to have stronger AI players and the diffic
   !!VRy10:Si^timerDay^;                 [current day  y10 Sunday is the bonuses day]
   !!VRy12:Si^Health_Grow_Enable^;       [check settings level]
   !!FU|y11=145/y11=146/y11=147/y11=148/y11=149:E; [Execlude Warmachines]
-  !!BMx16&y10>84/y12<=21:Sd1;           [add one speed at start of month 4 at Hard level]
-  !!BMx16&y10>168/y12<=10:Sd1;          [add one speed at start of month 7 at Extreme level]
-  !!BMx16&y10>252/y12<=3:Sd1;           [add one speed at start of month 10 at Insane level]
+  !!BMx16&i^Dif_Mod_Scaling_Speed^/y10>=85/y12>=14/y12<=21:Sd1;           [add one speed at start of month 4 at Hard level]
+  !!BMx16&i^Dif_Mod_Scaling_Speed^/y10>=57/y12<=7:Sd1;          [add one speed at start of month 7 at Extreme level]
+  !!BMx16&i^Dif_Mod_Scaling_Speed^/y10>=169/y12<=3:Sd1;           [add one speed at start of month 10 at Insane level]
 !!en;
 
 
 !?FU(Dif_Mod_Static_Boost);
 !!BMx16:N?y20;                          [Creature Number y20]
 !!if&y20>0;                             [if a valid stack]
-  !!VRy1:S1;                            [set bonus to 1]
-  !!BMx16:Ady1 Ddy1;                    [+1 attack and defense]
+  !!VRy1:Si^Dif_Mod_Neutral_boost^ F0/10;
+  !!BMx16:Ady1 Ddy1;                    [+1 attack and defense per selected level]
   !!BMx16:H?y2 T?y11;                   [Hit Points of stack: y2]
   !!VRy6:Sy1*5+100;                     [calc new HP]
-  !!VRy4:Sy2*y6:100-y2;                 [5% of hit points]
+  !!VRy4:Sy2*y6:100-y2;                 [5% of hit points per selected level, rounded down]
   !!BMx16:Hdy4;                         [set hit points]
-  !!VRy10:Si^timerDay^;                 [current day  y10 Sunday is the bonuses day]
-  !!FU|y11=145/y11=146/y11=147/y11=148/y11=149:E; [Execlude Warmachines]
-  !!BMx16&y10>84:Sd1;                   [add one speed at start of month 4]
-  !!BMx16&y10>168:Sd1;                  [add one speed at start of month 7]
-  !!BMx16&y10>252:Sd1;                  [add one speed at start of month 10]
 !!en;
 
 
@@ -384,6 +391,9 @@ This option is for everyone who wants to have stronger AI players and the diffic
 
 !?FU5402;
 !#VA(bloodDragonFv:x);
+
+; WoG option 232 may stay enabled; only apply saved bonuses when selected in Difficulty Mod.
+!!FU&i^Stack_Size_Enable^=0:E;
 
 !!VRv2&x16=1:S-1;
 !!UN:U54/-1/-1/2;                       [Store coordinates for next monster in v2/v3/v4]
@@ -679,6 +689,8 @@ This option is for everyone who wants to have stronger AI players and the diffic
 !!en;
 
 ; Grow new creature bank's guards and resources for each game week
+; Refill restored the base guards: apply the start bonus before weekly growth.
+!!FU(difm_BankStartBonus):P(x)/(y)/(z)/-1;
 !!re i/1/i^timerWeek^;
   !!FU(WOG_235_CreatureBanks_IncreaseReward):P(x)/(y)/(z)/i;
 !!en;

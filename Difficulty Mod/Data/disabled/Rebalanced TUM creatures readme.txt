@@ -1,2 +1,0 @@
-a couple of creatures have reduced and less abilities. For the change to be effective you must move this folder to ACM/Data.
-I didn't want this change to be active by default, because not everybody will agree with my balance suggestions. So you can decide for yourself.

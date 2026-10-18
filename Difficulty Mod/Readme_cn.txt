@@ -1,175 +1,70 @@
+Difficulty Mod
+Version 1.1
+Daemon_n and Perry R
 
+ABOUT
+Difficulty Mod lets you shape the challenge of a Heroes III ERA map. Adjust
+neutral armies, creature banks, hero progression and computer-player bonuses
+separately instead of relying on a single global difficulty setting.
 
-                 ************** 扩展难度选项 ****************
-                 ************** 版本: 1.04 ******************
-                 ************  Daemon & Perry  **************
-                 ************  汉化：Archer30  **************
-                 
+Use a few options for a harder opening, gradual scaling for long games, or a
+combination suited to your map and installed mods. The strongest settings are
+intended for heavily developed heroes and armies; they are not a recommended
+starting point for every map.
 
-一个用于在游戏开始的时候提供多种选项自定义游戏难度的mod。
+REQUIREMENTS
+ERA 3.3 or newer, WoG and Era Erm Framework. Place Difficulty Mod above the
+standard WoG scripts in the mod manager so its replacement scripts take priority.
+Companion configuration windows require their corresponding mods to be installed.
 
-这个mod包含了（均为可选项目）：
+MAIN FEATURES
+- Neutral troop numbers, starting stats and gradual stat scaling.
+- Separate creature-bank difficulty and optional bank starting troop additions.
+- Creature stack experience, including Ace from day 1.
+- Hero battle experience from 10% to 200%, including Learning.
+- Optional AI participation in selected neutral and experience bonuses.
+- Adjustable growth limits, buffs, abilities and neutral encounter modifiers.
+- AI difficulty, a configurable bonus start day (Payday) and later increases.
+- Optional Battle Rewards and access to companion-mod settings.
 
--更强的电脑玩家选项
--电脑自动装备最佳宝物
--增大野外生物的数量
--增大野外生物的增长率
--野外生物数量可超过4000
--野外生物的属性随时间增加
--低级部队获得额外的增长率
--野外生物获得随机魔法状态
--野外生物获得额外能力（暂时不可用）
--战斗指挥官选项
--战斗奖励选项
--野外生物援军更强选项
--随机英雄总是参战
--渐进难度选项
--电脑玩家初始加成
--电脑玩家无异次元之门魔法
--混合野外生物的选项界面（作者Berserker）
--追随者增强选项界面（作者Archer）
--重新平衡部队经验值选项界面（作者Perry）
+GETTING STARTED
+1. At map start, open Neutral settings and/or AI settings.
+2. Use arrows to choose values. Right-click a control for its description.
+3. The small boxes beside the six main neutral settings are modifiers, not
+   universal on/off switches. For example, the Battle Experience box includes
+   AI heroes; the Scaling Bonus box allows speed bonuses.
+4. Confirm each settings window to save its choices. Cancel restores the last
+   saved settings for that window.
+5. For AI bonuses, choose Payday. Progressive Difficulty cannot start earlier.
 
+Start with moderate settings and change a few things at a time. The creature
+portraits select preset/randomized combinations; check the resulting choices.
+Battle Reward and Battle Experience are not randomized by these portraits.
 
+DURING THE GAME
+Right-click System Options to access Difficulty Mod settings again. When Ingame
+Menu is active, use its difficulty entries. The startup notice and confirmation
+show the current AI level and relevant start days.
 
-如何使用本mod：
-- 在地图开始时选择你喜欢的选项。
-- 右击可查看额外的说明信息。
-- 点击“确认”可以保存你的所有设置，点击“取消”会重置所有选项。
-- 输入一个电脑玩家开始获得奖励的日期（奖励日）。你在这个日期前先培养好你的英雄。
-- 如果你是新手，请不要使用最强的电脑难度，推荐从简单或一般难度开始，奖励日设在第50天。
-- 你可以设置渐进难度选项，在游戏过程中慢慢提升电脑难度到更高等级。这可以让游戏节奏变得更流畅一些，比如从较难到专家，或者专家到极难。
-- 最好不要启用极难难度。
-- 感觉游戏变得太简单或者太难了？没问题，在冒险地图上右击系统选项图标可以设置新的游戏难度。
+No in the reopening confirmation leaves settings unchanged. Yes opens the
+configuration using saved selections. This is not a fresh map or an undo:
+previously added creatures and other map changes remain. Enabled stack additions,
+higher-tier changes and doubling may be applied again after closing settings.
+Some initialization options only take effect on a new map. Manual reopening is
+limited to once per game day by the existing System Options handler.
 
+The Hide at Map Start option skips automatic setup while retaining manual access.
+Saved settings are reused; check them when starting a map with different mods.
 
-“可能的”常见问题
- 
-- 我可以启用什么WoG选项？
-答：随便选你喜欢的。这个mod会自动启用必要的选项。
+DOCUMENTATION
+Help and Readme files/Index.txt lists the available option descriptions.
+Help and Readme files/Options/ contains short descriptions of effect, use and
+purpose. Changelog.txt in the mod root contains the release history.
+Existing technical notes remain in the help folder. The English overview is also
+used as the Chinese fallback. The Russian Readme remains available separately.
 
-- 我想要自定义电脑玩家获得的奖励数值，可以实现吗？
-答：那当然了，你可以改变任何任何你想改的数值。如果遇到困难的话，最好问问Perry和Daemon。
-
-- 为什么有些数值和奖励看起来如此夸张呢？
-答：每个人都有自己理想的英雄无敌3玩法，大家喜欢不同的地图，用不同的mod。很多时候，你觉得夸张的数值也许恰恰是别的玩家所喜欢的，反之亦然。这也是我们开始做这个mod的原因。
-
-- 混合野外生物设置选项是做什么的？
-答：混合野外生物的功能就如同它的名字所说的一样。 它让野外生物变成混合部队，使战斗更加多样化。这个mod是Berserker开发的，必须单独在mod管理器内启用。扩展难度选项仅提供一个方便的窗口进行所有设置。
-
-- 为什么在我的游戏开始时会弹出一些奇怪的错误信息？
-你可能正在使用旧版本的ERA。 你至少必须用ERA 3.3和ERA Erm框架mod才能使用扩展难度选项的全部功能。
-
-
-这个mod包含了电脑自动装备最佳宝物的功能：
-电脑英雄会为身上的每个格子装备拥有的最好的宝物。这个脚本每天检查电脑英雄的宝物，如果在行囊内有更好的宝物，会自动装备到身上。
-你可以阅读这个脚本的代码并尝试改变装备的顺序。越差的宝物顺序越靠前。这个功能可以让电脑玩家在不作弊的情况下变得更强。
-
-访问主页：http://heroescommunity.com 或 http://wforum.heroes35.net 可以获得更多信息。
-
-
-更新日志：
-1.041
-- 现在宝屋的难度设定对于三阶升级mod的新宝屋同样有效。
-- 修复热座模式中，防守方的指挥官被战斗指挥官选项的属性覆盖的问题。
-
-
-1.04
-- 略微降低了各个难度下宝屋中的指挥官的生命值。
-- 略微提高了战斗指挥官在游戏后期的速度，
-- 根据野外生物数量选项略微降低电脑玩家的起始军队，增加了电脑玩家可在城镇中雇佣的生物数量。
-- 添加新选项：野外生物的属性增长对电脑玩家适用。
-- 添加新选项：野外生物的英雄使用更强大的指挥官和追随者。
-
-
-1.0391
-- 修复专家和极难难度下AI的基本技能增长不正确的问题。感谢Orc的测试。
-
-
-1.039
-- 根据野外生物数量选项和双倍野外生物选项是否启用，AI英雄可能会获得更大的起始兵力。这将减少AI被困在出生点的几率。
-- AI在宝屋中的战斗不再需要对付宝屋的指挥官。
-- 暂时改变mod的优先级，以便让三阶升级mod启用时经验值平衡选项和生物配置文件可以正常使用。
-- 小调整
-
-
-1.0381
-- TUM技能平衡选项加入Archer写的灵吸怪和摄心魔蛊惑人心的脚本
-- 移除进阶职业的变量保存
-
-
-1.038
-- 野外生物数量可超过4000现在会在冒险地图中显示真实的数量。你可以自定义1百万以下的显示
-- 加入未来的沉默的遗产的兼容
-- 在沉默的遗产启用时，将解锁新的难度等级
-
-
-1.036
-- 添加新的野外生物属性等级（疯狂I+II）
-
-
-1.035
-- 新的追随者增强mod的配置窗口。（由Archer30完成）
-- 移除随机英雄和野外生物援军脚本。
-
-
-1.033
-- 新选项：部队经验值平衡。移除所有追随神迹和三阶升级过强的或者非必要的经验技能，只留下10级时获得的关键的技能。其他的部分也做了平衡处理
-- 新选项：野外生物的敌意值+1、+2、+3（分别为33%的几率）
-- 更新三阶升级2.16对应的混合野外生物编号
-- 战斗指挥官在三阶升级mod启用时将获得20%的生命值加成
-- 宝屋的指挥官现在拥有稍微少一些的生命值和杀伤力
-- 加入用于调整Archer30的追随者增强mod的选项（制作中）
-
-
-1.032
-
-- 野外生物“能力”选项现在可以正常使用（测试功能）
-- 改进了AI最佳宝物选项，现在AI不会装备相同的宝物了
-- 战斗奖励的几率超过55%时，英雄有几率学习新的魔法。几率超过65%时，英雄有几率获得宝物
-- 启用野外生物数量选项后，野外生物敌意值会提升2至3点，而不会被自动设置为野蛮的
-- AI英雄的基本属性不会超过99
-- 战斗指挥官出现的几率降低4%，并且不会在宝屋中出现
-- 降低了较难、专家和极难难度下宝屋的守卫增长
-- 将战斗重打相关的触发器改为!?FU(OnBattleReplay)
-- 一些细节上的修改
-
-
-1.031
-
-- 注册了三阶升级的新生物，现在最多可支持291个生物
-- 增加野外生物数量的选项在游戏开始时即可生效
-- 移除了40 wog - karmic battles.erm的SN:D语句 - 这个语句会导致游戏崩溃
-- 混合野外生物选项设置选项现在也会保存选项开关状态
-- 一些方便翻译的细节修改
-
-
-1.03
-
--为“混合野外生物Mod”添加了新的设置窗口，可轻松自定义几乎所有选项。通过点击混合野外生物设置可以打开这些选项。
--保存所有设置的功能！每次重启游戏时都会读取上一次使用时的设置。感谢Berserker。
--现在可以启用/禁用电脑玩家自动装备最佳宝物的选项了。
--添加了英雄无敌3的小号字体，这可以让所有文本都在文本框完整显示，不会溢出。如果你不想更改字体的话，请删除Data文件夹中的文件。
--“每周升级生物”选项现在也可以和三阶升级Mod一起使用了。
--这个mod现在必须在ERA 3.3下使用。如果要在ERA 2.9x下运行这个mod，请从 Data/s 文件夹中删除“difm-age 3.erm”文件，这也会禁用一些功能。
--Mod不再依赖WoG脚本。
--更新了WoG脚本野外随机英雄（6 wog - random hero）、野外生物援军（40 wog - karmic battles）和野外生物（21 wog - neutral units）。感谢Archer。
-
-
-1.02
-
-- 添加了新的扩展难度选项
-
-- 战损恢复。电脑玩家和野外生物战斗后恢复{50%}的部队损失。如果一支部队被完全杀死，损失就无法恢复。
-- 额外部队。为了给电脑玩家一个良好的开局，所有的电脑英雄获得额外的部队，并且城镇里有更多的部队可供招募。额外部队的数量取决于{野外生物数量增加}和{双倍野外生物}选项是否开启。电脑英雄只会获得1-3级生物，并且每队总数不会超过100。这个选项可以帮助电脑打败一些随机生成的极其强大的野外生物。额外的部队数量大致等于野外生物数量选项额外增加的数量。
-- 初级魔法书。奖励日到来的时候，电脑英雄自动获得魔法书以及下列的魔法：攻击加速、迟缓大法、治疗和恶咒附身。
-- 飞行之门。为了防止大地图过天迟缓，所有电脑英雄的异次元之门被飞行奇术替代。这可以减少游戏的过天时间。
-
--修复野外生物属性增长无效的问题。
--修复了点击极难难度会重置当前电脑难度选择的问题
--现在可以在游戏开始时就选择选择极难难度，并将渐进难度作为单独的选项
--被替换为高级生物的野外生物的敌意值不会被设置为野蛮的。
--野外生物数量增加时，原本被设置为“屈服的”野外生物不会被重置为“野蛮的”。
--降低了战斗指挥官50％的杀伤力。
--添加了一些新的提示文本。
--修复“野外生物经验值”选项默认禁用的问题。
+PROJECT AND CREDITS
+Authors: Daemon_n and Perry R. Special thanks to Berserker and the authors of the
+integrated companion mods. Configuration access does not bundle those mods.
+Project: https://github.com/daemon1995/era_gaming_mods
+Community: https://heroescommunity.com and https://wforum.heroes35.net
