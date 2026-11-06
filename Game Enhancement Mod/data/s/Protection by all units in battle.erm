@@ -1,177 +1,136 @@
 ZVSE2
 
-; После любого боя, как сетевого, как и локального сбросим флаг спец. действия «Защита всем»,
-; чтобы в новом бою по умолчанию он был не активен. А так как любая глобальная переменная имеет значение
-; 0 по умолчанию, то заранее инициализировать флаг не нужно.
-!?FU(OnBeforeBattleUniversal)&(ERM_FLAG_IS_HUMAN);/i^battle_humanOnly^=(FALSE);;
+; Alt+W: wait with all local human stacks. Alt+D / Alt+Space: defend.
+; Button names must match Data/Buttons/gem_buttons.btn and gem_core.erm exactly.
+!?FU(OnBeforeBattleUniversal);
 !!FU(nig_ClearGlobalVars):P;
 
-!?FU(OnAfterBattleUniversal)&(ERM_FLAG_IS_HUMAN); [/i^battle_humanOnly^=(FALSE);]
+!?FU(OnAfterBattleUniversal);
 !!FU(nig_ClearGlobalVars):P;
 
-!?FU(nig_ClearGlobalVars);                        [/i^battle_humanOnly^=(FALSE);]
-!!VRi^nig_isAllWaitAction^:S(FALSE);              [Установили глобальный флаг спец. действия Ожидание всем» в ложь (FALSE)]
-                                     ; Константы (TRUE) - истина и (FALSE) - ложь заменяют 1 и 0 для логических значений
-!!VRi^nig_allWaitSide^:S0;                        [Удаляем переменные, которые использовали в бою. Нули не записываются в сохранения]
+!?FU(OnBattleRound);
+!!FU(nig_ClearGlobalVars):P;
+
+!?FU(nig_ClearGlobalVars);
+!!VRi^nig_isAllWaitAction^:S(FALSE);
+!!VRi^nig_allWaitSide^:S0;
 !!VRi^nig_allWaitRound^:S0;
-!!VRi^nig_isAllDefendAction^:S(FALSE);            [Установили глобальный флаг спец. действия «Защита всем» в ложь (FALSE)]
-                                     ; Константы (TRUE) - истина и (FALSE) - ложь заменяют 1 и 0 для логических значений
-!!VRi^nig_allDefendSide^:S0;                      [Удаляем переменные, которые использовали в бою. Нули не записываются в сохранения]
+!!VRi^nig_isAllDefendAction^:S(FALSE);
+!!VRi^nig_allDefendSide^:S0;
 !!VRi^nig_allDefendRound^:S0;
-; События нажатия клавиши в бою. Первый аргумент (x1) код клавиши. Второй — предотвратить ли реакцию по умолчанию
-; Список кодов клавиш встроен в ЕРМ редактор и отдельно есть в Mods\Era Erm Framework\9999 key codes.erm
-!?FU(OnKeyPressed_Battle)&(ERM_FLAG_IS_HUMAN);    [/i^battle_humanOnly^=(FALSE);]
-!!VR(doAction:y):S(FALSE);
-!!VR(doAction)&i^key_leftAlt^=1/i^key_down^=(TRUE):S(TRUE);
-!!VR(doAction)&i^key_rightAlt^=1/i^key_down^=(TRUE):S(TRUE);
 
-!!if&(doAction):;
-  !!BG:A?(bgAction:y);
-  !!UN:C6916668/4/?(isActionUndergoing:y);
-  !!if&(isActionUndergoing)=(BATTLE_ACTION_CANCEL);
-    !!FU(gem_All_Actions_Function)&x1=(KEY_W):P1/1; ждать всеми со звуком кнопки
-    !!FU(gem_All_Actions_Function)|x1=(KEY_D)/x1=(KEY_SPACE):P0/1; защита всеми со звуком кнопки
-  !!en;
+!?FU(OnKeyPressed_Battle)&(ERM_FLAG_IS_HUMAN);
+!!FU&i^key_down^<>(TRUE):E;
+!!FU&i^key_leftAlt^<>(TRUE)/i^key_rightAlt^<>(TRUE):E;
+!!VR(action:y):S-1;
+!!VR(action)&x1=(KEY_W):S1;
+!!VR(action)|x1=(KEY_D)/x1=(KEY_SPACE):S0;
+!!FU&(action)<0:E;
+!!UN:C6916668/4/?(pendingAction:y);
+!!FU&(pendingAction)<>(BATTLE_ACTION_CANCEL):E;
+!!FU(gem_All_Actions_Function):P(action)/(TRUE)/?(accepted:y);
+!!VRx2&(accepted):S(TRUE);
+
+!?FU(OnBattleScreenMouseClick)&(ERM_FLAG_IS_HUMAN)/i^mouse_action^=(MOUSE_LMB_RELEASED)/i^battle_round^>-1;
+!!VR(action:y):S-1;
+!!VR(action)&i^gem_allwait_Button_ID^>0/i^mouse_item^=i^gem_allwait_Button_ID^:S1;
+!!VR(action)&i^gem_alldefend_Button_ID^>0/i^mouse_item^=i^gem_alldefend_Button_ID^:S0;
+!!FU&(action)<0:E;
+!!FU(gem_All_Actions_Function):P(action)/(FALSE);
+
+!?FU(gem_All_Actions_Function)&(ERM_FLAG_IS_HUMAN);
+!#VA(actionType:x) (withSound:x) (accepted:x);
+!!VR(accepted):S(FALSE);
+!!FU|(actionType)<0/(actionType)>1:E;
+!!BU:T?(tactics:y);
+!!FU&(tactics):E;
+!!BG:N?(stackId:y) Q?(side:y);
+!!FU|(stackId)<0/(stackId)>=42:E;
+!!FU|(side)<0/(side)>1:E;
+!!FU&i^battle_localHuman_%(side)^<>(TRUE):E;
+!!BM(stackId):T?(creature:y) N?(count:y);
+!!FU|(creature)=(MON_ARROW_TOWERS)/(count)<1:E;
+!!FU(nig_CheckStackIsControled):P(stackId)/?(controlled:y);
+!!FU&(controlled)=(FALSE):E;
+!!if&(actionType)=1;
+  !!UN:C(COMBAT_MANAGER)/4/?(manager:y) C(manager)/81380/1/?(waitPhase:y);
+  !!FU&(waitPhase):E;
 !!en;
-
-!?FU(gem_All_Actions_Function)&(ERM_FLAG_IS_HUMAN);/i^battle_humanOnly^=(FALSE);
-
-!#VA(actionType:x) (withSound:x);
-!!BU:T?(isTactick:y);
-!!FU&(isTactick)=1:E;
-!!BG:N?(stackId:y);                                     Получили ID текущего стека
-!!BM(stackId):T?(mosterType:y);
-!!FU&(mosterType)=(MON_ARROW_TOWERS):E;
-!!VR(stackSide:y):S(stackId) :(BATTLE_STACKS_PER_SIDE); Получили активную сторону, поделив ID на макс числов стеков для одной стороны
-!!FU&i^battle_localHuman_%(stackSide)^<>(TRUE):E;       Вышли, если текущая сторона — не человек, сидящий за данным компьютером
-                                                 ;      Глобальные переменные battle_localHuman_0 и battle_localHuman_1 устанавливаются
-                                                 ;      в библиотеке ЭРЫ в событиях «до боя»
-                                                 ;      Так как (stackSide) хранит 0 или 1, то вся строка будет раскрыта в battle_localHuman_0
-                                                 ;      или battle_localHuman_1, то есть вернёт значение для текущей стороны
-!!if&x1=0:;
-  !!if&i^battle_humanOnly^=(TRUE);
-    !!IF:Q1^%T(gem.battle.Confirm2)^; !!FU&-1:E;
+!!if&i^battle_humanOnly^=(TRUE);
+  !!if&(actionType)=1;
+    !!IF:Q1^%T(gem.battle.Confirm1)^;
+  !!el;
+    !!IF:Q1^%T(gem.battle.Confirm2)^;
   !!en;
-
-  !!VRi^nig_isAllDefendAction^:S(TRUE);        Устанавливаем флаг действия «Защита всем» в ИСТИНУ
-  !!VRi^nig_allDefendSide^:S(stackSide);       Запоминаем сторону, отряды которой должны войти в оборону
-  !!VRi^nig_allDefendRound^:Si^battle_round^;  Запоминаем текущий раунд
-  !!BG:A(BATTLE_ACTION_DEFEND);                Входим в оборону текущим отрядом  
-!!el:;
-  !!UN:C6919200/4/?y10;
-  !!VRy11:Sy10 +81380;
-  !!UN:Cy11/1/?y12; ѕроверка на фазу ожидани€: 0-Ќ≈“, 1=ƒј
-  !!FU&y12=1:E;
-
-  !!if&i^battle_humanOnly^=(TRUE);
-    !!IF:Q1^%T(gem.battle.Confirm1)^; !!FU&-1:E;
-  !!en;
-  !!VRi^nig_isAllWaitAction^:S(TRUE);        Устанавливаем флаг действия «Защита всем» в ИСТИНУ
-  !!VRi^nig_allWaitSide^:S(stackSide);       Запоминаем сторону, отряды которой должны войти в оборону
-  !!VRi^nig_allWaitRound^:Si^battle_round^;  Запоминаем текущий раунд
-  !!BG:A(BATTLE_ACTION_WAIT);                Входим в оборону текущим отрядом
+  !!FU&-1:E;
 !!en;
-
-!!if&(withSound)=(TRUE):;
-  !!VRz-1:S^Button.wav^;
-  !!SN:Pz-1;
+; An explicit new order supersedes the previous mass order.
+!!FU(nig_ClearGlobalVars):P;
+!!if&(actionType)=1;
+  !!VRi^nig_isAllWaitAction^:S(TRUE);
+  !!VRi^nig_allWaitSide^:S(side);
+  !!VRi^nig_allWaitRound^:Si^battle_round^;
+  !!BG:A(BATTLE_ACTION_WAIT);
+!!el;
+  !!VRi^nig_isAllDefendAction^:S(TRUE);
+  !!VRi^nig_allDefendSide^:S(side);
+  !!VRi^nig_allDefendRound^:Si^battle_round^;
+  !!BG:A(BATTLE_ACTION_DEFEND);
 !!en;
-
+!!VR(accepted):S(TRUE);
+!!if&(withSound)=(TRUE);
+  !!SN:P^Button.wav^;
+!!en;
 
 !?FU(nig_CheckStackIsControled);
 !#VA(stackId:x) (controlled:x);
-  !!UN:C(COMBAT_MANAGER)/4/?(cmbMgr:y);
-  !!BM(stackId):Z?(stack:y);
-  !!SN:E4670752/(CALLCONV_THISCALL)/(cmbMgr)/(stack);
-  !!VR(controlled):Sv1 B X1;
+!!VR(controlled):S(FALSE);
+!!FU|(stackId)<0/(stackId)>=42:E;
+!!UN:C(COMBAT_MANAGER)/4/?(manager:y);
+!!BM(stackId):Z?(stack:y);
+; IsMonsterAutoControlledByAI returns nonzero for uncontrolled stacks.
+!!SN:E4670752/(CALLCONV_THISCALL)/(manager)/(stack);
+!!VR(controlled):Sv1 B X1;
 
-!?FU(OnBattleScreenMouseClick)&i^mouse_action^=(MOUSE_LMB_RELEASED)/i^battle_round^>-1;/i^battle_humanOnly^=(FALSE);
-!!if&i^mouse_item^=i^gem_Allwait_Button_ID^:;
-  !!FU(gem_All_Actions_Function):P1/0;
-!!el&i^mouse_item^=i^gem_Alldefend_Button_ID^:;
-  !!FU(gem_All_Actions_Function):P0/0;
-!!en;
-
-!?FU(OnAfterBattleAction)&i^nig_isAllDefendAction^=(TRUE)/(ERM_FLAG_IS_HUMAN);/i^battle_humanOnly^=(FALSE);
-!!BG:N?(stackId:y) Q?(stackSide:y);                                      Получили ID текущего стека. В событии "OnAfterBattleAction" текущий стек уже не тот,
-
-!!if&(stackSide)=i^nig_allDefendSide^/i^nig_isAllDefendAction^=(TRUE):;                  Если текущая сторона — та, что активировала «Защита всем»
-  !!FU(nig_CheckStackIsControled):P(stackId)/?(controlled:y);
-
-  !!if&(controlled:y)/i^gem_ignore_siege_weapon^;
-    !!BM(stackId):F?f;
-    !!VRf:&(MON_FLAG_SIEGE_WEAPON);
-    !!FU&f:E;
-  !!en;
-  !!if&(controlled);
-    !!BG:A(BATTLE_ACTION_DEFEND);                          Выбираем действие «Защита»
-  !!en;
-!!el:;
-
-  !!BA:O?(atkPlayer:y)/?(defPlayer:y) E?(isNetwork:y);
-  !!OW:I(atkPlayer)/?(isAiAttacker:y) I(defPlayer)/?(isAiDeffender:y);
-
-
-  !!if&(isNetwork);
-    !!VRi^nig_isAllDefendAction^:S(FALSE);           [отключаем флаг «Защита всем», потому что мультиплеер]
+!?FU(OnAfterBattleAction)&(ERM_FLAG_IS_HUMAN);
+!!FU&i^nig_isAllWaitAction^=(FALSE)/i^nig_isAllDefendAction^=(FALSE):E;
+!!BG:N?(stackId:y) Q?(side:y);
+!!FU|(stackId)<0/(stackId)>=42:E;
+!!VR(orderSide:y):Si^nig_allDefendSide^;
+!!VR(orderRound:y):Si^nig_allDefendRound^;
+!!if&i^nig_isAllWaitAction^;
+  !!VR(orderSide):Si^nig_allWaitSide^;
+  !!VR(orderRound):Si^nig_allWaitRound^;
+  !!UN:C(COMBAT_MANAGER)/4/?(manager:y) C(manager)/81380/1/?(waitPhase:y);
+  !!if&(waitPhase);
+    !!FU(nig_ClearGlobalVars):P;
     !!FU:E;
   !!en;
-
-  !!if&(isAiAttacker)=(FALSE);
-    !!VRi^nig_isAllDefendAction^&i^gem_control_units^=(TRUE):S(FALSE); [Иначе отключаем флаг «Защита всем», давая противнику сделать ход, а человеку потом среагировать на него]
-    !!FU:E;
-  !!en;
-
-  !!if&(isAiDeffender)=(FALSE);
-    !!VRi^nig_isAllDefendAction^&i^gem_control_units^:S(FALSE); [Иначе отключаем флаг «Защита всем», давая противнику сделать ход, а человеку потом среагировать на него]
-  !!en;
-
-!!en:;
-
-!?FU(OnAfterBattleAction)&i^nig_isAllWaitAction^=(TRUE)/(ERM_FLAG_IS_HUMAN);/i^battle_humanOnly^=(FALSE);
-!!BG:N?(stackId:y) Q?(stackSide:y);                                      Получили ID текущего стека. В событии "OnAfterBattleAction" текущий стек уже не тот,
-*!IF:L^%^;
-
-!!if&i^nig_isAllWaitAction^=(TRUE):;
-  !!UN:C(COMBAT_MANAGER)/4/?y10;
-  !!VRy11:Sy10 +81380;
-  !!UN:Cy11/1/?y12; ѕроверка на фазу ожидани€: 0-Ќ≈“, 1=ƒј
-  !!FU&y12=1:E;
-
-  !!if&(stackSide)=i^nig_allWaitSide^;/y12<>1:;                  Если текущая сторона — та, что активировала «Защита всем»
-    !!FU(nig_CheckStackIsControled):P(stackId)/?(controlled:y);
-    !!VR(playerId:y):Si^battle_owner_%(stackSide)^;
-    !!if&(controlled:y)/i^gem_ignore_siege_weapon^;    
-      !!BM(stackId):F?f;
-      !!VRf:&(MON_FLAG_SIEGE_WEAPON);
-      !!FU&f:E;
-    !!en;
-    !!if&(controlled);
-      !!BG:A(BATTLE_ACTION_WAIT);                          Выбираем действие «Защита»
-    !!en;
-  !!el:;
-    !!BA:O?(atkPlayer:y)/?(defPlayer:y) E?(isNetwork:y);
-    !!OW:I(atkPlayer)/?(isAiAttacker:y) I(defPlayer)/?(isAiDeffender:y);
-
-    !!if&(isNetwork);
-      !!VRi^nig_isAllWaitAction^:S(FALSE);           [отключаем флаг «Защита всем», потому что мультиплеер]
-      !!FU:E;
-    !!en;
-
-    !!if&(isAiAttacker)=(FALSE);
-      !!VRi^nig_isAllWaitAction^&i^gem_control_units^=(TRUE):S(FALSE); [Иначе отключаем флаг «Защита всем», давая противнику сделать ход, а человеку потом среагировать на него]
-      !!FU:E;
-    !!en;
-
-    !!if&(isAiDeffender)=(FALSE);
-      !!VRi^nig_isAllWaitAction^&i^gem_control_units^:S(FALSE); [Иначе отключаем флаг «Защита всем», давая противнику сделать ход, а человеку потом среагировать на него]
-    !!en;
-
-  !!en:;
 !!en;
-
-
-; Если новый раунд наступил при активном действии «Защита всем», то сбросить флаг действия «Защита всем»
-!?FU(OnBattleRound)&i^nig_isAllWaitAction^|i^nig_isAllDefendAction^;i^battle_round^<>i^nig_allWaitRound^;
-!!VRi^nig_isAllDefendAction^:S(FALSE);
-!!VRi^nig_isAllWaitAction^:S(FALSE);
+!!if&(orderRound)<>i^battle_round^;
+  !!FU(nig_ClearGlobalVars):P;
+  !!FU:E;
+!!en;
+!!if&(side)<>(orderSide);
+  !!BA:E?(network:y);
+  !!if|(network)/i^gem_control_units^;
+    !!FU(nig_ClearGlobalVars):P;
+  !!en;
+  !!FU:E;
+!!en;
+!!FU&i^battle_localHuman_%(side)^<>(TRUE):E;
+!!FU(nig_CheckStackIsControled):P(stackId)/?(controlled:y);
+!!FU&(controlled)=(FALSE):E;
+!!BM(stackId):T?(creature:y) N?(count:y) F?(flags:y);
+!!FU|(creature)=(MON_ARROW_TOWERS)/(count)<1:E;
+!!if&i^gem_ignore_siege_weapon^;
+  !!VR(siege:y):S(flags) &(MON_FLAG_SIEGE_WEAPON);
+  !!FU&(siege):E;
+!!en;
+!!if&i^nig_isAllWaitAction^;
+  !!VR(waited:y):S(flags) &(MON_FLAG_WAITING);
+  !!FU&(waited):E;
+  !!BG:A(BATTLE_ACTION_WAIT);
+!!el;
+  !!BG:A(BATTLE_ACTION_DEFEND);
+!!en;

@@ -353,11 +353,47 @@ ZVSE2
 *                 [TOWN SCRREN SCRIPTS  - scripts for towns]
 ; --------------------------------------------------------------------------------------------------
 ; --------------------------------------------------------------------------------------------------
+; GEM town upgrades: ERM input and hints, C++ exports.
 
-!?FU(OnKeyPressed_Town)&x1=(KEY_A);     [/i^key_down^;]
+; Input belongs to ERM. C++ only implements the requested upgrade operation.
+; The button's hover hint and RMB description are handled by gem_buttons.btn.
+!?FU(OnTownMouseClick)&i^gem_town_upgrade^/i^mouse_item^;
+  !!VR(item:y):Si^mouse_item^;
+  !!VR(action:y):Si^mouse_action^;
+  !!SN:F^GetButtonID^/^gem_town_upgrade_all^;
+  !!if&v1>0/(item)=v1;
+    !!FU&(action)<>(MOUSE_LMB_RELEASED):E;
+    !!SN:F^Gameplay_GameplayEnhancementPlugin:GEM_UpgradeTownSelection^/-1/3/-1/1;
+    !!FU:E;
+  !!en;
 
-  !!SN:F^PluginExists^/^fast upgrade stacks in town^;
-  !!FU&v1<>(TRUE):E;
+  !!FU&(action)<>(MOUSE_LMB_PRESSED):E;
+  !!SN:F^GetKeyState^/(KEY_A);
+  !!VR(heldA:y):Sv1 &32768;
+  !!FU&(heldA)=(FALSE):E;
+  !!VR(armyMask:y):S0;
+  !!VR(slot:y):S-1;
+  !!if&(item)>=115/(item)<=121;
+    !!VR(armyMask):S1;
+    !!VR(slot):S(item) -115;
+  !!el&(item)>=140/(item)<=146;
+    !!VR(armyMask):S2;
+    !!VR(slot):S(item) -140;
+  !!el&(item)=123;
+    !!VR(armyMask):S1;
+  !!el&(item)=125;
+    !!VR(armyMask):S2;
+  !!en;
+  !!FU&(armyMask)=(FALSE):E;
+  !!SN:F^Gameplay_GameplayEnhancementPlugin:GEM_UpgradeTownSelection^/-1/(armyMask)/(slot)/0;
+  !!if&v1>0;
+    !!CM:R0;
+    !!FU(gem_CheckUpgradeCostInTown):P(item);
+  !!en;
+
+
+!?FU(OnKeyPressed_Town)&x1=(KEY_A)/i^gem_town_upgrade^;     [/i^key_down^;]
+
   !!CM:I?(itemId:y);
   !!FU(H3Dlg_GetCurrentDlg):P?i^gem_townDlg^;
   !!VRi^gem_InTownKey_A_Pressed^:S(itemId);
@@ -378,7 +414,7 @@ ZVSE2
 !!VRi^gem_InTownKey_A_Pressed^:S(NULL);
 
 
-!?FU(OnTownMouseHint)&i^gem_InTownKey_A_Pressed^/i^gem_InTownKey_A_Pressed^<>148; [/i^key_down^;]
+!?FU(OnTownMouseHint)&i^gem_town_upgrade^/i^gem_InTownKey_A_Pressed^/i^gem_InTownKey_A_Pressed^<>148; [/i^key_down^;]
 !!FU(gem_CheckUpgradeCostInTown):Pi^mouse_item^; [i^gem_InTownKey_A_Pressed^;]
 
 
@@ -410,9 +446,9 @@ ZVSE2
   !!en;
 
 !?FU(gem_OnOpenCreatureInformationDlg);
+  !!FU&i^gem_town_upgrade^=(FALSE):E;
   !!SN:F^GetGameState^/?(mainDialogs[2]:y);
   !!FU&(mainDialogs[1])<>(DLG_TOWN_SCREEN):E;
-
   !!VRi^gem_MonCanBeUpgraded^:S(FALSE);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp:y)/20/4/?(town:y) C(ebp:y)/-20/4/?(upgMonType:y);
   !!if&(town)>0/(upgMonType)<>(NO_MON);
@@ -460,6 +496,9 @@ ZVSE2
     !!VRi^gem_townHintChanged^:S(TRUE);
   !!en;
 
+
+
+; GEM town upgrades: end.
 
 !?FU(gem_MixUpTownCreatures);
 !#VA(mons[9]:y) (upgMons[9]:y);
