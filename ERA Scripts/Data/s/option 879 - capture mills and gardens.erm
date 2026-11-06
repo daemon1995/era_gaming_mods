@@ -1,7 +1,7 @@
 ZVSE2
 ** Author orig.  : DracoLich
 ** Updated by    : Archer30
-** Name          : Capture the mills and leprechaun's gardens
+** Name          : Capture the mills and leprechaun's gardens (ERA_RunTimeservices)
 ** Options       : 879
 ** Dialogs       : -
 ** Variables     : -
@@ -15,6 +15,8 @@ ZVSE2
 15.10.2023 Updated by daemon_n: Added graphics with flags;
 15.10.2023 Updated by daemon_n: Now supported capture status in MP game during enemy turn but not added in replay turn;
 Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten visit and auto visit logic / graphics is by @JackSlater
+13.10.2026 Adapted for ERA_RunTimeservices: native flags, ownership API and replay;
+
 
 !#DC(ES_OBJ_WAREHOUSE) = 142;
 
@@ -24,10 +26,12 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 !!UN:P879/?(isCaptureObjOpt:y);
 
 !!if&(isCaptureObjOpt);
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(OBJ_WATER_WHEEL)/-1/1;
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(OBJ_MYSTICAL_GARDEN)/-1/1;
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(OBJ_WINDMILL)/-1/1;
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(ES_OBJ_WAREHOUSE)/-1/1;
   !!SN:E(address)/1/4882852/(ES_OnPlayerVisitObject); [Trigger on player visiting Any Object] 4A81A4]
 
-  !!SN:E(address)/1/4263804/(ES_OnMapItem_GetOwner);
-  !!SN:E(address)/1/4263370/(ES_OnMapItem_Draw);
   !!SN:E(address)/1/5183597/(ES_Hook_OnPlayerDefeated);
 
   !!SN:E(address)/1/4239726/(ES_HOOK_OnObjectHintGetType);
@@ -40,6 +44,12 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 !!UN:P879/?(isCaptureObjOpt:y);
 
 !!if&(isCaptureObjOpt);
+  ; Register again on every loaded map, then import PO owners from older saves once.
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(OBJ_WATER_WHEEL)/-1/1;
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(OBJ_MYSTICAL_GARDEN)/-1/1;
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(OBJ_WINDMILL)/-1/1;
+  !!SN:F^ERA_RunTimeservices:Erm_RegisterObjectType^/(ES_OBJ_WAREHOUSE)/-1/1;
+
   //replace wind mill grass
   !!re i/0/7;                           [(end_value);]
     !!SN:R^AVMwndd0.def:0_%i.png^/^Data\Defs\ESwind00.def\0_%i.png^; [;]
@@ -70,17 +80,17 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
   //mercury
   !!re i/0/7;                           [(end_value);]
     !!SN:R^avwrhsmc.def:0_%i.png^/^Data\Defs\ESwrhsmc.def\0_%i.png^;
-  !!en; 
+  !!en;
   //ore
   !!SN:R^avwrhsor.def:0_0.png^/^Data\Defs\ESwrhsor.def\0_0.png^;
   //sulfur
   !!re i/0/11;                          [(end_value);]
     !!SN:R^avwrhssf.def:0_%i.png^/^Data\Defs\ESwrhssf.def\0_%i.png^;
-  !!en; 
+  !!en;
   //crystall
   !!re i/0/7;                           [(end_value);]
     !!SN:R^avwrhscr.def:0_%i.png^/^Data\Defs\ESwrhscr.def\0_%i.png^;
-  !!en;  
+  !!en;
   //gem
   !!re i/0/7;                           [(end_value);]
     !!SN:R^avwrhsgm.def:0_%i.png^/^Data\Defs\ESwrhsgm.def\0_%i.png^;
@@ -95,38 +105,17 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
   !!en;
 !!en;
 
-!?FU(ES_OnMapItem_GetOwner)&i^ES_879_DrawObjectType^;
-  !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/4/?(ebp:y) C(ebp)/-68/4/?(coords:y);
-  !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(coords);
-  
-  !!if&(x)>-1/(y)>-1/(z)>-1;            [This check is required for some maps]
-    !!PO(x)/(y)/(z):O?(owner:y);
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EAX)/4/(owner);
-    !!VRi^ES_879_DrawObjectType^:S(NULL);
-  !!en;
-
-
-!?FU(ES_OnMapItem_Draw);
-!!UN:Cx1/(STRUCT_HOOK_CONTEXT_EDI)/4/?(mapitem:y) C(mapitem:y)/56/4/?(objType:y);
-
-!!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
-  !!UN:C6916676/4/?(noShowObjectcts:y);
-
-  !!if&(noShowObjectcts)=0;
-    !!VRi^ES_879_DrawObjectType^:S(objType);
-    !!SN:X?t/0;
-    !!UN:Cx1/(STRUCT_HOOK_CONTEXT_RET)/4/4263617;
-  !!en; 
-!!en;
-
 !?FU(ES_OnPlayerVisitObject)&i^ES_879_isAuto^=(FALSE); [4A81A4]
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBX)/(UNC_INT)/?(objType:y);
   !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
-    
+
     !!UN:Cx1/(STRUCT_HOOK_CONTEXT_EBP)/(UNC_INT)/?(ebp:y) C(ebp)/16/(UNC_INT)/?(packedCoords:y);
     !!FU(ES_UnPackedCoords):P?(x:y)/?(y:y)/?(z:y)/(packedCoords);
-    
-    !!PO(x)/(y)/(z):O?(oldOwner:y);
+
+    !!SN:F^ERA_RunTimeservices:Erm_GetObjectOwner^/(x)/(y)/(z);
+
+    !!VR(oldOwner:y):Sv1;
+    !!VR(oldOwner)&(oldOwner)<(NO_OWNER):S(NO_OWNER); [invalid entrance: keep neutral behaviour]
 
     !!VR(ownerChanged:y):S(FALSE);
 
@@ -143,16 +132,15 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
     !!en;
 
     !!if&(ownerChanged);
-      !!IP:D(ANY_PLAYER);
-      !!FU(ES_879_MP_SetObjectOwner):D(x)/(y)/(z)/i^timerOwner^ P(x)/(y)/(z)/i^timerOwner^;
+      !!FU(ES_879_MP_SetObjectOwner):P(x)/(y)/(z)/i^timerOwner^;
     !!en;
 
   !!en;
 
 !?FU(ES_879_MP_SetObjectOwner);
-!#VA (packedCoords[3]:x) (newOwner:x);
+!#VA(x:x) (y:x) (z:x) (newOwner:x);
 
-!!POx1/x2/x3:O(newOwner);
+!!SN:F^ERA_RunTimeservices:Erm_SetObjectOwnerAndSync^/(x)/(y)/(z)/(newOwner);
 
 
 
@@ -166,7 +154,7 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 
 !?FU(ES_879_CollectResources);
 
-  !!FU(NewIntArray):P8/?(liveArr:y); 
+  !!FU(NewIntArray):P8/?(liveArr:y);
   !!re (playerID:y)/0/(PLAYER_LAST);
     !!OW:I(playerID)/d/?(isDead:y);
     !!SN&(isDead)=(FALSE):V(liveArr)/(playerID)/(TRUE);
@@ -190,17 +178,18 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
   !!VRi^ES_879_isAuto^:S(FALSE);
 
 
-!?FU(ES_879_IterateObjects); 
+!?FU(ES_879_IterateObjects);
 !#VA(objType:x) (hero:x) (liveArr:x);
-!#VA(x:y) (y:y) (z:y); 
+!#VA(x:y) (y:y) (z:y);
 
 !!VR(x):S-1;                            [init as start]
 !!UN:C(ADV_MANAGER)/4/?(advMgr:y);
 !!re i;                                 [endless loop]
-  !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y)/(z); 
+  !!UN:U(objType)/(ANY_OBJ)/-1/(x)/(y)/(z);
   !!br&(x)<0;                           [exit loop if nothing found]
-
-  !!PO(x)/(y)/(z):O?(owner:y);          [get obj owner]
+  !!SN:F^ERA_RunTimeservices:Erm_GetObjectOwner^/(x)/(y)/(z);
+  !!VR(owner:y):Sv1;          [get obj owner]
+  !!VR(owner)&(owner)<(NO_OWNER):S(NO_OWNER); [invalid entrance: keep neutral behaviour]
 
   !!if&(owner)<>(NO_OWNER);             [if there is one]
     !!SN:V(liveArr)/(owner)/?(isAlive:y);[check if lives]
@@ -217,7 +206,7 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
       !!FU(ES_879_AdvMgr_HeroEnterObjectAsAi):P(x)/(y)/(z)/(hero);
 
     !!el;
-      !!PO(x)/(y)/(z):O(NO_OWNER) V0/0 V1/0; [set no owner if is dead]
+      !!PO(x)/(y)/(z):V0/0 V1/0; [set no owner if is dead]
       !!FU(ES_879_MP_SetObjectOwner):P(x)/(y)/(z)/(NO_OWNER);
     !!en;
   !!en;
@@ -242,7 +231,7 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 !!en;
 
 !?FU(ES_879_AdjustStoredRes);
-!#VA(x:x) (y:x) (z:x) (objType:x); 
+!#VA(x:x) (y:x) (z:x) (objType:x);
 
 !!if&(objType)=(OBJ_MYSTICAL_GARDEN);
   !!GD(x)/(y)/(z):B?(resType:y);
@@ -283,8 +272,9 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 
 !?FU(OnAdventureMapTileHint)&i^es_879_hint_object_type^;
 !#VA(x:x) (y:x) (z:x);                  [Object entrance coordinates]
-
-!!PO(x)/(y)/(z):O?(owner:y);
+!!SN:F^ERA_RunTimeservices:Erm_GetObjectOwner^/(x)/(y)/(z);
+!!VR(owner:y):Sv1;
+!!VR(owner)&(owner)<(NO_OWNER):S(NO_OWNER); [invalid entrance: keep neutral behaviour]
 
 !!if&(owner)>(NO_OWNER);
   !!VR(ownerStrIndex:y):S(owner) +23;
@@ -313,7 +303,9 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 !!SN:O?(x:y)/?(y:y)/?(z:y);
 !!VRt:Si^es_879_rmc_hint_object_type^;
 !!VRi^es_879_rmc_hint_object_type^:S0;
-!!PO(x)/(y)/(z):O?(owner:y);
+!!SN:F^ERA_RunTimeservices:Erm_GetObjectOwner^/(x)/(y)/(z);
+!!VR(owner:y):Sv1;
+!!VR(owner)&(owner)<(NO_OWNER):S(NO_OWNER); [invalid entrance: keep neutral behaviour]
 
 !!if&(owner)<>(NO_OWNER);
   !!UN:Cx1/(STRUCT_HOOK_CONTEXT_ECX)/4/?(textBuffer:y);
@@ -330,7 +322,7 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
 !!UN:C(GAME_MANAGER)/4/?(gameMgr:y);
 
 ; get size of the map
-!!UN:X?(mapSize:y)/?(hasUnderground:y); 
+!!UN:X?(mapSize:y)/?(hasUnderground:y);
 ; pass once through all cells of the map
 !!re l/0/(hasUnderground)/1;            [coord z]
   !!re k/0/(mapSize)/1/-1;              [coord y]
@@ -338,12 +330,14 @@ Jun 18 2025 Updated by daemon_n: Added "warehouses" object support, rewritten vi
       !!OBi/k/l:T?(objType:y);
 
       !!if|(objType)=(OBJ_WATER_WHEEL)/(objType)=(OBJ_MYSTICAL_GARDEN)/(objType)=(OBJ_WINDMILL)/(objType)=(ES_OBJ_WAREHOUSE);
-        !!TRi/k/l:E?(isYellowSquare:y); 
+        !!TRi/k/l:E?(isYellowSquare:y);
         !!VR(isYellowSquare):X(TRUE);   [reverse param isYellowSquare]
 
         !!if&(isYellowSquare);
           !!FU(ES_AdvMgr_GetMapItem):Pi/k/l/?(mapItem:y);
-          !!POi/k/l:O?(owner:y);
+          !!SN:F^ERA_RunTimeservices:Erm_GetObjectOwner^/i/k/l;
+          !!VR(owner:y):Sv1;
+          !!VR(owner)&(owner)<(NO_OWNER):S(NO_OWNER); [invalid entrance: keep neutral behaviour]
           !!SN:E4836816/(CALLCONV_THISCALL)/(gameMgr)/i/k/l/(owner)/3/0;
         !!en;
       !!en;
